@@ -32,7 +32,7 @@ const flush = () => new Promise<void>((r) => setImmediate(r));
 // use-scoped slots a caller queued for the lock holds none to begin with.
 test("a caller queued for the lock holds no use-scoped slot, so the holder can resume", async () => {
   const gate = createSemaphore(1);
-  const mutex = createKeyedMutex();
+  const mutex = createKeyedMutex("test");
   const io = deferred();
   const order: string[] = [];
   const a = gate.run(

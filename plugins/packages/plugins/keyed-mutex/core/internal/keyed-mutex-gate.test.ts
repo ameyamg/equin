@@ -32,7 +32,7 @@ const flush = () => new Promise<void>((r) => setImmediate(r));
 describe("keyed mutex inside a use-scoped gate", () => {
   test("a holder's file wait and a queue of waiters never wedge the gate", async () => {
     const gate = createSemaphore(2);
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const disk = deferred<string>();
     const order: string[] = [];
     // One read holds the key and waits on the disk (a timed-fs call — a use
@@ -76,7 +76,7 @@ describe("keyed mutex inside a use-scoped gate", () => {
 
   test("an aborted waiter rejects holding no slot", async () => {
     const gate = createSemaphore(1);
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const held = deferred();
     const first = mutex.run("k", () => held.promise);
     const controller = new AbortController();

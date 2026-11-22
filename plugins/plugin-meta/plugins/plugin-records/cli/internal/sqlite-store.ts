@@ -805,7 +805,7 @@ export function openRecordStore(opts?: StoreOptions): RecordStore {
   };
   // One flush writes at a time, in call order: a flush returns once every
   // record put before it is written (or lost).
-  const flushes = createKeyedMutex();
+  const flushes = createKeyedMutex("plugin-records.flush");
   // Every record this process has read, per table. A record is a pure
   // function of its key, so a key this process already read is never asked of
   // SQLite again: a build reads the same facts from several readers (the facet

@@ -14,6 +14,16 @@ A rewind puts it there the moment it starts, from the preview's text (the same
 cut's): the message leaves the transcript as soon as the server cuts the file,
 while the agent's respawn after it takes seconds.
 
+**The request never waits for the new agent.** `POST …/rewind` answers once
+the transcript is cut, the old agent stopped and the row marked coming up
+(`starting` / `resumingSince` — every turn sent from then on is held for the
+new agent); the new agent's start (a process and its Claude Code's
+initialize, 1–5 s) runs after the answer (`beginRespawnResume` in
+`conversations/server`, a `conversations.rewind-relaunch` background entry).
+One that fails puts the row back and tells the user on the conversation
+("Couldn't restart the agent after the rewind"). Before: 2.6–26 s per click
+(2026-11-22: 25 s of it queued behind a Stop on the agent-lifecycle lock).
+
 The same flow is exported as `useGoBackToMessage` for a surface that stands for
 a message the transcript hides (an AskUserQuestion answer): the caller decides
 where the removed text goes instead of the prompt editor.

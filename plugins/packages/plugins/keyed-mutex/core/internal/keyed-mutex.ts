@@ -1,4 +1,23 @@
 /**
+ * How a queued caller's wait is metered: shown from the moment it queues behind
+ * a run of its key, charged as its own turn comes (or it gives up). Installed by
+ * the process's profiler at boot (`runtime-profiler/server` installs
+ * `beginWait(layer, "queue")`) — this primitive cannot import the profiler. With
+ * none installed (a browser, a CLI, a test), nothing.
+ */
+export type KeyedMutexWaitMeter = (layer: string) => () => void;
+
+const NO_WAIT_END = (): void => {};
+let waitMeter: KeyedMutexWaitMeter = () => NO_WAIT_END;
+
+/** Install the meter every queued caller reports to (see {@link KeyedMutexWaitMeter}). */
+export function installKeyedMutexWaitMeter(
+  meter: KeyedMutexWaitMeter | null,
+): void {
+  waitMeter = meter ?? (() => NO_WAIT_END);
+}
+
+/**
  * A per-key FIFO mutex: `run(key, fn)` starts `fn` only once every earlier
  * `run` for the same key has settled, in the order the calls arrived. Different
  * keys never wait on each other.
@@ -58,7 +77,17 @@ async function waitForTurn(
   }
 }
 
-export function createKeyedMutex(): KeyedMutex {
+/**
+ * `name` says what the mutex orders: a caller queued behind another run of its
+ * key is shown and charged as the `mutex:<name>` wait (see
+ * {@link installKeyedMutexWaitMeter}), so the request that waited names the lock
+ * it sat on instead of booking the holder's time as its own work. Required: an
+ * unnamed lock is the wait no trace can explain (2026-11-22, a rewind queued
+ * 25 s behind a Stop on the agent-lifecycle lock read as 26 s of "own" time).
+ * An uncontended run meters nothing.
+ */
+export function createKeyedMutex(name: string): KeyedMutex {
+  const waitLayer = `mutex:${name}`;
   // key → the tail of its queue: a promise that settles when the LAST queued
   // run settles. A run chains onto the tail it found; the entry is deleted only
   // by the run that is still the tail when it settles, so an idle key holds
@@ -85,12 +114,20 @@ export function createKeyedMutex(): KeyedMutex {
       };
       return (async () => {
         let turn: "turn" | "aborted";
+        // Only a caller with a run ahead of it waits: announced here (the
+        // body runs synchronously up to its first await, in the caller's own
+        // async context), ended as its turn comes or it gives up — inside the
+        // `try`, so a meter that throws never leaves the key held.
+        let endWait = NO_WAIT_END;
         try {
+          if (ahead) endWait = waitMeter(waitLayer);
           turn = await waitForTurn(previous, signal);
         } catch (err) {
           // Never leave the key held by a call that will not run.
           void previous.then(settle);
           throw err;
+        } finally {
+          endWait();
         }
         // Aborted while waiting (or as its turn came): it never runs. The calls behind it wait for the runs
         // ahead of it, so giving up never lets two runs of one key overlap.

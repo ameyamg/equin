@@ -111,7 +111,7 @@ let watcher: { files: string; handle: FileWatcher } | null = null;
  * and an artifact prune — see {@link pruneOutsideWatcherStart}. One key: there
  * is one runs dir per process.
  */
-const runsDirExclusion = createKeyedMutex();
+const runsDirExclusion = createKeyedMutex("supervised-job.runs-dir");
 const RUNS_DIR_KEY = "runs-dir";
 
 /**

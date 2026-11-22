@@ -50,6 +50,7 @@ import {
   SPAN_MEASURES,
 } from "../../core";
 import { installInflightJoinMeter } from "@plugins/packages/plugins/inflight/core";
+import { installKeyedMutexWaitMeter } from "@plugins/packages/plugins/keyed-mutex/core";
 import {
   installLeaseContextRuntime,
   usingSlot,
@@ -83,6 +84,13 @@ installFsWaitMeter((layer) => beginDeferredWait(layer, "io", FS_WAIT_FLOOR_MS));
 // time as its own. Installed, not imported: the resource runtime builds on
 // inflight, and this plugin's server half on the runtime.
 installInflightJoinMeter((layer) => beginWait(layer, "join"));
+
+// A caller queued behind another run of its key waits on the holder's work:
+// every `createKeyedMutex(name)` wait is the `mutex:<name>` queue wait. Before,
+// a request queued on a lock booked the holder's whole run as its own time
+// (2026-11-22: a rewind 25 s behind a Stop on the agent-lifecycle lock, read as
+// 26 s of "own" time). Installed, not imported, for the same layering reason.
+installKeyedMutexWaitMeter((layer) => beginWait(layer, "queue"));
 
 // A child process is another process's work: every `spawnCaptured` child is
 // an `io` wait on its layer (`spawn:<program>`, or the caller's name —

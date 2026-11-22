@@ -247,7 +247,7 @@ export function defineAgentWriteLedger<K extends string>(
   // file behind it, with awaits in between (the disk reads and the rewrite):
   // they run one at a time, in arrival order, as they did when each was one
   // synchronous call.
-  const serial = createKeyedMutex();
+  const serial = createKeyedMutex("agent-write-ledger");
   const exclusive = <T>(fn: () => Promise<T>): Promise<T> => serial.run(id, fn);
 
   async function load(): Promise<LedgerFile<K>> {

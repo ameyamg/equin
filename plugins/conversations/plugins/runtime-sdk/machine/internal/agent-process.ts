@@ -380,14 +380,22 @@ export async function killAgentProcess(id: string): Promise<number | null> {
  * it really exits) or naming a dead pid — or `timeoutMs` of AWAKE time passes
  * (`armAwakeDeadline`: an agent stopping across a sleep is not killed and
  * reported at the wake). Woken by the watch on the pid files' directory.
+ * With `signal`, it answers `aborted` as soon as it aborts.
  */
 export async function awaitAgentExit(
   id: string,
   timeoutMs: number,
-): Promise<"exited" | "timeout"> {
+  /** Stop watching: answers `aborted` (a caller whose other wait won the race). */
+  signal?: AbortSignal,
+): Promise<"exited" | "timeout" | "aborted"> {
   if ((await livePid(id)) === null) return "exited";
-  const { promise, resolve } = Promise.withResolvers<"exited" | "timeout">();
+  const { promise, resolve } = Promise.withResolvers<
+    "exited" | "timeout" | "aborted"
+  >();
   const cancelTimer = armAwakeDeadline(timeoutMs, () => resolve("timeout"));
+  const onAbort = () => resolve("aborted");
+  if (signal?.aborted) onAbort();
+  signal?.addEventListener("abort", onAbort, { once: true });
   const release = await acquireDirWatch({
     dir: ownAgentPidsDir(),
     scope: "children",
@@ -401,6 +409,7 @@ export async function awaitAgentExit(
     return await promise;
   } finally {
     cancelTimer();
+    signal?.removeEventListener("abort", onAbort);
     release();
   }
 }

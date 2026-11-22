@@ -38,6 +38,7 @@ import {
   waitForProjection,
 } from "./consumer";
 import { agentEventsExist } from "./paths";
+import type { AgentProjection } from "../../server/internal/reducer";
 import {
   ProjectionTimeoutError,
   ProjectionWaitAbortedError,
@@ -499,6 +500,56 @@ async function waitForCliInitialize(
 }
 
 /**
+ * The interrupted turn's `result` applied — or the agent gone first: an agent
+ * that dies after the interrupt (2026-11-22: conv-1795388713-fqba21 crashed on
+ * the interrupt's stream frames) never writes a result, and waiting out
+ * {@link INTERRUPT_SETTLE_MS} held the conversation's lifecycle lock for 30 s —
+ * the Stop failed, and a Rewind clicked meanwhile queued behind it for 25 s.
+ * Gone, the projection is read as every line it wrote is applied: what Stop
+ * decides from it (did the turn get a reply, which prompt to take back) is as
+ * true of a dead agent as of one at rest.
+ */
+async function interruptSettled(
+  id: string,
+  interruptedAt: number,
+): Promise<AgentProjection> {
+  const stop = new AbortController();
+  // Its outcome is always held, so the rejection the abort below causes when
+  // the exit wins is consumed here, never unhandled.
+  const settled = waitForProjection(
+    id,
+    (s) => s.cursorSeq > interruptedAt && !s.working,
+    INTERRUPT_SETTLE_MS,
+    "the interrupted turn's result",
+    stop.signal,
+  ).then(
+    (s) => ({ kind: "settled" as const, s }),
+    (err: unknown) => ({ kind: "failed" as const, err }),
+  );
+  let first;
+  try {
+    first = await Promise.race([
+      settled,
+      awaitAgentExit(id, INTERRUPT_SETTLE_MS, stop.signal).then((r) => ({
+        kind: r,
+      })),
+    ]);
+    // The exit watch's own bound ran out: the projection's bound, as long,
+    // decides — it fails with the timeout, as before.
+    if (first.kind === "timeout" || first.kind === "aborted")
+      first = await settled;
+  } finally {
+    stop.abort();
+  }
+  if (first.kind === "settled") return first.s;
+  if (first.kind === "failed") throw first.err;
+  await catchUpNow(id);
+  const row = await currentAgentRow(id);
+  if (!row) throw new Error(`SDK agent ${id}: no agent row after its exit`);
+  return row;
+}
+
+/**
  * A running agent keeps the account it started on until its process restarts
  * (the launch picks the account). So before a turn reaches an idle agent,
  * restart it on its session's end when a launch now would pick another
@@ -628,12 +679,7 @@ export const sdkRuntime: ConversationRuntime = {
     if (!before?.working) return { returnedPromptUuid: null };
     const interruptedAt = before.cursorSeq;
     await commandAgent(id, { type: "interrupt" }, UnknownReplySchema);
-    const settled = await waitForProjection(
-      id,
-      (s) => s.cursorSeq > interruptedAt && !s.working,
-      INTERRUPT_SETTLE_MS,
-      "the interrupted turn's result",
-    );
+    const settled = await interruptSettled(id, interruptedAt);
     // A turn the agent has begun answering (an assistant message or a tool result) stays.
     if (settled.turnReplied || !settled.lastPromptUuid) {
       return { returnedPromptUuid: null };

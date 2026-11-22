@@ -140,7 +140,7 @@ export function createInProcessQueue(
 
   // Writes to the store, in order per row (and per schedule), each carrying
   // the row's state when it was asked for; `stop()` waits for those in flight.
-  const writeLane = createKeyedMutex();
+  const writeLane = createKeyedMutex("jobs.in-process-write");
   const writing = new Set<Promise<void>>();
   const persist = (key: string, write: () => Promise<void>): Promise<void> => {
     const done = writeLane.run(key, write);

@@ -95,7 +95,7 @@ export function createMemoryDataFiles(opts?: {
   const trees = new Map<string, Tree>();
   const subscribers = new Map<string, Set<(paths: RelPath[]) => void>>();
   const pending = new Map<string, Set<RelPath>>();
-  const locks = createKeyedMutex();
+  const locks = createKeyedMutex("data-files.memory");
   const stores = new Map<string, FileRootStore>();
   let clock = 0;
   const now = (): number => (clock = Math.max(Date.now(), clock + 1));

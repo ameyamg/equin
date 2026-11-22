@@ -74,7 +74,7 @@ export class TranscriptLines {
   private builder: JsonlEventBuilder | null = null;
   private builtTo = 0;
   private version = 0;
-  private readonly lock = createKeyedMutex();
+  private readonly lock = createKeyedMutex("transcript-lines");
 
   constructor(private readonly readImage: TranscriptImageReader) {}
 

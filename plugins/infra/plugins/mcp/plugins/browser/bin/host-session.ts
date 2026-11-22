@@ -175,7 +175,7 @@ const callsInFlight = new Map<string, number>();
  * in progress would skip the tab the freeze then marks frozen, and the call
  * would act on a page that runs nothing.
  */
-const lifecycle = createKeyedMutex();
+const lifecycle = createKeyedMutex("mcp-browser.lifecycle");
 
 /** Wired by the entry: publish the status file, exit when idle. */
 let onChange: () => void = () => {};

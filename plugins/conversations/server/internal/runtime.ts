@@ -231,7 +231,7 @@ const registry = new Map<string, ConversationRuntime>();
 // own methods never call each other through the registry, so a lifecycle op is
 // never entered from inside another (the mutex is not reentrant); and nothing
 // under it takes the terminal, so the order is always terminal → lifecycle.
-const agentLifecycles = createKeyedMutex();
+const agentLifecycles = createKeyedMutex("conversations.agent-lifecycle");
 
 export function serializeLifecycle(
   runtime: ConversationRuntime,
@@ -286,7 +286,7 @@ export const Runtime = {
 // relaunch racing a turn into the old process). In-process is enough: the HTTP
 // handlers and the jobs that send (the held-turn flush, the spawn's launch)
 // run in the same backend process.
-const terminals = createKeyedMutex();
+const terminals = createKeyedMutex("conversations.terminal");
 
 /** Run `fn` as the conversation's only terminal writer. */
 export function withTerminal<T>(id: string, fn: () => Promise<T>): Promise<T> {

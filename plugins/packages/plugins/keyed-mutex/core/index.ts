@@ -1,2 +1,5 @@
-export { createKeyedMutex } from "./internal/keyed-mutex";
-export type { KeyedMutex } from "./internal/keyed-mutex";
+export {
+  createKeyedMutex,
+  installKeyedMutexWaitMeter,
+} from "./internal/keyed-mutex";
+export type { KeyedMutex, KeyedMutexWaitMeter } from "./internal/keyed-mutex";

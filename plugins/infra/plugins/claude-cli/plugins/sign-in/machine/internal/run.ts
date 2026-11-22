@@ -141,7 +141,7 @@ async function readProgressNow(run: Run): Promise<void> {
 
 // Reads of one run's progress are serialized, so a slow read never publishes
 // over a newer one.
-const progressMutex = createKeyedMutex();
+const progressMutex = createKeyedMutex("claude-sign-in.progress");
 
 /** Re-read a run's progress (from a watch: nothing awaits it). */
 function readProgress(run: Run): void {

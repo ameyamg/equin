@@ -106,7 +106,7 @@ describe("read admission — a slot covers only a read's own DB / fs uses", () =
   });
 
   test("six reads waiting on a keyed mutex hold no slot", async () => {
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const holder = deferred();
     // The key's holder is busy (on anything); every read queues on the key.
     const held = mutex.run("conv", () => holder.promise);

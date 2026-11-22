@@ -18,7 +18,7 @@ export const LATCH_WINDOW_MS = 3_600_000;
 export const MAX_TRIPS_PER_WINDOW = 3;
 
 /** Serializes the latch's read-modify-write: two runners can die at once. */
-const latchMutex = createKeyedMutex();
+const latchMutex = createKeyedMutex("jobs.exit-latch");
 
 function latchFile(): AppPath {
   return jobsStateDir.file(`${runtimeNamespace()}.json`);

@@ -53,7 +53,7 @@ import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watche
 
 // One derivation at a time per report: a regression and a deploy stamp racing
 // on one row would otherwise each derive from what the other has not written.
-const perReport = createKeyedMutex();
+const perReport = createKeyedMutex("reports.fix-ledger");
 
 /**
  * Derive report `reportId`'s fix state from its newest ledger row and write

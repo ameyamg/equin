@@ -23,7 +23,7 @@ export type HeldLock = FileHandle;
 // Every momentary take — a probe, and an attempt from open to its verdict — is
 // serialized per lock path, so an in-process attempt never observes a probe.
 // A lock actually TAKEN outlives its section, and is rightly seen as held.
-const attemptMutex = createKeyedMutex();
+const attemptMutex = createKeyedMutex("deps.attempt");
 
 /** Take the lock without waiting: its held descriptor, or `null` when another holds it. */
 export async function tryLock(path: string): Promise<HeldLock | null> {

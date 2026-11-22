@@ -144,7 +144,7 @@ export function createStatusWriter(
   let reclaimed = false;
   // Writes land in call order, one at a time: they share one temp file, and the
   // last status written must be the one the rename leaves behind.
-  const mutex = createKeyedMutex();
+  const mutex = createKeyedMutex("sentinel.status-file");
   return (status) => mutex.run("status", () => write(status));
   async function write(status: SentinelStatus): Promise<void> {
     await mkdir(dir, { recursive: true });

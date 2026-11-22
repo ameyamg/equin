@@ -67,7 +67,7 @@ async function writeClaudeAccounts(state: ClaudeAccounts): Promise<void> {
 // Every change is read-modify-write of one file: serialized, so two callers
 // (the endpoints, an agent launch switching account) never interleave and lose
 // one another's change.
-const accountsMutex = createKeyedMutex();
+const accountsMutex = createKeyedMutex("claude-accounts.store");
 const changeAccounts = <T>(fn: () => Promise<T>): Promise<T> =>
   accountsMutex.run(ACCOUNTS_FILE, fn);
 

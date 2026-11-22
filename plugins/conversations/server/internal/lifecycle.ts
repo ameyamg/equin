@@ -57,11 +57,18 @@ import type {
   Conversation,
   ConversationKind,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   attemptIdKind,
   conversationIdKind,
 } from "@plugins/tasks/plugins/task-ids/core";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInRootContext,
+  runTracked,
+} from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   DEFAULT_WORKSPACE,
   type WorkspaceSpec,
@@ -810,16 +817,51 @@ async function preflightResume(
 // Re-runs `preflightResume` as the invariant guard rather than trusting callers:
 // every statement below is destructive (kills the pane, rewrites status), so the
 // check must sit at the mutation, not one frame above it.
-async function respawnResume(
+async function respawnResume(row: Conversation): Promise<void> {
+  const { created } = await beginRespawnResume(row);
+  await created;
+}
+
+/** How a {@link beginRespawnResume}'s create came out — always held, never an unhandled rejection. */
+type CreateOutcome = { ok: true } | { ok: false; error: unknown };
+
+/**
+ * {@link respawnResume} in two halves: resolves once the old agent is stopped
+ * and the row marked coming up (`starting` / `resumingSince`, so every turn
+ * sent from then on is held for the new agent), with `created` — the new
+ * agent's start, still running — settling once it is up (or rejecting, the row
+ * already put back). The inline-launch hold covers both halves.
+ *
+ * The split is what lets a click not wait for the agent's start (a process,
+ * its Claude Code's initialize: 1–5 s, more under load): Rewind answers after
+ * the first half. The old agent must be gone BEFORE the row reads coming up —
+ * a coming-up row whose old agent still answers is taken live by the status
+ * reconciler, and the held turns flushed into the agent the rewind abandons —
+ * so only the create leaves the request.
+ */
+async function beginRespawnResume(
   row: Conversation,
   // A rewind to the first message: nothing is left to resume, so the agent
   // starts a fresh session (a new id the session chain records on launch).
-  { fresh = false }: { fresh?: boolean } = {},
-): Promise<void> {
-  // Held across the status write, the create and its failure write: the
-  // status sweep's "still coming" for this row (`inline-launch.ts`).
-  return withInlineLaunch(row.id, async () => {
-    const workspace = await workspaceOf(row);
+  {
+    fresh = false,
+    runCreate = (create) => create(),
+  }: {
+    fresh?: boolean;
+    /**
+     * How the create half runs — a caller that answers before it settles
+     * runs it as its own background entry, so its work is not charged to a
+     * request already answered.
+     */
+    runCreate?: (create: () => Promise<void>) => Promise<void>;
+  } = {},
+): Promise<{ created: Promise<void> }> {
+  let workspace!: WorkspaceAt;
+  let keepStatus = false;
+  const runtime = Runtime.get(row.runtime);
+
+  async function prepareRespawn(): Promise<void> {
+    workspace = await workspaceOf(row);
     const preflight = await preflightResume(row, workspace);
     if (preflight.kind === "blocked") {
       throw new ResumeBlockedError(preflight.reason, preflight.message);
@@ -840,7 +882,6 @@ async function respawnResume(
     // worktree's fork DB) comes back before the session starts.
     await Workspace.get(workspace.spec.kind).onResume(workspace);
 
-    const runtime = Runtime.get(row.runtime);
     // Clear any stale agent for this conversation before re-spawning.
     await runtime.delete(row.id);
 
@@ -850,14 +891,16 @@ async function respawnResume(
     // process answers, and what the status reconciler clears once it does.
     // Any other row is reset to `starting` so the reconciler tracks the new
     // session — without this, "done" rows are skipped and stay stuck as done.
-    const keepStatus = row.status === "waiting";
+    keepStatus = row.status === "waiting";
     await updateConversation(
       row.id,
       keepStatus
         ? { resumingSince: new Date() }
         : { status: "starting", endedAt: null },
     );
+  }
 
+  async function create(): Promise<void> {
     try {
       await runtime.create(
         row.id,
@@ -904,7 +947,37 @@ async function respawnResume(
     // again. The flip out of `starting` / `resumingSince` enqueues the flush
     // too; dedup folds the two.
     await deliverHeldTurnsJob.enqueue({ conversationId: row.id });
-  });
+  }
+
+  const prepared = Promise.withResolvers<void>();
+  // Held across the status write, the create and its failure write: the
+  // status sweep's "still coming" for this row (`inline-launch.ts`).
+  const outcome: Promise<CreateOutcome> = withInlineLaunch(row.id, async () => {
+    try {
+      await prepareRespawn();
+    } catch (err) {
+      prepared.reject(err);
+      throw err;
+    }
+    prepared.resolve();
+    await runCreate(create);
+  }).then(
+    (): CreateOutcome => ({ ok: true }),
+    (error: unknown): CreateOutcome => ({ ok: false, error }),
+  );
+  try {
+    await prepared.promise;
+  } catch (err) {
+    // Refused or failed before the create: nothing is left running, and the
+    // hold is released once `outcome` settles.
+    await outcome;
+    throw err;
+  }
+  return {
+    created: outcome.then((o) => {
+      if (!o.ok) throw o.error;
+    }),
+  };
 }
 
 // The status a row whose resume failed goes back to: the one it had, except a
@@ -931,7 +1004,7 @@ export async function resumeConversation(id: string): Promise<Conversation> {
 // sent turn) would both see `done` and the second respawn would kill the
 // first's agent mid-start. In-process is enough — a conversation is resumed
 // only by the backend that runs it.
-const stoppedResumes = createKeyedMutex();
+const stoppedResumes = createKeyedMutex("conversations.stopped-resume");
 
 /**
  * Resume a conversation if it is stopped (`gone` / `done`) — the Resume
@@ -1181,14 +1254,49 @@ export async function rewindConversationAt(
   }
   await returnCutTurns(id, located.cut, userMessageUuid);
 
-  // Kills the pane — a running turn and any background work with it — and
-  // resumes the same session id on the shortened file, or starts afresh.
-  await respawnResume(row, { fresh: startsOver });
+  // Stops the agent — a running turn and any background work with it — and
+  // marks the row coming up; the new agent, resuming the same session id on
+  // the shortened file (or starting afresh), starts after the answer. The
+  // click never waits for a process start and its Claude Code's initialize
+  // (2026-11-19: 4.8 s of a 5.5 s rewind): every turn sent meanwhile is held
+  // for the new agent, and the conversation shows it coming up.
+  const { created } = await beginRespawnResume(row, {
+    fresh: startsOver,
+    runCreate: (create) =>
+      runInRootContext(() =>
+        runTracked("conversations.rewind-relaunch", create),
+      ),
+  });
+  // Handled from here on, before any other await: a start that fails puts the
+  // row back itself (hibernated on the next sweep, resumed by the next sent
+  // turn); the user is told on the conversation, and the rejection, left
+  // unhandled, is filed as a crash report with the agent's own output.
+  const settled = created.then(
+    async () => {
+      // Rewinding a closed conversation re-opens it, exactly like the Resume
+      // button — once its agent is up, as the Resume button's does.
+      if (row.status === "gone" || row.status === "done") {
+        await updateTask(row.taskId, { drop: false, hold: false });
+      }
+    },
+    async (err: unknown) => {
+      await recordNotification({
+        type: "conversation",
+        category: "conversations",
+        title: "Couldn't restart the agent after the rewind",
+        description: "",
+        subjectId: id,
+        subjectName: conversationName(row),
+        detail: err instanceof Error ? err.message : String(err),
+        variant: "error",
+        linkTo: conversationRoute.link(agentManagerApp, { convId: id }),
+        dedupeKey: `conversation-rewind-failed:${id}`,
+      });
+      throw err;
+    },
+  );
+  void runTracked("conversations.rewind-relaunch-settled", () => settled);
   await setConversationHibernated(id, null);
-  // Rewinding a closed conversation re-opens it, exactly like the Resume button.
-  if (row.status === "gone" || row.status === "done") {
-    await updateTask(row.taskId, { drop: false, hold: false });
-  }
 
   return { ok: true, rewindText: located.cut.messageText };
 }

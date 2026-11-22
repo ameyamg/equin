@@ -24,7 +24,7 @@ import {
 // a catch-up of an agent it no longer follows — so what is held is bounded by
 // the agents running (and launching), not by every conversation caught up.
 
-const leases = createKeyedMutex();
+const leases = createKeyedMutex("runtime-sdk.agent-row");
 const held = new Map<string, AgentRow>();
 
 /** The agent's row under its lease: read it, write it, or stop holding it. */

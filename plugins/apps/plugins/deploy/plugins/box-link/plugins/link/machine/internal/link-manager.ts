@@ -72,7 +72,7 @@ const servers = new Map<string, ServerEntry>();
 /** Servers a Retry asked to reopen whatever their target says. */
 const forceReopen = new Set<string>();
 const graceTimers = new Map<string, { until: number; cancel: () => void }>();
-const persistLock = createKeyedMutex();
+const persistLock = createKeyedMutex("box-link.persist");
 let kept = new Map<string, KeptBoxLink>();
 let stops: (() => void)[] = [];
 let started = false;

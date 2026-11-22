@@ -29,7 +29,7 @@ type Settled = Extract<JobAttemptEvent, { phase: "settled" }>;
 // One queue row's events in the order the queue announced them: a settle
 // that follows its attempt's failure by milliseconds (a last attempt, then
 // its death) must find that attempt's link already written.
-const perRow = createKeyedMutex();
+const perRow = createKeyedMutex("jobs.attempt-audit");
 
 /**
  * The parent's attempt seam into the reports engine. A `sinkHandlers` entry;

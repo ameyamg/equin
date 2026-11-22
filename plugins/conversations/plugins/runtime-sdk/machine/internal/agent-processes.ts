@@ -199,7 +199,7 @@ const byNamespace = new Map<string, PidFileAgent[]>();
 /** What the next count must re-read: some namespaces, or everything. */
 let dirty: Set<string> | "all" = "all";
 /** One count at a time, so an older read never lands after a newer one. */
-const counting = createKeyedMutex();
+const counting = createKeyedMutex("runtime-sdk.agent-processes");
 
 function markDirty(namespace: string | "all"): void {
   if (namespace === "all") dirty = "all";

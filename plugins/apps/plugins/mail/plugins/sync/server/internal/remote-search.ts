@@ -58,7 +58,7 @@ interface SearchAnswer {
 }
 
 const answers = new Map<string, SearchAnswer>();
-const growing = createKeyedMutex();
+const growing = createKeyedMutex("mail.remote-search");
 
 function questionKey(q: MailSearchQuery): string {
   return JSON.stringify([q.accountId, q.q, q.round]);

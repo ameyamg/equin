@@ -186,7 +186,7 @@ export function createJobLocks({
   // The cost: one statement that gets no reply delays every other job's lock or
   // unlock on the session until its deadline (60 s) closes the connection —
   // which then loses the session anyway (see above).
-  const statements = createKeyedMutex();
+  const statements = createKeyedMutex("jobs.job-lock");
 
   const onSession = <T>(
     session: LockSession,

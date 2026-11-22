@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createKeyedMutex } from "./keyed-mutex";
+import { createKeyedMutex, installKeyedMutexWaitMeter } from "./keyed-mutex";
 
 function gate(): { promise: Promise<void>; open: () => void } {
   let open!: () => void;
@@ -13,7 +13,7 @@ const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
 describe("createKeyedMutex", () => {
   test("runs one key's calls one at a time, in arrival order", async () => {
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const log: string[] = [];
     const first = gate();
     const a = mutex.run("k", async () => {
@@ -38,7 +38,7 @@ describe("createKeyedMutex", () => {
   });
 
   test("different keys run concurrently", async () => {
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const held = gate();
     let otherRan = false;
     const a = mutex.run("a", () => held.promise);
@@ -51,7 +51,7 @@ describe("createKeyedMutex", () => {
   });
 
   test("a rejection reaches its own caller only and does not stall the queue", async () => {
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const failed = mutex.run("k", async () => {
       throw new Error("boom");
     });
@@ -67,7 +67,7 @@ describe("createKeyedMutex", () => {
   });
 
   test("an idle key holds no entry", async () => {
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const held = gate();
     const a = mutex.run("k", () => held.promise);
     const b = mutex.run("k", async () => undefined);
@@ -79,7 +79,7 @@ describe("createKeyedMutex", () => {
   });
 
   test("a waiter aborted in the queue rejects at once, never runs, and keeps the order", async () => {
-    const mutex = createKeyedMutex();
+    const mutex = createKeyedMutex("test");
     const log: string[] = [];
     const first = gate();
     const a = mutex.run("k", async () => {
@@ -115,5 +115,33 @@ describe("createKeyedMutex", () => {
     expect(log).toEqual(["a:start", "a:end", "c:start"]);
     await tick();
     expect(mutex.size).toBe(0);
+  });
+
+  test("a queued caller's wait is metered as mutex:<name>, an uncontended run's is not", async () => {
+    const log: string[] = [];
+    installKeyedMutexWaitMeter((layer) => {
+      log.push(`begin ${layer}`);
+      return () => log.push(`end ${layer}`);
+    });
+    try {
+      const mutex = createKeyedMutex("agent-lifecycle");
+      await mutex.run("k", async () => {});
+      expect(log).toEqual([]);
+      const first = gate();
+      const a = mutex.run("k", () => first.promise);
+      const b = mutex.run("k", async () => {
+        log.push("b runs");
+      });
+      expect(log).toEqual(["begin mutex:agent-lifecycle"]);
+      first.open();
+      await Promise.all([a, b]);
+      expect(log).toEqual([
+        "begin mutex:agent-lifecycle",
+        "end mutex:agent-lifecycle",
+        "b runs",
+      ]);
+    } finally {
+      installKeyedMutexWaitMeter(null);
+    }
   });
 });

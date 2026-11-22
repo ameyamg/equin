@@ -277,8 +277,19 @@ function logMessage(msg: SDKMessage): void {
 // message lands in the transcript anyway. Kept in memory so a subscriber
 // joining mid-message starts from what is already written.
 let partial: PartialMessage | null = null;
+// Cleared (interrupted, failed) and not yet followed by a new message: the SDK
+// still streams the rest of the cleared message — an interrupt lands mid-block,
+// and that block's `content_block_stop` arrives after the `clear`. Those frames
+// belong to a message nobody will see, so they are dropped here, before the
+// fold: folded, a `close` with no message threw and killed the agent on every
+// Stop mid-block (2026-11-22, conv-1795388713-fqba21 — the Stop then waited
+// 30 s for a result the dead agent never wrote, and a Rewind queued behind it).
+let cleared = false;
 const subscribers = new Set<Socket>();
 function pushFrame(frame: PartialFrame): void {
+  if (frame.type === "start") cleared = false;
+  else if (cleared) return;
+  if (frame.type === "clear") cleared = true;
   partial = applyPartialFrame(partial, frame);
   const line = JSON.stringify({ frame }) + "\n";
   for (const conn of subscribers) conn.write(line);

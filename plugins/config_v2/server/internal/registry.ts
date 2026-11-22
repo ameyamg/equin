@@ -122,7 +122,7 @@ function editEntry(
 // before a write could replace the cache with the pre-write document after
 // the write's own refresh. Keyed per document; never re-entered (a locked
 // section calls the unlocked helpers, e.g. `refreshEntryNow`).
-const documentLock = createKeyedMutex();
+const documentLock = createKeyedMutex("config.document");
 
 /** Run `fn` holding the document's lock (`storePath`, `scopeId`). */
 export function withDocument<T>(

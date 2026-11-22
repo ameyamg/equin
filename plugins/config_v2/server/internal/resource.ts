@@ -389,7 +389,7 @@ const conflictMemo = new Map<string, DerivedTrioState>();
 
 // Serializes each "last published" push path per descriptor — see
 // refreshScopeMembers.
-const publishLock = createKeyedMutex();
+const publishLock = createKeyedMutex("config.publish");
 
 // THE conflict derivation. A descriptor's conflict state is a pure function of
 // its file trio plus the descriptor itself (code — constant for the process), so

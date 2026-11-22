@@ -68,7 +68,7 @@ interface FileLines {
  */
 const held = new Map<string, Map<string, FileLines>>();
 const HELD_MAX = 16;
-const reads = createKeyedMutex();
+const reads = createKeyedMutex("usage.cost-by-hour");
 
 function filesOf(conversationId: string): Map<string, FileLines> {
   const files = held.get(conversationId) ?? new Map<string, FileLines>();

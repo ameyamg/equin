@@ -18,7 +18,7 @@ import { withFailedJob, type RunFacts } from "./events";
 // through the same upserts, so the two can never store a run differently.
 
 /** Serializes the read-merge-write of one run's failed jobs. */
-const runLocks = createKeyedMutex();
+const runLocks = createKeyedMutex("github-events.ingest");
 
 /**
  * Store what GitHub says of a run attempt. A delivery older than the row

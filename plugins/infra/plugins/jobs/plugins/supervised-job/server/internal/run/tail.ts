@@ -98,7 +98,7 @@ export function createTranscriptTail(opts: {
   let partial = "";
   // One pump (or the final drain) at a time: each reads from `offset` and moves
   // it, so two in flight would read the same bytes twice.
-  const serial = createKeyedMutex();
+  const serial = createKeyedMutex("supervised-job.tail");
 
   /**
    * Publish every COMPLETE line in `text`, holding the rest back.

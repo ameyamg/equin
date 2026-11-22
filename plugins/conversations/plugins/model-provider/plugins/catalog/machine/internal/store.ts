@@ -27,7 +27,7 @@ let memory:
   null;
 
 /** One read at a time, so an older read never lands after a newer one. */
-const reading = createKeyedMutex();
+const reading = createKeyedMutex("model-catalog.read");
 
 function reload(): Promise<void> {
   return reading.run("catalog", async () => {

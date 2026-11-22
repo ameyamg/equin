@@ -66,7 +66,7 @@ function entryOf(name: string, st: Stats): FileEntry | null {
 // One in-process queue per lock file, shared by every tree in the process:
 // waiters inside this process line up here, so only contention with ANOTHER
 // process pays for a `flock-wait` child.
-const inProcess = createKeyedMutex();
+const inProcess = createKeyedMutex("data-files.disk-tree");
 
 /**
  * Run `fn` holding the exclusive flock on `lockPath` (created if absent, never

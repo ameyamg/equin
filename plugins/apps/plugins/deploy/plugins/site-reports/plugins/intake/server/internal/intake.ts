@@ -114,7 +114,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
   let drops = new Map<SiteReportDropReason, number>();
   let armed = false;
   // Flushes run one at a time, so the row cap's count is read fresh by each.
-  const flushLock = createKeyedMutex();
+  const flushLock = createKeyedMutex("site-reports.intake-flush");
 
   function drop(reason: SiteReportDropReason, n = 1): void {
     if (n <= 0) return;

@@ -127,7 +127,7 @@ const sourced = new Set<SpendSource>();
  * Serializes every pass over one session — this path's, and the conversation
  * path's adoption barrier (`releaseSessions`).
  */
-const sessionMutex = createKeyedMutex();
+const sessionMutex = createKeyedMutex("usage.session-sync");
 
 /**
  * The ids of `sessionIds` that are equin's: recorded in any conversation's

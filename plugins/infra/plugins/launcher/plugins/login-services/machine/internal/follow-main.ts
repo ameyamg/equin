@@ -24,7 +24,7 @@ import { declaredLoginServices } from "./registry";
 
 // One reconcile per service at a time: a build settling while the boot
 // reconcile of the same service runs must not reload it twice.
-const serviceMutex = createKeyedMutex();
+const serviceMutex = createKeyedMutex("login-services.follow-main");
 
 const followLog = defineLogSink({
   id: "login-services",
