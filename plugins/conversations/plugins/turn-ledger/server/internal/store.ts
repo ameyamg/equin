@@ -28,9 +28,21 @@ export interface NewTurn {
   text: string;
   /** What reaches the CLI — for an `event`, its raw body (the accept wraps it). */
   typedText: string;
+  /**
+   * Run on the transaction that inserts the row, and only when it does: a
+   * sender records "this went out as that turn" atomically with the ledger's
+   * own record of it, instead of asking the ledger later — settled rows are
+   * swept after a week, so "no row" never means "never sent". A throw rolls
+   * the insert back (the turn is not recorded, nothing is typed).
+   */
+  onRecorded?: (tx: Tx) => Promise<void>;
 }
 
-type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
+/** The transaction a ledger write runs on. */
+export type LedgerTx = Parameters<
+  Parameters<NodePgDatabase["transaction"]>[0]
+>[0];
+type Tx = LedgerTx;
 
 /** What the accept decided for one turn. */
 export type AcceptOutcome =
@@ -124,7 +136,10 @@ export async function acceptTurn(
       })
       .onConflictDoNothing({ target: _conversationTurns.id })
       .returning();
-    if (inserted) return { kind: held ? "held" : "send", turn: inserted };
+    if (inserted) {
+      await turn.onRecorded?.(tx);
+      return { kind: held ? "held" : "send", turn: inserted };
+    }
     const existing = await existingTurn(tx, conversationId, turn.id);
     if (!existing) throw new Error(`turn ${turn.id} conflicted but is gone`);
     return { kind: "duplicate", turn: existing };

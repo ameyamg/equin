@@ -19,7 +19,7 @@ import {
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import type { TurnId } from "@plugins/conversations/plugins/turn-ledger/core";
 import type { TurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
-import type { WatchEvent, WatchId } from "../../core";
+import { watchEventIdKind, type WatchEvent, type WatchId } from "../../core";
 import {
   claimDelivery,
   sendClaimedTurn,
@@ -89,18 +89,22 @@ async function inbox(tx: Tx, watchId: WatchId) {
   return tx.select().from(_watchInbox).where(eq(_watchInbox.watchId, watchId));
 }
 
-/** A fake agent: records every submitted turn; its readiness per
- * conversation (ready unless set). */
+/** A fake agent: records every submitted turn (its ledger — a turn id it
+ * holds is a duplicate); its readiness per conversation (ready unless set).
+ * `onRecorded` runs on the scenario's transaction: `deliver` binds it. */
 function fakePorts(state: Map<string, TurnReadiness> = new Map()) {
   const turns: { conversationId: string; turnId: TurnId; text: string }[] = [];
   const batches: WatchEvent[][] = [];
   const ports: DeliverPorts = {
     readiness: async (id) => state.get(id) ?? { kind: "ready" },
-    submit: async (conversationId, turnId, text) => {
+    submit: async (conversationId, turnId, text, onRecorded) => {
+      if (turns.some((t) => t.turnId === turnId)) return { kind: "duplicate" };
+      // The hook first, as on the ledger's transaction: a throw records nothing.
+      await onRecorded(NO_TX);
       turns.push({ conversationId, turnId, text });
+      return { kind: "recorded" };
     },
     digest: async () => "DIGEST",
-    turnRecorded: async (turnId) => turns.some((t) => t.turnId === turnId),
     handler: (id) =>
       id === "test.handler"
         ? {
@@ -114,15 +118,32 @@ function fakePorts(state: Map<string, TurnReadiness> = new Map()) {
   return { ports, turns, batches, state };
 }
 
-/** The job's two steps on the scenario's one transaction: claim, then send
- * a conversation turn. */
+/** Stands for the ledger's transaction until {@link onTx} binds the scenario's. */
+const NO_TX = null as unknown as DbExecutor;
+
+/** `ports` whose recording hook runs in a savepoint of `tx` — standing in for
+ * the ledger's transaction: a throw rolls back what the hook wrote. */
+function onTx(tx: Tx, ports: DeliverPorts): DeliverPorts {
+  return {
+    ...ports,
+    submit: (conversationId, turnId, text, onRecorded) =>
+      ports.submit(conversationId, turnId, text, () =>
+        tx.transaction((sp) => onRecorded(sp)),
+      ),
+  };
+}
+
+/** The job's two steps on the scenario's one transaction: read the batch,
+ * then send a conversation turn. */
 async function deliver(
   tx: Tx,
   watchId: WatchId,
   ports: DeliverPorts,
-): Promise<DeliverOutcome> {
+): Promise<DeliverOutcome | { kind: "changed" }> {
   const out = await claimDelivery(tx, watchId, ports);
-  return out.kind === "claimed" ? sendClaimedTurn(tx, out, ports) : out;
+  return out.kind === "claimed"
+    ? sendClaimedTurn(tx, out, onTx(tx, ports))
+    : out;
 }
 
 describe("routing", () => {
@@ -387,6 +408,44 @@ describe("quiet while an agent is starting", () => {
   });
 });
 
+describe("a quiet event waiting while the flag already reads busy", () => {
+  test("is withdrawn at delivery: the re-check does not depend on seeing the flip", async () => {
+    // 2026-11-22: replayed `quiet` rows reached three supervisors whose
+    // subtrees had agents working — the flag was already false, so the
+    // delivery re-check (which withdrew only on a flip) let them through.
+    const fake = fakePorts();
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const child = await task(tx, root);
+      const watcherConv = await conversation(tx, root, "waiting");
+      await conversation(tx, child, "working");
+      const w = await watchTask(
+        root,
+        { kind: "conversation", conversationId: watcherConv },
+        tx,
+      );
+      // A quiet row waits (re-routed from a watch below, or recorded before
+      // a flip no check saw) while the flag says busy.
+      await tx.insert(_watchInbox).values({
+        id: watchEventIdKind.mint(),
+        watchId: w.id,
+        kind: "quiet",
+        taskId: root,
+        summary: "Nothing runs in this subtree any more",
+      });
+      await routeEvents(tx, [{ kind: "flagged", taskId: child, summary: "x" }]);
+      const flag = w.quiet;
+      const out = await deliver(tx, w.id, fake.ports);
+      const kinds = (await inbox(tx, w.id)).map((r) => r.kind);
+      return { flag, out, kinds };
+    });
+    expect(got.flag).toBe(false);
+    expect(got.out).toMatchObject({ kind: "delivered", count: 1 });
+    expect(got.kinds).toEqual(["flagged"]);
+    expect(fake.turns[0]?.text).not.toContain("- quiet · ");
+  });
+});
+
 describe("delivery", () => {
   test("N rows become ONE turn; a retry is the same turn; nothing left after", async () => {
     const fake = fakePorts();
@@ -443,7 +502,7 @@ describe("delivery", () => {
     expect(got.sentOnClaim).toBe(0);
   });
 
-  test("a failed send gives the rows back; a claim never sent is re-claimed", async () => {
+  test("a send that records no turn leaves the rows undelivered; nothing is written before the turn is recorded", async () => {
     const fake = fakePorts();
     const got = await worktreeDbScenario(async (tx) => {
       const root = await task(tx, null);
@@ -466,24 +525,99 @@ describe("delivery", () => {
       } catch (err) {
         error = (err as Error).message;
       }
-      const afterFailure = (await inbox(tx, w.id)).filter(
-        (r) => r.deliveredInTurn === null,
-      ).length;
-      // The backend dies between the claim and the send.
+      const undeliveredCount = async () =>
+        (await inbox(tx, w.id)).filter((r) => r.deliveredInTurn === null)
+          .length;
+      const afterFailure = await undeliveredCount();
+      // The backend dies between the read and the send.
       await claimDelivery(tx, w.id, fake.ports);
-      const lost = (await inbox(tx, w.id)).filter(
-        (r) => r.deliveredInTurn === null,
-      ).length;
+      const afterRead = await undeliveredCount();
       const recovered = await deliver(tx, w.id, fake.ports);
       const again = await deliver(tx, w.id, fake.ports);
-      return { error, afterFailure, lost, recovered, again };
+      return { error, afterFailure, afterRead, recovered, again };
     });
     expect(got.error).toBe("agent gone");
     expect(got.afterFailure).toBe(1);
-    expect(got.lost).toBe(0);
+    expect(got.afterRead).toBe(1);
     expect(got.recovered.kind).toBe("delivered");
     expect(got.again).toEqual({ kind: "empty" });
     expect(fake.turns).toHaveLength(1);
+  });
+
+  test("a delivered event is never delivered again, even once its turn is gone from the ledger", async () => {
+    // 2026-11-21/22: the ledger sweeps settled turns after 7 days; delivery
+    // read a claimed row whose turn was missing as "never sent" and sent
+    // week-old events again, beside the new one (5 watchers, up to 41 rows).
+    const fake = fakePorts();
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const child = await task(tx, root);
+      const conv = await conversation(tx, root, "waiting");
+      const w = await watchTask(
+        root,
+        { kind: "conversation", conversationId: conv },
+        tx,
+      );
+      await routeEvents(tx, [
+        { kind: "backlog", taskId: child, summary: "old" },
+      ]);
+      const first = await deliver(tx, w.id, fake.ports);
+      // Retention sweeps the turn.
+      fake.turns.length = 0;
+      await routeEvents(tx, [
+        { kind: "settled", taskId: child, summary: "new" },
+      ]);
+      const second = await deliver(tx, w.id, fake.ports);
+      return { first, second };
+    });
+    expect(got.first.kind).toBe("delivered");
+    expect(got.second).toMatchObject({ kind: "delivered", count: 1 });
+    expect(fake.turns).toHaveLength(1);
+    expect(fake.turns[0]?.text).toContain("— new");
+    expect(fake.turns[0]?.text).not.toContain("— old");
+  });
+
+  test("rows changed while the turn was being sent: nothing is recorded, and the next run sends what is left once", async () => {
+    const fake = fakePorts();
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const conv = await conversation(tx, root, "waiting");
+      const w = await watchTask(
+        root,
+        { kind: "conversation", conversationId: conv },
+        tx,
+      );
+      await routeEvents(tx, [
+        { kind: "flagged", taskId: root, summary: "a" },
+        { kind: "reported", taskId: root, summary: "b" },
+      ]);
+      const claim = await claimDelivery(tx, w.id, fake.ports);
+      if (claim.kind !== "claimed") throw new Error(claim.kind);
+      // A second delivery records one of the rows first.
+      const [first] = await inbox(tx, w.id);
+      await tx
+        .update(_watchInbox)
+        .set({ deliveredInTurn: "turn-other" })
+        .where(eq(_watchInbox.id, first!.id));
+      const raced = await sendClaimedTurn(tx, claim, onTx(tx, fake.ports));
+      const recordedOnRace = fake.turns.length;
+      const rest = await deliver(tx, w.id, fake.ports);
+      // Two runs gathered the same rows: the second finds the turn recorded.
+      await routeEvents(tx, [{ kind: "settled", taskId: root, summary: "c" }]);
+      const a = await claimDelivery(tx, w.id, fake.ports);
+      const b = await claimDelivery(tx, w.id, fake.ports);
+      if (a.kind !== "claimed" || b.kind !== "claimed")
+        throw new Error("not claimed");
+      const firstSend = await sendClaimedTurn(tx, a, onTx(tx, fake.ports));
+      const secondSend = await sendClaimedTurn(tx, b, onTx(tx, fake.ports));
+      return { raced, recordedOnRace, rest, firstSend, secondSend };
+    });
+    expect(got.firstSend.kind).toBe("delivered");
+    expect(got.secondSend).toEqual({ kind: "changed" });
+    expect(got.raced).toEqual({ kind: "changed" });
+    expect(got.recordedOnRace).toBe(0);
+    expect(got.rest).toMatchObject({ kind: "delivered", count: 1 });
+    expect(fake.turns).toHaveLength(2);
   });
 
   test("held while the watcher cannot take an automatic turn, claiming nothing", async () => {

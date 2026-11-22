@@ -64,10 +64,10 @@ export const _taskWatches = pgTable(
 );
 
 /**
- * Events routed to a watch and not yet delivered. `delivered_in_turn` is set
- * when a delivery claims the row: the id of the ONE turn (or code batch) that
- * carried it — derived from the claimed rows, so a retried delivery of the
- * same batch is the same turn.
+ * Events routed to a watch. `delivered_in_turn` is the id of the ONE turn (or
+ * code batch) that carried the row — derived from the batch's rows — written
+ * on the transaction that records that turn and never cleared
+ * (`markDelivered`); null until then.
  */
 export const _watchInbox = pgTable(
   "watch_inbox",

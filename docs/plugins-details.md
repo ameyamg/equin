@@ -17728,9 +17728,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 94 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 95 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×29
-      - `conversations/turn-ledger` ×15
+      - `conversations/turn-ledger` ×16
       - `conversations/transcript-watcher` ×8
       - `conversations/conversation-preprompt` ×3
       - `conversations/spawn-failure` ×3
@@ -24602,6 +24602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugins/conversations/plugins/turn-ledger/server/internal/tables.ts`
         - Exports (types):
           - `AcceptOutcome`
+          - `LedgerTx`
           - `NewTurn`
           - `TurnEvent`
           - `TurnRow`

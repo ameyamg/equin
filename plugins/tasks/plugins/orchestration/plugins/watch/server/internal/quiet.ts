@@ -14,8 +14,8 @@ export type QuietOutcome =
 
 /**
  * Re-evaluate whether a watch's subtree is quiet and record a flip. Only a
- * false → true flip raises a `quiet` event (once per transition). A true →
- * false flip withdraws that event while it is still undelivered: `quiet` is a
+ * false → true flip raises a `quiet` event (once per transition). Finding it
+ * busy withdraws every undelivered `quiet` event, flip or not: `quiet` is a
  * claim about the present, and a watcher is held (busy, asking the user) for
  * as long as it takes — an agent launched meanwhile (still `starting`) would
  * otherwise be told its subtree is idle. Its settling flips it back and raises
@@ -33,13 +33,11 @@ export async function evaluateQuiet(
     watch.taskId,
     watch.watcherConversationId,
   ));
-  const [flipped] = await exec
-    .update(_taskWatches)
-    .set({ quiet })
-    .where(and(eq(_taskWatches.id, watchId), ne(_taskWatches.quiet, quiet)))
-    .returning({ id: _taskWatches.id });
-  if (!flipped) return "unchanged";
-  if (!quiet) {
+  // Not quiet now: no `quiet` row may wait to be delivered, whatever the
+  // flag said — the flag can already read busy while one waits (a row
+  // re-routed from a watch below, or one recorded before a flip this check
+  // did not see), and only a flip used to withdraw it.
+  if (!quiet)
     await exec
       .delete(_watchInbox)
       .where(
@@ -49,8 +47,13 @@ export async function evaluateQuiet(
           isNull(_watchInbox.deliveredInTurn),
         ),
       );
-    return "became-busy";
-  }
+  const [flipped] = await exec
+    .update(_taskWatches)
+    .set({ quiet })
+    .where(and(eq(_taskWatches.id, watchId), ne(_taskWatches.quiet, quiet)))
+    .returning({ id: _taskWatches.id });
+  if (!flipped) return "unchanged";
+  if (!quiet) return "became-busy";
   await exec.insert(_watchInbox).values({
     id: watchEventIdKind.mint(),
     watchId,

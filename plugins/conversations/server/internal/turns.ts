@@ -16,6 +16,7 @@ import {
   onStatusEvidence,
   returnHeldTurns,
   returnTurnByPromptUuid,
+  type LedgerTx,
   type TurnRow,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import {
@@ -69,6 +70,13 @@ export interface TurnSubmission {
    * body: the ledger types it inside the event envelope itself.
    */
   typedText: string;
+  /**
+   * Run on the transaction that records the turn in the ledger — only when
+   * this call records it (not for a duplicate id, nor a refused `stopped`
+   * turn). A throw rolls the record back and nothing is typed. See
+   * `NewTurn.onRecorded`.
+   */
+  onRecorded?: (tx: LedgerTx) => Promise<void>;
 }
 
 export type SubmitOutcome =
@@ -98,6 +106,7 @@ export async function submitTurn(
     kind: turn.kind,
     text: turn.text,
     typedText: turn.typedText,
+    onRecorded: turn.onRecorded,
   });
   switch (accepted.kind) {
     case "not-found":

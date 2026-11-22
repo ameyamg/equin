@@ -10,7 +10,6 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isActiveStatus, isAgentBusy } from "@plugins/conversations/core";
 import { submitTurn } from "@plugins/conversations/server";
-import { getTurn } from "@plugins/conversations/plugins/turn-ledger/server";
 import { automaticTurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
 import { treeDigest } from "@plugins/tasks/plugins/orchestration/plugins/tree-digest/server";
 import {
@@ -51,27 +50,32 @@ const productionPorts: DeliverPorts = {
   // The watch is no PendingTurn contributor: every pending turn holds it.
   readiness: (conversationId, exec) =>
     automaticTurnReadiness(conversationId, { exec }),
-  async submit(conversationId, turnId, text) {
+  async submit(conversationId, turnId, text, onRecorded) {
+    // Set inside the recording transaction, so it is true only when this call
+    // wrote the ledger row (a duplicate id runs no hook).
+    let recorded = false;
     const out = await submitTurn(conversationId, {
       id: turnId,
       kind: "event",
       text,
       typedText: text,
+      onRecorded: async (tx) => {
+        await onRecorded(tx);
+        recorded = true;
+      },
     });
     if (out.kind === "not-found")
       throw new Error(`event turn: conversation ${conversationId} not found`);
-    // An event never reopens a stopped agent: the failed send unclaims the
-    // rows (sendClaimedTurn), as the send to an absent agent did before.
+    // An event never reopens a stopped agent: nothing was recorded, so the
+    // rows stay undelivered (re-routed once the watch is dead).
     if (out.kind === "stopped")
       throw new Error(
         `event turn: conversation ${conversationId} is ${out.status}`,
       );
+    return { kind: recorded ? "recorded" : "duplicate" };
   },
   async digest(conversationId) {
     return (await treeDigest({ conversationId }))?.text ?? null;
-  },
-  async turnRecorded(turnId, exec) {
-    return (await getTurn(turnId, exec)) !== null;
   },
   handler: watchHandlerById,
 };
@@ -97,7 +101,11 @@ export const watchDeliverJob = defineJob({
       return claim;
     });
     // After the commit, on no transaction: see claimDelivery.
-    if (out.kind === "claimed") await sendClaimedTurn(db, out, productionPorts);
+    if (out.kind !== "claimed") return;
+    const sent = await sendClaimedTurn(db, out, productionPorts);
+    // The rows moved while it was sent (a quiet withdrawn, another delivery
+    // first): deliver what is left now — an empty run if nothing is.
+    if (sent.kind === "changed") await watchDeliverJob.enqueue({ watchId });
   },
 });
 

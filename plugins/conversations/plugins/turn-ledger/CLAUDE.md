@@ -280,6 +280,7 @@ withdrawn).
     - `plugins/conversations/plugins/turn-ledger/server/internal/tables.ts`
   - Exports (types):
     - `AcceptOutcome`
+    - `LedgerTx`
     - `NewTurn`
     - `TurnEvent`
     - `TurnRow`

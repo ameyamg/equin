@@ -48,6 +48,7 @@ import {
   returnTurnByPromptUuid,
   returnTurnsSince,
   type AcceptOutcome,
+  type LedgerTx,
   type NewTurn,
 } from "./store";
 
@@ -194,6 +195,46 @@ describe("acceptTurn", () => {
       caught = err;
     }
     expect(String(caught)).toContain("already belongs to conversation");
+  });
+
+  test("onRecorded runs on the inserting transaction only: not for a duplicate id, nor a refused turn; a throw records nothing", async () => {
+    const id = await seedConversation("waiting");
+    const ran: string[] = [];
+    const once = {
+      ...turn("hello"),
+      onRecorded: async (tx: LedgerTx) => {
+        const seen = await tx.execute(
+          sql`SELECT count(*)::int AS n FROM conversation_turns WHERE conversation_id = ${id}`,
+        );
+        ran.push(String(seen.rows[0]?.n));
+      },
+    };
+    expect((await acceptTurn(id, once, conn)).kind).toBe("send");
+    expect((await acceptTurn(id, once, conn)).kind).toBe("duplicate");
+    // The hook saw the row it was recording, once.
+    expect(ran).toEqual(["1"]);
+
+    const stopped = await seedConversation("done");
+    expect(
+      (await acceptTurn(stopped, { ...once, id: turnIdKind.mint() }, conn))
+        .kind,
+    ).toBe("stopped");
+    expect(ran).toEqual(["1"]);
+
+    const refused = {
+      ...turn("no"),
+      onRecorded: async () => {
+        throw new Error("batch changed");
+      },
+    };
+    let caught: unknown;
+    try {
+      await acceptTurn(id, refused, conn);
+    } catch (err) {
+      caught = err;
+    }
+    expect(String(caught)).toContain("batch changed");
+    expect(await getTurn(refused.id, conn)).toBeNull();
   });
 
   test("a stopped conversation refuses a turn that does not resume it, writing no row", async () => {

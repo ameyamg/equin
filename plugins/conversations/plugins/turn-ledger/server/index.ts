@@ -25,7 +25,12 @@ export {
   returnTurnsSince,
 } from "./internal/store";
 export { onStatusEvidence } from "./internal/status-evidence-signal";
-export type { AcceptOutcome, NewTurn, TurnRow } from "./internal/store";
+export type {
+  AcceptOutcome,
+  LedgerTx,
+  NewTurn,
+  TurnRow,
+} from "./internal/store";
 export type { TurnEvent } from "./internal/transition";
 export { userTurnSent } from "./internal/tables-user-turn-sent-event";
 export type { UserTurnSentPayload } from "./internal/tables-user-turn-sent-event";

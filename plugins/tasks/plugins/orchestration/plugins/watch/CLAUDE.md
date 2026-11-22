@@ -31,11 +31,14 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
   watcher's own, or an armed task that can launch (`listLaunchableArmedIn`:
   not blocked, held or dropped). Only a false → true flip of
   `task_watches.quiet` raises one `quiet` event. **A `quiet` event is a claim
-  about the present**: a true → false flip withdraws it while undelivered, and
-  delivery re-checks it before claiming — the watcher may be held long after
-  it was recorded, and an agent launched meanwhile (still `starting`) must not
-  be reported idle (2026-11-14: three supervisors told "quiet" while their
-  child was starting). The agent settling raises a fresh one.
+  about the present**: every evaluation that finds the subtree busy withdraws
+  any undelivered one — flip or not, since the flag can already read busy
+  while one waits (2026-11-22: replayed quiet rows passed a re-check that
+  withdrew only on a flip) — and delivery re-checks before sending: the
+  watcher may be held long after it was recorded, and an agent launched
+  meanwhile (still `starting`) must not be reported idle (2026-11-14: three
+  supervisors told "quiet" while their child was starting). The agent
+  settling raises a fresh one.
 - **Delivery** (`watch.deliver`, keyed by watch) — a dead watch re-routes its
   rows to the next live watch above; a conversation watcher that cannot take
   an automatic turn (`conversations/automatic-turn`'s readiness: busy,
@@ -44,18 +47,27 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
   `conversation.statusChanged` re-enqueues delivery — which fires on leaving
   a busy status AND on `waitingFor` clearing with the status unchanged (a
   question answered); a pending turn ends by making the agent busy, then
-  idle. Otherwise every undelivered row is claimed into
-  ONE turn whose id is derived from the row ids (`turnIdFor`), so a retried
-  delivery is the same turn; the turn is the event lines plus the tree digest,
-  submitted as kind `event`. A code watcher gets the batch on the claiming
-  transaction; a throw rolls the claim back. A conversation turn is sent in a
-  SECOND step, after the claim commits (`claimDelivery` → `sendClaimedTurn`):
-  submitting a turn opens transactions of its own and may resume the agent, so
-  holding the claim across it pinned a background transaction lease while
-  waiting for another — three deliveries at once took all three and wedged the
-  backend (2026-10-30). A failed send unclaims its rows; a claim whose turn the
-  ledger never recorded (the backend died between the steps) is unclaimed by
-  the next delivery.
+  idle. Otherwise every undelivered row goes into
+  ONE turn whose id is derived from the row ids (`turnIdFor`); the turn is the
+  event lines plus the tree digest, submitted as kind `event`. A code watcher
+  gets the batch on the delivering transaction, its rows marked delivered on
+  it; a throw rolls both back. A conversation turn is sent in a SECOND step,
+  after the read commits (`claimDelivery` → `sendClaimedTurn`): submitting a
+  turn opens transactions of its own and may resume the agent, so holding a
+  claim across it pinned a background transaction lease while waiting for
+  another — three deliveries at once took all three and wedged the backend
+  (2026-10-30).
+- **Delivered is written once, with the turn** — `delivered_in_turn` is set
+  only by `markDelivered`, on the transaction that records the turn in the
+  ledger (`submitTurn`'s `onRecorded`), and nothing ever clears it. So a send
+  that records no turn (it threw, the conversation stopped, the backend died)
+  leaves its rows undelivered for the next run, and a recorded turn is never
+  sent again. Delivery never asks the ledger whether a turn exists: its
+  settled rows are swept after 7 days, and reading "no row" as "never sent"
+  re-sent week-old events as new (2026-11-21/22, five watchers). Rows that
+  changed while the turn was sent (a `quiet` withdrawn, another delivery
+  first) roll the record back (`BatchChangedError` → `changed`) and the job
+  runs again over what is left.
 - **Stop waiver** — a conversation owning a live, not-quiet watch may stop: the
   next event wakes it.
 - **Capability** — `watch.children: true` (core). `add_task` makes the caller

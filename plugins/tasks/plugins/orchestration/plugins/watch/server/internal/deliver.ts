@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { DbExecutor } from "@plugins/database/server";
 import {
   turnIdKind,
@@ -22,13 +22,18 @@ export interface DeliverPorts {
   /** Whether an automatic turn may be typed into the watcher conversation
    * now (conversations/automatic-turn), read on the delivery's transaction. */
   readiness(conversationId: string, exec: DbExecutor): Promise<TurnReadiness>;
-  /** Submit one `event` turn (idempotent on `turnId`). */
-  submit(conversationId: string, turnId: TurnId, text: string): Promise<void>;
+  /** Submit one `event` turn. `onRecorded` runs on the transaction that
+   * records it in the turn ledger (a throw rolls that record back, typing
+   * nothing). `duplicate`: the ledger had `turnId` already, so `onRecorded`
+   * did not run. */
+  submit(
+    conversationId: string,
+    turnId: TurnId,
+    text: string,
+    onRecorded: (tx: DbExecutor) => Promise<void>,
+  ): Promise<{ kind: "recorded" | "duplicate" }>;
   /** The tree digest appended to the turn (advances the watcher's cursor). */
   digest(conversationId: string): Promise<string | null>;
-  /** Whether the turn ledger has `turnId` — a claim whose turn it lacks was
-   * never sent (the backend died between the claim and the send). */
-  turnRecorded(turnId: TurnId, exec: DbExecutor): Promise<boolean>;
   handler(id: string): WatchHandlerEntry | undefined;
 }
 
@@ -43,16 +48,18 @@ export type DeliverOutcome =
   | { kind: "rerouted"; to: WatchId[]; dropped: number }
   /** A code watcher's batch, handled on the claiming transaction. */
   | { kind: "delivered"; turnId: string; count: number }
-  /** A conversation watcher's rows, claimed into one turn that is not sent
-   * yet: `sendClaimedTurn` sends it once the claim committed. */
+  /** A conversation watcher's rows, gathered into one turn that is not sent
+   * yet: `sendClaimedTurn` sends it once the read committed. */
   | ClaimedTurn;
 
-/** Rows claimed for a conversation watcher, waiting to be sent as one turn. */
+/** A conversation watcher's undelivered rows, to be sent as one turn. Nothing
+ * is written for it until the turn is recorded (`sendClaimedTurn`). */
 export interface ClaimedTurn {
   kind: "claimed";
   watchId: WatchId;
   conversationId: string;
   turnId: TurnId;
+  rowIds: InboxRow["id"][];
   events: WatchEvent[];
   titles: ReadonlyMap<string, string>;
 }
@@ -119,35 +126,46 @@ async function undelivered(
     .for("update");
 }
 
-/** Rows claimed into a turn the ledger never recorded go back to
- * undelivered: the claim committed, the send never happened. */
-async function reclaimUnsent(
+/** The rows changed under the batch while it was being sent (a `quiet`
+ * withdrawn, another delivery recorded some of them first): the turn is not
+ * recorded, and delivery runs again over what is left. */
+export class BatchChangedError extends Error {
+  constructor(watchId: WatchId, turnId: TurnId) {
+    super(
+      `watch ${watchId}: the rows of turn ${turnId} changed before it was recorded`,
+    );
+    this.name = "BatchChangedError";
+  }
+}
+
+/**
+ * Mark rows delivered in `turnId` — the ONLY write of `delivered_in_turn`,
+ * and never undone: it runs on the transaction that records the turn (or, for
+ * a code watcher, that hands it the batch), so a row is delivered exactly when
+ * its turn exists. Nothing asks the ledger afterwards — its settled rows are
+ * swept after 7 days, and reading "no row" as "never sent" replayed week-old
+ * events as new (2026-11-21/22). Throws {@link BatchChangedError} unless every
+ * row was still this watch's and undelivered.
+ */
+async function markDelivered(
   exec: DbExecutor,
   watchId: WatchId,
-  ports: DeliverPorts,
+  ids: readonly InboxRow["id"][],
+  turnId: TurnId,
 ): Promise<void> {
-  const claimed = await exec
-    .selectDistinct({ turnId: _watchInbox.deliveredInTurn })
-    .from(_watchInbox)
+  const marked = await exec
+    .update(_watchInbox)
+    .set({ deliveredInTurn: turnId })
     .where(
       and(
+        inArray(_watchInbox.id, [...ids]),
         eq(_watchInbox.watchId, watchId),
-        isNotNull(_watchInbox.deliveredInTurn),
+        isNull(_watchInbox.deliveredInTurn),
       ),
-    );
-  for (const { turnId } of claimed) {
-    if (turnId === null) continue;
-    if (await ports.turnRecorded(turnIdKind.parse(turnId), exec)) continue;
-    await exec
-      .update(_watchInbox)
-      .set({ deliveredInTurn: null })
-      .where(
-        and(
-          eq(_watchInbox.watchId, watchId),
-          eq(_watchInbox.deliveredInTurn, turnId),
-        ),
-      );
-  }
+    )
+    .returning({ id: _watchInbox.id });
+  if (marked.length !== ids.length)
+    throw new BatchChangedError(watchId, turnId);
 }
 
 /**
@@ -160,12 +178,13 @@ async function reclaimUnsent(
  *   one), waiting on the user (it would answer their question), or another
  *   plugin's turn is pending for it (it goes first — typed after ours it
  *   would reach a busy CLI).
- * - A `quiet` row is re-checked first: withdrawn when the subtree is no
- *   longer quiet (an agent launched while the watcher was held).
- * - Otherwise every undelivered row is claimed into ONE turn (or ONE code
- *   batch), whose id is derived from the rows. A code batch is handled here,
- *   on the claim; a conversation turn is only claimed (`claimed`) — sending it
- *   is `sendClaimedTurn`, AFTER this transaction commits.
+ * - A `quiet` row is re-checked first: withdrawn when the subtree is not
+ *   quiet now (an agent launched while the watcher was held).
+ * - Otherwise every undelivered row goes into ONE turn (or ONE code batch),
+ *   whose id is derived from the rows. A code batch is handled and marked
+ *   delivered here; a conversation turn is only gathered (`claimed`, nothing
+ *   written) — `sendClaimedTurn` sends it AFTER this transaction commits and
+ *   marks the rows on the transaction that records the turn.
  *
  * Never send the turn on the claiming transaction: submitting a turn opens
  * transactions of its own (the turn ledger) and may resume the agent, so a
@@ -213,7 +232,6 @@ export async function claimDelivery(
         `watch ${watchId}: its conversation ${watcher.conversationId} does not exist`,
       );
     if (readiness.kind === "held") return readiness;
-    await reclaimUnsent(exec, watchId, ports);
   }
 
   let rows = await undelivered(exec, watchId);
@@ -221,16 +239,12 @@ export async function claimDelivery(
   // (the watcher was held): asked again now, a subtree that came back to life
   // withdraws it (evaluateQuiet) rather than telling the watcher it is idle.
   if (rows.some((r) => r.kind === QUIET_EVENT_KIND)) {
-    if ((await evaluateQuiet(exec, watchId)) === "became-busy")
-      rows = await undelivered(exec, watchId);
+    await evaluateQuiet(exec, watchId);
+    rows = await undelivered(exec, watchId);
   }
   if (rows.length === 0) return { kind: "empty" };
   const ids = rows.map((r) => r.id);
   const turnId = turnIdFor(ids);
-  await exec
-    .update(_watchInbox)
-    .set({ deliveredInTurn: turnId })
-    .where(inArray(_watchInbox.id, ids));
   const events = rows.map(toEvent);
 
   if (watcher.kind === "code") {
@@ -239,6 +253,7 @@ export async function claimDelivery(
       throw new Error(
         `watch ${watchId}: no WatchHandler "${watcher.handler}" is contributed`,
       );
+    await markDelivered(exec, watchId, ids, turnId);
     await handler.onEvents(events, { watch, tx: exec });
     return { kind: "delivered", turnId, count: rows.length };
   }
@@ -252,39 +267,57 @@ export async function claimDelivery(
     watchId,
     conversationId: watcher.conversationId,
     turnId,
+    rowIds: ids,
     events,
     titles: new Map(titleRows.map((t) => [t.id, t.title])),
   };
 }
 
 /**
- * Send a committed claim as one `event` turn, on no transaction. A failed
- * send gives the rows back (unclaims them) and rethrows, so the job's retry
- * claims the same rows into the same turn — `submit` no-ops on a turn id it
- * already recorded.
+ * Send a gathered batch as one `event` turn, on no transaction. Its rows are
+ * marked delivered on the transaction that records the turn, so a send that
+ * never recorded one (it threw first, the conversation stopped, the backend
+ * died) leaves them undelivered for the next run — and a recorded turn is
+ * never sent again, whatever becomes of its ledger row later. `changed`: the
+ * rows moved under it ({@link BatchChangedError}), or another delivery of the
+ * same rows recorded the turn first; the caller runs delivery again.
  */
 export async function sendClaimedTurn(
   exec: DbExecutor,
   claim: ClaimedTurn,
   ports: DeliverPorts,
-): Promise<{ kind: "delivered"; turnId: string; count: number }> {
+): Promise<
+  { kind: "delivered"; turnId: string; count: number } | { kind: "changed" }
+> {
+  const digest = await ports.digest(claim.conversationId);
   try {
-    const digest = await ports.digest(claim.conversationId);
-    await ports.submit(
+    const out = await ports.submit(
       claim.conversationId,
       claim.turnId,
       renderEventTurn(claim.events, claim.titles, digest),
+      (tx) => markDelivered(tx, claim.watchId, claim.rowIds, claim.turnId),
     );
+    // The ledger has this turn already: another delivery of the same rows
+    // recorded it first, marking them on that transaction. Rows still
+    // unmarked under a recorded turn would break the one invariant here.
+    if (out.kind === "duplicate") {
+      const marked = await exec
+        .select({ id: _watchInbox.id })
+        .from(_watchInbox)
+        .where(
+          and(
+            inArray(_watchInbox.id, claim.rowIds),
+            eq(_watchInbox.deliveredInTurn, claim.turnId),
+          ),
+        );
+      if (marked.length !== claim.rowIds.length)
+        throw new Error(
+          `watch ${claim.watchId}: turn ${claim.turnId} is in the ledger, but ${claim.rowIds.length - marked.length} of its rows are not marked delivered in it`,
+        );
+      return { kind: "changed" };
+    }
   } catch (err) {
-    await exec
-      .update(_watchInbox)
-      .set({ deliveredInTurn: null })
-      .where(
-        and(
-          eq(_watchInbox.watchId, claim.watchId),
-          eq(_watchInbox.deliveredInTurn, claim.turnId),
-        ),
-      );
+    if (err instanceof BatchChangedError) return { kind: "changed" };
     throw err;
   }
   return {
