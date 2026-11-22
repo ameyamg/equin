@@ -56,7 +56,8 @@ export const sdkConsumerStalledKind = ReportKind({
         `Conversation \`${d.conversationId}\`'s agent answered \`hello\` at seq ` +
           `**${d.agentSeq}**, but its \`conversations_ext_sdk_agent\` row has ` +
           `applied only up to seq **${d.cursorSeq}** — the launch waited the ` +
-          "whole start bound for its `started` line to be applied, and it never was.",
+          "whole start bound (awake time: a machine sleep spends none of it) for " +
+          "its `started` line to be applied, and it never was.",
         "",
         "Until the consumer catches up, the conversation's status, its turns " +
           '(an echo left on "Waiting for the agent to take it…") and its ' +

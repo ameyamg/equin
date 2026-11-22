@@ -36,7 +36,9 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   - Launch (`launchAgent` / `waitForStart` in `sdk-runtime.ts`): waits for the
     consumer to apply this launch's `started` line (the projection's
     `agentPid`, with `statusAt` past the launch, so a predecessor's unapplied
-    pid does not count), bounded at 60 s, then asks `hello` once. Outcomes:
+    pid does not count), bounded at 60 s of awake time (`projection-waits.ts`:
+    a sleep spends none of it — a `started` written 0.2 s before a 15 min nap
+    read as a stall on the wake, 2026-11-22), then asks `hello` once. Outcomes:
     `ready`; `slow` (no answer yet — not a failure, left to the readiness
     waiters); `consumer-behind` (it answers at a seq past the row's cursor —
     reported as `sdk-consumer-stalled`, NOT thrown: the agent took the launch

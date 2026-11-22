@@ -31,14 +31,16 @@ import {
   catchUpWithin,
   onEventsAppended,
   prepareLaunchRow,
-  ProjectionTimeoutError,
-  ProjectionWaitAbortedError,
   recordLaunchSession,
   signalNextBatch,
   startConsumer,
   waitForProjection,
 } from "./consumer";
 import { agentEventsExist } from "./paths";
+import {
+  ProjectionTimeoutError,
+  ProjectionWaitAbortedError,
+} from "./projection-waits";
 import {
   attachRunningAgents,
   awaitAgentExit,
@@ -69,6 +71,7 @@ import { infoOf } from "./runtime-info";
 // `conversations_ext_sdk_agent` row. Liveness is "does the socket answer
 // `hello`?"; status is that row.
 
+// The projection waits' bounds count awake time (projection-waits.ts).
 // The agent answers `hello` within a second of starting; its CLI's initialize
 // (readiness) takes a few more — far more under load, or on a cold cache.
 const READY_TIMEOUT_MS = 60_000;

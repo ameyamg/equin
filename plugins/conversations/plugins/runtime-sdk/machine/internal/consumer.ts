@@ -37,11 +37,7 @@ import {
   USAGE_LIMIT_ERROR,
   type OpenRequest,
 } from "../../core";
-import {
-  reduceEvents,
-  type AgentEffect,
-  type AgentProjection,
-} from "../../server/internal/reducer";
+import { reduceEvents, type AgentEffect } from "../../server/internal/reducer";
 import {
   isSdkConversation,
   liveSdkConversationIds,
@@ -61,6 +57,7 @@ import {
   runningAgentIds,
 } from "./agent-processes";
 import { agentReady } from "./partial-stream";
+import { createProjectionWaits } from "./projection-waits";
 import { reportedStateChanged } from "./runtime-info";
 import {
   agentDir,
@@ -112,11 +109,12 @@ export const sdkEventsWatcher = defineFileWatcher({
  */
 const ours = new Set<string>();
 
-type Waiter = {
-  until: (s: AgentProjection) => boolean;
-  resolve: (s: AgentProjection) => void;
-};
-const waiters = new Map<string, Set<Waiter>>();
+const projectionWaits = createProjectionWaits({
+  current: (id) => currentAgentRow(id),
+  catchUp: (id) => catchUps.trigger(id),
+});
+/** Wait until the agent did X, as far as this consumer applied it. */
+export const waitForProjection = projectionWaits.wait;
 
 let signal: ((s: RuntimeSignal) => void) | null = null;
 
@@ -138,66 +136,6 @@ async function isOurs(id: string): Promise<boolean> {
   const mine = await isSdkConversation(id);
   if (mine) ours.add(id);
   return mine;
-}
-
-/** {@link waitForProjection}'s bound ran out. */
-export class ProjectionTimeoutError extends Error {
-  constructor(id: string, what: string, timeoutMs: number) {
-    super(`SDK agent ${id}: ${what} did not happen within ${timeoutMs}ms`);
-    this.name = "ProjectionTimeoutError";
-  }
-}
-
-/** {@link waitForProjection}'s caller stopped waiting (its signal aborted). */
-export class ProjectionWaitAbortedError extends Error {
-  constructor(id: string, what: string) {
-    super(`SDK agent ${id}: stopped waiting for ${what}`);
-    this.name = "ProjectionWaitAbortedError";
-  }
-}
-
-/**
- * Wait until the conversation's applied projection satisfies `until` — checked
- * against the stored row first, then after every catch-up. Resolves the
- * projection; rejects after `timeoutMs`, or once `signal` aborts.
- */
-export async function waitForProjection(
-  id: string,
-  until: (s: AgentProjection) => boolean,
-  timeoutMs: number,
-  what: string,
-  signal?: AbortSignal,
-): Promise<AgentProjection> {
-  let resolve!: (s: AgentProjection) => void;
-  let reject!: (e: Error) => void;
-  const done = new Promise<AgentProjection>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  const waiter: Waiter = { until, resolve };
-  const set = waiters.get(id) ?? new Set();
-  waiters.set(id, set);
-  set.add(waiter);
-  const timer = setTimeout(
-    () => reject(new ProjectionTimeoutError(id, what, timeoutMs)),
-    timeoutMs,
-  );
-  const onAbort = () => reject(new ProjectionWaitAbortedError(id, what));
-  if (signal?.aborted) onAbort();
-  signal?.addEventListener("abort", onAbort);
-  try {
-    // Registered before the read, so a catch-up landing in between wakes it.
-    const current = await currentAgentRow(id);
-    if (current && until(current)) return current;
-    // Lines may already be on disk that no watch event announced yet.
-    catchUps.trigger(id);
-    return await done;
-  } finally {
-    clearTimeout(timer);
-    signal?.removeEventListener("abort", onAbort);
-    set.delete(waiter);
-    if (set.size === 0) waiters.delete(id);
-  }
 }
 
 const catchUps = createKeyedCoalescer<string>({
@@ -399,9 +337,7 @@ async function applyNewLines(
   const owed = owedSignals.delete(id);
   if (owed || reportedStateChanged(projection, state))
     signal?.({ conversationIds: [id] });
-  for (const w of [...(waiters.get(id) ?? [])]) {
-    if (w.until(state)) w.resolve(state);
-  }
+  projectionWaits.applied(id, state);
 }
 
 function samePosition(a: ReadPosition | null, b: ReadPosition | null): boolean {
