@@ -77,8 +77,8 @@ here. Cron schedules are timers, not rows — a tick not yet due is left alone.
     - `host-service:jobs.queue` "jobs.queue"
     - `change-feed-exclusion` "jobs_in_process_rows"
     - `change-feed-exclusion` "jobs_in_process_schedules"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/jobs` ×14
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/jobs` ×17
     - `database` ×3
     - `database/sql-column` ×2
     - `ids.externalIdColumn`

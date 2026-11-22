@@ -219,6 +219,24 @@ export function deadlineMsFor(hold: HoldClass): number {
   return HOLD_SPECS[hold].deadlineMs;
 }
 
+/**
+ * How long after the deadline's abort a run still unsettled is called a
+ * zombie and its slot written off (`machine/internal/deadline.ts`).
+ *
+ * It is a grace on the UNWIND, not a second budget: a handler that honours the
+ * signal has to propagate the rejection out through whatever it was awaiting,
+ * and 30 s is generous for that while still being short enough that a wedge is
+ * named while an operator is still looking at it.
+ */
+export const ZOMBIE_GRACE_MS = 30_000;
+
+/** When a run of this class becomes a zombie: its deadline plus the unwind
+ * grace, on awake time. Also when a scheduled job's own-run claim lets go of
+ * a run that never settled (`server/internal/own-run-gate.ts`). */
+export function zombieAfterMsFor(hold: HoldClass): number {
+  return deadlineMsFor(hold) + ZOMBIE_GRACE_MS;
+}
+
 /** The class's queueing target — see {@link HoldClassSpec.pickupTargetMs}. */
 export function pickupTargetMsFor(hold: HoldClass): number {
   return HOLD_SPECS[hold].pickupTargetMs;

@@ -39535,6 +39535,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JobRunnerDiedReport`
           - `JobSlotFloorReport`
           - `JobTaskPayload`
+          - `OwnRunEnd`
+          - `OwnRunEntry`
+          - `OwnRunGate`
           - `QueuedJob`
           - `RegisteredJob`
           - `RunDeathCause`
@@ -39550,6 +39553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `announceRunDead`
           - `answerJobsInMemory`
           - `ceilingMsFor`
+          - `createOwnRunGate`
           - `deadlineMsFor`
           - `DEFAULT_MAX_ATTEMPTS`
           - `defineJob`
@@ -39669,6 +39673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `settledRunAt`
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
+          - `zombieAfterMsFor`
       - Cross-plugin:
         - Imported by: 91 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
@@ -39820,8 +39825,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `host-service:jobs.queue` "jobs.queue"
               - `change-feed-exclusion` "jobs_in_process_rows"
               - `change-feed-exclusion` "jobs_in_process_schedules"
-            - Uses: 21 symbols — full list in [`plugins/infra/plugins/jobs/plugins/in-process/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/in-process/REFERENCE.md)
-              - `infra/jobs` ×14
+            - Uses: 24 symbols — full list in [`plugins/infra/plugins/jobs/plugins/in-process/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/in-process/REFERENCE.md)
+              - `infra/jobs` ×17
               - `database` ×3
               - `database/sql-column` ×2
               - `ids.externalIdColumn`

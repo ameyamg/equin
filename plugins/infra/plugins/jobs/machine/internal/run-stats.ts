@@ -80,6 +80,10 @@ const started = new Map<string, { at: number }>();
 // Job ids whose dispatch returned "suspended" (a durable workflow waiting).
 // graphile reports those as successes; `dispatch()` knows better and says so.
 const suspended = new Set<string>();
+// Job ids whose dispatch folded them into a live run of the same scheduled job
+// (`server/internal/own-run-gate.ts`): they ran nothing, so they are no run of
+// the history — the trailing run they asked for is.
+const folded = new Set<string>();
 
 const changeListeners = new Set<(jobName: string) => void>();
 
@@ -121,6 +125,11 @@ export function markRunSuspended(jobId: string): void {
   suspended.add(jobId);
 }
 
+/** Called by `dispatch()` when a row folded into its job's live run. */
+export function markRunFolded(jobId: string): void {
+  folded.add(jobId);
+}
+
 /**
  * Feed the run history from one runner's events. Attach before `run()`, like
  * the slot ledger. Returns a detach function.
@@ -143,7 +152,12 @@ export function attachRunStats(events: WorkerEvents): () => void {
       started.delete(id);
       inFlight.delete(id);
       const wasSuspended = suspended.delete(id);
+      const wasFolded = folded.delete(id);
       const jobName = jobNameOf(job.payload);
+      if (wasFolded) {
+        if (jobName !== null) emitChanged(jobName);
+        return;
+      }
       // A run whose start this process never saw (attached mid-run) has no
       // honest duration, so it is not recorded rather than recorded wrong.
       if (jobName === null || start === undefined) return;
@@ -186,6 +200,7 @@ export function clearRunStats(): void {
   started.clear();
   inFlight.clear();
   suspended.clear();
+  folded.clear();
 }
 
 /**

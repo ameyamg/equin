@@ -34,6 +34,12 @@ export { pendingWaits } from "./internal/workflow-log";
 export { announceRunDead } from "./internal/run-death";
 export type { JobTaskPayload } from "./internal/registry";
 export { UNSAFE_runJobRow } from "./internal/run-row";
+export { createOwnRunGate } from "./internal/own-run-gate";
+export type {
+  OwnRunEnd,
+  OwnRunEntry,
+  OwnRunGate,
+} from "./internal/own-run-gate";
 export type { JobRowOutcome } from "./internal/run-row";
 export { singletonJobKey } from "./internal/run-identity";
 export { isSuspendSignal } from "./internal/step-ctx";

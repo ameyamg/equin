@@ -216,10 +216,52 @@ of the waits query.
 
 So **"singleton" means at most one PENDING row, not at most one live
 workflow**: an enqueue while a singleton workflow is suspended starts a new run.
+(A SCHEDULED job's rows are further held to one live run — see "A scheduled job
+never runs beside itself".)
 A dead run's log can no longer be replayed by the next run of the job. Dead-job
 GC and the sweeper's superseded DELETE discard the logs of the rows they remove
 — only row-owned run ids, since a baked (keyed/resume) id is shared with
 whatever row holds that key next.
+
+## A scheduled job never runs beside itself
+
+`singleton` alone does not stop it: a run's row releases its key the moment it
+is locked, so the next tick (or a manual `enqueue()`) inserts a fresh row any
+free slot fetches at once. On a laptop that sleeps most of each hour that is
+common — a run needs awake time while its cron follows the wall clock.
+`worktree.fsmonitor-reconcile` had up to four passes at once failing each other
+on shared locks; `debug.tab-memory-climb` ran two ticks queued ten minutes
+apart together after a wake (main's `job_runs`, 2026-11-22). No scheduled job
+wants it — each brings current state up to date — so the rule belongs to the
+type, not to each job remembering `serial`.
+
+The own-run gate (`server/internal/own-run-gate.ts`), entered by both queues'
+dispatch before anything else runs: a row of a scheduled job dispatched while
+a run of that job is live **folds** — it completes at once without running
+(no lock, no deadline, not a run of the history) — and the live run, when it
+ends, enqueues **one** trailing singleton run with the newest folded payload,
+collapsing onto any tick already pending. Waiting happens nowhere: never in a
+slot (the `serial` lesson), never in a graphile queue.
+
+- **Why not `serial` per scheduled job.** graphile 0.18 hardcodes fetch
+  strategy 2, which row-locks EVERY available named queue on every fetch
+  (`dist/sql/getJobs.js`) — ~120 more queues, ~120 more row locks per fetch.
+- **Why not graphile `forbiddenFlags`.** graphile's cron inserts ticks with
+  `flags` NULL (`dist/cron.js`), so the tick could never carry one.
+- **Liveness is the process's own**, held for the handler's lifetime. A
+  crashed backend takes its claims with it, and the sweeper's re-run of its row
+  is the trailing run. A handler that never settles cannot hold its schedule
+  forever: the gate lets go by itself at a zombie's age (`zombieAfterMsFor`:
+  the class deadline plus `ZOMBIE_GRACE_MS`, on awake time — the desktop's
+  write-off instant), on both queues; the next run then starts beside it.
+- **A run that threw queues no trailing run**: its retry, or once dead the next
+  tick, is the later run. Queuing one would supersede the still-locked failing
+  row and hand the job a fresh retry budget on every fold.
+- **It covers a run's first dispatch.** Resume rows (`workflowRunId` set) are
+  not gated, and a suspend ends its claim, so a tick during a resumed run (a
+  `defineSupervisedJob`, a `ctx.sleep`) still runs beside it, as before.
+- **Scope:** one queue in one process, like `serial`. A folded row's own
+  `maxAttempts` override is not carried; the trailing run takes the job's.
 
 ## A wait re-reads its condition once armed: `settled`
 
@@ -889,6 +931,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobRunnerDiedReport`
     - `JobSlotFloorReport`
     - `JobTaskPayload`
+    - `OwnRunEnd`
+    - `OwnRunEntry`
+    - `OwnRunGate`
     - `QueuedJob`
     - `RegisteredJob`
     - `RunDeathCause`
@@ -904,6 +949,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `announceRunDead`
     - `answerJobsInMemory`
     - `ceilingMsFor`
+    - `createOwnRunGate`
     - `deadlineMsFor`
     - `DEFAULT_MAX_ATTEMPTS`
     - `defineJob`
@@ -1023,6 +1069,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `settledRunAt`
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
+    - `zombieAfterMsFor`
 - Cross-plugin:
   - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21

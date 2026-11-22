@@ -288,6 +288,12 @@ export type Dedup<S extends z.ZodType> =
  */
 export type SerialSpec = true | { readonly with: string };
 
+/**
+ * A recurring schedule. A scheduled job never runs beside itself: a row of it
+ * dispatched while its run is live folds into ONE trailing run
+ * (`own-run-gate.ts`), so no `serial` is needed for that — declare one only to
+ * share a lane with OTHER jobs.
+ */
 export interface ScheduleSpec {
   /**
    * Standard 5-field crontab (`m h dom mon dow`, UTC) describing when this

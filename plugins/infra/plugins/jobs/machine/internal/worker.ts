@@ -45,6 +45,7 @@ import {
   resolveJobCron,
   UNSAFE_getRegisteredJob,
   type JobTaskPayload,
+  type RegisteredJob,
 } from "../../server/internal/registry";
 import { scheduleResume } from "../../server/internal/resume-job";
 import { announceRunDead } from "../../server/internal/run-death";
@@ -75,7 +76,17 @@ import {
 } from "../../server/internal/workflow-log";
 import { attachSlotLedger, clearSlotLedger } from "./slot-ledger";
 import { exitForDeadRunner, watchRunner } from "./runner-watch";
-import { attachRunStats, clearRunStats, markRunSuspended } from "./run-stats";
+import {
+  attachRunStats,
+  clearRunStats,
+  markRunFolded,
+  markRunSuspended,
+} from "./run-stats";
+import {
+  createOwnRunGate,
+  type OwnRunEnd,
+} from "../../server/internal/own-run-gate";
+import { JobQueue } from "../../server/internal/queue";
 import { jobsLog } from "./jobs-log";
 import { JOBS_POOL_IDLE_TIMEOUT_MS } from "./pool-idle";
 import { createQueueWake, NO_POLL_INTERVAL_MS } from "./queue-wake";
@@ -95,6 +106,13 @@ const deadRunners = new Set<Runner>();
 // read runs on the app's background lane, like every handler: a stalled lane
 // stops the jobs themselves, so a dedicated connection would buy nothing.
 const queueWake = createQueueWake({ readDue: () => queryQueueDue() });
+
+// This backend's scheduled jobs, one live run each (own-run-gate.ts): a row of
+// a scheduled job dispatched while that job runs folds into one trailing run,
+// enqueued through the host queue when the live run ends.
+const ownRuns = createOwnRunGate((job, payload, opts) =>
+  JobQueue.get().enqueue(job, payload, opts),
+);
 
 // One slot-ledger detach per runner, undone by `stopWorkers`.
 let ledgerDetaches: (() => void)[] = [];
@@ -750,6 +768,42 @@ async function dispatch(
     throw err;
   }
 
+  // A scheduled job never runs beside itself (own-run-gate.ts). Entered BEFORE
+  // the advisory lock and the deadline: a folded row takes no lock, arms no
+  // timer and runs nothing — its slot is free again the moment graphile
+  // completes the row, and the live run enqueues the trailing run it asked for.
+  const own = ownRuns.enter(job, payload);
+  if (own.kind === "folded") {
+    jobsLog.publish(
+      `${payload.jobName} (job ${meta.jobId}) folded into its live run — one trailing run follows it`,
+    );
+    markRunFolded(meta.jobId);
+    return;
+  }
+  // Released on every exit (and by the gate itself once the run is a zombie's
+  // age). Awaited: the trailing run must be queued before this row's outcome
+  // is written and before a stopping runner lets the pool go. A failed
+  // trailing enqueue fails this row — loud, and its retry is the later run the
+  // folds asked for.
+  let end: OwnRunEnd = "threw";
+  try {
+    await dispatchOwned(job, payload, meta);
+    end = "settled";
+  } finally {
+    await own.release(end);
+  }
+}
+
+async function dispatchOwned(
+  job: RegisteredJob,
+  payload: JobTaskPayload,
+  meta: {
+    jobId: string;
+    attempt: number;
+    maxAttempts: number;
+    runnerId: string;
+  },
+): Promise<void> {
   // One derivation for every row: a keyed dedup or resume row carries its run
   // id, everything else (singleton, none, cron tick) is its own row's run. See
   // `run-identity.ts`. The row id survives retries and sweeper reclaims, so a

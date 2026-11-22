@@ -9,6 +9,7 @@ import {
   defineJob,
   jobAttemptSink,
   JobQueue,
+  singletonJobKey,
   type JobAttemptEvent,
   type JobQueueImpl,
   type JobRowOutcome,
@@ -498,4 +499,65 @@ test("a schedule seen for the first time records now and catches up nothing", as
   expect(ran).toEqual([]);
   const { lastExecutions } = await store.load();
   expect(lastExecutions.has(DAILY)).toBe(true);
+});
+
+test("a scheduled job's rows due while it runs fold into ONE trailing run, never beside it", async () => {
+  const store = memoryRowStore();
+  // Resolves once both mid-run rows have folded (each fold drops its row).
+  let removes = 0;
+  let onFolded: () => void = () => {};
+  const folded = new Promise<void>((resolve) => {
+    onFolded = resolve;
+  });
+  const remove = store.remove.bind(store);
+  store.remove = async (id) => {
+    await remove(id);
+    removes += 1;
+    if (removes === 2) onFolded();
+  };
+  let release: () => void = () => {};
+  const firstRunHeld = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let onFirstStarted: () => void = () => {};
+  const firstStarted = new Promise<void>((resolve) => {
+    onFirstStarted = resolve;
+  });
+  let running = 0;
+  let maxRunning = 0;
+  const payloads: JobTaskPayload[] = [];
+  const queue = createInProcessQueue({
+    store,
+    runRow: async (p) => {
+      running += 1;
+      maxRunning = Math.max(maxRunning, running);
+      payloads.push(p);
+      if (payloads.length === 1) {
+        onFirstStarted();
+        await firstRunHeld;
+      }
+      running -= 1;
+      return { kind: "completed" };
+    },
+  });
+  await start(queue);
+  const key = { jobKey: singletonJobKey(DAILY) };
+  const tick = (n: number): JobTaskPayload => ({
+    jobName: DAILY,
+    input: {},
+    _cron: { ts: String(n) },
+  });
+  await queue.enqueue(job(DAILY), tick(1), key);
+  await firstStarted;
+  // The running row released its key: each of these is a fresh row, due now.
+  await queue.enqueue(job(DAILY), tick(2), key);
+  await queue.enqueue(job(DAILY), tick(3), key);
+  await folded;
+  // A settle already waiting when the run ends must see the trailing run.
+  const settled = settle(queue);
+  release();
+  await settled;
+  expect(maxRunning).toBe(1);
+  // The first run, then ONE trailing run carrying the newest folded payload.
+  expect(payloads.map((p) => p._cron?.ts)).toEqual(["1", "3"]);
 });

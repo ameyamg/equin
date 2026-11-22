@@ -1,6 +1,10 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
-import { deadlineMsFor, type HoldClass } from "../../core/hold";
+import {
+  deadlineMsFor,
+  ZOMBIE_GRACE_MS,
+  type HoldClass,
+} from "../../core/hold";
 import {
   jobDeadlineSink,
   type JobDeadlineEvent,
@@ -41,15 +45,8 @@ import { JobDeadlineExceededError } from "../../server/internal/deadline-error";
 // deadline fired in the wake's first second, aborted a healthy run and filed
 // "exceeded its deadline — held 15m 18s"; the run finished 0.4 s later.
 
-/**
- * How long after the abort we wait before calling the run a zombie.
- *
- * It is a grace on the UNWIND, not a second budget: a handler that honours the
- * signal has to propagate the rejection out through whatever it was awaiting,
- * and 30 s is generous for that while still being short enough that a wedge is
- * named while an operator is still looking at it.
- */
-const ZOMBIE_GRACE_MS = 30_000;
+// The zombie grace is `ZOMBIE_GRACE_MS` (core/hold.ts): the own-run gate lets
+// go of a scheduled job's claim at the same instant.
 
 export interface ArmDeadlineArgs {
   jobName: string;

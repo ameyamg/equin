@@ -33,6 +33,7 @@ export {
   taskFor,
   priorityFor,
   deadlineMsFor,
+  zombieAfterMsFor,
   pickupTargetMsFor,
   reachableSlots,
   holdForTask,

@@ -2,14 +2,17 @@ import { afterCommit } from "@plugins/database/server";
 import {
   announceRunDead,
   answerJobsInMemory,
+  createOwnRunGate,
   JobQueue,
   listRegisteredJobs,
   resolveJobCron,
   pendingWaits,
   singletonJobKey,
+  UNSAFE_getRegisteredJob,
   UNSAFE_runJobRow,
   type JobQueueImpl,
   type JobRowOpts,
+  type OwnRunEnd,
   type JobRowOutcome,
   type JobTaskPayload,
   type QueuedJob,
@@ -211,9 +214,46 @@ export function createInProcessQueue(
     }, timerDelay(row.runAt));
   }
 
+  // A scheduled job never runs beside itself (jobs' own-run gate, the rule the
+  // desktop's dispatch applies too): a due row of a job running now folds into
+  // that run, which queues ONE trailing run when it ends — a singleton row,
+  // collapsing onto any tick already pending.
+  const ownRuns = createOwnRunGate((job, payload, opts) =>
+    queue.enqueue(job, payload, opts),
+  );
+
+  async function run(row: QueueRow): Promise<void> {
+    const job = UNSAFE_getRegisteredJob(row.payload.jobName);
+    // An unknown job is the row runner's to report; it holds no claim.
+    const own = job === undefined ? null : ownRuns.enter(job, row.payload);
+    if (own?.kind === "folded") {
+      row.running = true;
+      rows.delete(row.id);
+      try {
+        await drop(row.id);
+      } finally {
+        row.running = false;
+        activity();
+      }
+      return;
+    }
+    // Released as soon as the handler is over — BEFORE the row leaves the
+    // working copy, so a settle never sees the queue empty with the trailing
+    // run still to be queued. The `finally` covers a store write that threw
+    // (a no-op once released).
+    try {
+      await runOwned(row, (end) => own?.release(end) ?? Promise.resolve());
+    } finally {
+      if (own !== null) await own.release("threw");
+    }
+  }
+
   // A row stays `running` until its outcome is written, so neither a collapse
   // nor a cancel acts on it in between.
-  async function run(row: QueueRow): Promise<void> {
+  async function runOwned(
+    row: QueueRow,
+    handlerOver: (end: OwnRunEnd) => Promise<void>,
+  ): Promise<void> {
     row.running = true;
     row.attempts += 1;
     row.updatedAt = new Date();
@@ -228,6 +268,7 @@ export function createInProcessQueue(
         attempt: row.attempts,
         maxAttempts: row.maxAttempts,
       });
+      await handlerOver(outcome.kind === "failed" ? "threw" : "settled");
       row.updatedAt = new Date();
       if (outcome.kind !== "failed") {
         rows.delete(row.id);
