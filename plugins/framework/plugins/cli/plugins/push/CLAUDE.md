@@ -116,6 +116,19 @@ mutex the order is load-bearing:
    access refusal (re-probe, as above) and from GitHub's workflow refusal
    (local `main` still moves — above).
 
+**The branch push's lease follows what this checkout sent** (`cli/branch-lease.ts`).
+A bare `--force-with-lease` takes its expectation from the remote-tracking ref,
+which git writes only when it saw the push succeed. A connection that drops after
+the server accepted the push (`RPC failed; curl 56`) left the branch on the
+remote with no tracking ref, and every retry was refused as `stale info`. Now
+each commit is recorded under `refs/equin/push-attempts/<branch>/<sha>` before git
+sends it, the remote tip is read (`ls-remote`), and the push leases on that exact
+sha when it is absent, the tracking ref, or one of this checkout's recorded
+attempts. Any other tip is someone else's: the push is refused naming the
+commit (author, subject) and the two ways on. The records are cleared once the
+branch push succeeds. Never "fix" a stale lease with a blanket fetch before the
+push: that would accept a branch someone else moved.
+
 **Steps 3–8 run under ONE interactive CPU grant**, taken by `withPushLock` as
 the first thing inside the mutex and passed to its body (and from there to the
 check subprocess). Every queued push waits on the holder for its whole hold, so

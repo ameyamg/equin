@@ -22,6 +22,11 @@ import {
   run,
   type PublishOutcome,
 } from "./git";
+import {
+  clearPushAttempts,
+  decideBranchLease,
+  recordPushAttempt,
+} from "./branch-lease";
 import { openLandReport, type LandPayload, type LandReporter } from "./handoff";
 
 // The LAND PHASE of a push: everything after the rebase, run by the push driver
@@ -165,11 +170,32 @@ async function landWorktree(
   if (publish.kind === "publish") {
     report.stepStart("push-branch");
     console.log(`Pushing branch ${branch}...`);
+    // The lease follows what this checkout SENT, not git's tracking ref
+    // (`./branch-lease.ts`): a retry after a push whose connection dropped
+    // once the remote had taken it replaces its own earlier commit, while a
+    // branch someone else moved is still refused — by name.
+    const lease = await decideBranchLease(publish.remote, branch, root);
+    if (lease.kind === "refused") {
+      // Like any other refused push: no stated outcome, so it reads as error.
+      console.error(lease.message);
+      process.exit(1);
+    }
+    if (lease.basis === "own-attempt")
+      console.log(
+        `${publish.remote}/${branch} holds ${lease.expect?.slice(0, 10)}, which an earlier push of this checkout sent ` +
+          `(git never saw that push succeed) — replacing it.`,
+      );
+    await recordPushAttempt(
+      branch,
+      await run(["git", "rev-parse", "HEAD"]),
+      root,
+    );
     outcome = await execPublish(
-      ["git", "push", "--force-with-lease", "-u", publish.remote, branch],
+      ["git", "push", lease.flag, "-u", publish.remote, branch],
       undefined,
       root,
     );
+    if (outcome.kind === "published") await clearPushAttempts(branch, root);
     report.stepEnd("push-branch");
   }
 
