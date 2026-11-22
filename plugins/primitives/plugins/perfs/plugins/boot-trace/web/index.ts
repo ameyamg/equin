@@ -14,7 +14,7 @@ export { readPageShown } from "./internal/page-shown";
 export {
   startBootSpan,
   markBootInstant,
-  markBootInstantAtNextCommit,
+  readOpenBootSpans,
   traceBootPluginLoad,
   recordBootSpan,
   getBootTrace,

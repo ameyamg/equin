@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { flushSync } from "react-dom";
 import {
   PluginProvider,
@@ -38,7 +38,6 @@ import { yieldToMain } from "@plugins/primitives/plugins/perfs/plugins/scheduler
 import {
   startBootSpan,
   markBootInstant,
-  markBootInstantAtNextCommit,
   traceBootPluginLoad,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import {
@@ -414,6 +413,35 @@ function PageApp() {
     if (ready) appCommitted.resolve();
   }, [ready, appCommitted]);
 
+  // The two content milestones, stamped by the commits they name (a layout
+  // effect: committed, not yet painted). Not from the DevTools commit hook: an
+  // extension owns that global, and where it answered nothing a page in full
+  // use was never "ready" (equin.ai, 2026-11-22: "not ready after 47.6 s"
+  // over a visitor five pages into the demo).
+  // The first render that can show data: the commit that swaps the boot screen
+  // for the app, chrome and eager panes reading the hydrated cache.
+  useLayoutEffect(() => {
+    if (ready)
+      markBootInstant(
+        FIRST_DATA_COMMIT_ID,
+        "paint",
+        "First commit after boot snapshot",
+      );
+  }, [ready]);
+  // The active app's content is on screen at that first commit — its priority
+  // batch registers with the eager tier, before the boot screen gives way — or,
+  // past Continue anyway, at the commit after it registers.
+  const [contentRegistered, setContentRegistered] = useState(false);
+  const contentShown = ready && contentRegistered;
+  useLayoutEffect(() => {
+    if (contentShown)
+      markBootInstant(
+        ROUTE_CONTENT_COMMIT_ID,
+        "paint",
+        "First commit with the active app's content",
+      );
+  }, [contentShown]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -426,16 +454,6 @@ function PageApp() {
       registry.append(plugins);
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
     };
-
-    // The active app's content is on screen at the first render: its priority
-    // batch registers with the eager tier, before the boot screen gives way
-    // (or, past Continue anyway, at the commit that registers it).
-    const markRouteContentAtNextCommit = () =>
-      markBootInstantAtNextCommit(
-        ROUTE_CONTENT_COMMIT_ID,
-        "paint",
-        "First commit with the active app's content",
-      );
 
     // Each plugin import timed per tier (boot-trace's per-plugin User Timing),
     // so a load can be split into which plugins it waited on.
@@ -579,27 +597,16 @@ function PageApp() {
       if (appCodeAtPaint !== null) await registerBatch(appCodeAtPaint);
       markBootInstant("set-state", "paint", "App setState (first render)");
       if (cancelled) return;
-      // The first render that can show data: the commit that swaps the boot
-      // screen for the app, chrome and eager panes reading the hydrated cache.
-      // Armed here, not by the snapshot task: the boot screen commits too (its
-      // elapsed clock), so "the next commit after hydrate" could be one of its.
-      markBootInstantAtNextCommit(
-        FIRST_DATA_COMMIT_ID,
-        "paint",
-        "First commit after boot snapshot",
-      );
-
-      // The active app's content is on screen at this first commit — or, past
-      // Continue anyway, at the commit that registers it.
-      if (appCodeAtPaint !== null) markRouteContentAtNextCommit();
+      // Batched with the phase below: one commit, the one both milestones name.
+      if (appCodeAtPaint !== null) setContentRegistered(true);
       setState({ phase: "ready", coreErrors: eagerResult.errors });
       rendered = true;
       recordErrors(eagerResult.errors);
       if (appCodeAtPaint === null) {
         const late = await appCodeLoad;
         if (cancelled) return;
-        markRouteContentAtNextCommit();
         await registerBatch(late);
+        setContentRegistered(true);
       }
 
       // The rest of the deferred tier, AFTER the first app frame has

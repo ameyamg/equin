@@ -4152,7 +4152,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `Core.Root` → `SlowLoadReporter`
                     - Uses:
                       - `apps/deploy/site-reports/channel.countPageDrop`
+                      - `primitives/perfs/boot-trace.getBootTrace`
                       - `primitives/perfs/boot-trace.readFirstByteSplit`
+                      - `primitives/perfs/boot-trace.readOpenBootSpans`
                       - `primitives/perfs/boot-trace.readPageShown`
                       - `primitives/perfs/boot-trace.subscribeBootTrace`
                       - `reports.report`
@@ -4163,18 +4165,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `apps/deploy/analytics/collect.FirstByteSplitSchema`
                       - `apps/deploy/analytics/collect.StoredFirstByteSplit`
+                      - `primitives/perfs/boot-trace.BootSpan`
                       - `primitives/perfs/boot-trace.connectionTimed`
                       - `primitives/perfs/boot-trace.FirstByteSplit`
+                      - `primitives/perfs/boot-trace.LongTask`
+                      - `primitives/perfs/boot-trace.MAX_PROTOCOL_LENGTH`
+                      - `primitives/perfs/boot-trace.MODULE_EVAL_ID`
                       - `primitives/perfs/boot-trace.notShownFromMs`
                       - `primitives/perfs/boot-trace.PageShown`
+                      - `primitives/perfs/boot-trace.RESOURCE_TIMING_BUFFER_SIZE`
+                      - `primitives/perfs/boot-trace.ROUTE_CONTENT_COMMIT_ID`
                       - `reports/main-thread-stall.StallClient`
                       - `reports/main-thread-stall.StallClientSchema`
                     - Exports (types):
                       - `LoadMilestones`
+                      - `LoadSplit`
                       - `LoadVerdict`
                       - `SlowLoadPhase`
                       - `SlowPageLoadPayload`
                     - Exports (values):
+                      - `buildLoadSplit`
                       - `CONNECTION_TYPES`
                       - `judgeHiddenLoad`
                       - `judgeLoad`
@@ -4185,6 +4195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `slowPageLoadFingerprint`
                       - `SlowPageLoadPayloadSchema`
                       - `slowPageLoadSummary`
+                      - `withLoadSplit`
             - **`import`** — Errors and slowness a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: both kinds' Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors and slowness a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident, each row of the website-visitor-error or website-visitor-slowness kind by its site kind's own category (so a visitor's slow load or freeze is a slow op here too) (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
               - Web:
                 - Contributes:
@@ -35333,7 +35344,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/networking/request-guard.installRequestGuard`
           - `primitives/perfs/boot-trace.markBootInstant`
-          - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
           - `primitives/perfs/boot-trace.startBootSpan`
           - `primitives/perfs/boot-trace.traceBootPluginLoad`
           - `primitives/perfs/scheduler.yieldToMain`
@@ -35443,6 +35453,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `markPageReach`
           - `MissingCompanionError`
           - `pageReachLostSince`
+          - `pageReachRetries`
           - `partitionWebEntries`
           - `planDeferredLoad`
           - `pluginLoadReportSink`
@@ -58187,8 +58198,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `bootWindowEnd`
               - `getBootTrace`
               - `markBootInstant`
-              - `markBootInstantAtNextCommit`
               - `readFirstByteSplit`
+              - `readOpenBootSpans`
               - `readPageShown`
               - `recordBootSpan`
               - `refreshBootTrace`
@@ -58220,8 +58231,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FIRST_HIDDEN_GLOBAL`
               - `firstByteSplit`
               - `MAX_PROTOCOL_LENGTH`
+              - `MODULE_EVAL_ID`
               - `notShownFromMs`
               - `pageShown`
+              - `RESOURCE_TIMING_BUFFER_SIZE`
               - `ROUTE_CONTENT_COMMIT_ID`
         - **`latency-signal`** — The closed vocabulary of client latency signals (update: a pushed change applied; confirm: an optimistic write confirmed), each a fixed tuple of named phases, as plain data; ClientLatencySample (a union on signal, so a missing or misspelled phase is a tsc error), the clientLatencySink observation sink producers emit into and consumers subscribe to, and splitPhases.
           - Core:

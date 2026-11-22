@@ -21,12 +21,15 @@ import type {
 import {
   BOOT_PLUGIN_TIMING_PREFIX,
   BOOT_TIMING_PREFIX,
+  ROUTE_CONTENT_COMMIT_ID,
   firstByteSplit,
   type FirstByteSplit,
 } from "../../core";
 
 const spans: BootSpan[] = [];
 const longTasks: LongTask[] = [];
+// Spans opened and not yet closed: what a boot that never finished waits on.
+const openSpans = new Set<{ id: string; startMs: number }>();
 // Ceiling on recorded boot long tasks (see observeLongTasks).
 const MAX_BOOT_LONG_TASKS = 500;
 let firstCommitMs: number | null = null;
@@ -117,7 +120,10 @@ export function startBootSpan(
   label: string,
 ): () => void {
   const startMs = performance.now();
+  const open = { id, startMs };
+  openSpans.add(open);
   return () => {
+    openSpans.delete(open);
     recordBootSpan({
       id,
       phase,
@@ -126,6 +132,11 @@ export function startBootSpan(
       durationMs: performance.now() - startMs,
     });
   };
+}
+
+/** The spans still open now, oldest first (a span is recorded once it closes). */
+export function readOpenBootSpans(): { id: string; startMs: number }[] {
+  return [...openSpans];
 }
 
 /** Record a 0-duration marker span at the current instant. */
@@ -169,21 +180,6 @@ export async function traceBootPluginLoad<T>(
       detail,
     });
   }
-}
-
-/**
- * Stamp a 0-duration marker at the NEXT React commit (of any root) after this
- * call — for an instant defined by "the first render once X is true", which no
- * call site can stamp itself because the commit happens inside React. Stamped
- * at commit time (before the browser paints it). No-op when the commit bridge
- * (`web-core/web/index.html`) is absent, like the first-commit capture.
- */
-export function markBootInstantAtNextCommit(
-  id: string,
-  phase: BootPhase,
-  label: string,
-): void {
-  onNextCommit(() => markBootInstant(id, phase, label));
 }
 
 /**
@@ -367,20 +363,21 @@ onNextCommit(() => {
 // independently; `buffered: true` replays the ones that fired before this module
 // evaluated. Must NEVER throw and brick boot — longtask may be unsupported.
 //
-// Bounded to the boot window: once both boot-end instants are known (FCP and
-// the first commit — `bootWindowEnd`), the first long task starting after them
-// disconnects the observer, and a hard cap stops it regardless (a page without
-// the commit bridge never learns its first commit). Every consumer clips to the
+// Bounded to the load: once the page has painted AND shows the active app's
+// content (the paint alone can be the boot screen's, with the boot's own work
+// still to come), the first long task starting after both disconnects the
+// observer, and a hard cap stops it regardless. Every consumer clips to the
 // boot window anyway; before this, the array grew for the page's whole life.
 // After-boot main-thread stalls are reports/main-thread-stall's to watch.
 (function observeLongTasks() {
   try {
     const obs = new PerformanceObserver((list) => {
       const fcp = readPaintTiming().firstContentfulPaintMs;
+      const content = spans.find(
+        (s) => s.id === ROUTE_CONTENT_COMMIT_ID,
+      )?.startMs;
       const bootEnd =
-        fcp !== null && firstCommitMs !== null
-          ? Math.max(fcp, firstCommitMs)
-          : null;
+        fcp !== null && content !== undefined ? Math.max(fcp, content) : null;
       let done = false;
       for (const e of list.getEntries()) {
         if (bootEnd !== null && e.startTime > bootEnd) {

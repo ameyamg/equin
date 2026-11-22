@@ -9,7 +9,10 @@ export {
   slowPageLoadFingerprint,
   SlowPageLoadPayloadSchema,
   slowPageLoadSummary,
+  withLoadSplit,
 } from "./internal/slow-load";
+export { buildLoadSplit } from "./internal/load-split";
+export type { LoadSplit } from "./internal/load-split";
 export type {
   LoadMilestones,
   LoadVerdict,

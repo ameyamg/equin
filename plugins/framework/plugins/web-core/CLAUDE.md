@@ -145,7 +145,6 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/networking/request-guard.installRequestGuard`
     - `primitives/perfs/boot-trace.markBootInstant`
-    - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
     - `primitives/perfs/boot-trace.startBootSpan`
     - `primitives/perfs/boot-trace.traceBootPluginLoad`
     - `primitives/perfs/scheduler.yieldToMain`

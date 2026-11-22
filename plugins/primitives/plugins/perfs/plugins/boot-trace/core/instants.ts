@@ -16,5 +16,8 @@ export const FIRST_DATA_COMMIT_ID = "first-data-commit";
  */
 export const ROUTE_CONTENT_COMMIT_ID = "route-content-commit";
 
+/** The entry module evaluated (web-core's main.tsx): the app's code had arrived. */
+export const MODULE_EVAL_ID = "module-eval";
+
 /** Every deferred-tier plugin has loaded (or failed): web-core's boot sequence is done. */
 export const DEFERRED_LOAD_COMPLETE_ID = "deferred-load-complete";

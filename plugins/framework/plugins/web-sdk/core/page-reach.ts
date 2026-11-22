@@ -52,6 +52,7 @@ const SLEEP_MIN_MS = 2_000;
 // Page-global by design: the page's visibility and connectivity are one fact
 // for the whole document, observed once.
 let reachLosses = 0;
+let reachRetries = 0;
 let watching = false;
 
 function onPage(): boolean {
@@ -89,6 +90,11 @@ function watch(): void {
   // Page Lifecycle (Chromium): a frozen page's loads are cancelled.
   document.addEventListener("freeze", lost);
   window.addEventListener("pagehide", lost);
+}
+
+/** How many loads this realm asked again after losing its reach. */
+export function pageReachRetries(): number {
+  return reachRetries;
 }
 
 /** A point in the page's reach history, to ask later whether it was lost since. */
@@ -168,6 +174,7 @@ export async function loadAcrossReachLoss<T>(
         "[plugin] a load failed while the page was hidden, offline, asleep or leaving — loading it again once the page is back",
         err,
       );
+      reachRetries++;
       await whenPageCanFetch();
     }
   }
@@ -223,6 +230,7 @@ export function createWorkerRelaunch(what: string): WorkerRelaunch {
         `${what}: the worker failed to load while the page was hidden, offline, asleep or leaving — starting it again once the page is back`,
       );
       generation = Math.max(generation, launch.generation + 1);
+      reachRetries++;
       void whenPageCanFetch().then(relaunch);
       return "relaunching";
     },

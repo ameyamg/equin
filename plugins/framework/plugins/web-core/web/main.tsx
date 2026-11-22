@@ -7,9 +7,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
 import { markBootInstant } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { MODULE_EVAL_ID } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import App from "./App";
 
-markBootInstant("module-eval", "scripts", "main.tsx eval");
+markBootInstant(MODULE_EVAL_ID, "scripts", "main.tsx eval");
 
 // NOTE: the `.experimental` frame is NOT decided here. The browser cannot tell a
 // git-worktree namespace from a composition namespace or a release preview —

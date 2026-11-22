@@ -19,8 +19,10 @@ import {
   type LoadMilestones,
   type LoadVerdict,
   type SlowPageLoadPayload,
+  withLoadSplit,
 } from "../../core";
 import { connectionType } from "../internal/connection";
+import { readLoadSplit } from "../internal/read-load-split";
 
 /** Whether the browser reports paint timing at all (else FCP is never awaited). */
 function paintTimed(): boolean {
@@ -55,7 +57,15 @@ function milestones(): LoadMilestones {
   };
 }
 
-function file(payload: SlowPageLoadPayload): void {
+function file(judgedLoad: SlowPageLoadPayload): void {
+  // Read once, for a slow load only: the timeline holds thousands of files.
+  // Off the commit that may have settled the verdict (the boot trace notifies
+  // from the app's layout effects): an error here is reported, never the
+  // app's unmount.
+  queueMicrotask(() => fileNow(withLoadSplit(judgedLoad, readLoadSplit)));
+}
+
+function fileNow(payload: SlowPageLoadPayload): void {
   void report({
     kind: SLOW_PAGE_LOAD_KIND,
     source: "client-slow-op",

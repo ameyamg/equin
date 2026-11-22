@@ -31,7 +31,6 @@ vi.mock(
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     recordBootSpan: () => {},
-    markBootInstantAtNextCommit: () => {},
   }),
 );
 vi.mock("@plugins/reports/web", async (importOriginal) => ({

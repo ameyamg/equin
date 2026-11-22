@@ -55,6 +55,7 @@ export {
   loadAcrossReachLoss,
   markPageReach,
   pageReachLostSince,
+  pageReachRetries,
   whenPageCanFetch,
 } from "./page-reach";
 export type { ReachMark, WorkerLaunch, WorkerRelaunch } from "./page-reach";

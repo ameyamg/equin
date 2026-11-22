@@ -21,6 +21,13 @@
         seen();
       })();
     </script>
+    <!-- Resource Timing room. A browser keeps 250 entries and then records
+         none: boot outgrows that, losing the files a slow load waited for
+         last. Raised while the head parses, before any file is asked for
+         (boot-trace's RESOURCE_TIMING_BUFFER_SIZE). -->
+    <script id="resource-timing">
+      performance.setResourceTimingBufferSize(5000);
+    </script>
     <!-- First-frame color scheme floor. The theme itself arrives with this
          document: the gateway splices the server-rendered theme CSS (and the
          desktop's `data-color-scheme`) in at the end of the head — see

@@ -14,6 +14,7 @@ import {
   StallClientSchema,
   type StallClient,
 } from "@plugins/reports/plugins/main-thread-stall/core";
+import { LoadSplitSchema, loadSplitWords, type LoadSplit } from "./load-split";
 
 /**
  * A site visitor's slow page load, as a report. The site's analytics already
@@ -85,11 +86,25 @@ export const SlowPageLoadPayloadSchema = z
      * reports filed before it was recorded.
      */
     firstByte: FirstByteSplitSchema.nullable().default(null),
+    /**
+     * Where the time went until ready (or hidden): files, main thread, boot
+     * spans, retries. Null on reports filed before it was recorded.
+     */
+    split: LoadSplitSchema.nullable().default(null),
     client: StallClientSchema,
     connection: z.enum(CONNECTION_TYPES).nullable(),
   })
   .strict();
 export type SlowPageLoadPayload = z.infer<typeof SlowPageLoadPayloadSchema>;
+
+/** A verdict's payload with the split of the time the visitor waited. */
+export function withLoadSplit(
+  payload: SlowPageLoadPayload,
+  read: (untilMs: number) => LoadSplit,
+): SlowPageLoadPayload {
+  const untilMs = payload.readyMs ?? payload.hiddenAtMs;
+  return untilMs === null ? payload : { ...payload, split: read(untilMs) };
+}
 
 /** A measured instant as whole positive ms, or null (analytics' `loadMs`). */
 function wholeMs(ms: number | null): number | null {
@@ -136,6 +151,7 @@ export function judgeReadyLoad(
     hiddenAtMs: null,
     barMs,
     firstByte: ctx.firstByte,
+    split: null,
     client: ctx.client,
     connection: ctx.connection,
   };
@@ -164,6 +180,7 @@ export function judgeHiddenLoad(
     hiddenAtMs: hidden,
     barMs,
     firstByte: ctx.firstByte,
+    split: null,
     client: ctx.client,
     connection: ctx.connection,
   };
@@ -289,8 +306,12 @@ export function slowPageLoadSummary(p: SlowPageLoadPayload): string {
     p.firstByte && !connectionTimed(p.firstByte)
       ? ", connection untimed (reused or unreported)"
       : "";
-  const split = p.firstByte
+  const firstByte = p.firstByte
     ? ` [first byte${untimed}: ${splitWords(p.firstByte)}]`
     : "";
-  return `${head} (first byte ${seconds(p.ttfbMs)}, first paint ${seconds(p.fcpMs)}) — ${PHASE_WORDS[p.phase]}; ${p.client.os}/${p.client.family}${net}${split}`;
+  const words = p.split ? loadSplitWords(p.split) : "";
+  const rest = words ? ` [${words}]` : "";
+  // The import keeps 300 characters: what explains this phase goes first.
+  const why = p.phase === "server" ? firstByte + rest : rest + firstByte;
+  return `${head} (first byte ${seconds(p.ttfbMs)}, first paint ${seconds(p.fcpMs)}) — ${PHASE_WORDS[p.phase]}; ${p.client.os}/${p.client.family}${net}${why}`;
 }
