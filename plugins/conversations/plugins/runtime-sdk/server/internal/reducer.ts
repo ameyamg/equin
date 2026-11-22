@@ -65,10 +65,18 @@ export interface AgentProjection {
    */
   turnIds: boolean;
   /**
-   * When a failed model request last stopped the agent's turn — the CLI's
-   * synthetic assistant message with an `error`, written once its retries
-   * gave up (a usage limit, a server error, a lost connection) — until a turn
-   * runs past it or a new process starts.
+   * The API error the running turn's latest reply was — the CLI's synthetic
+   * assistant message with an `error` — while the turn has not gone past it.
+   * Not a stop yet: the CLI also writes one for a request it recovers from
+   * and goes on with (`Your computer went to sleep mid-response`, stop reason
+   * `tool_use`: it runs the tools, or asks again), so only a turn that ENDS on
+   * it (`result`) stopped. A reply or a tool result after it clears it.
+   */
+  turnError: string | null;
+  /**
+   * When a failed model request last stopped the agent's turn — the turn
+   * ended (`result`) on an API error (a usage limit, a server error, a lost
+   * connection) — until a turn runs past it or a new process starts.
    */
   stoppedAt: Date | null;
   /** The CLI's kind of that failure (`rate_limit`, `server_error`, …). */
@@ -92,6 +100,7 @@ export const EMPTY_PROJECTION: AgentProjection = {
   account: null,
   turnIds: false,
   cliReady: false,
+  turnError: null,
   stoppedAt: null,
   stopError: null,
 };
@@ -276,6 +285,7 @@ export function reduceEvents(
             s.openToolUseId = null;
             s.account = p.account ?? null;
             s.turnIds = p.turnIds === true;
+            s.turnError = null;
             s.stoppedAt = null;
             s.stopError = null;
             effects.push({
@@ -302,6 +312,7 @@ export function reduceEvents(
             s.rewindAnchorUuid = s.lastAssistantUuid;
             s.lastPromptUuid = p.promptUuid;
             s.turnReplied = false;
+            s.turnError = null;
             s.stoppedAt = null;
             s.stopError = null;
             if (p.turnId !== null) {
@@ -452,23 +463,29 @@ export function reduceEvents(
         ) {
           s.lastAssistantUuid = msg.uuid;
           s.turnReplied = true;
-          // The CLI's own notice that a failed model request stopped the turn
-          // (a sub-agent's is its own: the parent carries on).
-          if (typeof msg.error === "string") {
-            s.stoppedAt = at;
-            s.stopError = msg.error;
-          }
+          // The CLI's own notice that a model request failed (a sub-agent's
+          // is its own: the parent carries on). It stops the turn only if the
+          // turn ends on it (`result` below); any other reply means the CLI
+          // got past it.
+          s.turnError = typeof msg.error === "string" ? msg.error : null;
         } else if (
           msg.type === "user" &&
           msg.parent_tool_use_id == null &&
           hasToolResult(msg)
         ) {
           // A tool result means the agent is mid-turn (the transcript rule of
-          // `cutTranscriptAtUnansweredPrompt`).
+          // `cutTranscriptAtUnansweredPrompt`) — past any failed request.
           s.turnReplied = true;
+          s.turnError = null;
         } else if (msg.type === "result") {
           s.working = false;
           s.statusAt = at;
+          // The turn ended on an API error: the agent is stopped by it.
+          if (s.turnError !== null) {
+            s.stoppedAt = at;
+            s.stopError = s.turnError;
+            s.turnError = null;
+          }
         }
         break;
       }

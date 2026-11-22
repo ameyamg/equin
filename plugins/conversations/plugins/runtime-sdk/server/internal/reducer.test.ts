@@ -87,9 +87,11 @@ describe("reduceEvents", () => {
       },
     };
     const head = [withAccount, turnStarted(2, "go", "p-a"), init(3, "sid-1")];
-    const hit = reduceEvents(EMPTY_PROJECTION, [...head, limited, result(5)]);
+    const end = result(5);
+    const hit = reduceEvents(EMPTY_PROJECTION, [...head, limited, end]);
     expect(hit.state.account).toBe("acct-a");
-    expect(hit.state.stoppedAt).toEqual(new Date(limited.t));
+    // Stopped when the turn ended on it.
+    expect(hit.state.stoppedAt).toEqual(new Date(end.t));
     expect(hit.state.stopError).toBe("rate_limit");
 
     const past = reduceEvents(hit.state, [turnStarted(6, "continue", "p-b")]);
@@ -102,6 +104,43 @@ describe("reduceEvents", () => {
     expect(restarted.state.account).toBeNull();
   });
 
+  test("an API error the CLI goes on from is no stop", () => {
+    // `Your computer went to sleep mid-response`: the CLI writes the notice
+    // (stop reason `tool_use`), then runs the tools or asks again.
+    const notice = (seq: number) =>
+      sdk(seq, {
+        type: "assistant",
+        uuid: `a-${String(seq)}`,
+        parent_tool_use_id: null,
+        error: "server_error",
+        message: { content: [] },
+      });
+    const toolResult = (seq: number) =>
+      sdk(seq, {
+        type: "user",
+        parent_tool_use_id: null,
+        message: { content: [{ type: "tool_result", tool_use_id: "t" }] },
+      });
+    const head = [started(1), turnStarted(2, "go", "p-a"), init(3, "sid-1")];
+
+    // Mid-turn, the notice alone is not a stop yet.
+    const pending = reduceEvents(EMPTY_PROJECTION, [...head, notice(4)]);
+    expect(pending.state.stoppedAt).toBeNull();
+
+    // Past it — a tool result, or a reply — then the turn ends: no stop.
+    for (const after of [toolResult(5), assistant(5, "a-next")]) {
+      const ran = reduceEvents(pending.state, [after, result(6)]);
+      expect(ran.state.stoppedAt).toBeNull();
+      expect(ran.state.stopError).toBeNull();
+      expect(ran.state.turnError).toBeNull();
+    }
+
+    // Split across batches, a turn ending on it is still a stop.
+    const ended = reduceEvents(pending.state, [result(5)]);
+    expect(ended.state.stopError).toBe("server_error");
+    expect(ended.state.turnError).toBeNull();
+  });
+
   test("any API error stops the turn, a sub-agent's does not", () => {
     const failed = (seq: number, parent: string | null) =>
       sdk(seq, {
@@ -112,10 +151,18 @@ describe("reduceEvents", () => {
         message: { content: [] },
       });
     const head = [started(1), turnStarted(2, "go", "p-a"), init(3, "sid-1")];
-    const sub = reduceEvents(EMPTY_PROJECTION, [...head, failed(4, "toolu_1")]);
+    const sub = reduceEvents(EMPTY_PROJECTION, [
+      ...head,
+      failed(4, "toolu_1"),
+      result(5),
+    ]);
     expect(sub.state.stoppedAt).toBeNull();
 
-    const hit = reduceEvents(EMPTY_PROJECTION, [...head, failed(4, null)]);
+    const hit = reduceEvents(EMPTY_PROJECTION, [
+      ...head,
+      failed(4, null),
+      result(5),
+    ]);
     expect(hit.state.stopError).toBe("server_error");
     expect(hit.state.stoppedAt).not.toBeNull();
   });

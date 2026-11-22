@@ -48,6 +48,7 @@ const sdkAgentShape = defineExtensionShape({
     rewindAnchorUuid: nullable(textField()),
     turnIds: boolField(),
     cliReady: boolField(),
+    turnError: nullable(textField()),
   },
 });
 

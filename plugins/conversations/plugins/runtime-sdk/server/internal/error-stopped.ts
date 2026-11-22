@@ -14,8 +14,9 @@ import { _sdkAgentStopsTable } from "./tables";
 // Served from the conversations table with the agent's stop row joined
 // (`conversations_ext_sdk_agent_stop`, written only when a stop field moves —
 // never the per-batch checkpoint, which is out of the change feed): the
-// reducer sets `stopped_at` (and `stop_error`) on the CLI's notice of a failed
-// model request and clears it on the next turn or process, so a resume (or the
+// reducer sets `stopped_at` (and `stop_error`) when a turn ends on the CLI's
+// notice of a failed model request — never for one the CLI got past and went on
+// from — and clears it on the next turn or process, so a resume (or the
 // conversation closing) moves the row out of the window.
 // REQUIRED (INNER): a conversation without an agent row never stopped on an
 // API error. Its `on` is the host identity, so a side-row write is routed to its

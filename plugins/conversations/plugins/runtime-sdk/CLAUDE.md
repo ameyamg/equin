@@ -105,6 +105,13 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   row, NOTIFY, routing pass reaching no reader (2026-11-08: ~6,500/h on main).
   The file watch and catch-up per append remain: each append is an event to
   apply.
+- **A stop is a turn that ENDED on an API error** (`reducer.ts`). The CLI's
+  synthetic assistant message with an `error` is held as the checkpoint's
+  `turnError` and becomes the stop (`stoppedAt` / `stopError`) only at the
+  turn's `result`; a reply or tool result after it clears it. The CLI writes
+  the same notice for a request it gets past (`Your computer went to sleep
+  mid-response`, stop reason `tool_use` — it then runs the tools or asks
+  again), so recording it at the notice listed a working agent as stopped.
 - **The consumer signals the status reconciler only when the runtime's answer
   moves** (`machine/internal/runtime-info.ts`): `infoOf` is the one derivation
   of what `inspect` reports from a projection, and a batch signals only when
