@@ -38489,8 +38489,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports.ReportRow`
             - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
-            - Uses: 48 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
-              - `infra/git/main-slots/boot-lease` ×20
+            - Uses: 49 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
+              - `infra/git/main-slots/boot-lease` ×21
               - `packages/timed-fs` ×6
               - `infra/paths` ×5
               - `infra/namespace` ×4
@@ -38500,7 +38500,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names.readEnv`
               - `infra/paths/repo-root.REPO_ROOT`
               - `infra/spawn.getMainRepoRoot`
-              - `packages/sleep-clock.sleepStampNow`
+              - `packages/sleep-clock.clockStampNow`
             - Exports (types):
               - `DrainSlowPayload`
               - `HandedBuildSlot`
@@ -38585,8 +38585,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/host-fs/user-path.joinAppPath`
                   - `packages/flock.flockSharedSync`
                   - `packages/owned-fd.openOwnedFdSync`
-                  - `packages/sleep-clock.sleepStampNow`
+                  - `packages/sleep-clock.clockStampNow`
                   - `packages/sleep-clock/stamp.awakeBetween`
+                  - `packages/sleep-clock/stamp.ClockStamp`
                   - `packages/sleep-clock/stamp.isSleepStamp`
                   - `packages/sleep-clock/stamp.SleepStamp`
                   - `packages/timed-fs.existsSync`
@@ -38623,6 +38624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SLOT_UNSERVED_FILE`
                   - `slotHandedLockFile`
                   - `slotHolderRole`
+                  - `unservedStamp`
               - Cross-plugin:
                 - Imported by:
                   - `infra/git/main-slots`
@@ -45591,7 +45593,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `processStartStamp`
           - `readAwakeClock`
           - `readSleepClock`
-          - `sleepStampNow`
       - Cross-plugin:
         - Imported by:
           - `auth`

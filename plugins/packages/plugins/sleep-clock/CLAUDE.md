@@ -101,7 +101,6 @@ fails open). Those stay on the wall clock, and should say why.
     - `processStartStamp`
     - `readAwakeClock`
     - `readSleepClock`
-    - `sleepStampNow`
 - Cross-plugin:
   - Imported by:
     - `auth`

@@ -12,7 +12,7 @@ import { resolveGhTools } from "./gh";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { onSleepReadingChanged } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
-import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { catchUp } from "./catch-up";
 import { createCatchUpLedger } from "./catch-up-owed";
@@ -29,7 +29,8 @@ const githubEventsLog = defineLogSink({
  */
 export const catchUps = createCatchUpLedger({
   catchUp: (repo) => catchUp(runningGh(), repo),
-  sleepStamp: sleepStampNow,
+  // Only the sleep half: the ledger compares two sleep readings, no wall instant.
+  sleepStamp: () => clockStampNow().sleep,
   report: (repo, err) =>
     reportServerError({
       message: `[github-events] catching up ${repo} after its forwarder connected failed (owed until one succeeds: run again at its next reconnect or the next wake): ${err instanceof Error ? err.message : String(err)}`,
