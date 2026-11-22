@@ -72,6 +72,16 @@ around nothing the real instance. Designs:
     follows its place.
   - One embed per pane instance (two would share the tail). Outside any pane
     (a test, an exhibit with no address) the place is kept in memory only.
+  - **The host's place is a store, read when the embed decides** —
+    `location: { read, subscribe }` (`tabs`' `HostLocation`), never a value
+    the host renders. A rendered copy trails the moves written into it (a
+    pane surface draws its route deferred; even a `useSyncExternalStore`
+    value is the one read at the last render), and an embed judging by it
+    took its own earlier move for the page's Back: two quick app switches
+    on a slow device swapped the website demo between them, one commit and
+    one history entry each, until the tab closed (2026-11, 22–42 commits/s
+    with no input). The pane tail reads `usePaneViews().read()`, the
+    store's views now.
   - **A host can keep it elsewhere**: `place={{ location, onLocationChange,
     browserTabUrl }}` (`EmbedPlaceBinding`, the embedded tab set's own
     fields) replaces the pane's tail — an embed portaled from a layout, one
@@ -115,6 +125,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `apps-core/tab-surface.AppTabsBody`
     - `apps-core/tabs.EmbeddedAt`
     - `apps-core/tabs.EmbeddedTabSet`
+    - `apps-core/tabs.HostLocation`
     - `apps-core/tabs.TabsProvider`
     - `apps-core/tabs.useTabs`
     - `primitives/app-shell.useRecordBrandDrawn`

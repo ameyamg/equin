@@ -111,17 +111,18 @@ function ResidentDemo({
   onMaximize: () => void;
   onRestore: () => void;
 }): ReactNode {
-  const { place, controls, viaMaximize } = useDemoState();
-  const { setPlace } = useDemoActions();
+  const { controls, viaMaximize } = useDemoState();
+  const demo = useDemoActions();
+  const { setPlace } = demo;
   const claimTitle = useClaimTabTitle();
   // The framed demo's place: memory, never the homepage's URL.
   const framed = useMemo<EmbedPlaceBinding>(
     () => ({
-      location: place,
+      location: demo.place,
       onLocationChange: (url) => setPlace(url),
       browserTabUrl: (at) => withActiveRoutePrefix(demoPagePath(at)),
     }),
-    [place, setPlace],
+    [demo.place, setPlace],
   );
   const page = target.kind === "page";
   return (

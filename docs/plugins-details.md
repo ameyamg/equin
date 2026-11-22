@@ -14345,6 +14345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tab-surface.AppTabsBody`
           - `apps-core/tabs.EmbeddedAt`
           - `apps-core/tabs.EmbeddedTabSet`
+          - `apps-core/tabs.HostLocation`
           - `apps-core/tabs.TabsProvider`
           - `apps-core/tabs.useTabs`
           - `primitives/app-shell.useRecordBrandDrawn`
@@ -14902,6 +14903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `EmbeddedAt`
           - `EmbeddedTabSet`
+          - `HostLocation`
           - `NavigateOptions`
           - `OpenTab`
           - `PlacementCapabilities`
@@ -28548,6 +28550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/places/places-map`
+          - `apps/website/landing/screenshot`
           - `debug/live-state-churn/emit`
           - `debug/profiling/cold-start`
           - `reports/render-loop`

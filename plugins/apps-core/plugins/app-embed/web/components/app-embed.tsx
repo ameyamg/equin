@@ -20,6 +20,7 @@ import {
   useTabs,
   type EmbeddedAt,
   type EmbeddedTabSet,
+  type HostLocation,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import {
@@ -154,13 +155,14 @@ export function AppEmbed({
   const location = binding?.location;
   // The seed is read once, at the tab set's first render: the host's place
   // first, else the host's app / route, else the composition's home app.
-  const seed: EmbeddedAt =
-    location !== undefined
-      ? { url: location }
+  const [embeddedAt] = useState((): EmbeddedAt => {
+    const held = location?.read();
+    return held !== undefined
+      ? { url: held }
       : at.app !== undefined
         ? { app: at.app, route: at.route }
         : { url: undefined };
-  const [embeddedAt] = useState(seed);
+  });
   const onLocationChange = binding?.onLocationChange;
   const browserTabUrl = binding?.browserTabUrl;
   const embedded = useMemo<EmbeddedTabSet>(
@@ -194,9 +196,16 @@ export function AppEmbed({
  * in the URL, hands its own.
  */
 export interface EmbedPlaceBinding {
-  /** Where the embed is, as the host keeps it (`undefined`: nowhere chosen yet). */
-  location: string | undefined;
-  /** Told each move (`history`: how the app's own tab would write it). */
+  /**
+   * Where the embed is, as the host keeps it now (`read()` → `undefined`:
+   * nowhere chosen yet) — its store, never a copy the host renders, which
+   * can trail the moves it was told (see `EmbeddedTabSet.location`).
+   */
+  location: HostLocation;
+  /**
+   * Told each move (`history`: how the app's own tab would write it). A
+   * repeat is possible: the host writes only a place it does not hold.
+   */
   onLocationChange: (url: string, history: HistoryMode) => void;
   /** The URL of this origin a new browser tab opened at `place` from inside opens. */
   browserTabUrl: (place: string) => string;
@@ -209,13 +218,24 @@ export interface EmbedPlaceBinding {
  */
 function usePaneTailBinding(): EmbedPlaceBinding | null {
   const views = usePaneViews();
-  const location = views?.values[EMBED_PLACE_SURFACE];
-  const latest = useLatestRef({ views, location });
+  const latest = useLatestRef({ views });
+  const read = views?.read;
+  const subscribe = views?.subscribe;
+  const location = useMemo(
+    (): HostLocation | null =>
+      read === undefined || subscribe === undefined
+        ? null
+        : { read: () => read()[EMBED_PLACE_SURFACE], subscribe },
+    [read, subscribe],
+  );
+  // Only a place the tail does not hold yet is written: a report repeating
+  // it may come after the pane instance left the route (the page left, its
+  // drawn match not yet), where a write throws.
   const onLocationChange = useCallback(
     (next: string) => {
-      const now = latest.current;
-      if (now.views === null || next === now.location) return;
-      now.views.set({ [EMBED_PLACE_SURFACE]: next }, "replace");
+      const views = latest.current.views;
+      if (views === null || views.read()[EMBED_PLACE_SURFACE] === next) return;
+      views.set({ [EMBED_PLACE_SURFACE]: next }, "replace");
     },
     [latest],
   );
@@ -230,10 +250,10 @@ function usePaneTailBinding(): EmbedPlaceBinding | null {
     },
     [latest],
   );
-  const bound = views !== null;
   return useMemo(
-    () => (bound ? { location, onLocationChange, browserTabUrl } : null),
-    [bound, location, onLocationChange, browserTabUrl],
+    () =>
+      location === null ? null : { location, onLocationChange, browserTabUrl },
+    [location, onLocationChange, browserTabUrl],
   );
 }
 

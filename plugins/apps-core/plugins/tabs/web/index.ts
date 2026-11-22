@@ -15,6 +15,7 @@ export {
   type NavigateOptions,
   type EmbeddedTabSet,
   type EmbeddedAt,
+  type HostLocation,
 } from "./internal/use-tabs";
 export { appLink, appLinkProps } from "./internal/app-link";
 export { useFocusedTabTitle } from "./internal/focused-tab-title-store";

@@ -2849,8 +2849,21 @@ export function usePaneViewParam(surface: string): PaneViewParam | null {
 
 /** Several surface views of the enclosing pane instance, bound for read and write. */
 export interface PaneViews {
-  /** Every surface view the URL names for this instance, by surface. */
+  /**
+   * Every surface view the URL names for this instance, by surface, as the
+   * surface DRAWS it — the route is drawn deferred, so this can trail a write
+   * by a render (see {@link read}).
+   */
   values: Readonly<Record<string, string>>;
+  /**
+   * The views the instance holds NOW, written or not yet drawn — for a
+   * reader that decides on them (an echo check), where {@link values} would
+   * hand it an older write. Read outside render; {@link subscribe} hears each
+   * change.
+   */
+  read: () => Readonly<Record<string, string>>;
+  /** Told every route change of the surface (the views' included). */
+  subscribe: (onChange: () => void) => () => void;
   /**
    * Write several views at once (`undefined` clears one) in ONE history
    * write — replacing the entry by default, `"push"` to add one — as
@@ -2918,10 +2931,24 @@ export function usePaneViews(): PaneViews | null {
     },
     [store, pane, instanceId, keyed],
   );
+  const read = useCallback((): Readonly<Record<string, string>> => {
+    if (store === null || pane === undefined || instanceId === undefined)
+      return {};
+    if (pane.appIndex && instanceId === indexInstanceIdFor(pane.id))
+      return surfaceViewsOf(store.getIndexParams());
+    const slot = store.getRoute().find((s) => s.instanceId === instanceId);
+    return slot === undefined ? {} : surfaceViewsOf(slot.params);
+  }, [store, pane, instanceId]);
+  const subscribe = useCallback(
+    (onChange: () => void) =>
+      store === null ? () => {} : store.subscribeRoute(onChange),
+    [store],
+  );
   const values = bound ? entry.views : undefined;
   return useMemo(
-    () => (values === undefined ? null : { values, set, href }),
-    [values, set, href],
+    () =>
+      values === undefined ? null : { values, read, subscribe, set, href },
+    [values, read, subscribe, set, href],
   );
 }
 

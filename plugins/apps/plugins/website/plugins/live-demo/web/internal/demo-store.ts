@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { EmbedPlaceBinding } from "@plugins/apps-core/plugins/app-embed/web";
+import type { HostLocation } from "@plugins/apps-core/plugins/tabs/web";
 import type { DemoEntry } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
   defineScopedStore,
@@ -87,6 +88,8 @@ export interface DemoActions {
   setControls(element: HTMLElement | null): void;
   /** Where the visitor is inside the demo (`undefined`: forget it — a Reset). */
   setPlace(place: string | undefined): void;
+  /** {@link DemoState.place} as the framed demo's embed reads it: now, and on each change. */
+  place: HostLocation;
   /** The visitor came in through the scope's gate or a join. */
   entered(how: DemoEntry): void;
   /** The visitor maximized the frame: the demo page about to show offers the way back. */
@@ -142,6 +145,10 @@ function demoActions(store: ScopedStore<DemoState>): DemoActions {
     },
     setPlace(place) {
       if (store.getState().place !== place) update({ place });
+    },
+    place: {
+      read: () => store.getState().place,
+      subscribe: (onChange) => store.subscribe(() => onChange()),
     },
     maximizing() {
       update({ viaMaximize: true });

@@ -276,6 +276,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
   - Exports (types):
     - `EmbeddedAt`
     - `EmbeddedTabSet`
+    - `HostLocation`
     - `NavigateOptions`
     - `OpenTab`
     - `PlacementCapabilities`

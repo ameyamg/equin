@@ -26,20 +26,24 @@ export function DemoPage(): ReactNode {
   const views = usePaneViews();
   if (views === null)
     throw new Error("The demo page is a pane: its place is its URL.");
-  const location = views.values[EMBED_PLACE_SURFACE];
-  const { set, href } = views;
+  const { read, subscribe, set, href } = views;
   const { setPlace } = useDemoActions();
   const place = useMemo<EmbedPlaceBinding>(
     () => ({
-      location,
+      // The tail as the pane holds it now, never as it is drawn (deferred):
+      // the embed must hear its own moves back at once.
+      location: { read: () => read()[EMBED_PLACE_SURFACE], subscribe },
       onLocationChange: (url: string, history: HistoryMode) => {
         setPlace(url);
-        if (url !== location) set({ [EMBED_PLACE_SURFACE]: url }, history);
+        // Only a place the tail does not hold yet: a repeat may come after
+        // the page left the route (still drawn), where a write throws.
+        if (read()[EMBED_PLACE_SURFACE] !== url)
+          set({ [EMBED_PLACE_SURFACE]: url }, history);
       },
       browserTabUrl: (at: string) =>
         withActiveRoutePrefix(href({ [EMBED_PLACE_SURFACE]: at })),
     }),
-    [location, set, href, setPlace],
+    [read, subscribe, set, href, setPlace],
   );
   return (
     <>

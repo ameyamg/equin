@@ -5,6 +5,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useReducer,
   useRef,
   useState,
   useSyncExternalStore,
@@ -620,13 +621,19 @@ export interface EmbeddedTabSet {
   /** Where the first tab opens (read once, at the set's first render). */
   at: EmbeddedAt;
   /**
-   * The host's copy of the set's location, once the set is open: what
-   * {@link onLocationChange} told it, or a place the host moved to itself (its
-   * page's Back / Forward). Changed to one the set did not just report, the
-   * set moves there — its surface mode included (`/desktop/sonata`). Omitted:
-   * the host keeps none, and the set goes only where its user takes it.
+   * Where the host keeps the set's location: what {@link onLocationChange}
+   * told it, or a place the host moved to itself (its page's Back / Forward).
+   * Changed to one other than the set's last report, the set moves there —
+   * its surface mode included (`/desktop/sonata`). Omitted: the host keeps
+   * none, and the set goes only where its user takes it.
+   *
+   * A store, read when the set decides, never a value the host renders: a
+   * rendered copy can trail what the host holds (a pane surface draws its
+   * route deferred), and a set judging by it hears its own older reports back
+   * as moves — two quick app switches then swapped the set between them for
+   * as long as the page stayed open.
    */
-  location?: string;
+  location?: HostLocation;
   /** An app-rooted URL no app in scope owns. */
   onLeave: (url: string) => void;
   /**
@@ -665,6 +672,20 @@ export interface EmbeddedTabSet {
    */
   fillsPage: boolean;
 }
+
+/** What a host holds as an embedded set's location, read now (see {@link EmbeddedTabSet.location}). */
+export interface HostLocation {
+  /** The location the host holds now (`undefined`: none chosen yet). */
+  read(): string | undefined;
+  /** Told every change of {@link read}'s answer (a repeat is possible). */
+  subscribe(onChange: () => void): () => void;
+}
+
+/** A host that keeps no location: nothing to read, nothing to hear. */
+const NO_HOST_LOCATION: HostLocation = {
+  read: () => undefined,
+  subscribe: () => () => {},
+};
 
 /**
  * Where an embedded set's first tab opens: one app at its app-relative route
@@ -822,6 +843,10 @@ export function TabsProvider({
   // per-tab: every tab is displayed under this single value, so two modes can
   // never be visible at once. `previousMode` backs the solo (fullscreen) exit.
   const [rawMode, setModeState] = useState<Placement>(initialMode);
+  // The requested mode as of now: `applyMode` writes it before its render, so
+  // a report made in the same tick (the boundary switches the mode, then
+  // navigates) names the mode the set is going to, not the one it leaves.
+  const rawModeRef = useRef<Placement>(initialMode);
   const previousModeRef = useRef<Placement>(initialMode);
   // Its render-path twin (the ref backs the stable exit callback).
   const [previousMode, setPreviousMode] = useState<Placement>(initialMode);
@@ -1496,6 +1521,7 @@ export function TabsProvider({
       previousModeRef.current = modeRef.current;
       setPreviousMode(modeRef.current);
       modeRef.current = next;
+      rawModeRef.current = next;
       setModeState(next);
       if (page) setActiveRoutePrefix(routePrefixForMode(next, appsRef.current));
       persist();
@@ -1791,7 +1817,8 @@ export function TabsProvider({
   // host page's address; a host holding a location hears every report, so a
   // stale one is corrected.
   const locationRef = useLatestRef(embedded?.onLocationChange);
-  const hostLocationRef = useLatestRef(embedded?.location);
+  const hostLocation = embedded?.location ?? NO_HOST_LOCATION;
+  const hostLocationRef = useLatestRef(hostLocation);
   const reportedRef = useRef<{ url: string; seq: number } | undefined>(
     undefined,
   );
@@ -1799,9 +1826,14 @@ export function TabsProvider({
     undefined,
   );
   const movedRef = useRef(false);
+  // The host location the set last stood at: the one it opened at, last
+  // reported, or last followed (see the follow below).
+  const [openedAt] = useState(() => hostLocation.read());
+  const followedRef = useRef(openedAt);
   useEffect(() => {
     if (page) return;
     const report = () => {
+      const rawMode = rawModeRef.current;
       const tab = tabsRef.current.find((t) => t.tabId === focusedRef.current);
       const url = embeddedLocation(tab, rawMode, appsRef.current);
       const write = tab?.store.lastHistoryWrite();
@@ -1819,7 +1851,9 @@ export function TabsProvider({
         (write !== undefined && write.seq > opened.seq && write.mode === "push")
       )
         movedRef.current = true;
-      if (!movedRef.current && hostLocationRef.current === undefined) return;
+      if (!movedRef.current && hostLocationRef.current.read() === undefined)
+        return;
+      followedRef.current = url;
       locationRef.current?.(url, history);
     };
     report();
@@ -1867,13 +1901,21 @@ export function TabsProvider({
   );
 
   // The host moved the set (its page's Back / Forward): go to the location it
-  // holds, in the surface mode that location names — unless it is the echo
-  // of the set's own report. Judged on a CHANGE of the host's location only:
-  // at mount the set is where it was seeded, and its first report may still
-  // be on its way to the host.
-  const followed = embedded?.location;
-  const followedRef = useRef(followed);
+  // holds, in the surface mode that location names — unless it is where the
+  // set last reported, or last went. A rendered value only says WHEN to look:
+  // what the host holds is read now, from its store. Any copy a render holds
+  // trails the reports written since (this effect runs after the report that
+  // moved the host), and a set deciding on one hears its own earlier move as
+  // the page's — two quick app switches then swapped the set between them,
+  // one commit each, for as long as the page stayed open.
+  //
+  // Woken by every notice, not by a changed rendered value: a Back landing
+  // on the value last rendered (A, then B reported, then Back to A before a
+  // render) is a change of what the host holds all the same.
+  const [hostNotices, noticeHost] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => hostLocation.subscribe(noticeHost), [hostLocation]);
   useEffect(() => {
+    const followed = hostLocationRef.current.read();
     if (page || followed === undefined || followed === followedRef.current)
       return;
     followedRef.current = followed;
@@ -1898,7 +1940,15 @@ export function TabsProvider({
     }
     const path = prefixed?.rest ?? followed;
     if (path !== "/") navigate(path);
-  }, [page, followed, appsRef, navigate, setMode, focusTab]);
+  }, [
+    page,
+    hostNotices,
+    hostLocationRef,
+    appsRef,
+    navigate,
+    setMode,
+    focusTab,
+  ]);
 
   // An embedded set's focused store, for an op made outside every pane
   // surface inside it (a dialog in the embed's render origin): its live
