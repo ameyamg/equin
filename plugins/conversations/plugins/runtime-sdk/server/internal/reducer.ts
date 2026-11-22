@@ -4,6 +4,7 @@ import {
   type ContextUsage,
 } from "@plugins/conversations/plugins/context-usage/core";
 import type { AgentLaunchPhase } from "@plugins/conversations/plugins/launch-timeline/core";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import type { AgentEvent, AgentLifecycle, OpenRequest } from "../../core";
 
 // Event lines → the conversation's projection, plus the side effects the
@@ -150,15 +151,15 @@ export type AgentEffect =
   /** The agent could not measure its context window: reported. */
   | { kind: "context-unmeasured"; seq: number; error: string }
   /**
-   * The process `pid` reached a launch phase at `at` (its own clock): marked
-   * on the conversation's launch record (launch-timeline), which keeps only
-   * the launch's own process's.
+   * The process `pid` reached a launch phase at `at` (its own clocks — the
+   * line's wall time and sleep stamp): marked on the conversation's launch
+   * record (launch-timeline), which keeps only the launch's own process's.
    */
   | {
       kind: "launch-phase";
       phase: AgentLaunchPhase;
       pid: number;
-      at: Date;
+      at: ClockStamp;
     };
 
 /** Lines the file skipped over: more rotations than the sink keeps were missed. */
@@ -250,7 +251,7 @@ export function reduceEvents(
   const malformed: MalformedEvent[] = [];
   const stalls: ExitStall[] = [];
   // A phase of the running process; none is known before its `started`.
-  const launchPhase = (phase: AgentLaunchPhase, at: Date): void => {
+  const launchPhase = (phase: AgentLaunchPhase, at: ClockStamp): void => {
     if (s.agentPid !== null)
       effects.push({ kind: "launch-phase", phase, pid: s.agentPid, at });
   };
@@ -264,6 +265,8 @@ export function reduceEvents(
     switch (e.kind) {
       case "agent": {
         const p = e.payload;
+        // The line's instant on both clocks, as the agent read them together.
+        const stamp: ClockStamp = { wallMs: e.t, sleep: e.sleep ?? null };
         switch (p.event) {
           case "started":
             // A turn typed into an earlier process and never started died
@@ -292,19 +295,19 @@ export function reduceEvents(
               kind: "launch-phase",
               phase: "agent-started",
               pid: p.pid,
-              at,
+              at: stamp,
             });
             break;
           case "ready":
             s.cliVersion = p.cliVersion;
             s.cliReady = true;
-            launchPhase("cli-ready", at);
+            launchPhase("cli-ready", stamp);
             break;
           case "first_token":
-            launchPhase("first-token", at);
+            launchPhase("first-token", stamp);
             break;
           case "first_message":
-            launchPhase("first-message", at);
+            launchPhase("first-message", stamp);
             break;
           case "turn_started":
             s.working = true;

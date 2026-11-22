@@ -17,6 +17,10 @@ import {
   markCheckoutEnded,
 } from "@plugins/conversations/plugins/launch-timeline/server";
 import type { CheckoutStep } from "@plugins/conversations/plugins/launch-timeline/core";
+import {
+  clockStampNow,
+  processStartStamp,
+} from "@plugins/packages/plugins/sleep-clock/core";
 import { checkoutProgress } from "./tables-checkout-progress";
 
 // The checkout's transcript, at `logs/worktree-prepare.jsonl` of the backend
@@ -69,19 +73,20 @@ export const worktreePrepareJob = defineSupervisedJob({
     // from the CLI.
     log(`checkout ${attemptId} at ${path}: starting`);
     // The launch record (launch-timeline): when this process started — before
-    // its worktree-prepare slot wait and its boot — and when its body began.
+    // its worktree-prepare slot wait and its boot — and when its body began,
+    // each stamped on both clocks so a sleep in between is not read as boot.
     // Written before the checkout, so a hung one shows it got this far.
     if (conversationId !== undefined)
       await markCheckoutBooted(conversationId, {
-        childStartedAt: Math.round(performance.timeOrigin),
-        bootedAt: Date.now(),
+        childStarted: processStartStamp(),
+        booted: clockStampNow(),
       });
     // Each step as it ends (a hung one shows where it hung), then the whole
     // split on the result line — the record every launch leaves of where its
     // checkout's time went — and on the launch record, placed by its end.
     const ended: CheckoutStep[] = [];
     const steps = recordSetupSteps((s) => {
-      ended.push({ ...s, endAt: Date.now() });
+      ended.push({ ...s, end: clockStampNow() });
       log(`checkout ${attemptId} step: ${describeSetupStep(s)}`);
     });
     const { source, tree, depStore, fsmonitor, untrackedCache } =
@@ -105,7 +110,7 @@ export const worktreePrepareJob = defineSupervisedJob({
       );
     if (conversationId !== undefined)
       await markCheckoutEnded(conversationId, {
-        endedAt: Date.now(),
+        ended: clockStampNow(),
         steps: ended,
         source,
       });

@@ -18,6 +18,7 @@ import {
   segmentStats,
   type LaunchRecord,
   type Percentiles,
+  type SegmentStats,
 } from "../../core";
 
 /** One stretch's percentiles over all launches, and split by how the checkout was made. */
@@ -25,7 +26,7 @@ interface SegmentRow {
   id: string;
   label: string;
   total: boolean;
-  all: Percentiles;
+  all: SegmentStats;
   spare: Percentiles;
   fresh: Percentiles;
 }
@@ -74,6 +75,20 @@ const SEGMENT_COLUMNS: ColumnDef<SegmentRow>[] = [
     cell: (r) => (r.total ? <strong>{r.label}</strong> : r.label),
   },
   ...percentileColumns<SegmentRow>("all", "All", (r) => r.all),
+  {
+    id: "slept",
+    header: "Slept through",
+    align: "end",
+    width: "7rem",
+    value: (r) => r.all.slept,
+  },
+  {
+    id: "untold",
+    header: "Sleep unknown",
+    align: "end",
+    width: "7rem",
+    value: (r) => r.all.untold,
+  },
   ...percentileColumns<SegmentRow>("spare", "Spare", (r) => r.spare),
   ...percentileColumns<SegmentRow>("fresh", "Fresh", (r) => r.fresh),
 ];
@@ -113,8 +128,7 @@ function LaunchStats({
       <Stack gap="lg">
         <Stack as="section" gap="sm">
           <SectionLabel>
-            Agent launches — the newest {launches.length}, request to first
-            token (spare: a claimed spare checkout; fresh: a cold one)
+            Agent launches — the newest {launches.length}, in awake time
           </SectionLabel>
           <DataTable
             data={segmentRows(launches)}

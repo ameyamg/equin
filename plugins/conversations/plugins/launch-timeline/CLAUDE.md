@@ -10,11 +10,44 @@ was recorded nowhere
 
 ## The record
 
-`requestedAt` (the conversation's creation) plus `marks` — each phase's
-wall-clock instant (epoch ms), in `LAUNCH_PHASES` (core, a closed list) — plus
+`requestedAt` (the conversation's creation) plus `marks` — the request's and
+each phase's instant, in `LAUNCH_INSTANT_IDS` (core, a closed list) — plus
 `checkoutSteps` (the checkout child's `SetupStep` spans with the instant each
-ended) and `checkoutSource` (`spare` / `fresh` / `existing`). Every writer is
-on this machine, so the clocks compare.
+ended) and `checkoutSource` (`spare` / `fresh` / `existing`).
+
+**Every instant is a `ClockStamp`** (`packages/sleep-clock/stamp`):
+`{ wallMs, sleep: { boot, asleepMs } | null }` — the wall instant and the
+machine's sleep clock read together, by the process that saw it. Every writer
+is on this machine, so any two stamps compare, and **a stretch is judged on
+awake time**: `awakeBetween(from, to).awakeMs`, the wall span less the sleep
+inside it. A Mac sleeps through launches (on battery it naps in cycles); on
+the wall clock that read as launch latency — on 2026-11-21 a "request → first
+token" of 7320 s was 110 s awake, and a 14.8 s checkout step sat inside a
+2134 s gap. `sleep` is null where it cannot be told (records from before
+2026-11-23, migrated as wall-only; a platform without the clock): that stretch
+reads as wall time and is counted as such. A checkout step's `ms` was always
+awake time (the child times it on `performance.now()`); its `end` is a stamp
+like the marks.
+
+- `requested`: the conversation row has only a wall instant (`created_at`),
+  so the spawn job stamps it when it opens the record: its own stamp less the
+  sleep its process saw since (`infra/host/machine-sleep`'s
+  `stampOfWallInstant`).
+- **Bare wall instants still read.** The data migration turned every old
+  mark and step into a stamp with `sleep: null`, and the schema reads a bare
+  number (or a step's `endAt`) the same way, for a writer still on the old code
+  across that deploy.
+- **The request's sleep is a lower bound.** `sleptDuring` knows the sleeps the
+  spawn's process lived through and the one before it started: a backend
+  restarted between two naps after the request, or a reboot, leaves sleep
+  untaken out — the queue stretch reads high, never low.
+- The writers (`server/`) take stamps; their callers read the clocks. The
+  barrel stays portable: it also serves `conversations.launches`, which the
+  in-browser demo's host answers without the computer's `bun:ffi`.
+- `prepare-child-started`: `processStartStamp()` — the process start, exact
+  however long after it the child first reads its clocks.
+- The agent's phases: `bin/agent.ts` stamps each `agent` lifecycle line
+  (`t` + `sleep`, runtime-sdk's protocol), read back as one stamp.
 
 | phase | written by | when |
 |---|---|---|
@@ -54,23 +87,34 @@ on this machine, so the clocks compare.
 
 - **People**: Debug → Profiling → the agent launches section (`web/`): the
   newest 200 records (`conversations.launches`, a window by `requestedAt`),
-  each stretch's p50 / p90 / n (`LAUNCH_SEGMENTS`), split by spare / fresh
-  checkout, and each checkout step's. Stats are per stretch over the launches
+  each stretch's awake p50 / p90 / n (`LAUNCH_SEGMENTS`), how many of them
+  slept through it (taken out) or could not tell (wall), split by spare /
+  fresh checkout, and each checkout step's. Stats are per stretch over the launches
   that reached both its ends (`segmentStats`), so a change that reorders phases
   (starting the agent while the checkout installs) shows as a negative
   stretch while the `Request → …` totals stay comparable.
 - **Agents** (`query_db`, main's DB `equin`):
 
   ```sql
+  -- Awake ms from <from> to <to>: the wall span less the sleep between the
+  -- two stamps (none taken out across a reboot or an unstamped side).
+  WITH s AS (
+    SELECT marks->'requested' AS a, marks->'first-token' AS b
+    FROM conversations_ext_launch
+    WHERE marks ? 'first-token' AND requested_at > now() - interval '7 days'
+  )
   SELECT percentile_disc(ARRAY[0.5, 0.9]) WITHIN GROUP (ORDER BY
-           ((marks->>'first-token')::bigint
-            - extract(epoch FROM requested_at) * 1000)) AS request_to_first_token
-  FROM conversations_ext_launch
-  WHERE marks ? 'first-token' AND requested_at > now() - interval '7 days';
+           (b->>'wallMs')::numeric - (a->>'wallMs')::numeric
+           - CASE WHEN a->'sleep'->>'boot' = b->'sleep'->>'boot'
+                  THEN (b->'sleep'->>'asleepMs')::numeric
+                       - (a->'sleep'->>'asleepMs')::numeric
+                  ELSE 0 END) AS request_to_first_token_awake
+  FROM s;
   ```
 
-  Any stretch is `(marks->>'<to>')::bigint - (marks->>'<from>')::bigint`;
-  steps are `jsonb_array_elements(checkout_steps)`.
+  Never subtract `->>'wallMs'` alone: that is the wall span, a night's
+  sleep included. Steps are `jsonb_array_elements(checkout_steps)` (`ms` is
+  already awake).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
@@ -123,6 +167,9 @@ on this machine, so the clocks compare.
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
     - `packages/list-bound.cappedList`
+    - `packages/sleep-clock/stamp.awakeBetween`
+    - `packages/sleep-clock/stamp.ClockStamp`
+    - `packages/sleep-clock/stamp/schema.ClockStampSchema`
   - Exports (types):
     - `AgentLaunchPhase`
     - `CheckoutSourceKind`
@@ -142,6 +189,7 @@ on this machine, so the clocks compare.
     - `checkoutStepStats`
     - `conversationLaunches`
     - `instantOf`
+    - `LAUNCH_INSTANT_IDS`
     - `LAUNCH_PHASE_IDS`
     - `LAUNCH_PHASES`
     - `LAUNCH_SEGMENTS`

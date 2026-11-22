@@ -34,6 +34,23 @@ describe("awakeBetween", () => {
       awakeBetween({ wallMs: 0, sleep: null }, { wallMs: 5_000, sleep: s(9) }),
     ).toEqual({ wallMs: 5_000, sleptMs: null, awakeMs: 5_000 });
   });
+  test("a backward span (to before from) takes its sleep out toward zero", () => {
+    // Agent started at 0, a 1 h nap, the checkout ended after it.
+    expect(
+      awakeBetween(
+        { wallMs: 3_602_000, sleep: s(3_600_000) },
+        { wallMs: 0, sleep: s(0) },
+      ),
+    ).toEqual({ wallMs: -3_602_000, sleptMs: 3_600_000, awakeMs: -2_000 });
+  });
+  test("a wall clock stepped back with no sleep between: the wall span", () => {
+    expect(
+      awakeBetween(
+        { wallMs: 1_000, sleep: s(5) },
+        { wallMs: 400, sleep: s(5) },
+      ),
+    ).toEqual({ wallMs: -600, sleptMs: 0, awakeMs: -600 });
+  });
   test("a sleep is never more than the span (a wall clock stepped back)", () => {
     expect(
       awakeBetween(

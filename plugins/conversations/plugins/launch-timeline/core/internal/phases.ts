@@ -4,9 +4,12 @@
  * `requestedAt`, offset 0). A closed list: every writer names one, and the
  * stats derive their rows from it.
  *
- * Each mark is a wall-clock epoch ms written by the process that saw it — the
- * backend, the checkout child, the agent — all on one machine, so their clocks
- * compare (one instance per user).
+ * Each mark is a `ClockStamp` (packages/sleep-clock/stamp) taken by the
+ * process that saw it — the backend, the checkout child, the agent: the wall
+ * instant and the machine's sleep clock at it, both machine-wide, so any two
+ * marks compare and a stretch between them is judged on AWAKE time
+ * (`awakeBetween`). A Mac that sleeps through a launch has not spent that nap
+ * launching (2026-11-21: a 2 h "request → first token" was 110 s awake).
  */
 export const LAUNCH_PHASES = [
   {
@@ -56,6 +59,16 @@ export type LaunchPhase = (typeof LAUNCH_PHASES)[number]["id"];
 export const LAUNCH_PHASE_IDS = LAUNCH_PHASES.map((p) => p.id) as [
   LaunchPhase,
   ...LaunchPhase[],
+];
+
+/**
+ * Every instant a record stamps: the request (the conversation's creation,
+ * stamped by the spawn job from the sleep its process saw since — the row
+ * itself holds only a wall instant), then each phase.
+ */
+export const LAUNCH_INSTANT_IDS = ["requested", ...LAUNCH_PHASE_IDS] as [
+  LaunchInstant,
+  ...LaunchInstant[],
 ];
 
 /** The phases the agent process itself reports, through its events file. */

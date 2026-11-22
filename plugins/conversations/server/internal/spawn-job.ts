@@ -16,6 +16,8 @@ import {
   abandonLaunch,
   openLaunch,
 } from "@plugins/conversations/plugins/launch-timeline/server";
+import { stampOfWallInstant } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import { Runtime } from "./runtime";
 import { spawnSystemPrompt } from "./spawn-system-prompt";
 import { requestStatusReconcile } from "./status-reconciler";
@@ -124,7 +126,13 @@ export const spawnConversationJob = defineJob({
       if (!row || row.status === "done") return;
       // The launch record: every phase from here to the first token lands on
       // it (launch-timeline). Opened once — a retry keeps the first run's.
-      await openLaunch(conversationId, attemptId, row.createdAt);
+      // Stamped on both clocks, the request from the sleep this process saw
+      // since it: a machine asleep before the spawn ran is not queue time.
+      const spawnStarted = clockStampNow();
+      await openLaunch(conversationId, attemptId, {
+        requested: stampOfWallInstant(row.createdAt.getTime(), spawnStarted),
+        spawnStarted,
+      });
       const workspace = Workspace.get(spec.kind);
       const runtime = Runtime.get(runtimeId);
       // The agent's process starts as soon as the workspace's files exist

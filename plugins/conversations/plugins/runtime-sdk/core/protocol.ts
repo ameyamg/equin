@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SleepStampSchema } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/plugins/schema/core";
 
 // The wire between a backend and one SDK agent process.
 //
@@ -250,6 +251,14 @@ export const AgentEventSchema = z.discriminatedUnion("kind", [
     ...envelope,
     kind: z.literal("agent"),
     payload: AgentLifecycleSchema,
+    /**
+     * Where the machine's sleep clock stood at `t`, read with it (`t` and
+     * this are one `ClockStamp`): a lifecycle line is a launch instant, and
+     * launch-timeline judges its stretches on awake time. Null where the
+     * platform cannot tell; absent from an agent started before it was
+     * written.
+     */
+    sleep: SleepStampSchema.nullable().optional(),
   }),
 ]);
 export type AgentEvent = z.infer<typeof AgentEventSchema>;

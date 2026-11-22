@@ -10,14 +10,33 @@ import {
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { nullable } from "@plugins/fields/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
-import { LAUNCH_PHASE_IDS } from "./phases";
+import { ClockStampSchema } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/plugins/schema/core";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import { LAUNCH_INSTANT_IDS } from "./phases";
 
-/** Each phase's instant (epoch ms), present once reached. */
+/**
+ * A stored instant: a stamp — or a bare wall instant (epoch ms), read as a
+ * stamp whose sleep cannot be told. Records from before stamps were migrated
+ * (the `launch_marks_clock_stamps` data migration), but a writer still running
+ * the old code across that deploy (a detached checkout child, the old backend
+ * in its overlap) writes one more after it: read, never a broken window.
+ */
+const StoredStampSchema = z.union([
+  ClockStampSchema,
+  z.number().transform((wallMs): ClockStamp => ({ wallMs, sleep: null })),
+]);
+
+/**
+ * Each instant's stamp, present once reached: its wall time and the machine's
+ * sleep clock at it, so a stretch is judged on awake time (`awakeBetween`).
+ * `sleep` is null where it cannot be told (a record from before stamps, a
+ * platform without the clock) — the stretch then reads as wall time.
+ */
 export const LaunchMarksSchema = z.partialRecord(
-  z.enum(LAUNCH_PHASE_IDS),
-  z.number(),
+  z.enum(LAUNCH_INSTANT_IDS),
+  StoredStampSchema,
 );
-export type LaunchMarks = z.infer<typeof LaunchMarksSchema>;
+export type LaunchMarks = z.output<typeof LaunchMarksSchema>;
 
 /**
  * At most this many checkout steps are kept: one checkout takes about ten
@@ -28,15 +47,32 @@ export const MAX_CHECKOUT_STEPS = 32;
 /**
  * One step of the checkout child's `setupWorktree` — the same spans its
  * `worktree-prepare` log lines carry (infra/worktree's `SetupStep`), with the
- * instant it ended so it can be placed on the launch's axis.
+ * instant it ended so it can be placed on the launch's axis. `ms` is already
+ * awake time (the child times it on a clock that pauses through sleep); `end`
+ * is stamped like the marks, so its place compares with theirs.
  */
-export const CheckoutStepSchema = z.object({
-  step: z.string(),
-  ms: z.number(),
-  endAt: z.number(),
-  failed: z.literal(true).optional(),
-});
-export type CheckoutStep = z.infer<typeof CheckoutStepSchema>;
+export const CheckoutStepSchema = z.union([
+  z.object({
+    step: z.string(),
+    ms: z.number(),
+    end: ClockStampSchema,
+    failed: z.literal(true).optional(),
+  }),
+  // A step written by the old code (its wall instant only), read the same
+  // way as a bare mark above.
+  z
+    .object({
+      step: z.string(),
+      ms: z.number(),
+      endAt: z.number(),
+      failed: z.literal(true).optional(),
+    })
+    .transform(({ endAt, ...step }) => ({
+      ...step,
+      end: { wallMs: endAt, sleep: null } satisfies ClockStamp,
+    })),
+]);
+export type CheckoutStep = z.output<typeof CheckoutStepSchema>;
 
 /**
  * How the checkout was made: a claimed `spare` (warm), a `fresh` add (cold),

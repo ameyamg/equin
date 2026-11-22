@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import {
   MAX_CHECKOUT_STEPS,
   type AgentLaunchPhase,
@@ -12,7 +13,11 @@ import { launches } from "./tables";
 // The launch record's writers. Every mark is first-wins — `new || marks`
 // (jsonb concatenation: the right side's keys win) — so a retried spawn, a
 // re-requested checkout or a replayed events file never moves an instant
-// already recorded.
+// already recorded. Every mark is a ClockStamp taken where the instant
+// happened (never a wall instant paired with a sleep read later), so the
+// stats can take the machine's sleep out of each stretch. The callers read
+// the clocks (they run on the computer); this barrel stays portable — it
+// also serves the launches window, which a browser host answers.
 
 const t = launches.table;
 
@@ -22,20 +27,22 @@ function mergeFirstWins(marks: LaunchMarks) {
 
 /**
  * The spawn job's body runs: open the conversation's launch record, from its
- * request (the conversation's creation). A retry finds it open and keeps it.
+ * request (the conversation's creation — a row's wall instant, which the spawn
+ * stamps from the sleep its process saw since: machine-sleep's
+ * `stampOfWallInstant`). A retry finds it open and keeps it.
  */
 export async function openLaunch(
   conversationId: string,
   attemptId: string,
-  requestedAt: Date,
+  at: { requested: ClockStamp; spawnStarted: ClockStamp },
 ): Promise<void> {
   await db
     .insert(t)
     .values({
       conversationId,
       attemptId,
-      requestedAt,
-      marks: { "spawn-started": Date.now() },
+      requestedAt: new Date(at.requested.wallMs),
+      marks: { requested: at.requested, "spawn-started": at.spawnStarted },
       checkoutSteps: [],
       checkoutSource: null,
       abandonedAt: null,
@@ -45,19 +52,20 @@ export async function openLaunch(
 
 /**
  * The checkout child booted: when its process started (before its slot wait
- * and boot) and when its run body began. Written before the checkout, so a
- * checkout that hangs still shows where it is.
+ * and boot — sleep-clock's `processStartStamp`) and when its run body began.
+ * Written before the checkout, so a checkout that hangs still shows where it
+ * is.
  */
 export async function markCheckoutBooted(
   conversationId: string,
-  at: { childStartedAt: number; bootedAt: number },
+  at: { childStarted: ClockStamp; booted: ClockStamp },
 ): Promise<void> {
   await db
     .update(t)
     .set({
       marks: mergeFirstWins({
-        "prepare-child-started": at.childStartedAt,
-        "prepare-booted": at.bootedAt,
+        "prepare-child-started": at.childStarted,
+        "prepare-booted": at.booted,
       }),
     })
     .where(eq(t.conversationId, conversationId));
@@ -70,7 +78,7 @@ export async function markCheckoutBooted(
 export async function markCheckoutEnded(
   conversationId: string,
   ended: {
-    endedAt: number;
+    ended: ClockStamp;
     steps: readonly CheckoutStep[];
     source: CheckoutSourceKind;
   },
@@ -78,7 +86,7 @@ export async function markCheckoutEnded(
   await db
     .update(t)
     .set({
-      marks: mergeFirstWins({ "prepare-ended": ended.endedAt }),
+      marks: mergeFirstWins({ "prepare-ended": ended.ended }),
       checkoutSteps: ended.steps.slice(0, MAX_CHECKOUT_STEPS),
       checkoutSource: ended.source,
     })
@@ -109,7 +117,9 @@ export async function abandonLaunch(conversationId: string): Promise<void> {
 }
 
 /**
- * The agent process reported a launch phase (its events file). `started`
+ * The agent process reported a launch phase (its events file), stamped by
+ * the agent as it wrote the line (an older agent's line has no sleep half:
+ * its stretches read as wall time). `started`
  * claims the launch for its process — only the first process does; every
  * later phase marks it only when it comes from that process, so a resume
  * days later never fills in what the launch's own agent did not report — nor
@@ -121,9 +131,9 @@ export async function markAgentLaunchPhase(
   conversationId: string,
   pid: number,
   phase: AgentLaunchPhase,
-  at: Date,
+  at: ClockStamp,
 ): Promise<void> {
-  const marks: LaunchMarks = { [phase]: at.getTime() };
+  const marks: LaunchMarks = { [phase]: at };
   if (phase === "agent-started") {
     await db
       .update(t)

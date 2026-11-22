@@ -275,28 +275,46 @@ describe("reduceEvents", () => {
     ]);
   });
 
-  test("a process's launch phases are effects carrying its pid and its clock", () => {
+  test("a process's launch phases are effects carrying its pid and its clocks", () => {
+    const sleep = (asleepMs: number) => ({ boot: "B", asleepMs });
     const events: AgentEvent[] = [
+      // An agent from before sleep stamps: its line has wall time only.
       started(1, 7),
       {
         seq: 2,
         t: at(),
         kind: "agent",
         payload: { event: "ready", cliVersion: "2" },
+        sleep: sleep(10),
       },
-      { seq: 3, t: at(), kind: "agent", payload: { event: "first_token" } },
-      { seq: 4, t: at(), kind: "agent", payload: { event: "first_message" } },
+      {
+        seq: 3,
+        t: at(),
+        kind: "agent",
+        payload: { event: "first_token" },
+        sleep: sleep(7_000),
+      },
+      {
+        seq: 4,
+        t: at(),
+        kind: "agent",
+        payload: { event: "first_message" },
+        sleep: null,
+      },
     ];
     const { effects } = reduceEvents(EMPTY_PROJECTION, events);
     expect(effects.filter((e) => e.kind === "launch-phase")).toEqual(
       (
         ["agent-started", "cli-ready", "first-token", "first-message"] as const
-      ).map((phase, i) => ({
-        kind: "launch-phase",
-        phase,
-        pid: 7,
-        at: new Date(events[i]!.t),
-      })),
+      ).map((phase, i) => {
+        const e = events[i]!;
+        return {
+          kind: "launch-phase",
+          phase,
+          pid: 7,
+          at: { wallMs: e.t, sleep: "sleep" in e ? (e.sleep ?? null) : null },
+        };
+      }),
     );
   });
 

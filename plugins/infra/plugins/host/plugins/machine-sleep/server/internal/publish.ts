@@ -1,4 +1,8 @@
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
+import {
+  stampBefore,
+  type ClockStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import type { SleepNow } from "../../core";
 import { createSleepPublisher, type WakeBefore } from "./sleep-publisher";
 
@@ -35,6 +39,23 @@ export function onSleepReadingChanged(fn: () => void): () => void {
  */
 export function sleptDuring(startMs: number, endMs: number): number | null {
   return publisher.sleptDuring(startMs, endMs);
+}
+
+/**
+ * The stamp of a past wall instant nothing could stamp when it happened (a
+ * DB row's `created_at`), worked out at `now` from the sleep this process saw
+ * since ({@link sleptDuring}): a span from it to a real stamp is then judged
+ * on awake time like any other (`awakeBetween`). Unstamped (`sleep: null`)
+ * where that sleep cannot be told. Take `now` from `clockStampNow()` and
+ * store it too: both stamps then name their own instants.
+ */
+export function stampOfWallInstant(
+  wallMs: number,
+  now: ClockStamp,
+): ClockStamp {
+  const slept = sleptDuring(wallMs, now.wallMs);
+  if (slept === null) return { wallMs, sleep: null };
+  return stampBefore(now, wallMs, now.wallMs - wallMs - slept);
 }
 
 /**

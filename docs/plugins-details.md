@@ -17730,7 +17730,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 95 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 96 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×29
       - `conversations/turn-ledger` ×16
       - `conversations/transcript-watcher` ×8
@@ -17743,6 +17743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2
+      - `infra/host/machine-sleep` ×2
       - `infra/jobs` ×2
       - `reports` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
@@ -17752,7 +17753,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `database/fork-point.databaseForkedAt`
       - `infra/attachments.getAttachment`
-      - `infra/host/machine-sleep.sleptDuring`
       - `infra/paths.claudeTranscriptPath`
       - `infra/warmup.defineWarmup`
       - `reports/engine.recordReport`
@@ -23411,6 +23411,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live.liveCollection`
           - `packages/list-bound.cappedList`
+          - `packages/sleep-clock/stamp.awakeBetween`
+          - `packages/sleep-clock/stamp.ClockStamp`
+          - `packages/sleep-clock/stamp/schema.ClockStampSchema`
         - Exports (types):
           - `AgentLaunchPhase`
           - `CheckoutSourceKind`
@@ -23430,6 +23433,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `checkoutStepStats`
           - `conversationLaunches`
           - `instantOf`
+          - `LAUNCH_INSTANT_IDS`
           - `LAUNCH_PHASE_IDS`
           - `LAUNCH_PHASES`
           - `LAUNCH_SEGMENTS`
@@ -23965,6 +23969,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveValue`
           - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
+          - `packages/sleep-clock/stamp/schema.SleepStampSchema`
           - `tasks/tasks-core.conversationsEntityRef`
         - Exports (types):
           - `AgentAnswer`
@@ -39156,7 +39161,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FS_LATENCY_MONITOR_PLATFORM_REASON`
                   - `FS_LATENCY_MONITOR_PLATFORMS`
                   - `START_MONITOR_COMMAND`
-        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
+        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — stampOfWallInstant(wallMs, now) — the ClockStamp of a past wall instant nothing stamped (a row's created_at), from those sleeps — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
             - Exports (types):
@@ -39168,6 +39173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `onSleepReadingChanged`
               - `publishSleepReading`
               - `sleptDuring`
+              - `stampOfWallInstant`
               - `wakeBefore`
             - Resources: `machine.sleep` (push, notified)
           - Web:
@@ -45620,6 +45626,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `auth`
+          - `conversations`
           - `conversations/runtime-sdk`
           - `conversations/workspace/worktree`
           - `debug/boot-events`
@@ -45640,10 +45647,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it.
           - Cross-plugin:
             - Imported by:
+              - `conversations/launch-timeline`
               - `conversations/workspace/worktree`
               - `debug/boot-watchdog`
               - `infra/git/main-slots/boot-lease`
               - `infra/host/host-admission`
+              - `infra/host/machine-sleep`
               - `integrations/github-events`
               - `packages/sleep-clock`
           - Core:
@@ -45656,6 +45665,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isSleepStamp`
               - `sleptBetween`
               - `stampBefore`
+          - Plugins:
+            - **`schema`** — zod schemas of a stored ClockStamp and SleepStamp (a JSON column, a log line), so a reader parses both halves of one instant together. Apart from stamp, whose barrel the CLI bootstrap reaches before node_modules exists.
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/launch-timeline`
+                  - `conversations/runtime-sdk`
+              - Core:
+                - Exports (values):
+                  - `ClockStampSchema`
+                  - `SleepStampSchema`
     - **`smooth-clock`** — Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.
       - Cross-plugin:
         - Imported by:

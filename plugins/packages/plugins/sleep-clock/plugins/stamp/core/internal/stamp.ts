@@ -28,13 +28,14 @@ export interface AwakeSpan {
   /** `to.wallMs − from.wallMs`. */
   wallMs: number;
   /**
-   * The sleep inside it, clamped to `[0, wallMs]`; `null` when it cannot be
+   * The sleep inside it, clamped to `[0, |wallMs|]` (a span with `to` before
+   * `from` counts the sleep between them too); `null` when it cannot be
    * told (a stamp without a sleep clock, or a reboot in between).
    */
   sleptMs: number | null;
   /**
-   * The span less that sleep — what a watchdog, lease or staleness threshold
-   * judges. Where the sleep cannot be told, the wall span: never in the
+   * The span less that sleep (toward zero: a backward span stays negative) —
+   * what a watchdog, lease or staleness threshold judges. Where the sleep cannot be told, the wall span: never in the
    * judged thing's favour.
    */
   awakeMs: number;
@@ -61,6 +62,15 @@ export function sleptBetween(
  */
 export function awakeBetween(from: ClockStamp, to: ClockStamp): AwakeSpan {
   const wallMs = to.wallMs - from.wallMs;
+  if (wallMs < 0) {
+    // `to` came first (a reordered pair: one stretch measured from an
+    // instant after its end). The sleep between them is the reverse span's,
+    // and the awake span stays negative — a nap between them shortens it in
+    // either direction, never lengthens it.
+    const back = sleptBetween(to.sleep, from.sleep);
+    const sleptMs = back === null ? null : Math.min(-wallMs, back);
+    return { wallMs, sleptMs, awakeMs: wallMs + (sleptMs ?? 0) };
+  }
   const slept = sleptBetween(from.sleep, to.sleep);
   const sleptMs = slept === null ? null : Math.min(Math.max(0, wallMs), slept);
   return { wallMs, sleptMs, awakeMs: wallMs - (sleptMs ?? 0) };

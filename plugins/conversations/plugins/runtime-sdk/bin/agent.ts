@@ -33,6 +33,7 @@ import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import { createServer, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
@@ -188,7 +189,16 @@ const events = defineFileSink({
 
 type EventBody = Omit<AgentEvent, "seq" | "t">;
 function emit(body: EventBody): void {
-  const line = { seq: ++seq, t: Date.now(), ...body } as AgentEvent;
+  // A lifecycle line is a launch instant (launch-timeline): stamped on both
+  // clocks at once, so a reader takes the machine's sleep out of a stretch
+  // ending at it. Other lines are many and judged by no one on awake time.
+  const at = body.kind === "agent" ? clockStampNow() : null;
+  const line = {
+    seq: ++seq,
+    t: at?.wallMs ?? Date.now(),
+    ...(at === null ? {} : { sleep: at.sleep }),
+    ...body,
+  } as AgentEvent;
   // Written before anyone is told: a backend that crashes after reading a line
   // finds it on replay (the page cache outlives the process; only a host crash
   // would need an fsync).
