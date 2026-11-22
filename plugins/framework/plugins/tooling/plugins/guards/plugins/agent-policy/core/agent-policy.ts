@@ -30,15 +30,33 @@ export const GUARD_SCRIPTS = {
 export interface PolicyHookCommand {
   type: "command";
   command: HookCommand;
+  /** What a failed run does; required where it must refuse ({@link BlockingHookCommand}). */
+  onFailure?: "block";
 }
 
-export interface PolicyHookGroup {
+/**
+ * A hook whose failure refuses what it guards. Claude Code's default
+ * (`continue`) runs the tool call when the hook timed out, as typed: neither
+ * judged nor rewritten. Its timeout counts time the machine slept, so a hook
+ * that needs a quarter of a second does time out.
+ */
+export interface BlockingHookCommand extends PolicyHookCommand {
+  onFailure: "block";
+}
+
+export interface PolicyHookGroup<
+  H extends PolicyHookCommand = PolicyHookCommand,
+> {
   matcher?: string;
-  hooks: PolicyHookCommand[];
+  hooks: H[];
 }
 
 /** A `hooks` settings map: hook event → its matcher groups. */
-export type PolicyHooks = Record<string, PolicyHookGroup[]>;
+export interface PolicyHooks {
+  [event: string]: PolicyHookGroup[];
+  /** A guard that gave no verdict is a refusal, whatever stopped it. */
+  PreToolUse: PolicyHookGroup<BlockingHookCommand>[];
+}
 
 export interface AgentPolicySettings {
   hooks: PolicyHooks;
@@ -105,11 +123,11 @@ export function isLauncherHookCommand(command: string): boolean {
   return launcher?.endsWith(`/${HOOK_LAUNCHER}`) ?? false;
 }
 
-// Fails closed. Claude Code blocks a tool call only on exit 2 — any other
-// failure is a "non-blocking error" and the call runs unguarded. The guard
-// refuses through stdout and exits 0, so a non-zero exit is a crash (no bun —
-// the launcher says why — a missing checkout, a throwing guard): turn it into a
-// block, its stderr the reason.
+// Fails closed, in two halves. The guard refuses through stdout and exits 0,
+// so a non-zero exit is a crash (no bun — the launcher says why — a missing
+// checkout, a throwing guard): the command turns it into exit 2, a block with
+// its stderr as the reason. What the command cannot answer for — being killed
+// at the hook timeout — is the hook's `onFailure: "block"` (BlockingHookCommand).
 const PRE_TOOL_USE =
   `${launch(ROOT, GUARD_SCRIPTS.preToolUse)} || { echo 'guards: the PreToolUse guard could not run (above), so every tool call is blocked until it does' >&2; exit 2; }` as HookCommand;
 
@@ -126,7 +144,9 @@ export function agentPolicySettings(): AgentPolicySettings {
         {
           matcher:
             "Bash|Write|Edit|Read|NotebookEdit|Agent|ToolSearch|Grep|Glob|mcp__claude-in-chrome__.*",
-          hooks: [{ type: "command", command: PRE_TOOL_USE }],
+          hooks: [
+            { type: "command", command: PRE_TOOL_USE, onFailure: "block" },
+          ],
         },
       ],
       SubagentStop: [{ hooks: [{ type: "command", command: STOP }] }],

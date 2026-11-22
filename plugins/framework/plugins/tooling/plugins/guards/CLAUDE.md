@@ -37,6 +37,10 @@ itself, or when main's guard fails too, the hook exits non-zero and the hook
 command blocks. A mistake in the bootstrap files themselves still locks the
 checkout out — keep them tiny.
 
+**A guard that never answers blocks too.** Killed at the hook timeout, it has
+no exit code for the bootstrap or the command to turn into a block: that half
+is the hook's `onFailure: "block"` (`plugins/agent-policy`).
+
 **An uninstalled checkout counts as broken.** Before the dynamic import, the
 bootstrap checks for the install stamp (`node_modules/.equin-deps`, a literal
 `bootstrap.test.ts` pins to `ensureDeps`'s `STAMP_REL`); without it, Bun would

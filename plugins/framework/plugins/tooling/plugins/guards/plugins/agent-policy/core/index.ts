@@ -7,6 +7,7 @@ export {
 } from "./agent-policy";
 export type {
   AgentPolicySettings,
+  BlockingHookCommand,
   HookCommand,
   PolicyHookCommand,
   PolicyHookGroup,

@@ -25,7 +25,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/bin/sh \"${EQUIN_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/bin/run-hook.sh\" \"${EQUIN_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts\" || { echo 'guards: the PreToolUse guard could not run (above), so every tool call is blocked until it does' >&2; exit 2; }"
+            "command": "/bin/sh \"${EQUIN_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/bin/run-hook.sh\" \"${EQUIN_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts\" || { echo 'guards: the PreToolUse guard could not run (above), so every tool call is blocked until it does' >&2; exit 2; }",
+            "onFailure": "block"
           }
         ]
       }

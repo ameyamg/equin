@@ -25,6 +25,19 @@ worktree session runs its own project's scripts (a worktree's own, so an agent
 can edit and test its guards); a scratch launch names the launching backend's
 checkout — the code that spelled the hooks.
 
+## A guard with no verdict refuses the call
+
+The PreToolUse hook declares `onFailure: "block"` (required by `PolicyHooks`),
+beside the command's own `|| exit 2` for a crash. A hook Claude Code kills at
+its timeout never reaches that `exit 2`, and by default the call then runs as
+typed: no guard judged it and no rewrite applied. That happens on a healthy
+guard, because Claude Code's hook timeout (600 s) counts time the Mac slept.
+On 2026-11-22 a backgrounded build started with the 30 min default in place of
+`background-timeout`'s 2 h, after a hook "timed out" with ~1 s awake. Such a
+call is now refused as `timed out`, and the agent issues it again. Don't raise
+the hook timeout instead: a longer sleep passes any value. The stop hooks stay
+fail-open (Claude Code ignores `onFailure` on them).
+
 ## Every hook runs through one launcher
 
 A hook command is a `HookCommand` (branded: only `hookCommand()` and this
@@ -53,6 +66,7 @@ portable `agent-launch` server barrel imports it.
   - Uses: `infra/launcher/env-names.envName`
   - Exports (types):
     - `AgentPolicySettings`
+    - `BlockingHookCommand`
     - `HookCommand`
     - `PolicyHookCommand`
     - `PolicyHookGroup`

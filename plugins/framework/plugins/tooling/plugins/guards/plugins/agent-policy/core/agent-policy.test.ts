@@ -51,6 +51,17 @@ function inScratch(fn: (scratch: string) => void): void {
 }
 
 describe("PreToolUse hook", () => {
+  // A hook killed at its timeout never reaches the command's `exit 2`: without
+  // this, Claude Code runs the call as typed — no refusal, and no rewrite
+  // (a backgrounded build lost its 2 h timeout that way, 2026-11-22).
+  test("a guard that gives no verdict (timed out, killed) blocks the call", () => {
+    const hooks = agentPolicySettings().hooks.PreToolUse.flatMap(
+      (group) => group.hooks,
+    );
+    expect(hooks.length).toBeGreaterThan(0);
+    for (const hook of hooks) expect(hook.onFailure).toBe("block");
+  });
+
   test("runs from a workspace outside any checkout (no mise.toml there to pick bun's version)", () => {
     inScratch((scratch) => {
       expect(runHook(scratch, repoRoot)).toEqual({ exitCode: 0, stderr: "" });

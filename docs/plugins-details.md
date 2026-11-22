@@ -34773,6 +34773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: `infra/launcher/env-names.envName`
                 - Exports (types):
                   - `AgentPolicySettings`
+                  - `BlockingHookCommand`
                   - `HookCommand`
                   - `PolicyHookCommand`
                   - `PolicyHookGroup`
