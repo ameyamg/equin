@@ -1,6 +1,6 @@
 {
-  "id": "1ca08fdc-8cf4-424b-a0ff-c066f1ae1720",
-  "prevId": "e39c0591-50a9-407a-9ee2-a1f7b8668768",
+  "id": "c4b2ce34-6384-4200-99fe-98868fe315ce",
+  "prevId": "1ca08fdc-8cf4-424b-a0ff-c066f1ae1720",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12834,6 +12834,12 @@
           "type": "double precision",
           "primaryKey": false,
           "notNull": true
+        },
+        "slept_ms": {
+          "name": "slept_ms",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
         },
         "attempt": {
           "name": "attempt",

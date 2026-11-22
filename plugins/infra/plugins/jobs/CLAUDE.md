@@ -791,6 +791,13 @@ sorts by `finishedAt` / `durationMs` / `waitMs`. `waitMs` (`startedAt −
 queuedAt`, floored at 0, NULL without a `queuedAt`) is an `expr` column
 computed in SQL. Nothing
 prunes a retired job name's ring yet.
+A run's `durationMs` (and the stats row's `lastDurationMs`) is **awake time**:
+both ends are read in the recording process, on the wall clock for
+`startedAt` / `finishedAt` and on the awake clock (`performance.now`,
+`packages/deadline`'s `awakeClock`) for the duration, so a Mac sleeping
+mid-run no longer reads as hours of run time or trips the hold class's
+ceiling. `sleptMs` is how long the machine slept in between; NULL marks a row
+recorded before (its duration is wall-clock — Debug → Queue marks it "wall").
 `readRecentJobRuns(name)` still reads one job's ring for the Background
 activity catalog.
 

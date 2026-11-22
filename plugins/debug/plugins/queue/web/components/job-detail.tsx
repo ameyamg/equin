@@ -274,8 +274,19 @@ function RunDetail({
               : `${isOverCeiling(row) ? "over the" : "under the"} ${formatDuration(ceiling)} ceiling`
           }
         >
-          <DurationText ms={run.durationMs} hold={run.hold} />
+          <DurationText
+            ms={run.durationMs}
+            sleptMs={run.sleptMs}
+            hold={run.hold}
+          />
         </MetaCell>
+        {run.sleptMs !== null && run.sleptMs > 0 && (
+          <MetaCell label="Machine asleep">
+            <Text tone="muted" className="tabular-nums">
+              {formatDuration(run.sleptMs)}
+            </Text>
+          </MetaCell>
+        )}
         <MetaCell label="Waited for slot">
           <Text className="tabular-nums">
             {run.waitMs === null ? "—" : formatDuration(run.waitMs)}

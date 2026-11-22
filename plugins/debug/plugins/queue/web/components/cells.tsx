@@ -54,25 +54,41 @@ export function RunningDuration({
   );
 }
 
-/** A finished duration, in the warning tint when over its hold class's ceiling. */
+/**
+ * A finished run's duration against its hold class's work ceiling. It is AWAKE
+ * time (`sleptMs` says how long the machine slept during the run); a run
+ * recorded before that (`sleptMs` null) is wall-clock and marked so, since a
+ * sleep mid-run reads as run time on it.
+ */
 export function DurationText({
   ms,
+  sleptMs,
   hold,
 }: {
   ms: number;
+  sleptMs: number | null;
   hold: HoldClass | null;
 }) {
   const ceiling = hold === null ? null : HOLD_SPECS[hold].ceilingMs;
   const over = ceiling !== null && ms > ceiling;
-  return over ? (
+  const notes = [
+    over
+      ? `Over the ${HOLD_SPECS[hold ?? "instant"].label} ceiling (${formatDuration(ceiling)})`
+      : null,
+    sleptMs === null
+      ? "Wall-clock: recorded before runs were timed on awake time, so it counts any machine sleep during the run"
+      : sleptMs > 0
+        ? `Awake time — the machine also slept ${formatDuration(sleptMs)} during this run`
+        : null,
+  ].filter((n) => n !== null);
+  return (
     <Text
-      className="tabular-nums text-warning"
-      title={`Over the ${HOLD_SPECS[hold ?? "instant"].label} ceiling (${formatDuration(ceiling)})`}
+      className={over ? "tabular-nums text-warning" : "tabular-nums"}
+      title={notes.length === 0 ? undefined : notes.join("\n")}
     >
       {formatDuration(ms)}
+      {sleptMs === null && <Text tone="muted"> (wall)</Text>}
     </Text>
-  ) : (
-    <Text className="tabular-nums">{formatDuration(ms)}</Text>
   );
 }
 

@@ -20,8 +20,33 @@ import {
   RECENT_RUNS_RING,
   recordJobRun,
   ringSlot,
+  runDurations,
   type JobRunRecord,
 } from "./run-stats";
+
+describe("runDurations", () => {
+  test("a run the machine slept through counts only its awake time", () => {
+    // reap-stale, 2026-11: 15,429 s on the wall clock, 278 s awake.
+    const start = { at: 1_000_000, awake: 50_000 };
+    const end = { at: 1_000_000 + 15_429_000, awake: 50_000 + 278_000 };
+    expect(runDurations(start, end)).toEqual({
+      durationMs: 278_000,
+      sleptMs: 15_151_000,
+    });
+  });
+
+  test("a run with no sleep: wall and awake agree, sub-second drift is not a sleep", () => {
+    const start = { at: 5_000, awake: 100.4 };
+    const end = { at: 5_000 + 2_300, awake: 100.4 + 2_000.6 };
+    expect(runDurations(start, end)).toEqual({ durationMs: 2001, sleptMs: 0 });
+  });
+
+  test("a wall clock stepped backwards never makes a negative duration", () => {
+    const start = { at: 10_000, awake: 0 };
+    const end = { at: 4_000, awake: 1_500 };
+    expect(runDurations(start, end)).toEqual({ durationMs: 1500, sleptMs: 0 });
+  });
+});
 
 describe("ringSlot", () => {
   test("run 1 is slot 0, and the ring wraps after RECENT_RUNS_RING runs", () => {
@@ -67,6 +92,7 @@ describe("recordJobRun", () => {
         outcome text NOT NULL,
         error text,
         duration_ms integer NOT NULL,
+        slept_ms integer,
         attempt integer NOT NULL,
         job_id text,
         hold text,
@@ -91,6 +117,7 @@ describe("recordJobRun", () => {
       outcome,
       error: outcome === "failed" ? `boom ${i}` : null,
       durationMs: 1000,
+      sleptMs: i === 1 ? null : 0,
       attempt: 1,
       jobId: String(1000 + i),
       hold: "instant",

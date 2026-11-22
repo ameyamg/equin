@@ -3,6 +3,7 @@ import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { desc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
+import { awakeClock } from "@plugins/packages/plugins/deadline/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
 import { holdForTask, type HoldClass } from "../../core/hold";
@@ -45,7 +46,17 @@ export interface JobRunRecord {
   outcome: JobRunOutcome;
   /** The error's message (capped at {@link RUN_ERROR_CHARS}), or null. */
   error: string | null;
+  /**
+   * How long the run took in AWAKE time: a machine sleep in the middle of it
+   * is not run time (see {@link runDurations}).
+   */
   durationMs: number;
+  /**
+   * How long the machine slept during the run (wall − awake, 0 when it did
+   * not). `null` on a run recorded before durations were awake time — its
+   * `durationMs` is then wall-clock and counts any sleep.
+   */
+  sleptMs: number | null;
   attempt: number;
   /**
    * What the queue row said about the run — graphile's job id, the class of
@@ -76,7 +87,43 @@ export interface JobRunStats {
 // A run is started in one event and finished in another; what `job:start` knew
 // is held here until then, keyed by graphile job id (one id is one run in one
 // slot). Process state: a run that outlives its process is never finished here.
-const started = new Map<string, { at: number }>();
+const started = new Map<string, RunInstant>();
+
+/** One instant on both clocks a run's duration is judged from. */
+export interface RunInstant {
+  /** Wall clock (epoch ms): when, for `startedAt` / `finishedAt`. */
+  at: number;
+  /** The awake clock ({@link awakeClock}): how long, for `durationMs`. */
+  awake: number;
+}
+
+/** Below this, wall − awake is the two clocks' own drift (NTP slew, rounding), not a sleep. */
+const SLEEP_NOISE_MS = 1000;
+
+/**
+ * A run's duration from its two instants: the AWAKE time between them, and
+ * how long the machine slept in between (wall − awake). Both instants are read
+ * in this process, so the awake clock (`performance.now`, which pauses through
+ * a sleep) is exact. On the wall clock alone a Mac's nap mid-run read as run
+ * time: a run "took" the whole night, and Debug → Queue flagged it over its
+ * hold class's ceiling.
+ */
+export function runDurations(
+  start: RunInstant,
+  end: RunInstant,
+): { durationMs: number; sleptMs: number } {
+  const awakeMs = Math.max(0, end.awake - start.awake);
+  const gapMs = end.at - start.at - awakeMs;
+  return {
+    durationMs: Math.round(awakeMs),
+    sleptMs: gapMs < SLEEP_NOISE_MS ? 0 : Math.round(gapMs),
+  };
+}
+
+function runInstantNow(): RunInstant {
+  return { at: Date.now(), awake: awakeClock() };
+}
+
 // Job ids whose dispatch returned "suspended" (a durable workflow waiting).
 // graphile reports those as successes; `dispatch()` knows better and says so.
 const suspended = new Set<string>();
@@ -140,7 +187,7 @@ export function attachRunStats(events: WorkerEvents): () => void {
       const jobName = jobNameOf(job.payload);
       if (jobName === null) return;
       const id = String(job.id);
-      started.set(id, { at: Date.now() });
+      started.set(id, runInstantNow());
       inFlight.set(id, jobName);
       emitChanged(jobName);
     });
@@ -161,15 +208,15 @@ export function attachRunStats(events: WorkerEvents): () => void {
       // A run whose start this process never saw (attached mid-run) has no
       // honest duration, so it is not recorded rather than recorded wrong.
       if (jobName === null || start === undefined) return;
-      const finishedAt = Date.now();
+      const end = runInstantNow();
       const failed = error !== null && error !== undefined;
       const record: JobRunRecord = {
         jobName,
         startedAt: new Date(start.at),
-        finishedAt: new Date(finishedAt),
+        finishedAt: new Date(end.at),
         outcome: failed ? "failed" : wasSuspended ? "suspended" : "succeeded",
         error: failed ? errorMessage(error) : null,
-        durationMs: finishedAt - start.at,
+        ...runDurations(start, end),
         attempt: job.attempts,
         jobId: id,
         hold: holdForTask(job.task_identifier),
@@ -243,11 +290,12 @@ export async function recordJobRun(
     )
     INSERT INTO job_runs (
       job_name, slot, seq, started_at, finished_at, outcome, error, duration_ms,
-      attempt, job_id, hold, max_attempts, queued_at, input
+      slept_ms, attempt, job_id, hold, max_attempts, queued_at, input
     )
     SELECT ${run.jobName}, (s.runs - 1) % ${RECENT_RUNS_RING}, s.runs,
       ${run.startedAt.toISOString()}, ${run.finishedAt.toISOString()},
-      ${run.outcome}, ${run.error}, ${run.durationMs}, ${run.attempt},
+      ${run.outcome}, ${run.error}, ${run.durationMs}, ${run.sleptMs},
+      ${run.attempt},
       ${run.jobId}, ${run.hold}, ${run.maxAttempts},
       ${run.queuedAt === null ? null : run.queuedAt.toISOString()},
       ${input}::jsonb
@@ -259,6 +307,7 @@ export async function recordJobRun(
       outcome = excluded.outcome,
       error = excluded.error,
       duration_ms = excluded.duration_ms,
+      slept_ms = excluded.slept_ms,
       attempt = excluded.attempt,
       job_id = excluded.job_id,
       hold = excluded.hold,
@@ -290,6 +339,7 @@ export async function readRecentJobRuns(
     outcome: r.outcome,
     error: r.error,
     durationMs: r.durationMs,
+    sleptMs: r.sleptMs,
     attempt: r.attempt,
     jobId: r.jobId,
     hold: r.hold,

@@ -306,7 +306,9 @@ const historyOverrides = fieldOverrides(jobRuns, {
     width: "5.5rem",
   },
   durationMs: {
-    cell: (r) => <DurationText ms={r.durationMs} hold={r.hold} />,
+    cell: (r) => (
+      <DurationText ms={r.durationMs} sleptMs={r.sleptMs} hold={r.hold} />
+    ),
     width: "5.5rem",
   },
   waitMs: {

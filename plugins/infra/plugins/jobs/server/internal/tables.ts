@@ -125,6 +125,8 @@ export const _jobRunStats = pgTable("job_run_stats", {
   }).notNull(),
   lastOutcome: parsedText("last_outcome", JobRunOutcomeSchema).notNull(),
   lastError: text("last_error"),
+  // Awake time since the change that added `job_runs.slept_ms` (run-stats.ts
+  // `runDurations`); wall-clock before.
   lastDurationMs: integer("last_duration_ms").notNull(),
   // Null until the job has succeeded at least once.
   lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),

@@ -214,7 +214,14 @@ export const jobRunsEntityRef = entityRef("job_runs", {
   finishedAt: dateField({ label: "Finished" }),
   outcome: JOB_RUN_OUTCOME,
   error: nullable(textField({ label: "Error" })),
+  /** AWAKE time — wall-clock on a row whose `sleptMs` is null (recorded before). */
   durationMs: durationField({ label: "Duration" }),
+  /**
+   * How long the machine slept during the run (0 when it did not). Null on a
+   * run recorded before durations were awake time: its `durationMs` is then
+   * wall-clock and counts any sleep.
+   */
+  sleptMs: nullable(durationField({ label: "Asleep" })),
   attempt: intField({ label: "Attempt" }),
   jobId: nullable(identifierField({ label: "Job id" })),
   hold: JOB_RUN_HOLD,
@@ -274,7 +281,9 @@ export const jobRuns = liveCollection("job-runs.history", {
   ],
   fields: JOB_RUN_LISTED,
   carry: {
-    pick: ["id", "startedAt", "queuedAt", "input"],
+    // `sleptMs` qualifies the Duration column (its title, a legacy wall-clock
+    // mark), so it rides along rather than being a column of its own.
+    pick: ["id", "startedAt", "queuedAt", "input", "sleptMs"],
     fields: JOB_RUN_CARRIED,
   },
   id: "id",
