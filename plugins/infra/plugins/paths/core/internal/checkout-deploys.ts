@@ -30,6 +30,7 @@ import {
 } from "./paths";
 import { listWorktreeDirsSync } from "./worktree-dirs";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
+import { mainFamilyRepo, mainFamilyRepoSync } from "./checkout-admin-dir";
 
 // Which deploys a CHECKOUT published — read back out of the registry that
 // checkout wrote, never guessed from a directory basename.
@@ -405,18 +406,23 @@ export function lookupCheckoutDeploySync(
 ): CheckoutDeployLookup {
   const wanted = composition ?? MAIN_COMPOSITION_ID;
   const ours = comparablePathSync(joinAppPath(root, SERVER_CORE_RELATIVE));
+  const mainNamespace = namespaceFor(wanted, { kind: "main" });
+  const ourRepo = mainFamilyRepoSync(root);
   const reads = candidateNamespaces(comparablePathSync(root), root, wanted).map(
     (namespace): CandidateRead => {
       const path = worktreeArtifacts.spec(namespace);
       const read = readDeploySpecSync(path);
+      const server =
+        read.kind === "deploy" && read.composition === wanted
+          ? comparableSpecPathSync(asAppPath(read.server))
+          : null;
       return {
         namespace,
         path,
         read,
-        server:
-          read.kind === "deploy" && read.composition === wanted
-            ? comparableSpecPathSync(asAppPath(read.server))
-            : null,
+        server,
+        inMainFamily:
+          namespace === mainNamespace && sameMainFamilySync(ourRepo, server),
       };
     },
   );
@@ -434,6 +440,8 @@ export async function lookupCheckoutDeploy(
 ): Promise<CheckoutDeployLookup> {
   const wanted = composition ?? MAIN_COMPOSITION_ID;
   const ours = await comparablePath(joinAppPath(root, SERVER_CORE_RELATIVE));
+  const mainNamespace = namespaceFor(wanted, { kind: "main" });
+  const ourRepo = await mainFamilyRepo(root);
   const candidates = candidateNamespaces(
     await comparablePath(root),
     root,
@@ -443,14 +451,18 @@ export async function lookupCheckoutDeploy(
     candidates.map(async (namespace): Promise<CandidateRead> => {
       const path = worktreeArtifacts.spec(namespace);
       const read = await readDeploySpec(path);
+      const server =
+        read.kind === "deploy" && read.composition === wanted
+          ? await comparableSpecPath(asAppPath(read.server))
+          : null;
       return {
         namespace,
         path,
         read,
-        server:
-          read.kind === "deploy" && read.composition === wanted
-            ? await comparableSpecPath(asAppPath(read.server))
-            : null,
+        server,
+        inMainFamily:
+          namespace === mainNamespace &&
+          (await sameMainFamily(ourRepo, server)),
       };
     }),
   );
@@ -466,6 +478,82 @@ interface CandidateRead {
   path: AppPath;
   read: SpecRead;
   server: SpecServerPath | null;
+  /**
+   * The main namespace's spec, named by ANOTHER of main's checkouts of this
+   * checkout's own repository — see {@link sameMainFamilySync}.
+   */
+  inMainFamily: boolean;
+}
+
+/**
+ * The checkout a spec's `server` path belongs to, or `null` when the path is
+ * no checkout's backend (or could not be resolved — already a fault the
+ * lookup reports).
+ */
+function specCheckout(server: SpecServerPath | null): AppPath | null {
+  if (server === null || server.kind === "fault") return null;
+  const suffix = `/${SERVER_CORE_RELATIVE}`;
+  if (!server.path.endsWith(suffix)) return null;
+  // The checkout a spec the app wrote names: app-owned by that claim.
+  return asAppPath(server.path.slice(0, -suffix.length));
+}
+
+/**
+ * A fault reading the checkout a spec names is the spec's, not ours — the rule
+ * `comparableSpecPath` applies to the path itself: said, and kept out of the
+ * answer, never thrown into every caller on the machine.
+ */
+function specRepoFault(err: unknown): null {
+  console.warn(
+    `Ignoring the main namespace's spec: the checkout it names could not be read: ` +
+      `${err instanceof Error ? err.message : String(err)}`,
+  );
+  return null;
+}
+
+/**
+ * Whether the main namespace's spec was written by ANOTHER of main's checkouts
+ * of this checkout's own repository.
+ *
+ * Main is built and served from per-commit slots (`infra/git/main-slots`): its
+ * spec names the slot its LATEST build ran in, while main's backend — and every
+ * job it spawns in its own checkout — may still run from the previous one, and
+ * the repo's main checkout is main too (`checkoutRef` answers `main` for each).
+ * So for the main namespace the match is the REPOSITORY, not the directory: a
+ * main checkout or slot publishes main's deploy whichever sibling wrote the
+ * spec. Only main checkouts and slots qualify (`mainFamilyRepo` is null for any
+ * other checkout), so an agent's worktree still resolves only to what it built
+ * itself — this rule can never land it on main's deploy.
+ */
+function sameMainFamilySync(
+  ourRepo: string | null,
+  server: SpecServerPath | null,
+): boolean {
+  const checkout = specCheckout(server);
+  if (ourRepo === null || checkout === null) return false;
+  let theirs: string | null;
+  try {
+    theirs = mainFamilyRepoSync(checkout);
+  } catch (err) {
+    theirs = specRepoFault(err);
+  }
+  return theirs === ourRepo;
+}
+
+/** {@link sameMainFamilySync}, without holding the thread. */
+async function sameMainFamily(
+  ourRepo: string | null,
+  server: SpecServerPath | null,
+): Promise<boolean> {
+  const checkout = specCheckout(server);
+  if (ourRepo === null || checkout === null) return false;
+  let theirs: string | null;
+  try {
+    theirs = await mainFamilyRepo(checkout);
+  } catch (err) {
+    theirs = specRepoFault(err);
+  }
+  return theirs === ourRepo;
 }
 
 /** The lookup's decision over the candidates' reads, shared by both twins. */
@@ -476,7 +564,7 @@ function judgeLookup(
 ): CheckoutDeployLookup {
   const matches: CheckoutDeploy[] = [];
   const malformed: string[] = [];
-  for (const { namespace, path, read, server } of reads) {
+  for (const { namespace, path, read, server, inMainFamily } of reads) {
     if (read.kind === "absent") continue;
     if (read.kind === "malformed") {
       malformed.push(`${path}: ${read.reason}`);
@@ -488,7 +576,7 @@ function judgeLookup(
       malformed.push(`${path}: ${server.reason}`);
       continue;
     }
-    if (server.path !== ours) continue;
+    if (server.path !== ours && !inMainFamily) continue;
     matches.push({
       namespace,
       composition: read.composition,

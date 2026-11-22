@@ -263,6 +263,7 @@ the shared Playwright harness.
     - `writeBuildReceiptSync`
 - Cross-plugin:
   - Imported by:
+    - `apps/desktop/fullscreen-budget`
     - `build/build-logs`
     - `build/failure-report`
     - `database`

@@ -137,6 +137,16 @@ the refusal names what this checkout DOES serve, which only the whole registry
 can say. A spec naming this checkout under a name no build mints (a
 `serve-app --name`, a renamed namespace) is not resolved, only listed.
 
+**Main's namespace matches by repository, not directory.** Main is built and
+served from per-commit slots (`infra/git/main-slots`): its spec names the slot
+its LATEST build ran in, while main's backend — and every job it spawns in its
+own checkout (`desktop.fullscreen-budget`'s e2e run) — can still be in the
+previous slot. So for the main namespace's spec the lookup also accepts a
+`server` in ANOTHER main checkout of the same repository (the repo's main
+checkout or a stamped slot, same git common dir — `mainFamilyRepo(Sync)`, sync
+and git-free). Only main checkouts and slots qualify: an agent's worktree still
+resolves only what it built, so it can never land on main's deploy this way.
+
 ## The data root is a registry, not a string
 
 Everything under `~/.equin/` is a **declared directory with an owner**.
@@ -401,8 +411,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `packages/timed-fs` ×10
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/timed-fs` ×11
     - `infra/namespace` ×8
     - `infra/launcher/env-names` ×4
     - `infra/host-fs/user-path` ×3

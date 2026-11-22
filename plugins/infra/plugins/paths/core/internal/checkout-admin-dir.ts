@@ -8,8 +8,13 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   exists,
+  existsSync,
   readFile,
+  readFileSync,
+  realpath,
+  realpathSync,
   stat,
+  statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
@@ -100,4 +105,61 @@ export async function isMainCheckoutOrSlot(root: AppPath): Promise<boolean> {
   const mainRoot = await getMainRepoRoot(root);
   if (resolve(root) === resolve(mainRoot)) return true;
   return isMainSlotCheckout(root);
+}
+
+// ── Main's family: the repository main is served from, from any of its checkouts ──
+//
+// Main is built and served from per-commit slots (`infra/git/main-slots`), so
+// "main's checkout" is not one directory: the repo's own main checkout and
+// every slot are main (`checkoutRef` says so for each). A process running in
+// one of them — main's backend in the slot it booted from, a supervised job it
+// spawns there — publishes main's namespace, even when main's LATEST build
+// wrote its spec from another slot. The repository is the identity they share:
+// the git common dir.
+
+/** The git common dir a linked worktree's git dir points at (its `commondir` file). */
+function commonDirOf(gitDir: AppPath, commondirText: string): AppPath {
+  return asAppPath(resolve(gitDir, commondirText.trim()));
+}
+
+/**
+ * `root`'s repository — its git common dir, symlinks resolved — when `root` is
+ * one of that repository's main checkouts (the repo's own main checkout, or a
+ * main slot: {@link isMainSlotCheckout}); `null` for any other checkout (an
+ * agent's worktree), or a directory that is no checkout.
+ *
+ * Sync and git-free (a few small reads, no spawn), so the deploy lookup an e2e
+ * script resolves its target with can ask it before launching anything.
+ */
+export function mainFamilyRepoSync(root: AppPath): string | null {
+  const dotGit = joinAppPath(root, ".git");
+  if (!existsSync(dotGit)) return null;
+  if (statSync(dotGit).isDirectory()) return realpathSync(dotGit);
+  const gitDir = gitDirFromDotGitFile(root, readFileSync(dotGit, "utf8"));
+  const stamp = joinAppPath(gitDir, LEGACY_IDS.gitLockDir, MAIN_SLOT_STAMP);
+  if (!existsSync(stamp)) return null;
+  const commondir = joinAppPath(gitDir, "commondir");
+  if (!existsSync(commondir)) {
+    throw new Error(
+      `${root} is stamped a main slot, but its git dir ${gitDir} has no "commondir" — not a linked worktree git can read`,
+    );
+  }
+  return realpathSync(commonDirOf(gitDir, readFileSync(commondir, "utf8")));
+}
+
+/** {@link mainFamilyRepoSync}, without holding the thread. */
+export async function mainFamilyRepo(root: AppPath): Promise<string | null> {
+  const dotGit = joinAppPath(root, ".git");
+  if (!(await exists(dotGit))) return null;
+  if ((await stat(dotGit)).isDirectory()) return realpath(dotGit);
+  const gitDir = gitDirFromDotGitFile(root, await readFile(dotGit, "utf8"));
+  const stamp = joinAppPath(gitDir, LEGACY_IDS.gitLockDir, MAIN_SLOT_STAMP);
+  if (!(await exists(stamp))) return null;
+  const commondir = joinAppPath(gitDir, "commondir");
+  if (!(await exists(commondir))) {
+    throw new Error(
+      `${root} is stamped a main slot, but its git dir ${gitDir} has no "commondir" — not a linked worktree git can read`,
+    );
+  }
+  return realpath(commonDirOf(gitDir, await readFile(commondir, "utf8")));
 }

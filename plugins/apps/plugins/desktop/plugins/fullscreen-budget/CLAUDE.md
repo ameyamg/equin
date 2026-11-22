@@ -36,6 +36,12 @@ rendered — and none is slow enough for the stall report to see.
   own modules, the demo's in-browser host failing to load its plugins, then
   the 30 s wait for a window). The convergence run holds the namespace's
   deploy lock for its whole run; the script takes it shared and drops it.
+- **A commit main no longer serves is skipped, not measured.** A run can wait
+  minutes for a host e2e slot; by then main may have deployed a newer commit
+  (from another slot — the run still resolves main's deploy, see `infra/paths`
+  § main's namespace matches by repository). The script reads the build
+  receipt and, when it is `ok` for another commit, prints `superseded: …` and
+  exits 0 — that commit's own run measures it.
 - Reading a run on main: `job_runs` shows two rows per commit — a ~100 ms
   `suspended` one (claim + spawn) and, ~80 s later, a few-ms `succeeded` one
   (the wake that records the child's exit). The measurement is the child, in

@@ -40,9 +40,11 @@ import {
   flag,
   numArg,
   pathUrl,
+  targetNamespace,
   usage,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { resolveBuildReceiptSync } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openFloatingActionBar } from "@plugins/shell/plugins/global-action-bar/e2e";
 import {
@@ -151,6 +153,26 @@ const cases: BudgetCase[] = [];
 // convergence run that ran the build may still restart the gateway (and every
 // backend) behind it. Measure the deploy once it has settled, not through it.
 await awaitDeploySettled();
+
+// The job measures ONE commit (`--commit`), and a run can wait minutes for a
+// host e2e slot: by then main may have deployed a newer commit, whose own build
+// enqueued its own run. Measuring that deploy under this commit would file its
+// numbers against the wrong commit range — so a commit main no longer serves is
+// said and skipped, never measured.
+if (commit !== undefined && commit !== "") {
+  const served = resolveBuildReceiptSync(targetNamespace());
+  if (
+    served.kind === "ok" &&
+    served.receipt.commit !== null &&
+    served.receipt.commit !== commit
+  ) {
+    console.log(
+      `superseded: ${commit} is no longer deployed — main now serves ${served.receipt.commit} ` +
+        `(${served.receipt.buildId}), whose own run measures it. Nothing to measure for ${commit}.`,
+    );
+    process.exit(0);
+  }
+}
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport: { width: 1400, height: 900 } });

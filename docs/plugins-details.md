@@ -32872,6 +32872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `writeBuildReceiptSync`
           - Cross-plugin:
             - Imported by:
+              - `apps/desktop/fullscreen-budget`
               - `build/build-logs`
               - `build/failure-report`
               - `database`
@@ -40639,8 +40640,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readNdjson`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses: 37 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `packages/timed-fs` ×10
+        - Uses: 38 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `packages/timed-fs` ×11
           - `infra/namespace` ×8
           - `infra/launcher/env-names` ×4
           - `infra/host-fs/user-path` ×3

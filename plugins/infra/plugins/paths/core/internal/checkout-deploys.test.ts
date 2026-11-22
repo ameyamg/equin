@@ -23,8 +23,11 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { MAIN_SLOT_STAMP } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
   deploysForCheckoutSync,
+  lookupCheckoutDeploy,
   lookupCheckoutDeploySync,
   resolveCheckoutDeploySync,
 } from "./checkout-deploys";
@@ -430,5 +433,101 @@ describe("resolveCheckoutDeploy", () => {
     expect(resolution.others.map((d) => d.composition)).toEqual([
       MAIN_WORKTREE_NAME,
     ]);
+  });
+});
+
+describe("main's family: the repo's main checkout and its main slots", () => {
+  /**
+   * A repository on disk shaped the way git and `infra/git/main-slots` leave
+   * it: `<repo>/.git` a directory, each linked worktree's `.git` a `gitdir:`
+   * file into `<repo>/.git/worktrees/<name>` (with its `commondir`), and a
+   * main slot's git dir carrying the main-slot stamp.
+   */
+  function repo(fx: ReturnType<typeof fixture>): {
+    root: AppPath;
+    linked: (name: string, opts: { slot: boolean }) => AppPath;
+  } {
+    const root = fx.checkout(`repo-${Math.random().toString(36).slice(2, 8)}`);
+    mkdirSync(join(root, ".git", "worktrees"), { recursive: true });
+    return {
+      root,
+      linked: (name, { slot }) => {
+        const wt = fx.checkout(name);
+        const gitDir = join(root, ".git", "worktrees", name);
+        mkdirSync(join(gitDir, LEGACY_IDS.gitLockDir), { recursive: true });
+        writeFileSync(join(gitDir, "commondir"), "../..\n");
+        writeFileSync(join(wt, ".git"), `gitdir: ${gitDir}\n`);
+        if (slot)
+          writeFileSync(
+            join(gitDir, LEGACY_IDS.gitLockDir, MAIN_SLOT_STAMP),
+            "{}\n",
+          );
+        return wt;
+      },
+    };
+  }
+
+  const MAIN = {
+    kind: "resolved",
+    deploy: {
+      namespace: asNamespace(MAIN_WORKTREE_NAME),
+      composition: MAIN_WORKTREE_NAME,
+      isMainComposition: true,
+    },
+  } as const;
+
+  test("a slot resolves main's deploy that ANOTHER slot published (main moved on)", async () => {
+    const fx = fixture();
+    const r = repo(fx);
+    const older = r.linked("slot-2", { slot: true });
+    const newer = r.linked("slot-3", { slot: true });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(newer) });
+
+    expect(lookupCheckoutDeploySync(older)).toEqual(MAIN);
+    expect(await lookupCheckoutDeploy(older)).toEqual(MAIN);
+    expect(resolveCheckoutDeploySync(older)).toEqual(MAIN);
+  });
+
+  test("the repo's own main checkout resolves main's deploy a slot published", async () => {
+    const fx = fixture();
+    const r = repo(fx);
+    const slot = r.linked("slot-1", { slot: true });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(slot) });
+
+    expect(lookupCheckoutDeploySync(r.root)).toEqual(MAIN);
+    expect(await lookupCheckoutDeploy(r.root)).toEqual(MAIN);
+  });
+
+  test("an agent's worktree of the same repo never lands on main's deploy", async () => {
+    const fx = fixture();
+    const r = repo(fx);
+    const slot = r.linked("slot-1", { slot: true });
+    const agent = r.linked("att-20", { slot: false });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(slot) });
+
+    expect(lookupCheckoutDeploySync(agent)).toEqual({ kind: "none" });
+    expect(await lookupCheckoutDeploy(agent)).toEqual({ kind: "none" });
+  });
+
+  test("a slot of ANOTHER repository does not take main's deploy", async () => {
+    const fx = fixture();
+    const ours = repo(fx).linked("slot-a", { slot: true });
+    const theirs = repo(fx).linked("slot-b", { slot: true });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(theirs) });
+
+    expect(lookupCheckoutDeploySync(ours)).toEqual({ kind: "none" });
+    expect(await lookupCheckoutDeploy(ours)).toEqual({ kind: "none" });
+  });
+
+  test("a spec naming a reclaimed slot (gone from disk) is no match, not a fault", async () => {
+    const fx = fixture();
+    const r = repo(fx);
+    const slot = r.linked("slot-1", { slot: true });
+    fx.register(MAIN_WORKTREE_NAME, {
+      server: join(appPathParent(slot), "slot-gone", SERVER_CORE_RELATIVE),
+    });
+
+    expect(lookupCheckoutDeploySync(slot)).toEqual({ kind: "none" });
+    expect(await lookupCheckoutDeploy(slot)).toEqual({ kind: "none" });
   });
 });
