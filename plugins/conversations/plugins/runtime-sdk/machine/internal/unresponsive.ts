@@ -5,7 +5,7 @@
 // wedged — that is the one worth a report, once per stretch.
 
 export interface UnresponsiveStretch {
-  /** When the stretch's first missed reply was seen. */
+  /** When the stretch's first missed reply was seen, on an awake clock (`awakeClock`). */
   since: number;
   /** The latest miss's detail (the socket client's message). */
   detail: string;

@@ -13,7 +13,10 @@ import {
   createKeyedCoalescer,
 } from "@plugins/packages/plugins/coalesce/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { withDeadline } from "@plugins/packages/plugins/deadline/core";
+import {
+  awakeClock,
+  withDeadline,
+} from "@plugins/packages/plugins/deadline/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
@@ -169,7 +172,8 @@ class CatchUpOverdueError extends Error {
  */
 async function watchedCatchUp(id: string): Promise<void> {
   const progress: CatchUpProgress = { stage: "start" };
-  const startedAt = Date.now();
+  // Awake, like the deadline: a run across a sleep reports its work, not the nap.
+  const startedAt = awakeClock();
   const work = runTracked("runtime-sdk:catch-up", () => catchUp(id, progress));
   try {
     await withDeadline(
@@ -179,14 +183,15 @@ async function watchedCatchUp(id: string): Promise<void> {
     );
   } catch (err) {
     if (!(err instanceof CatchUpOverdueError)) throw err;
+    const elapsedMs = awakeClock() - startedAt;
     await recordReport({
       kind: "sdk-catch-up-overdue",
       source: "server-caught",
-      message: `SDK agent ${id}: a catch-up of its events has been running for ${String(Math.round((Date.now() - startedAt) / 1000))} s, parked at "${progress.stage}"; the conversation's later events wait behind it`,
+      message: `SDK agent ${id}: a catch-up of its events has been running for ${String(Math.round(elapsedMs / 1000))} s awake, parked at "${progress.stage}"; the conversation's later events wait behind it`,
       data: {
         conversationId: id,
         stage: progress.stage,
-        elapsedMs: Date.now() - startedAt,
+        elapsedMs,
       },
     });
     await work;

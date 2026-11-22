@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  agentAwakeAgeMs,
+  ORPHAN_MIN_AGE_MS,
   parseAgentProcesses,
   parseEtime,
   pidFileVerdict,
@@ -71,5 +73,32 @@ describe("pidFileVerdict", () => {
     expect(pidFileVerdict(42, { kind: "unreadable", text: "" })).toEqual({
       kind: "being-written",
     });
+  });
+});
+
+describe("agentAwakeAgeMs", () => {
+  // A start the machine slept through: spawned just before an 8 h night, its
+  // pid file not written yet at the wake. `ps etime` says 8 h; it ran 3 s.
+  const starting = {
+    pid: 4242,
+    ageMs: 8 * 3_600_000,
+    namespace: "ns-main",
+    conversationId: "conv-1",
+  };
+
+  test("a start that spanned a sleep is young in awake time, so never an orphan", () => {
+    const age = agentAwakeAgeMs(starting, { kind: "awake", awakeMs: 3_000 });
+    expect(age).toBe(3_000);
+    expect(age!).toBeLessThan(ORPHAN_MIN_AGE_MS);
+  });
+
+  test("a process gone since the ps is not judged", () => {
+    expect(agentAwakeAgeMs(starting, { kind: "refused" })).toBeNull();
+  });
+
+  test("no awake clock: the wall age, older — never in the process's favour", () => {
+    expect(agentAwakeAgeMs(starting, { kind: "unsupported" })).toBe(
+      8 * 3_600_000,
+    );
   });
 });

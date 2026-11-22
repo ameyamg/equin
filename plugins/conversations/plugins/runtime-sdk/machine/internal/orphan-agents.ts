@@ -8,6 +8,10 @@ import {
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { PS } from "@plugins/infra/plugins/paths/server";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  readProcessAwakeAge,
+  type ProcessAwakeAge,
+} from "@plugins/packages/plugins/sleep-clock/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { killAgentPid } from "./agent-process";
@@ -34,16 +38,20 @@ import { agentPidsRoot } from "./paths";
 const log = Log.channel("runtime-sdk-orphan-agents");
 
 /**
- * How old an agent process with no pid file must be before it is an orphan
- * rather than a start in progress: the agent writes its pid file once its
- * socket listens, which a launch waits for at most 60 s (`READY_TIMEOUT_MS`) —
- * a process ten times past that is no launch anyone still waits on.
+ * How old an agent process with no pid file must be, in AWAKE time, before it
+ * is an orphan rather than a start in progress: the agent writes its pid file
+ * once its socket listens, which a launch waits for at most 60 s of awake time
+ * (`READY_TIMEOUT_MS`) — a process ten times past that is no launch anyone
+ * still waits on. Awake, because a start the machine slept through is still a
+ * start: on the wall clock (`ps etime`) one that spawned just before a nap was
+ * "hours old" at the wake, before it could write its pid file, and was killed.
  */
 export const ORPHAN_MIN_AGE_MS = 10 * 60_000;
 
 /** An agent process, as `ps` shows it. */
 export interface AgentProcessLine {
   pid: number;
+  /** Wall time since it started (`ps etime`) — counts every sleep since. */
   ageMs: number;
   /** The namespace and conversation of the pid file its argv names. */
   namespace: string;
@@ -127,6 +135,26 @@ export function pidFileVerdict(
   }
 }
 
+/**
+ * How long `agent` has run, in awake time: its kernel start record against the
+ * awake clock (`readProcessAwakeAge`); `ps etime` (wall) where that cannot be
+ * told — older, never in the process's favour. Null when it is gone since the
+ * `ps` (or the pid is another account's): nothing to judge.
+ */
+export function agentAwakeAgeMs(
+  agent: AgentProcessLine,
+  age: ProcessAwakeAge,
+): number | null {
+  switch (age.kind) {
+    case "awake":
+      return age.awakeMs;
+    case "refused":
+      return null;
+    case "unsupported":
+      return agent.ageMs;
+  }
+}
+
 /** Every agent process on the machine (one `ps`). */
 async function agentProcesses(): Promise<AgentProcessLine[]> {
   const ps = await spawnCaptured([PS, "-axo", "pid=,etime=,command="], {
@@ -150,7 +178,8 @@ export async function killOrphanAgents(): Promise<OrphanSweep> {
   const agents = await agentProcesses();
   let killed = 0;
   for (const agent of agents) {
-    if (agent.ageMs < ORPHAN_MIN_AGE_MS) continue;
+    const ageMs = agentAwakeAgeMs(agent, await readProcessAwakeAge(agent.pid));
+    if (ageMs === null || ageMs < ORPHAN_MIN_AGE_MS) continue;
     const verdict = pidFileVerdict(
       agent.pid,
       await readPidFile(
@@ -168,7 +197,7 @@ export async function killOrphanAgents(): Promise<OrphanSweep> {
     await recordReport({
       kind: "crash",
       source: "server-caught",
-      message: `SDK agent ${conversationId} (namespace ${namespace}): killed pid ${String(agent.pid)} and its CLI, running ${String(Math.round(agent.ageMs / 60_000))} min while ${verdict.why} — no backend could reach it. An agent removes its pid file only as it exits, so its exit stalled after that (process.exit returned or hung, and its hard exit never ran)`,
+      message: `SDK agent ${conversationId} (namespace ${namespace}): killed pid ${String(agent.pid)} and its CLI, running ${String(Math.round(ageMs / 60_000))} min (awake) while ${verdict.why} — no backend could reach it. An agent removes its pid file only as it exits, so its exit stalled after that (process.exit returned or hung, and its hard exit never ran)`,
       data: {
         errorType: "SdkAgentOrphaned",
         label: "runtime-sdk.orphan-agents",

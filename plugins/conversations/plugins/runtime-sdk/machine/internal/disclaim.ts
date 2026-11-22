@@ -7,6 +7,7 @@ import {
 import { spawnDisclaimWanted } from "@plugins/packages/plugins/spawn-disclaim/core";
 import { disclaimExec } from "@plugins/packages/plugins/spawn-disclaim/deps";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 
 // The agent runs claude through `disclaim-exec` (packages/spawn-disclaim), so
 // macOS attributes claude's permission prompts to claude rather than to the
@@ -14,7 +15,10 @@ import { recordReport } from "@plugins/reports/plugins/engine/server";
 // requested at boot, resolved at every agent start — never a reason for an
 // agent not to start.
 
-/** How long a launch waits for an install still running before going without. */
+/**
+ * How long a launch waits for an install still running before going without,
+ * in awake time: a sleep in the wait is not an install too slow.
+ */
 const INSTALL_WAIT_MS = 5_000;
 
 /** At boot (off the event loop: the install is the `deps.install` job). */
@@ -38,10 +42,10 @@ export async function resolveDisclaimExec(
   if (now.kind === "ready") return builtFile(now.ready);
 
   let off = (): void => {};
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancelTimer = (): void => {};
   const settled = new Promise<void>((resolve) => {
     off = onDepInstallSettled(disclaimExec, resolve);
-    timer = setTimeout(resolve, INSTALL_WAIT_MS);
+    cancelTimer = armAwakeDeadline(INSTALL_WAIT_MS, resolve);
   });
   try {
     // Subscribed first, so a run that settles at once is not missed. A request
@@ -52,7 +56,7 @@ export async function resolveDisclaimExec(
       await settled;
     }
   } finally {
-    clearTimeout(timer);
+    cancelTimer();
     off();
   }
 

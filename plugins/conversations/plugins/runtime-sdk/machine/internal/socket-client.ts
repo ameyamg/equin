@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { connect } from "node:net";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import {
   CommandReplySchema,
   HelloReplySchema,
@@ -101,7 +102,9 @@ async function closedFailure(conversationId: string): Promise<Error> {
 }
 
 // A command is answered in milliseconds (`hello` never waits on the CLI); the
-// bound only breaks a wedged agent's hold on the caller.
+// bound only breaks a wedged agent's hold on the caller. Awake time
+// (`armAwakeDeadline`): a `hello` sent just before a sleep is not "no reply"
+// at the wake — the agent slept too.
 const COMMAND_TIMEOUT_MS = 10_000;
 
 /**
@@ -125,20 +128,18 @@ function exchange(
     const finish = (err: Error | null) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      cancelTimer();
       conn.destroy();
       if (err) reject(err);
       else resolve(replies);
     };
-    const timer = setTimeout(
-      () =>
-        finish(
-          new AgentUnresponsiveError(
-            conversationId,
-            `no reply to ${commands.map((c) => c.type).join(", ")} within ${COMMAND_TIMEOUT_MS}ms`,
-          ),
+    const cancelTimer = armAwakeDeadline(COMMAND_TIMEOUT_MS, () =>
+      finish(
+        new AgentUnresponsiveError(
+          conversationId,
+          `no reply to ${commands.map((c) => c.type).join(", ")} within ${COMMAND_TIMEOUT_MS}ms`,
         ),
-      COMMAND_TIMEOUT_MS,
+      ),
     );
     conn.on("connect", () => {
       connected = true;
@@ -221,17 +222,15 @@ export function subscribeAgent(
     let open = false;
     let message: PartialMessage | null = null;
     let broken: Error | null = null;
-    const timer = setTimeout(
-      () =>
-        fail(
-          new Error(
-            `SDK agent ${conversationId}: no reply to subscribe within ${COMMAND_TIMEOUT_MS}ms`,
-          ),
+    const cancelTimer = armAwakeDeadline(COMMAND_TIMEOUT_MS, () =>
+      fail(
+        new Error(
+          `SDK agent ${conversationId}: no reply to subscribe within ${COMMAND_TIMEOUT_MS}ms`,
         ),
-      COMMAND_TIMEOUT_MS,
+      ),
     );
     function fail(err: Error): void {
-      clearTimeout(timer);
+      cancelTimer();
       conn.destroy();
       reject(err);
     }
@@ -268,7 +267,7 @@ export function subscribeAgent(
       if (++replies < 2) return true;
       message = SubscribeReplySchema.parse(reply.result);
       open = true;
-      clearTimeout(timer);
+      cancelTimer();
       onMessage(message);
       resolve({ close: () => conn.destroy() });
       return true;

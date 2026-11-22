@@ -7,6 +7,11 @@ export {
   readAwakeClock,
   readSleepClock,
 } from "./internal/sleep-clock";
+export {
+  judgeProcessAwakeAge,
+  readProcessAwakeAge,
+} from "./internal/process-age";
+export type { ProcessAwakeAge } from "./internal/process-age";
 export type {
   AwakeClockReading,
   SleepClockReading,

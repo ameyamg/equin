@@ -40829,6 +40829,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RUN_TRANSCRIPT_SUFFIX`
           - `SAMPLE`
           - `SERVER_CORE_RELATIVE`
+          - `SYSCTL`
           - `SYSTEM_ZIP`
           - `WEB_CORE_RELATIVE`
           - `webDistDir`
@@ -45374,6 +45375,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/op-runtime`
           - `framework/tooling/checks/type-check/backstop`
           - `infra/spawn`
+          - `packages/sleep-clock`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/proc-linux.ts`, `core/internal/peak-footprint.ts` (debt)
         - Exempted by: `debug/heap-snapshot` (0 debt)
@@ -45579,23 +45581,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
       - Core:
         - Uses:
+          - `packages/proc-rusage.ProcRusage`
+          - `packages/proc-rusage.readProcRusage`
           - `packages/sleep-clock/stamp.ClockStamp`
           - `packages/sleep-clock/stamp.SleepStamp`
           - `packages/sleep-clock/stamp.stampBefore`
         - Exports (types):
           - `AwakeClockReading`
+          - `ProcessAwakeAge`
           - `SleepClockReading`
           - `SleepMeter`
           - `SleepReading`
         - Exports (values):
           - `clockStampNow`
           - `createSleepMeter`
+          - `judgeProcessAwakeAge`
           - `processStartStamp`
           - `readAwakeClock`
+          - `readProcessAwakeAge`
           - `readSleepClock`
       - Cross-plugin:
         - Imported by:
           - `auth`
+          - `conversations/runtime-sdk`
           - `debug/boot-events`
           - `debug/boot-watchdog`
           - `debug/health-monitor`

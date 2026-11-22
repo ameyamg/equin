@@ -24,24 +24,53 @@ const TRUE_BIN = Bun.which("true") ?? "true";
 
 type Ending = "wedged-exit" | "clean-exit" | "killed-unarmed";
 
-function fixture(ending: Ending, dir: string): string {
+/**
+ * Stands in for `sysctl -n kern.waketime`: the wake the test's `wake` file
+ * holds (epoch seconds), in sysctl's own format. A machine sleep is never
+ * real here — only the kernel's word that one ended.
+ */
+function fakeSysctl(dir: string): string {
+  const bin = join(dir, "sysctl");
+  writeFileSync(
+    bin,
+    `#!/bin/sh\necho "{ sec = $(cat ${JSON.stringify(join(dir, "wake"))}), usec = 0 } Mon Nov 23 00:00:00 2026"\n`,
+    { mode: 0o755 },
+  );
+  return bin;
+}
+
+/**
+ * `wakeAfterArmS`: the machine "woke" that many seconds after the exit was
+ * armed (null: its last wake long before).
+ */
+function fixture(
+  ending: Ending,
+  dir: string,
+  wakeAfterArmS: number | null,
+): string {
   return `
 import { spawn } from "node:child_process";
 import { rmSync, writeFileSync } from "node:fs";
 import { startExitWatchdog } from ${JSON.stringify(join(import.meta.dir, "exit-watchdog.ts"))};
 const dir = ${JSON.stringify(dir)};
-const watchdog = startExitWatchdog({ graceSeconds: ${GRACE_S}, sampleBin: ${JSON.stringify(TRUE_BIN)} });
+const watchdog = startExitWatchdog({ graceSeconds: ${GRACE_S}, sampleBin: ${JSON.stringify(TRUE_BIN)}, sysctlBin: ${JSON.stringify(fakeSysctl(dir))} });
+const wakeAfterArmS = ${JSON.stringify(wakeAfterArmS)};
+writeFileSync(dir + "/wake", "1");
 const cli = spawn("/bin/sleep", ["60"], { stdio: "ignore" });
 writeFileSync(dir + "/pid", String(process.pid));
 writeFileSync(dir + "/events.jsonl", JSON.stringify({ seq: 7, t: 0, kind: "agent", payload: { event: "exited", reason: "x" } }) + "\\n");
 console.log(JSON.stringify({ agent: process.pid, cli: cli.pid, watchdog: watchdog.pid }));
-const arm = () => watchdog.arm({
+const arm = () => {
+  if (wakeAfterArmS !== null)
+    writeFileSync(dir + "/wake", String(Math.floor(Date.now() / 1000) + wakeAfterArmS));
+  watchdog.arm({
   eventsPath: dir + "/events.jsonl",
   seqFloor: 3,
   samplePath: dir + "/sample.txt",
   sampledTail: '"t":1,"kind":"agent","payload":{"event":"exit_stalled","sampled":true}}',
   unsampledTail: '"t":1,"kind":"agent","payload":{"event":"exit_stalled","sampled":false}}',
-});
+  });
+};
 switch (${JSON.stringify(ending)}) {
   case "wedged-exit":
     // The 2026-11-08 shape: the exit listener arms and removes the pid file,
@@ -76,10 +105,10 @@ function alive(pid: number): boolean {
   }
 }
 
-async function run(ending: Ending) {
+async function run(ending: Ending, wakeAfterArmS: number | null = null) {
   const dir = mkdtempSync(join(root, `${ending}-`));
   const script = join(dir, "agent.ts");
-  writeFileSync(script, fixture(ending, dir));
+  writeFileSync(script, fixture(ending, dir, wakeAfterArmS));
   const started = Date.now();
   const proc = spawn(process.execPath, [script], {
     stdio: ["ignore", "pipe", "inherit"],
@@ -126,6 +155,16 @@ describe("exit watchdog", () => {
       payload: { event: "exit_stalled", sampled: true },
     });
   }, 20_000);
+
+  test("a wake inside the grace restarts it: the nap is not stall time", async () => {
+    // The kernel says the machine woke 3 s after the arm — past the 2 s grace
+    // the wall clock already counted. The helper restarts the grace from the
+    // wake, so the kill comes a full grace after it, not at once.
+    const r = await run("wedged-exit", GRACE_S + 1);
+    expect(r.ended).toBe("SIGKILL");
+    expect(r.elapsedMs).toBeGreaterThanOrEqual((2 * GRACE_S + 1) * 1000 - 1000);
+    expect(r.out).toContain("exit watchdog: agent");
+  }, 30_000);
 
   test("an exit that completes after arming is left alone", async () => {
     const r = await run("clean-exit");

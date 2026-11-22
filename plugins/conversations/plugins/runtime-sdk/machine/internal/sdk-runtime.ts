@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { awakeClock } from "@plugins/packages/plugins/deadline/core";
 import type {
   ConversationRuntime,
   OutgoingTurn,
@@ -92,7 +93,8 @@ const LAUNCH_CATCH_UP_MS = 10_000;
 const UnknownReplySchema = z.unknown();
 
 // How long an agent may go without answering any `hello` before it is
-// reported. Above a host-duress spike (2026-10-30: ~4 min of load 180 on 18
+// reported, in awake time (`awakeClock`: a stretch that began before a sleep
+// is not 5 min old at the first miss after the wake). Above a host-duress spike (2026-10-30: ~4 min of load 180 on 18
 // CPUs starved healthy agents past the 10 s bound); the reconcile sweep runs
 // every minute, so a wedged agent is seen several times before this.
 const UNRESPONSIVE_REPORT_MS = 5 * 60_000;
@@ -222,14 +224,14 @@ async function noteUnresponsive(
   id: string,
   hello: HelloReply | "not-running" | AgentUnresponsiveError,
 ): Promise<void> {
-  const now = Date.now();
+  const now = awakeClock();
   const detail = hello instanceof AgentUnresponsiveError ? hello.message : null;
   const stretch = unresponsive.observe(id, now, detail);
   if (!stretch) return;
   await recordReport({
     kind: "sdk-agent-unresponsive",
     source: "server-caught",
-    message: `SDK agent ${id}: no answer to hello for ${String(Math.round((now - stretch.since) / 1000))} s — ${stretch.detail}`,
+    message: `SDK agent ${id}: no answer to hello for ${String(Math.round((now - stretch.since) / 1000))} s awake — ${stretch.detail}`,
     data: {
       conversationId: id,
       elapsedMs: now - stretch.since,

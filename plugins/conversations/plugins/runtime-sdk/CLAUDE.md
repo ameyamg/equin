@@ -175,7 +175,8 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   started before the pid file is written, holding the read end of a FIFO only
   the agent writes. EOF (the agent died, however) → it exits; armed (one
   `writeSync` from `shutdown` and the `exit` listener, before the pid file
-  goes) and still open after 30 s → it samples the agent, appends
+  goes) and still open after 30 s (a wake in between, per `kern.waketime`,
+  restarts the grace — bash has no awake clock) → it samples the agent, appends
   `exit_stalled` (`trigger: "wedged"`) and SIGKILLs the agent's children and
   it. A child's `stdin.write` would not do: in an exit listener it is
   buffered and never sent. The backend's
@@ -193,8 +194,10 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   watchdog's to end; the sweep stays as the backstop for an agent started
   before it, or one whose watchdog died. The sweep
   finds agents by argv (`--pid-file <locks/sdk-agents>/<ns>/<id>.pid`, one
-  `ps`), and SIGKILLs each one older than 10 min (ten times the launch's
-  60 s wait for `started`, so never a start in progress) that its pid file
+  `ps`), and SIGKILLs each one older than 10 min of AWAKE time
+  (`readProcessAwakeAge`, sleep-clock — never `ps etime`, which made a start
+  the machine slept through look hours old; ten times the launch's 60 s wait
+  for `started`, so never a start in progress) that its pid file
   does not name, CLI first (`killAgentPid`), reported as `SdkAgentOrphaned`.
   The agent's directory goes with its workspace as usual.
 - `core/protocol.ts` — the wire: commands, replies, event lines, `PROTOCOL_VERSION`.
@@ -300,6 +303,11 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `runtime-sdk.claude-usage`. `core/usage-limits.ts` reads a report against
   now (limit reached, weekly room, the roomiest account). A window reset since
   the last report shows as such, never as empty.
+- **Every watchdog here counts awake time** (`packages/sleep-clock` § Judging
+  an age): socket replies, the stop's exit wait, the disclaim install wait,
+  the agent's 5 s hard exit (`armAwakeDeadline`), the unresponsive stretch and
+  the catch-up overdue report (`awakeClock`). A bare `setTimeout` as a bound
+  fires at the wake as if the nap were a hang.
 - Usage limits on demand (`machine/internal/usage-probe.ts`): an SDK session
   that sends no prompt asks Claude Code its `get_usage` control request (what
   `/usage` shows — no model call, ~1 s) under the account's sign-in, and writes

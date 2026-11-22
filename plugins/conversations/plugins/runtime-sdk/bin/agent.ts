@@ -32,6 +32,7 @@ import type {
 import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { createServer, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
@@ -39,7 +40,7 @@ import {
   transcriptUuidOfTurn,
   turnIdKind,
 } from "@plugins/conversations/plugins/turn-ledger/core";
-import { SAMPLE } from "@plugins/infra/plugins/paths/server";
+import { SAMPLE, SYSCTL } from "@plugins/infra/plugins/paths/server";
 import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-core/core";
 import { SecretStore } from "@plugins/infra/plugins/secrets/server";
 import { centralSecretStore } from "@plugins/infra/plugins/secrets/cli";
@@ -745,7 +746,7 @@ const listening = new Promise<void>((resolve) => {
 // WEDGED_EXIT_GRACE_S it samples this process, writes `exit_stalled`
 // (`wedged`) and SIGKILLs the CLI and it.
 
-/** How long process.exit may take before the hard exit ends the process. */
+/** How long (awake) process.exit may take before the hard exit ends the process. */
 const EXIT_GRACE_MS = 5_000;
 // `sample` records for 1 s, then symbolicates.
 const SAMPLE_TIMEOUT_MS = 5_000;
@@ -802,7 +803,8 @@ function shutdown(reason: string): void {
   closed = true;
   exitReason = reason;
   armExitWatchdog("shutdown began", reason);
-  setTimeout(() => hardExit("watchdog", reason), EXIT_GRACE_MS);
+  // Awake time: an exit the machine slept through is not a stalled one.
+  armAwakeDeadline(EXIT_GRACE_MS, () => hardExit("watchdog", reason));
   stage = "log";
   log(`● exiting: ${reason}`);
   stage = "emit exited";
@@ -917,6 +919,7 @@ markStarted();
 exitWatchdog = startExitWatchdog({
   graceSeconds: WEDGED_EXIT_GRACE_S,
   sampleBin: SAMPLE,
+  sysctlBin: SYSCTL,
 });
 mkdirSync(dirname(pidPath), { recursive: true });
 writeFileSync(pidPath, agentPidFileText(process.pid, args.account));

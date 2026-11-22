@@ -1,4 +1,5 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   exists,
@@ -376,8 +377,9 @@ export async function killAgentProcess(id: string): Promise<number | null> {
 
 /**
  * Wait until `id`'s agent is gone — its pid file removed (it does so only as
- * it really exits) or naming a dead pid — or `timeoutMs` passes. Woken by the
- * watch on the pid files' directory.
+ * it really exits) or naming a dead pid — or `timeoutMs` of AWAKE time passes
+ * (`armAwakeDeadline`: an agent stopping across a sleep is not killed and
+ * reported at the wake). Woken by the watch on the pid files' directory.
  */
 export async function awaitAgentExit(
   id: string,
@@ -385,7 +387,7 @@ export async function awaitAgentExit(
 ): Promise<"exited" | "timeout"> {
   if ((await livePid(id)) === null) return "exited";
   const { promise, resolve } = Promise.withResolvers<"exited" | "timeout">();
-  const timer = setTimeout(() => resolve("timeout"), timeoutMs);
+  const cancelTimer = armAwakeDeadline(timeoutMs, () => resolve("timeout"));
   const release = await acquireDirWatch({
     dir: ownAgentPidsDir(),
     scope: "children",
@@ -398,7 +400,7 @@ export async function awaitAgentExit(
   try {
     return await promise;
   } finally {
-    clearTimeout(timer);
+    cancelTimer();
     release();
   }
 }

@@ -4,6 +4,13 @@ export const PS = Bun.which("ps") ?? "ps";
 export const LSOF = Bun.which("lsof") ?? "/usr/sbin/lsof";
 /** macOS `sample`: a native stack sample of a running process. */
 export const SAMPLE = Bun.which("sample") ?? "sample";
+/**
+ * `sysctl`: reads kernel state (e.g. `kern.waketime`). In /usr/sbin, which an
+ * agent's PATH may not hold, so looked up there too.
+ */
+export const SYSCTL =
+  Bun.which("sysctl", { PATH: `${process.env.PATH ?? ""}:/usr/sbin:/sbin` }) ??
+  "/usr/sbin/sysctl";
 /** `mkfifo`: makes a named pipe. */
 export const MKFIFO = Bun.which("mkfifo") ?? "mkfifo";
 /**

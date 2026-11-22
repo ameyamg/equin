@@ -69,6 +69,7 @@ Pick by what you have:
 | An age measured in one process (start and now both read here) | `performance.now()` differences (`awakeClock`, `packages/deadline`): it pauses through sleep. |
 | An instant stored and judged later, maybe by another process (a file, a log line, a DB row) | Stamp it with `clockStampNow()` (here), store the `ClockStamp`'s `sleep` beside the wall instant, judge with `awakeBetween(from, to)` — `sleep-clock/stamp` (pure, web-safe). Exact across processes. |
 | A process's age from its own start, judged later or by another process | `processStartStamp()` (here). Never `performance.timeOrigin` beside a `sleep` read later: the sleep in between would count as awake. |
+| Another process's age, read from outside it (a reaper, a sweep over `ps`) | `readProcessAwakeAge(pid)` (here): its kernel start record against the awake clock — exact on macOS, `unsupported` elsewhere (fall back to `ps etime`). Never `ps etime` alone: it counts every sleep since the process started. |
 | Only a wall instant you cannot stamp (a DB `created_at`, another tool's timestamp) | `sleptDuring(start, end)` — `infra/host/machine-sleep` (the sleeps this process saw, plus the one before it started). |
 
 Where the sleep cannot be told (off macOS, a reboot in between, an
@@ -87,23 +88,29 @@ fails open). Those stay on the wall clock, and should say why.
 - Description: How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
 - Core:
   - Uses:
+    - `packages/proc-rusage.ProcRusage`
+    - `packages/proc-rusage.readProcRusage`
     - `packages/sleep-clock/stamp.ClockStamp`
     - `packages/sleep-clock/stamp.SleepStamp`
     - `packages/sleep-clock/stamp.stampBefore`
   - Exports (types):
     - `AwakeClockReading`
+    - `ProcessAwakeAge`
     - `SleepClockReading`
     - `SleepMeter`
     - `SleepReading`
   - Exports (values):
     - `clockStampNow`
     - `createSleepMeter`
+    - `judgeProcessAwakeAge`
     - `processStartStamp`
     - `readAwakeClock`
+    - `readProcessAwakeAge`
     - `readSleepClock`
 - Cross-plugin:
   - Imported by:
     - `auth`
+    - `conversations/runtime-sdk`
     - `debug/boot-events`
     - `debug/boot-watchdog`
     - `debug/health-monitor`

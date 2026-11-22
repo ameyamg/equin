@@ -107,6 +107,7 @@ orchestrator's own peak and the build-progress log.
     - `framework/cli/op-runtime`
     - `framework/tooling/checks/type-check/backstop`
     - `infra/spawn`
+    - `packages/sleep-clock`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/proc-linux.ts`, `core/internal/peak-footprint.ts` (debt)
   - Exempted by: `debug/heap-snapshot` (0 debt)

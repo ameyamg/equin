@@ -61,6 +61,7 @@ export {
   PGREP,
   PS,
   SAMPLE,
+  SYSCTL,
 } from "./internal/bins";
 
 export {

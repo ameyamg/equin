@@ -68,13 +68,23 @@ function oneLine(value: string, name: string): string {
 /**
  * The helper. `read -t` tells a timeout from EOF by neither status nor output
  * in bash 3.2 (macOS's), so it is told by the time it took: the timeout is
- * one second over the grace, and anything at least the grace is a timeout.
- * Even an EOF misjudged at that edge only reaches `kill -0`, which a dead
- * agent fails.
+ * one second over what is left of the grace, and anything at least that is a
+ * timeout. Even an EOF misjudged at that edge only reaches `kill -0`, which a
+ * dead agent fails.
+ *
+ * The grace is AWAKE time. A sleeping Mac runs neither the agent's exit nor
+ * this helper, but `read -t` and the wall clock count the nap: an exit the
+ * machine slept through was killed and reported `wedged` at the wake. Bash has
+ * no awake clock (`kern.monotonicclock_usecs` is not one: it read 19,542 s
+ * beside CLOCK_UPTIME_RAW's 5,583,163 s, 2026-11-23), so the helper asks
+ * `kern.waketime` instead: a wake since the grace began means the time before
+ * it is unknown, and the grace restarts from the wake. Only the last wake is
+ * known, so a stall across several naps gets at most one more grace per wake
+ * — late, never early. Unreadable (off macOS): the wall clock, as before.
  */
 const SCRIPT = `
 set -u
-agent=$1 grace=$2 sample_bin=$3 fifo=$4
+agent=$1 grace=$2 sample_bin=$3 fifo=$4 sysctl_bin=$5
 exec 0<"$fifo" || exit 1
 rm -f "$fifo"
 rmdir "\${fifo%/*}"
@@ -83,9 +93,20 @@ IFS= read -r floor || exit 0
 IFS= read -r sample_path || exit 0
 IFS= read -r sampled || exit 0
 IFS= read -r unsampled || exit 0
-start=$SECONDS
-read -r -t $((grace + 1)) _
-[ $((SECONDS - start)) -ge "$grace" ] || exit 0
+woke() { "$sysctl_bin" -n kern.waketime 2>/dev/null | sed -n 's/^{ sec = \\([0-9][0-9]*\\),.*/\\1/p'; }
+start=$(date +%s) left=$grace
+while :; do
+  t0=$(date +%s)
+  read -r -t $((left + 1)) _
+  now=$(date +%s)
+  [ $((now - t0)) -ge "$left" ] || exit 0
+  wake=$(woke)
+  if [ -n "$wake" ] && [ "$wake" -gt "$start" ]; then
+    start=$wake left=$((grace - (now - wake)))
+    [ "$left" -ge 1 ] && continue
+  fi
+  break
+done
 kill -0 "$agent" 2>/dev/null || exit 0
 "$sample_bin" "$agent" 1 -file "$sample_path" >/dev/null 2>&1 &
 sampler=$!
@@ -109,6 +130,8 @@ kill -KILL "$agent"
 export function startExitWatchdog(opts: {
   graceSeconds: number;
   sampleBin: string;
+  /** `sysctl`, asked `-n kern.waketime` (a stand-in in tests). */
+  sysctlBin: string;
 }): ExitWatchdog {
   if (!Number.isInteger(opts.graceSeconds) || opts.graceSeconds < 1)
     throw new Error(
@@ -131,6 +154,7 @@ export function startExitWatchdog(opts: {
       String(opts.graceSeconds),
       opts.sampleBin,
       fifo,
+      opts.sysctlBin,
     ],
     // Its own session: a signal to the agent's process group (the backend
     // stopping it) leaves the helper to see the agent's end. Its output joins
