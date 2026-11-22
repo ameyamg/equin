@@ -2,8 +2,9 @@ import { z } from "zod";
 import type { SleepStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 /**
- * The machine's sleep clock when a start line was written (packages/sleep-clock's
- * `sleepStampNow`): what lets the boot watchdog age a never-ready boot by AWAKE
+ * The machine's sleep clock at `processStartedAt` — not at `sampledAt`, when
+ * the start line was written (packages/sleep-clock's `processStartStamp`):
+ * what lets the boot watchdog age a never-ready boot by AWAKE
  * time exactly, whichever process judges it. Absent on lines written before it
  * was recorded, null where the platform cannot read it.
  */
@@ -91,8 +92,9 @@ export interface BootEvent {
   deadBy: number | null;
   supersededAtMs: number | null;
   /**
-   * The sleep clock at this boot's start line (`null`: not recorded, or not
-   * readable), and at the superseding boot's — the stamps the watchdog ages
+   * The sleep clock at `processStartedAt` (`null`: not recorded, or not
+   * readable) and at `supersededAtMs` (the superseding boot's process start)
+   * — each the other half of that instant's stamp, which the watchdog ages
    * the un-ready span by.
    */
   startSleep: SleepStamp | null;

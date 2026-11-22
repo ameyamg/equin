@@ -3,6 +3,7 @@
 export {
   clockStampNow,
   createSleepMeter,
+  processStartStamp,
   readAwakeClock,
   readSleepClock,
   sleepStampNow,

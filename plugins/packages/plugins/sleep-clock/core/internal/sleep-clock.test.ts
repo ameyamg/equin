@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   createSleepMeter,
+  processStartStamp,
   readAwakeClock,
   readSleepClock,
 } from "./sleep-clock";
@@ -20,6 +21,16 @@ describe.if(process.platform === "darwin")("readSleepClock (darwin)", () => {
       expect(a.wakeAtMs).toBeGreaterThan(0);
       expect(a.wakeAtMs).toBeLessThanOrEqual(Date.now());
     }
+  });
+
+  test("the process's start stamp is at its start, no later than now", () => {
+    const start = processStartStamp();
+    const now = readSleepClock();
+    if (!now.supported || start.sleep === null)
+      throw new Error("expected support on darwin");
+    expect(start.wallMs).toBe(Math.round(performance.timeOrigin));
+    expect(start.sleep.boot).toBe(now.boot);
+    expect(start.sleep.asleepMs).toBeLessThanOrEqual(now.asleepMs + 1);
   });
 
   test("a meter over an awake window reports no sleep", () => {

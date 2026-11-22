@@ -66,6 +66,27 @@ export function awakeBetween(from: ClockStamp, to: ClockStamp): AwakeSpan {
   return { wallMs, sleptMs, awakeMs: wallMs - (sleptMs ?? 0) };
 }
 
+/**
+ * The stamp of an earlier instant `wallMs`, worked out at `now` from the
+ * `awakeMs` this process timed since then on a clock that pauses through sleep
+ * (`performance.now()`): what is left of the wall time since is sleep. For a
+ * start that is over before anything can stamp it — a process's own. Pairing
+ * that instant with a stamp taken later instead would count every sleep in
+ * between as time awake.
+ */
+export function stampBefore(
+  now: ClockStamp,
+  wallMs: number,
+  awakeMs: number,
+): ClockStamp {
+  if (now.sleep === null) return { wallMs, sleep: null };
+  const sleptSince = Math.max(0, now.wallMs - wallMs - awakeMs);
+  return {
+    wallMs,
+    sleep: { boot: now.sleep.boot, asleepMs: now.sleep.asleepMs - sleptSince },
+  };
+}
+
 /** Whether a parsed JSON value is a {@link SleepStamp} (for stores read without zod). */
 export function isSleepStamp(v: unknown): v is SleepStamp {
   if (typeof v !== "object" || v === null) return false;

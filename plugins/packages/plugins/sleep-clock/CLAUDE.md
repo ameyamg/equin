@@ -39,7 +39,8 @@ const r = readSleepClock();
 
 `createSleepMeter()` is the relative form, built on `readSleepClock()`.
 `sleepStampNow()` / `clockStampNow()` are the reading as a stamp stores it
-(`sleep-clock/stamp`'s `SleepStamp` / `ClockStamp`).
+(`sleep-clock/stamp`'s `SleepStamp` / `ClockStamp`). `processStartStamp()` is
+the stamp of this process's start, whenever it is called.
 
 **Off darwin** both `read()` and `readSleepClock()` return `{ supported: false }`.
 That is "cannot tell", never "did not sleep" — a caller decides what to do with an unknown.
@@ -62,6 +63,7 @@ Pick by what you have:
 | An in-process timer: "fire after N of work" | `armAwakeDeadline(ms, fn)` / `withDeadline` — `packages/deadline`. Never a bare `setTimeout` as a watchdog: timers count sleep. |
 | An age measured in one process (start and now both read here) | `performance.now()` differences (`awakeClock`, `packages/deadline`): it pauses through sleep. |
 | An instant stored and judged later, maybe by another process (a file, a log line, a DB row) | Stamp it with `clockStampNow()` (here), store the `ClockStamp`'s `sleep` beside the wall instant, judge with `awakeBetween(from, to)` — `sleep-clock/stamp` (pure, web-safe). Exact across processes. |
+| A process's age from its own start, judged later or by another process | `processStartStamp()` (here). Never `performance.timeOrigin` beside a `sleep` read later: the sleep in between would count as awake. |
 | Only a wall instant you cannot stamp (a DB `created_at`, another tool's timestamp) | `sleptDuring(start, end)` — `infra/host/machine-sleep` (the sleeps this process saw, plus the one before it started). |
 
 Where the sleep cannot be told (off macOS, a reboot in between, an
@@ -78,6 +80,23 @@ fails open). Those stay on the wall clock, and should say why.
 ## Plugin reference
 
 - Description: How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
+- Core:
+  - Uses:
+    - `packages/sleep-clock/stamp.ClockStamp`
+    - `packages/sleep-clock/stamp.SleepStamp`
+    - `packages/sleep-clock/stamp.stampBefore`
+  - Exports (types):
+    - `AwakeClockReading`
+    - `SleepClockReading`
+    - `SleepMeter`
+    - `SleepReading`
+  - Exports (values):
+    - `clockStampNow`
+    - `createSleepMeter`
+    - `processStartStamp`
+    - `readAwakeClock`
+    - `readSleepClock`
+    - `sleepStampNow`
 - Cross-plugin:
   - Imported by:
     - `auth`
@@ -94,18 +113,6 @@ fails open). Those stay on the wall clock, and should say why.
     - `infra/host/machine-sleep`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
-- Core:
-  - Exports (types):
-    - `AwakeClockReading`
-    - `SleepClockReading`
-    - `SleepMeter`
-    - `SleepReading`
-  - Exports (values):
-    - `clockStampNow`
-    - `createSleepMeter`
-    - `readAwakeClock`
-    - `readSleepClock`
-    - `sleepStampNow`
 - Sub-plugins:
   - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two…
 

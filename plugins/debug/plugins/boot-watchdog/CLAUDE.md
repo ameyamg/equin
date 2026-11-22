@@ -57,14 +57,18 @@ like a live wedge; before 2026-11-05 this watchdog filed such dead boots as
     sweeper ran) — the next request boots it again.
 
 **Un-ready time is awake time.** The budget is spent only while the machine
-is awake: the sleep main's process saw inside the span (machine-sleep's
-`sleptDuring`) is taken off. A nap freezes the booting process and its
+is awake: the span runs between two stamps of the sleep clock — the one at
+process start (the start line's `sleep`) and this tick's (or the superseding
+boot's start) — with `sleptDuring`, the sleep main's process saw, as the
+fallback for a line without one. A nap freezes the booting process and its
 journal's clock alike, so a boot the Mac slept through is no slower for it —
 on 2026-11-20 a backend started the second a lid-shut Mac entered a 934 s
 maintenance sleep, and the first tick on wake filed it "not ready after 16m
-… in load:wave-24 at 1s"; it was ready 1.6 s later. A sleep main did not live
-through (before its own start) or a platform without the clocks counts as
-awake — never in the boot's favour. The report says how long it slept.
+… in load:wave-24 at 1s"; it was ready 1.6 s later. And on 2026-11-22, with
+the stamp taken at the start line, the 939 s a Mac slept between the process's
+start and that line read as "not ready after 16m awake" for a 6 s boot. A
+sleep neither can tell counts as awake — never in the boot's favour. The
+report says how long it slept.
 
 **One report per boot.** Every verdict but **booting** says the boot's
 process is gone (killed at its readiness deadline, or replaced): a fact about

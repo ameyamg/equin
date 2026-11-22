@@ -45571,6 +45571,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/single-flight.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/single-flight.ts` (sanctioned)
     - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
+      - Core:
+        - Uses:
+          - `packages/sleep-clock/stamp.ClockStamp`
+          - `packages/sleep-clock/stamp.SleepStamp`
+          - `packages/sleep-clock/stamp.stampBefore`
+        - Exports (types):
+          - `AwakeClockReading`
+          - `SleepClockReading`
+          - `SleepMeter`
+          - `SleepReading`
+        - Exports (values):
+          - `clockStampNow`
+          - `createSleepMeter`
+          - `processStartStamp`
+          - `readAwakeClock`
+          - `readSleepClock`
+          - `sleepStampNow`
       - Cross-plugin:
         - Imported by:
           - `auth`
@@ -45587,18 +45604,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host/machine-sleep`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
-      - Core:
-        - Exports (types):
-          - `AwakeClockReading`
-          - `SleepClockReading`
-          - `SleepMeter`
-          - `SleepReading`
-        - Exports (values):
-          - `clockStampNow`
-          - `createSleepMeter`
-          - `readAwakeClock`
-          - `readSleepClock`
-          - `sleepStampNow`
       - Plugins:
         - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it.
           - Cross-plugin:
@@ -45606,6 +45611,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/boot-watchdog`
               - `infra/git/main-slots/boot-lease`
               - `infra/host/host-admission`
+              - `packages/sleep-clock`
           - Core:
             - Exports (types):
               - `AwakeSpan`
@@ -45615,6 +45621,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `awakeBetween`
               - `isSleepStamp`
               - `sleptBetween`
+              - `stampBefore`
     - **`smooth-clock`** — Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.
       - Cross-plugin:
         - Imported by:

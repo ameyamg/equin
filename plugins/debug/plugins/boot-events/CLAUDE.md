@@ -17,7 +17,9 @@ Both lines go to the persisted `boot` log channel →
   its predecessor read as the latest attempt. No host service is up that
   early, so it appends through the channel's own memoised file sink
   (`channelFileSink`, the one the desktop's log persistence writes the later
-  lines through). **Serve mode only**, by construction — only the serving
+  lines through). Its `sleep` is the sleep clock at `processStartedAt`, not
+  at the write (`processStartStamp`): the machine can sleep between the two.
+  **Serve mode only**, by construction — only the serving
   entry point calls it; an `exec` child never reaches `onReady`, so its
   `start` would never pair.
 - **`phase: "ready"`** — written from `onReady` (post-`onReadyBlocking`
@@ -56,7 +58,7 @@ for these. They are the one plugin-installed crash listener
 (`server-core/no-process-crash-listener`, sanctioned in `exempt/`).
 
 ```json
-{ "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "phase": "start" }
+{ "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "phase": "start", "sleep": { "boot": "<id>", "asleepMs": <ms> } | null }
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "readyAt": <ms>, "phase": "ready" }
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "exitedAt": <ms>, "phase": "exited" }
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "deadBy": <ms>, "phase": "dead" }

@@ -61,9 +61,9 @@ export function classifyNeverReady(
   // first tick on wake filed it "not ready after 16m … in load:wave-24 at
   // 1s" — it was ready 1.6 s later, having run ~3 s in all.
   //
-  // Exact where the boot's start line carries the sleep clock (and so does
-  // its end: the superseding boot's start line, or this tick): the stamps'
-  // difference, whoever judges — sleeps before main's own start included.
+  // Exact where the boot's start line carries the sleep clock at process
+  // start (and so does its end: the superseding boot's, or this tick): the
+  // stamps' difference, whoever judges — sleeps before main's own start included.
   // A line from before the stamp falls back to the sleeps main's process
   // saw (`sleptDuring`).
   const endMs = ev.supersededAtMs ?? now;

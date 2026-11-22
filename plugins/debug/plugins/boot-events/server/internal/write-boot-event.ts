@@ -1,4 +1,4 @@
-import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { processStartStamp } from "@plugins/packages/plugins/sleep-clock/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { openDynamicSink } from "@plugins/infra/plugins/file-sink/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -65,7 +65,12 @@ let ready = false;
 
 export function writeBootStartEvent(): void {
   const worktree = runtimeNamespace();
-  const processStartedAt = Math.round(performance.timeOrigin);
+  // Both clocks at PROCESS start, not at this line: the watchdog ages a boot
+  // that never gets ready from that instant, by the time the machine was
+  // awake since. 2026-11-22 a Mac slept 939 s between a backend's start and
+  // this line, and its 6 s boot was filed as wedged for 16 min.
+  const started = processStartStamp();
+  const processStartedAt = started.wallMs;
   const file = channelFileSink(BOOT_CHANNEL);
   const append = (line: BootLine): void =>
     file.appendSync(
@@ -75,15 +80,12 @@ export function writeBootStartEvent(): void {
         line: JSON.stringify(line),
       }),
     );
-  // Both clocks: the watchdog ages a boot that never gets ready by the time
-  // the machine was awake since this line, not by a nap it slept through.
-  const at = clockStampNow();
   append({
-    sampledAt: at.wallMs,
+    sampledAt: Date.now(),
     worktree,
     processStartedAt,
     phase: "start",
-    sleep: at.sleep,
+    sleep: started.sleep,
   });
   process.once("exit", () => {
     if (ready) return;

@@ -119,10 +119,10 @@ export const bootWatchdogMonitorJob = defineJob({
         // report — boot-events files it, error and stack, through the report
         // outbox — and measured to the next start its "un-ready" time would be
         // however long the agent took to rebuild (classifyNeverReady skips it).
-        // Un-ready time is awake time: the sleep this (main) process saw
-        // inside the span is taken off. Where the platform cannot tell
-        // (null), or for a sleep before main's own start, the wall clock
-        // judges alone — never in the boot's favour.
+        // Un-ready time is awake time, by the boot's own stamp; for a line
+        // without one, the sleep this (main) process saw inside the span.
+        // Where neither can tell, the wall clock judges alone — never in the
+        // boot's favour.
         const verdict = classifyNeverReady(
           ev,
           fleet,

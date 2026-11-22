@@ -1,7 +1,8 @@
 import { dlopen, ptr } from "bun:ffi";
-import type {
-  ClockStamp,
-  SleepStamp,
+import {
+  stampBefore,
+  type ClockStamp,
+  type SleepStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 // <time.h> clock ids on darwin. CLOCK_MONOTONIC_RAW is mach_continuous_time: it
@@ -171,6 +172,20 @@ export function sleepStampNow(): SleepStamp | null {
  */
 export function clockStampNow(): ClockStamp {
   return { wallMs: Date.now(), sleep: sleepStampNow() };
+}
+
+/**
+ * This process's start on both clocks, exact whenever it is called: a sleep
+ * between the start and the call is not in the stamp. The stamp to age a
+ * process by from its start — `clockStampNow()` at its first line of JS is
+ * already late, a Mac can sleep a quarter of an hour in between.
+ */
+export function processStartStamp(): ClockStamp {
+  return stampBefore(
+    clockStampNow(),
+    Math.round(performance.timeOrigin),
+    performance.now(),
+  );
 }
 
 /**

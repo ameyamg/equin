@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
+import { stampBefore } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import {
   classifyNeverReady,
   isSettledVerdict,
@@ -220,6 +221,35 @@ describe("classifyNeverReady", () => {
       sleptMs: 933_570,
       fleetState: "starting",
     });
+  });
+
+  // 2026-11-22 (report-1795351863-wqbcq3), the real numbers: the process
+  // started as the Mac slept, wrote its start line 939.7 s later having run
+  // ~0.5 s, slept 628.6 s more inside a blocking hook, and was filed "16m
+  // awake" 0.4 s after the wake. It was ready 0.2 s later, 5.8 s awake.
+  test("a sleep between the process start and its start line is not awake time", () => {
+    const startedAt = 1795350290524;
+    const tick = 1795351863860;
+    const atLine = {
+      wallMs: 1795351230219,
+      sleep: { boot: "B", asleepMs: 778912673.5505 },
+    };
+    const slept = 628599.3789579868;
+    const nowSleep = { boot: "B", asleepMs: atLine.sleep.asleepMs + slept };
+    const judge = (startSleep: BootEvent["startSleep"], budget: number) =>
+      classifyNeverReady(
+        boot({ processStartedAt: startedAt, startSleep }),
+        fleet("restarting"),
+        tick,
+        budget,
+        NO_SLEEP,
+        nowSleep,
+      );
+    // What was filed: the start's wall instant beside the line's sleep.
+    expect(judge(atLine.sleep, BUDGET)?.wedgedMs).toBeCloseTo(944_736.6, 0);
+    const started = stampBefore(atLine, startedAt, 537);
+    expect(judge(started.sleep, BUDGET)).toBeNull();
+    expect(judge(started.sleep, 0)?.wedgedMs).toBeCloseTo(5_578.6, 0);
   });
 
   test("a stamped start line is aged by the sleep clock, whoever judges", () => {
