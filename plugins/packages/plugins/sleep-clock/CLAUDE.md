@@ -111,6 +111,7 @@ fails open). Those stay on the wall clock, and should say why.
   - Imported by:
     - `auth`
     - `conversations/runtime-sdk`
+    - `conversations/workspace/worktree`
     - `debug/boot-events`
     - `debug/boot-watchdog`
     - `debug/health-monitor`

@@ -10,6 +10,23 @@ its handle on `work` and decides what a still-running promise means (keep a
 memo, report it, leave it running). Use it for an await with no timeout option
 of its own — a module import, a run a bug may never settle.
 
+## `deadline/no-wall-clock-deadline` (lint)
+
+A `setTimeout` whose callback gives up on work — calls `reject`, `.abort()`,
+`.kill()` or `process.exit()` — is a deadline, and `setTimeout` counts machine
+sleep: on wake every timer whose time passed during the nap fires at once, so
+work that ran 0.3 s awake is declared failed (report-1795305324-8wpwx2: a launch
+failed `AgentNotRunningError` 104 ms before its agent said it had started).
+The rule reports it everywhere except browser code (`web/`, `e2e/`,
+`exhibits/`), tests and generated files; use `armAwakeDeadline` / `withDeadline`.
+A deadline that really is on wall time (a remote peer's lease, an external
+token) is declared in the plugin's `exempt/index.ts`, with its reason.
+
+It recognises the give-up by the callback's own calls, so a debounce, a backoff
+or a `setTimeout(resolve, ms)` sleep is not reported — and a watchdog that only
+sets a flag or resolves `"timeout"` is not either; those still belong on
+`armAwakeDeadline`.
+
 Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
 `conversations/runtime-sdk` (the event consumer's catch-up watchdog).
 
@@ -20,17 +37,23 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
 - Description: Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
 - Cross-plugin:
   - Imported by:
+    - `apps/browser/engine`
     - `apps/deploy/box-link/link`
+    - `apps/prototypes/thumbnails`
     - `conversations`
     - `conversations/runtime-sdk`
     - `database`
     - `database/connection`
     - `framework/cli/bootstrap`
+    - `framework/tooling/e2e-harness/page-ready`
     - `infra/claude-cli/sdk`
     - `infra/jobs`
+    - `infra/mcp/browser`
     - `infra/safe-fetch/browser-fetch`
     - `infra/spawn`
+    - `infra/spawn/daemon`
     - `network/live/live-state-snapshot`
+    - `packages/signal-origin`
 - Core:
   - Exports (types):
     - `AwakeClock`

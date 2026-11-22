@@ -16,6 +16,10 @@ import {
   SUPERVISED_EXIT_SCHEMA_NOT_READY,
   SUPERVISED_EXIT_TEMPFAIL,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import {
+  awakeBetween,
+  type ClockStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 /**
  * How long one suspension waits for a prepare run's `supervisedRun.ended`
@@ -50,14 +54,22 @@ export function tempfailBackoffMs(n: number): number {
 }
 
 /**
- * How many wakes a request may go without a run of its own appearing before it
- * counts as lost and is made again (~2 min). `worktree.prepare` is an `instant`
- * job that claims in milliseconds, so a request still unclaimed after that was
- * absorbed — its claim lost to a run that was already ending — or is stuck
- * behind a wedged queue; either way asking again is the way forward, and it
- * counts against `MAX_PREPARE_REQUESTS`.
+ * How long, in AWAKE time since it was made, a request may go without a run of
+ * its own appearing before it counts as lost and is made again.
+ * `worktree.prepare` is an `instant` job that claims in milliseconds, so a
+ * request still unclaimed after that was absorbed — its claim lost to a run
+ * that was already ending — or is stuck behind a wedged queue; either way
+ * asking again is the way forward, and it counts against
+ * `MAX_PREPARE_REQUESTS`.
+ *
+ * Awake, not a count of wakes: each wait's timeout is wall time, so a Mac
+ * napping through a launch spent one wake per nap with the queue asleep too,
+ * and four naps re-requested a run nothing had had the chance to claim
+ * (three such rounds lost the launch). Judged from a stamp the request's
+ * memoized step stores, so a replay judges the same request by the same
+ * instant (`sleep-clock/stamp`).
  */
-const MAX_PENDING_WAKES = 4;
+export const PENDING_REQUEST_AWAKE_MS = 120_000;
 
 /** What the loop reads and does — bound to the real job in `worktree-workspace.ts`. */
 export interface PrepareDeps {
@@ -76,6 +88,18 @@ export interface PrepareDeps {
    * so it must be idempotent.
    */
   filesReady(): Promise<void>;
+  /** Both clocks, now (`clockStampNow`): what a request's age is judged on. */
+  now(): ClockStamp;
+}
+
+/**
+ * A request, as its memoized step stores it: the run that was newest when it
+ * was made (`null`: none — a run other than that one is the request's), and
+ * when it was made. `at` is absent from a step memoized before it existed.
+ */
+interface PrepareRequest {
+  after: string | null;
+  at?: ClockStamp;
 }
 
 /**
@@ -131,10 +155,20 @@ export async function prepareWorktree(
   // Our latest request, as the run that was newest when it was made (`null`:
   // none): a run other than that one is the request's. By identity, not by
   // clock — the run's start is the database's time, the request the backend's.
-  let request: { after: string | null } | null = null;
+  let request: { after: string | null; at: ClockStamp } | null = null;
+  // Each request is its own memoized step. A step memoized before requests
+  // were stamped counts as already past its budget (a stamp at the epoch with
+  // no sleep reading is judged on the wall clock): every walk reads it back,
+  // so a "now" would never age, and the old counter would have re-asked by now.
+  const ask = async (name: string, after: string | null) => {
+    const made: PrepareRequest = await ctx.step(name, async () => {
+      await deps.request();
+      return { after, at: deps.now() };
+    });
+    return { after: made.after, at: made.at ?? { wallMs: 0, sleep: null } };
+  };
   let requests = 0;
   let tempfails = 0;
-  let pendingWakes = 0;
   let filesReady = false;
   for (let i = 0; ; i++) {
     const run = await deps.latestRun();
@@ -171,11 +205,14 @@ export async function prepareWorktree(
     }
     const ours = request !== null && run !== null && run.id !== request.after;
     if (ours && run.exitCode === 0 && state === "complete") return;
-    if (request !== null && !ours && pendingWakes < MAX_PENDING_WAKES) {
+    if (
+      request !== null &&
+      !ours &&
+      awakeBetween(request.at, deps.now()).awakeMs < PENDING_REQUEST_AWAKE_MS
+    ) {
       // Requested, not claimed yet: wait for any run of the kind to end — ours
       // ends with one, and a timeout is a re-look. Before its files, for the
       // attempt's checkout to move instead: the run writing them says so.
-      pendingWakes++;
       await (filesReady
         ? wait(ctx, deps.kindId, null, i, moved)
         : waitProgress(ctx, attemptId, i, moved));
@@ -205,16 +242,8 @@ export async function prepareWorktree(
         );
       }
       await ctx.sleep(tempfailBackoffMs(tempfails));
-      const after: string = run.id;
-      request = await ctx.step(
-        `prepare:retry:${String(tempfails)}`,
-        async () => {
-          await deps.request();
-          return { after };
-        },
-      );
+      request = await ask(`prepare:retry:${String(tempfails)}`, run.id);
       tempfails++;
-      pendingWakes = 0;
       continue;
     }
     if (requests >= MAX_PREPARE_REQUESTS) {
@@ -226,13 +255,8 @@ export async function prepareWorktree(
               `${run.errorMessage ?? "killed or crashed before recording an error — see its transcript in the runs directory"}`),
       );
     }
-    const after: string | null = run?.id ?? null;
-    request = await ctx.step(`prepare:request:${requests}`, async () => {
-      await deps.request();
-      return { after };
-    });
+    request = await ask(`prepare:request:${requests}`, run?.id ?? null);
     requests++;
-    pendingWakes = 0;
   }
 }
 

@@ -33,6 +33,7 @@
  * Usage: bun signal-origin.fixture.ts --mode <mode> --out <dir>
  */
 import { writeFileSync } from "node:fs";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { signalOriginShim } from "../../deps";
 import {
@@ -84,10 +85,10 @@ function announceReady(): void {
 
 /** Keep the loop alive, with a hard cap so a wedged fixture can never linger. */
 function stayAlive(): void {
-  setTimeout(() => {
+  armAwakeDeadline(30_000, () => {
     event("timeout");
     process.exit(0);
-  }, 30_000);
+  });
 }
 
 switch (mode) {

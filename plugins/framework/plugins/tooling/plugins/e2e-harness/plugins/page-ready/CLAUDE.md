@@ -21,7 +21,9 @@ may import no `e2e` barrel — hence a `core/` of its own).
 ## Plugin reference
 
 - Core:
-  - Uses: `framework/tooling/web-artifacts/served-paths.isWorkerChunkPath`
+  - Uses:
+    - `framework/tooling/web-artifacts/served-paths.isWorkerChunkPath`
+    - `packages/deadline.armAwakeDeadline`
   - Exports (types):
     - `Flatness`
     - `NetworkIdleOptions`

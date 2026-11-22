@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
 import type { Ready } from "@plugins/infra/plugins/deps/deps";
+import { withDeadline } from "@plugins/packages/plugins/deadline/core";
 import {
   launchChromium,
   type PlaywrightBrowserSource,
@@ -76,7 +77,7 @@ let playwrightModule: Promise<PlaywrightModule> | undefined;
  */
 async function loadPlaywright(): Promise<PlaywrightModule> {
   const pending = (playwrightModule ??= import("playwright"));
-  return withTimeout(
+  return withDeadline(
     pending,
     MODULE_TIMEOUT_MS,
     () =>
@@ -85,25 +86,6 @@ async function loadPlaywright(): Promise<PlaywrightModule> {
         `playwright did not load within ${MODULE_TIMEOUT_MS}ms`,
       ),
   );
-}
-
-/** Bound a promise that has no timeout option of its own. */
-async function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  onTimeout: () => Error,
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(onTimeout()), ms);
-      }),
-    ]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
 }
 
 /** Playwright signals every one of its own budget breaches this way. */
@@ -136,7 +118,7 @@ function isTimeout(err: unknown): boolean {
  */
 async function closeBrowser(browser: Browser, name: string): Promise<void> {
   try {
-    await withTimeout(
+    await withDeadline(
       browser.close(),
       CLOSE_TIMEOUT_MS,
       () =>
@@ -218,7 +200,7 @@ export async function renderThumbnail(
     // A `window` or `responsive` prototype has no size of its own to render
     // at here; it renders at the headless preset's.
     const size = viewportRenderSize(meta.viewport);
-    const context = await withTimeout(
+    const context = await withDeadline(
       browser.newContext({
         viewport: { width: size.w, height: size.h },
         deviceScaleFactor: DEVICE_SCALE_FACTOR,
@@ -232,7 +214,7 @@ export async function renderThumbnail(
           `chromium did not open a context within ${CONTEXT_TIMEOUT_MS}ms`,
         ),
     );
-    const page = await withTimeout(
+    const page = await withDeadline(
       context.newPage(),
       PAGE_TIMEOUT_MS,
       () =>

@@ -1,4 +1,5 @@
 import type { BrowserContext, Page, Request } from "playwright";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { isWorkerChunkPath } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 
 /**
@@ -128,7 +129,7 @@ export async function waitForNetworkIdle(
   const idleMs = opts.idleMs ?? 500;
   await new Promise<void>((resolve, reject) => {
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
-    const deadline = setTimeout(() => {
+    const cancelDeadline = armAwakeDeadline(timeoutMs, () => {
       done();
       const pending = [...tracker.inflight].map((r) => r.url());
       reject(
@@ -137,7 +138,7 @@ export async function waitForNetworkIdle(
             `${timeoutMs}ms: ${pending.slice(0, 5).join(", ")}`,
         ),
       );
-    }, timeoutMs);
+    });
     const check = (): void => {
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = null;
@@ -148,7 +149,7 @@ export async function waitForNetworkIdle(
       }, idleMs);
     };
     const done = (): void => {
-      clearTimeout(deadline);
+      cancelDeadline();
       if (idleTimer) clearTimeout(idleTimer);
       tracker.changed.delete(check);
     };

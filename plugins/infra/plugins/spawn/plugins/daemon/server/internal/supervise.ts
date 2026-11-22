@@ -1,4 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   backoffPolicy,
@@ -391,13 +392,13 @@ export function spawnProcessIn(
       code: processCode(argv),
       async stop() {
         proc.kill();
-        // SIGKILL a child that ignores SIGTERM, so a stop always ends.
-        const escalate = setTimeout(
-          () => proc.kill("SIGKILL"),
-          STOP_KILL_AFTER_MS,
+        // SIGKILL a child that ignores SIGTERM, so a stop always ends — after
+        // that much awake time: a stop the machine naps through is not a hang.
+        const cancelEscalate = armAwakeDeadline(STOP_KILL_AFTER_MS, () =>
+          proc.kill("SIGKILL"),
         );
         await proc.exited;
-        clearTimeout(escalate);
+        cancelEscalate();
       },
     };
   });

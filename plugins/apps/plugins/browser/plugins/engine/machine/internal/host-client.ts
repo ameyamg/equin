@@ -1,6 +1,7 @@
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { requestDep } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { PLAYWRIGHT_BUNDLE_EXTERNAL } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
@@ -182,13 +183,14 @@ async function waitForStatus(
   await startStatusWatcher();
   const now = await readEngineStatus();
   if (until(now)) return now;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancelTimer: (() => void) | undefined;
   let waiter: Waiter | undefined;
   try {
     return await new Promise<EngineStatus>((resolve, reject) => {
       waiter = { until, resolve };
       waiters.add(waiter);
-      timer = setTimeout(() => {
+      // Awake time: a wait the machine naps through is not a timeout.
+      cancelTimer = armAwakeDeadline(timeoutMs, () => {
         readEngineStatus().then(
           (last) =>
             reject(
@@ -198,10 +200,10 @@ async function waitForStatus(
             ),
           reject,
         );
-      }, timeoutMs);
+      });
     });
   } finally {
-    clearTimeout(timer);
+    cancelTimer?.();
     if (waiter) waiters.delete(waiter);
   }
 }

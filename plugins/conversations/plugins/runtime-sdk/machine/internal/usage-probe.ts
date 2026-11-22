@@ -7,6 +7,7 @@ import { onClaudeCodeProbed } from "@plugins/infra/plugins/claude-cli/plugins/av
 import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
@@ -30,9 +31,9 @@ const USAGE_READ_BUDGET_MS = 5_000;
 
 async function readUsageReply(accountId: string): Promise<unknown> {
   const abortController = new AbortController();
-  const timeout = setTimeout(
-    () => abortController.abort(),
-    USAGE_READ_TIMEOUT_MS,
+  // Awake time: a read issued just before a nap is not aborted on the wake.
+  const cancelTimeout = armAwakeDeadline(USAGE_READ_TIMEOUT_MS, () =>
+    abortController.abort(),
   );
   let release!: () => void;
   const released = new Promise<void>((resolve) => (release = resolve));
@@ -59,7 +60,7 @@ async function readUsageReply(accountId: string): Promise<unknown> {
       { skipBehaviors: true },
     );
   } finally {
-    clearTimeout(timeout);
+    cancelTimeout();
     release();
     session.close();
   }

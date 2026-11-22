@@ -6,6 +6,8 @@ import { SUPERVISED_EXIT_TEMPFAIL } from "@plugins/infra/plugins/jobs/plugins/su
 import {
   MAX_PREPARE_REQUESTS,
   MAX_TEMPFAIL_REQUESTS,
+  PENDING_REQUEST_AWAKE_MS,
+  PREPARE_WAIT_MS,
   prepareWorktree,
   tempfailBackoffMs,
   type PrepareDeps,
@@ -37,6 +39,10 @@ function world(opts: {
    * loop's read of the run and its wait (a spare checkout's usual timing).
    */
   endsDuringFilesReady?: boolean;
+  /** Requests are absorbed: no run ever claims one (a lost claim). */
+  lostClaims?: boolean;
+  /** How long the machine sleeps inside each wait that times out. */
+  napPerTimeoutMs?: number;
 }) {
   let state = opts.state;
   const outcomes = [...(opts.outcomes ?? [])];
@@ -45,6 +51,9 @@ function world(opts: {
   let nextId = 0;
   const log: string[] = [];
   const steps = new Map<string, unknown>();
+  // Both clocks: a wait that times out spends PREPARE_WAIT_MS of wall time,
+  // `napPerTimeoutMs` of it asleep.
+  const clock = { wallMs: Date.parse("2026-11-21T23:38:47Z"), asleepMs: 0 };
 
   const startRun = (): void => {
     run = {
@@ -117,7 +126,7 @@ function world(opts: {
       ),
     request: () => {
       log.push("request");
-      pendingRequest = true;
+      pendingRequest = !opts.lostClaims;
       return Promise.resolve();
     },
     filesReady: () => {
@@ -125,6 +134,10 @@ function world(opts: {
       if (opts.endsDuringFilesReady) advance();
       return Promise.resolve();
     },
+    now: () => ({
+      wallMs: clock.wallMs,
+      sleep: { boot: "B", asleepMs: clock.asleepMs },
+    }),
   };
 
   const ctx = {
@@ -150,7 +163,11 @@ function world(opts: {
         log.push("rechecked");
         return null;
       }
-      if (!advance()) log.push("timeout");
+      if (!advance()) {
+        log.push("timeout");
+        clock.wallMs += PREPARE_WAIT_MS;
+        clock.asleepMs += Math.min(opts.napPerTimeoutMs ?? 0, PREPARE_WAIT_MS);
+      }
       return null;
     },
     sleep: (ms: number): Promise<void> => {
@@ -158,7 +175,7 @@ function world(opts: {
       return Promise.resolve();
     },
   };
-  return { deps, ctx, log };
+  return { deps, ctx, log, steps };
 }
 
 describe("prepareWorktree", () => {
@@ -341,6 +358,62 @@ describe("prepareWorktree", () => {
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log.filter((l) => l === "request")).toHaveLength(1);
     expect(w.log.slice(-2)).toEqual(["ended:run-0", "files-ready"]);
+  });
+
+  test("a request no run claims is made again after its awake budget, and the last one fails loudly", async () => {
+    const w = world({ state: "absent", lostClaims: true });
+    const thrown = await prepareWorktree(w.ctx, "att-1", w.deps).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(isNonRetryableError(thrown)).toBe(true);
+    expect(w.log.filter((l) => l === "request")).toHaveLength(
+      MAX_PREPARE_REQUESTS,
+    );
+    // Each request waited out its awake budget, one timeout at a time.
+    const waitsPerRequest = PENDING_REQUEST_AWAKE_MS / PREPARE_WAIT_MS;
+    expect(w.log.filter((l) => l === "timeout")).toHaveLength(
+      MAX_PREPARE_REQUESTS * waitsPerRequest,
+    );
+  });
+
+  test("a request memoized before requests were stamped is asked again at once — never aged from each replay's now", async () => {
+    const w = world({ state: "absent", lostClaims: true });
+    w.steps.set("prepare:request:0", { after: null });
+    await prepareWorktree(w.ctx, "att-1", w.deps).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    // Request 0 (memoized) is past its budget: request 1 is made before any wait.
+    expect(w.log[0]).toBe("request");
+    expect(w.log.filter((l) => l === "request")).toHaveLength(
+      MAX_PREPARE_REQUESTS - 1,
+    );
+  });
+
+  test("timeouts the machine slept through spend no request (report-1795305324-8wpwx2)", async () => {
+    // Every wait's 30 s is 29.7 s asleep: forty of them are 12 s awake —
+    // under the budget, so the one request is still waited on, never remade.
+    const w = world({
+      state: "absent",
+      lostClaims: true,
+      napPerTimeoutMs: PREPARE_WAIT_MS - 300,
+    });
+    let waits = 0;
+    const waitFor = w.ctx.waitFor;
+    const ctx = {
+      ...w.ctx,
+      waitFor: <T>(event: unknown, o: Parameters<typeof waitFor<T>>[1]) => {
+        if (++waits > 40) return Promise.reject(new Error("enough"));
+        return waitFor(event, o);
+      },
+    };
+    await prepareWorktree(ctx, "att-1", w.deps).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(w.log.filter((l) => l === "request")).toHaveLength(1);
+    expect(w.log.filter((l) => l === "timeout")).toHaveLength(40);
   });
 
   test("a run refused a database connection (EX_TEMPFAIL) is re-requested after a pause, without spending a request", async () => {

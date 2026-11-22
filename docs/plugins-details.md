@@ -34595,7 +34595,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`page-ready`**
               - Core:
-                - Uses: `framework/tooling/web-artifacts/served-paths.isWorkerChunkPath`
+                - Uses:
+                  - `framework/tooling/web-artifacts/served-paths.isWorkerChunkPath`
+                  - `packages/deadline.armAwakeDeadline`
                 - Exports (types):
                   - `Flatness`
                   - `NetworkIdleOptions`
@@ -45008,17 +45010,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
       - Cross-plugin:
         - Imported by:
+          - `apps/browser/engine`
           - `apps/deploy/box-link/link`
+          - `apps/prototypes/thumbnails`
           - `conversations`
           - `conversations/runtime-sdk`
           - `database`
           - `database/connection`
           - `framework/cli/bootstrap`
+          - `framework/tooling/e2e-harness/page-ready`
           - `infra/claude-cli/sdk`
           - `infra/jobs`
+          - `infra/mcp/browser`
           - `infra/safe-fetch/browser-fetch`
           - `infra/spawn`
+          - `infra/spawn/daemon`
           - `network/live/live-state-snapshot`
+          - `packages/signal-origin`
       - Core:
         - Exports (types):
           - `AwakeClock`
@@ -45613,6 +45621,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `auth`
           - `conversations/runtime-sdk`
+          - `conversations/workspace/worktree`
           - `debug/boot-events`
           - `debug/boot-watchdog`
           - `debug/health-monitor`
@@ -45631,6 +45640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it.
           - Cross-plugin:
             - Imported by:
+              - `conversations/workspace/worktree`
               - `debug/boot-watchdog`
               - `infra/git/main-slots/boot-lease`
               - `infra/host/host-admission`

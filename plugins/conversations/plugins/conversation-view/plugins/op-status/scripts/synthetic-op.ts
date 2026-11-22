@@ -45,6 +45,7 @@ import {
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { readSleepNow } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import {
   appendOpLogSync,
@@ -126,11 +127,11 @@ function driven(
   const controlFile = join(dir, "control.json");
   const say = (step: number) =>
     writeFileSync(readyFile, JSON.stringify({ step, pid: process.pid }));
-  const lifetime = setTimeout(() => {
+  const cancelLifetime = armAwakeDeadline(MAX_LIFE_MS, () => {
     console.error("synthetic-op: never advanced — giving up");
     onGiveUp();
     process.exit(1);
-  }, MAX_LIFE_MS);
+  });
 
   let step = 0;
   const advanceTo = (wanted: number): void => {
@@ -139,7 +140,7 @@ function driven(
       const last = perform(step);
       say(step);
       if (last) {
-        clearTimeout(lifetime);
+        cancelLifetime();
         watcher.close();
         process.exit(0);
       }

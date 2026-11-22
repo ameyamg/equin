@@ -14,6 +14,7 @@ import {
 } from "@plugins/infra/plugins/worktree/server";
 import { worktreePrepareJob } from "./prepare-job";
 import { prepareWorktree } from "./prepare-wait";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 
 // The agent's own git checkout of this repo, at `<repo>/.claude/worktrees/<id>`,
 // with a forked DB and config dir of its own.
@@ -66,6 +67,7 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
         await worktreePrepareJob.enqueue(input);
       },
       filesReady,
+      now: clockStampNow,
     });
   },
 

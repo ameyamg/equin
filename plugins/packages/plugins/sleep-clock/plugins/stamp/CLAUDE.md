@@ -25,6 +25,7 @@ awake timer or `sleptDuring`: the table in `packages/sleep-clock/CLAUDE.md`.
 - Description: The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it.
 - Cross-plugin:
   - Imported by:
+    - `conversations/workspace/worktree`
     - `debug/boot-watchdog`
     - `infra/git/main-slots/boot-lease`
     - `infra/host/host-admission`
