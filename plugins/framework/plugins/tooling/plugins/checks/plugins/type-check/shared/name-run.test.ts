@@ -937,6 +937,64 @@ test("a signature ignores comments, never a triple-slash directive", () => {
   );
 });
 
+test("a signature ignores parentheses where the grammar takes any type, never where they change the type", () => {
+  // Emit keeps a served `.d.ts`'s `=> (() => void)` and prints the same type
+  // from source as `=> () => void`.
+  const c = canonicalDeclarations;
+  const same = (a: string, b: string) =>
+    expect(c(`export declare ${a};\n`)).toBe(c(`export declare ${b};\n`));
+  const differ = (a: string, b: string) =>
+    expect(c(`export declare ${a};\n`)).not.toBe(c(`export declare ${b};\n`));
+  // Redundant: the type of a property, parameter, variable or alias, a return
+  // type, a type argument, a tuple element, a conditional branch, nested.
+  same(
+    "const o: { g: (x: (string)) => (() => void) }",
+    "const o: { g: (x: string) => () => void }",
+  );
+  same("function f(): ((() => void))", "function f(): () => void");
+  same("type T = (string | number)", "type T = string | number");
+  same(
+    "const t: [(() => void), (string | number)]",
+    "const t: [() => void, string | number]",
+  );
+  same("const p: Promise<(() => void)>", "const p: Promise<() => void>");
+  same(
+    "type C<T> = T extends string ? (() => void) : (number | T)",
+    "type C<T> = T extends string ? () => void : number | T",
+  );
+  same(
+    "class K { m(): (() => void); p: (string | number) }",
+    "class K { m(): () => void; p: string | number }",
+  );
+  // Kept: they change what the type is.
+  differ("const a: (() => void)[]", "const a: () => void[]");
+  differ("const u: (() => void) | string", "const u: () => void | string");
+  differ(
+    "const i: (string | number) & object",
+    "const i: string | number & object",
+  );
+  differ("const k: keyof (A | B)", "const k: keyof A | B");
+  differ('const x: (A | B)["x"]', 'const x: A | B["x"]');
+  differ("const o: [(string | number)?]", "const o: [string | number?]");
+  // Kept where the parser disallows a conditional type (a conditional's
+  // extends clause), and around a generic function as a type argument.
+  expect(
+    c(
+      "export type R<T> = T extends () => (string extends T ? 1 : 2) ? 3 : 4;\n",
+    ),
+  ).toContain("() => (string extends T ? 1 : 2)");
+  expect(c("export declare const g: Box<(<T>() => T)>;\n")).toContain(
+    "Box<(<T>() => T)>",
+  );
+  // Canonical text is canonical: it parses back to itself.
+  for (const text of [
+    "export type R<T> = T extends () => (string extends T ? 1 : 2) ? 3 : 4;\n",
+    "export declare const o: { g: (x: (string)) => (() => void)[] };\n",
+  ]) {
+    expect(c(c(text))).toBe(c(text));
+  }
+});
+
 test("a type named through an import binding reads as the import type it names, whichever way emit spelled it", () => {
   // Declaration emit copies `import("s").Rank` from a served `.d.ts`, and
   // prints `Rank` through the local binding when it infers from source.
@@ -1185,6 +1243,24 @@ test("a dependency's type reached through its namespaces is spelled by its short
       'import { Model } from "./sch";\nexport const field = <T>(v: T) => ({ v });\nexport const ref = field(Model.out);\n',
     "use.ts":
       'import { z } from "pkg";\nimport { ref } from "./reg";\nexport const s = z.string();\nexport const box = { ref };\n',
+  };
+  const root = freshRoot();
+  writeTree(root, files);
+  const out = await run(root, files, memoryNameStore());
+  expect(out.results.get("use.ts")!.diagnostics).toEqual([]);
+});
+
+test("a redundantly parenthesised type is the same signature, whichever program printed it", async () => {
+  // `defineDesktopSink`'s shape: a member annotated `(): (() => void)`. A
+  // batch served `sink.ts`'s .d.ts reuses the node and keeps the parentheses
+  // (`=> (() => void)`); a whole program prints it from source without them.
+  // Same type: same signature (`run` compares one program with batches of
+  // one file; `use.ts` reads `x`, so `x`'s signature is in its key).
+  const files = {
+    "sink.ts":
+      "export function f<T>(v: T) { return { v, g: (): (() => void) => () => {} }; }\n",
+    "x.ts": 'import { f } from "./sink";\nexport const x = f<number>(1);\n',
+    "use.ts": 'import { x } from "./x";\nexport const y = x.g;\n',
   };
   const root = freshRoot();
   writeTree(root, files);

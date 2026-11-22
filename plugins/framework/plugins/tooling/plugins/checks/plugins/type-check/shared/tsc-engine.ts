@@ -294,11 +294,65 @@ const NOT_ENGINE = new Set([
  * `.d.ts`), so the name's text moved where nothing had (prediction miss
  * report-1793151601-6dwk28; backstop signature divergence
  * report-1792989194-debinz on the same file).
+ *
+ * And with no redundant parentheses around a type: emit reuses a node of a
+ * served `.d.ts` as written, and prints the same type inferred from source
+ * without them (measured: `install: (…) => (() => void)` with
+ * desktop-runtime.ts served, `=> () => void` with it as source; backstop
+ * signature divergences report-1794890177-gf92fh / -egdcki on
+ * launcher-controls.ts and switcher-controls.ts). A parenthesised type is
+ * unwrapped only in a position whose grammar takes any type, so the
+ * parentheses cannot have meant anything there (`redundantParens`); a union,
+ * intersection, array, type operator or indexed access keeps its own.
  */
 /** How `canonicalDeclarations` spells an import type: `import(spec).<path>`. */
 export interface DeclaringSpelling {
   spec: string;
   path: readonly string[];
+}
+
+/**
+ * Whether a parenthesised type's parentheses mean nothing where it stands: a
+ * position whose grammar parses a whole type (a property, parameter,
+ * variable or alias type, a return type, a type argument, a tuple element, a
+ * conditional type's branch, or inside other parentheses). Never inside a
+ * conditional type's `extends` clause, where the parser takes no conditional
+ * type (`T extends () => (A extends B ? C : D) ? X : Y` needs them), nor a
+ * generic function type as a type argument (`X<(<T>() => T)>`: printed as
+ * `X<<T>…`). Reads the ORIGINAL tree's parents.
+ */
+function redundantParens(n: ts.ParenthesizedTypeNode): boolean {
+  for (let c: ts.Node = n; c.parent !== undefined; c = c.parent) {
+    if (ts.isConditionalTypeNode(c.parent) && c.parent.extendsType === c) {
+      return false;
+    }
+  }
+  const p = n.parent;
+  if (ts.isParenthesizedTypeNode(p)) return true;
+  if (
+    (ts.isPropertySignature(p) ||
+      ts.isPropertyDeclaration(p) ||
+      ts.isParameter(p) ||
+      ts.isVariableDeclaration(p) ||
+      ts.isTypeAliasDeclaration(p) ||
+      ts.isFunctionLike(p)) &&
+    p.type === n
+  ) {
+    return true;
+  }
+  if (ts.isConditionalTypeNode(p)) {
+    return p.trueType === n || p.falseType === n;
+  }
+  if (ts.isTupleTypeNode(p)) return p.elements.includes(n);
+  const args = (p as { typeArguments?: ts.NodeArray<ts.TypeNode> })
+    .typeArguments;
+  if (args?.includes(n)) {
+    return !(
+      ts.isFunctionOrConstructorTypeNode(n.type) &&
+      n.type.typeParameters !== undefined
+    );
+  }
+  return false;
 }
 
 export function canonicalDeclarations(
@@ -375,6 +429,14 @@ export function canonicalDeclarations(
       return parent.propertyName !== undefined && parent.name === id;
     }
     return (parent as { name?: ts.Node }).name === id;
+  };
+  // First: `redundantParens` reads the original tree's parents.
+  const unwrapParens: ts.TransformerFactory<ts.SourceFile> = (context) => {
+    const visit = (node: ts.Node): ts.Node =>
+      ts.isParenthesizedTypeNode(node) && redundantParens(node)
+        ? visit(node.type)
+        : ts.visitEachChild(node, visit, context);
+    return (root) => ts.visitNode(root, visit) as ts.SourceFile;
   };
   const qualifyImports: ts.TransformerFactory<ts.SourceFile> = (context) => {
     const f = context.factory;
@@ -538,6 +600,7 @@ export function canonicalDeclarations(
     return (root) => ts.visitNode(root, visit) as ts.SourceFile;
   };
   const result = ts.transform(sf, [
+    unwrapParens,
     qualifyImports,
     declaringSpecs,
     sortMembers,

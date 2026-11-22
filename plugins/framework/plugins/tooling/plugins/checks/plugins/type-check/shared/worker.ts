@@ -397,7 +397,8 @@ function openJobWalkBase(
  * members in type-creation order, which follows what its program loaded
  * first, so the same declarations can emit in two orders (a raw-only
  * difference, counted in `rawOnly`, the same one `canonicalDeclarations`
- * exists to hash away).
+ * exists to hash away). So are two whose signatures agree: the raw text
+ * differs only in which module path spells a type.
  */
 function compareWalks(
   inc: NameRunOutput,
@@ -413,6 +414,10 @@ function compareWalks(
     const t = st.readContract(h);
     return t === undefined ? undefined : canonicalDeclarations(t);
   };
+  const sameCanonical = (keyed: string, fullHash: string): boolean => {
+    const x = canonical(incStore, keyed);
+    return x !== undefined && x === canonical(fullStore, fullHash);
+  };
   for (const [file, f] of b) {
     const k = a.get(file);
     if (k === undefined) {
@@ -423,8 +428,17 @@ function compareWalks(
       out.push({ file, kind: "walk-key", keyed: k.r, full: f.r });
     }
     if (k.contract !== f.contract) {
-      const x = canonical(incStore, k.contract);
-      if (x !== undefined && x === canonical(fullStore, f.contract)) {
+      // Same signature: the canonical text with every import type spelled
+      // through its declaring module, which is what keys read. The raw
+      // contracts can still name one type through two module paths (a barrel
+      // vs the file behind it, by what the program that wrote the entry had
+      // loaded), which `canonical` cannot resolve with no `declaringOf`; that
+      // only changes how importers' diagnostics print, compared on their own
+      // as `walk-diagnostics`.
+      if (
+        k.signature === f.signature ||
+        sameCanonical(k.contract, f.contract)
+      ) {
         rawOnly.push(file);
       } else
         out.push({
