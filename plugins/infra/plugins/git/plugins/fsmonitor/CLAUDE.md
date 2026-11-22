@@ -46,8 +46,13 @@ writes, before the index refresh (so the refresh records the token), and
 ensures it for an existing one (a resume) — a failure there is a result
 (`fsmonitor: { kind: "failed" }`), never a failed launch.
 `conversations/workspace/worktree`'s `worktree.fsmonitor-reconcile` (main
-only) does the rest: on while the attempt is retained, off once not — when a
-conversation closes, at main's start, and every 10 minutes. It decides
+only) does the rest: on while the attempt is retained, off once not — at
+main's start and every 10 minutes, with `worktree.fsmonitor-release` stopping
+the one checkout whose conversation closed, in between (a hard-deleted
+conversation, which no longer names its attempt, gets a pass). Both share one serial
+lane: a pass costs one git per retained checkout, so overlapping passes
+multiply exactly that (four in lock-step, 16 git at once, 2026-11-22), and a
+per-checkout event never starts one. The pass decides
 FINISHED checkouts only: one whose `worktree.prepare` run is open belongs to
 that run's `setupWorktree` (which starts the fsmonitor itself, after the install), and one a
 cut-off run left unfinished is discarded by the next — both are passed as
@@ -118,8 +123,8 @@ No opt-out yet: a pass rewrites the key if the human removes it. A renewal's
 publish holds `index.lock` for one stat and one rename (`private-index`), so a
 `git merge` / `checkout` in main landing in that window fails loudly
 ("index.lock: File exists"). The same protocol `checkout-watch` and the tree
-hash already run there. What keeps it on: each pass (main's start, every 10 minutes, a
-conversation closing) restarts a dead or throttled daemon and renews a stale
+hash already run there. What keeps it on: each pass (main's start, every 10
+minutes) restarts a dead or throttled daemon and renews a stale
 token; a pass that cannot fails `worktree.fsmonitor-reconcile`, which the jobs
 audit files as a `job-attempt-failed` report naming main's path. Every push
 merge rewrites main's index, which also renews the token.

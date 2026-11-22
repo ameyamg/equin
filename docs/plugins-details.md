@@ -24922,17 +24922,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `withDirTrusted`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/claude-trust.ts`, `server/internal/reap-job.ts`, `server/internal/scratch-workspace.ts` (debt)
-        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for main's own checkout and for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).
+        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for main's own checkout and for exactly the checkouts whose attempt is still retained (main only: worktree.fsmonitor-reconcile at start and every 10 minutes, one pass at a time; worktree.fsmonitor-release for the one checkout whose conversation closed).
           - Server:
             - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
-            - Uses: 36 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
-              - `infra/worktree` ×11
+            - Uses: 39 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
+              - `infra/worktree` ×12
               - `infra/jobs/supervised-job` ×6
+              - `infra/jobs` ×4
               - `infra/git/fsmonitor` ×3
-              - `infra/jobs` ×3
+              - `tasks/tasks-core` ×3
               - `conversations/launch-timeline` ×2
               - `infra/events` ×2
-              - `tasks/tasks-core` ×2
               - `config_v2.getConfig`
               - `conversations/workspace.Workspace`
               - `database/admin.databaseExists`
@@ -24945,6 +24945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineTriggerEvent('worktree.checkoutProgress')`
               - `defineSupervisedJob('worktree.prepare')`
               - `defineJob('worktree.fsmonitor-reconcile')`
+              - `defineJob('worktree.fsmonitor-release')`
               - `defineJob('worktree.fsmonitor-on-conversation-ended')`
               - `defineWarmup('worktree.fsmonitor-reconcile')`
           - Exemptions:

@@ -265,6 +265,29 @@ test("reconcile: on is started with a current token, off is stopped, unknown is 
   });
 });
 
+test("reconcile over one closed checkout stops it and leaves every checkout it was not given", async () => {
+  const closed = await addWorktree("wt-closed");
+  const open = await addWorktree("wt-open");
+  await startCheckoutFsmonitor(closed.path);
+  await startCheckoutFsmonitor(open.path);
+  const openPid = await daemonOf(open.gitDir);
+
+  const r = await reconcileCheckoutFsmonitors([{ ...closed, want: "off" }], {
+    orphanRoot: join(repo, ".git", "worktrees"),
+    tier: "background",
+    stillOff: async () => true,
+  });
+  expect(r).toMatchObject({
+    on: 0,
+    started: [],
+    renewed: [],
+    stopped: [closed.path],
+    orphans: [],
+    failures: [],
+  });
+  expect(await daemonOf(open.gitDir)).toBe(openPid);
+});
+
 /** core.fsmonitor as a git in `path` reads it, the host's own config ignored. */
 async function fsmonitorSetting(path: string): Promise<string | null> {
   const r = await spawnCaptured(
