@@ -157,10 +157,13 @@ export function readSleepClock(): SleepClockReading {
 
 /**
  * The sleep clock right now as a stamp stores it (`{ boot, asleepMs }`), or
- * `null` where the platform cannot read it. Compare two with the stamp
- * plugin's `sleptBetween` / `awakeBetween`.
+ * `null` where the platform cannot read it. Not exported: a sleep reading on
+ * its own invites pairing it with a wall instant captured at another moment
+ * (main-slots' unserved stamp did, across an awaited lock wait), and a sleep
+ * between the two is then lost from every span judged from it. Read both
+ * clocks at once with {@link clockStampNow}.
  */
-export function sleepStampNow(): SleepStamp | null {
+function sleepStampNow(): SleepStamp | null {
   const r = readSleepClock();
   return r.supported ? { boot: r.boot, asleepMs: r.asleepMs } : null;
 }

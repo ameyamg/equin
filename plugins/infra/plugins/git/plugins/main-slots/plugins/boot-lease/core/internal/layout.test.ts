@@ -7,7 +7,12 @@ import {
   renderUnserved,
   type SlotHolder,
   type UnservedStamp,
+  unservedStamp,
 } from "./layout";
+import type {
+  ClockStamp,
+  SleepStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 const SWITCH = new Date("2026-11-20T05:18:53Z");
 const stamp = (asleep: UnservedStamp["asleep"]): UnservedStamp => ({
@@ -24,14 +29,18 @@ const holder: SlotHolder = {
 };
 // report-1794976612-es42jy's last occurrence: 7 384 s on the wall clock.
 const RELEASE = new Date(SWITCH.getTime() + 7_384_000);
+const at = (wall: Date, sleep: SleepStamp | null): ClockStamp => ({
+  wallMs: wall.getTime(),
+  sleep,
+});
 
 describe("heldPastSwitch", () => {
   test("takes the machine's sleep inside the span out of it", () => {
     expect(
-      heldPastSwitch(stamp({ boot: "b", asleepMs: 500 }), RELEASE, {
-        boot: "b",
-        asleepMs: 500 + 6_970_000,
-      }),
+      heldPastSwitch(
+        stamp({ boot: "b", asleepMs: 500 }),
+        at(RELEASE, { boot: "b", asleepMs: 500 + 6_970_000 }),
+      ),
     ).toEqual({
       heldPastSwitchMs: 7_384_000,
       sleptMs: 6_970_000,
@@ -47,33 +56,40 @@ describe("heldPastSwitch", () => {
     };
     // An old stamp, no sleep clock now, or a reboot in between.
     expect(
-      heldPastSwitch(stamp(null), RELEASE, { boot: "b", asleepMs: 9 }),
+      heldPastSwitch(stamp(null), at(RELEASE, { boot: "b", asleepMs: 9 })),
     ).toEqual(wall);
     expect(
-      heldPastSwitch(stamp({ boot: "b", asleepMs: 0 }), RELEASE, null),
+      heldPastSwitch(stamp({ boot: "b", asleepMs: 0 }), at(RELEASE, null)),
     ).toEqual(wall);
     expect(
-      heldPastSwitch(stamp({ boot: "a", asleepMs: 0 }), RELEASE, {
-        boot: "b",
-        asleepMs: 9e9,
-      }),
+      heldPastSwitch(
+        stamp({ boot: "a", asleepMs: 0 }),
+        at(RELEASE, { boot: "b", asleepMs: 9e9 }),
+      ),
     ).toEqual(wall);
   });
 
   test("never counts more sleep than the span, nor less than none", () => {
     const now = new Date(SWITCH.getTime() + 1_000);
     expect(
-      heldPastSwitch(stamp({ boot: "b", asleepMs: 0 }), now, {
-        boot: "b",
-        asleepMs: 5_000,
-      }).awakeMs,
+      heldPastSwitch(
+        stamp({ boot: "b", asleepMs: 0 }),
+        at(now, { boot: "b", asleepMs: 5_000 }),
+      ).awakeMs,
     ).toBe(0);
     expect(
-      heldPastSwitch(stamp({ boot: "b", asleepMs: 10 }), now, {
-        boot: "b",
-        asleepMs: 9.9,
-      }).sleptMs,
+      heldPastSwitch(
+        stamp({ boot: "b", asleepMs: 10 }),
+        at(now, { boot: "b", asleepMs: 9.9 }),
+      ).sleptMs,
     ).toBe(0);
+  });
+});
+
+describe("unservedStamp", () => {
+  test("is both halves of one clock stamp", () => {
+    const sleep = { boot: "b", asleepMs: 1_234 };
+    expect(unservedStamp(at(SWITCH, sleep), 10_000)).toEqual(stamp(sleep));
   });
 });
 
@@ -84,8 +100,7 @@ describe("drainRecordFor", () => {
       holder,
       slot: "/slot-3",
       commit: null,
-      now: RELEASE,
-      asleepNow,
+      now: at(RELEASE, asleepNow),
     });
 
   test("a release whose span was all sleep but the threshold owes no record", () => {

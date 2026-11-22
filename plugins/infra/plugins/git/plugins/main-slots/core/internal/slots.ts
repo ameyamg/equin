@@ -1,4 +1,5 @@
-import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import {
   mkdir,
   rename,
@@ -36,6 +37,7 @@ import {
   MAIN_SLOT_SERVED_FILE,
   parseUnserved,
   renderUnserved,
+  unservedStamp,
   SLOT_UNSERVED_FILE,
   slotHolderRole,
   type SlotHolder,
@@ -178,21 +180,17 @@ export async function readUnserved(
 }
 
 /**
- * Stamp `slot` as having stopped serving every app at `at`, with the sleep
- * clock read now (the stamp is written as the switch is seen), so a later
- * judge takes the machine's sleep out of the span (`heldPastSwitch`).
+ * Stamp `slot` as having stopped serving every app at `at` — both clocks,
+ * read at that instant (`clockStampNow()`), so a later judge takes the
+ * machine's sleep out of the span (`heldPastSwitch`).
  */
 export async function stampUnserved(
   slot: AppPath,
-  stamp: { at: Date; reportAfterMs: number },
+  stamp: { at: ClockStamp; reportAfterMs: number },
 ): Promise<void> {
   await writeAtomically(
     await adminFileOf(slot, SLOT_UNSERVED_FILE),
-    renderUnserved({
-      at: stamp.at.toISOString(),
-      reportAfterMs: stamp.reportAfterMs,
-      asleep: sleepStampNow(),
-    }),
+    renderUnserved(unservedStamp(stamp.at, stamp.reportAfterMs)),
   );
 }
 
@@ -362,7 +360,7 @@ export async function servedMainRoot(): Promise<AppPath> {
 export async function serveSlot(
   slot: AppPath,
   namespace: Namespace,
-  opts: { drainReportAfterMs: number; now?: Date },
+  opts: { drainReportAfterMs: number; now?: ClockStamp },
 ): Promise<void> {
   await withSlotPool(() => serveSlotLocked(slot, namespace, opts));
 }
@@ -370,7 +368,7 @@ export async function serveSlot(
 async function serveSlotLocked(
   slot: AppPath,
   namespace: Namespace,
-  opts: { drainReportAfterMs: number; now?: Date },
+  opts: { drainReportAfterMs: number; now?: ClockStamp },
 ): Promise<void> {
   await migrateLegacyCurrentLink();
   const link = currentLinkFor(namespace);
@@ -380,8 +378,11 @@ async function serveSlotLocked(
   await symlink(slot, tmp);
   await rename(tmp, link);
   await clearUnserved(slot);
-  if (namespace === MAIN_WORKTREE_NAME) await markSlotServed(slot, opts.now);
-  await stampUnservedSlots(opts.drainReportAfterMs, opts.now);
+  // The switch is the rename above: both clocks read here, once.
+  const now = opts.now ?? clockStampNow();
+  if (namespace === MAIN_WORKTREE_NAME)
+    await markSlotServed(slot, new Date(now.wallMs));
+  await stampUnservedSlots(opts.drainReportAfterMs, now);
 }
 
 /** What a slot is doing — derived, never stored. */
@@ -473,7 +474,8 @@ async function stateOf(
 
 /**
  * Stamp every slot that serves no app and is not being built, and has no
- * stamp yet, as unserved at `now` — called whenever an app may have left a
+ * stamp yet, as unserved at `now` (both clocks, read at once — the default
+ * is read as the call starts, before the pool wait) — called whenever an app may have left a
  * slot (`serveSlot`, a build moving central's spec, `reclaimSlots`). A
  * serving slot still carrying a stamp loses it: an app lives there (central
  * pinned a slot an older reader stamped), and a stale stamp would time its
@@ -483,7 +485,7 @@ async function stateOf(
  */
 export async function stampUnservedSlots(
   drainReportAfterMs: number,
-  now: Date = new Date(),
+  now: ClockStamp = clockStampNow(),
 ): Promise<void> {
   await withSlotPool(async () => {
     for (const s of await slotStates()) {

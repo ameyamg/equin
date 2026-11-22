@@ -11,6 +11,7 @@
 import {
   awakeBetween,
   isSleepStamp,
+  type ClockStamp,
   type SleepStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
@@ -174,7 +175,12 @@ export function parseHolder(file: string, text: string): SlotHolder {
   return { ...(parsed as SlotHolder), label: parsed.label ?? null };
 }
 
-/** The {@link SLOT_UNSERVED_FILE} stamp. */
+/**
+ * The {@link SLOT_UNSERVED_FILE} stamp. Written from ONE {@link ClockStamp}
+ * (`unservedStamp`), so `at` and `asleep` name the same instant: a sleep
+ * between a wall instant and a sleep reading taken apart would be left out
+ * of every later span judged from it.
+ */
 export interface UnservedStamp {
   /** ISO instant the slot's last app left it. */
   at: string;
@@ -186,6 +192,18 @@ export interface UnservedStamp {
    * cannot tell, or a stamp written before it was recorded.
    */
   asleep: SleepStamp | null;
+}
+
+/** The unserved stamp of a slot whose last app left at `at`. */
+export function unservedStamp(
+  at: ClockStamp,
+  reportAfterMs: number,
+): UnservedStamp {
+  return {
+    at: new Date(at.wallMs).toISOString(),
+    reportAfterMs,
+    asleep: at.sleep,
+  };
 }
 
 export function renderUnserved(stamp: UnservedStamp): string {
@@ -229,17 +247,17 @@ export interface HeldPastSwitch {
  * needs one — but the wall clock keeps going: a supervised child that started
  * before a night of dark wakes (≈1 min awake every 15) "held" its slot for
  * hours while it ran for minutes (report-1794976612-es42jy: 7384 s on the wall,
- * ~7 min awake). Pure: the sleep clock now is passed in. Where it cannot be
- * told, the wall clock — the behaviour before.
+ * ~7 min awake). Pure: `now` is passed in, both clocks read at once
+ * (`clockStampNow()`). Where the sleep cannot be told, the wall clock — the
+ * behaviour before.
  */
 export function heldPastSwitch(
   stamp: UnservedStamp,
-  now: Date,
-  asleepNow: SleepStamp | null,
+  now: ClockStamp,
 ): HeldPastSwitch {
   const span = awakeBetween(
     { wallMs: Date.parse(stamp.at), sleep: stamp.asleep },
-    { wallMs: now.getTime(), sleep: asleepNow },
+    now,
   );
   return {
     heldPastSwitchMs: span.wallMs,
@@ -322,15 +340,18 @@ export function drainRecordFor(i: {
   holder: SlotHolder;
   slot: string;
   commit: string | null;
-  now: Date;
-  /** The sleep clock at `now` (`sleepStampNow()`); `null`: cannot be told. */
-  asleepNow: SleepStamp | null;
+  /**
+   * The release, on both clocks (`clockStampNow()`). A past instant whose
+   * sleep reading was not taken then (a holder found dead) carries
+   * `sleep: null`: judged on the wall clock.
+   */
+  now: ClockStamp;
   /** The holder was found dead at `now`, not released (see {@link DrainRecord.foundDead}). */
   foundDead?: boolean;
 }): DrainRecord | null {
   if (i.stamp === null || slotHolderRole(i.holder.kind) !== "drains")
     return null;
-  const held = heldPastSwitch(i.stamp, i.now, i.asleepNow);
+  const held = heldPastSwitch(i.stamp, i.now);
   if (held.awakeMs <= i.stamp.reportAfterMs) return null;
   return {
     kind: i.holder.kind,
@@ -341,7 +362,7 @@ export function drainRecordFor(i: {
     thresholdMs: i.stamp.reportAfterMs,
     slot: i.slot,
     commit: i.commit,
-    releasedAt: i.now.toISOString(),
+    releasedAt: new Date(i.now.wallMs).toISOString(),
     foundDead: i.foundDead ?? false,
   };
 }

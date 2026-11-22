@@ -10,7 +10,8 @@ import {
   SLOT_UNSERVED_FILE,
   type SlotHolder,
 } from "./layout";
-import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 // The release half of the slow-drain report, synchronous: a lease let go
 // (explicitly, or by an exit handler) compares the instant against its slot's
@@ -41,7 +42,8 @@ export function noteLeaseReleaseSync(i: {
   admin: string;
   slot: string;
   holder: SlotHolder;
-  now?: Date;
+  /** The release, on both clocks. Default: `clockStampNow()`. */
+  now?: ClockStamp;
 }): boolean {
   const stampFile = join(i.admin, SLOT_UNSERVED_FILE);
   const stampText = readOrNullSync(stampFile);
@@ -52,10 +54,7 @@ export function noteLeaseReleaseSync(i: {
     holder: i.holder,
     slot: i.slot,
     commit: head === null ? null : detachedHeadOf(head),
-    now: i.now ?? new Date(),
-    // The sleep clock reads the PRESENT: a span ending at a given past `now`
-    // is judged on the wall clock rather than less sleep that came after it.
-    asleepNow: i.now === undefined ? sleepStampNow() : null,
+    now: i.now ?? clockStampNow(),
   });
   if (record === null) return false;
   const dir = join(i.admin, SLOT_DRAIN_LOG_DIR);

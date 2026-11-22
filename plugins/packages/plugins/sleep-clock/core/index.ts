@@ -6,7 +6,6 @@ export {
   processStartStamp,
   readAwakeClock,
   readSleepClock,
-  sleepStampNow,
 } from "./internal/sleep-clock";
 export type {
   AwakeClockReading,

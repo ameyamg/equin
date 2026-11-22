@@ -12,7 +12,7 @@ with another's `sleep`.
 
 Pure and web-safe (no `bun:ffi`), so a stored stamp is compared anywhere — a
 web-reachable core (host-admission's) included. Reading one is
-`packages/sleep-clock`'s `clockStampNow()` / `sleepStampNow()`.
+`packages/sleep-clock`'s `clockStampNow()` (or `processStartStamp()`).
 
 Used by: host-admission's fleet-memory lease, main-slots' slow-drain judge,
 boot-events' start lines (the boot watchdog). When to use it rather than an

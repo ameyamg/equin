@@ -38,9 +38,14 @@ const r = readSleepClock();
   unreadable. It places only the LAST sleep on the wall clock.
 
 `createSleepMeter()` is the relative form, built on `readSleepClock()`.
-`sleepStampNow()` / `clockStampNow()` are the reading as a stamp stores it
-(`sleep-clock/stamp`'s `SleepStamp` / `ClockStamp`). `processStartStamp()` is
-the stamp of this process's start, whenever it is called.
+`clockStampNow()` is the reading as a stamp stores it (`sleep-clock/stamp`'s
+`ClockStamp`): both clocks, read at once. There is deliberately no public
+sleep-only stamp reader — a sleep reading taken apart from its wall instant
+(after an `await`, a lock wait) drops any sleep in between from every span
+judged from it. Pass a `ClockStamp` around, never a `Date` plus a sleep
+reading. `processStartStamp()` is the stamp of this process's start, whenever
+it is called; `stampBefore` the stamp of another earlier instant this process
+timed on an awake clock.
 
 **Off darwin** both `read()` and `readSleepClock()` return `{ supported: false }`.
 That is "cannot tell", never "did not sleep" — a caller decides what to do with an unknown.

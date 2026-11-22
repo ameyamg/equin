@@ -44,7 +44,9 @@ import {
   asNamespace,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import {
+  heldPastSwitch,
   holdSlotLeaseSync,
   renderDrainRecord,
   renderUnserved,
@@ -76,6 +78,7 @@ import {
   serveSlot,
   slotStates,
   stampUnserved,
+  stampUnservedSlots,
 } from "../../core/internal/slots";
 import type { DrainSlowPayload } from "../../core/internal/reports";
 import {
@@ -84,6 +87,12 @@ import {
   type HeldSlot,
 } from "./acquire-build-slot";
 import { reclaimSlots } from "./reclaim";
+
+/** A wall instant with no sleep reading: judged on the wall clock. */
+const wallAt = (at: Date): ClockStamp => ({
+  wallMs: at.getTime(),
+  sleep: null,
+});
 
 // Each case owns a data root (so its own slot pool) and real git repos.
 
@@ -378,7 +387,7 @@ describe("acquireBuildSlot", () => {
     await b.lease.release();
     // b stopped serving long ago, a just now.
     const stamp = (at: string) => ({
-      at: new Date(at),
+      at: wallAt(new Date(at)),
       reportAfterMs: THRESHOLD_MS,
     });
     await stampUnserved(b.slot, stamp("2026-01-01T00:00:00Z"));
@@ -429,11 +438,11 @@ describe("acquireBuildSlot", () => {
     const readerA = await acquireSharedLease(a, "exec-child", "job.a");
     const readerB = await acquireSharedLease(b, "exec-child", "job.b");
     await stampUnserved(b, {
-      at: new Date("2026-06-01T00:00:00Z"),
+      at: wallAt(new Date("2026-06-01T00:00:00Z")),
       reportAfterMs: THRESHOLD_MS,
     });
     await stampUnserved(a, {
-      at: new Date("2026-01-01T00:00:00Z"),
+      at: wallAt(new Date("2026-01-01T00:00:00Z")),
       reportAfterMs: THRESHOLD_MS,
     });
     let reported: { draining: HeldSlot[]; waitedOn: AppPath } | null = null;
@@ -586,7 +595,7 @@ describe("slow drains", () => {
 
     const quick = await acquireSharedLease(a, "exec-child", "quick.job");
     await stampUnserved(a, {
-      at: new Date(Date.now() - 2_000),
+      at: wallAt(new Date(Date.now() - 2_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     await quick.release();
@@ -594,7 +603,7 @@ describe("slow drains", () => {
 
     const slow = await acquireSharedLease(a, "exec-child", "worktree.prepare");
     await stampUnserved(a, {
-      at: new Date(Date.now() - 15_000),
+      at: wallAt(new Date(Date.now() - 15_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     await slow.release();
@@ -619,7 +628,7 @@ describe("slow drains", () => {
     const a = await slotAt(root, first);
     const drainLog = join((await checkoutAdminDir(a))!, SLOT_DRAIN_LOG_DIR);
     await stampUnserved(a, {
-      at: new Date(Date.now() - 15_000),
+      at: wallAt(new Date(Date.now() - 15_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     const relay = holdSlotLeaseSync(a, "build-relay", "build");
@@ -639,7 +648,7 @@ describe("slow drains", () => {
     const hold = await holdSlotForLife(a, "backend", MAIN);
     if (hold.kind !== "held") throw new Error("not held");
     await stampUnserved(a, {
-      at: new Date(Date.now() - 15_000),
+      at: wallAt(new Date(Date.now() - 15_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     hold.releaseAtExitSync();
@@ -666,7 +675,7 @@ describe("slow drains", () => {
       "desktop.fullscreen-budget",
     );
     await stampUnserved(a, {
-      at: new Date(Date.now() - 20_000),
+      at: wallAt(new Date(Date.now() - 20_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     await slow.release();
@@ -708,7 +717,10 @@ describe("slow drains", () => {
     await reclaimSlots({
       drainReportAfterMs: 300_000,
       fileDrainSlow: slept.file,
-      asleepNow: { boot: "boot-1", asleepMs: 8_000_000 },
+      now: {
+        wallMs: Date.now(),
+        sleep: { boot: "boot-1", asleepMs: 8_000_000 },
+      },
     });
     expect(slept.filed).toEqual([]);
 
@@ -717,13 +729,49 @@ describe("slow drains", () => {
     await reclaimSlots({
       drainReportAfterMs: 300_000,
       fileDrainSlow: awake.file,
-      asleepNow: { boot: "boot-1", asleepMs: 1_000_000 },
+      now: {
+        wallMs: Date.now(),
+        sleep: { boot: "boot-1", asleepMs: 1_000_000 },
+      },
     });
     expect(
       awake.filed.map((r) => [r.label, r.stillHolding, r.sleptMs]),
     ).toEqual([["type-check-backstop", true, 0]]);
 
     await backstop.release();
+  });
+
+  test("an unserved stamp names one instant on both clocks, however long the pool wait before it is written", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    // The switch, on both clocks. The stamp waits for the pool lock; a Mac
+    // asleep through that wait used to have its sleep read AFTER it and
+    // paired with the earlier wall instant — so the sleep went missing from
+    // every later span, and a drain was reported late.
+    const switchAt: ClockStamp = {
+      wallMs: Date.now() - 7_200_000,
+      sleep: { boot: "boot-1", asleepMs: 1_000_000 },
+    };
+    const holder = withSlotPool(() => Bun.sleep(200));
+    await Bun.sleep(20);
+    await Promise.all([holder, stampUnservedSlots(300_000, switchAt)]);
+    const stamp = await readUnserved(a);
+    expect(stamp).toEqual({
+      at: new Date(switchAt.wallMs).toISOString(),
+      reportAfterMs: 300_000,
+      asleep: switchAt.sleep,
+    });
+    // 7 200 s since, 7 000 s of them asleep: 200 s awake, under the threshold.
+    expect(
+      heldPastSwitch(stamp!, {
+        wallMs: switchAt.wallMs + 7_200_000,
+        sleep: { boot: "boot-1", asleepMs: 8_000_000 },
+      }),
+    ).toEqual({
+      heldPastSwitchMs: 7_200_000,
+      sleptMs: 7_000_000,
+      awakeMs: 200_000,
+    });
   });
 
   test("a holder killed past the threshold is reported found dead — its pid reused or not", async () => {
@@ -745,7 +793,7 @@ describe("slow drains", () => {
     // SIGKILLed after the switch: records left, no release ran. One pid is
     // now an unrelated live process's.
     await stampUnserved(a, {
-      at: new Date(Date.now() - 20_000),
+      at: wallAt(new Date(Date.now() - 20_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     killed(process.ppid, "reused.job");
@@ -770,7 +818,10 @@ describe("slow drains", () => {
     const leases = join((await checkoutAdminDir(a))!, SLOT_LEASES_DIR);
     mkdirSync(leases, { recursive: true });
     const switchedAt = new Date(Date.now() - 60_000);
-    await stampUnserved(a, { at: switchedAt, reportAfterMs: THRESHOLD_MS });
+    await stampUnserved(a, {
+      at: wallAt(switchedAt),
+      reportAfterMs: THRESHOLD_MS,
+    });
     const record = join(leases, "99999999.1.json");
     writeFileSync(
       record,
@@ -820,7 +871,7 @@ describe("slow drains", () => {
     await reclaimSlots({
       drainReportAfterMs: THRESHOLD_MS,
       fileDrainSlow: reports.file,
-      now: new Date(Date.now() + 60_000),
+      now: wallAt(new Date(Date.now() + 60_000)),
     });
     expect(reports.filed).toEqual([]);
   });
@@ -831,7 +882,7 @@ describe("slow drains", () => {
     const drainLog = join((await checkoutAdminDir(a))!, SLOT_DRAIN_LOG_DIR);
     const slow = await acquireSharedLease(a, "exec-child", "deps.install");
     await stampUnserved(a, {
-      at: new Date(Date.now() - 20_000),
+      at: wallAt(new Date(Date.now() - 20_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     await slow.release();
@@ -855,11 +906,11 @@ describe("reclaimSlots", () => {
     await serve(d);
     const held = await acquireSharedLease(c, "backend", "old");
     await stampUnserved(a, {
-      at: new Date("2026-01-01T00:00:00Z"),
+      at: wallAt(new Date("2026-01-01T00:00:00Z")),
       reportAfterMs: THRESHOLD_MS,
     });
     await stampUnserved(b, {
-      at: new Date("2026-06-01T00:00:00Z"),
+      at: wallAt(new Date("2026-06-01T00:00:00Z")),
       reportAfterMs: THRESHOLD_MS,
     });
     const reports = collector();
@@ -1469,7 +1520,7 @@ describe("central pins its slot", () => {
     // Stamped by a reader that did not know central pins it: an old stamp
     // must not make it a drain either.
     await stampUnserved(slot, {
-      at: new Date(Date.now() - 60_000),
+      at: wallAt(new Date(Date.now() - 60_000)),
       reportAfterMs: THRESHOLD_MS,
     });
     return { slot, central };
@@ -1499,7 +1550,10 @@ describe("central pins its slot", () => {
       "worktree.spare-refill",
     );
     for (const s of [a, b])
-      await stampUnserved(s, { at: new Date(), reportAfterMs: THRESHOLD_MS });
+      await stampUnserved(s, {
+        at: wallAt(new Date()),
+        reportAfterMs: THRESHOLD_MS,
+      });
     expect(await stateOf(c)).toBe("serving");
     expect(await stateOf(a)).toBe("draining");
     expect(await stateOf(b)).toBe("draining");

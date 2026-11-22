@@ -17,6 +17,7 @@ export {
   parseUnserved,
   renderDrainRecord,
   renderUnserved,
+  unservedStamp,
   SLOT_DRAIN_LOG_DIR,
   SLOT_HANDED_FILE,
   SLOT_UNSERVED_FILE,

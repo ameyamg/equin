@@ -1,4 +1,5 @@
-import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { mkdir, rename, unlink, utimes, writeFile } from "node:fs/promises";
 import {
   joinAppPath,
@@ -136,8 +137,8 @@ async function noteRelease(
   admin: AppPath,
   slot: AppPath,
   holder: SlotHolder,
-  found: { now: Date; foundDead: boolean } = {
-    now: new Date(),
+  found: { now: ClockStamp; foundDead: boolean } = {
+    now: clockStampNow(),
     foundDead: false,
   },
 ): Promise<void> {
@@ -151,11 +152,6 @@ async function noteRelease(
     slot,
     commit: head === null ? null : detachedHeadOf(head),
     now: found.now,
-    // A holder found dead is judged up to when it was last seen alive (a past
-    // instant); the sleep clock reads the present, and the sleep after that
-    // instant is not in the span — so the wall clock, as before (a holder
-    // killed overnight would otherwise have every hour of the night taken out).
-    asleepNow: found.foundDead ? null : sleepStampNow(),
     foundDead: found.foundDead,
   });
   if (record === null) return;
@@ -491,7 +487,10 @@ async function reapRecord(
   try {
     const lastSeenAlive = (await stat(claimed)).mtime;
     await noteRelease(admin, slot, holder, {
-      now: lastSeenAlive,
+      // Judged up to when it was last seen alive — a past instant whose sleep
+      // reading nobody took: the wall clock, as before (reading the sleep
+      // clock now would take out every hour of a night it was already dead).
+      now: { wallMs: lastSeenAlive.getTime(), sleep: null },
       foundDead: true,
     });
   } finally {

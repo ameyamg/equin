@@ -53,8 +53,9 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/flock.flockSharedSync`
     - `packages/owned-fd.openOwnedFdSync`
-    - `packages/sleep-clock.sleepStampNow`
+    - `packages/sleep-clock.clockStampNow`
     - `packages/sleep-clock/stamp.awakeBetween`
+    - `packages/sleep-clock/stamp.ClockStamp`
     - `packages/sleep-clock/stamp.isSleepStamp`
     - `packages/sleep-clock/stamp.SleepStamp`
     - `packages/timed-fs.existsSync`
@@ -91,6 +92,7 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `SLOT_UNSERVED_FILE`
     - `slotHandedLockFile`
     - `slotHolderRole`
+    - `unservedStamp`
 - Cross-plugin:
   - Imported by:
     - `infra/git/main-slots`
