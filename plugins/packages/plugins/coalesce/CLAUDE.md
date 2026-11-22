@@ -48,13 +48,14 @@ is bounded by construction.
     - `createCoalescer`
     - `createKeyedCoalescer`
 - Cross-plugin:
-  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×11
     - `apps` ×3
     - `conversations` ×3
     - `debug` ×3
     - `database/migrations/schema-question`
     - `framework/tooling/web-artifacts`
+    - `integrations/github-events`
     - `packages/watched-memo`
     - `plugin-meta/plugin-tree`
     - `reports/outbox`

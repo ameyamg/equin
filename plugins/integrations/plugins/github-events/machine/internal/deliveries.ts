@@ -1,7 +1,5 @@
-import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { releasesWatched, watchFor } from "../../server";
-import { catchUp, failedJobsLoader, refreshReleases } from "./catch-up";
+import { failedJobsLoader, refreshReleases } from "./catch-up";
 import {
   DELIVERY_EVENTS,
   DeliverySchemas,
@@ -19,7 +17,7 @@ import {
   upsertRelease,
   upsertRun,
 } from "./ingest";
-import { runningGh } from "./lifecycle";
+import { catchUps, runningGh } from "./lifecycle";
 
 function isDeliveryEvent(name: string | null): name is DeliveryEvent {
   return name !== null && (DELIVERY_EVENTS as string[]).includes(name);
@@ -58,10 +56,9 @@ async function ingest(
       const d = DeliverySchemas.ping.parse(json);
       assertSameRepo(signer, d.repository.full_name);
       markConnected(signer);
-      // Off the delivery's path: the forwarder waits on this answer.
-      void catchUp(runningGh(), signer).catch((err: unknown) =>
-        reportCatchUpFailure(signer, err),
-      );
+      // Off the delivery's path: the forwarder waits on this answer. Owed
+      // until one succeeds (`./catch-up-owed`).
+      catchUps.owe(signer);
       return;
     }
     case "workflow_run": {
@@ -106,11 +103,4 @@ function assertSameRepo(signer: string, repo: string): void {
     throw new Error(
       `[github-events] the ${signer} forwarder delivered an event of ${repo}`,
     );
-}
-
-function reportCatchUpFailure(repo: string, err: unknown): void {
-  reportServerError({
-    message: `[github-events] catching up ${repo} after its forwarder connected failed: ${err instanceof Error ? err.message : String(err)}`,
-    ...crashFieldsOf(err, `github-events:catch-up:${repo}`),
-  });
 }

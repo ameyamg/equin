@@ -59,8 +59,15 @@ a 401.
 
 - `ping` (on connect): the forwarder is `connected`, and one **catch-up** runs:
   each watched workflow's 10 newest runs and, for a releases watch, the 5
-  newest releases (`gh api`), through the same upserts. Once per connect,
-  never on a timer.
+  newest releases (`gh api`), through the same upserts. Never on a timer.
+  **A catch-up is owed until one succeeds** (`machine/internal/catch-up-owed.ts`):
+  a failed one is run again at the repo's next ping and at the next machine
+  wake (machine-sleep's `onSleepReadingChanged`). An attempt the machine
+  slept through (its sleep clock moved between its start and its failure)
+  was cut by the sleep (begun in a dark wake, reset at the next wake), so it
+  is run again at once and logged on the `github-events` channel, not
+  reported. Any other failure, or one where the sleep clock cannot be read,
+  is reported every time.
 - `workflow_run` of a watched workflow: upsert into `github_runs` (key
   `<repo>#<run id>#<attempt>`; an older `updated_at` never overwrites a newer
   one). When it completes: file its failure, and re-read the repo's releases

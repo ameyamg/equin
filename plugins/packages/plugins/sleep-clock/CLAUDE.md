@@ -111,6 +111,7 @@ fails open). Those stay on the wall clock, and should say why.
     - `infra/git/main-slots/boot-lease`
     - `infra/host/host-admission`
     - `infra/host/machine-sleep`
+    - `integrations/github-events`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
 - Sub-plugins:

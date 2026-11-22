@@ -39187,6 +39187,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/queue-health`
               - `debug/slow-ops`
               - `infra/jobs`
+              - `integrations/github-events`
               - `reports/engine`
     - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives; useProfileName() — the name to show for the user (the profile-name setting's name, else the account's), or anonymous when the user turned their name off. Registers that setting. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's. Registers the profile-name setting (the name shown for the user, or none).
       - Web:
@@ -44978,13 +44979,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createCoalescer`
           - `createKeyedCoalescer`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
           - `infra` ×11
           - `apps` ×3
           - `conversations` ×3
           - `debug` ×3
           - `database/migrations/schema-question`
           - `framework/tooling/web-artifacts`
+          - `integrations/github-events`
           - `packages/watched-memo`
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
@@ -45602,6 +45604,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/git/main-slots/boot-lease`
           - `infra/host/host-admission`
           - `infra/host/machine-sleep`
+          - `integrations/github-events`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
       - Plugins:
@@ -45611,6 +45614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/boot-watchdog`
               - `infra/git/main-slots/boot-lease`
               - `infra/host/host-admission`
+              - `integrations/github-events`
               - `packages/sleep-clock`
           - Core:
             - Exports (types):
@@ -56535,7 +56539,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×12
@@ -56545,13 +56549,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×4
           - `plugin-meta` ×3
           - `build` ×2
+          - `integrations` ×2
           - `reports` ×2
           - `tasks` ×2
           - `active-data/show-me`
           - `apps-core/app-preload`
           - `backup`
           - `companions/browser-extension`
-          - `integrations/youtube/audio-fetch`
           - `packages/source-digest/prune`
           - `primitives/log-channels/memory-persistence`
           - `release`

@@ -28,6 +28,7 @@ awake timer or `sleptDuring`: the table in `packages/sleep-clock/CLAUDE.md`.
     - `debug/boot-watchdog`
     - `infra/git/main-slots/boot-lease`
     - `infra/host/host-admission`
+    - `integrations/github-events`
     - `packages/sleep-clock`
 - Core:
   - Exports (types):

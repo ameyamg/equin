@@ -9,6 +9,37 @@ import {
   stopForwarders,
 } from "./forwarders";
 import { resolveGhTools } from "./gh";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { onSleepReadingChanged } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
+import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import { catchUp } from "./catch-up";
+import { createCatchUpLedger } from "./catch-up-owed";
+
+const githubEventsLog = defineLogSink({
+  id: "github-events",
+  description:
+    "GitHub event forwarding on main: a catch-up a machine sleep cut off, and that it was run again.",
+});
+
+/**
+ * The catch-ups owed by the running forwarders (`./catch-up-owed`): a ping
+ * owes one, a wake retries what is still owed.
+ */
+export const catchUps = createCatchUpLedger({
+  catchUp: (repo) => catchUp(runningGh(), repo),
+  sleepStamp: sleepStampNow,
+  report: (repo, err) =>
+    reportServerError({
+      message: `[github-events] catching up ${repo} after its forwarder connected failed (owed until one succeeds: run again at its next reconnect or the next wake): ${err instanceof Error ? err.message : String(err)}`,
+      ...crashFieldsOf(err, `github-events:catch-up:${repo}`),
+    }),
+  log: (line) => githubEventsLog.publish(line),
+});
+
+/** Unsubscribes the wake retry; `null` while no forwarder runs. */
+let stopWakeRetry: (() => void) | null = null;
 
 /** The gh binary the running forwarders use; `null` while none runs. */
 let ghBin: string | null = null;
@@ -35,10 +66,14 @@ export async function startGitHubEvents(): Promise<void> {
   const tools = await resolveGhTools();
   if (tools.kind === "not-set-up") return markNotSetUp(tools.reason, tools.fix);
   ghBin = tools.tools.gh;
+  stopWakeRetry = onSleepReadingChanged(() => catchUps.retryOwed());
   startForwarders(tools.tools, watchedRepos());
 }
 
 export async function stopGitHubEvents(): Promise<void> {
+  stopWakeRetry?.();
+  stopWakeRetry = null;
+  catchUps.forgetAll();
   await stopForwarders();
   ghBin = null;
 }
