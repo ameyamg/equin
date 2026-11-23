@@ -1,6 +1,7 @@
 import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
 
 export interface InvestigationTaskRequest {
+  /** The report's live owner (`reportHasLiveOwner`), reused as the answer; null files a new task. */
   existingTaskId: string | null;
   title: string;
   description: string;

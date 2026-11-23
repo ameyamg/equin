@@ -317,8 +317,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `change-feed-exclusion` "report_trend_days"
     - `db-trigger` "reports.trend"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×10
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×11
     - `build/server-build-id` ×4
     - `shell/notifications` ×4
     - `database/db-triggers` ×2

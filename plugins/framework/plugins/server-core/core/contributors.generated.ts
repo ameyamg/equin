@@ -108,6 +108,7 @@ export const serverContributors: Readonly<Record<string, readonly string[]>> = {
   "sink:network/plugins/live/plugins/query-resource:liveSetOverBudgetSink": ["reports/plugins/live-set-budget"],
   "sink:page/plugins/editor:docRankDriftSink": ["reports/plugins/page-doc-rank-drift"],
   "sink:reports:reportInvestigationSink": ["tasks/plugins/reports-investigation"],
+  "sink:reports:reportOwnerSink": ["tasks/plugins/reports-investigation"],
   "sink:reports/plugins/engine:fixedReportOccurrenceSink": ["reports/plugins/engine"],
   "sink:reports/plugins/engine:reportOutboxFatalSink": ["reports/plugins/outbox"],
   "sink:reports/plugins/engine:reportOutboxSink": ["reports/plugins/outbox"],

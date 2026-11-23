@@ -60961,10 +60961,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `createFanOutGate`
       - `getReportTitle`
       - `isReportKindRegistered`
+      - `reportHasLiveOwner`
       - `reportInvestigationSink`
       - `ReportKind`
       - `reportKindCategory`
       - `ReportNoiseRule`
+      - `reportOwnerSink`
       - `ReportRecorded`
     - Resources:
       - `reports.list` (keyed, window)
@@ -61303,8 +61305,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-feed-exclusion` "report_trend_days"
           - `db-trigger` "reports.trend"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-        - Uses: 36 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `reports` ×10
+        - Uses: 37 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `reports` ×11
           - `build/server-build-id` ×4
           - `shell/notifications` ×4
           - `database/db-triggers` ×2
@@ -64948,11 +64950,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/outcome-report`
               - `tasks/sidequest-autopilot`
               - `upstream`
-    - **`reports-investigation`** — Files reports' investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink (Investigate).
+    - **`reports-investigation`** — Files reports' investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink (Investigate) and answers reports' owner question (a linked task owns its report until it is dropped).
       - Server:
         - Contributes: `taskCategory` "reports"
         - Uses:
           - `reports.reportInvestigationSink`
+          - `reports.reportOwnerSink`
           - `tasks/task-category.setTaskCategory`
           - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.createTask`

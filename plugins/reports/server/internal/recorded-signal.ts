@@ -5,8 +5,9 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
  * new, or an existing fingerprint recurring. Called on the hot path after the
  * row lands (past the duress and fan-out gates — a collapsed storm never
  * calls), so `onRecorded` must be cheap: wake something, enqueue a job. Noise
- * reports and reports already linked to a task do not call — until a fix
- * regresses: that unlinks the task, and the report is announced again. Any number of
+ * reports and reports with a live owner (`reportHasLiveOwner`) do not call —
+ * until the owner is dropped (its next occurrence is announced) or a fix
+ * regresses (that unlinks the task, and the report is announced again). Any number of
  * plugins may listen (the Report investigations automation, supervisor event
  * streams); each contributes one.
  */

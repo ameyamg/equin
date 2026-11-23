@@ -25,11 +25,12 @@ it.
 
 ## Plugin reference
 
-- Description: Files reports' investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink (Investigate).
+- Description: Files reports' investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink (Investigate) and answers reports' owner question (a linked task owns its report until it is dropped).
 - Server:
   - Contributes: `taskCategory` "reports"
   - Uses:
     - `reports.reportInvestigationSink`
+    - `reports.reportOwnerSink`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-category.TaskCategory`
     - `tasks/tasks-core.createTask`

@@ -483,7 +483,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
     );
   }
 
-  announceRecorded(row);
+  await announceRecorded(row);
   // A report with a live or pending fix: does this occurrence's code contain
   // it? Judged off the recording path (a git read), and only for these rows.
   if (

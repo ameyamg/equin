@@ -5,7 +5,11 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { _reports, reportInvestigationSink } from "@plugins/reports/server";
+import {
+  _reports,
+  reportHasLiveOwner,
+  reportInvestigationSink,
+} from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
 import { renderReportTask } from "./uninvestigated";
 import { reportIdKind } from "@plugins/reports/core";
@@ -69,7 +73,10 @@ export async function investigateReport(
 
         const { title, description } = renderReportTask(row);
         const result = await reportInvestigationSink.emit({
-          existingTaskId: row.taskId,
+          // Reuse the linked task only while it owns the report.
+          existingTaskId: (await reportHasLiveOwner(row.taskId))
+            ? row.taskId
+            : null,
           title,
           description: `${description}\n\n${DEBUG_SKILL_HINT}`,
           filedFrom: "reports.engine",

@@ -3,7 +3,12 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { reportIdKind, type ReportCategory } from "@plugins/reports/core";
-import { _reports, ReportKind, ReportRecorded } from "@plugins/reports/server";
+import {
+  _reports,
+  ReportKind,
+  ReportRecorded,
+  reportHasLiveOwner,
+} from "@plugins/reports/server";
 import { parseSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { SupervisorEventStream } from "@plugins/tasks/plugins/supervisor-roles/plugins/events/server";
 import { publishSupervisorEvent } from "@plugins/tasks/plugins/supervisor-roles/plugins/events/machine";
@@ -70,7 +75,8 @@ export const reportEventJob = defineJob({
     if (!row) return; // deleted since (retention): nothing to tell
     // Owned since it was recorded (a task about its subject took it in the
     // meantime — a failed build's Investigate): someone is on it, not news.
-    if (row.taskId !== null) return;
+    // A dropped task is no owner (`reportHasLiveOwner`, the one definition).
+    if (await reportHasLiveOwner(row.taskId)) return;
     const spec = ReportKind.getContributions().find((k) => k.kind === row.kind);
     if (!spec) throw new Error(`No report kind "${row.kind}" is registered.`);
     await publishSupervisorEvent({

@@ -107,7 +107,7 @@ export async function deriveReportFixState(
       await ringRowBell(row, conn);
       // Back on the worklist: its listeners hear of it as of a fresh
       // occurrence (the regressing one was written with the task linked).
-      announceRecorded(row);
+      await announceRecorded(row);
     }
   });
 }

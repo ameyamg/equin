@@ -143,10 +143,12 @@ before it) beside the total, worded by `formatReportActivity`
     - `createFanOutGate`
     - `getReportTitle`
     - `isReportKindRegistered`
+    - `reportHasLiveOwner`
     - `reportInvestigationSink`
     - `ReportKind`
     - `reportKindCategory`
     - `ReportNoiseRule`
+    - `reportOwnerSink`
     - `ReportRecorded`
   - Resources:
     - `reports.list` (keyed, window)
