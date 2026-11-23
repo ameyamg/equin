@@ -212,15 +212,64 @@ describe("holderReserve", () => {
     });
   });
 
-  test("10–19 records: the largest peak recorded", () => {
+  test("10–19 records: the second largest peak recorded", () => {
     const peaks = [3, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1].map((g) => g * GB);
-    expect(holderReserve(1, peaks).bytes).toBe(3 * GB);
+    expect(holderReserve(1, peaks).bytes).toBe(2 * GB);
   });
 
-  test("a work that changes shape lifts its reservation from its latest holders", () => {
-    // 40 light holders, then one heavy: the p95 is still light, the recent max is not.
-    const peaks = [...Array.from({ length: 40 }, () => 1 * GB), 6 * GB];
+  test("a work that changes shape lifts its reservation once two latest holders show it", () => {
+    // 40 light holders, then two heavy: the p95 is still light, the recent floor is not.
+    const peaks = [...Array.from({ length: 40 }, () => 1 * GB), 6 * GB, 7 * GB];
     expect(holderReserve(1, peaks).bytes).toBe(6 * GB);
+  });
+
+  test("one heavy holder among the latest five does not lift it alone", () => {
+    const peaks = [...Array.from({ length: 40 }, () => 1 * GB), 6 * GB, 1 * GB];
+    expect(holderReserve(1, peaks).bytes).toBe(1 * GB);
+  });
+
+  test("40+ records: the 95th percentile, not capped by the top two", () => {
+    // 36 at 1 GB, then 2, 3, 4 GB, then two far above; newest light.
+    const peaks = [
+      ...Array.from({ length: 36 }, () => 1 * GB),
+      2 * GB,
+      3 * GB,
+      4 * GB,
+      30 * GB,
+      40 * GB,
+      ...Array.from({ length: 5 }, () => 1 * GB),
+    ];
+    // n = 46: rank ⌈0.95·46⌉−1 = 43 of the sorted peaks → 4 GB (the cap, rank 44, is 30 GB).
+    expect(holderReserve(1, peaks).bytes).toBe(4 * GB);
+  });
+
+  test("exactly 10 records: measured, the second largest", () => {
+    const peaks = [...Array.from({ length: 9 }, () => 1 * GB), 9 * GB];
+    expect(holderReserve(1, peaks)).toEqual({
+      bytes: 1 * GB,
+      basis: "measured",
+      samples: 10,
+    });
+  });
+
+  test("one outlier never sets the reservation (2026-11-23: a 55 GB hand-run suite)", () => {
+    // The real shape: hundreds of light tests, a few real full-suite runs
+    // (~20 GB) days ago, and one 55 GB experiment among the latest five.
+    const light = Array.from({ length: 200 }, () => 0.5 * GB);
+    const peaks = [
+      ...light,
+      20 * GB,
+      22 * GB,
+      ...light,
+      1 * GB,
+      0.4 * GB,
+      55 * GB,
+      1 * GB,
+    ];
+    expect(holderReserve(1, peaks).bytes).toBe(1 * GB);
+    // Alone among few records, it is not the reservation either.
+    const few = [...Array.from({ length: 10 }, () => 1 * GB), 55 * GB];
+    expect(holderReserve(1, few).bytes).toBe(1 * GB);
   });
 
   test("enough records: their 95th percentile, whatever the units", () => {

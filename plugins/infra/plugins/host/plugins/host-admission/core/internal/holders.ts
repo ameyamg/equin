@@ -107,19 +107,17 @@ export type HolderPeakRecord = z.infer<typeof HolderPeakRecordSchema>;
 export const HOLDER_PEAK_WINDOW_MS = 14 * 24 * 3600 * 1000;
 
 /**
- * Fewer recorded holders of a work than this cannot stand for it. Ten
- * because, with the nearest-rank quantile below, a work with 10–19 records
- * is reserved the LARGEST peak it has recorded (rank ⌈0.95·n⌉ = n): the
- * quantile only starts discounting the top peak at 20, once one outlier is
- * one holder in twenty. Under ten, no record is trusted at all.
+ * Fewer recorded holders of a work than this cannot stand for it: under ten,
+ * no record is trusted at all.
  */
 export const MIN_HOLDER_PEAKS = 10;
 
 /**
- * How many of a work's most recent holders its reservation is never below:
- * a work that changes shape (a new heavy check, a bigger build) lifts its
- * reservation from the first holders that show it, instead of waiting for
- * them to be 5 % of two weeks of records.
+ * How many of a work's most recent holders its reservation is never below
+ * the SECOND largest of (`HOLDER_PEAK_CORROBORATION`): a work that changes
+ * shape (a new heavy check, a bigger build) lifts its reservation as soon as
+ * two of its latest holders show it, instead of waiting for them to be 5 % of
+ * two weeks of records.
  */
 export const RECENT_HOLDER_PEAKS = 5;
 
@@ -132,6 +130,20 @@ export const RECENT_HOLDER_PEAKS = 5;
  * measured footprint at the next reading anyway.
  */
 export const HOLDER_RESERVE_QUANTILE = 0.95;
+
+/**
+ * How many recorded holders a reservation must rest on: never ONE. Every
+ * peak the reservation reads (the quantile, the recent floor) is the
+ * second-largest at most, so no single holder — an experimental run outside
+ * the standard runner, a runaway — sets the charge of every holder of its
+ * work. On 2026-11-23 one hand-run full suite `bun test --isolate` peaked at
+ * 55 GB (ordinary tests: p95 1.9 GB) and, as the recent max, was every test
+ * holder's reservation: the one holder left on the box was charged 55 GB and
+ * no op was admitted (6 tests, 2 builds, a check queued). A real heavy run is
+ * still charged what it uses — its measured tree, at every reading — and two
+ * of them among the latest five lift the reservation itself.
+ */
+export const HOLDER_PEAK_CORROBORATION = 2;
 
 /** The reservation of one share of `work` holding `units`, and what it rests on. */
 export interface HolderReserve {
@@ -153,7 +165,9 @@ export interface HolderReserve {
  *   wrong for one that cannot — such a holder takes a rigid share
  *   (`withHostGrant`'s `min`), so its units are always its whole weight.
  * - Otherwise the `HOLDER_RESERVE_QUANTILE` of its peaks — and never below
- *   the largest of its `RECENT_HOLDER_PEAKS` latest — whatever the units:
+ *   the second largest of its `RECENT_HOLDER_PEAKS` latest — each capped at
+ *   the `HOLDER_PEAK_CORROBORATION`-th largest, so one holder alone never
+ *   sets it — whatever the units:
  *   a holder's peak is set by what it runs, not by how many slots it got (a
  *   1-unit build still runs its 2-unit type-check worker, clamped), so this
  *   may sit above `units × PER_UNIT_BYTES` as well as below.
@@ -171,17 +185,24 @@ export function holderReserve(
   return {
     bytes: Math.max(
       quantile(peaks, HOLDER_RESERVE_QUANTILE),
-      ...peaks.slice(-RECENT_HOLDER_PEAKS),
+      quantile(peaks.slice(-RECENT_HOLDER_PEAKS), 1),
     ),
     basis: "measured",
     samples: peaks.length,
   };
 }
 
-/** Nearest-rank quantile (no interpolation: always a peak that happened). */
+/**
+ * Nearest-rank quantile (no interpolation: always a peak that happened),
+ * never above the `HOLDER_PEAK_CORROBORATION`-th largest value — so `q = 1`
+ * reads the largest value another holder reached too.
+ */
 function quantile(values: readonly number[], q: number): number {
   const sorted = [...values].sort((a, b) => a - b);
-  const rank = Math.min(sorted.length - 1, Math.ceil(q * sorted.length) - 1);
+  const rank = Math.min(
+    sorted.length - HOLDER_PEAK_CORROBORATION,
+    Math.ceil(q * sorted.length) - 1,
+  );
   return sorted[Math.max(0, rank)]!;
 }
 

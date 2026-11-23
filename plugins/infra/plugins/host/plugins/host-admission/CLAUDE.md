@@ -118,7 +118,11 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   holder's process tree every 30 s, appends its peak to the **holder-peak
   ledger** when it ends (`logs/cpu-holder-peaks/holder-peaks.jsonl`, a file
   sink), and publishes each holder with its reservation: the 95th percentile
-  of its work's recorded peaks over 14 days (`holderReserve`), or — under 10
+  of its work's recorded peaks over 14 days, never below the second largest
+  of its 5 latest, and never resting on one record alone: each is at most
+  the second-largest peak (`holderReserve`, `HOLDER_PEAK_CORROBORATION` —
+  on 2026-11-23 one 55 GB hand-run suite, as the recent max, charged every
+  test holder 55 GB and closed the window), or — under 10
   records — `units × PER_UNIT_BYTES`, the whole quantum per slot, as every
   share was charged before. A holder reserves from the moment it is taken
   (a just-started build has not grown) and is charged its measured tree
