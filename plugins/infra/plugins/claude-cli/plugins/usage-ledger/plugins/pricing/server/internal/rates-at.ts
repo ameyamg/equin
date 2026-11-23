@@ -44,17 +44,31 @@ export async function ratesInForceAt(
 /**
  * A bucket's cost at `rates`, or `null` when they hold no rate for its model
  * and speed — unpriced, as the view's NULL, never $0.
+ *
+ * A bucket of no tokens costs $0 under any price, rate or not: the ledger
+ * never files one (`usageLedgerUpsert` drops all-zero rows), so the view never
+ * calls it unpriced, and neither may this. Claude Code's `<synthetic>`
+ * pseudo-model (an interrupted or failed turn) carries only zeros — priced as
+ * `null` it flagged a fully priced conversation's cost as missing a price.
  */
 export function priceWithRates(
   rates: RatesInForce,
   bucket: Pick<DayBucket, "model" | "speed" | (typeof TOKEN_KINDS)[number]>,
 ): number | null {
   const r = rates.get(rateKey(bucket.model, bucket.speed));
-  if (!r) return null;
+  if (!r) return hasTokens(bucket) ? null : 0;
   let cost = 0;
   for (const kind of TOKEN_KINDS) {
     cost += bucket[kind].below * r[`${kind}Below`];
     cost += bucket[kind].above * r[`${kind}Above`];
   }
   return cost;
+}
+
+function hasTokens(
+  bucket: Pick<DayBucket, (typeof TOKEN_KINDS)[number]>,
+): boolean {
+  return TOKEN_KINDS.some(
+    (kind) => bucket[kind].below !== 0 || bucket[kind].above !== 0,
+  );
 }
