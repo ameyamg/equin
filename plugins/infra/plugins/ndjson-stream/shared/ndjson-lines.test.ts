@@ -1,7 +1,21 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ndjsonFrames, NdjsonParseError } from "./ndjson-lines";
 
 const enc = new TextEncoder();
+
+let unhandled: unknown[];
+const onUnhandled = (err: unknown) => {
+  unhandled.push(err);
+};
+
+beforeEach(() => {
+  unhandled = [];
+  process.on("unhandledRejection", onUnhandled);
+});
+
+afterEach(() => {
+  process.off("unhandledRejection", onUnhandled);
+});
 
 /** A body delivering `chunks` as given (strings encoded, bytes as is), then ending. */
 function body(chunks: readonly (string | Uint8Array)[]): {
@@ -92,6 +106,29 @@ describe("ndjsonFrames", () => {
     ac.abort(reason);
     expect(pending).rejects.toBe(reason);
     expect(reasons).toEqual([reason]);
+  });
+
+  // A fetch given the same signal errors its body with the reason before the
+  // reader's own cancel runs, so that cancel rejects with the reason too —
+  // the box link's tunnel drop filed it as an unhandled AbortError
+  // (report-1795431120-azhd86).
+  test("aborting a body its fetch already errored with the reason leaves no unhandled rejection", async () => {
+    const ac = new AbortController();
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(enc.encode('{"a":1}\n'));
+        ac.signal.addEventListener("abort", () => c.error(ac.signal.reason), {
+          once: true,
+        });
+      },
+    });
+    const it = ndjsonFrames(stream, ac.signal);
+    expect(await it.next()).toEqual({ done: false, value: { a: 1 } });
+    const pending = it.next();
+    ac.abort();
+    expect(pending).rejects.toBe(ac.signal.reason);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(unhandled).toEqual([]);
   });
 
   test("an already-aborted signal throws before reading", () => {

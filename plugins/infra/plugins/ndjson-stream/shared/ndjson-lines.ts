@@ -33,8 +33,15 @@ export async function* ndjsonFrames(
 ): AsyncGenerator<unknown, void, undefined> {
   signal?.throwIfAborted();
   const reader = body.getReader();
+  // A body whose fetch shares `signal` is already errored with its reason by
+  // then, so this cancel rejects with that same reason — the end the caller
+  // asked for, which the pending read throws to it. Any other rejection stays
+  // loud.
   const onAbort = () => {
-    void reader.cancel(signal?.reason);
+    const reason: unknown = signal?.reason;
+    reader.cancel(reason).catch((err: unknown) => {
+      if (err !== reason) throw err;
+    });
   };
   signal?.addEventListener("abort", onAbort, { once: true });
   // The body ended, failed, or was aborted: nothing left to cancel. Only a
