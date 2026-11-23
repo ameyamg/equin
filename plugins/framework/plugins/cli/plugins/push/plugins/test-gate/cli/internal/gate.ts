@@ -287,7 +287,14 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
 
   console.log("");
   if (preExisting.length > 0)
-    await printPreExisting(root, preExisting, base, known);
+    // Judged on every record so far — the merge-base run's included — so
+    // its lines say what the gate decided.
+    await printPreExisting(
+      root,
+      preExisting,
+      base,
+      buildVerdictIndex(await readTestRunRecords(), mainSlug),
+    );
   if (batchOnly.length > 0)
     console.error(
       [

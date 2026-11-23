@@ -25036,10 +25036,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 183 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 184 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×50
       - `conversations` ×22
-      - `tasks` ×20
+      - `tasks` ×21
       - `infra` ×18
       - `page` ×14
       - `debug` ×12
@@ -25130,8 +25130,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
-          - `debug` ×9
+        - Imported by: 38 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+          - `debug` ×10
           - `infra` ×7
           - `database` ×5
           - `apps` ×4
@@ -26055,10 +26055,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 59 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+        - Imported by: 60 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
           - `database` ×16
           - `apps` ×9
-          - `debug` ×6
+          - `debug` ×7
           - `tasks` ×6
           - `infra` ×5
           - `conversations` ×3
@@ -29255,7 +29255,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GATE_WAITERS_MAX`
           - `SPAN_STUCK_KIND`
           - `StuckSpanPayloadSchema`
-    - **`tests`** — Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), and the Tests task category Investigate files under.
+    - **`tests`** — Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), the tests.runsIngested event (an ingest pass took in runs with failures), and the Tests task category Investigate files under.
       - Web:
         - Slots:
           - `tests.actions`
@@ -29323,13 +29323,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_testFileResults`
           - `_testFileStatus`
           - `_testRuns`
+          - `_testRunsIngestedTriggers`
           - `ingestedOpIds`
           - `ingestRunRecord`
           - `recomputeFileStatus`
           - `testDigestsSettled`
+          - `testRunsIngested`
         - Register:
           - `defineJob('tests.results-cap')`
           - `defineTriggerEvent('tests.digestsSettled')`
+          - `defineTriggerEvent('tests.runsIngested')`
         - Resources:
           - `tests.case-failures` (keyed)
           - `tests.case-failures:rows` (keyed, point)
@@ -29349,6 +29352,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineSupervisedJob('tests.checkout-digests')`
           - `defineSupervisedJob('tests.run-now')`
           - `defineRefReaction('tests.checkout-digests (refs/heads/main)')`
+          - `defineWarmup('tests.checkout-digests-boot')`
           - `defineWarmup('tests.ingest-catch-up')`
         - Routes: `POST /api/debug/tests/run-now`
       - Core:
@@ -29429,7 +29433,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
       - Plugins:
-        - **`failing-report`** — Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind: one row per test file of main that went from passing to failing (fingerprint = file path), filed by main's idle test runner once a second run on the same code confirmed the failure. Category error, so the Error reports supervisor stream carries it; its task names the failing cases and the commit range where they started failing.
+        - **`failing-report`** — Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind: one row per test file failing on main's code (fingerprint = file path), filed by main's test runner once a second run of main's on the same code confirmed the failure. Category test, so the Broken tests supervisor stream owns it (one investigation task per report, in the backlog of the role it is routed to); a raised fan-out ceiling, so one push breaking many tests still files each; its task names the failing cases and the commit range where they started failing.
           - Web:
             - Contributes: `Reports.KindView` → `TestFailingSummary`
             - Uses: `reports.Reports`
@@ -29457,14 +29461,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `testFailingMessage`
               - `TestFailingPayloadSchema`
           - Cross-plugin:
-            - Imported by: `debug/tests/idle-runner`
+            - Imported by:
+              - `debug/tests/idle-runner`
+              - `framework/cli/test/main-standing`
           - Machine:
             - Exports (values): `fileTestFailingReports`
-        - **`idle-runner`** — Runs stale and never-run test files while the host is idle: on host.idleBegan it brings the checkout's test digests current; each tests.digestsSettled (and each batch's end, after its record is ingested) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle — while the host is still idle; host.idleEnded cancels the running batch.
+          - Cli:
+            - Exports (types): `KnownTestReport`
+            - Exports (values): `readKnownTestReports`
+        - **`idle-runner`** — The checkout's test runner: runs the test files whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run) — on main whenever an opportunistic op may run, so main's verdicts follow its head; elsewhere, and for the 7-day re-verify sweep, only while the host is idle. Each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle; an advance of main cancels the running batch (main), host.idleEnded the running sweep.
           - Server:
             - Contributes:
               - `trigger` "tests.idle-began"
               - `trigger` "tests.idle-ended"
+              - `trigger` "tests.idle-next"
               - `trigger` "tests.idle-next"
           - Machine:
             - Uses:
@@ -29476,6 +29486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('tests.idle-next')`
               - `defineJob('tests.idle-began')`
               - `defineJob('tests.idle-ended')`
+              - `defineRefReaction('tests.idle-batch (refs/heads/main)')`
     - **`timeline`** — Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, read live from the debug.timeline.scan value as the fan-out resolves. Cross-worktree unified timeline: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and serves it as the debug.timeline.scan live value — one scan per window, pushed as each cell resolves.
       - Web:
         - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
@@ -32740,8 +32751,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
-              - `framework` ×11
+            - Imported by: 35 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+              - `framework` ×12
               - `infra` ×8
               - `debug` ×4
               - `apps` ×2
@@ -32955,23 +32966,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`test-gate`** — The push's test gate: before the push mutex, run every test file whose test digest moved since the merge base (a pass already recorded at the same digest counts), and refuse the push when one newly fails — telling a test that already fails on main (its verdict at the merge base, established by running it there in a scratch checkout when none is recorded) from one this change broke, and a batch-only failure (passes when run again alone) from a real one.
               - Cli:
-                - Uses: `plugin-meta/plugin-records.openRecordStore`
+                - Uses:
+                  - `framework/cli/test/main-standing.mainSlug`
+                  - `framework/cli/test/main-standing.readTestRunRecords`
+                  - `framework/cli/test/main-standing.standingLines`
+                  - `framework/cli/test/main-standing.standingOnMain`
+                  - `plugin-meta/plugin-records.openRecordStore`
                 - Exports (types): `TestGateResult`
                 - Exports (values): `runTestGate`
               - Cross-plugin:
                 - Imported by: `framework/cli/push`
               - Core:
-                - Exports (types):
-                  - `FailureJudgement`
-                  - `RecordedVerdict`
-                  - `VerdictIndex`
-                - Exports (values):
-                  - `affectedTests`
-                  - `buildVerdictIndex`
-                  - `describeJudgement`
-                  - `isProvingPass`
-                  - `judgeFailure`
-                  - `restsOnMergeBase`
+                - Exports (values): `affectedTests`
         - **`regen-generated`** — `./equin regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
           - Cli:
             - Uses: `plugin-meta/plugin-records.openRecordStore`
@@ -33050,12 +33056,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/op-runtime.DirectOpFlight`
               - `framework/cli/op-runtime.withDirectOp`
+              - `framework/cli/test/main-standing.FailingFile`
+              - `framework/cli/test/main-standing.mainSlug`
+              - `framework/cli/test/main-standing.standingLines`
+              - `framework/cli/test/main-standing.standingOnMain`
               - `plugin-meta/plugin-records.openRecordStore`
           - Cross-plugin:
             - Imported by:
               - `debug/tests`
               - `framework/cli/await`
-              - `framework/cli/push/test-gate`
+              - `framework/cli/test/main-standing`
               - `infra/deps/updates`
           - Exemptions:
             - Exempts itself from:
@@ -33090,6 +33100,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `framework/cli/push/test-gate`
                   - `framework/cli/test`
+                  - `framework/cli/test/main-standing`
+            - **`main-standing`** — Where a failing test file stands on main — the one notion of "already failing on main" (judgeFailure over the harvested verdicts: at the merge base's digest by majority, else main's own newest), with main's test-failing report and owner task about it. Printed by `./equin test` under a failing run and used by the push test gate.
+              - Cli:
+                - Uses:
+                  - `debug/tests/failing-report.KnownTestReport`
+                  - `debug/tests/failing-report.readKnownTestReports`
+                  - `plugin-meta/plugin-records.openRecordStore`
+                - Exports (types):
+                  - `FailingFile`
+                  - `Standing`
+                  - `StandingResult`
+                - Exports (values):
+                  - `mainSlug`
+                  - `mergeBaseDigests`
+                  - `readTestRunRecords`
+                  - `readVerdictIndex`
+                  - `standingLines`
+                  - `standingOnMain`
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/cli/push/test-gate`
+                  - `framework/cli/test`
+              - Core:
+                - Exports (types):
+                  - `FailureJudgement`
+                  - `RecordedVerdict`
+                  - `VerdictIndex`
+                - Exports (values):
+                  - `buildVerdictIndex`
+                  - `describeJudgement`
+                  - `isProvingPass`
+                  - `judgeFailure`
+                  - `restsOnMergeBase`
             - **`record`** — The test harvest's file formats, as zod schemas: TestRunRecord (one `./equin test` run's per-file verdicts under their digests, written to the host-global test-runs dir) and CheckoutDigests (`./equin test-digest`'s output) — a leaf every writer and reader shares.
               - Cross-plugin:
                 - Imported by:
@@ -33097,6 +33140,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `debug/tests/idle-runner`
                   - `framework/cli/push/test-gate`
                   - `framework/cli/test`
+                  - `framework/cli/test/main-standing`
               - Core:
                 - Exports (types):
                   - `CheckoutDigests`
@@ -33722,8 +33766,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `repoSnapshotOver`
           - `WHOLE_TREE_FILE_CALLS`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/framework/plugins/tooling/REFERENCE.md`](../plugins/framework/plugins/tooling/REFERENCE.md)
-          - `framework` ×16
+        - Imported by: 22 plugins — full list in [`plugins/framework/plugins/tooling/REFERENCE.md`](../plugins/framework/plugins/tooling/REFERENCE.md)
+          - `framework` ×17
           - `infra` ×2
           - `plugin-meta` ×2
           - `review/plugin-changes`
@@ -38515,6 +38559,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition`
               - `conversations/conversation-view/commits-graph`
               - `debug/tests`
+              - `debug/tests/idle-runner`
               - `infra/deps/pin-drift`
               - `infra/launcher/gateway-drift`
               - `infra/launcher/login-services`
@@ -40687,11 +40732,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 90 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 91 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `apps` ×16
           - `framework` ×16
+          - `debug` ×12
           - `infra` ×12
-          - `debug` ×11
           - `conversations` ×7
           - `build` ×6
           - `database` ×3
@@ -40836,7 +40881,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 150 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 151 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×39
           - `framework` ×26
           - `apps` ×19
@@ -40849,12 +40894,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×3
           - `release` ×3
           - `reports` ×3
+          - `tasks` ×3
           - `code-explorer` ×2
           - `companions` ×2
           - `database` ×2
           - `integrations` ×2
           - `stats` ×2
-          - `tasks` ×2
           - `apps-core/app-preload`
           - `config_v2`
           - `installer`
@@ -41308,15 +41353,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `REPO_ROOT_MODULE`
               - `scriptPath`
           - Cross-plugin:
-            - Imported by: 63 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 62 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
               - `infra` ×10
               - `apps` ×7
               - `build` ×6
-              - `debug` ×4
               - `packages` ×4
               - `plugin-meta` ×4
               - `conversations` ×3
+              - `debug` ×3
               - `reports` ×3
               - `code-explorer`
               - `config_v2`
@@ -41453,9 +41498,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×18
-          - `debug` ×15
+          - `debug` ×16
           - `build` ×9
           - `conversations` ×9
           - `apps` ×6
@@ -41789,9 +41834,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnToFile`
           - `watchChildKills`
       - Cross-plugin:
-        - Imported by: 113 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 114 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+          - `framework` ×34
           - `infra` ×34
-          - `framework` ×33
           - `apps` ×10
           - `database` ×5
           - `debug` ×5
@@ -42068,9 +42113,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `apps` ×8
-          - `tasks` ×7
+          - `tasks` ×8
           - `infra` ×6
           - `conversations` ×4
           - `debug` ×3
@@ -46111,9 +46156,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withChangedFilesWork`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 196 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 197 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
-          - `framework` ×30
+          - `framework` ×31
           - `apps` ×18
           - `debug` ×17
           - `conversations` ×13
@@ -50429,8 +50474,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `verificationPassed`
           - `verifyRecordsAgainst`
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/plugin-meta/plugins/plugin-records/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-records/REFERENCE.md)
-          - `framework` ×13
+        - Imported by: 23 plugins — full list in [`plugins/plugin-meta/plugins/plugin-records/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-records/REFERENCE.md)
+          - `framework` ×14
           - `plugin-meta` ×7
           - `database/migrations/schema-question`
           - `infra/deps/npm`
@@ -60890,6 +60935,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `FanOutConfigValues`
       - `FanOutGate`
       - `FanOutGateOptions`
+      - `InvestigationRequester`
       - `InvestigationTaskRequest`
       - `ReportKindSpec`
       - `ReportKindVariant`
@@ -61246,8 +61292,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-feed-exclusion` "report_trend_days"
           - `db-trigger` "reports.trend"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-        - Uses: 36 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `reports` ×10
+        - Uses: 37 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `reports` ×11
           - `build/server-build-id` ×4
           - `shell/notifications` ×4
           - `database/db-triggers` ×2
@@ -61296,7 +61342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×14
           - `conversations` ×5
           - `infra` ×4
@@ -61309,6 +61355,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/github-events`
           - `page/place/google`
           - `stats/scoreboard`
+          - `tasks/supervisor-roles/events/report-streams`
       - Exemptions:
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
@@ -64895,7 +64942,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `taskCategory` "reports"
         - Uses:
+          - `database.db`
           - `reports.reportInvestigationSink`
+          - `tasks/supervisor-roles.fileSystemBacklogTask`
           - `tasks/task-category.setTaskCategory`
           - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.createTask`
@@ -65116,6 +65165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `tasks`
+          - `tasks/reports-investigation`
           - `tasks/supervisor-roles/events`
           - `tasks/supervisor-roles/pane`
           - `tasks/supervisor-roles/sessions`
@@ -65256,15 +65306,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/events/report-streams`
               - `tasks/supervisor-roles/pane`
           - Plugins:
-            - **`report-streams`** — The report event streams: Error reports and Slow-op reports (the kinds whose `category` is error / slow-op), each fed every recorded report of its category — one event per occurrence, keyed by the report so its occurrences fold into one line of the supervisor's next message.
+            - **`report-streams`** — The report event streams: Error reports and Slow-op reports (the kinds whose `category` is error / slow-op), each fed every recorded report of its category — one event per occurrence, keyed by the report so its occurrences fold into one line of the supervisor's next message — and Broken tests (category test), which OWNS its reports instead: each open report gets its one investigation task (system-filed, in the backlog of the role the stream is routed to, else a plain Reports task), on its occurrence and, for reports recorded before or whose task ended, at boot.
               - Server:
                 - Contributes:
+                  - `supervisor-event-stream` "broken-tests"
                   - `supervisor-event-stream` "error-reports"
                   - `supervisor-event-stream` "slow-op-reports"
                   - `report-recorded` "tasks.supervisor-roles.events.report-streams"
               - Machine:
                 - Uses: `tasks/supervisor-roles/events.publishSupervisorEvent`
-                - Register: `defineJob('supervisor-events.report')`
+                - Register:
+                  - `defineJob('supervisor-events.report')`
+                  - `defineWarmup('supervisor-events.own-open-reports')`
         - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role; InheritedTaskSupervisor: a nested task's role, read from its tree's root and naming it), SupervisorPill and SupervisorRoleBadge (a role by id, read live — the add_task card's backlog badge).
           - Web:
             - Slots:

@@ -1,4 +1,5 @@
--- singularity:snapshot id=0a0faba0-895b-4848-977f-736176c3e30c parents=f108b2c5-c416-49de-bb41-94cd069cc92f
+-- singularity:snapshot id=a1bab304-ee23-4c2f-b564-06863dd0f46f parents=f108b2c5-c416-49de-bb41-94cd069cc92f
+-- singularity:supersedes 65700b4a
 -- singularity:phase expand
 CREATE TABLE "tests_runsIngested_triggers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
