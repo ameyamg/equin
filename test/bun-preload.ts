@@ -3,7 +3,7 @@ import "./track-slot-sites";
 import { beforeEach } from "bun:test";
 import { discardHeldReports } from "@plugins/primitives/plugins/report-sink/core/testing";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   PLUGINS_DIR,
@@ -77,17 +77,22 @@ declareRuntimeNamespace(await checkoutNamespace(REPO_ROOT));
 // A test process is also a HOST that never boots its plugin graph: suites call
 // code that reads host services (`db` reads the database driver, `job.enqueue`
 // the job queue) with no `collectContributions` behind them. A `bun test` runs
-// on the desktop, so its providers are the desktop's — the host-service
-// providers among the app's machine halves (`machine.generated.ts`, the
-// committed main composition). A suite that boots a graph of its own
-// (the PGlite boot test) collects its own providers, which then answer instead.
+// on the desktop, so its providers are the desktop's — the machine half that
+// provides each service, read from the build's contributor table
+// (`contributors.generated.ts`: `host-service:<id>` → its `#machine` node;
+// `list-catalog-in-sync` keeps it equal to the code). A suite that boots a graph
+// of its own (the PGlite boot test) collects its own providers, which then
+// answer instead.
 //
-// Only the machine halves that PROVIDE a host service are loaded (their barrel
-// spells `<Service>.provide(`), one at a time in registry order: loading every
-// machine half would evaluate most of the app's server graph in every test
-// process, registering resources (and jobs, channels) no suite asked for — and
-// a suite booting a slice of the graph would then find them undeclared. A
-// provider this misses fails loudly at its first `get()` ("no provider").
+// LAZILY, one provider at its service's first `get()`: every bun:test file runs
+// in a process of its own (`./equin test`), and loading all ~24 providers up
+// front evaluated ~1 s of the app's server graph in each of them (0.2 s → 1.1 s
+// for a file with one trivial case; ~40 min of CPU over the 2.6k-file suite)
+// for the few suites that read a service at all. `get()` is synchronous, so the
+// provider is `require`d — every machine barrel loads without top-level await.
+// Only providers load, never other machine halves: those would register
+// resources (and jobs, channels) no suite asked for, and a suite booting a
+// slice of the graph would then find them undeclared.
 //
 // A process that boots a graph of its OWN (a portable boot test's child, which
 // sets `BOOTS_OWN_PLUGIN_GRAPH=1`) gets none of them: its graph collects its own
@@ -95,20 +100,36 @@ declareRuntimeNamespace(await checkoutNamespace(REPO_ROOT));
 // provider's whole import closure (the transcript reader reaches reports and
 // config) — into a process whose graph does not hold it.
 if (process.env.BOOTS_OWN_PLUGIN_GRAPH !== "1") {
-  const { machineEntries } =
-    await import("../plugins/framework/plugins/server-core/core/machine.generated");
+  const { serverContributors } =
+    await import("../plugins/framework/plugins/server-core/core/contributors.generated");
   const { provideHostServicesUnbooted } =
     await import("@plugins/framework/plugins/server-core/core");
-  const providers: ServerContribution[] = [];
-  for (const entry of machineEntries) {
-    const barrel = join(PLUGINS_DIR, entry.pluginPath, "machine", "index.ts");
-    if (!/\.provide\(/.test(readFileSync(barrel, "utf8"))) continue;
-    const mod = (await entry.loader()) as {
-      default: { contributions?: readonly ServerContribution[] };
-    };
-    providers.push(...(mod.default.contributions ?? []));
-  }
-  provideHostServicesUnbooted(providers);
+  const loaded = new Map<string, readonly ServerContribution[]>();
+  provideHostServicesUnbooted((serviceId) => {
+    const hit = loaded.get(serviceId);
+    if (hit !== undefined) return hit;
+    // No row: nothing in the repo provides it — `get()` says "no provider".
+    const nodes = serverContributors[`host-service:${serviceId}`] ?? [];
+    const machine = nodes.filter((node) => node.endsWith("#machine"));
+    if (machine.length > 1)
+      throw new Error(
+        `[bun-preload] host service "${serviceId}" has ${machine.length} desktop providers (${machine.join(", ")}) — the desktop boots exactly one.`,
+      );
+    const contributions = machine.flatMap((node) => {
+      const barrel = join(
+        PLUGINS_DIR,
+        node.slice(0, -"#machine".length),
+        "machine",
+        "index.ts",
+      );
+      const mod = require(barrel) as {
+        default: { contributions?: readonly ServerContribution[] };
+      };
+      return mod.default.contributions ?? [];
+    });
+    loaded.set(serviceId, contributions);
+    return contributions;
+  });
   // What the desktop's database driver loads at boot (its `ready()`) before
   // anything queries: suites use `db` without booting, so the stand-in boot
   // loads it here.

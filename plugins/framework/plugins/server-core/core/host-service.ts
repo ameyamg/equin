@@ -64,7 +64,19 @@ let booted: { collection: object; clears: number } | null = null;
 // headless `bun test`, whose preload names the desktop host's providers here
 // (`provideHostServicesUnbooted`). Read whenever no booted graph answers: once a
 // graph boots, its own providers answer, exactly as at runtime.
-let unbooted: readonly ServerContribution[] | null = null;
+let unbooted: UnbootedProviders | null = null;
+
+/**
+ * The providers an unbooted host names: the contributions themselves, or — for
+ * a host whose providers are costly to load and mostly unread (the `bun test`
+ * preload: the desktop's machine halves, ~1 s of module graph in every test
+ * process) — a resolver handed a service id that loads and returns the
+ * contributions of whatever provides it, read at that service's first `get()`.
+ * Either way the exactly-one rule is applied to what comes back.
+ */
+export type UnbootedProviders =
+  | readonly ServerContribution[]
+  | ((serviceId: string) => readonly ServerContribution[]);
 
 // Test support: the implementations a suite swapped in for the length of one
 // call (`withHostServices`, `core/testing`), by service id. They answer before
@@ -115,7 +127,9 @@ export function defineHostService<T>(id: string): HostService<T> {
           `[host-service] "${id}" read before boot — host services are read by code running in a booted graph (or under a host that names its providers unbooted), never at module evaluation.`,
         );
       }
-      const providers = token.from([{ contributions: unbooted }]);
+      const contributions =
+        typeof unbooted === "function" ? unbooted(id) : unbooted;
+      const providers = token.from([{ contributions }]);
       if (providers.length !== 1) throw providerCountError(id, providers);
       return providers[0]!.impl as T;
     },
@@ -146,13 +160,13 @@ function providerCountError(
  * contributions) and a check that runs booted code headless (the migration
  * dry-run's log persistence). Until some
  * suite boots a graph (whose asserted providers then answer), every
- * `HostService.get()` reads its provider from these, with the same
- * exactly-one rule. Returns the set it replaced, so a suite naming its own
- * can put the process's back.
+ * `HostService.get()` reads its provider from these (a resolver: what it
+ * returns for that service's id), with the same exactly-one rule. Returns the
+ * set it replaced, so a suite naming its own can put the process's back.
  */
 export function provideHostServicesUnbooted(
-  providers: readonly ServerContribution[] | null,
-): readonly ServerContribution[] | null {
+  providers: UnbootedProviders | null,
+): UnbootedProviders | null {
   const previous = unbooted;
   unbooted = providers;
   return previous;

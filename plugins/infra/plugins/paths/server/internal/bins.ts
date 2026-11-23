@@ -6,10 +6,13 @@ export const LSOF = Bun.which("lsof") ?? "/usr/sbin/lsof";
 export const SAMPLE = Bun.which("sample") ?? "sample";
 /**
  * `sysctl`: reads kernel state (e.g. `kern.waketime`). In /usr/sbin, which an
- * agent's PATH may not hold, so looked up there too.
+ * agent's PATH may not hold, so looked up there too — as a second lookup, not
+ * by appending to `process.env.PATH`: a barrel import refuses a top-level env
+ * read (barrel-import's load guard), and this module loads as barrels do.
  */
 export const SYSCTL =
-  Bun.which("sysctl", { PATH: `${process.env.PATH ?? ""}:/usr/sbin:/sbin` }) ??
+  Bun.which("sysctl") ??
+  Bun.which("sysctl", { PATH: "/usr/sbin:/sbin" }) ??
   "/usr/sbin/sysctl";
 /** `mkfifo`: makes a named pipe. */
 export const MKFIFO = Bun.which("mkfifo") ?? "mkfifo";
