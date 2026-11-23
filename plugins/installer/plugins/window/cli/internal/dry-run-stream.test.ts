@@ -249,7 +249,9 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
       // The facts about the machine and the folder, as table rows.
       expect(body).toMatch(/^\| Release \| .+ \|$/m);
       expect(body).toMatch(/^\| System \| .+ \|$/m);
-      expect(body).toMatch(/^\| Stopped at \| clone \(attempt 1\) · unknown \|$/m);
+      expect(body).toMatch(
+        /^\| Stopped at \| clone \(attempt 1\) · unknown \|$/m,
+      );
       // Every byte encoded right, those above 127 too (the paste line's ⬇ and ⌘).
       expect(body).toContain(
         "⬇ **Your install log is on your clipboard: paste it here (⌘V / Ctrl+V).**",
