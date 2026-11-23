@@ -303,9 +303,7 @@ describe("resolveHostGraph", () => {
     expect(lines[1]).toBe(
       `  - ${clock} needs unguarded .unref() (2 problems follow from it)`,
     );
-    expect(lines[3]).toBe(
-      "  2 problems following from the root cause above:",
-    );
+    expect(lines[3]).toBe("  2 problems following from the root cause above:");
     expect(message).toContain(
       `    - host service "db.driver" (${SERVICE_MODULE}) has no provider: its provider db/plugins/memory is not portable`,
     );

@@ -212,7 +212,10 @@ export async function derivePortability(
   const offendersMemo = new Map<string, Offender[]>();
   const rootsMemo = new Map<string, Offender[]>();
   // Each rule-3 seed's services, with their providers (all tainted).
-  const serviceSeeds = new Map<string, { need: string; providers: string[] }[]>();
+  const serviceSeeds = new Map<
+    string,
+    { need: string; providers: string[] }[]
+  >();
   for (const d of byName.values()) {
     if (!tainted.has(d.module)) continue;
     const ps = providers.get(d.name) ?? [];
@@ -253,7 +256,13 @@ export async function derivePortability(
           `rootCauses(${barrel}): it is portable — nothing in its closure needs the computer.`,
         );
       }
-      const found = rootOffenders(closure, intrinsic, serviceSeeds, tainted, barrel);
+      const found = rootOffenders(
+        closure,
+        intrinsic,
+        serviceSeeds,
+        tainted,
+        barrel,
+      );
       rootsMemo.set(barrel, found);
       return found;
     },

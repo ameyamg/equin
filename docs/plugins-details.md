@@ -34264,7 +34264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 173 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 174 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×17
               - `plugin-meta/parse-utils` ×17
               - `framework/plugin-id` ×13
@@ -34283,10 +34283,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path` ×4
               - `packages/shared-work` ×4
               - `config_v2/ledger` ×3
+              - `framework/tooling/boundaries` ×3
               - `framework/tooling/format` ×3
               - `framework/list-catalog` ×2
               - `framework/server-core` ×2
-              - `framework/tooling/boundaries` ×2
               - `framework/tooling/collected-dir/discovery` ×2
               - `framework/tooling/lint` ×2
               - `framework/tooling/web-artifacts` ×2

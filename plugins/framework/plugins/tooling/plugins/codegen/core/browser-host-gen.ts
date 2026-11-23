@@ -312,7 +312,8 @@ function renderHostGraphProblems(
     lines.push(
       `  ${plural(derived.length, "problem")} following from the root cause${roots.size === 1 ? "" : "s"} above:`,
     );
-    for (const p of derived) lines.push(`    - ${p.text.replace(/\n/g, "\n  ")}`);
+    for (const p of derived)
+      lines.push(`    - ${p.text.replace(/\n/g, "\n  ")}`);
   }
   return lines.join("\n");
 }
