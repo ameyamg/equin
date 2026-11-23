@@ -1,4 +1,6 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { z } from "zod";
+import { awakeSpanStart } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { taskTriageConfig } from "../../shared/config";
@@ -83,11 +85,13 @@ export const triageSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "23 * * * *" },
   run: async () => {
-    const now = Date.now();
+    const now = wallNow("expiry");
     const { staleAfterDays } = getConfig(taskTriageConfig);
     await markOldReadsStale(new Date(now - staleAfterDays * DAY_MS));
+    // Awake time: a nap is not the run being stuck.
+    const stuckBefore = awakeSpanStart(now, STUCK_RUN_MS) ?? now - STUCK_RUN_MS;
     const failed = await failStuckRuns(
-      new Date(now - STUCK_RUN_MS),
+      new Date(stuckBefore),
       "The run did not submit a read within 30 minutes.",
     );
     if (failed > 0) await wakeTriageDispatcher();

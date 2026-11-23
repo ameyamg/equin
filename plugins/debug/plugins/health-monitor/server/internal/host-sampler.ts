@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { cpus, freemem, loadavg, totalmem } from "node:os";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import type { HostSample } from "../../core";
@@ -91,7 +92,7 @@ export function onHostSample(cb: HostSampleObserver): () => void {
 }
 
 async function tick(): Promise<void> {
-  const now = Date.now();
+  const now = wallNow("sleep-detection");
   const wallJumpMs = detectWallJumpMs(now, lastTickAt, SAMPLE_INTERVAL_MS);
   // True elapsed window for the rate deltas, not the nominal cadence: a late
   // tick (wedged loop or sleep) otherwise divides a multi-window counter delta

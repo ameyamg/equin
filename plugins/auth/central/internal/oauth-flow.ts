@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { createHash, randomBytes } from "node:crypto";
 import {
   namespaceFromHost,
@@ -61,7 +62,7 @@ export function recordPendingState(nonce: string, state: PendingState): void {
   pendingStates.set(nonce, state);
   // Garbage collect expired states opportunistically.
   if (pendingStates.size > 64) {
-    const now = Date.now();
+    const now = wallNow("expiry");
     for (const [k, v] of pendingStates) {
       if (now - v.createdAt > STATE_TTL_MS) pendingStates.delete(k);
     }
@@ -72,7 +73,7 @@ export function consumePendingState(nonce: string): PendingState | undefined {
   const state = pendingStates.get(nonce);
   if (!state) return undefined;
   pendingStates.delete(nonce);
-  if (Date.now() - state.createdAt > STATE_TTL_MS) return undefined;
+  if (wallNow("expiry") - state.createdAt > STATE_TTL_MS) return undefined;
   return state;
 }
 

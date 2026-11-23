@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { and, count, desc, eq, inArray, isNull, max, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type DbExecutor } from "@plugins/database/server";
@@ -267,7 +268,7 @@ async function claimMessage(
       // A run enqueued before the last claim committed may run inside the
       // quiet period that claim started: it waits for its end instead.
       const at = await dueAt(roleId, tx);
-      if (at.getTime() > Date.now()) return { notBefore: at };
+      if (at.getTime() > wallNow("schedule")) return { notBefore: at };
     }
     const pending = await tx
       .select()

@@ -17,6 +17,7 @@
 // transcript (`check-<buildId>.log`, kept for a checkout's last 50 runs), whose
 // worker cost lines end in `slot wait …s`; "slot n/N" says how many builds
 // still had one.
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   existsSync,
   readFileSync,
@@ -88,7 +89,7 @@ function workerSlotWaitMs(r: OpRecord): number | null {
   return ms;
 }
 
-const since = new Date(Date.now() - days * 86_400_000)
+const since = new Date(wallNow("lookback") - days * 86_400_000)
   .toISOString()
   .slice(0, 10);
 const byDay = new Map<string, OpRecord[]>();

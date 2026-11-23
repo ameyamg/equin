@@ -43,6 +43,7 @@
 // the host serves, and what the visitor does is lost with the worker — the
 // limit, said in the boot report (`HostBoot.data`) and the worker's console.
 
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import {
   ENTRIES_STORE,
@@ -280,7 +281,7 @@ async function openPersistent(
     current = lifecycle ?? { state: "seeding", migrations: [...migrations] };
 
     if (snapshot !== null) {
-      const shiftMs = Date.now() - snapshot.takenAt;
+      const shiftMs = wallNow("human-time") - snapshot.takenAt;
       const owedShift: Record<string, number> = {};
       // The record, marked `seeding`, and the entries, in one transaction: a
       // tab closed before `booted()` leaves `seeding`, wiped next open.
@@ -511,7 +512,8 @@ async function openInMemory(
           spec.migrations,
           spec.start.snapshot,
         );
-  const shiftMs = snapshot === null ? 0 : Date.now() - snapshot.takenAt;
+  const shiftMs =
+    snapshot === null ? 0 : wallNow("human-time") - snapshot.takenAt;
   const stores = new Map<string, HostStore<unknown>>();
   const resources: HostStorageResource[] = [];
   const close = async (): Promise<void> => {

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import {
   MAX_SLOW_OP_MARKERS,
@@ -13,7 +14,7 @@ export async function readSlowOpMarkers(
   worktree: string,
   windowMs: number,
 ): Promise<SlowOpMarker[]> {
-  const cutoff = Date.now() - windowMs;
+  const cutoff = wallNow("lookback") - windowMs;
   const markers = await readChannelJson(
     worktree,
     "slow-op-markers",

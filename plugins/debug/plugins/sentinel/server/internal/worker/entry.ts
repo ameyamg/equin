@@ -2,6 +2,7 @@
 // its argv. Modules below resolve paths from it as they load. See
 // `./declare-namespace`.
 import "./declare-namespace";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   clearDuress,
   readDuress,
@@ -64,6 +65,8 @@ declare var self: Worker;
 /** Extra info: episode identity + cause, held for lines/refresh/max-hold. */
 interface Episode {
   setAt: number;
+  /** `performance.now()` the hold is counted from: the max-hold bound is on awake time. */
+  heldFromPerf: number;
   reason: string;
   // The elevated signal names at trip — carried to the clear frame as the
   // duress-episode report's cause-signature (its fingerprint axis). An adopted
@@ -276,7 +279,12 @@ async function applyDetector(
     // written rather than re-deriving, so lines and shed first-N keys can
     // never disagree.
     const { setAt } = await setDuress(reason);
-    episode = { setAt, reason, elevated: event.elevated };
+    episode = {
+      setAt,
+      heldFromPerf: performance.now(),
+      reason,
+      elevated: event.elevated,
+    };
     await writeEpisodeLine("trip", reason, setAt);
     emit({
       type: "trip",
@@ -294,7 +302,7 @@ async function applyDetector(
   }
 
   if (detector.tripped && episode) {
-    if (Date.now() - episode.setAt > maxEpisodeHoldMs) {
+    if (performance.now() - episode.heldFromPerf > maxEpisodeHoldMs) {
       // Safety bound: a mis-calibrated threshold must not latch the fleet
       // indefinitely. Force-clear and re-evaluate from scratch — if the
       // elevation is real the fresh detector re-trips after onTicks (which
@@ -352,7 +360,15 @@ async function handleInit(
   const latch = reading?.latch ?? null;
   if (latch && reading?.fresh) {
     detector = createOnsetDetector({ tripped: true });
-    episode = { setAt: latch.setAt, reason: latch.reason, elevated: [] };
+    episode = {
+      setAt: latch.setAt,
+      // Its age before this worker cannot be told awake; counted on the wall
+      // (errs toward the force-clear), then awake from here.
+      heldFromPerf:
+        performance.now() - Math.max(0, wallNow("external") - latch.setAt),
+      reason: latch.reason,
+      elevated: [],
+    };
     log(
       `adopted existing duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
     );

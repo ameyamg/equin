@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   gatewayOriginFor,
   servedGatewayPort,
@@ -114,7 +115,7 @@ async function countBuilds(log: Logger): Promise<number | null> {
 export async function readBackendP99Rollup(): Promise<Record<string, number>> {
   const rollup: Record<string, number> = {};
   const names = await listWorktreeDirsAsync();
-  const now = Date.now();
+  const now = wallNow("expiry");
   for (const name of names) {
     const file = joinAppPath(worktreesDir(), name, "logs", "health.jsonl");
     try {
@@ -177,7 +178,7 @@ export async function readHostCompressor(
   }
   const sample = HostSampleSchema.safeParse(parsed);
   if (!sample.success) return NULL_HOST_READING;
-  if (Date.now() - sample.data.sampledAt > HOST_SAMPLE_FRESH_MS) {
+  if (wallNow("expiry") - sample.data.sampledAt > HOST_SAMPLE_FRESH_MS) {
     return NULL_HOST_READING;
   }
   // A wallJumpMs-stamped tick spans a machine suspend — "no measurement this

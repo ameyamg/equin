@@ -1,5 +1,6 @@
 import { dlopen, ptr } from "bun:ffi";
 import {
+  clockStamp,
   stampBefore,
   type ClockStamp,
   type SleepStamp,
@@ -174,7 +175,7 @@ function sleepStampNow(): SleepStamp | null {
  * it later ages (`awakeBetween(start, clockStampNow())`).
  */
 export function clockStampNow(): ClockStamp {
-  return { wallMs: Date.now(), sleep: sleepStampNow() };
+  return clockStamp(Date.now(), sleepStampNow());
 }
 
 /**

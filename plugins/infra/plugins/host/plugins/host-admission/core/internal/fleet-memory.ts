@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   awakeBetween,
+  clockStamp,
   type ClockStamp,
   type SleepStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
@@ -310,7 +311,7 @@ export function fleetAdmission(
   // Aged by AWAKE time (FLEET_MEMORY_LEASE_MS): where the sleep cannot be
   // told, the wall clock judges alone — never in the reading's favour.
   const ageMs = awakeBetween(
-    { wallMs: reading.sampledAt, sleep: reading.sleep },
+    clockStamp(reading.sampledAt, reading.sleep),
     now,
   ).awakeMs;
   if (ageMs > FLEET_MEMORY_LEASE_MS)

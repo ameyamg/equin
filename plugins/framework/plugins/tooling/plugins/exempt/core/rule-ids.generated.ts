@@ -48,6 +48,7 @@ export type ExemptableRuleId =
   | "database/no-pure-write-transaction"
   | "db-client-tools/no-path-pg-client"
   | "db-connection/no-raw-pg-connection"
+  | "deadline/no-unstated-wall-age"
   | "deadline/no-wall-clock-deadline"
   | "detached-work-safety/no-raw-set-interval"
   | "detached-work-safety/no-untracked-detached-work"

@@ -10,6 +10,7 @@
 
 import {
   awakeBetween,
+  clockStamp,
   isSleepStamp,
   type ClockStamp,
   type SleepStamp,
@@ -256,7 +257,7 @@ export function heldPastSwitch(
   now: ClockStamp,
 ): HeldPastSwitch {
   const span = awakeBetween(
-    { wallMs: Date.parse(stamp.at), sleep: stamp.asleep },
+    clockStamp(Date.parse(stamp.at), stamp.asleep),
     now,
   );
   return {

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   gatewayOriginFor,
   servedGatewayPort,
@@ -67,7 +68,7 @@ async function tick(): Promise<void> {
   if (ticking) return;
   ticking = true;
   try {
-    const startedMs = Date.now();
+    const startedMs = wallNow("sleep-detection");
     const fleet = await readFleet();
     if (!fleet.ok) {
       // The gateway restarting or down: nothing observed this tick, which the
@@ -79,7 +80,7 @@ async function tick(): Promise<void> {
       return;
     }
     const observations = await observeFleet(fleet.fleet);
-    const atMs = Date.now();
+    const atMs = wallNow("sleep-detection");
     const reports = detector.step({
       atMs,
       suspended: atMs - startedMs > SUSPENDED_TICK_MS,

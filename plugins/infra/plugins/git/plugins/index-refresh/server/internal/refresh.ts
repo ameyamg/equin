@@ -16,6 +16,7 @@ import {
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { countRacyEntries } from "../../core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * The tier a checkout's heavy children run at — never `inherit`: whoever waits
@@ -173,7 +174,7 @@ export async function refreshIndexIfRacy(wtPath: string): Promise<IndexTrust> {
   const mtimeSec = Math.floor(mtimeMs / 1000);
   const { entries, racy } = countRacyEntries(bytes, mtimeSec);
   if (racy === 0) return { kind: "trusted", entries };
-  const nextSecondMs = (mtimeSec + 1) * 1000 - Date.now();
+  const nextSecondMs = (mtimeSec + 1) * 1000 - wallNow("external");
   if (nextSecondMs > 0) await Bun.sleep(nextSecondMs + 5);
   return {
     kind: "refreshed",

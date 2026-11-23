@@ -281,7 +281,7 @@ export async function createFileWatcher(
   let pending: parcel.Event[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
-  let lastFlushAt = 0;
+  let lastFlushAt = -Infinity;
   // One reaction at a time; batches landing mid-run fold into one trailing
   // call. The `bg` span covers the reaction's awaited work, not only its
   // synchronous body. In the root context: a reaction is an entry of its
@@ -309,7 +309,7 @@ export async function createFileWatcher(
         });
 
   function flush(): void {
-    lastFlushAt = Date.now();
+    lastFlushAt = performance.now();
     if (ceilingTimer) {
       clearTimeout(ceilingTimer);
       ceilingTimer = null;
@@ -325,7 +325,7 @@ export async function createFileWatcher(
 
   function schedule(): void {
     if (debounceTimer) return;
-    const since = Date.now() - lastFlushAt;
+    const since = performance.now() - lastFlushAt;
     const delay =
       since >= ceilingMs ? debounceMs : Math.min(debounceMs, ceilingMs - since);
     debounceTimer = setTimeout(() => {

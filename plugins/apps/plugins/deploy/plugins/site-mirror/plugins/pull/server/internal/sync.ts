@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
@@ -52,7 +53,7 @@ async function staleOnOpen(
   if (asked) return false;
   return (
     row.lastSyncedAt === null ||
-    Date.now() - row.lastSyncedAt.getTime() > STALE_ON_OPEN_MS
+    wallNow("expiry") - row.lastSyncedAt.getTime() > STALE_ON_OPEN_MS
   );
 }
 

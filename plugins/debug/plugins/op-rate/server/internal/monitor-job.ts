@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { z } from "zod";
 import {
   getRuntimeProfile,
@@ -150,7 +151,7 @@ export const opRateMonitorJob = defineJob({
 
     const { aggregates, gates, sinceMs } = getRuntimeProfile();
     const nowMs = profilerNowMs();
-    const wallNow = Date.now();
+    const atWallMs = wallNow("human-time");
     // The process's start on the profiler clock (performance.now()'s origin).
     const processStartMs = nowMs - performance.now();
     const plan = planTick(lastTick, sinceMs, nowMs, processStartMs);
@@ -235,7 +236,7 @@ export const opRateMonitorJob = defineJob({
     // here; the window joins the history after the reports are filed. ---
     // The window's middle: a window closed on the hour belongs to the hour it
     // covered.
-    const atMs = plan.kind === "window" ? wallNow - plan.windowMs / 2 : 0;
+    const atMs = plan.kind === "window" ? atWallMs - plan.windowMs / 2 : 0;
     if (plan.kind === "window")
       perOp.push(
         ...worstPerOp([

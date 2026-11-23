@@ -11,7 +11,7 @@ import { declaredDep, ensureDep } from "../../deps";
 // barrel (a `web/`-row test driver) can still ask for an install and learn
 // where it landed.
 const run: CliAction<[string], { json?: boolean }> = async (id, opts) => {
-  const started = Date.now();
+  const started = performance.now();
   const say = opts.json
     ? (line: string) => console.error(line)
     : (line: string) => console.log(line);
@@ -25,7 +25,7 @@ const run: CliAction<[string], { json?: boolean }> = async (id, opts) => {
     return;
   }
   say(
-    `${id} ready at ${ready.identity} (${ready.dir}) in ${((Date.now() - started) / 1000).toFixed(1)} s`,
+    `${id} ready at ${ready.identity} (${ready.dir}) in ${((performance.now() - started) / 1000).toFixed(1)} s`,
   );
 };
 

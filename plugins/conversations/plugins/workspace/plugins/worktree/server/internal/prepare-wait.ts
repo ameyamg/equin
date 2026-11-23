@@ -18,6 +18,7 @@ import {
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
   awakeBetween,
+  unstampedInstant,
   type ClockStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
@@ -165,7 +166,7 @@ export async function prepareWorktree(
       await deps.request();
       return { after, at: deps.now() };
     });
-    return { after: made.after, at: made.at ?? { wallMs: 0, sleep: null } };
+    return { after: made.after, at: made.at ?? unstampedInstant(0) };
   };
   let requests = 0;
   let tempfails = 0;

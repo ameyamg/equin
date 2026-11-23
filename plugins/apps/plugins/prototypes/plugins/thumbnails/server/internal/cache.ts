@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   relPath,
   type ReadResult,
@@ -54,7 +55,7 @@ export async function writeThumbnail(
  * unrecoverable. Returns how many files were removed.
  */
 export async function sweepThumbnails(maxAgeMs: number): Promise<number> {
-  const cutoff = Date.now() - maxAgeMs;
+  const cutoff = wallNow("retention") - maxAgeMs;
   const listed = await thumbnailCache.list(relPath());
   // Nothing rendered yet on this host.
   if (listed.kind === "missing") return 0;

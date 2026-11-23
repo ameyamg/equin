@@ -38,6 +38,10 @@ import {
   type OpProfiler,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import type { OutcomeByKind } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import { stampOfWallInstant } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { awakeBetween } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { checkBroadcasts } from "./broadcasts";
 import { reportInterruptedPredecessorSync } from "./build-receipt";
 import { installFatalSignalExit } from "./fatal-signals";
@@ -259,7 +263,7 @@ function admissionFor(kind: OpKind): OpAdmission | null {
  * units per stage), which is why the line says "in flight", not "held by".
  */
 function describeQueueFromOpLog(pool: GrantPool, selfOpId: string): string {
-  const now = Date.now();
+  const now = clockStampNow();
   const holders: string[] = [];
   let queued = 0;
   for (const st of readOpStates().values()) {
@@ -269,7 +273,12 @@ function describeQueueFromOpLog(pool: GrantPool, selfOpId: string): string {
     const who = `${id.kind} ${id.opSlug ?? "?"}`;
     if (st.openWait?.kind === "host-grant") queued++;
     else if (st.grantedAt !== null) {
-      const mins = Math.round((now - Date.parse(st.grantedAt)) / 60_000);
+      // awake: a nap since the grant is not time held.
+      const held = awakeBetween(
+        stampOfWallInstant(Date.parse(st.grantedAt), now),
+        now,
+      );
+      const mins = Math.round(held.awakeMs / 60_000);
       holders.push(`${who} (${mins}m)`);
     }
   }
@@ -652,5 +661,5 @@ export async function withDirectOp<K extends OpKind>(
 
 /** `12s ago` — how long ago an epoch-ms instant was. */
 function ago(epochMs: number): string {
-  return `${Math.max(0, Math.round((Date.now() - epochMs) / 1000))}s ago`;
+  return `${Math.max(0, Math.round((wallNow("human-time") - epochMs) / 1000))}s ago`;
 }

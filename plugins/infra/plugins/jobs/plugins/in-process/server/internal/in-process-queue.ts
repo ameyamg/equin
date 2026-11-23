@@ -31,6 +31,7 @@ import {
   type JobState,
 } from "@plugins/infra/plugins/jobs/core";
 import { databaseRowStore, type RowStore, type StoredRow } from "./row-store";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 /** One queued job: its stored state, plus what only this process knows. */
 interface QueueRow extends StoredRow {
@@ -187,18 +188,18 @@ export function createInProcessQueue(
   // every host's setTimeout), so a far-off due time is reached in hops.
   const MAX_TIMER_MS = 2 ** 31 - 1;
   const timerDelay = (at: Date) =>
-    Math.min(MAX_TIMER_MS, Math.max(0, at.getTime() - Date.now()));
+    Math.min(MAX_TIMER_MS, Math.max(0, at.getTime() - wallNow("schedule")));
 
   function arm(row: QueueRow): void {
     // Only a row still held: one cancelled or finished while a write was in
     // flight must never run.
     if (!started || row.running || row.dead || rows.get(row.id) !== row) return;
-    if (settling > 0 && row.runAt.getTime() > Date.now())
+    if (settling > 0 && row.runAt.getTime() > wallNow("schedule"))
       row.runAt = new Date();
     if (row.timer !== null) clearTimeout(row.timer);
     row.timer = setTimeout(() => {
       row.timer = null;
-      if (row.runAt.getTime() > Date.now()) {
+      if (row.runAt.getTime() > wallNow("schedule")) {
         arm(row);
         return;
       }
@@ -434,7 +435,7 @@ export function createInProcessQueue(
     if (due === null) return;
     const fire = (): void => {
       scheduleTimers.delete(job.name);
-      if (due.getTime() > Date.now()) {
+      if (due.getTime() > wallNow("schedule")) {
         // A hop of a far-off due time (`timerDelay`'s bound): wait again.
         scheduleTimers.set(job.name, setTimeout(fire, timerDelay(due)));
         return;

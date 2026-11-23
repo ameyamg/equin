@@ -1,4 +1,5 @@
 import { utimes } from "node:fs/promises";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   webGraphRecordPath,
@@ -32,7 +33,8 @@ const TOUCH_EVERY_MS = 60 * 60 * 1000;
 const lastTouched = new Map<string, number>();
 
 function noteClientGraph(graph: string): void {
-  const now = Date.now();
+  // Wall: the record's mtime is judged against a wall retention window.
+  const now = wallNow("retention");
   if (now - (lastTouched.get(graph) ?? -Infinity) < TOUCH_EVERY_MS) return;
   lastTouched.set(graph, now);
   const t = new Date(now);

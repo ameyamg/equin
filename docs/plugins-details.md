@@ -23411,6 +23411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound.cappedList`
           - `packages/sleep-clock/stamp.awakeBetween`
           - `packages/sleep-clock/stamp.ClockStamp`
+          - `packages/sleep-clock/stamp.unstampedInstant`
           - `packages/sleep-clock/stamp/schema.ClockStampSchema`
         - Exports (types):
           - `AgentLaunchPhase`
@@ -32401,6 +32402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server/host-storage/stored.storageLockName`
               - `framework/browser-server/host-storage/stored.storagePrefix`
               - `framework/browser-server/host-storage/stored.storesDbName`
+              - `packages/deadline.wallNow`
               - `primitives/dom/web-locks.webLocks`
             - Exports (types):
               - `BlobFree`
@@ -33524,6 +33526,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tag-tree/engine`
       - Exemptions:
         - Exempts itself from:
+          - `deadline/no-unstated-wall-age` — `core/resources.ts` (debt)
           - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
@@ -33884,7 +33887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 99 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 100 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `packages/shared-work` ×9
@@ -33904,6 +33907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/macrotask-yield` ×2
               - `reports/outbox/file` ×2
               - `infra/file-sink.defineFileSink`
+              - `packages/deadline.wallNow`
               - `packages/flock.flockTry`
               - `packages/owned-fd.openOwnedFdSync`
               - `packages/semaphore.createSemaphore`
@@ -34724,7 +34728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isGeneratedArtifactPath`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 40 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 41 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `infra/paths` ×5
               - `framework/cli/cli-name` ×4
               - `framework/tooling/guards/bypass` ×4
@@ -34742,6 +34746,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards/tool-use-id.TOOL_USE_ID_RE`
               - `infra/launcher/env-names.envName`
               - `infra/paths/repo-root.REPO_ROOT`
+              - `packages/deadline.wallNow`
               - `packages/string-hash.hashHex`
             - Exports (types):
               - `AllowVerdict`
@@ -35177,7 +35182,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `source-read-safety/no-text-source-read` — `check/index.ts`, `check/runner-split.scan.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 57 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 58 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/import-map-names` ×6
               - `framework/list-catalog` ×4
@@ -35198,6 +35203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths.worktreesDir`
               - `infra/spawn.spawnCaptured`
               - `packages/coalesce.createCoalescer`
+              - `packages/deadline.wallNow`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `ArtifactBuilder`
@@ -38498,7 +38504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports.ReportRow`
             - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
-            - Uses: 49 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
               - `infra/git/main-slots/boot-lease` ×21
               - `packages/timed-fs` ×6
               - `infra/paths` ×5
@@ -38506,6 +38512,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/flock` ×4
               - `infra/host-fs/user-path` ×3
               - `packages/owned-fd` ×2
+              - `packages/sleep-clock/stamp` ×2
               - `infra/launcher/env-names.readEnv`
               - `infra/paths/repo-root.REPO_ROOT`
               - `infra/spawn.getMainRepoRoot`
@@ -38596,6 +38603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `packages/owned-fd.openOwnedFdSync`
                   - `packages/sleep-clock.clockStampNow`
                   - `packages/sleep-clock/stamp.awakeBetween`
+                  - `packages/sleep-clock/stamp.clockStamp`
                   - `packages/sleep-clock/stamp.ClockStamp`
                   - `packages/sleep-clock/stamp.isSleepStamp`
                   - `packages/sleep-clock/stamp.SleepStamp`
@@ -38904,6 +38912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `packages/sleep-clock/stamp.awakeBetween`
+              - `packages/sleep-clock/stamp.clockStamp`
               - `packages/sleep-clock/stamp.ClockStamp`
               - `packages/sleep-clock/stamp.SleepStamp`
             - Exports (types):
@@ -39200,9 +39209,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/ops`
               - `debug/queue-health`
               - `debug/slow-ops`
+              - `framework/cli/op-runtime`
+              - `framework/cli/push`
+              - `framework/tooling/checks`
               - `infra/jobs`
               - `integrations/github-events`
               - `reports/engine`
+              - `tasks/task-triage`
     - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives; useProfileName() — the name to show for the user (the profile-name setting's name, else the account's), or anonymous when the user turned their name off. Registers that setting. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's. Registers the profile-name setting (the name shown for the user, or none).
       - Web:
         - Contributes:
@@ -42329,6 +42342,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stallWords`
       - Cross-plugin:
         - Imported by: `framework/cli/build`
+      - Exemptions:
+        - Exempts itself from: `deadline/no-unstated-wall-age` — `cli/internal/holder.ts` (debt)
     - **`window`** — The installer window: equin-installer, a small wry/tao Rust app (rust/) that runs install.sh as its child — events on fd 3, decisions on fd 4 — and draws the stream in a page bundled into the binary (standalone-page/). Built locally as the installer-window dependency; `./equin installer window` runs it over this checkout's install.sh.
       - Cli:
         - Uses: `infra/jobs/supervised-job.cliExecContext`
@@ -44211,6 +44226,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/retention`
               - `network/live/live-state-snapshot`
               - `reports/engine`
+          - Exemptions:
+            - Exempts itself from: `deadline/no-unstated-wall-age` — `server/internal/route-span.ts` (debt)
           - Test helpers:
             - Server: `@plugins/network/plugins/live/plugins/change-feed/server/testing`
               - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
@@ -44791,7 +44808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 51 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
               - `network/live/resource-protocol` ×20
               - `network/live/resource-runtime/routing` ×19
               - `packages/semaphore` ×3
@@ -44799,6 +44816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/value-patch` ×2
               - `primitives/networking` ×2
               - `network/live/canonical-params.canonicalParams`
+              - `packages/deadline.wallNow`
               - `packages/floor-compat.promiseWithResolvers`
               - `packages/inflight.createInflight`
             - Exports (types):
@@ -45014,33 +45032,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
           - `shell/document-head`
-    - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
+    - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by:
-          - `apps/browser/engine`
-          - `apps/deploy/box-link/link`
-          - `apps/prototypes/thumbnails`
-          - `conversations`
-          - `conversations/runtime-sdk`
-          - `database`
-          - `database/connection`
-          - `framework/cli/bootstrap`
-          - `framework/tooling/e2e-harness/page-ready`
-          - `infra/claude-cli/sdk`
-          - `infra/jobs`
-          - `infra/mcp/browser`
-          - `infra/safe-fetch/browser-fetch`
-          - `infra/spawn`
-          - `infra/spawn/daemon`
-          - `network/live/live-state-snapshot`
+        - Imported by: 64 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+          - `infra` ×16
+          - `debug` ×12
+          - `framework` ×12
+          - `apps` ×7
+          - `conversations` ×5
+          - `database` ×3
+          - `network` ×2
+          - `tasks` ×2
+          - `auth`
+          - `build`
+          - `installer/waits`
           - `packages/signal-origin`
+          - `shell/notifications`
+      - Exemptions:
+        - Exempted by:
+          - `framework/server-core` (1 debt)
+          - `installer/waits` (1 debt)
+          - `network/live/change-feed` (1 debt)
       - Core:
         - Exports (types):
           - `AwakeClock`
           - `AwakeDeadlineOptions`
+          - `WallClockReason`
         - Exports (values):
           - `armAwakeDeadline`
           - `awakeClock`
+          - `wallNow`
           - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
@@ -45611,6 +45632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `packages/proc-rusage.ProcRusage`
           - `packages/proc-rusage.readProcRusage`
+          - `packages/sleep-clock/stamp.clockStamp`
           - `packages/sleep-clock/stamp.ClockStamp`
           - `packages/sleep-clock/stamp.SleepStamp`
           - `packages/sleep-clock/stamp.stampBefore`
@@ -45639,7 +45661,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/health-monitor`
           - `debug/profiling/op-log`
           - `debug/sentinel/machine-usage`
+          - `framework/cli/op-runtime`
+          - `framework/cli/push`
           - `framework/cli/test`
+          - `framework/tooling/checks`
           - `infra/file-watcher`
           - `infra/git/main-slots`
           - `infra/git/main-slots/boot-lease`
@@ -45649,17 +45674,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
       - Plugins:
-        - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it.
+        - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it. ClockStamp is branded, so an object literal is not one: clockStamp(wallMs, sleep) names two halves read together (a decoded record), unstampedInstant(wallMs) an instant with no sleep reading.
           - Cross-plugin:
             - Imported by:
+              - `conversations`
               - `conversations/launch-timeline`
+              - `conversations/runtime-sdk`
               - `conversations/workspace/worktree`
               - `debug/boot-watchdog`
+              - `framework/cli/op-runtime`
+              - `framework/cli/push`
+              - `framework/tooling/checks`
+              - `infra/git/main-slots`
               - `infra/git/main-slots/boot-lease`
               - `infra/host/host-admission`
               - `infra/host/machine-sleep`
               - `integrations/github-events`
               - `packages/sleep-clock`
+              - `packages/sleep-clock/stamp/schema`
           - Core:
             - Exports (types):
               - `AwakeSpan`
@@ -45667,19 +45699,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SleepStamp`
             - Exports (values):
               - `awakeBetween`
+              - `clockStamp`
               - `isSleepStamp`
               - `sleptBetween`
               - `stampBefore`
+              - `unstampedInstant`
           - Plugins:
             - **`schema`** — zod schemas of a stored ClockStamp and SleepStamp (a JSON column, a log line), so a reader parses both halves of one instant together. Apart from stamp, whose barrel the CLI bootstrap reaches before node_modules exists.
+              - Core:
+                - Uses:
+                  - `packages/sleep-clock/stamp.clockStamp`
+                  - `packages/sleep-clock/stamp.ClockStamp`
+                  - `packages/sleep-clock/stamp.SleepStamp`
+                - Exports (values):
+                  - `ClockStampSchema`
+                  - `SleepStampSchema`
               - Cross-plugin:
                 - Imported by:
                   - `conversations/launch-timeline`
                   - `conversations/runtime-sdk`
-              - Core:
-                - Exports (values):
-                  - `ClockStampSchema`
-                  - `SleepStampSchema`
     - **`smooth-clock`** — Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.
       - Cross-plugin:
         - Imported by:
@@ -66411,7 +66449,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger` "task-triage.conversation-status"
           - `trigger` "task-triage.edited"
           - `trigger` "task-triage.edited"
-        - Uses: 32 symbols — full list in [`plugins/tasks/plugins/task-triage/REFERENCE.md`](../plugins/tasks/plugins/task-triage/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/tasks/plugins/task-triage/REFERENCE.md`](../plugins/tasks/plugins/task-triage/REFERENCE.md)
           - `tasks/tasks-core` ×7
           - `tasks/task-subject` ×4
           - `conversations/workspace` ×3
@@ -66424,6 +66462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/availability.assertClaudeCodeReady`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
+          - `infra/host/machine-sleep.awakeSpanStart`
           - `infra/jobs.defineJob`
           - `infra/mcp.Mcp`
           - `infra/warmup.defineWarmup`

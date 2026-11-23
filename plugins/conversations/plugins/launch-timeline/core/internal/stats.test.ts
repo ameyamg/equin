@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import {
+  clockStamp,
+  type ClockStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { CheckoutStepSchema, LaunchMarksSchema } from "./schemas";
 import { checkoutStepStats, percentiles, segmentStats } from "./stats";
 import type { LaunchSample } from "./stats";
@@ -8,10 +11,10 @@ const T0 = Date.UTC(2026, 10, 18, 12);
 
 /** An instant `ms` after T0, the machine having slept `asleepMs` by then. */
 function at(ms: number, asleepMs: number | null = 0): ClockStamp {
-  return {
-    wallMs: T0 + ms,
-    sleep: asleepMs === null ? null : { boot: "B", asleepMs },
-  };
+  return clockStamp(
+    T0 + ms,
+    asleepMs === null ? null : { boot: "B", asleepMs },
+  );
 }
 
 function launch(
@@ -98,11 +101,11 @@ describe("segmentStats", () => {
 describe("stored shapes", () => {
   test("a bare wall instant from the old writers reads as an untold stamp", () => {
     expect(LaunchMarksSchema.parse({ "spawn-started": T0 })).toEqual({
-      "spawn-started": { wallMs: T0, sleep: null },
+      "spawn-started": clockStamp(T0, null),
     });
     expect(
       CheckoutStepSchema.parse({ step: "install", ms: 5, endAt: T0 }),
-    ).toEqual({ step: "install", ms: 5, end: { wallMs: T0, sleep: null } });
+    ).toEqual({ step: "install", ms: 5, end: clockStamp(T0, null) });
   });
   test("a stamp reads as itself", () => {
     expect(LaunchMarksSchema.parse({ requested: at(3, 9) })).toEqual({

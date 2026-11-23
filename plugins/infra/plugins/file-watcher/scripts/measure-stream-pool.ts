@@ -106,7 +106,7 @@ async function deliveryLag(): Promise<void> {
       debounceMs: 0,
       onDeliveryLag: (s) => void probe[key].push(s.lagMs),
       onChange: (events) => {
-        const now = Date.now();
+        const now = performance.now();
         for (const e of events) {
           const t = written.get(e.path);
           if (t !== undefined) {
@@ -131,7 +131,7 @@ async function deliveryLag(): Promise<void> {
   for (let i = 0; i < rounds; i++) {
     for (const dir of [ownDir, ridingDir]) {
       const file = join(dir, `f${i}`);
-      written.set(file, Date.now());
+      written.set(file, performance.now());
       await writeFile(file, "x");
     }
     await Bun.sleep(1000);

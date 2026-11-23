@@ -2,6 +2,7 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { openSync, watch } from "node:fs";
 import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
@@ -571,7 +572,7 @@ function waitForLatchWake(signal: AbortSignal): Promise<void> {
         statSync(join(dir, LATCH_FILENAME)).mtimeMs +
         FRESHNESS_LEASE_MS +
         LEASE_EPSILON_MS -
-        Date.now();
+        wallNow("fail-open-lease");
     } catch (err) {
       if (!(
         err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT"

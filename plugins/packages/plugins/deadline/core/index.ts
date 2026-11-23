@@ -4,3 +4,5 @@ export type {
   AwakeClock,
   AwakeDeadlineOptions,
 } from "./internal/awake-deadline";
+export { wallNow } from "./internal/wall-now";
+export type { WallClockReason } from "./internal/wall-now";

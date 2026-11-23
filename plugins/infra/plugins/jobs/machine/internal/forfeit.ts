@@ -44,8 +44,8 @@ export interface ForfeitedSlot {
   hold: HoldClass;
   /** Which runner in the ladder this slot belongs to (`floor` / `mid` / `wide`). */
   runnerId: string;
-  /** When the slot was written off (epoch ms) — the zombie instant, not the
-   * dispatch instant. */
+  /** When the slot was written off, on this process's awake clock
+   * (`performance.now()`) — the zombie instant, not the dispatch instant. */
   since: number;
 }
 
@@ -260,7 +260,7 @@ function describe(
   tripsThisWindow: number,
 ): JobSlotFloorReport {
   const spec = RUNNERS.find((r) => r.id === runnerId)!;
-  const now = Date.now();
+  const now = performance.now();
   return {
     action,
     restartSuppressed,
@@ -275,7 +275,7 @@ function describe(
         jobId: e.jobId,
         jobName: e.jobName,
         hold: e.hold,
-        heldMs: now - e.since,
+        heldMs: Math.round(now - e.since),
       })),
     tripsThisWindow,
     maxTripsPerWindow: MAX_TRIPS_PER_WINDOW,

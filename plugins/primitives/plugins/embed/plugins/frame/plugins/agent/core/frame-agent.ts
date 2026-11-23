@@ -288,9 +288,9 @@ export function installFrameAgent(
     );
   }
 
-  let lastActivity = 0;
+  let lastActivity = -Infinity;
   function onActivity(): void {
-    const now = Date.now();
+    const now = performance.now();
     if (now - lastActivity < ACTIVITY_EVERY_MS) return;
     lastActivity = now;
     post({ event: "activity" });

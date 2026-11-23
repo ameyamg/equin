@@ -36,6 +36,7 @@ import {
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   WAIT_KINDS,
@@ -187,7 +188,8 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
   // Capture (kind, opId, pid) now. Everything after this decides about THESE
   // runs: an op started after arming is not the one the caller meant, and
   // without the frozen ids a wait would silently start reporting on it too.
-  const startedAt = Date.now();
+  // Wall: the budget is there to beat the caller's Bash timeout, which counts sleep.
+  const startedAt = wallNow("external");
   let awaited: AwaitedOp[] = [];
   const armOnce = async (): Promise<boolean> => {
     const live = (await listWorktreeOps(slug)).filter((o) => matches(o.op));
@@ -206,7 +208,7 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
     // Nothing live. Either it already finished (the fast-op race) or it has not
     // started yet (the slow-start race). Answer the first from the log; wait out
     // the second.
-    const now = Date.now();
+    const now = wallNow("lookback");
     const recent = readOpRecords()
       .flatMap((r) =>
         r.opSlug === slug &&
@@ -279,7 +281,8 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
   // Arming spent part of the budget. `watchUntil` reads 0 as "no limit", so a
   // budget already exhausted must skip the wait rather than be handed a 0 that
   // would mean forever — the one way this command could hang.
-  const remaining = maxWaitMs === 0 ? 0 : maxWaitMs - (Date.now() - startedAt);
+  const remaining =
+    maxWaitMs === 0 ? 0 : maxWaitMs - (wallNow("external") - startedAt);
   const budgetLeft = maxWaitMs === 0 || remaining > 0;
   // Read once up front whatever happens next, so a wait that never gets to run
   // still reports the truth (`still running`) instead of an empty `states`,
@@ -298,7 +301,7 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
   const code = exitCodeFor(states);
   if (code === AWAIT_EXIT.stillRunning)
     console.log(
-      `\nStill running after ${Math.round((Date.now() - startedAt) / 1000)}s. ` +
+      `\nStill running after ${Math.round((wallNow("external") - startedAt) / 1000)}s. ` +
         `This is not a failure — run \`./equin await ${awaited.map((a) => a.op).join(" ")}\` again.`,
     );
   process.exit(code);

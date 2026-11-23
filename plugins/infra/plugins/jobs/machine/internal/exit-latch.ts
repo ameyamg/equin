@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { jobsStateDir } from "../../data-dirs";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // The anti-loop latch, shared by every deliberate exit of the worker pool: the
 // slot floor (`forfeit.ts`) and a dead runner (`runner-watch.ts`). An automatic
@@ -42,7 +43,7 @@ export function recordTrip(): Promise<number> {
 }
 
 async function recordTripNow(): Promise<number> {
-  const now = Date.now();
+  const now = wallNow("lookback");
   let trips: number[] = [];
   try {
     const raw = await readFile(latchFile(), "utf8");

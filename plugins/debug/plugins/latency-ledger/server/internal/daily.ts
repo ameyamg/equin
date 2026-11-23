@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db, writeAtomically } from "@plugins/database/server";
@@ -174,7 +175,9 @@ async function rolledDaysSince(sinceDay: string): Promise<Set<string>> {
 }
 
 /** Every closed, still-rollable day without its host-day row, oldest first. */
-export async function rollClosedDays(now = Date.now()): Promise<number> {
+export async function rollClosedDays(
+  now = wallNow("human-time"),
+): Promise<number> {
   const lastClosed = dayOf(now - ROLL_AFTER_CLOSE_MS - DAY_MS);
   const first = dayOf(now - ROLLABLE_DAYS * DAY_MS);
   if (first > lastClosed) return 0;
@@ -250,7 +253,7 @@ function statsOf(rows: readonly DayRow[]): DailyLatency["metrics"][number] {
  */
 export async function loadDailyLatency(
   sinceDay: string,
-  now = Date.now(),
+  now = wallNow("human-time"),
 ): Promise<DailyLatency> {
   const tomorrow = dayOf(now + DAY_MS);
   // Roll any closed day the hourly job has not reached yet (a fresh install

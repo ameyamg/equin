@@ -536,6 +536,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
 - Core:
   - Uses:
     - `packages/sleep-clock/stamp.awakeBetween`
+    - `packages/sleep-clock/stamp.clockStamp`
     - `packages/sleep-clock/stamp.ClockStamp`
     - `packages/sleep-clock/stamp.SleepStamp`
   - Exports (types):

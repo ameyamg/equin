@@ -169,6 +169,7 @@ like the marks.
     - `packages/list-bound.cappedList`
     - `packages/sleep-clock/stamp.awakeBetween`
     - `packages/sleep-clock/stamp.ClockStamp`
+    - `packages/sleep-clock/stamp.unstampedInstant`
     - `packages/sleep-clock/stamp/schema.ClockStampSchema`
   - Exports (types):
     - `AgentLaunchPhase`

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, desc, eq, gt, isNull, notExists, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -359,7 +360,10 @@ export async function unrungRecentAutoBuilds(): Promise<BuildRunId[]> {
       and(
         eq(_buildRuns.namespace, runtimeNamespace()),
         eq(_buildRuns.trigger, "auto"),
-        gt(_buildRuns.finishedAt, new Date(Date.now() - BOOT_BELL_LOOKBACK_MS)),
+        gt(
+          _buildRuns.finishedAt,
+          new Date(wallNow("lookback") - BOOT_BELL_LOOKBACK_MS),
+        ),
         notExists(
           db
             .select({ one: sql`1` })

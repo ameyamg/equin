@@ -1,6 +1,7 @@
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { GatewayDrift } from "../../core";
 import { checkGatewayDrift } from "./check";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * How long an answer is reused by a fresh read. A main push re-checks at once
@@ -22,7 +23,7 @@ const changedListeners = new Set<() => void>();
 
 /** The last answer when fresh enough, else a new check. */
 export function currentGatewayDrift(): Promise<GatewayDrift> {
-  if (last !== null && Date.now() - last.at < MAX_AGE_MS)
+  if (last !== null && wallNow("expiry") - last.at < MAX_AGE_MS)
     return Promise.resolve(last.drift);
   return recheckGatewayDrift();
 }

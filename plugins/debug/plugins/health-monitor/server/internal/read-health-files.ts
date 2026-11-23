@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import type { z } from "zod";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
@@ -43,7 +44,7 @@ export async function readHealthSeries(windowMs: number): Promise<{
   hostSamples: HostSample[];
   ownerSamples: Omit<OwnerSample, "top">[];
 }> {
-  const cutoff = Date.now() - windowMs;
+  const cutoff = wallNow("lookback") - windowMs;
 
   const series: HealthSeries[] = [];
   for (const name of await listWorktreeDirsAsync()) {

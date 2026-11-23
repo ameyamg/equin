@@ -6,6 +6,7 @@ import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/cor
 import { CRON_RESOLUTION_MS } from "../../core/cron";
 import type { QueueDueByTask } from "./introspection";
 import { onQueueActivity } from "./slot-ledger";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // The queue wake: what tells graphile's idle workers a row is there to fetch,
 // in place of graphile's poll.
@@ -187,14 +188,14 @@ export function createQueueWake(opts: {
 
   function scheduleCheck(): void {
     if (armedFor === null) return;
-    const remaining = Math.max(0, armedFor - Date.now());
+    const remaining = Math.max(0, armedFor - wallNow("schedule"));
     timer = setTimeout(onTimer, Math.min(remaining, CLOCK_RECHECK_MS));
   }
 
   function onTimer(): void {
     timer = null;
     if (armedFor === null || stopped) return;
-    if (Date.now() < armedFor) {
+    if (wallNow("schedule") < armedFor) {
       scheduleCheck();
       return;
     }

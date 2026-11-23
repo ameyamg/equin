@@ -9,9 +9,10 @@ import {
   type UnservedStamp,
   unservedStamp,
 } from "./layout";
-import type {
-  ClockStamp,
-  SleepStamp,
+import {
+  clockStamp,
+  type ClockStamp,
+  type SleepStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 const SWITCH = new Date("2026-11-20T05:18:53Z");
@@ -29,10 +30,8 @@ const holder: SlotHolder = {
 };
 // report-1794976612-es42jy's last occurrence: 7 384 s on the wall clock.
 const RELEASE = new Date(SWITCH.getTime() + 7_384_000);
-const at = (wall: Date, sleep: SleepStamp | null): ClockStamp => ({
-  wallMs: wall.getTime(),
-  sleep,
-});
+const at = (wall: Date, sleep: SleepStamp | null): ClockStamp =>
+  clockStamp(wall.getTime(), sleep);
 
 describe("heldPastSwitch", () => {
   test("takes the machine's sleep inside the span out of it", () => {

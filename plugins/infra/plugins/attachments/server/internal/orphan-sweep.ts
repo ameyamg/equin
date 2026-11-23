@@ -6,6 +6,7 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { AttachmentBlobs } from "./blobs";
 import { _attachmentHolds, _attachments } from "./tables";
 import { getRegisteredLinks } from "./define-link";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 const TTL_MS = 60 * 60 * 1000; // 1 hour orphan age before delete
 const log = Log.channel("attachments");
@@ -28,7 +29,7 @@ export const orphanSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "5 * * * *" }, // hourly, offset 5 min
   async run() {
-    const cutoff = new Date(Date.now() - TTL_MS);
+    const cutoff = new Date(wallNow("retention") - TTL_MS);
     const links = getRegisteredLinks();
     // An attachment is "referenced" if any registered link table has a row
     // pointing at its id, or a live hold keeps it (an unsent draft — see

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type {
   GrantHooks,
@@ -191,7 +192,7 @@ export function createOpProfiler<K extends OpKind>(
   let sleepStamp: OpSleepStamp | null = null;
 
   const steps: OpStep[] = [];
-  const stepStarts = new Map<string, number>();
+  const stepStarts = new Map<string, { wallMs: number; perfMs: number }>();
 
   // `OpStep.startMs` is an offset from `grantedAt` (see core/internal/types.ts).
   // Before `markGranted` there is no reference instant yet, so the step pins to
@@ -279,7 +280,7 @@ export function createOpProfiler<K extends OpKind>(
       cycle: open.cycle,
       result,
       atMs: open.startWallMs - requestedMs,
-      wallMs: Math.max(0, Date.now() - open.startWallMs),
+      wallMs: Math.max(0, wallNow("human-time") - open.startWallMs),
     };
     waits.push(closed);
     emitAfterRequested({
@@ -366,7 +367,7 @@ export function createOpProfiler<K extends OpKind>(
           reason: null,
           cycle,
           result: "acquired",
-          atMs: Math.max(0, Date.now() - requestedMs - durationMs),
+            atMs: Math.max(0, wallNow("human-time") - requestedMs - durationMs),
           wallMs: durationMs,
         };
         waits.push(closed);
@@ -390,7 +391,8 @@ export function createOpProfiler<K extends OpKind>(
     },
 
     stepStart: (name: string) => {
-      stepStarts.set(name, Date.now());
+      // Wall for the step's place beside `grantedAt`, awake for its length.
+      stepStarts.set(name, { wallMs: Date.now(), perfMs: performance.now() });
     },
 
     stepEnd: (name: string) => {
@@ -399,8 +401,8 @@ export function createOpProfiler<K extends OpKind>(
       stepStarts.delete(name);
       steps.push({
         name,
-        startMs: stepOffset(start),
-        durationMs: Date.now() - start,
+        startMs: stepOffset(start.wallMs),
+        durationMs: Math.round(performance.now() - start.perfMs),
       });
     },
 

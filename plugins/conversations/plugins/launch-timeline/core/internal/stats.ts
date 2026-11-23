@@ -1,5 +1,6 @@
 import {
   awakeBetween,
+  unstampedInstant,
   type ClockStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { LAUNCH_SEGMENTS, type LaunchInstant } from "./phases";
@@ -63,10 +64,7 @@ export function instantOf(
 ): ClockStamp | undefined {
   if (at === "requested")
     return (
-      launch.marks.requested ?? {
-        wallMs: launch.requestedAt.getTime(),
-        sleep: null,
-      }
+      launch.marks.requested ?? unstampedInstant(launch.requestedAt.getTime())
     );
   return launch.marks[at];
 }

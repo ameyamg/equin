@@ -54,7 +54,7 @@ export async function features(
 
   for (const id of ids) {
     console.log(`${id}:`);
-    const started = Date.now();
+    const started = performance.now();
     const result = await ensureBeatFeatures(id, exec, {
       log,
       force: opts.force,
@@ -62,7 +62,7 @@ export async function features(
       settings,
     });
     console.log(
-      `  ${formatSummary(summarizeBeats(result))} — ${((Date.now() - started) / 1000).toFixed(1)} s`,
+      `  ${formatSummary(summarizeBeats(result))} — ${((performance.now() - started) / 1000).toFixed(1)} s`,
     );
     if (clicksDir !== null) {
       const out = join(clicksDir, `${id}-clicks.wav`);

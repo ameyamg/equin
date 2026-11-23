@@ -227,9 +227,9 @@ async function stopByPid(
     // Exited between the liveness check and the signal.
     if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
   }
-  const deadline = Date.now() + ms;
+  const deadline = performance.now() + ms;
   while (pidAlive(pid)) {
-    if (Date.now() > deadline) {
+    if (performance.now() > deadline) {
       throw new Error(
         `${what} is still running ${ms / 1000}s after ${signal}; nothing was moved. Stop it, then rerun.`,
       );

@@ -47,7 +47,7 @@ export function createReportDebounce(): ReportDebounce {
   }
 
   return {
-    admit(key, windowMs, now = Date.now()) {
+    admit(key, windowMs, now = performance.now()) {
       const last = lastEmittedAt.get(key);
       if (last !== undefined && now - last < windowMs) return false;
       sweep(now, windowMs);

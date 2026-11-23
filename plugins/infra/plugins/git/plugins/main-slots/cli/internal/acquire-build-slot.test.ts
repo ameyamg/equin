@@ -44,7 +44,10 @@ import {
   asNamespace,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
-import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import {
+  clockStamp,
+  type ClockStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import {
   heldPastSwitch,
   holdSlotLeaseSync,
@@ -89,10 +92,7 @@ import {
 import { reclaimSlots } from "./reclaim";
 
 /** A wall instant with no sleep reading: judged on the wall clock. */
-const wallAt = (at: Date): ClockStamp => ({
-  wallMs: at.getTime(),
-  sleep: null,
-});
+const wallAt = (at: Date): ClockStamp => clockStamp(at.getTime(), null);
 
 // Each case owns a data root (so its own slot pool) and real git repos.
 
@@ -717,10 +717,7 @@ describe("slow drains", () => {
     await reclaimSlots({
       drainReportAfterMs: 300_000,
       fileDrainSlow: slept.file,
-      now: {
-        wallMs: Date.now(),
-        sleep: { boot: "boot-1", asleepMs: 8_000_000 },
-      },
+      now: clockStamp(Date.now(), { boot: "boot-1", asleepMs: 8_000_000 }),
     });
     expect(slept.filed).toEqual([]);
 
@@ -729,10 +726,7 @@ describe("slow drains", () => {
     await reclaimSlots({
       drainReportAfterMs: 300_000,
       fileDrainSlow: awake.file,
-      now: {
-        wallMs: Date.now(),
-        sleep: { boot: "boot-1", asleepMs: 1_000_000 },
-      },
+      now: clockStamp(Date.now(), { boot: "boot-1", asleepMs: 1_000_000 }),
     });
     expect(
       awake.filed.map((r) => [r.label, r.stillHolding, r.sleptMs]),
@@ -748,10 +742,10 @@ describe("slow drains", () => {
     // asleep through that wait used to have its sleep read AFTER it and
     // paired with the earlier wall instant — so the sleep went missing from
     // every later span, and a drain was reported late.
-    const switchAt: ClockStamp = {
-      wallMs: Date.now() - 7_200_000,
-      sleep: { boot: "boot-1", asleepMs: 1_000_000 },
-    };
+    const switchAt: ClockStamp = clockStamp(Date.now() - 7_200_000, {
+      boot: "boot-1",
+      asleepMs: 1_000_000,
+    });
     const holder = withSlotPool(() => Bun.sleep(200));
     await Bun.sleep(20);
     await Promise.all([holder, stampUnservedSlots(300_000, switchAt)]);
@@ -763,10 +757,13 @@ describe("slow drains", () => {
     });
     // 7 200 s since, 7 000 s of them asleep: 200 s awake, under the threshold.
     expect(
-      heldPastSwitch(stamp!, {
-        wallMs: switchAt.wallMs + 7_200_000,
-        sleep: { boot: "boot-1", asleepMs: 8_000_000 },
-      }),
+      heldPastSwitch(
+        stamp!,
+        clockStamp(switchAt.wallMs + 7_200_000, {
+          boot: "boot-1",
+          asleepMs: 8_000_000,
+        }),
+      ),
     ).toEqual({
       heldPastSwitchMs: 7_200_000,
       sleptMs: 7_000_000,

@@ -410,7 +410,7 @@ async function waitReminding<T>(
   everyMs: number,
   remind: (waitingMs: number) => Promise<void>,
 ): Promise<T> {
-  const start = Date.now();
+  const start = performance.now();
   const settled = wait.then((value) => ({ value }));
   for (;;) {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -424,7 +424,7 @@ async function waitReminding<T>(
       clearTimeout(timer);
     }
     if (won !== null) return won.value;
-    await remind(Date.now() - start);
+    await remind(performance.now() - start);
   }
 }
 

@@ -10,7 +10,7 @@ const THRESHOLD = 20;
 const windows = new Map<string, { start: number; count: number }>();
 
 export function bumpWindowAndCheck(fingerprint: string): boolean {
-  const now = Date.now();
+  const now = performance.now();
   const w = windows.get(fingerprint);
   if (!w || now - w.start > WINDOW_MS) {
     windows.set(fingerprint, { start: now, count: 1 });

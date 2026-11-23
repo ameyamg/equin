@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   readEndpointResponse,
   sendEndpointRequest,
@@ -59,7 +60,7 @@ const PRESETS_DATA_VIEW = "places.presets";
 export async function writePlacesFixture(
   fixture: PlacesFixture,
   host: FixtureHost,
-  now: number = Date.now(),
+  now: number = wallNow("human-time"),
 ): Promise<void> {
   await seedStarterPlaceTags();
   const send = (path: string, init: RequestInit) =>

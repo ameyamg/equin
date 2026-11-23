@@ -54,14 +54,14 @@ async function alignTo(
 ): Promise<AlignmentRecord> {
   const features = await ensureBeatFeatures(videoId, exec, { log, onPhase });
   await onPhase("aligning");
-  const started = Date.now();
+  const started = performance.now();
   const record = alignChords(parseUgTab(tab), features, {
     capo: tab.capo,
     sheetHash: hash,
     settingsKey: settingsKey(features.source.settings),
   });
   log(
-    `${videoId}: score ${record.score.toFixed(3)}, transpose ${record.transpose}, ${record.segments.length} segments, ${Date.now() - started} ms`,
+    `${videoId}: score ${record.score.toFixed(3)}, transpose ${record.transpose}, ${record.segments.length} segments, ${Math.round(performance.now() - started)} ms`,
   );
   return record;
 }

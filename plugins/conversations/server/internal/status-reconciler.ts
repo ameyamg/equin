@@ -1,5 +1,10 @@
 import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
-import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import {
+  sleptDuring,
+  stampOfWallInstant,
+} from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { awakeBetween } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { dirname } from "node:path";
 import { z } from "zod";
 import {
@@ -495,7 +500,7 @@ async function stopAgentsOfClosed(
   const strays = [...live.next.keys()].filter((id) => !active.has(id));
   if (strays.length === 0) return;
   const launching = inlineLaunchesInFlightOf(strays, mark);
-  const now = Date.now();
+  const now = clockStampNow();
   for (const id of strays) {
     if (launching.has(id)) continue;
     const row = await getConversation(id);
@@ -503,8 +508,13 @@ async function stopAgentsOfClosed(
     if (!isOwnConversation(row, live.forkedAt)) continue;
     // A row closed before `statusSince` was recorded: long ago.
     const closedAt = row.statusSince ?? row.endedAt;
-    const closedForMs = closedAt === null ? null : now - closedAt.getTime();
-    if (closedForMs !== null && closedForMs < CLOSE_STOP_GRACE_MS) continue;
+    // Awake time: a nap inside the grace is not the close failing to stop it.
+    const closedFor =
+      closedAt === null
+        ? null
+        : awakeBetween(stampOfWallInstant(closedAt.getTime(), now), now);
+    if (closedFor !== null && closedFor.awakeMs < CLOSE_STOP_GRACE_MS) continue;
+    const closedForMs = closedFor?.wallMs ?? null;
     await Runtime.get(row.runtime).delete(id);
     await recordReport({
       kind: "crash",

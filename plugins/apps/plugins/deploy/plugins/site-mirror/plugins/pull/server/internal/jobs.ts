@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { z } from "zod";
 import { and, eq, isNull, like } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -203,7 +204,10 @@ async function pullPaced(
     .from(tableMirrorReplicas)
     .where(eq(tableMirrorReplicas.id, replicaId));
   const last = replica?.lastAttemptAt ?? null;
-  if (last !== null && Date.now() - last.getTime() < spec.pace.minIntervalMs) {
+  if (
+    last !== null &&
+    wallNow("schedule") - last.getTime() < spec.pace.minIntervalMs
+  ) {
     return;
   }
   const [deployment] = await db

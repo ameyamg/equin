@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { getParcelWatcher, watcherBackend } from "./engine";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // ─── The file-system journal: what changed under a folder since a cursor ─────
 //
@@ -152,7 +153,7 @@ export async function journalChangesSince(
   cursor: JournalCursor,
   opts: JournalReplayOptions = {},
 ): Promise<JournalReplay> {
-  if (Date.now() - cursor.takenAt > MAX_CURSOR_AGE_MS)
+  if (wallNow("retention") - cursor.takenAt > MAX_CURSOR_AGE_MS)
     return { kind: "unknown", reason: "the cursor is too old to trust" };
   const volume = await journalVolume(cursor.root);
   if (volume.kind === "unsupported")

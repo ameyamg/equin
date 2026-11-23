@@ -57,7 +57,7 @@ export const songIndexLoadJob = defineSupervisedJob({
     log(
       `loading the index: ${target.snapshotName}, ${target.scope}, derivation v${target.derivationVersion}`,
     );
-    const started = Date.now();
+    const started = performance.now();
     await beginIndexLoad(
       target,
       (await exists(snapshotPath())) ? "loading" : "downloading",
@@ -78,7 +78,9 @@ export const songIndexLoadJob = defineSupervisedJob({
       // (`chord_api_documents`) are re-applied here, over the dump's rows, once
       // the top-up exists. Nothing writes them yet.
       await markIndexReady(result);
-      log(`index ready in ${Math.round((Date.now() - started) / 1000)} s`);
+      log(
+        `index ready in ${Math.round((performance.now() - started) / 1000)} s`,
+      );
     } catch (err) {
       await markIndexFailed(err instanceof Error ? err.message : String(err));
       throw err;

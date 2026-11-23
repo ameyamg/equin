@@ -1,3 +1,4 @@
+import { clockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { describe, expect, test } from "bun:test";
 import type { AgentEvent } from "../../core";
 import { EMPTY_PROJECTION, reduceEvents } from "./reducer";
@@ -312,7 +313,7 @@ describe("reduceEvents", () => {
           kind: "launch-phase",
           phase,
           pid: 7,
-          at: { wallMs: e.t, sleep: "sleep" in e ? (e.sleep ?? null) : null },
+          at: clockStamp(e.t, "sleep" in e ? (e.sleep ?? null) : null),
         };
       }),
     );

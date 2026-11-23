@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
@@ -35,7 +36,7 @@ export const hibernateIdleJob = defineJob({
     const cfg = getConfig(hibernationConfig);
     if (!cfg.enabled) return;
 
-    const before = new Date(Date.now() - cfg.idleHours * HOUR_MS);
+    const before = new Date(wallNow("human-time") - cfg.idleHours * HOUR_MS);
     const candidates = await listHibernationCandidates(before);
     for (const { id } of candidates) {
       await deleteConversation(id);

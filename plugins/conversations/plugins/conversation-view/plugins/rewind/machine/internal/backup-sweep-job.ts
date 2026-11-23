@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { unlink } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
@@ -25,7 +26,8 @@ export const rewindBackupSweepJob = defineJob({
   schedule: { cron: "30 4 * * *" }, // daily at 04:30 UTC
   async run() {
     const dir = await rewindBackupsDir.ensure();
-    const cutoff = Date.now() - REWIND_BACKUP_TTL_DAYS * 24 * 60 * 60 * 1000;
+    const cutoff =
+      wallNow("retention") - REWIND_BACKUP_TTL_DAYS * 24 * 60 * 60 * 1000;
     let removed = 0;
     for (const name of await readdir(dir)) {
       const path = join(dir, name);

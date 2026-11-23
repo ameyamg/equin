@@ -177,6 +177,7 @@ serveBrowserHost({
     - `framework/browser-server/host-storage/stored.storageLockName`
     - `framework/browser-server/host-storage/stored.storagePrefix`
     - `framework/browser-server/host-storage/stored.storesDbName`
+    - `packages/deadline.wallNow`
     - `primitives/dom/web-locks.webLocks`
   - Exports (types):
     - `BlobFree`

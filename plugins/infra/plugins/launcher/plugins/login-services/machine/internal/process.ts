@@ -44,8 +44,8 @@ export async function awaitProcessGone(
   pid: number,
   budgetMs: number = SERVICE_STOP_WAIT_MS,
 ): Promise<void> {
-  const deadline = Date.now() + budgetMs;
-  while (processExists(pid) && Date.now() < deadline) {
+  const deadline = performance.now() + budgetMs;
+  while (processExists(pid) && performance.now() < deadline) {
     await Bun.sleep(100);
   }
   if (processExists(pid)) {
@@ -64,8 +64,8 @@ export async function awaitProcessGone(
  */
 export async function terminateProcess(pid: number): Promise<void> {
   if (!signal(pid, "SIGTERM")) return;
-  const killAt = Date.now() + SERVICE_STOP_TIMEOUT_S * 1000;
-  while (processExists(pid) && Date.now() < killAt) {
+  const killAt = performance.now() + SERVICE_STOP_TIMEOUT_S * 1000;
+  while (processExists(pid) && performance.now() < killAt) {
     await Bun.sleep(100);
   }
   if (processExists(pid)) signal(pid, "SIGKILL");

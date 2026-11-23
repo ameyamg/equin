@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { readOpRecords } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import type { OpRecord } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import type { GrantHooks } from "@plugins/infra/plugins/host/plugins/host-admission/core";
@@ -194,7 +195,7 @@ function ago(ms: number): string {
 export function stallWords(
   record: OpRecord,
   quietSince: number,
-  now: number = Date.now(),
+  now: number = wallNow("human-time"),
 ): { title: string; text: string; evidence: string[] } {
   const started = ago(now - Date.parse(record.grantedAt));
   return {

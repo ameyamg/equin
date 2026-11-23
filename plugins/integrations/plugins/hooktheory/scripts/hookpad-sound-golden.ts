@@ -456,7 +456,7 @@ function compareSection(id: string, entry: z.infer<typeof RawEntrySchema>) {
 
 // ─── stream the raw file ─────────────────────────────────────────────────────
 
-const t0 = Date.now();
+const t0 = performance.now();
 const parser = new JSONParser({ paths: ["$.*"], keepStack: false });
 parser.onValue = ({ key, value }) => {
   if (typeof key !== "string")
@@ -466,7 +466,7 @@ parser.onValue = ({ key, value }) => {
   compareSection(key, RawEntrySchema.parse(value));
   if (counts.rawEntries % 5000 === 0) {
     console.log(
-      `… ${counts.rawEntries} sections, ${Math.round((Date.now() - t0) / 1000)} s`,
+      `… ${counts.rawEntries} sections, ${Math.round((performance.now() - t0) / 1000)} s`,
     );
   }
 };
@@ -480,7 +480,9 @@ for (const id of processedIds) {
 // ─── report ──────────────────────────────────────────────────────────────────
 
 const pct = (n: number, d: number) => `${((100 * n) / d).toFixed(4)} %`;
-console.log(`\n# Golden run (${Math.round((Date.now() - t0) / 1000)} s)`);
+console.log(
+  `\n# Golden run (${Math.round((performance.now() - t0) / 1000)} s)`,
+);
 console.log(
   `raw entries ${counts.rawEntries}, without a document ${counts.noDocument}, sections compared ${counts.sections}`,
 );

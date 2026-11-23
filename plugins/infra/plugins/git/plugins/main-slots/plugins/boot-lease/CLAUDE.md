@@ -55,6 +55,7 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `packages/owned-fd.openOwnedFdSync`
     - `packages/sleep-clock.clockStampNow`
     - `packages/sleep-clock/stamp.awakeBetween`
+    - `packages/sleep-clock/stamp.clockStamp`
     - `packages/sleep-clock/stamp.ClockStamp`
     - `packages/sleep-clock/stamp.isSleepStamp`
     - `packages/sleep-clock/stamp.SleepStamp`

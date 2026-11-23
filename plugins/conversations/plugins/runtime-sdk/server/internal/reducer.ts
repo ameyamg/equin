@@ -4,7 +4,10 @@ import {
   type ContextUsage,
 } from "@plugins/conversations/plugins/context-usage/core";
 import type { AgentLaunchPhase } from "@plugins/conversations/plugins/launch-timeline/core";
-import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import {
+  clockStamp,
+  type ClockStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import type { AgentEvent, AgentLifecycle, OpenRequest } from "../../core";
 
 // Event lines → the conversation's projection, plus the side effects the
@@ -266,7 +269,7 @@ export function reduceEvents(
       case "agent": {
         const p = e.payload;
         // The line's instant on both clocks, as the agent read them together.
-        const stamp: ClockStamp = { wallMs: e.t, sleep: e.sleep ?? null };
+        const stamp = clockStamp(e.t, e.sleep ?? null);
         switch (p.event) {
           case "started":
             // A turn typed into an earlier process and never started died

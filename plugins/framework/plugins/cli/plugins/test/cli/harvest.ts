@@ -24,6 +24,7 @@ import {
   type TestRunRecord,
 } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
 import { testRunRecordsDir } from "../data-dirs";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // A wedge-breaker for one metadata read, not a latency budget.
 const GIT_TIMEOUT_MS = 30_000;
@@ -176,7 +177,7 @@ export async function finishHarvest(opts: {
 
 /** Drop records past their retention: writing a new one is what prunes old ones. */
 function pruneRecords(dir: string): void {
-  const cutoff = Date.now() - TEST_RUN_RECORD_RETENTION_DAYS * DAY_MS;
+  const cutoff = wallNow("retention") - TEST_RUN_RECORD_RETENTION_DAYS * DAY_MS;
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
     if (statSync(path).mtimeMs < cutoff) rmSync(path, { force: true });

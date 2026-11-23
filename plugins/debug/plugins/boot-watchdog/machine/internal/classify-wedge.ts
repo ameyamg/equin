@@ -2,6 +2,7 @@ import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
 import type { BootWedgeState } from "../../core";
 import {
   awakeBetween,
+  clockStamp,
   type SleepStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
@@ -69,8 +70,8 @@ export function classifyNeverReady(
   const endMs = ev.supersededAtMs ?? now;
   const endSleep = ev.supersededAtMs === null ? nowSleep : ev.supersededSleep;
   const span = awakeBetween(
-    { wallMs: ev.processStartedAt, sleep: ev.startSleep },
-    { wallMs: endMs, sleep: endSleep },
+    clockStamp(ev.processStartedAt, ev.startSleep),
+    clockStamp(endMs, endSleep),
   );
   const sleptMs =
     span.sleptMs ?? Math.max(0, sleptDuring(ev.processStartedAt, endMs));

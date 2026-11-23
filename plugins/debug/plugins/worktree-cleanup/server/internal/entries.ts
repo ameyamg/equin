@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   getAttempt,
   getTask,
@@ -69,7 +70,7 @@ async function buildEntry(
     dbPresent,
     isDirty,
     taskDeletable,
-    ageMs: Date.now() - attempt.createdAt.getTime(),
+    ageMs: wallNow("retention") - attempt.createdAt.getTime(),
     retained: attempt.retained,
   });
 
@@ -103,7 +104,7 @@ async function buildOrphanEntry(
   dir: WorktreeDir,
   dbSet: Set<string>,
 ): Promise<WorktreeEntry> {
-  const now = Date.now();
+  const now = wallNow("retention");
   const ageMs = await dirAgeMs(dir.path, now);
   const dbPresent = dbSet.has(dir.name);
   const { isDirty, strandedCommit } = await getGitHygiene(dir.path);

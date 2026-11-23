@@ -905,7 +905,7 @@ async function runPinnedRelease(args: {
   });
 
   try {
-    const started = Date.now();
+    const started = performance.now();
     const child = await spawnPassthrough(argv, {
       cwd: checkout.root,
       onSpawn: (proc) => {
@@ -913,15 +913,15 @@ async function runPinnedRelease(args: {
       },
     });
     console.log(
-      `\nPrivate-checkout release exited ${child.exitCode}${child.signalCode ? ` (${child.signalCode})` : ""} after ${Math.round((Date.now() - started) / 1000)} s`,
+      `\nPrivate-checkout release exited ${child.exitCode}${child.signalCode ? ` (${child.signalCode})` : ""} after ${Math.round((performance.now() - started) / 1000)} s`,
     );
     if (signalled !== null) return (signalled as { exitCode: number }).exitCode;
     return child.exitCode;
   } finally {
-    const disposeStarted = Date.now();
+    const disposeStarted = performance.now();
     await checkout.dispose();
     console.log(
-      `Removed private checkout ${checkout.root} (${Math.round((Date.now() - disposeStarted) / 1000)} s)`,
+      `Removed private checkout ${checkout.root} (${Math.round((performance.now() - disposeStarted) / 1000)} s)`,
     );
     for (const [signal, onSignal] of listeners) process.off(signal, onSignal);
   }

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   ceilingMsFor,
   deadlineMsFor,
@@ -521,7 +522,7 @@ async function checkSlotHogs(
     }
   }
 
-  const now = Date.now();
+  const now = wallNow("lookback");
   for (const [jobName, agg] of longestPerJob) {
     const thresholdMs = deadlineMsFor(agg.hold) * slotHogDeadlineFraction;
     // AWAKE hold, like the deadline it is a fraction of: a slot held across a
@@ -587,8 +588,9 @@ async function checkSlotBlocked(floorMs: number): Promise<void> {
   const ioLayers = new Set(
     gates.filter((g) => g.kind === "io").map((g) => g.layer),
   );
-  const now = Date.now();
-  const windowMs = lastJobSampleAtMs === 0 ? 0 : now - lastJobSampleAtMs;
+  const now = performance.now();
+  const windowMs =
+    lastJobSampleAtMs === 0 ? 0 : Math.round(now - lastJobSampleAtMs);
   lastJobSampleAtMs = now;
 
   for (const agg of aggregates.job) {

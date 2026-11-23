@@ -10,6 +10,7 @@ import {
   resolveConfigured,
   RESET_HINT,
 } from "../deps";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 const DAY_MS = 24 * 60 * 60_000;
 /** How far ahead an expiry is reported. */
@@ -20,7 +21,7 @@ function expiryVerdict(
   validTo: Date,
   renew: string,
 ): CheckResult {
-  const days = Math.floor((validTo.getTime() - Date.now()) / DAY_MS);
+  const days = Math.floor((validTo.getTime() - wallNow("external")) / DAY_MS);
   if (days >= EXPIRY_WARNING_DAYS) return { ok: true };
   return {
     ok: false,

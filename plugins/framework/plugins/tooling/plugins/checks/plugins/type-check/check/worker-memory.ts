@@ -17,6 +17,7 @@ import {
 } from "@plugins/infra/plugins/file-sink/core";
 import { PER_UNIT_BYTES } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { formatBytes } from "@plugins/packages/plugins/proc-rusage/core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import type {
   Check,
   CheckResult,
@@ -237,7 +238,7 @@ export const workerWeightCheck: Check = {
     ].join("\n");
   },
   run: async () => {
-    const records = await readWorkerMemory(Date.now() - WINDOW_MS);
+    const records = await readWorkerMemory(wallNow("lookback") - WINDOW_MS);
     return combineVerdicts([
       judgeWorkerWeight(peaksOf(records, heavyTreePeak), {
         peakBytes: TYPE_CHECK_WORKER_PEAK_BYTES,

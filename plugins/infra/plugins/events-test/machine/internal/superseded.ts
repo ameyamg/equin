@@ -13,6 +13,7 @@ import {
 } from "@plugins/infra/plugins/jobs/machine";
 import { fixed, retryUntil } from "@plugins/packages/plugins/retry/core";
 import { fail } from "../../server/internal/queue-probe";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // End-to-end check that a SUPERSEDED row is dropped, not dead-lettered — the
 // incident of 2026-09-12 replayed on purpose (research/
@@ -130,7 +131,7 @@ export async function handleSuperseded(): Promise<Response> {
   // Dead rows are read back from this instant on, so a leftover from an earlier
   // failed run of this endpoint cannot fail this one. A second of slack covers
   // the database clock and this process's clock disagreeing by a little.
-  const startedAt = Date.now() - 1_000;
+  const startedAt = wallNow("lookback") - 1_000;
 
   // Far future so the live worker cannot claim the victim before we forge it —
   // it must be held by our stand-in, not by a real worker.

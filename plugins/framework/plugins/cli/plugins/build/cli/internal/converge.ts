@@ -168,7 +168,7 @@ export async function runConvergence(opts: ConvergeOptions): Promise<number> {
   const log = (line: string): void =>
     console.log(`[converge ${new Date().toISOString()}] ${line}`);
   const namespace = await actAsCheckoutNamespace(root);
-  const lockStartedAt = Date.now();
+  const lockStartedAt = performance.now();
   // Run as an install's build step, the wait for the gateway's own run (a
   // fresh install's first boot converges at once) is reported naming that
   // run's build (installer/waits) — the install reuses its work rather than
@@ -187,7 +187,7 @@ export async function runConvergence(opts: ConvergeOptions): Promise<number> {
     lockWait.end();
     followed = withdrawFollow().followed;
   }
-  const lockWaitMs = Date.now() - lockStartedAt;
+  const lockWaitMs = performance.now() - lockStartedAt;
   if (lockWaitMs >= 1000)
     log(
       `waited ${Math.round(lockWaitMs / 1000)} s for the deploy lock (another convergence run held it)`,
@@ -530,13 +530,13 @@ async function buildInSlot(i: {
   scope: BuildScope;
   log: (line: string) => void;
 }): Promise<number> {
-  const startedAt = Date.now();
+  const startedAt = performance.now();
   return runInBuildSlot(
     i.sha,
     { repoRoot: i.repoRoot, label: i.buildId },
     async ({ slot, created, env }) => {
       i.log(
-        `slot ${slot} at ${i.sha.slice(0, 9)} (${created ? "made" : "reused"}, ${Date.now() - startedAt} ms)`,
+        `slot ${slot} at ${i.sha.slice(0, 9)} (${created ? "made" : "reused"}, ${Math.round(performance.now() - startedAt)} ms)`,
       );
       return runAttached({
         namespace: i.namespace,

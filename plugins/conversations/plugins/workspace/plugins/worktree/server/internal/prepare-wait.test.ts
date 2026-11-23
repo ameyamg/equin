@@ -1,3 +1,4 @@
+import { clockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { describe, expect, test } from "bun:test";
 import { isNonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import type { SupervisedRunRow } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
@@ -134,10 +135,8 @@ function world(opts: {
       if (opts.endsDuringFilesReady) advance();
       return Promise.resolve();
     },
-    now: () => ({
-      wallMs: clock.wallMs,
-      sleep: { boot: "B", asleepMs: clock.asleepMs },
-    }),
+    now: () =>
+      clockStamp(clock.wallMs, { boot: "B", asleepMs: clock.asleepMs }),
   };
 
   const ctx = {

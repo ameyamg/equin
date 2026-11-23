@@ -10,6 +10,14 @@ instant from a later one and the awake time since (a process's own start). A
 stamp's two halves always name one instant: never pair one instant's `wallMs`
 with another's `sleep`.
 
+`ClockStamp` is **branded**, so an object literal is not one: a stamp comes
+from a reading (`clockStampNow()` / `processStartStamp()`), from `stampBefore`,
+from a stored stamp parsed whole (`stamp/schema`'s `ClockStampSchema`), or
+from a constructor named for what it is — `clockStamp(wallMs, sleep)` (two
+halves READ TOGETHER, decoded from a record or a wire line; tests build
+stamps with it too) or `unstampedInstant(wallMs)` (no sleep reading exists:
+judged on the wall clock).
+
 Pure and web-safe (no `bun:ffi`), so a stored stamp is compared anywhere — a
 web-reachable core (host-admission's) included. Reading one is
 `packages/sleep-clock`'s `clockStampNow()` (or `processStartStamp()`).
@@ -22,17 +30,24 @@ awake timer or `sleptDuring`: the table in `packages/sleep-clock/CLAUDE.md`.
 
 ## Plugin reference
 
-- Description: The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it.
+- Description: The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it. ClockStamp is branded, so an object literal is not one: clockStamp(wallMs, sleep) names two halves read together (a decoded record), unstampedInstant(wallMs) an instant with no sleep reading.
 - Cross-plugin:
   - Imported by:
+    - `conversations`
     - `conversations/launch-timeline`
+    - `conversations/runtime-sdk`
     - `conversations/workspace/worktree`
     - `debug/boot-watchdog`
+    - `framework/cli/op-runtime`
+    - `framework/cli/push`
+    - `framework/tooling/checks`
+    - `infra/git/main-slots`
     - `infra/git/main-slots/boot-lease`
     - `infra/host/host-admission`
     - `infra/host/machine-sleep`
     - `integrations/github-events`
     - `packages/sleep-clock`
+    - `packages/sleep-clock/stamp/schema`
 - Core:
   - Exports (types):
     - `AwakeSpan`
@@ -40,9 +55,11 @@ awake timer or `sleptDuring`: the table in `packages/sleep-clock/CLAUDE.md`.
     - `SleepStamp`
   - Exports (values):
     - `awakeBetween`
+    - `clockStamp`
     - `isSleepStamp`
     - `sleptBetween`
     - `stampBefore`
+    - `unstampedInstant`
 - Sub-plugins:
   - **`schema`** — zod schemas of a stored ClockStamp and SleepStamp (a JSON column, a log line), so a reader parses both halves of one instant together. Apart from stamp, whose barrel the CLI bootstrap reaches before…
 

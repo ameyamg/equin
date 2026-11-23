@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
@@ -33,7 +34,7 @@ export const tabMemoryClimbJob = defineJob({
   run: async () => {
     const cfg = getConfig(tabMemoryClimbConfig);
     if (!cfg.enabled) return;
-    const now = Date.now();
+    const now = wallNow("lookback");
     const owners = await readOwnerSamples(now - CLIMB_CURVE_MS);
     const pages = pagesFrom(await readPageLogs(now - CLIMB_CURVE_MS));
     const climbs = detectClimbs(owners, pages, now, {

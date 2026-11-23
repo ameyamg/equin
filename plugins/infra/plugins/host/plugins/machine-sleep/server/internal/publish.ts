@@ -1,6 +1,7 @@
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
 import {
   stampBefore,
+  unstampedInstant,
   type ClockStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import type { SleepNow } from "../../core";
@@ -54,7 +55,7 @@ export function stampOfWallInstant(
   now: ClockStamp,
 ): ClockStamp {
   const slept = sleptDuring(wallMs, now.wallMs);
-  if (slept === null) return { wallMs, sleep: null };
+  if (slept === null) return unstampedInstant(wallMs);
   return stampBefore(now, wallMs, now.wallMs - wallMs - slept);
 }
 

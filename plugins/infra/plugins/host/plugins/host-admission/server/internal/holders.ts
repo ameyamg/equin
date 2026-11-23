@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   type AppPath,
   joinAppPath,
@@ -149,7 +150,10 @@ async function probeHolder(path: AppPath): Promise<CpuHolderMarker | null> {
 async function reapIfStaleTmp(path: AppPath): Promise<void> {
   try {
     const s = await stat(path);
-    if (Date.now() - s.mtimeMs > STALE_TMP_MS) await rm(path, { force: true });
+    // Wall time: a live tmp exists only between one write and its rename, so
+    // an old one is a dead writer's leftover, not a sleeping writer's file.
+    if (wallNow("retention") - s.mtimeMs > STALE_TMP_MS)
+      await rm(path, { force: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }

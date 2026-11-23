@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { db } from "@plugins/database/server";
@@ -138,7 +139,7 @@ export async function seed(
   assertStoryCategoriesRegistered();
   await writePageTree(DEMO_PAGES);
   await settleJobQueue();
-  const now = Date.now();
+  const now = wallNow("human-time");
   const ago = (ms: number) => new Date(now - ms);
   const live = DEMO_STORIES.filter((s) => s.status !== "done");
   const ranks = Rank.nBetween(null, null, live.length);

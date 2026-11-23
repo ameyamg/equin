@@ -400,7 +400,7 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/paths` ×5
     - `framework/cli/cli-name` ×4
     - `framework/tooling/guards/bypass` ×4
@@ -418,6 +418,7 @@ can blind or deafen all of them at once.
     - `framework/tooling/guards/tool-use-id.TOOL_USE_ID_RE`
     - `infra/launcher/env-names.envName`
     - `infra/paths/repo-root.REPO_ROOT`
+    - `packages/deadline.wallNow`
     - `packages/string-hash.hashHex`
   - Exports (types):
     - `AllowVerdict`

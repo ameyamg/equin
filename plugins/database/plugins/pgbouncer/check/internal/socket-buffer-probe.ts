@@ -248,8 +248,9 @@ async function probe(binary: string): Promise<void> {
       // — everything PgBouncer can put in flight is then in the kernel when
       // this loop next reads — or SENT_WAIT_MS passed: the reply did not fit
       // in flight, and the reads below show it.
-      const deadline = Date.now() + SENT_WAIT_MS;
-      while (!existsSync(sentMarker) && Date.now() < deadline) Bun.sleepSync(5);
+      const deadline = performance.now() + SENT_WAIT_MS;
+      while (!existsSync(sentMarker) && performance.now() < deadline)
+        Bun.sleepSync(5);
       Bun.sleepSync(SETTLE_MS);
     });
     const { reads, bytes } = await reply;

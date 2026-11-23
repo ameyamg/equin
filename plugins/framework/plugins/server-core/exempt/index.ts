@@ -2,6 +2,14 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "deadline/no-unstated-wall-age",
+    paths: ["core/resources.ts"],
+    kind: "debt",
+    task: "task-1795393483-05t4rq",
+    reason:
+      "sinceChangeMs ages another process's wall change instant on the wall clock, so a sleep before delivery reads as latency; core/ cannot reach machine-sleep.",
+  },
+  {
     rule: "detached-work-safety/no-raw-set-interval",
     paths: ["bin/serve.ts"],
     kind: "sanctioned",

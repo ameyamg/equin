@@ -47,6 +47,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdirEnv, withRunTmpdir } from "./run-tmpdir";
 import { finishHarvest, startHarvest, type HarvestRunner } from "./harvest";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // No args ⇒ every test in the repo. `plugins/` is the whole of it: both runners
 // are scoped to that tree (vitest's `include` literally starts `plugins/**`).
@@ -335,7 +336,7 @@ function testFlight(
     adopt: ({ outcome, leader }, ctx) => {
       const ago = Math.max(
         0,
-        Math.round((Date.now() - leader.startedAt) / 1000),
+        Math.round((wallNow("human-time") - leader.startedAt) / 1000),
       );
       console.log(
         `Joined in-flight test ${leader.id} (same files, same tree, started ${ago}s ago) — its verdict: ${outcome}.`,

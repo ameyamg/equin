@@ -100,7 +100,7 @@ export async function waitForOwner(
   deps: OwnerWaitDeps,
 ): Promise<void> {
   const { driver, verify, waitMs } = deps;
-  const started = Date.now();
+  const started = performance.now();
   // Sticky: a NOTIFY that lands while the loop is reading (no wait armed)
   // is kept for the next wait, never dropped.
   let notified = false;
@@ -149,7 +149,7 @@ export async function waitForOwner(
       const check = await verify();
       if (check.kind === "ready") {
         dbLog.publish(
-          `[database] the schema is set up for this code, after ${String(Math.round((Date.now() - started) / 1000))} s`,
+          `[database] the schema is set up for this code, after ${String(Math.round((performance.now() - started) / 1000))} s`,
         );
         return;
       }
@@ -180,7 +180,7 @@ export async function waitForOwner(
                 await driver.lastOwnerBoot(),
               ),
         );
-      const remaining = waitMs - (Date.now() - started);
+      const remaining = waitMs - (performance.now() - started);
       if (remaining <= 0) throw new SchemaNotReadyError(check.detail);
       if (notified || settled !== null || watchFailed !== null) continue;
       await withDeadline(

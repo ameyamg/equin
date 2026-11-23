@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { _deadJobs } from "@plugins/infra/plugins/jobs/server";
@@ -86,7 +87,7 @@ const verdictFacts = createVerdictFacts({
   classes: () => queryQueuePulse(),
   dead: () =>
     queryRecentDeadJobs({
-      since: Date.now() - PULSE_DEAD_WINDOW_MS,
+      since: wallNow("lookback") - PULSE_DEAD_WINDOW_MS,
       limit: PULSE_DEAD_LIMIT,
     }),
   onActivity: onQueueActivity,
@@ -100,7 +101,7 @@ function armChangeTimer(sub: Subscription, at: number | null): void {
   clearChangeTimer(sub);
   const notify = sub.notify;
   if (notify === undefined || at === null) return;
-  const delay = Math.min(Math.max(0, at - Date.now()), MAX_TIMEOUT_MS);
+  const delay = Math.min(Math.max(0, at - wallNow("schedule")), MAX_TIMEOUT_MS);
   sub.timer = setTimeout(() => {
     sub.timer = undefined;
     verdictFacts.invalidateAll();

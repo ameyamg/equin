@@ -45,7 +45,10 @@ import {
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
+import {
+  armAwakeDeadline,
+  wallNow,
+} from "@plugins/packages/plugins/deadline/core";
 import { readSleepNow } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import {
   appendOpLogSync,
@@ -222,7 +225,7 @@ function runAsleep(): void {
   }
 
   const marker = markWorktreeOpStart(slug, "build", opId);
-  const now = Date.now();
+  const now = wallNow("human-time");
   const requestedMs = now - asleepMs - 10 * MINUTE;
   const grantedMs = requestedMs + MINUTE;
   const waitAtMs = now - 30_000;
@@ -281,7 +284,7 @@ function runAsleep(): void {
   });
 
   const finish = (outcome: "success" | "failed"): void => {
-    const endMs = Date.now();
+    const endMs = wallNow("human-time");
     const endT = endMs - requestedMs - asleepMs;
     emit(endMs, woke, {
       e: "wait-end",

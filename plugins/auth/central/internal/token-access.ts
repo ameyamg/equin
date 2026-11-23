@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { getProvider, listProviders } from "./registry";
 import { getAccount, patchAccount, type StoredAccount } from "./token-store";
 import { resolveCredentials } from "./credentials";
@@ -73,7 +74,7 @@ async function refreshAccount(
       } catch (err) {
         const status = (err as { status?: number }).status;
         if (status === 400 || status === 401) {
-          const at = Date.now();
+          const at = wallNow("external");
           const hint = descriptor.oauth.diagnoseRefreshFailure?.({
             responseText: (err as { responseText?: string }).responseText ?? "",
             grantAgeMs: at - account.connectedAt,

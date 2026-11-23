@@ -10,6 +10,7 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { AWAIT_EXIT } from "@plugins/framework/plugins/cli/plugins/await/core";
 import type { HandoffOp } from "../core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 const READ_CHUNK_BYTES = 64 * 1024;
 
@@ -103,7 +104,7 @@ export async function runHandedOff(
     // One-shot: the deadline is an instant, not a loop.
     setTimeout(
       () => resolve({ kind: "deadline" }),
-      Math.max(0, deadlineMs - Date.now()),
+      Math.max(0, deadlineMs - wallNow("external")),
     ).unref();
   });
   watcher.close();

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import {
@@ -26,7 +27,7 @@ const MAX_LINES = 1000;
 export async function readDuressEpisodes(
   windowMs: number,
 ): Promise<DuressEpisodeEvent[]> {
-  const cutoff = Date.now() - windowMs;
+  const cutoff = wallNow("lookback") - windowMs;
   // Envelope-unwrap + safeParse-drop via the log-channels primitive (a missing
   // duress-episodes.jsonl — no episode since the channel shipped — is a
   // legitimately-empty history), then keep transitions inside the window.

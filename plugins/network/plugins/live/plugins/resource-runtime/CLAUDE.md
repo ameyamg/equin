@@ -1039,7 +1039,7 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/resource-protocol` ×20
     - `network/live/resource-runtime/routing` ×19
     - `packages/semaphore` ×3
@@ -1047,6 +1047,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `packages/value-patch` ×2
     - `primitives/networking` ×2
     - `network/live/canonical-params.canonicalParams`
+    - `packages/deadline.wallNow`
     - `packages/floor-compat.promiseWithResolvers`
     - `packages/inflight.createInflight`
   - Exports (types):

@@ -71,7 +71,7 @@ export interface ArmDeadlineArgs {
 export function armDeadline(args: ArmDeadlineArgs): () => void {
   const { jobName, jobId, attempt, hold, runnerId, abort } = args;
   const deadlineMs = deadlineMsFor(hold);
-  const startedAt = Date.now();
+  const startedAt = performance.now();
 
   let cancelZombie: (() => void) | null = null;
 
@@ -91,7 +91,7 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
       attempt,
       hold,
       deadlineMs,
-      elapsedMs: Date.now() - startedAt,
+      elapsedMs: Math.round(performance.now() - startedAt),
       runnerId,
     });
 
@@ -111,7 +111,13 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
       // This reclaims NOTHING: no row is touched, no lock released, the handler
       // keeps running. See forfeit.ts — that is the property that keeps the
       // sweeper from ever reclaiming a row whose handler is still live.
-      recordForfeit({ jobId, jobName, hold, runnerId, since: Date.now() });
+      recordForfeit({
+        jobId,
+        jobName,
+        hold,
+        runnerId,
+        since: performance.now(),
+      });
       announce({
         phase: "zombie",
         jobName,
@@ -119,7 +125,7 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
         attempt,
         hold,
         deadlineMs,
-        elapsedMs: Date.now() - startedAt,
+        elapsedMs: Math.round(performance.now() - startedAt),
         runnerId,
       });
       // Last: whether the pool can still do its job with the slots that are
@@ -151,7 +157,7 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
         attempt,
         hold,
         deadlineMs,
-        elapsedMs: Date.now() - startedAt,
+        elapsedMs: Math.round(performance.now() - startedAt),
         runnerId,
       });
     }

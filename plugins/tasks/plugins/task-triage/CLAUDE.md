@@ -118,7 +118,7 @@ risk, a context for the person, at most one one-click question. Design:
     - `trigger` "task-triage.conversation-status"
     - `trigger` "task-triage.edited"
     - `trigger` "task-triage.edited"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×7
     - `tasks/task-subject` ×4
     - `conversations/workspace` ×3
@@ -131,6 +131,7 @@ risk, a context for the person, at most one one-click question. Design:
     - `infra/claude-cli/availability.assertClaudeCodeReady`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
+    - `infra/host/machine-sleep.awakeSpanStart`
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`
     - `infra/warmup.defineWarmup`

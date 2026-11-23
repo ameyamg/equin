@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
-import { stampBefore } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import {
+  clockStamp,
+  stampBefore,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import {
   classifyNeverReady,
   isSettledVerdict,
@@ -230,12 +233,10 @@ describe("classifyNeverReady", () => {
   test("a sleep between the process start and its start line is not awake time", () => {
     const startedAt = 1795350290524;
     const tick = 1795351863860;
-    const atLine = {
-      wallMs: 1795351230219,
-      sleep: { boot: "B", asleepMs: 778912673.5505 },
-    };
+    const atLineSleep = { boot: "B", asleepMs: 778912673.5505 };
+    const atLine = clockStamp(1795351230219, atLineSleep);
     const slept = 628599.3789579868;
-    const nowSleep = { boot: "B", asleepMs: atLine.sleep.asleepMs + slept };
+    const nowSleep = { boot: "B", asleepMs: atLineSleep.asleepMs + slept };
     const judge = (startSleep: BootEvent["startSleep"], budget: number) =>
       classifyNeverReady(
         boot({ processStartedAt: startedAt, startSleep }),

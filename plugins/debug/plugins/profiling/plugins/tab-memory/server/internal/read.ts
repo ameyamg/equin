@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import type { z } from "zod";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
@@ -70,7 +71,7 @@ export function readOwnerSamples(cutoff: number): Promise<OwnerSample[]> {
 }
 
 export async function readTabMemory(): Promise<TabMemoryData> {
-  const readAtMs = Date.now();
+  const readAtMs = wallNow("lookback");
   const cutoff = readAtMs - TAB_MEMORY_WINDOW_MS;
   const logs = await readPageLogs(cutoff);
   const owners = await readOwnerSamples(cutoff);

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
@@ -23,7 +24,7 @@ export const ttlCleanupJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "0 * * * *" }, // hourly
   async run() {
-    const cutoff = new Date(Date.now() - RETENTION_MS);
+    const cutoff = new Date(wallNow("retention") - RETENTION_MS);
     await db.delete(_notifications).where(lt(_notifications.createdAt, cutoff));
   },
 });

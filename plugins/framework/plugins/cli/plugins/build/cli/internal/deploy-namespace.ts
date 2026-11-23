@@ -416,7 +416,7 @@ async function awaitSettled(
   if (firstBoot === "settled") return { kind: "ok", note: null };
   const site = namespaceUrl(name, "", gatewayPortSync());
   const deadline = adaptiveTimeoutMs(60_000, 180_000);
-  const tookOverAt = Date.now();
+  const tookOverAt = performance.now();
   console.log(
     `Backend took over (startedAt ${incarnation}); waiting for its boot to settle... (deadline ${Math.round(deadline / 1000)}s)`,
   );
@@ -461,7 +461,7 @@ async function awaitSettled(
       switch (step.kind) {
         case "settled":
           console.log(
-            `Backend boot settled ${Math.round((Date.now() - tookOverAt) / 1000)}s after it took over.`,
+            `Backend boot settled ${Math.round((performance.now() - tookOverAt) / 1000)}s after it took over.`,
           );
           return { kind: "ok", note: null };
         case "died":

@@ -6,6 +6,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // ─── What this is ─────────────────────────────────────────────────────────────
 //
@@ -146,7 +147,8 @@ export function createCheckpointStore(
       if (!name.endsWith(".tmp")) continue;
       const tmp = join(dir, name);
       try {
-        if (Date.now() - (await stat(tmp)).mtimeMs < STALE_TMP_MS) continue;
+        if (wallNow("retention") - (await stat(tmp)).mtimeMs < STALE_TMP_MS)
+          continue;
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
         continue;

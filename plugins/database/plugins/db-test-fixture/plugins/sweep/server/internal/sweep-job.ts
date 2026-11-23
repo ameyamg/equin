@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import {
@@ -56,7 +57,7 @@ export const testDbSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "23 * * * *" },
   async run() {
-    const now = Date.now();
+    const now = wallNow("retention");
     for (const name of await listDatabases()) {
       const minted = parseTestDbName(name);
       if (minted === null) continue;

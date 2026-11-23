@@ -106,7 +106,7 @@ async function timed(
   samples: Sample[],
   onBody?: (text: string) => void,
 ): Promise<void> {
-  const at = Date.now();
+  const at = performance.now();
   const t0 = performance.now();
   try {
     const res = await run();
@@ -138,13 +138,13 @@ function quantile(sorted: number[], q: number): number {
 
 async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
-  const until = Date.now() + opts.seconds * 1000;
+  const until = performance.now() + opts.seconds * 1000;
   const samples: Sample[] = [];
   const backends = new Map<number, { first: number; last: number }>();
   const sawBackend = (text: string) => {
     const parsed = JSON.parse(text) as { startedAt?: number };
     if (typeof parsed.startedAt !== "number") return;
-    const now = Date.now();
+    const now = performance.now();
     const seen = backends.get(parsed.startedAt);
     if (seen === undefined) {
       backends.set(parsed.startedAt, { first: now, last: now });
@@ -157,14 +157,14 @@ async function main(): Promise<void> {
   const intervalMs = (opts.workers * 1000) / opts.rate;
   const worker = async (i: number) => {
     let n = i;
-    let next = Date.now() + (i * intervalMs) / opts.workers;
-    while (Date.now() < until) {
-      const wait = next - Date.now();
+    let next = performance.now() + (i * intervalMs) / opts.workers;
+    while (performance.now() < until) {
+      const wait = next - performance.now();
       if (wait > 0) await Bun.sleep(wait);
-      if (Date.now() >= until) return;
+      if (performance.now() >= until) return;
       // A request that ran past its slot is followed at once, never by a burst
       // catching up on the slots it covered.
-      next = Math.max(next + intervalMs, Date.now());
+      next = Math.max(next + intervalMs, performance.now());
       switch (n % 3) {
         case 0:
           await timed("page", () => fetch(`${opts.url}/`), samples);
@@ -196,26 +196,26 @@ async function main(): Promise<void> {
   const wsEvents: { closedAt: number; reopenedMs: number | null }[] = [];
   const wsUrl = `${opts.url.replace(/^http/, "ws")}/ws/notifications`;
   const holdSocket = async () => {
-    while (Date.now() < until) {
+    while (performance.now() < until) {
       const closedAt = await new Promise<number>((resolve) => {
         const ws = new WebSocket(wsUrl);
         const timer = setTimeout(
           () => ws.close(),
-          Math.max(0, until - Date.now()),
+          Math.max(0, until - performance.now()),
         );
         ws.addEventListener("close", () => {
           clearTimeout(timer);
-          resolve(Date.now());
+          resolve(performance.now());
         });
       });
-      if (Date.now() >= until) return;
+      if (performance.now() >= until) return;
       const ev = { closedAt, reopenedMs: null as number | null };
       wsEvents.push(ev);
-      const t0 = Date.now();
+      const t0 = performance.now();
       await new Promise<void>((resolve) => {
         const probe = new WebSocket(wsUrl);
         probe.addEventListener("open", () => {
-          ev.reopenedMs = Date.now() - t0;
+          ev.reopenedMs = performance.now() - t0;
           probe.close();
           resolve();
         });
@@ -225,7 +225,7 @@ async function main(): Promise<void> {
     }
   };
 
-  const started = Date.now();
+  const started = performance.now();
   await Promise.all([
     ...Array.from({ length: opts.workers }, (_, i) => worker(i)),
     ...Array.from({ length: opts.websockets }, () => holdSocket()),

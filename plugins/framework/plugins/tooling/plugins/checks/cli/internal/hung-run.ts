@@ -1,5 +1,8 @@
 import { SAMPLE } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { stampOfWallInstant } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { awakeBetween } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
   CHECK_PASS_HUNG_KIND,
@@ -92,6 +95,8 @@ export async function recordHungRun(
   args: HangWatchData & { heldMs: number; silentMs: number },
 ): Promise<{ consoleLine: string }> {
   const nativeStack = await captureNativeStack(args.pid);
+  // awake: `openedAt` is a bare wall instant; a nap since is not run time.
+  const now = clockStampNow();
   const payload = CheckPassHungPayloadSchema.parse({
     worktree: args.worktree,
     runId: args.runId,
@@ -99,7 +104,8 @@ export async function recordHungRun(
     transcript: args.transcript,
     heldMs: args.heldMs,
     silentMs: args.silentMs,
-    elapsedMs: Date.now() - args.openedAt,
+    elapsedMs: awakeBetween(stampOfWallInstant(args.openedAt, now), now)
+      .awakeMs,
     ...inFlight(args.runId),
     nativeStack,
   } satisfies CheckPassHungPayload);

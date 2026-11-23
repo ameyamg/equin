@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { BootLineSchema, type BootEvent } from "./schema";
 import { pairBootLines } from "./pair-boot-lines";
@@ -15,7 +16,7 @@ export async function readBootEvents(
   worktree: string,
   windowMs: number,
 ): Promise<BootEvent[]> {
-  const cutoff = Date.now() - windowMs;
+  const cutoff = wallNow("lookback") - windowMs;
   const lines = await readChannelJson(
     worktree,
     "boot",

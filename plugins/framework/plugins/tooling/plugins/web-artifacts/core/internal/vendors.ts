@@ -324,7 +324,7 @@ async function resolveVendors(
   requests: VendorSpecRequest[],
   opts: { root: AppPath; builderVersion: number; builderSource: string },
 ): Promise<{ resolved: ResolvedVendor[]; stats: VendorResolveStats }> {
-  const startedMs = Date.now();
+  const startedMs = performance.now();
   await cjsInit();
   await esInit();
 
@@ -453,7 +453,7 @@ async function resolveVendors(
     stats: {
       cached: requests.length - misses.length,
       resolved: misses.length,
-      elapsedMs: Date.now() - startedMs,
+      elapsedMs: Math.round(performance.now() - startedMs),
     },
   };
 }

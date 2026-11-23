@@ -1,5 +1,8 @@
 import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
-import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import {
+  unstampedInstant,
+  type ClockStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { mkdir, rename, unlink, utimes, writeFile } from "node:fs/promises";
 import {
   joinAppPath,
@@ -490,7 +493,7 @@ async function reapRecord(
       // Judged up to when it was last seen alive — a past instant whose sleep
       // reading nobody took: the wall clock, as before (reading the sleep
       // clock now would take out every hour of a night it was already dead).
-      now: { wallMs: lastSeenAlive.getTime(), sleep: null },
+      now: unstampedInstant(lastSeenAlive.getTime()),
       foundDead: true,
     });
   } finally {

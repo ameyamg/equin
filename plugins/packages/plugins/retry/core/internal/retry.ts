@@ -11,15 +11,15 @@ export async function retryUntil<T, D = never>(
   fn: (attempt: number) => Promise<T | null | undefined>,
   opts: { delay: DelayStrategy; signal?: AbortSignal; deadline?: number; onDeadline?: () => D },
 ): Promise<T | D> {
-  const start = Date.now();
+  const start = performance.now();
   let attempt = 0;
   while (true) {
     if (opts.signal?.aborted) {
       throw new DOMException("Aborted", "AbortError");
     }
-    if (opts.deadline != null && Date.now() - start >= opts.deadline) {
+    if (opts.deadline != null && performance.now() - start >= opts.deadline) {
       if (opts.onDeadline) return opts.onDeadline();
-      throw new RetryDeadlineError(Date.now() - start);
+      throw new RetryDeadlineError(Math.round(performance.now() - start));
     }
     const result = await fn(attempt);
     if (result != null) return result;

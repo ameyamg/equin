@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { createHash, randomUUID } from "crypto";
 import { renameSync, rmSync, writeFileSync } from "fs";
 import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
@@ -266,7 +267,7 @@ export function pruneCheckCache(): CheckCachePruneReport {
   checkCacheDir.ensureSync();
   const all = readdirSync(checkCacheDir.path);
   const names = all.filter((n) => n.endsWith(".json"));
-  const now = Date.now();
+  const now = wallNow("retention");
   sweepOrphanTemps(all, now);
   const flightFiles = sweepIdleFlights(now);
   let removed = 0;

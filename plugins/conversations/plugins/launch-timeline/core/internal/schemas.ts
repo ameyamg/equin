@@ -11,7 +11,7 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { nullable } from "@plugins/fields/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { ClockStampSchema } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/plugins/schema/core";
-import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import { unstampedInstant } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { LAUNCH_INSTANT_IDS } from "./phases";
 
 /**
@@ -23,7 +23,7 @@ import { LAUNCH_INSTANT_IDS } from "./phases";
  */
 const StoredStampSchema = z.union([
   ClockStampSchema,
-  z.number().transform((wallMs): ClockStamp => ({ wallMs, sleep: null })),
+  z.number().transform(unstampedInstant),
 ]);
 
 /**
@@ -69,7 +69,7 @@ export const CheckoutStepSchema = z.union([
     })
     .transform(({ endAt, ...step }) => ({
       ...step,
-      end: { wallMs: endAt, sleep: null } satisfies ClockStamp,
+      end: unstampedInstant(endAt),
     })),
 ]);
 export type CheckoutStep = z.output<typeof CheckoutStepSchema>;

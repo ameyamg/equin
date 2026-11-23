@@ -191,7 +191,7 @@ function record(state: TimerState, run: BackgroundRun): void {
   state.runs += 1;
   if (run.outcome === "failed") state.failures += 1;
   else state.lastSuccessAt = new Date(run.finishedAt ?? run.startedAt);
-  const now = Date.now();
+  const now = performance.now();
   if (
     previous === undefined ||
     previous.outcome !== run.outcome ||

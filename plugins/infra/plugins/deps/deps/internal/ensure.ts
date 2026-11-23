@@ -297,7 +297,7 @@ async function install(args: {
     }
   };
 
-  const started = Date.now();
+  const started = performance.now();
   say(`installing ${dep.id} (${source.kind}: ${source.label}) at ${identity}`);
   try {
     const installNow = () =>
@@ -320,7 +320,7 @@ async function install(args: {
     };
     await writeJsonAtomic(paths.ready, ready);
     log(
-      `installed ${dep.id} in ${Math.round((Date.now() - started) / 1000)} s (${(ready.bytes / 1e6).toFixed(1)} MB)`,
+      `installed ${dep.id} in ${Math.round((performance.now() - started) / 1000)} s (${(ready.bytes / 1e6).toFixed(1)} MB)`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

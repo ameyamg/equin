@@ -54,6 +54,7 @@ import {
   hostCheckMessage,
   type HostCheckPayload,
 } from "@plugins/reports/plugins/host-check/core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * Deliver each failing check's verdict as a `host-check` report through the
@@ -266,7 +267,7 @@ function checkFlight(
       const transcript = worktreeArtifacts.checkLog(ctx.slug, leader.id);
       const ago = Math.max(
         0,
-        Math.round((Date.now() - leader.startedAt) / 1000),
+        Math.round((wallNow("human-time") - leader.startedAt) / 1000),
       );
       console.log(
         `Joined in-flight check ${leader.id} (same tree, started ${ago}s ago) — its verdict: ${outcome}.\n`,
@@ -513,7 +514,7 @@ const run: CliAction<
           profiler?.recordStep(
             id,
             durationMs,
-            Date.now() - (performance.now() - wallStartMs),
+            wallNow("human-time") - (performance.now() - wallStartMs),
           );
         },
         noCache,

@@ -11,7 +11,10 @@ import {
   onSleepReadingChanged,
   sleptDuring,
 } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
-import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
+import {
+  armAwakeDeadline,
+  wallNow,
+} from "@plugins/packages/plugins/deadline/core";
 import {
   latestDeployRun,
   onDeployRunChanged,
@@ -119,7 +122,7 @@ function armGrace(link: BoxLink): void {
   current?.cancel();
   graceTimers.set(id, {
     until,
-    cancel: armAwakeDeadline(Math.max(0, until - Date.now()), () => {
+    cancel: armAwakeDeadline(Math.max(0, until - wallNow("schedule")), () => {
       graceTimers.delete(id);
       dispatch(id, { kind: "grace-check", at: Date.now() });
     }),

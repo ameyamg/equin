@@ -7,6 +7,7 @@
 // journal is volume-wide, so N counts every change on the volume, not only
 // those under <root>), timing each replay and counting the paths it names.
 import { journalChangesSince, journalCursor } from "../shared/journal";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 const args = process.argv.slice(2);
 const root = args[0];
@@ -22,7 +23,7 @@ if (now.kind !== "cursor") throw new Error(now.reason);
 console.log(`cursor now: ${now.cursor.eventId}`);
 for (const back of backs) {
   const eventId = String(BigInt(now.cursor.eventId) - BigInt(back));
-  const takenAt = Date.now() - 60_000;
+  const takenAt = wallNow("external") - 60_000;
   const cursor = {
     ...now.cursor,
     eventId,

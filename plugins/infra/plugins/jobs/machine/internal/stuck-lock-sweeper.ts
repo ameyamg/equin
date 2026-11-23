@@ -20,6 +20,7 @@ import { announceAttemptSettled } from "../../server/internal/attempt-seam";
 import { pruneDyingRuns } from "./dying-runs";
 import { ANY_QUEUE_CHANGE, emitQueueActivity } from "./slot-ledger";
 import { discardWorkflowLogs } from "../../server/internal/workflow-log";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // Recovery floor for jobs that were mid-execution when their worker died
 // uncleanly (SIGKILL, OOM-killer, kernel panic, `process.exit()` from a
@@ -370,7 +371,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
  * two are read on one clock; only the span's length comes from this process.
  */
 function acquireGraceSql(): SQL {
-  const nowMs = Date.now();
+  const nowMs = wallNow("lookback");
   const start = awakeSpanStart(nowMs, LOCK_ACQUIRE_GRACE_MS);
   const spanMs = start === null ? LOCK_ACQUIRE_GRACE_MS : nowMs - start;
   return sql`(${spanMs}::bigint * interval '1 millisecond')`;

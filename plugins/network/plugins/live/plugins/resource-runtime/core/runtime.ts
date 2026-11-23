@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import { addressFrame } from "@plugins/primitives/plugins/networking/core";
 import {
@@ -1964,7 +1965,8 @@ interface SocketState {
   /**
    * Frames the socket did not accept, oldest first, waiting for its `drain` —
    * and every frame sent after them, so none overtakes one held back. Absent
-   * while the socket accepts every frame. See `deliver`.
+   * while the socket accepts every frame. See `deliver`. `since` is awake time
+   * (`performance.now()`).
    */
   backlog?: { frames: string[]; chars: number; since: number };
   /** The runtime closed it (`closeBacklogged`): nothing more is sent. */
@@ -6761,7 +6763,7 @@ export function createResourceRuntime(
       backlog.chars += str.length;
       if (
         backlog.chars > BACKLOG_MAX_CHARS ||
-        Date.now() - backlog.since > BACKLOG_MAX_AGE_MS
+        performance.now() - backlog.since > BACKLOG_MAX_AGE_MS
       )
         closeBacklogged(state);
       return;
@@ -6774,7 +6776,11 @@ export function createResourceRuntime(
       return; // close handler will clean up
     }
     if (accepted === 0) {
-      state.backlog = { frames: [str], chars: str.length, since: Date.now() };
+      state.backlog = {
+        frames: [str],
+        chars: str.length,
+        since: performance.now(),
+      };
       backlogEpisodes++;
       console.warn(
         `[resource-runtime] socket buffer full: holding frames until it drains (${backlogEpisodes} episode(s) this boot)`,
@@ -6803,7 +6809,7 @@ export function createResourceRuntime(
     backlog.frames.splice(0, sent);
     if (backlog.frames.length === 0) {
       console.warn(
-        `[resource-runtime] socket buffer drained: held frames delivered after ${Date.now() - backlog.since}ms`,
+        `[resource-runtime] socket buffer drained: held frames delivered after ${Math.round(performance.now() - backlog.since)}ms`,
       );
       state.backlog = undefined;
     }
@@ -6819,7 +6825,7 @@ export function createResourceRuntime(
     reportLoaderError(
       "live-state socket closed: its peer stopped reading",
       new Error(
-        `held ${held?.frames.length ?? 0} frame(s) (${held?.chars ?? 0} chars) for ${held ? Date.now() - held.since : 0}ms past the socket's buffer; closed so its tabs reconnect and replay`,
+        `held ${held?.frames.length ?? 0} frame(s) (${held?.chars ?? 0} chars) for ${held ? Math.round(performance.now() - held.since) : 0}ms past the socket's buffer; closed so its tabs reconnect and replay`,
       ),
     );
     try {
@@ -11392,7 +11398,7 @@ export function createResourceRuntime(
 
   function readResourcesDebug() {
     rebuildDag();
-    const now = Date.now();
+    const now = wallNow("human-time");
     const ownerByKey = new Map<string, { pluginId?: string }>();
     for (const c of opts.debugOwners?.() ?? []) {
       ownerByKey.set(c.key, { pluginId: c.pluginId });

@@ -119,8 +119,8 @@ console.log(
   `watching ${dirs.length} dirs for ${minutes} min, walking every ${everyS}s`,
 );
 
-const deadline = Date.now() + minutes * 60_000;
-while (Date.now() < deadline) {
+const deadline = performance.now() + minutes * 60_000;
+while (performance.now() < deadline) {
   await Bun.sleep(everyS * 1000);
   for (const s of states) {
     // The window's events are those heard since the previous walk BEGAN. An

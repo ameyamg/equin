@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   existsSync,
   readFileSync,
@@ -116,7 +117,7 @@ function minutesSince(iso: string | undefined): string {
   if (!iso) return "";
   const started = Date.parse(iso);
   if (Number.isNaN(started)) return "";
-  return ` (started ${Math.round((Date.now() - started) / 60000)}m ago)`;
+  return ` (started ${Math.round((wallNow("human-time") - started) / 60000)}m ago)`;
 }
 
 function receiptLiveness(worktree: string): Liveness {

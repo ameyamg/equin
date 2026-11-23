@@ -650,7 +650,7 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/import-map-names` ×6
     - `framework/list-catalog` ×4
@@ -671,6 +671,7 @@ Key invariants:
     - `infra/paths.worktreesDir`
     - `infra/spawn.spawnCaptured`
     - `packages/coalesce.createCoalescer`
+    - `packages/deadline.wallNow`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `ArtifactBuilder`

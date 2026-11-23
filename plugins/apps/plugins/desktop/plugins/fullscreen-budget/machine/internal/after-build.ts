@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
@@ -73,7 +74,10 @@ export async function measureLatestDeploy(): Promise<void> {
       and(
         eq(_buildRuns.namespace, runtimeNamespace()),
         eq(_buildRuns.exitCode, 0),
-        gt(_buildRuns.finishedAt, new Date(Date.now() - BOOT_LOOKBACK_MS)),
+        gt(
+          _buildRuns.finishedAt,
+          new Date(wallNow("lookback") - BOOT_LOOKBACK_MS),
+        ),
       ),
     )
     .orderBy(desc(_buildRuns.finishedAt))

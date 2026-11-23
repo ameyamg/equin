@@ -137,6 +137,7 @@ function supervise(
   let deaths = 0;
   let lastError: string | null = null;
   let spawnedAt = 0;
+  let spawnedAwakeAt = 0;
   let readyThisSpawn = false;
 
   const markHealthy = (): void => {
@@ -148,6 +149,7 @@ function supervise(
 
   const start = (): void => {
     spawnedAt = Date.now();
+    spawnedAwakeAt = performance.now();
     readyThisSpawn = false;
     let ended = false;
     // `ready()` may be called inside `spawn` (a process's `onSpawn` that
@@ -205,7 +207,7 @@ function supervise(
       log(`${label(state, rec)} exited: ${reason}. It is not restarted.`);
       return;
     }
-    const lived = Date.now() - spawnedAt;
+    const lived = performance.now() - spawnedAwakeAt;
     const rapid = lived < policy.rapidExitMs;
     // A survival-healthy spawn that outlived the rapid window was healthy.
     if (!rapid && policy.healthy === "survival") markHealthy();

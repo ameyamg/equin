@@ -150,7 +150,7 @@ export async function buildSnapshot(args: {
   outPath: AppPath;
   log: (line: string) => void;
 }): Promise<SnapshotBuildReport> {
-  const started = Date.now();
+  const started = performance.now();
   const processed = z
     .record(z.string(), ProcessedSectionSchema)
     .parse(
@@ -184,7 +184,7 @@ export async function buildSnapshot(args: {
     write(snapshotLine(key, RawEntrySchema.parse(value), processed[key]));
     if (entries % 5000 === 0) {
       args.log(
-        `… ${entries} raw entries, ${Math.round((Date.now() - started) / 1000)} s`,
+        `… ${entries} raw entries, ${Math.round((performance.now() - started) / 1000)} s`,
       );
     }
   };
@@ -216,7 +216,7 @@ export async function buildSnapshot(args: {
     skipped,
     skippedByReason,
     bytes: gz.byteLength,
-    ms: Date.now() - started,
+    ms: Math.round(performance.now() - started),
   };
 }
 

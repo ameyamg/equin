@@ -1,3 +1,4 @@
+import { clockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { describe, expect, test } from "bun:test";
 import {
   cpuBudget,
@@ -355,7 +356,7 @@ describe("grantPriority", () => {
 });
 
 describe("fleetAdmission", () => {
-  const wall = (wallMs: number): AdmissionNow => ({ wallMs, sleep: null });
+  const wall = (wallMs: number): AdmissionNow => clockStamp(wallMs, null);
 
   test("a reading inside its lease is measured, and says how much lease is left", () => {
     const a = fleetAdmission(reading({ sampledAt: 1_000 }), wall(31_000), BOX);
@@ -411,10 +412,10 @@ describe("fleetAdmission", () => {
         sampledAt,
         sleep: { boot: BOOT, asleepMs: asleepAtSample },
       });
-      const now: AdmissionNow = {
-        wallMs: sampledAt + o.wallAgeMs,
-        sleep: { boot: BOOT, asleepMs: asleepAtSample + o.sleptMs },
-      };
+      const now: AdmissionNow = clockStamp(sampledAt + o.wallAgeMs, {
+        boot: BOOT,
+        asleepMs: asleepAtSample + o.sleptMs,
+      });
       expect(fleetAdmission(r, wall(now.wallMs), BOX).kind).toBe("unmeasured");
       const a = fleetAdmission(r, now, BOX);
       expect(a.kind).toBe("measured");
@@ -433,10 +434,10 @@ describe("fleetAdmission", () => {
     // 15 min of wall time, of which a 10 min nap: 5 min awake with no reading.
     const a = fleetAdmission(
       r,
-      {
-        wallMs: sampledAt + 900_000,
-        sleep: { boot: BOOT, asleepMs: asleepAtSample + 600_000 },
-      },
+      clockStamp(sampledAt + 900_000, {
+        boot: BOOT,
+        asleepMs: asleepAtSample + 600_000,
+      }),
       BOX,
     );
     expect(a).toMatchObject({
@@ -448,20 +449,18 @@ describe("fleetAdmission", () => {
     expect(
       fleetAdmission(
         r,
-        {
-          wallMs: sampledAt + FLEET_MEMORY_LEASE_MS + 1,
-          sleep: { boot: BOOT, asleepMs: asleepAtSample },
-        },
+        clockStamp(sampledAt + FLEET_MEMORY_LEASE_MS + 1, {
+          boot: BOOT,
+          asleepMs: asleepAtSample,
+        }),
         BOX,
       ).kind,
     ).toBe("unmeasured");
   });
 
   test("a sleep clock that cannot be compared credits no sleep: the wall clock judges", () => {
-    const now = (sleep: AdmissionNow["sleep"]): AdmissionNow => ({
-      wallMs: sampledAt + 900_000,
-      sleep,
-    });
+    const now = (sleep: AdmissionNow["sleep"]): AdmissionNow =>
+      clockStamp(sampledAt + 900_000, sleep);
     const stamped = reading({
       sampledAt,
       sleep: { boot: BOOT, asleepMs: asleepAtSample },

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { ClaudeUsageLimitError } from "@plugins/infra/plugins/claude-cli/server";
 import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
@@ -96,5 +97,5 @@ export class UnplacedClaudeLimitError extends Error {
 
 /** How long to sleep: past the reset by the margin auto-resume waits too. */
 function untilReset(resetsAt: number): number {
-  return Math.max(0, resetsAt + AUTO_RESUME_MARGIN_MS - Date.now());
+  return Math.max(0, resetsAt + AUTO_RESUME_MARGIN_MS - wallNow("external"));
 }

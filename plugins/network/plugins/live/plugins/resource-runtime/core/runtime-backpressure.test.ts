@@ -113,19 +113,19 @@ describe("a frame the socket did not accept", () => {
   test("a backlog no drain empties is closed once it is old", async () => {
     const { r, socket, subscribe } = setup();
     await subscribe();
-    const realNow = Date.now;
+    const realNow = performance.now.bind(performance);
     try {
       socket.state.full = true;
       r.notify();
       await tick();
       expect(socket.state.closed).toBeNull();
       const start = realNow();
-      Date.now = () => start + 61_000;
+      performance.now = () => start + 61_000;
       r.notify(); // the heartbeat's ping is such a frame too
       await tick();
       expect(socket.state.closed).toBe(1013);
     } finally {
-      Date.now = realNow;
+      performance.now = realNow;
     }
   });
 

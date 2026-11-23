@@ -30,6 +30,7 @@ import {
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { randomBytes } from "node:crypto";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { z } from "zod";
 import {
   asAppPath,
@@ -268,7 +269,7 @@ const TMP_GRACE_MS = 10 * 60 * 1000;
 
 function isOlderThan(path: AppPath, ms: number): boolean {
   try {
-    return Date.now() - statSync(path).mtimeMs > ms;
+    return wallNow("retention") - statSync(path).mtimeMs > ms;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return false; // renamed into place since the listing

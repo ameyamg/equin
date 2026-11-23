@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   joinRel,
   type FileEntry,
@@ -77,7 +78,7 @@ export async function fingerprintFolder(
   dir: RelPath,
   memo: FingerprintMemo,
 ): Promise<FolderFingerprint> {
-  const listedAt = Date.now();
+  const listedAt = wallNow("lookback"); // compared with file mtimes
   const listed = await mount.list(dir);
   if (listed.kind === "missing") return listed;
   const entries = listed.entries.filter((entry) => entry.kind === "file");

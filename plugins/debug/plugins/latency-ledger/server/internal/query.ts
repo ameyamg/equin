@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
@@ -123,7 +124,7 @@ export async function loadLatencySummary(
   window: LatencyWindow,
   tabs: LatencySummaryTabs,
 ): Promise<LatencySummary> {
-  const since = new Date(Date.now() - WINDOW_MS[window]);
+  const since = new Date(wallNow("lookback") - WINDOW_MS[window]);
 
   // One row per (metric, class): the class's histograms added element-wise.
   const metricRows = await executeRows(db, {

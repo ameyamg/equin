@@ -23,6 +23,7 @@ import {
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { loadSharp } from "../../server/internal/sharp";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 /** JPEG / WebP quality of a resized copy: invisible loss at thumbnail and screen sizes. */
 const QUALITY = 82;
@@ -117,7 +118,7 @@ async function build(
 
 async function touch(file: string): Promise<void> {
   const st = await stat(file);
-  if (Date.now() - st.mtimeMs < TOUCH_EVERY_MS) return;
+  if (wallNow("retention") - st.mtimeMs < TOUCH_EVERY_MS) return;
   const now = new Date();
   await utimes(file, now, now);
 }

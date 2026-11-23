@@ -191,8 +191,8 @@ function readPidFile(): PidFileRead | null {
 
 /** Wait for the socket to accept, failing if `exited` reports the daemon gone first. */
 async function waitReady(exited: () => string | null): Promise<void> {
-  const deadline = Date.now() + READY_TIMEOUT_MS;
-  while (Date.now() < deadline) {
+  const deadline = performance.now() + READY_TIMEOUT_MS;
+  while (performance.now() < deadline) {
     const exit = exited();
     if (exit !== null) {
       throw new Error(

@@ -842,6 +842,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `tag-tree/engine`
 - Exemptions:
   - Exempts itself from:
+    - `deadline/no-unstated-wall-age` — `core/resources.ts` (debt)
     - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)

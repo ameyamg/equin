@@ -370,7 +370,7 @@ function printOutliers(
 
 // ─── run ─────────────────────────────────────────────────────────────────────
 
-const startedAt = Date.now();
+const startedAt = performance.now();
 
 const { table, source } = await resolveTable();
 console.log(`price table: ${source}`);
@@ -415,4 +415,6 @@ if (ours.unpriced.length > 0) {
 
 printOutliers(ours.byProject, theirs);
 
-console.log(`\ndone in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
+console.log(
+  `\ndone in ${((performance.now() - startedAt) / 1000).toFixed(1)}s`,
+);

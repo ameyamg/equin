@@ -323,7 +323,7 @@ a normal wait:
     - `reports.ReportRow`
   - Register: `defineSupervisedJob('main-slots.reclaim')`
 - Core:
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/git/main-slots/boot-lease` ×21
     - `packages/timed-fs` ×6
     - `infra/paths` ×5
@@ -331,6 +331,7 @@ a normal wait:
     - `packages/flock` ×4
     - `infra/host-fs/user-path` ×3
     - `packages/owned-fd` ×2
+    - `packages/sleep-clock/stamp` ×2
     - `infra/launcher/env-names.readEnv`
     - `infra/paths/repo-root.REPO_ROOT`
     - `infra/spawn.getMainRepoRoot`

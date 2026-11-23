@@ -31,7 +31,7 @@ const ready = await ensureDepViaCli(ytDlpDep, {
 });
 const noExec = {} as ExecContext;
 
-const started = Date.now();
+const started = performance.now();
 const result = await findSongVideosWith(
   {
     sources: [
@@ -55,7 +55,9 @@ const result = await findSongVideosWith(
   { log: (line) => console.error(`  ${line}`) },
 );
 
-console.log(`\n"${artist} – ${title}" — ${Date.now() - started} ms`);
+console.log(
+  `\n"${artist} – ${title}" — ${Math.round(performance.now() - started)} ms`,
+);
 for (const s of result.sources) console.log(`source ${s.source}: ${s.kind}`);
 for (const r of result.refused)
   console.log(`refused ${r.videoId}: ${r.status}`);

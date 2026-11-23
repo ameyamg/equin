@@ -12,6 +12,9 @@ import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import type { OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import { stampOfWallInstant } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import { awakeBetween } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 // The hand-off between a push and its LAND PHASE — everything after the rebase,
 // run as a child on the rebased code (`./land.ts`).
@@ -97,7 +100,7 @@ export interface LandReporter {
 
 export function openLandReport(path: string): LandReporter {
   const report: LandReport = { v: 1, startedAtMs: Date.now(), steps: [] };
-  const starts = new Map<string, number>();
+  const starts = new Map<string, { wallMs: number; awakeMs: number }>();
   // Atomic: the driver reads it after the phase exits, however it exits, and a
   // half-written file must not read as no report at all.
   const flush = (): void => {
@@ -108,7 +111,7 @@ export function openLandReport(path: string): LandReporter {
   flush();
   return {
     stepStart: (name) => {
-      starts.set(name, Date.now());
+      starts.set(name, { wallMs: Date.now(), awakeMs: performance.now() });
     },
     stepEnd: (name) => {
       const start = starts.get(name);
@@ -117,8 +120,8 @@ export function openLandReport(path: string): LandReporter {
       starts.delete(name);
       report.steps.push({
         name,
-        startedAtMs: start,
-        durationMs: Date.now() - start,
+        startedAtMs: start.wallMs,
+        durationMs: Math.round(performance.now() - start.awakeMs),
       });
       flush();
     },
@@ -175,7 +178,7 @@ export async function runLandPhase(opts: {
     mode: opts.mode,
     report: reportPath,
   };
-  const spawnedAtMs = Date.now();
+  const spawned = clockStampNow();
   // The land phase is the driver's whole remaining work: it is handed every
   // unit of the grant, reserved for it until it exits.
   const { exitCode } = await opts.grant.run(
@@ -199,8 +202,15 @@ export async function runLandPhase(opts: {
 
   // The land phase's boot — its bootstrap and the install of the rebased
   // lockfile — up to its own first line, then each step it ran.
-  const bootEndMs = report?.startedAtMs ?? Date.now();
-  profiler.recordStep("land-boot", bootEndMs - spawnedAtMs, spawnedAtMs);
+  // awake: the child's first line is a wall instant from another process.
+  const now = clockStampNow();
+  const bootEnd =
+    report === undefined ? now : stampOfWallInstant(report.startedAtMs, now);
+  profiler.recordStep(
+    "land-boot",
+    awakeBetween(spawned, bootEnd).awakeMs,
+    spawned.wallMs,
+  );
   for (const step of report?.steps ?? [])
     profiler.recordStep(step.name, step.durationMs, step.startedAtMs);
 

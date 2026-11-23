@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { readBootEvents } from "@plugins/debug/plugins/boot-events/server";
 import type { TimelineEvent } from "../../../core";
 import { mapBootEvents } from "./boot-map";
@@ -11,7 +12,7 @@ export async function loadBootEvents(
   fromMs: number,
   toMs: number,
 ): Promise<TimelineEvent[]> {
-  const windowMs = Math.max(0, Date.now() - fromMs);
+  const windowMs = Math.max(0, wallNow("lookback") - fromMs);
   return mapBootEvents(
     await readBootEvents(worktree, windowMs),
     worktree,

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { readDuressEpisodes } from "@plugins/debug/plugins/sentinel/server";
 import type { TimelineEvent } from "../../../core";
 import { mapDuressEpisodes } from "./duress-map";
@@ -11,6 +12,6 @@ export async function loadDuressEpisodes(
   fromMs: number,
   toMs: number,
 ): Promise<TimelineEvent[]> {
-  const windowMs = Math.max(0, Date.now() - fromMs);
+  const windowMs = Math.max(0, wallNow("lookback") - fromMs);
   return mapDuressEpisodes(await readDuressEpisodes(windowMs), fromMs, toMs);
 }

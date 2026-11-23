@@ -6,6 +6,7 @@ import {
   reachableSlots,
 } from "@plugins/infra/plugins/jobs/server";
 import { queueSaturateEventsTest } from "../../shared/endpoints";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // A load generator, not a regression harness: it puts the job queue into the
 // states queue observability exists to report — a full `minutes` class with a
@@ -122,7 +123,7 @@ export const handleQueueSaturate = implement(
     // The cost: the sleepers that are picked up also report a pickup time of
     // ≈ `backdateMs`, since they claim to have been due that long ago.
     const runAt =
-      backdateMs > 0 ? new Date(Date.now() - backdateMs) : undefined;
+      backdateMs > 0 ? new Date(wallNow("schedule") - backdateMs) : undefined;
 
     const sleeperJobIds: string[] = [];
     for (let i = 0; i < count; i++) {

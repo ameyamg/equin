@@ -3,6 +3,7 @@ import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { Job, WorkerEventMap, WorkerEvents } from "graphile-worker";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { HOLD_CLASSES, holdForTask, type HoldClass } from "../../core/hold";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 // THE SLOT LEDGER: which worker slot of which runner is holding which job, right
 // now, in this backend — plus how long each class's jobs waited to be picked up.
@@ -145,7 +146,7 @@ export function getOccupiedSlots(): OccupiedSlot[] {
 /** Pickup-delay percentiles per class over the last {@link PICKUP_WINDOW_MS}.
  * `now` is injectable for tests. */
 export function getPickupStats(
-  now: number = Date.now(),
+  now: number = wallNow("lookback"),
 ): Record<HoldClass, PickupStats> {
   const cutoff = now - PICKUP_WINDOW_MS;
   const out = {} as Record<HoldClass, PickupStats>;

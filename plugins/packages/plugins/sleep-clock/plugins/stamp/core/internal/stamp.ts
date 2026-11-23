@@ -11,16 +11,50 @@ export interface SleepStamp {
   asleepMs: number;
 }
 
+declare const clockStampBrand: unique symbol;
+
 /**
  * One instant on both clocks: the wall clock, and the sleep clock where the
  * platform can read it (`null`: it cannot — never "it did not sleep").
  * Stamp the START of anything whose age is judged later, store the stamp
  * beside it, and judge with {@link awakeBetween}.
+ *
+ * Branded: an object literal is not a stamp, so one instant's wall time cannot
+ * be paired by hand with a sleep reading taken at another moment
+ * (18ada4fbab: a `now` taken, then the sleep clock read after awaits). A stamp
+ * comes from a reading (`sleep-clock`'s `clockStampNow` /
+ * `processStartStamp`), from {@link stampBefore}, from a stored stamp parsed
+ * whole (`stamp/schema`'s `ClockStampSchema`), or is named for what it is:
+ * {@link clockStamp} (two halves read together, decoded) or
+ * {@link unstampedInstant} (no sleep reading exists).
  */
 export interface ClockStamp {
   /** Epoch ms. */
-  wallMs: number;
-  sleep: SleepStamp | null;
+  readonly wallMs: number;
+  readonly sleep: SleepStamp | null;
+  readonly [clockStampBrand]: true;
+}
+
+/**
+ * The stamp of one instant from its two halves, READ TOGETHER — by
+ * `clockStampNow`, or by the process that wrote the record or the line being
+ * decoded here. Never pair a wall instant with a sleep reading taken at
+ * another moment: every span judged from it would drop the sleep in between.
+ */
+export function clockStamp(
+  wallMs: number,
+  sleep: SleepStamp | null,
+): ClockStamp {
+  return { wallMs, sleep } as ClockStamp;
+}
+
+/**
+ * An instant nobody read the sleep clock at (a record from before stamps, a
+ * DB timestamp, a holder last seen alive): its spans are judged on the wall
+ * clock — never in the judged thing's favour.
+ */
+export function unstampedInstant(wallMs: number): ClockStamp {
+  return clockStamp(wallMs, null);
 }
 
 /** A span between two stamps, the machine's sleep taken out. */
@@ -89,12 +123,12 @@ export function stampBefore(
   wallMs: number,
   awakeMs: number,
 ): ClockStamp {
-  if (now.sleep === null) return { wallMs, sleep: null };
+  if (now.sleep === null) return unstampedInstant(wallMs);
   const sleptSince = Math.max(0, now.wallMs - wallMs - awakeMs);
-  return {
-    wallMs,
-    sleep: { boot: now.sleep.boot, asleepMs: now.sleep.asleepMs - sleptSince },
-  };
+  return clockStamp(wallMs, {
+    boot: now.sleep.boot,
+    asleepMs: now.sleep.asleepMs - sleptSince,
+  });
 }
 
 /** Whether a parsed JSON value is a {@link SleepStamp} (for stores read without zod). */

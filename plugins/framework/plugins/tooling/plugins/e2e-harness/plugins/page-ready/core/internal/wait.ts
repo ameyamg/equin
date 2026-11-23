@@ -90,13 +90,18 @@ export async function waitFor<T>(
 ): Promise<Settled<T>> {
   const timeoutMs = opts.timeoutMs ?? 45_000;
   const intervalMs = opts.intervalMs ?? 250;
-  const started = Date.now();
+  const started = performance.now();
   let value = await read();
   let attempts = 1;
-  while (!ok(value) && Date.now() - started < timeoutMs) {
+  while (!ok(value) && performance.now() - started < timeoutMs) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
     value = await read();
     attempts++;
   }
-  return { ok: ok(value), value, waitedMs: Date.now() - started, attempts };
+  return {
+    ok: ok(value),
+    value,
+    waitedMs: Math.round(performance.now() - started),
+    attempts,
+  };
 }

@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { rename } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/machine";
@@ -108,7 +109,10 @@ async function readCached(id: string): Promise<Thumbnail | null> {
     if (await file.exists()) return { kind: "image", file };
   }
   const none = Bun.file(placeThumbnailDir.file(`${id}.none`));
-  if ((await none.exists()) && Date.now() - none.lastModified < NO_PHOTO_TTL_MS)
+  if (
+    (await none.exists()) &&
+    wallNow("expiry") - none.lastModified < NO_PHOTO_TTL_MS
+  )
     return { kind: "no-photo" };
   return null;
 }

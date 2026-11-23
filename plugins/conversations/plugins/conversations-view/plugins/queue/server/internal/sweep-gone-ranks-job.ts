@@ -1,3 +1,4 @@
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { and, eq, inArray, lt } from "drizzle-orm";
@@ -37,7 +38,7 @@ export const sweepGoneRanksJob = defineJob({
   schedule: { cron: "0 4 * * *" },
   async run() {
     if (!isMain()) return;
-    const cutoff = new Date(Date.now() - GONE_RANK_TTL_DAYS * DAY_MS);
+    const cutoff = new Date(wallNow("retention") - GONE_RANK_TTL_DAYS * DAY_MS);
     const goneIds = db
       .select({ id: _conversations.id })
       .from(_conversations)
