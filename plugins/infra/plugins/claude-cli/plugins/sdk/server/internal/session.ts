@@ -14,7 +14,10 @@ import { nativeSpawn } from "./native-spawn";
 // caller, running the Claude Code build the SDK ships (never the computer's
 // own install). Nothing drives the `claude` binary by hand (argv flags, stdout
 // scraping): the `claude-sdk` lint rules reject a direct `query()` and a spawn
-// of the bundled binary anywhere else.
+// of the bundled binary anywhere else. The one bare exec is a warm-up whose
+// output nobody reads: a build's `--version` run (`scanBundledClaudeNow`) and
+// runtime-sdk's clone warm-up, so macOS's first-exec scan is paid off the
+// user's path.
 
 declare const sessionEnvBrand: unique symbol;
 

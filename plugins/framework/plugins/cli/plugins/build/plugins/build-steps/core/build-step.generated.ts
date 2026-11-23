@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const buildStepEntries: CollectedEntry[] = [
   { pluginPath: "companions/plugins/browser-extension", id: "companions.browser-extension", loader: () => import("@plugins/companions/plugins/browser-extension/build-step"), dependsOn: [] },
+  { pluginPath: "infra/plugins/claude-cli/plugins/sdk", id: "infra.claude-cli.sdk", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/sdk/build-step"), dependsOn: [] },
   { pluginPath: "infra/plugins/file-watcher/plugins/parcel-addon", id: "infra.file-watcher.parcel-addon", loader: () => import("@plugins/infra/plugins/file-watcher/plugins/parcel-addon/build-step"), dependsOn: [] },
 ];
 

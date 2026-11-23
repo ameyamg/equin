@@ -142,6 +142,7 @@ re-exports what server consumers use (same-plugin re-export), and
     - `debug/profiling/cold-start`
     - `framework/cli/run`
     - `framework/tooling/e2e-harness`
+    - `infra/claude-cli/sdk`
     - `infra/host/host-admission`
     - `infra/spawn`
 - Exemptions:
