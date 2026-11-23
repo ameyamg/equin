@@ -70,6 +70,7 @@ describe("the converge script never carries a value", () => {
       install: deriveInstall("website"),
       hostnames: ["equin.ai"],
       loopbackPort: 9100,
+      edge: "direct",
       sshPort: 22,
       sshUser: "root",
       secretKeys: ["A_KEY", "B_KEY"],

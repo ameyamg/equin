@@ -2,9 +2,13 @@ import type { FieldsRecord } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { DEPLOYMENT_EDGE_OPTIONS, DEPLOYMENT_EDGES } from "./edge";
 import { deploymentIdKind } from "./id-kinds";
 
 /**
@@ -29,6 +33,12 @@ export const deploymentFields = {
    */
   hostnames: stringListField({ label: "Hostnames" }),
   loopbackPort: intField({ label: "Loopback port" }),
+  /** What visitors reach first — see `./edge.ts`. */
+  edge: enumTextField(DEPLOYMENT_EDGES, {
+    label: "Edge",
+    default: "direct",
+    options: DEPLOYMENT_EDGE_OPTIONS,
+  }),
   createdAt: dateField({ label: "Created" }),
   updatedAt: dateField({ label: "Updated" }),
 } satisfies FieldsRecord;

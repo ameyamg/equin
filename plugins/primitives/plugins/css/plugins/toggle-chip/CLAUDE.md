@@ -55,8 +55,8 @@ filter rule reads as "custom").
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shape --spacing`
-  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×20
+  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×21
     - `primitives` ×7
     - `debug` ×5
     - `stats` ×5

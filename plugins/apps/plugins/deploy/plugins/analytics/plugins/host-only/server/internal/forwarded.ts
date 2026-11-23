@@ -17,6 +17,13 @@ import { HOST_ONLY_PREFIX } from "../../core";
  * (`<visitor>, 127.0.0.1`), while a request made on the box straight to the
  * gateway's loopback port (an SSH `curl`, the activate script's health gate,
  * or local dev through `*.localhost:<port>`) carries exactly one.
+ *
+ * A deployment whose edge is `cloudflare` adds a proxy in front of Caddy
+ * (visitor ──▶ Cloudflare ──▶ Caddy ──▶ …) without changing that count: Caddy
+ * trusts only Cloudflare's ranges, reads the visitor from `CF-Connecting-IP`,
+ * and SETS `X-Forwarded-For` to it (`header_up X-Forwarded-For {client_ip}`,
+ * the deploy CLI's `caddySite`) rather than appending the Cloudflare hop. The
+ * chain this file reads is the same two hops on either edge.
  */
 
 /** The `X-Forwarded-For` entries, outermost first. Empty when the header is absent. */

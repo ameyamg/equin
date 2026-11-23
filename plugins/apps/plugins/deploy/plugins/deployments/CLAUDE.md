@@ -454,7 +454,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 84 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
     - `network/live/live-state` ×6
@@ -486,6 +486,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `primitives/css/sticky.Sticky`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
@@ -602,6 +603,7 @@ default, a left rail revealing each (`useRevealSection`).
   - Exports (types):
     - `CreateDeploymentBody`
     - `Deployment`
+    - `DeploymentEdge`
     - `DeploymentId`
     - `DeployPhase`
     - `DeployRun`
@@ -621,6 +623,9 @@ default, a left rail revealing each (`useRevealSection`).
     - `DEPLOY_LOG_CHANNEL`
     - `DEPLOY_RUN_STATUSES`
     - `deployDeploymentsEntityRef`
+    - `DEPLOYMENT_EDGE_OPTIONS`
+    - `DEPLOYMENT_EDGES`
+    - `DeploymentEdgeSchema`
     - `deploymentFields`
     - `deploymentIdKind`
     - `deployments`

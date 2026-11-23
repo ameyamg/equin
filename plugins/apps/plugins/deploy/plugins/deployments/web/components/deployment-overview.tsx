@@ -12,10 +12,13 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { servers } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
+  DEPLOYMENT_EDGE_OPTIONS,
+  DEPLOYMENT_EDGES,
   deployments,
   deriveInstall,
   updateDeployment,
@@ -24,6 +27,12 @@ import {
 } from "../../core";
 
 const serverIcon = symbol("dns");
+
+const EDGE_SEGMENTS = DEPLOYMENT_EDGES.map((id) => ({
+  id,
+  label: DEPLOYMENT_EDGE_OPTIONS[id].label,
+  tooltip: DEPLOYMENT_EDGE_OPTIONS[id].hint,
+}));
 
 /**
  * Reads the site's row, then renders `body` with it — the one loading / error /
@@ -144,6 +153,17 @@ function GeneralBody({ deployment }: { deployment: Deployment }): ReactNode {
           onFocus={hostnames.onFocus}
           onBlur={hostnames.onBlur}
           placeholder="app.example.com, *.example.com"
+        />
+      </SettingsField>
+      <SettingsField
+        label="Edge"
+        hint="What visitors reach first; applied by the next converge"
+      >
+        <SegmentedControl
+          options={EDGE_SEGMENTS}
+          value={deployment.edge}
+          onChange={(edge) => void save({ edge })}
+          label="Edge"
         />
       </SettingsField>
       <SettingsField label="Loopback port" hint="Unique on this server">

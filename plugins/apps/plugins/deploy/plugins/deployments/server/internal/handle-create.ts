@@ -25,6 +25,7 @@ export const handleCreate = implement(createDeployment, async ({ body }) => {
       // Empty is legal — an install can exist before its DNS does.
       hostnames: body.hostnames ?? [],
       loopbackPort,
+      edge: body.edge ?? "direct",
     })
     .returning()
     .catch((err: unknown) => rethrowConstraintViolation(err, { loopbackPort }));

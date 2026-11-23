@@ -3030,7 +3030,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-            - Uses: 84 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 85 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `primitives/css/ui-kit` ×14
               - `primitives/data-view` ×7
               - `network/live/live-state` ×6
@@ -3062,6 +3062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/sticky.Sticky`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
@@ -3178,6 +3179,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `CreateDeploymentBody`
               - `Deployment`
+              - `DeploymentEdge`
               - `DeploymentId`
               - `DeployPhase`
               - `DeployRun`
@@ -3197,6 +3199,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEPLOY_LOG_CHANNEL`
               - `DEPLOY_RUN_STATUSES`
               - `deployDeploymentsEntityRef`
+              - `DEPLOYMENT_EDGE_OPTIONS`
+              - `DEPLOYMENT_EDGES`
+              - `DeploymentEdgeSchema`
               - `deploymentFields`
               - `deploymentIdKind`
               - `deployments`
@@ -53072,8 +53077,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape --spacing`
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×21
               - `primitives` ×7
               - `debug` ×5
               - `stats` ×5

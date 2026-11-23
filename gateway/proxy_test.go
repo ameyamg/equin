@@ -253,6 +253,35 @@ func TestArtifactIsImmutable(t *testing.T) {
 	}
 }
 
+// A dist file whose name carries no hash (a root icon) can change under the
+// same URL, so it revalidates like the shell — a silent origin would let a
+// browser or a CDN keep the previous build's copy for hours. /assets/ is left
+// to the deployed edge, which marks it immutable.
+func TestUnhashedStaticFileRevalidates(t *testing.T) {
+	f := newStaticProxy(t)
+	web := f.web
+	if err := os.WriteFile(filepath.Join(web, "favicon.svg"), []byte("<svg/>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(web, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(web, "assets", "app-abc123.css"), []byte("a{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rec := serve(f.proxy, "alpha.localhost:9000", "/favicon.svg")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("favicon status = %d, want 200", rec.Code)
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Fatalf("favicon Cache-Control = %q, want no-cache", got)
+	}
+	rec = serve(f.proxy, "alpha.localhost:9000", "/assets/app-abc123.css")
+	if got := rec.Header().Get("Cache-Control"); got != "" {
+		t.Fatalf("/assets/ Cache-Control = %q, want none (the edge owns it)", got)
+	}
+}
+
 // The end-to-end statement of the fix: after a build rewrites `web` to a new
 // dist, the gateway serves the NEW dist. Previously the in-memory spec was
 // frozen at first registration, so the gateway kept serving the old path — and

@@ -1,5 +1,11 @@
 export type { Deployment } from "./schemas";
 export { DeploymentSchema } from "./schemas";
+export {
+  DEPLOYMENT_EDGES,
+  DEPLOYMENT_EDGE_OPTIONS,
+  DeploymentEdgeSchema,
+} from "./edge";
+export type { DeploymentEdge } from "./edge";
 export { deployments } from "./resources";
 export {
   deploymentFields,

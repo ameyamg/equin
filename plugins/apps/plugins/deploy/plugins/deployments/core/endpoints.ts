@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { DeploymentSchema } from "./schemas";
 import { DeployRunSchema } from "./runs";
+import { DeploymentEdgeSchema } from "./edge";
 
 /**
  * A hostname converge will render into a Caddy site block, so it is validated at
@@ -36,6 +37,7 @@ export const CreateDeploymentBodySchema = z.object({
   serverId: z.string(),
   hostnames: HostnamesSchema.optional(),
   loopbackPort: LoopbackPortSchema.optional(),
+  edge: DeploymentEdgeSchema.optional(),
 });
 export type CreateDeploymentBody = z.infer<typeof CreateDeploymentBodySchema>;
 
@@ -50,6 +52,7 @@ export type CreateDeploymentBody = z.infer<typeof CreateDeploymentBodySchema>;
 export const UpdateDeploymentBodySchema = z.object({
   hostnames: HostnamesSchema.optional(),
   loopbackPort: LoopbackPortSchema.optional(),
+  edge: DeploymentEdgeSchema.optional(),
 });
 export type UpdateDeploymentBody = z.infer<typeof UpdateDeploymentBodySchema>;
 

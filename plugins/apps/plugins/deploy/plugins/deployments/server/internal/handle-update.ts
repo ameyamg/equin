@@ -16,6 +16,7 @@ export const handleUpdate = implement(
     if (body.hostnames !== undefined) updates.hostnames = body.hostnames;
     if (body.loopbackPort !== undefined)
       updates.loopbackPort = body.loopbackPort;
+    if (body.edge !== undefined) updates.edge = body.edge;
 
     // No `compositionId` / `serverId` branch on purpose — that pair is the
     // deployment's identity. See `UpdateDeploymentBodySchema`.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DeploymentEdgeSchema } from "./edge";
 
 /**
  * One deployment: *where a composition is served, and under what URL.*
@@ -39,6 +40,8 @@ export const DeploymentSchema = z.object({
   hostnames: z.array(z.string()),
   /** The loopback port the gateway binds; Caddy proxies to it. */
   loopbackPort: z.number().int(),
+  /** What visitors reach first: the box itself, or Cloudflare. See `./edge.ts`. */
+  edge: DeploymentEdgeSchema,
   /**
    * Dates, coerced: the `deployments` live collection projects the timestamp
    * columns as they are (a `Date` on the server), and the wire's ISO string —

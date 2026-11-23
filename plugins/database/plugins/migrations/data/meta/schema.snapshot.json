@@ -1,6 +1,6 @@
 {
-  "id": "373e6477-675d-435a-a183-93e770d88539",
-  "prevId": "bd35ef04-0887-4cae-9dd5-96466fa0794e",
+  "id": "f108b2c5-c416-49de-bb41-94cd069cc92f",
+  "prevId": "373e6477-675d-435a-a183-93e770d88539",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1875,6 +1875,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": 9100
+        },
+        "edge": {
+          "name": "edge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'direct'"
         },
         "created_at": {
           "name": "created_at",

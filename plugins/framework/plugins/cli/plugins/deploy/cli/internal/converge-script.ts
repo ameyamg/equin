@@ -37,6 +37,7 @@ import {
   currentAppPath,
   deriveInstall,
   listenAddress,
+  type DeploymentEdge,
   type InstallLayout,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
@@ -424,11 +425,158 @@ export const EDGE_ACCESS_LOG_ROLL_MB = 100;
 export const EDGE_ACCESS_LOG_ROLLS = 30;
 export const EDGE_ACCESS_LOG_KEEP_DAYS = 14;
 
+/**
+ * Where Cloudflare publishes the address ranges its proxies connect from. Read
+ * ON THE BOX at every converge of a `cloudflare` edge (`CLOUDFLARE_RANGES_SH`),
+ * so the trust list and the firewall follow Cloudflare rather than a copy in
+ * this repo that ages silently.
+ */
+export const CLOUDFLARE_RANGE_URLS = [
+  "https://www.cloudflare.com/ips-v4",
+  "https://www.cloudflare.com/ips-v6",
+] as const;
+
+/**
+ * Fewer ranges than this is not a list Cloudflare published (it publishes ~22),
+ * it is a truncated or tampered answer — and firewalling the site to it would
+ * shut out most of Cloudflare, so most visitors.
+ */
+export const CLOUDFLARE_MIN_RANGES = 10;
+
+/**
+ * `CF_RANGES` — Cloudflare's published ranges, space-separated, or the script
+ * stops. Every token must be a CIDR (it is interpolated into the Caddyfile and
+ * into ufw's argv), and there must be at least {@link CLOUDFLARE_MIN_RANGES}.
+ * A failed fetch is fatal rather than "keep the last list": converge cannot
+ * tell a stale list from a correct one, and a loud stop is what a human can act on.
+ */
+export const CLOUDFLARE_RANGES_SH = `CF_RANGES=""
+for url in ${CLOUDFLARE_RANGE_URLS.map((u) => sq(u)).join(" ")}; do
+  if ! body="$(curl -fsS --max-time 20 "$url")"; then
+    echo "could not read Cloudflare's address ranges from $url — this deployment's edge is cloudflare, so Caddy's trust list and the firewall need them" >&2
+    exit 1
+  fi
+  for r in $body; do
+    if ! printf '%s' "$r" | grep -Eq '^[0-9a-fA-F:.]+/[0-9]{1,3}$'; then
+      echo "Cloudflare's range list from $url holds a token that is not a CIDR: $r" >&2
+      exit 1
+    fi
+    CF_RANGES="$CF_RANGES $r"
+  done
+done
+CF_RANGES="\${CF_RANGES# }"
+cf_count=$(printf '%s\\n' $CF_RANGES | grep -c .)
+if [ "$cf_count" -lt ${CLOUDFLARE_MIN_RANGES} ]; then
+  echo "Cloudflare published only $cf_count address ranges (expected at least ${CLOUDFLARE_MIN_RANGES}) — refusing to firewall the site to them" >&2
+  exit 1
+fi
+echo "[=] Cloudflare publishes $cf_count address ranges"
+`;
+
+/**
+ * The root Caddyfile's global options for an edge: shell that prints them,
+ * reading `$CF_RANGES`. Empty for `direct`, so that root file stays the bare
+ * import it always was.
+ *
+ * For `cloudflare`, Caddy trusts ONLY Cloudflare's ranges, and from them takes
+ * the client's address from `CF-Connecting-IP` — which makes `{client_ip}` (the
+ * site block's forwarded header, the access log's client) the visitor rather
+ * than the Cloudflare server that connected. A global option is server-wide by
+ * nature, which is why converge refuses a box whose sites disagree on edge.
+ */
+export function caddyGlobalOptionsSh(edge: DeploymentEdge): string {
+  if (edge === "direct") return "";
+  return `printf '{\\n\\tservers {\\n\\t\\ttrusted_proxies static %s\\n\\t\\tclient_ip_headers CF-Connecting-IP\\n\\t}\\n}\\n' "$CF_RANGES"; `;
+}
+
+/**
+ * Step 7 for a `direct` edge: the world may reach SSH, 80/443 (TCP) and 443
+ * (UDP, HTTP/3). Also the repair back from `cloudflare`: a rule admitting only
+ * one source range is not one of ours here, so finding any resets the set.
+ */
+const DIRECT_FIREWALL_SH = `ufw_status="$(ufw status verbose 2>/dev/null || true)"
+if printf '%s' "$ufw_status" | grep -qF 'Status: active' \\
+  && printf '%s' "$ufw_status" | grep -qF 'Default: deny (incoming), allow (outgoing)' \\
+  && printf '%s' "$ufw_status" | grep -qF "$FIREWALL_RULE" \\
+  && printf '%s' "$ufw_status" | grep -qF "$QUIC_RULE" \\
+  && ! printf '%s' "$ufw_status" | grep -Eq '^80,443/tcp'; then
+  echo "[=] ufw: deny incoming, allow $FIREWALL_RULE $QUIC_RULE"
+else
+  # A reset drops rules a previous edge left (Cloudflare's ranges). ufw is
+  # disabled until the enable below, so the SSH session converge runs over is
+  # never cut.
+  ufw --force reset >/dev/null
+  ufw default deny incoming >/dev/null
+  ufw default allow outgoing >/dev/null
+  ufw allow "$FIREWALL_RULE" >/dev/null
+  ufw allow "$QUIC_RULE" >/dev/null
+  ufw --force enable >/dev/null
+  echo "[~] ufw: deny incoming, allow $FIREWALL_RULE $QUIC_RULE"
+fi
+`;
+
+/**
+ * Step 7 for a `cloudflare` edge: the world may reach SSH only; 80 and 443
+ * (TCP) are admitted from Cloudflare's published ranges and nothing else, so
+ * neither the CDN nor the `CF-Connecting-IP` Caddy trusts can be bypassed.
+ * Port 80 stays open to Cloudflare because Caddy renews its certificate by
+ * HTTP-01 through it. No UDP 443: Cloudflare reaches the origin over TCP.
+ *
+ * Already applied iff ufw is active, denies by default, admits SSH, and its
+ * `80,443/tcp` rules are exactly one per published range — so a range
+ * Cloudflare dropped, one it added, or the world-open rule of a `direct` past
+ * all read as drift, and the set is rebuilt from a reset (ufw is disabled until
+ * the enable, so the SSH session converge runs over survives it).
+ */
+const CLOUDFLARE_FIREWALL_SH = `ufw_status="$(ufw status 2>/dev/null || true)"
+ufw_verbose="$(ufw status verbose 2>/dev/null || true)"
+cf_rules_ok=1
+for r in $CF_RANGES; do
+  printf '%s\\n' "$ufw_status" | grep -E '^80,443/tcp' | grep -qF " $r" || cf_rules_ok=0
+done
+web_rules=$(printf '%s\\n' "$ufw_status" | grep -Ec '^80,443/tcp' || true)
+if printf '%s' "$ufw_verbose" | grep -qF 'Status: active' \\
+  && printf '%s' "$ufw_verbose" | grep -qF 'Default: deny (incoming), allow (outgoing)' \\
+  && printf '%s\\n' "$ufw_status" | grep -Eq "^$SSH_RULE[[:space:]]" \\
+  && ! printf '%s' "$ufw_status" | grep -qF "$FIREWALL_RULE" \\
+  && ! printf '%s' "$ufw_status" | grep -qF "$QUIC_RULE" \\
+  && [ "$cf_rules_ok" -eq 1 ] && [ "$web_rules" -eq "$cf_count" ]; then
+  echo "[=] ufw: deny incoming, allow $SSH_RULE, 80,443/tcp from Cloudflare only ($cf_count ranges)"
+else
+  ufw --force reset >/dev/null
+  ufw default deny incoming >/dev/null
+  ufw default allow outgoing >/dev/null
+  ufw allow "$SSH_RULE" >/dev/null
+  for r in $CF_RANGES; do
+    ufw allow proto tcp from "$r" to any port 80,443 >/dev/null
+  done
+  ufw --force enable >/dev/null
+  echo "[~] ufw: deny incoming, allow $SSH_RULE, 80,443/tcp from Cloudflare only ($cf_count ranges)"
+fi
+`;
+
+/**
+ * The visitor's address as the ONE `X-Forwarded-For` hop the gateway receives.
+ *
+ * Behind Cloudflare, Caddy trusts the connecting proxy and so APPENDS it to the
+ * header Cloudflare sent (`<visitor>, <cloudflare>`); the gateway then appends
+ * Caddy — three hops, and `requestClientIp`'s "second to last" would name
+ * Cloudflare. Setting the header to `{client_ip}` (the visitor, read from
+ * `CF-Connecting-IP` by the global options) keeps the chain the backend reads at
+ * exactly two hops on either edge: `<visitor>, 127.0.0.1`. `direct` needs no
+ * line — Caddy's default already replaces an untrusted client's header with
+ * its peer, which IS the visitor.
+ */
+function forwardedForLine(edge: DeploymentEdge): string {
+  return edge === "direct" ? "" : "\t\theader_up X-Forwarded-For {client_ip}\n";
+}
+
 /** This deployment's Caddy site block: TLS in front, plain HTTP on loopback. */
 export function caddySite(
   hostnames: string[],
   loopbackPort: number,
   accessLogPath: string,
+  edge: DeploymentEdge,
 ): string {
   // No `header_up Host`: each install runs its OWN gateway with
   // `-default-namespace <composition>`, and the gateway's `parseWorktree`
@@ -489,7 +637,7 @@ export function caddySite(
 \trespond ${GATEWAY_API_PREFIX}* 404
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
 \treverse_proxy ${listenAddress(loopbackPort)} {
-\t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
+${forwardedForLine(edge)}\t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
 \t\tlb_try_interval 250ms
 \t\tstream_close_delay ${EDGE_STREAM_CLOSE_DELAY_HOURS}h
 \t}
@@ -510,6 +658,8 @@ export function convergeScript(opts: {
   install: InstallLayout;
   hostnames: string[];
   loopbackPort: number;
+  /** What visitors reach first (the deployment's `edge`). */
+  edge: DeploymentEdge;
   sshPort: number;
   sshUser: string;
   /**
@@ -519,8 +669,15 @@ export function convergeScript(opts: {
    */
   secretKeys: readonly string[];
 }): string {
-  const { install, hostnames, loopbackPort, sshPort, sshUser, secretKeys } =
-    opts;
+  const {
+    install,
+    hostnames,
+    loopbackPort,
+    edge,
+    sshPort,
+    sshUser,
+    secretKeys,
+  } = opts;
   const caddyfile = "/etc/caddy/Caddyfile";
   const keyring = "/usr/share/keyrings/caddy-stable-archive-keyring.gpg";
   const sourceList = "/etc/apt/sources.list.d/caddy-stable.list";
@@ -572,6 +729,7 @@ ACCESS_LOG=${sq(install.edgeAccessLogPath)}
 CADDY_KEYRING=${sq(keyring)}
 CADDY_LIST=${sq(sourceList)}
 FIREWALL_RULE=${sq(firewallRule)}
+SSH_RULE=${sq(`${sshPort}/tcp`)}
 QUIC_RULE=${sq(quicRule)}
 
 # Converge runs as the server's LOGIN user because it creates users and writes
@@ -621,7 +779,15 @@ if [ -n "$missing" ]; then
 else
   echo "[=] base packages present"
 fi
-
+${
+  edge === "cloudflare"
+    ? `
+# ── 3b. The edge is Cloudflare: read the ranges its proxies connect from, which
+#       both Caddy's trust list (step 5) and the firewall (step 7) are built
+#       from. Before any write, so a failed read changes nothing.
+${CLOUDFLARE_RANGES_SH}`
+    : ""
+}
 # ── 4. The EnvironmentFile: the per-DEPLOYMENT values the shared unit template
 #       cannot hold — today the listen address and the public hostnames. NEVER a secret: those are
 #       credentials (step 4b). See the plan, §What goes in \`env\`.
@@ -687,7 +853,7 @@ fi
 
 install -d -m 755 "$CADDY_SITES"
 cat > "$(staged "$SITE")" <<'CADDY_SITE_EOF'
-${caddySite(hostnames, loopbackPort, install.edgeAccessLogPath)}CADDY_SITE_EOF
+${caddySite(hostnames, loopbackPort, install.edgeAccessLogPath, edge)}CADDY_SITE_EOF
 # 0644: the caddy unit runs as User=caddy and must be able to READ its own site.
 if put "$SITE" 644 -; then
   caddy_changed=1
@@ -725,7 +891,7 @@ fi`
 # config is deliberately empty, which is exactly "this box serves no hostname".
 if command -v caddy >/dev/null 2>&1; then
   if ls "$CADDY_SITES"/*.caddy >/dev/null 2>&1; then
-    printf '%s\\n%s\\n' '# GENERATED by ./equin deploy converge — do not edit.' "import $CADDY_SITES/*.caddy" > "$(staged "$CADDYFILE")"
+    { printf '%s\\n' '# GENERATED by ./equin deploy converge — do not edit.'; ${caddyGlobalOptionsSh(edge)}printf '%s\\n' "import $CADDY_SITES/*.caddy"; } > "$(staged "$CADDYFILE")"
   else
     printf '%s\\n' '# GENERATED by ./equin deploy converge — no deployment on this host declares a hostname.' > "$(staged "$CADDYFILE")"
   fi
@@ -788,21 +954,7 @@ fi
 #       UDP 443 is HTTP/3, which Caddy serves and advertises by default
 #       (\`Alt-Svc: h3\`): dropping it left browsers trying QUIC the host
 #       never answered.
-ufw_status="$(ufw status verbose 2>/dev/null || true)"
-if printf '%s' "$ufw_status" | grep -qF 'Status: active' \\
-  && printf '%s' "$ufw_status" | grep -qF 'Default: deny (incoming), allow (outgoing)' \\
-  && printf '%s' "$ufw_status" | grep -qF "$FIREWALL_RULE" \\
-  && printf '%s' "$ufw_status" | grep -qF "$QUIC_RULE"; then
-  echo "[=] ufw: deny incoming, allow $FIREWALL_RULE $QUIC_RULE"
-else
-  ufw default deny incoming >/dev/null
-  ufw default allow outgoing >/dev/null
-  ufw allow "$FIREWALL_RULE" >/dev/null
-  ufw allow "$QUIC_RULE" >/dev/null
-  ufw --force enable >/dev/null
-  echo "[~] ufw: deny incoming, allow $FIREWALL_RULE $QUIC_RULE"
-fi
-
+${edge === "cloudflare" ? CLOUDFLARE_FIREWALL_SH : DIRECT_FIREWALL_SH}
 # ── 8. Restart ONLY when the running process predates its configuration.
 ${RESTART_GATE_SH}
 

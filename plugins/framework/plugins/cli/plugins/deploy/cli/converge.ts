@@ -11,7 +11,11 @@
  * script, and the approved secrets reach it over the SSH session's stdin.
  */
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { listenAddress } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import {
+  listDeployments,
+  listenAddress,
+} from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { isLinuxTag } from "@plugins/release/core";
 import {
   assertCaddySafeHostname,
@@ -24,6 +28,7 @@ import {
   refuse,
   resolveTarget,
   runScript,
+  toBackend,
 } from "./internal/target";
 
 const run: CliAction<[string], { server: string }> = async (
@@ -46,6 +51,7 @@ const run: CliAction<[string], { server: string }> = async (
         : "(none — loopback only)"
     }`,
   );
+  console.log(`  Edge:    ${deployment.edge}`);
 
   // ── Refusals, all of them before the first host mutation ──────────────────
   // apt-get / systemd / ufw make this script Debian-family-specific, so a
@@ -59,6 +65,28 @@ const run: CliAction<[string], { server: string }> = async (
   for (const hostname of deployment.hostnames)
     assertCaddySafeHostname(hostname);
   await assertClosureSafe(target);
+  // The edge decides box-wide state — Caddy's global trust list and the
+  // firewall — so every site on one server must agree on it. A `cloudflare`
+  // converge beside a `direct` site would firewall that site's visitors out.
+  const disagreeing = (
+    await toBackend((origin) => callEndpoint(listDeployments, {}, { origin }))
+  ).filter(
+    (d) =>
+      d.serverId === deployment.serverId &&
+      d.id !== deployment.id &&
+      d.hostnames.length > 0 &&
+      d.edge !== deployment.edge,
+  );
+  if (disagreeing.length > 0) {
+    refuse(
+      `this deployment's edge is ${deployment.edge}, but ${disagreeing
+        .map((d) => `"${d.compositionId}" (${d.edge})`)
+        .join(
+          ", ",
+        )} on the same server ${disagreeing.length === 1 ? "is" : "are"} not — ` +
+        `the edge sets the server's firewall and Caddy's trusted proxies, so every site on it must use the same one.`,
+    );
+  }
   // The last refusal: a deploy secret the closure needs and the user has not
   // approved (for exactly its current value) stops converge here, before the
   // host is touched. Keys are printed; values never are.
@@ -74,6 +102,7 @@ const run: CliAction<[string], { server: string }> = async (
       install,
       hostnames: deployment.hostnames,
       loopbackPort: deployment.loopbackPort,
+      edge: deployment.edge,
       sshPort: server.port,
       sshUser: server.sshUser,
       secretKeys: secrets.map((s) => s.key),

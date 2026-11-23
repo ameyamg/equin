@@ -92,6 +92,50 @@ journal keeps only the responses it could not finish. Converge creates the file
 caddy-owned before `caddy validate` (root) can create it root-owned, which
 fails the reload with "permission denied".
 
+**The edge: direct, or behind Cloudflare.** A deployment's `edge`
+(`apps/deploy/deployments` `core/edge.ts`) is what visitors reach first, and
+converge derives the box from it. `direct` is the original shape: Caddy sees
+the visitor, the world may reach 80/443 (TCP) and 443 (UDP). `cloudflare`
+means the hostnames' DNS records are proxied by Cloudflare:
+
+- Converge reads Cloudflare's published ranges on the box
+  (`CLOUDFLARE_RANGES_SH`) before any write, and stops on a failed read, a
+  token that is not a CIDR, or a list shorter than `CLOUDFLARE_MIN_RANGES`.
+- The root Caddyfile trusts those ranges only and reads the client from
+  `CF-Connecting-IP`; the site block sets `X-Forwarded-For` to `{client_ip}`,
+  so the backend still receives `<visitor>, 127.0.0.1` and
+  `requestClientIp` (analytics, contact-form limits, site-reports admission)
+  names the visitor, not a Cloudflare server.
+- ufw admits SSH from anywhere and 80/443 (TCP) from Cloudflare's ranges
+  only, so neither the CDN nor the trusted header can be bypassed. The rule
+  set is rebuilt (reset, then enable) whenever it is not exactly one rule per
+  published range.
+- TLS is still Caddy's Let's Encrypt certificate, renewed by HTTP-01 through
+  Cloudflare on port 80.
+- Both settings are server-wide, so converge refuses a server whose sites
+  disagree on `edge`.
+
+What converge cannot do — the Cloudflare zone — is a checklist, in order:
+
+1. Add the zone and switch the registrar's nameservers to Cloudflare's, with
+   every record **DNS only** (grey), so nothing changes yet.
+2. SSL/TLS **Full (strict)**: never Flexible, which makes the origin see
+   `http` and breaks canonical and sitemap origins. **Leave "Always Use
+   HTTPS" off**: Caddy redirects to HTTPS itself after answering the ACME
+   challenge, and Cloudflare redirecting first breaks HTTP-01 renewal.
+   WebSockets on (the default).
+3. Cache Rules: bypass `/api/*` except `/api/asset-mirror/*`; let
+   `/artifacts/*`, `/assets/*` and `/api/asset-mirror/*` follow the origin's
+   `Cache-Control` (immutable); bypass `*.mp4` (Cloudflare's terms bar serving
+   video from its free plan's cache). Do not cache 404s. The HTML shell is
+   `no-cache` and stays uncached.
+4. Proxy the records (orange), then set the deployment's edge to
+   `cloudflare` and converge. Between the two, visitors briefly read as
+   Cloudflare addresses, so keep it to minutes.
+5. Rollback is the reverse order: grey records, then `direct` and converge.
+
+Design: `research/2026-11-23-global-cloudflare-in-front-of-equin-ai.md`.
+
 **A restart never answers a visitor with a 502.** Every restart of the unit (a
 host-changing ship, converge's restart gate, a crash) closes the loopback port
 until the new gateway binds. Caddy holds a request whose dial is refused for

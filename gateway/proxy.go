@@ -209,6 +209,21 @@ func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
 	serveStaticFile(w, r, file)
 }
 
+// hashedAssetsPrefix holds vite's content-hashed stylesheet and fonts. Their
+// year-long Cache-Control is the deployed edge's (the generated Caddy site
+// block); the gateway sends none, so it never contends with that header.
+const hashedAssetsPrefix = "/assets/"
+
+// serveRevalidated serves a dist file whose name carries no hash — the root
+// icons, the web manifest, anything outside /artifacts/ and /assets/ — so the
+// same URL can hold new bytes after a build. no-cache, like the shell: without
+// it a browser or a CDN in front (Cloudflare caches such files for hours by
+// default when the origin is silent) keeps serving the previous build's copy.
+func serveRevalidated(w http.ResponseWriter, r *http.Request, file string) {
+	w.Header().Set("Cache-Control", "no-cache")
+	serveStaticFile(w, r, file)
+}
+
 // serveShell serves the SPA shell, and on a document load starts the backend
 // alongside it (prestartBackend). The only place handleStatic serves the shell,
 // so the direct hit and the SPA fallback cannot disagree about prestarting or
@@ -404,7 +419,11 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 			serveArtifact(w, r, full)
 			return
 		}
-		serveStaticFile(w, r, full)
+		if strings.HasPrefix(upath, hashedAssetsPrefix) {
+			serveStaticFile(w, r, full)
+			return
+		}
+		serveRevalidated(w, r, full)
 		return
 	}
 	// /artifacts/* URLs are content-addressed module files (import-map targets),

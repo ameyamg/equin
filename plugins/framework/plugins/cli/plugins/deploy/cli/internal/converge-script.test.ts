@@ -23,7 +23,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { deriveInstall } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import {
+  REMOTE_SCRIPT_SHEBANG,
+  deriveInstall,
+} from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 import {
@@ -35,16 +38,21 @@ import {
   EDGE_RESTART_HOLD_SEC,
   EDGE_STREAM_CLOSE_DELAY_HOURS,
   convergeScript,
+  CLOUDFLARE_MIN_RANGES,
+  CLOUDFLARE_RANGES_SH,
+  caddyGlobalOptionsSh,
 } from "./converge-script";
+import type { DeploymentEdge } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 
 const tmp = mkdtempSync(join(tmpdir(), "converge-script-test-"));
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 
-const script = (hostnames: string[]) =>
+const script = (hostnames: string[], edge: DeploymentEdge = "direct") =>
   convergeScript({
     install: deriveInstall("website"),
     hostnames,
     loopbackPort: 9100,
+    edge,
     sshPort: 22,
     sshUser: "root",
     secretKeys: ["RESEND_API_KEY"],
@@ -75,6 +83,7 @@ describe("caddySite", () => {
         ["equin.dev", "www.equin.dev"],
         9100,
         "/var/log/caddy/website.access.log",
+        "direct",
       ),
     ).toBe(
       `equin.dev, www.equin.dev {
@@ -106,18 +115,154 @@ describe("caddySite", () => {
 
   test("refuses the gateway's control API publicly", () => {
     expect(
-      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log"),
+      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log", "direct"),
     ).toContain(`respond ${GATEWAY_API_PREFIX}* 404`);
   });
 
   test("the refused path is the prefix hostOnly() guards", () => {
     expect(
-      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log"),
+      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log", "direct"),
     ).toContain(`respond ${HOST_ONLY_PREFIX}* 404`);
   });
 });
 
+describe("caddySite behind Cloudflare", () => {
+  const site = caddySite(
+    ["equin.ai"],
+    9100,
+    "/var/log/caddy/website.access.log",
+    "cloudflare",
+  );
+
+  test("forwards the visitor as the one X-Forwarded-For hop", () => {
+    expect(site).toContain(
+      "\treverse_proxy 127.0.0.1:9100 {\n\t\theader_up X-Forwarded-For {client_ip}\n",
+    );
+  });
+
+  test("differs from the direct block by that line only", () => {
+    expect(
+      site.replace("\t\theader_up X-Forwarded-For {client_ip}\n", ""),
+    ).toBe(
+      caddySite(
+        ["equin.ai"],
+        9100,
+        "/var/log/caddy/website.access.log",
+        "direct",
+      ),
+    );
+  });
+});
+
+describe("the edge in the converge script", () => {
+  test("a direct edge never reads Cloudflare's ranges nor trusts a proxy", () => {
+    const text = script(["equin.ai"], "direct");
+    expect(text).not.toContain("cloudflare.com/ips");
+    expect(text).not.toContain("trusted_proxies");
+    expect(text).not.toContain("header_up X-Forwarded-For");
+    expect(caddyGlobalOptionsSh("direct")).toBe("");
+  });
+
+  test("a cloudflare edge reads the ranges before any Caddy or firewall write", () => {
+    const text = script(["equin.ai"], "cloudflare");
+    const fetchAt = text.indexOf(CLOUDFLARE_RANGES_SH);
+    expect(fetchAt).toBeGreaterThan(-1);
+    expect(fetchAt).toBeLessThan(text.indexOf('"$CADDY_SITES"/*.caddy'));
+    expect(fetchAt).toBeLessThan(text.indexOf("ufw --force enable"));
+  });
+
+  test("a cloudflare edge admits 80/443 from the ranges only, and no QUIC", () => {
+    const text = script(["equin.ai"], "cloudflare");
+    expect(text).toContain('ufw allow proto tcp from "$r" to any port 80,443');
+    expect(text).not.toContain('ufw allow "$FIREWALL_RULE"');
+    expect(text).not.toContain('ufw allow "$QUIC_RULE"');
+    expect(text).toContain('ufw allow "$SSH_RULE"');
+  });
+
+  test("the global options trust Cloudflare and read CF-Connecting-IP", async () => {
+    const result = await bash(
+      `CF_RANGES='173.245.48.0/20 2400:cb00::/32'; ${caddyGlobalOptionsSh("cloudflare")}`,
+    );
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe(
+      "{\n\tservers {\n\t\ttrusted_proxies static 173.245.48.0/20 2400:cb00::/32\n\t\tclient_ip_headers CF-Connecting-IP\n\t}\n}\n",
+    );
+  });
+});
+
+describe("reading Cloudflare's ranges", () => {
+  /**
+   * Runs CLOUDFLARE_RANGES_SH with `curl` replaced by a stub that answers each
+   * URL from a file (missing file = the fetch fails), then prints CF_RANGES.
+   */
+  async function readRanges(answers: { v4?: string; v6?: string }) {
+    const dir = mkdtempSync(join(tmp, "cf-"));
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    if (answers.v4 !== undefined) writeFileSync(join(dir, "v4"), answers.v4);
+    if (answers.v6 !== undefined) writeFileSync(join(dir, "v6"), answers.v6);
+    writeFileSync(
+      join(bin, "curl"),
+      `${REMOTE_SCRIPT_SHEBANG}
+url="\${@: -1}"
+case "$url" in
+  *ips-v4) f=${JSON.stringify(join(dir, "v4"))} ;;
+  *ips-v6) f=${JSON.stringify(join(dir, "v6"))} ;;
+  *) exit 22 ;;
+esac
+[ -f "$f" ] || exit 22
+cat "$f"
+`,
+    );
+    chmodSync(join(bin, "curl"), 0o755);
+    return bash(
+      // Progress goes to stderr, as the real script's \`exec 1>&2\` sends it.
+      `set -euo pipefail; exec 3>&1 1>&2; PATH=${JSON.stringify(bin)}:"$PATH"\n${CLOUDFLARE_RANGES_SH}\nprintf '%s' "$CF_RANGES" >&3`,
+    );
+  }
+
+  const v4 = Array.from(
+    { length: CLOUDFLARE_MIN_RANGES },
+    (_, i) => `10.${i}.0.0/16`,
+  ).join("\n");
+
+  test("a published list becomes one space-separated set", async () => {
+    const result = await readRanges({ v4: `${v4}\n`, v6: "2400:cb00::/32\n" });
+    expect(result.code).toBe(0);
+    expect(result.stdout.split(" ")).toHaveLength(CLOUDFLARE_MIN_RANGES + 1);
+    expect(result.stdout).toEndWith("2400:cb00::/32");
+  });
+
+  test("a failed fetch stops the script", async () => {
+    const result = await readRanges({ v4 });
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain(
+      "could not read Cloudflare's address ranges",
+    );
+  });
+
+  test("a token that is not a CIDR stops the script", async () => {
+    const result = await readRanges({ v4: `${v4}\n<html>`, v6: "" });
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain("not a CIDR");
+  });
+
+  test("a list shorter than Cloudflare publishes stops the script", async () => {
+    const result = await readRanges({ v4: "10.0.0.0/8\n", v6: "" });
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain("published only 1 address ranges");
+  });
+});
+
 describe("convergeScript (shell syntax)", () => {
+  test("parses as bash — behind Cloudflare", async () => {
+    const path = join(tmp, "converge-cloudflare.sh");
+    writeFileSync(path, script(["equin.ai"], "cloudflare"));
+    const result = await bash(`bash -n ${JSON.stringify(path)}`);
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+  });
+
   for (const [label, hostnames] of [
     ["with hostnames", ["equin.ai", "www.equin.ai"]],
     ["without hostnames", []],

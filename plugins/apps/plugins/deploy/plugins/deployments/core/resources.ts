@@ -30,6 +30,7 @@ export const deployments = liveCollection("deploy.deployments", {
       "compositionId",
       "hostnames",
       "loopbackPort",
+      "edge",
       "createdAt",
       "updatedAt",
     ],
