@@ -23,6 +23,32 @@ export interface AssetMirrorSource<F extends string = string> {
   /** Every file the mirror serves → its lowercase hex sha256. A name is flat,
    *  or one directory deep (`en/data.json`). */
   readonly files: Readonly<Record<F, string>>;
+  /**
+   * Whether a CDN in front of the site may STORE this mirror's video files
+   * (`video/*`). `"not-stored"` (the default) sends `CDN-Cache-Control:
+   * no-store` with each one: a CDN passes the bytes through and a browser still
+   * caches them. Video is the one kind a CDN's terms restrict (Cloudflare's
+   * free plan must not serve mostly video), so storing it is a decision each
+   * source makes for itself, never the default a new video inherits.
+   */
+  readonly videoAtCdn: VideoAtCdn;
+}
+
+/** See {@link AssetMirrorSource.videoAtCdn}. */
+export type VideoAtCdn = "stored" | "not-stored";
+
+/**
+ * The `CDN-Cache-Control` (RFC 9213 — read by CDNs, ignored by browsers) a
+ * mirrored file is served with, or null for none: `no-store` for a video of a
+ * source that did not opt in to `videoAtCdn: "stored"`.
+ */
+export function cdnCacheControlFor(
+  source: Pick<AssetMirrorSource, "videoAtCdn">,
+  contentType: string,
+): string | null {
+  return contentType.startsWith("video/") && source.videoAtCdn === "not-stored"
+    ? "no-store"
+    : null;
 }
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
@@ -41,6 +67,8 @@ export function defineAssetMirrorSource<const F extends string>(spec: {
   id: string;
   remoteBaseUrl: string;
   files: Readonly<Record<F, string>>;
+  /** Default `"not-stored"` — see {@link AssetMirrorSource.videoAtCdn}. */
+  videoAtCdn?: VideoAtCdn;
 }): AssetMirrorSource<F> {
   if (!isFlatSegment(spec.id)) {
     throw new Error(`[asset-mirror] invalid mirror id "${spec.id}"`);
@@ -68,6 +96,7 @@ export function defineAssetMirrorSource<const F extends string>(spec: {
     id: spec.id,
     remoteBaseUrl: spec.remoteBaseUrl.replace(/\/$/, ""),
     files: spec.files,
+    videoAtCdn: spec.videoAtCdn ?? "not-stored",
   };
 }
 

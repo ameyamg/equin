@@ -19,6 +19,10 @@ export const websiteMediaSource = defineAssetMirrorSource({
   remoteBaseUrl:
     "https://github.com/equinai/equin/releases/download/website-media",
   files: WEBSITE_MEDIA_PINS,
+  // The showcase film is cached at the CDN on purpose (2026-11-23): it loads
+  // only when a visitor presses play, so it stays a small share of the site's
+  // bytes. Any other source's video passes through the CDN unstored.
+  videoAtCdn: "stored",
 });
 
 type MediaFile = keyof typeof WEBSITE_MEDIA_PINS;

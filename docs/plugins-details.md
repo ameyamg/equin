@@ -36144,12 +36144,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AssetMirrorPrewarm`
           - `AssetMirrorSource`
           - `CollectedEntry`
+          - `VideoAtCdn`
         - Exports (values):
           - `assetMirrorBase`
           - `assetMirrorFile`
           - `assetMirrorPrewarmCollectedDir`
           - `AssetPinMismatchError`
           - `cachedFileSegments`
+          - `cdnCacheControlFor`
           - `defineAssetMirrorPrewarm`
           - `defineAssetMirrorSource`
           - `getMirroredFile`

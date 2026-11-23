@@ -130,9 +130,11 @@ What converge cannot do — the Cloudflare zone — is a checklist, in order:
    `/api/*` `no-store`, `/artifacts/*`, `/assets/*` and the asset mirror's
    files — the site's film included — immutable, a missing `/artifacts/*`
    `no-store`). A dashboard rule would be a second, unreviewed copy of that
-   policy. (The film is cached on purpose: Cloudflare's CDN terms frown on a
-   zone whose bytes are mostly video, which equin.ai's are not; if that ever
-   changes, the route is R2 / Stream, not a cache exclusion.)
+   policy. Video is the exception a source decides: a mirrored video carries
+   `CDN-Cache-Control: no-store` unless its asset-mirror source declares
+   `videoAtCdn: "stored"` (`infra/asset-mirror`) — only the website's film
+   does, since Cloudflare's CDN terms frown on a zone whose bytes are mostly
+   video. If video ever dominates, the route is R2 / Stream.
 4. Proxy the records (orange), then set the deployment's edge to
    `cloudflare` and converge. Between the two, visitors briefly read as
    Cloudflare addresses, so keep it to minutes.

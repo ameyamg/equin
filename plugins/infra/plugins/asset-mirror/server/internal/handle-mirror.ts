@@ -6,6 +6,7 @@ import {
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import {
   cachedFileSegments,
+  cdnCacheControlFor,
   pinOf,
   remoteFileUrl,
   verifyPinnedBytes,
@@ -113,9 +114,15 @@ export async function handleMirror(
     }
   }
   // Honours `Range`, so a mirrored video seeks (and plays at all in Safari).
+  const type = contentType(name);
+  const cdnCacheControl = cdnCacheControlFor(source, type);
   return rangedBlobResponse(cached.blob, req.headers, {
-    "content-type": contentType(name),
+    "content-type": type,
     // Pinned bytes are immutable; let the browser cache them indefinitely.
     "cache-control": "public, max-age=31536000, immutable",
+    // …but a CDN in front stores a video only when its source opted in.
+    ...(cdnCacheControl === null
+      ? {}
+      : { "cdn-cache-control": cdnCacheControl }),
   });
 }

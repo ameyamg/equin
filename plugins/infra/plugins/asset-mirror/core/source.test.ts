@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   AssetPinMismatchError,
+  cdnCacheControlFor,
   defineAssetMirrorSource,
   pinOf,
   remoteFileUrl,
@@ -97,5 +98,30 @@ describe("defineAssetMirrorPrewarm", () => {
         files: ["c.ogg"],
       }),
     ).toThrow("does not pin");
+  });
+});
+
+describe("cdnCacheControlFor", () => {
+  const make = (videoAtCdn?: "stored" | "not-stored") =>
+    defineAssetMirrorSource({
+      id: "m",
+      remoteBaseUrl: base,
+      files: { "a.mp4": hex("x") },
+      ...(videoAtCdn ? { videoAtCdn } : {}),
+    });
+
+  test("a video is not stored at a CDN unless its source opts in", () => {
+    expect(make().videoAtCdn).toBe("not-stored");
+    expect(cdnCacheControlFor(make(), "video/mp4")).toBe("no-store");
+    expect(cdnCacheControlFor(make("not-stored"), "video/webm")).toBe(
+      "no-store",
+    );
+    expect(cdnCacheControlFor(make("stored"), "video/mp4")).toBeNull();
+  });
+
+  test("anything but video carries no CDN instruction", () => {
+    for (const type of ["audio/ogg", "image/jpeg", "application/json"]) {
+      expect(cdnCacheControlFor(make(), type)).toBeNull();
+    }
   });
 });

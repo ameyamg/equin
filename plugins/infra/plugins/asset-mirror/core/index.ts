@@ -21,11 +21,12 @@ export { defineAssetMirrorPrewarm } from "./prewarm";
 export {
   AssetPinMismatchError,
   cachedFileSegments,
+  cdnCacheControlFor,
   defineAssetMirrorSource,
   pinOf,
   remoteFileUrl,
   verifyPinnedBytes,
 } from "./source";
-export type { AssetMirrorSource } from "./source";
+export type { AssetMirrorSource, VideoAtCdn } from "./source";
 export type { AssetMirrorPrewarm } from "./prewarm";
 export type { CollectedEntry } from "./prewarm.generated";
