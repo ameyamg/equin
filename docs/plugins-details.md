@@ -6480,6 +6480,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RIVER`
               - `riverWidth`
               - `roadHash`
+              - `routeAround`
               - `segDist`
               - `signHalfWidth`
               - `Slot`

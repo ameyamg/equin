@@ -32,6 +32,7 @@ import {
   plotBox,
   residentOf,
   RIVER,
+  routeAround,
   riverWidth,
   walkable,
   walkGrid,
@@ -40,6 +41,7 @@ import {
   type Layout,
   type MoveTarget,
   type Placement,
+  type Pt,
   type Resident,
   type WalkGrid,
   type WorldModel,
@@ -324,6 +326,23 @@ const TALK_LEAVE = 120;
 /** How long a line shows (s, plus a little per character), and the pause before the next while the hero stays. */
 const TALK_SHOW = 3;
 const TALK_PAUSE = 4;
+/** How far (px) a walking villager keeps its feet from the edge of something solid. */
+const VILLAGER_HALF_WIDTH = 10;
+
+/** The index of the route point nearest (x, y). */
+function nearestIndex(route: readonly Pt[], x: number, y: number): number {
+  let best = 0;
+  let bd = Infinity;
+  route.forEach(([px, py], k) => {
+    const d = (px - x) ** 2 + (py - y) ** 2;
+    if (d < bd) {
+      bd = d;
+      best = k;
+    }
+  });
+  return best;
+}
+
 /** How near a building's door a villager must stand to talk about its app. */
 const TALK_APP_NEAR = 260;
 /** How lived-in an app must be for a villager to linger at its door, and how many may. */
@@ -1100,19 +1119,32 @@ export class IsleEngine {
     const routes = layout.roads.filter(
       (r) => (r.kind === "trunk" || r.kind === "street") && r.pts.length > 6,
     );
+    // villagers walk the roads' polylines, not the walk grid: each route goes
+    // round the scenery the grid marks solid (the campfire on its square)
+    const solids = this.scene!.solids;
     this.villagers.forEach((v, i) => {
       if (v.linger) return;
-      if (v.route && layout.roads.some((r) => r.key === v.routeKey)) return;
+      const kept = v.route
+        ? layout.roads.find((r) => r.key === v.routeKey)
+        : undefined;
+      if (kept) {
+        // the same road, the scenery round it may have moved: keep its place
+        const route = routeAround(kept.pts, solids, VILLAGER_HALF_WIDTH);
+        v.k = nearestIndex(route, v.x, v.y);
+        v.route = route;
+        return;
+      }
       const r = routes[(i * 7 + routes.length) % Math.max(1, routes.length)];
       if (!r) {
         v.route = null;
         return;
       }
-      v.route = r.pts;
+      const route = routeAround(r.pts, solids, VILLAGER_HALF_WIDTH);
+      v.route = route;
       v.routeKey = r.key;
-      v.k = (r.pts.length * ((i * 0.37) % 1)) | 0;
-      v.x = r.pts[v.k]![0];
-      v.y = r.pts[v.k]![1];
+      v.k = (route.length * ((i * 0.37) % 1)) | 0;
+      v.x = route[v.k]![0];
+      v.y = route[v.k]![1];
     });
     const back = this.resume;
     const outOf =

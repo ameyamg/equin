@@ -114,6 +114,7 @@ never moves a plot (40 → 41, 14 → 142 one by one); no plot clashes at 14 / 4
     - `RIVER`
     - `riverWidth`
     - `roadHash`
+    - `routeAround`
     - `segDist`
     - `signHalfWidth`
     - `Slot`

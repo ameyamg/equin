@@ -64,7 +64,13 @@ export type { Placement, Plot, Resident } from "./internal/placement";
 export { residentOf } from "./internal/resident";
 export { plotBox, plotsClash } from "./internal/sites";
 export type { PlotBoxes } from "./internal/sites";
-export { findPath, walkable, walkGrid, WALK_CELL } from "./internal/walk";
+export {
+  findPath,
+  routeAround,
+  walkable,
+  walkGrid,
+  WALK_CELL,
+} from "./internal/walk";
 export type { Solid, WalkGrid } from "./internal/walk";
 export { Island, ISLAND_COUNT, Slot, WorldModel } from "./internal/world-model";
 export type { Hill } from "./internal/world-model";

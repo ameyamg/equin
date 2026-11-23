@@ -304,3 +304,108 @@ export function findPath(
     out[out.length - 1] = [tx, ty];
   return out;
 }
+
+/**
+ * A route that goes round `solids`: the route resampled every `step` px, and
+ * each run of it inside a solid (its radius plus `margin`, the walker's own
+ * half-width) replaced by the arc round the solid's edge, on the side the run
+ * leaned to. A run that reaches an end of the route (a street that starts at
+ * its square's campfire) is cut there instead, so the walker turns back at the
+ * edge. Pure; villagers walk the roads' polylines, not the walk grid, so this
+ * is how they keep off what the grid marks blocked.
+ */
+export function routeAround(
+  pts: readonly Pt[],
+  solids: readonly Solid[],
+  margin: number,
+  step = 6,
+): Pt[] {
+  if (pts.length < 2) return [...pts];
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const [x, y] of pts) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  const near = solids.filter(
+    ([x, y, r]) =>
+      x + r + margin >= x0 &&
+      x - r - margin <= x1 &&
+      y + r + margin >= y0 &&
+      y - r - margin <= y1,
+  );
+  let out = resample(pts, step);
+  for (const s of near) out = aroundOne(out, s, margin, step);
+  return out;
+}
+
+function resample(pts: readonly Pt[], step: number): Pt[] {
+  const out: Pt[] = [pts[0]!];
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1]!;
+    const [bx, by] = pts[i]!;
+    const n = Math.ceil(Math.hypot(bx - ax, by - ay) / step);
+    for (let k = 1; k <= n; k++)
+      out.push([ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n]);
+  }
+  return out;
+}
+
+function aroundOne(
+  pts: readonly Pt[],
+  [cx, cy, r]: Solid,
+  margin: number,
+  step: number,
+): Pt[] {
+  const R = r + margin;
+  const inside = (p: Pt) => Math.hypot(p[0] - cx, p[1] - cy) < R;
+  if (!pts.some(inside)) return [...pts];
+  const ang = (p: Pt) => Math.atan2(p[1] - cy, p[0] - cx);
+  const out: Pt[] = [];
+  let i = 0;
+  while (i < pts.length) {
+    if (!inside(pts[i]!)) {
+      out.push(pts[i]!);
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j + 1 < pts.length && inside(pts[j + 1]!)) j++;
+    // a run reaching an end of the route: cut it there
+    if (i === 0 || j === pts.length - 1) {
+      i = j + 1;
+      continue;
+    }
+    const a0 = ang(pts[i - 1]!);
+    const a1 = ang(pts[j + 1]!);
+    let d = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
+    // the side the run leans to: away from the centre, else the left of its way
+    let mx = 0;
+    let my = 0;
+    for (let k = i; k <= j; k++) {
+      mx += pts[k]![0] - cx;
+      my += pts[k]![1] - cy;
+    }
+    const n = j - i + 1;
+    mx /= n;
+    my /= n;
+    const lean =
+      Math.hypot(mx, my) > 0.5 ? Math.atan2(my, mx) : a0 + Math.PI / 2;
+    const between = (a: number, dd: number) => {
+      const t = Math.atan2(Math.sin(lean - a), Math.cos(lean - a));
+      return dd >= 0 ? t >= 0 && t <= dd : t <= 0 && t >= dd;
+    };
+    if (!between(a0, d)) d = d >= 0 ? d - 2 * Math.PI : d + 2 * Math.PI;
+    const m = Math.max(1, Math.ceil((Math.abs(d) * R) / step));
+    for (let k = 0; k <= m; k++) {
+      const a = a0 + (d * k) / m;
+      out.push([cx + Math.cos(a) * R, cy + Math.sin(a) * R]);
+    }
+    i = j + 1;
+  }
+  return out;
+}
