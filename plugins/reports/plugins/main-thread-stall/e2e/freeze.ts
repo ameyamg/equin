@@ -75,6 +75,7 @@ interface StallRow extends Record<string, unknown> {
       limitMb?: number;
     };
     frozenIn?: { source: string; what: string } | null;
+    ranNoScript?: boolean;
   };
   fingerprint: string;
   count: number;
@@ -134,6 +135,13 @@ await withBrowser(async (h) => {
     "LoAF attributes it to the injected function",
     rec?.data.topFunction?.includes("mtsInjectedSpin") ?? false,
     String(rec?.data.topFunction),
+  );
+  r.ok(
+    "a busy loop is a freeze that ran script: its row and message name the function, never no-script",
+    rec?.data.ranNoScript === false &&
+      rec.fingerprint.includes("mtsInjectedSpin") &&
+      !rec.fingerprint.includes("no-script"),
+    `${String(rec?.data.ranNoScript)} ${String(rec?.fingerprint)}`,
   );
   r.ok(
     "an unmarked loop names no frozen task",

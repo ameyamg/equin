@@ -53,7 +53,7 @@ function stallLines(s: VisitorStall | null): string[] {
   const st = s.stacks;
   if (st.kind === "sampled") {
     lines.push(
-      `- **Sampled stacks:** ${st.sampledMs} ms sampled of ${s.durationMs} ms (every ${st.sampleIntervalMs} ms; ${st.noJsMs} ms ran no JS)${st.truncated ? ", buffer filled before the end" : ""} — a sample far under the duration means the sampler thread stopped too (the process or machine was suspended, not the page busy)`,
+      `- **Sampled stacks:** ${st.sampledMs} ms sampled of ${s.durationMs} ms (every ${st.sampleIntervalMs} ms; ${st.noJsMs} ms ran no JS)${st.truncated ? ", buffer filled before the end" : ""} — ${s.ranNoScript ? "the site judged it held outside script (\`ranNoScript\`): the sampler kept its pace and saw no JS, no frame spent it in style/layout, the heap was far from its limit — a LoAF entry point spanning it did not spend the time" : "a sample far under the duration means the sampler thread stopped too (the process or machine was suspended, not the page busy)"}`,
     );
     for (const t of st.topSelf)
       lines.push(`  - ${fnLabel(t.fn)} — ${t.ms} ms self`);

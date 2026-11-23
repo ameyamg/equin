@@ -60,6 +60,12 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
   lines.push(
     `A browser tab's **main thread stopped answering for ${d.durationIsLowerBound ? "at least " : ""}${(d.durationMs / 1000).toFixed(1)} s** while it was visible: the UI was frozen — no input, no paint. Ended: **${d.ended}** (${ENDED[d.ended]}).`,
   );
+  if (d.ranNoScript) {
+    lines.push("");
+    lines.push(
+      `**No JS ran.** The tab's own profile sampled the stall at its full rate and found no JS on the main thread, and no long frame spent it in style or layout: the thread was held outside the page's work (the browser withholding its tasks, or a native wait), not running a loop. A LoAF entry point that spans it (below) is where the hold began, not what spent the time. Keyed as \`no-script\`, apart from the busy freezes of this screen.`,
+    );
+  }
   if (d.interaction) {
     const i = d.interaction;
     const t = i.target;

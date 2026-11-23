@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseUrl } from "@plugins/packages/plugins/floor-compat/core";
 import {
   dominantLayer,
   InteractionBreakdownSchema,
@@ -7,6 +8,7 @@ import {
   InteractionTargetSchema,
 } from "./interaction-target";
 import {
+  heapNearCeiling,
   StallMemorySchema,
   StallStacksSchema,
 } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
@@ -142,6 +144,17 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // the `main-thread` slow-op only — never a report, never a bell. Null:
   // it came back in view, or a long frame covers it.
   returnedOutOfView: z.enum(["hidden", "frozen"]).nullable().default(null),
+  // The stalled tab's own profile sampled the whole stall at its full rate
+  // and found no JS on the main thread, and no frame spent it in style or
+  // layout (`ranNoScript`): the thread was held outside the page's work —
+  // its tasks withheld by the browser, a nested native wait — not running a
+  // loop, whatever LoAF's entry point says (visitors' 180–1354 s "freezes" in
+  // `Ji (BODY.onanimationiteration)` sampled 100% no JS,
+  // report-1795436129-p17ttz). Set by the filing tab, which alone has the
+  // profile; its own fingerprint row, and the summary names no function.
+  // False: JS ran, or the profile could not tell (unavailable, truncated,
+  // the sampler starved too).
+  ranNoScript: z.boolean().default(false),
   durationIsLowerBound: z.boolean(),
   // recovered: the tab answered again on its own. gone: it was reloaded,
   // closed or killed while frozen. unknown: the watchdog itself died with the
@@ -212,8 +225,86 @@ export type MainThreadStallPayload = z.infer<
  */
 export type MainThreadStallDraft = Omit<
   MainThreadStallPayload,
-  "stacks" | "memory" | "client"
+  "stacks" | "memory" | "client" | "ranNoScript"
 >;
+
+/**
+ * What the fingerprint and summary read: the draft, plus the one coarse
+ * verdict the filing tab derives from its profile (`ranNoScript`; absent on
+ * the watchdog's own draft, which cannot know it) — never the stacks
+ * themselves.
+ */
+export type MainThreadStallIdentity = MainThreadStallDraft &
+  Partial<Pick<MainThreadStallPayload, "ranNoScript">>;
+
+// How much of the stall the profile must have sampled (the sampler thread
+// kept its pace: the renderer was neither suspended nor starved) — or, when
+// its buffer filled first (a ~300 s buffer, and a frozen thread starts no
+// next profiler), how long a stretch from the start; how much of that must
+// have had no JS; how little of it any frame may have spent in style / layout
+// (no-JS samples there are the page's own render work), and how much of it a
+// script the profiler cannot see may have run.
+const NO_SCRIPT = {
+  MIN_SAMPLED: 0.9,
+  MIN_SAMPLED_TRUNCATED_MS: 60_000,
+  MIN_NO_JS: 0.95,
+  MAX_RENDER: 0.05,
+  MAX_UNSEEN_SCRIPT: 0.05,
+} as const;
+
+/**
+ * A LoAF script the page's profiler samples: one of the page's own origin.
+ * Cross-origin script (without CORS), an extension's, or one with no URL
+ * (eval, CDP-evaluated) samples as no JS — its silence on the profile proves
+ * nothing.
+ */
+function profilerSees(sourceURL: string, pageUrl: string): boolean {
+  if (!sourceURL) return false;
+  const page = parseUrl(pageUrl);
+  const src = parseUrl(sourceURL, pageUrl);
+  return page !== null && src !== null && src.origin === page.origin;
+}
+
+/**
+ * The stall ran no script (see `ranNoScript` on the payload): its profile
+ * sampled ≥ 90% of it (or ≥ 60 s from its start, its buffer full), ≥ 95% of
+ * that with no JS; its long frames spent ≤ 5% of it in style / layout (their
+ * own pass or forced) and ≤ 5% in script the profiler cannot see; and the
+ * heap was not near its ceiling (GC).
+ */
+export function stallRanNoScript(
+  draft: MainThreadStallDraft,
+  evidence: Pick<MainThreadStallPayload, "stacks" | "memory">,
+): boolean {
+  const st = evidence.stacks;
+  const dur = draft.durationMs;
+  if (st.kind !== "sampled" || dur <= 0) return false;
+  const covered = st.truncated
+    ? st.sampledMs >= NO_SCRIPT.MIN_SAMPLED_TRUNCATED_MS
+    : st.sampledMs >= dur * NO_SCRIPT.MIN_SAMPLED;
+  if (!covered) return false;
+  if (st.noJsMs < st.sampledMs * NO_SCRIPT.MIN_NO_JS) return false;
+  const m = evidence.memory;
+  if (m.kind === "measured" && heapNearCeiling(m)) return false;
+  const frames = [
+    ...(draft.stallFrame ? [draft.stallFrame] : []),
+    ...draft.during,
+  ];
+  let renderMs = 0;
+  let unseenMs = 0;
+  for (const f of frames) {
+    if (f.styleAndLayoutStartMs !== null)
+      renderMs += Math.max(0, f.durationMs - f.styleAndLayoutStartMs);
+    for (const x of f.scripts) {
+      renderMs += x.forcedStyleAndLayoutDurationMs;
+      if (!profilerSees(x.sourceURL, draft.url)) unseenMs += x.durationMs;
+    }
+  }
+  return (
+    renderMs <= dur * NO_SCRIPT.MAX_RENDER &&
+    unseenMs <= dur * NO_SCRIPT.MAX_UNSEEN_SCRIPT
+  );
+}
 
 /**
  * A freeze a user interaction started: the interaction's target alone — the
@@ -224,32 +315,46 @@ export type MainThreadStallDraft = Omit<
  * handler runs together. No ids, durations or end kinds: the same freeze is
  * one row whose `count` grows, and its `data` is the newest sighting.
  */
-export function mainThreadStallFingerprint(data: MainThreadStallDraft): string {
+export function mainThreadStallFingerprint(
+  data: MainThreadStallIdentity,
+): string {
   if (data.interaction)
     return `main-thread-stall:interaction:${interactionTargetKey(data.interaction.target)}`;
   const task = data.frozenIn
     ? `|${data.frozenIn.source}:${data.frozenIn.what}`
     : "";
-  return `main-thread-stall:${data.app ?? "-"}|${data.routePattern}|${data.topFunction ?? "unattributed"}${task}`;
+  // No JS ran: LoAF's entry point did not spend the time, so it is not the
+  // row's identity.
+  const who = data.ranNoScript
+    ? "no-script"
+    : (data.topFunction ?? "unattributed");
+  return `main-thread-stall:${data.app ?? "-"}|${data.routePattern}|${who}${task}`;
 }
 
 /** The one-line summary used as the report message and the task title stem. */
-export function mainThreadStallSummary(data: MainThreadStallDraft): string {
+export function mainThreadStallSummary(data: MainThreadStallIdentity): string {
   const secs = (data.durationMs / 1000).toFixed(1);
   const at = `${data.app ?? "?"} ${data.routePattern}`;
+  const len = `${data.durationIsLowerBound ? "≥" : ""}${secs}s (${data.ended})`;
+  const task = data.frozenIn
+    ? ` in ${data.frozenIn.source} ${data.frozenIn.what}`
+    : "";
+  // Not a busy thread: say so, and name no function (none ran). A click's
+  // freeze keeps its own form (its row is the click's, whatever ran).
+  if (data.ranNoScript && !data.interaction)
+    return `Main thread unresponsive ${len}, no JS ran — ${at} — held outside script (browser-withheld or a native wait)${task}`;
   const who = data.topFunction ?? "unattributed";
-  const frozen = `Main thread frozen ${data.durationIsLowerBound ? "≥" : ""}${secs}s (${data.ended})`;
+  const frozen = `Main thread frozen ${len}`;
   const i = data.interaction;
   if (i) {
     const top = dominantLayer(i.breakdown);
     const fn =
       i.forcedBy && top.layer === "forced style/layout"
         ? i.forcedBy
-        : data.topFunction;
+        : data.ranNoScript
+          ? null
+          : data.topFunction;
     return `${frozen} after ${interactionTargetLabel(i.target)} — ${at} — ${top.layer} ${top.ms} ms${fn ? ` (${fn})` : ""}`;
   }
-  const task = data.frozenIn
-    ? ` in ${data.frozenIn.source} ${data.frozenIn.what}`
-    : "";
-  return `Main thread frozen ${data.durationIsLowerBound ? "≥" : ""}${secs}s (${data.ended}) — ${at} — ${who}${task}`;
+  return `${frozen} — ${at} — ${who}${task}`;
 }

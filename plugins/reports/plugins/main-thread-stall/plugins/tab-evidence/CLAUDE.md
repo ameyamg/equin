@@ -31,6 +31,7 @@ frame (`evidence: TabEvidence`).
     - `StallStacks`
     - `TabEvidence`
   - Exports (values):
+    - `heapNearCeiling`
     - `memorySection`
     - `stacksSection`
     - `StallMemorySchema`

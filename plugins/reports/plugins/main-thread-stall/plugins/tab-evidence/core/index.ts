@@ -1,4 +1,5 @@
 export {
+  heapNearCeiling,
   StallMemorySchema,
   StallStackSchema,
   StallStacksSchema,

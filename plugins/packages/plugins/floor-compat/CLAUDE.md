@@ -29,7 +29,7 @@ throws on an invalid URL); anything else is rethrown.
 
 - Description: Floor-safe spellings of built-ins newer than the browser floor (framework/tooling/lint/browser-floor), each answering as the built-in does: canParseUrl (URL.canParse), parseUrl (URL.parse), jsonResponse (Response.json), promiseWithResolvers (Promise.withResolvers). Plain JS on every host.
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×8
     - `conversations` ×3
     - `framework` ×2
@@ -40,6 +40,7 @@ throws on an invalid URL); anything else is rethrown.
     - `integrations/youtube`
     - `network/live/resource-runtime`
     - `primitives/networking/request-guard`
+    - `reports/main-thread-stall`
 - Core:
   - Exports (types): `Resolvers`
   - Exports (values):

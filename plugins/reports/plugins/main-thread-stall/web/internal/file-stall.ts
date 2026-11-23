@@ -3,6 +3,7 @@ import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/c
 import {
   coarseClient,
   mainThreadStallSummary,
+  stallRanNoScript,
   type MainThreadStallDraft,
   type MainThreadStallPayload,
   type StallFrame,
@@ -56,10 +57,14 @@ export async function fileStall(
   evidence: { profiler: StallProfiler; heap: HeapWatch },
   ownTabId: string,
 ): Promise<boolean> {
-  const payload: MainThreadStallPayload = {
-    ...draft,
+  const tabEvidence = {
     stacks: await evidence.profiler.stacksFor(draft, ownTabId),
     memory: evidence.heap.memoryFor(draft, ownTabId),
+  };
+  const payload: MainThreadStallPayload = {
+    ...draft,
+    ...tabEvidence,
+    ranNoScript: stallRanNoScript(draft, tabEvidence),
     // The filing tab is always of the stalled tab's browser (one origin's
     // SharedWorker, or the tab itself).
     client: coarseClient(navigator.userAgent),
@@ -70,7 +75,9 @@ export async function fileStall(
     endedAt: payload.endedAt,
     topFunction: payload.returnedOutOfView
       ? `out of view on return (${payload.returnedOutOfView})`
-      : payload.topFunction,
+      : payload.ranNoScript
+        ? "no JS ran"
+        : payload.topFunction,
     reportedBy: "main-thread-stall",
   });
   // Not a freeze anyone saw (see returnedOutOfView): recorded and drawn on

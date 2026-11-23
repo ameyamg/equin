@@ -183,6 +183,12 @@ export const VisitorStallSchema = z.discriminatedUnion("kind", [
       /** A click / key press started it. */
       fromInteraction: z.boolean(),
       /**
+       * The site tab's own profile sampled it whole and saw no JS
+       * (main-thread-stall's `ranNoScript`): the thread was held outside
+       * script, not busy. False on sightings imported before it existed.
+       */
+      ranNoScript: z.boolean().default(false),
+      /**
        * The JS Self-Profiling sample of the stall. `sampledMs` far under
        * `durationMs` means the sampler thread was not running either: the
        * whole process or machine was stopped, not the page busy.

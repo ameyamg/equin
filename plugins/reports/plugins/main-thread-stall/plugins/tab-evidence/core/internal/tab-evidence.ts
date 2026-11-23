@@ -55,6 +55,17 @@ export const StallMemorySchema = z.discriminatedUnion("kind", [
 ]);
 export type StallMemory = z.infer<typeof StallMemorySchema>;
 
+/**
+ * The heap's peak around a freeze (before or after) was near its limit: V8
+ * collecting garbage at its ceiling stops the thread with no JS on the stack.
+ * The one bar the evidence text and the stall's no-script verdict share.
+ */
+export function heapNearCeiling(
+  m: Extract<StallMemory, { kind: "measured" }>,
+): boolean {
+  return Math.max(m.beforeMb ?? 0, m.afterMb) >= m.limitMb * 0.75;
+}
+
 // What a tab files about a window its own thread ran (a stall it survived, a
 // slow interaction, a long frame): the stacks it sampled and the heap around
 // it. Evidence only — never part of a report's fingerprint or summary.

@@ -3,6 +3,7 @@ import {
   mainThreadStallFingerprint,
   MainThreadStallPayloadSchema,
   mainThreadStallSummary,
+  stallRanNoScript,
   type MainThreadStallDraft,
   type MainThreadStallPayload,
   slowInteractionFingerprint,
@@ -957,6 +958,7 @@ describe("sampled stacks", () => {
     const d = recovered();
     const sampled: MainThreadStallPayload = {
       ...d,
+      ranNoScript: false,
       client: { family: "chrome", os: "android" },
       memory: {
         kind: "measured",
@@ -977,6 +979,7 @@ describe("sampled stacks", () => {
     };
     const unavailable: MainThreadStallPayload = {
       ...d,
+      ranNoScript: false,
       client: { family: "safari", os: "macos" },
       memory: { kind: "unavailable", reason: "filed by another tab" },
       stacks: { kind: "unavailable", reason: "filed by another tab" },
@@ -996,6 +999,133 @@ describe("sampled stacks", () => {
   test("a report filed before stacks existed parses as unavailable, with the reason", () => {
     const old = MainThreadStallPayloadSchema.parse(recovered());
     expect(old.stacks.kind).toBe("unavailable");
+  });
+
+  // report-1795436129-p17ttz: a visible, focused tab silent 180.5 s, its LoAF
+  // entry one 180.4 s `Ji (BODY.onanimationiteration)` script — and its own
+  // profile sampling all 180.5 s at full rate, none of it JS.
+  const sampledStacks = (
+    durationMs: number,
+    noJsMs: number,
+    over: { sampledMs?: number; truncated?: boolean } = {},
+  ): MainThreadStallPayload["stacks"] => ({
+    kind: "sampled",
+    sampleIntervalMs: 21,
+    sampledMs: over.sampledMs ?? durationMs,
+    noJsMs,
+    truncated: over.truncated ?? false,
+    stacks: [],
+    topSelf: [],
+  });
+  const heap: MainThreadStallPayload["memory"] = {
+    kind: "measured",
+    beforeMb: null,
+    beforeAgoMs: null,
+    afterMb: 45,
+    limitMb: 3760,
+  };
+
+  // The page's own bundle (the profiler sees same-origin script).
+  const ownScript = (d: MainThreadStallDraft): MainThreadStallDraft => ({
+    ...d,
+    stallFrame: {
+      ...d.stallFrame!,
+      scripts: d.stallFrame!.scripts.map((x) => ({
+        ...x,
+        sourceURL: new URL("/artifacts/app.js", d.url).href,
+      })),
+    },
+  });
+
+  test("a stall its own profile sampled whole with no JS ran no script: its own row, and the summary names no function", () => {
+    const d = ownScript(recovered());
+    const evidence = {
+      stacks: sampledStacks(d.durationMs, d.durationMs),
+      memory: heap,
+    };
+    expect(stallRanNoScript(d, evidence)).toBe(true);
+    const filed = { ...d, ...evidence, ranNoScript: true };
+    expect(mainThreadStallFingerprint(filed)).toBe(
+      "main-thread-stall:agent-manager|conversation|no-script",
+    );
+    const summary = mainThreadStallSummary(filed);
+    expect(summary).toContain("no JS ran");
+    expect(summary).not.toContain("spin");
+    expect(summary).not.toContain("frozen");
+    expect(MainThreadStallPayloadSchema.parse(filed).ranNoScript).toBe(true);
+  });
+
+  test("a buffer that filled after a minute of no JS still tells (a stall longer than the ~300 s buffer)", () => {
+    const d = { ...ownScript(recovered()), durationMs: 1_353_600 };
+    const stacks = sampledStacks(d.durationMs, 299_518, {
+      sampledMs: 299_518,
+      truncated: true,
+    });
+    expect(stallRanNoScript(d, { stacks, memory: heap })).toBe(true);
+    expect(
+      stallRanNoScript(d, {
+        stacks: sampledStacks(d.durationMs, 30_000, {
+          sampledMs: 30_000,
+          truncated: true,
+        }),
+        memory: heap,
+      }),
+    ).toBe(false);
+  });
+
+  test("JS on the stack, a profile that could not tell, GC near the ceiling, layout time or script the profiler cannot see is never 'no script'", () => {
+    const d = ownScript(recovered());
+    const dur = d.durationMs;
+    const ran = (
+      stacks: MainThreadStallPayload["stacks"],
+      memory: MainThreadStallPayload["memory"] = heap,
+      draft: MainThreadStallDraft = d,
+    ) => stallRanNoScript(draft, { stacks, memory });
+    // A busy loop: JS sampled.
+    expect(ran(sampledStacks(dur, 0))).toBe(false);
+    expect(ran(sampledStacks(dur, dur * 0.8))).toBe(false);
+    // The sampler starved / stopped too: cannot tell.
+    expect(ran(sampledStacks(dur, dur * 0.5, { sampledMs: dur * 0.5 }))).toBe(
+      false,
+    );
+    expect(
+      ran(
+        sampledStacks(dur, dur * 0.5, {
+          sampledMs: dur * 0.5,
+          truncated: true,
+        }),
+      ),
+    ).toBe(false);
+    expect(ran({ kind: "unavailable", reason: "gone" })).toBe(false);
+    // A heap near its limit: V8 collecting garbage...
+    expect(ran(sampledStacks(dur, dur), { ...heap, afterMb: 3700 })).toBe(
+      false,
+    );
+    // ... or before it, freed by the collection that froze it.
+    expect(
+      ran(sampledStacks(dur, dur), { ...heap, beforeMb: 3500, afterMb: 900 }),
+    ).toBe(false);
+    // No-JS samples spent in the frame's own style / layout pass.
+    const layout: MainThreadStallDraft = {
+      ...d,
+      stallFrame: { ...d.stallFrame!, styleAndLayoutStartMs: 100 },
+    };
+    expect(ran(sampledStacks(dur, dur), heap, layout)).toBe(false);
+    // A cross-origin tag, an extension or eval'd code: the profiler is blind.
+    for (const sourceURL of [
+      "https://tags.example.com/t.js",
+      "chrome-extension://abc/content.js",
+      "",
+    ]) {
+      const blind: MainThreadStallDraft = {
+        ...d,
+        stallFrame: {
+          ...d.stallFrame!,
+          scripts: d.stallFrame!.scripts.map((x) => ({ ...x, sourceURL })),
+        },
+      };
+      expect(ran(sampledStacks(dur, dur), heap, blind)).toBe(false);
+    }
   });
 });
 

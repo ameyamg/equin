@@ -45250,7 +45250,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `waitForFlock`
     - **`floor-compat`** — Floor-safe spellings of built-ins newer than the browser floor (framework/tooling/lint/browser-floor), each answering as the built-in does: canParseUrl (URL.canParse), parseUrl (URL.parse), jsonResponse (Response.json), promiseWithResolvers (Promise.withResolvers). Plain JS on every host.
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/packages/plugins/floor-compat/REFERENCE.md`](../plugins/packages/plugins/floor-compat/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/packages/plugins/floor-compat/REFERENCE.md`](../plugins/packages/plugins/floor-compat/REFERENCE.md)
           - `apps` ×8
           - `conversations` ×3
           - `framework` ×2
@@ -45261,6 +45261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube`
           - `network/live/resource-runtime`
           - `primitives/networking/request-guard`
+          - `reports/main-thread-stall`
       - Core:
         - Exports (types): `Resolvers`
         - Exports (values):
@@ -61564,12 +61565,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `reports.ReportKind`
       - Core:
         - Uses:
+          - `packages/floor-compat.parseUrl`
+          - `reports/main-thread-stall/tab-evidence.heapNearCeiling`
           - `reports/main-thread-stall/tab-evidence.StallMemorySchema`
           - `reports/main-thread-stall/tab-evidence.StallStacksSchema`
         - Exports (types):
           - `InteractionBreakdown`
           - `InteractionTarget`
           - `MainThreadStallDraft`
+          - `MainThreadStallIdentity`
           - `MainThreadStallPayload`
           - `SlowInteractionDraft`
           - `SlowInteractionPayload`
@@ -61599,6 +61603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallFrameSchema`
           - `StallFrameScriptSchema`
           - `StallInteractionSchema`
+          - `stallRanNoScript`
           - `StallTabSchema`
       - Cross-plugin:
         - Uses tokens:
@@ -61623,6 +61628,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StallStacks`
               - `TabEvidence`
             - Exports (values):
+              - `heapNearCeiling`
               - `memorySection`
               - `stacksSection`
               - `StallMemorySchema`

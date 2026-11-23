@@ -230,6 +230,7 @@ export function reduceStall(data: unknown): VisitorStall {
       ? matchOrNull(d.frozenIn.source, SAFE_IDENTIFIER)
       : null,
     fromInteraction: d.interaction !== null,
+    ranNoScript: d.ranNoScript,
     stacks:
       d.stacks.kind === "sampled"
         ? {

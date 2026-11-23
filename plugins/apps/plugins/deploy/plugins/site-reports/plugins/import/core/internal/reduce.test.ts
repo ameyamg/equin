@@ -351,6 +351,7 @@ describe("reduceSiteReport: main-thread stalls", () => {
       ],
       frozenInSource: null,
       fromInteraction: false,
+      ranNoScript: false,
       stacks: {
         kind: "sampled",
         sampleIntervalMs: 20,

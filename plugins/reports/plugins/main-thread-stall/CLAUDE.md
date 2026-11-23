@@ -77,6 +77,23 @@ All rules live (and are tested) there:
     ping first (`recovered`, then `gone`), and on Chromium it leaves its LoAF
     frame, which clears the mark. If unload ever ran ahead of both, that
     freeze would still be on the Timeline.
+- **No script ran** (`ranNoScript`, `stallRanNoScript` in core): the
+  filing tab's own profile sampled ≥ 90% of the stall (the sampler kept its
+  pace: not suspended, not starved) — or ≥ 60 s from its start when the
+  ~300 s buffer filled first — ≥ 95% of that with no JS; its long frames
+  spent ≤ 5% of it in style / layout and ≤ 5% in script the profiler cannot
+  see (cross-origin, an extension, no URL), and the heap peak was far from
+  its limit (tab-evidence's `heapNearCeiling`, the bar its text uses).
+  The thread was held outside the page's work (the browser withholding its
+  tasks, a native wait), not running a loop — whatever LoAF's entry point
+  says. Still a report (the tab was visible and did not answer), but its own
+  row (`…|no-script`, in place of the function) and a summary that says
+  `unresponsive …, no JS ran` and names no function. A visitor on Linux
+  Chrome left /foundations open all day: 180–1354 s "freezes" in
+  `Ji (BODY.onanimationiteration)`, each sampled 100% no JS at the full
+  21 ms rate (report-1795436129-p17ttz). Only the filing tab has the
+  profile, so the verdict is set there; the watchdog's draft never carries
+  it. A busy loop still files under its function (`e2e/freeze.ts` case 1).
 - **Cohort**: tabs silent within 1.5 s of each other froze together (one
   renderer): one incident, the focused visible tab primary, the others
   `cohort[]`; they stay `covered` (no second incident) until they answer.
@@ -158,8 +175,9 @@ when the thread froze samples THROUGH the freeze.
   inside `[startedAt, endedAt)` aggregated by exact stack (innermost first,
   `name (url:line:col)`), the top 5 stacks and top 8 self-time frames, no-JS
   time, `truncated` when the buffer filled before the stall ended.
-- **Never identity**: the fingerprint and summary take `MainThreadStallDraft`,
-  so they cannot read `stacks` (tsc) — the same freeze stays one row.
+- **Never identity**: the fingerprint and summary take `MainThreadStallIdentity`
+  (the draft plus the coarse `ranNoScript` verdict), so they cannot read
+  `stacks` (tsc) — the same freeze stays one row.
 - **No JS on the stack is ambiguous**: a sample has no stack in GC, style,
   layout, paint or other native work, when the thread is not scheduled, and
   for JS the profiler may not show (cross-origin without CORS, an extension,
@@ -435,12 +453,15 @@ renderer forever — so the script kills it with CDP `Page.crash`.
   - Uses: `reports.ReportKind`
 - Core:
   - Uses:
+    - `packages/floor-compat.parseUrl`
+    - `reports/main-thread-stall/tab-evidence.heapNearCeiling`
     - `reports/main-thread-stall/tab-evidence.StallMemorySchema`
     - `reports/main-thread-stall/tab-evidence.StallStacksSchema`
   - Exports (types):
     - `InteractionBreakdown`
     - `InteractionTarget`
     - `MainThreadStallDraft`
+    - `MainThreadStallIdentity`
     - `MainThreadStallPayload`
     - `SlowInteractionDraft`
     - `SlowInteractionPayload`
@@ -470,6 +491,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `StallFrameSchema`
     - `StallFrameScriptSchema`
     - `StallInteractionSchema`
+    - `stallRanNoScript`
     - `StallTabSchema`
 - Cross-plugin:
   - Uses tokens:

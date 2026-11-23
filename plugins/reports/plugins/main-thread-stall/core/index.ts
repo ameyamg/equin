@@ -9,10 +9,12 @@ export {
   StallTabSchema,
   mainThreadStallFingerprint,
   mainThreadStallSummary,
+  stallRanNoScript,
 } from "./main-thread-stall-kind";
 export { coarseClient } from "./coarse-client";
 export type {
   MainThreadStallDraft,
+  MainThreadStallIdentity,
   StallClient,
   MainThreadStallPayload,
   StallFrame,

@@ -1,4 +1,8 @@
-import type { StallMemory, StallStacks } from "./tab-evidence";
+import {
+  heapNearCeiling,
+  type StallMemory,
+  type StallStacks,
+} from "./tab-evidence";
 
 // What a sampled window is called in the prose: a freeze the watchdog saw, an
 // interaction's own time (handlers → paint), or a long frame under the stall
@@ -87,7 +91,7 @@ export function memorySection(
     `In use before: **${before}** · after: **${m.afterMb} MB** · heap limit: **${m.limitMb} MB**.`,
   );
   const peak = Math.max(m.beforeMb ?? 0, m.afterMb);
-  if (peak >= m.limitMb * 0.75)
+  if (heapNearCeiling(m))
     lines.push(
       `The heap was at ${Math.round((peak / m.limitMb) * 100)}% of its limit: V8 collecting garbage over and over near its ceiling stops the thread with no JS on the stack. Find what holds the memory (a leak growing over the visit, or one huge allocation), not the task it froze in.`,
     );
