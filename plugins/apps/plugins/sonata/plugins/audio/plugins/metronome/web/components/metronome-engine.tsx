@@ -45,7 +45,8 @@ import { ACCENT_PITCH, CLICK_DURATION_BEATS, NORMAL_PITCH } from "../constants";
  */
 export function MetronomeEngine() {
   const graph = useAudioGraph();
-  const ctx = graph?.ctx ?? null;
+  const audio = graph?.audio ?? null;
+  const ctx = audio?.ctx ?? null;
 
   const { score, timeline, countIn, registerCountIn, finishCountIn } =
     useSession();
@@ -108,11 +109,11 @@ export function MetronomeEngine() {
   // arm ONE silent `ConstantSourceNode` whose `onended` (at the lead-in's end, on
   // the audio clock — no timer) starts real playback via `finishCountIn`.
   useEffect(() => {
-    if (!countIn || !ctx) return;
+    if (!countIn || !audio || !ctx) return;
     const voices = clickVoicesRef.current;
     if (!voices) return;
 
-    void ctx.resume();
+    void audio.requestResume();
 
     const startBeat = countIn.startBeat;
     const { numerator, denominator } = meterAt(scoreRef.current, startBeat);
@@ -163,7 +164,7 @@ export function MetronomeEngine() {
       if (!done) node.stop();
       node.disconnect();
     };
-  }, [countIn, ctx, finishCountIn]);
+  }, [countIn, audio, ctx, finishCountIn]);
 
   // --- Continuous click track: synthetic notes through the engine scheduler. --
   // The click-note LIST is tempo-INVARIANT (beats only), but `score` identity

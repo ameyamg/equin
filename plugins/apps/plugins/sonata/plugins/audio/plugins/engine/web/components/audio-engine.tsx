@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useReloadHold } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import { createSmoothClockModel } from "@plugins/packages/plugins/smooth-clock/core";
+import {
+  openAudioContext,
+  type AudioGraphContext,
+} from "@plugins/primitives/plugins/dom/plugins/audio-context/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import type { SongSetting } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
@@ -256,7 +260,7 @@ export function AudioEngine() {
   const { setStatus, setLoadError, setGraph } = useAudioControls();
 
   // --- Web Audio graph: AudioContext + master gain, owned in refs. ----------
-  const ctxRef = useRef<AudioContext | null>(null);
+  const ctxRef = useRef<AudioGraphContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
   // One channel strip per audible track, keyed by trackId: its own fader into
   // master, feeding its own voice manager. Two tracks on the same instrument
@@ -265,7 +269,8 @@ export function AudioEngine() {
 
   // Create the context eagerly on mount; it starts suspended until a gesture.
   useEffect(() => {
-    const ctx = new AudioContext();
+    const audio = openAudioContext();
+    const { ctx } = audio;
     const master = ctx.createGain();
     master.gain.value = DEFAULT_VOLUME;
     master.connect(ctx.destination);
@@ -275,13 +280,13 @@ export function AudioEngine() {
     // Publish the live graph so sibling per-surface audio effects (the metronome
     // reads `ctx`; the live player routes voices into `master`) can share the
     // SAME clock + output bus playback is anchored against.
-    setGraph({ ctx, master });
+    setGraph({ audio, master });
 
     // Register the AudioContext clock as the transport's authoritative time
     // source, so the visual cursor reads the *same* clock the audio is
     // scheduled against (no drift, correct across tab backgrounding). Stable for
     // the whole session: `ctx.currentTime` is frozen while suspended and only
-    // advances after `ctx.resume()` on play — exactly when the cursor reads it.
+    // advances after a resume on play — exactly when the cursor reads it.
     // Its latency is the output device's, so the cursor shows the music when
     // it is heard while the schedulers keep placing notes on `currentTime`.
     const latency = createOutputLatency(ctx);
@@ -311,7 +316,7 @@ export function AudioEngine() {
     // Belt-and-suspenders autoplay-gate unlock: the play button is itself a
     // gesture, but a one-time pointerdown resume covers any other entry point.
     const unlock = () => {
-      void ctx.resume();
+      void audio.requestResume();
     };
     document.addEventListener("pointerdown", unlock, { once: true });
 
@@ -331,10 +336,9 @@ export function AudioEngine() {
         channel.gain.disconnect();
       }
       channels.clear();
-      // Guard against React StrictMode's double invoke: only close once.
-      if (ctx.state !== "closed") {
-        void ctx.close();
-      }
+      // The owner closes once (React StrictMode's double invoke included), and
+      // a resume still pending — no gesture yet — answers closed, not a crash.
+      audio.close();
       ctxRef.current = null;
       masterRef.current = null;
     };
@@ -461,7 +465,7 @@ export function AudioEngine() {
   // The context starts suspended until a gesture; playing resumes it (the play
   // button is itself one).
   useEffect(() => {
-    if (isPlaying) void graph?.ctx.resume();
+    if (isPlaying && graph) void graph.audio.requestResume();
   }, [isPlaying, graph]);
 
   // --- Scheduling effect: follow the timeline with the audible notes. --------
@@ -483,7 +487,7 @@ export function AudioEngine() {
   // track's level moved. Per-track levels are never read here at all: they
   // live on the strips' faders, downstream of everything this schedules.
   useEffect(() => {
-    const ctx = graph?.ctx;
+    const ctx = graph?.audio.ctx;
     if (!ctx) return;
 
     const channels = [...channelsRef.current.values()];

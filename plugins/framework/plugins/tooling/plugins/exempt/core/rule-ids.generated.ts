@@ -12,6 +12,7 @@ export type ExemptableRuleId =
   | "app-manifest/no-resvg-system-fonts"
   | "apps-core/no-raw-history-nav"
   | "aria-safety/no-orphan-composite-role"
+  | "audio-context/no-raw-audio-context"
   | "bar/no-adhoc-bar"
   | "blocking-fs/no-sync-fs"
   | "blocking-fs/sync-named"

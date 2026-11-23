@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
+import type { OwnedAudioContext } from "@plugins/primitives/plugins/dom/plugins/audio-context/web";
 
 /**
  * A per-surface reactive store sharing the small slice of audio state that
@@ -23,14 +24,16 @@ export type AudioStatus = "empty" | "loading" | "ready";
  * The shared Web Audio graph handle the engine owns and publishes here. The
  * engine is the SOLE owner of the `AudioContext` (its lifecycle must not be tied
  * to mountable UI; see this plugin's `CLAUDE.md`); it merely publishes the live
- * ctx + master gain so sibling per-surface effects in other slot branches — e.g.
+ * context + master gain so sibling per-surface effects in other slot branches — e.g.
  * the metronome (reads `ctx`) and the live player (routes voices into `master`,
  * so the master-volume slider governs hand-played notes too) — can share the
  * same clock and output bus playback is anchored against. `null` until the
  * engine's mount effect has created the context.
  */
 export interface AudioGraph {
-  ctx: AudioContext;
+  /** The live context and its owner's resume (siblings resume it on a gesture;
+   *  only the engine closes it). */
+  audio: OwnedAudioContext;
   master: GainNode;
 }
 

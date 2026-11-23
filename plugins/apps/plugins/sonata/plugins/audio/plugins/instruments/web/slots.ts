@@ -61,7 +61,7 @@ export const SonataAudio = {
      * `unavailable` for rejects `loaded` with its message.
      */
     createVoices: (
-      ctx: AudioContext,
+      ctx: BaseAudioContext,
       destination: AudioNode,
       assets: InstrumentAssets,
     ) => InstrumentVoices;

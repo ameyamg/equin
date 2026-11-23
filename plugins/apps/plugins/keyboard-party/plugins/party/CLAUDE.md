@@ -14,6 +14,9 @@
     - `config_v2/fields.FieldRenderer`
     - `primitives/app-shell.AppShellBrand`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/dom/audio-context.AudioGraphContext`
+    - `primitives/dom/audio-context.openAudioContext`
+    - `primitives/dom/audio-context.OwnedAudioContext`
     - `primitives/dom/element-fullscreen.FullscreenSupport`
     - `primitives/dom/element-fullscreen.useFullscreenSupport`
     - `primitives/dom/reload-readiness.holdReload`

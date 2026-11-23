@@ -1,6 +1,10 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { AmbientMood } from "../../core";
 import { createAmbient, type Ambient, type AmbientSfx } from "./ambient";
+import {
+  openAudioContext,
+  type OwnedAudioContext,
+} from "@plugins/primitives/plugins/dom/plugins/audio-context/web";
 
 /**
  * Where the music stands: `playing`, `locked` while it is asked for but the
@@ -61,7 +65,7 @@ export interface AmbientHost {
 
 export function createAmbientHost(): AmbientHost {
   let holds = 0;
-  let built: { ctx: AudioContext; ambient: Ambient } | null = null;
+  let built: { audio: OwnedAudioContext; ambient: Ambient } | null = null;
   /** The scheduled build's cancel, while one waits for the next paint. */
   let scheduled: (() => void) | null = null;
   let wanted: { on: boolean; mood: AmbientMood } = { on: false, mood: "lofi" };
@@ -71,7 +75,7 @@ export function createAmbientHost(): AmbientHost {
   const listeners = new Set<() => void>();
 
   function publish() {
-    const contextState = built?.ctx.state ?? null;
+    const contextState = built?.audio.ctx.state ?? null;
     const status: AmbientStatus = !wanted.on
       ? "off"
       : contextState === "running"
@@ -85,7 +89,7 @@ export function createAmbientHost(): AmbientHost {
   }
 
   function apply() {
-    if (built && built.ctx.state === "running") {
+    if (built && built.audio.ctx.state === "running") {
       built.ambient.setMood(wanted.mood);
       if (wanted.on) built.ambient.start();
       else built.ambient.stop();
@@ -93,15 +97,16 @@ export function createAmbientHost(): AmbientHost {
     publish();
   }
 
-  function build(): { ctx: AudioContext; ambient: Ambient } {
-    const ctx = new AudioContext();
+  function build(): { audio: OwnedAudioContext; ambient: Ambient } {
+    const audio = openAudioContext();
+    const { ctx } = audio;
     const ambient = createAmbient(ctx, { mood: wanted.mood });
     ambient.setGain(gain);
     ambient.duck(ducked);
-    const b = { ctx, ambient };
+    const b = { audio, ambient };
     built = b;
     ctx.onstatechange = apply;
-    if (wanted.on) resume(ctx);
+    if (wanted.on) void audio.requestResume();
     apply();
     return b;
   }
@@ -114,11 +119,12 @@ export function createAmbientHost(): AmbientHost {
   function teardown() {
     cancelScheduled();
     if (!built) return;
-    const { ctx, ambient } = built;
+    const { audio, ambient } = built;
     built = null;
-    ctx.onstatechange = null;
+    audio.ctx.onstatechange = null;
     ambient.dispose();
-    void ctx.close();
+    // A resume still pending (no gesture yet) answers closed, not a crash.
+    audio.close();
     publish();
   }
 
@@ -154,11 +160,11 @@ export function createAmbientHost(): AmbientHost {
         cancelScheduled();
         b = build();
       }
-      resume(b.ctx);
+      void b.audio.requestResume();
     },
     set(opts) {
       wanted = { on: opts.on, mood: opts.mood ?? wanted.mood };
-      if (built && wanted.on) resume(built.ctx);
+      if (built && wanted.on) void built.audio.requestResume();
       apply();
     },
     setGain(next) {
@@ -176,26 +182,6 @@ export function createAmbientHost(): AmbientHost {
       return () => listeners.delete(listener);
     },
   };
-}
-
-/**
- * Resumes `ctx`, fire-and-forget. A resume asked for without a user gesture
- * stays pending until the browser allows sound; the last release closes the
- * context meanwhile (leaving the app before ever clicking), and close rejects
- * every pending resume with an InvalidStateError ("AudioContext is closed",
- * report-1795142633-urk0aa). That rejection is the teardown we asked for, not a
- * failure: absorbed only when the context is closed, anything else thrown on.
- */
-function resume(ctx: AudioContext): void {
-  void ctx.resume().catch((err: unknown) => {
-    if (
-      err instanceof DOMException &&
-      err.name === "InvalidStateError" &&
-      ctx.state === "closed"
-    )
-      return;
-    throw err;
-  });
 }
 
 /**

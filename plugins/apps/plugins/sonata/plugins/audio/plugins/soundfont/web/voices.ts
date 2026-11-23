@@ -59,7 +59,7 @@ import { SOUNDFONT_MIRROR_ID, soundfontFile } from "../shared/mirror";
 type Sf = ReturnType<(typeof import("smplr"))["Soundfont"]>;
 
 export function createSoundfontVoices(
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   destination: AudioNode,
   assets: InstrumentAssets,
   gleitzName: string,

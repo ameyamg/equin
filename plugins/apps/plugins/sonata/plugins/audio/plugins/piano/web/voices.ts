@@ -56,7 +56,7 @@ import { PIANO_MIRROR_ID } from "../shared/mirror";
 type Piano = ReturnType<(typeof import("smplr"))["SplendidGrandPiano"]>;
 
 export function createVoices(
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   destination: AudioNode,
   assets: InstrumentAssets,
 ): InstrumentVoices {

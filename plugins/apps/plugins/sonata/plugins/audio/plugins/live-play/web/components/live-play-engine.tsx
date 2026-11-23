@@ -67,7 +67,7 @@ export function LivePlayEngine() {
       const inst = instrumentRef.current;
       if (!graphNow || !inst) return;
       const voices = inst.createVoices(
-        graphNow.ctx,
+        graphNow.audio.ctx,
         graphNow.master,
         assetsRef.current,
       );
@@ -104,7 +104,7 @@ export function LivePlayEngine() {
       },
       press(pitch: number, velocity: number = DEFAULT_VELOCITY) {
         const graphNow = graphRef.current;
-        if (graphNow) void graphNow.ctx.resume();
+        if (graphNow) void graphNow.audio.requestResume();
         ensureVoices();
         // Retrigger: release an already-held voice for this pitch first.
         const prev = heldRef.current.get(pitch);
@@ -144,7 +144,7 @@ export function LivePlayEngine() {
   // Rebuild voices when the AudioContext changes (a fresh context must rebuild
   // the voice manager): release held notes + dispose the old voices so the next
   // press lazily recreates them against the new ctx.
-  const ctx = graph?.ctx;
+  const ctx = graph?.audio.ctx;
   useEffect(() => {
     // Capture the stable held-voices map for the cleanup (the Map identity never
     // changes; reading the ref directly in cleanup trips react-hooks/refs).

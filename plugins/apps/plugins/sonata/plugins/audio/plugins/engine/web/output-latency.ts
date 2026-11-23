@@ -16,7 +16,9 @@ const JITTER_SEC = 0.005;
  * Read on demand (every frame by the transport): both are live properties, so
  * switching the output device is followed with no listener.
  */
-export function createOutputLatency(ctx: AudioContext): { read(): number } {
+export function createOutputLatency(
+  ctx: Pick<AudioContext, "baseLatency" | "outputLatency">,
+): { read(): number } {
   let held: number | null = null;
   return {
     read() {

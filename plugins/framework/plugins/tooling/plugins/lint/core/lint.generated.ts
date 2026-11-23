@@ -124,6 +124,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/data-view", id: "primitives.data-view", loader: () => import("@plugins/primitives/plugins/data-view/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/detail-sections", id: "primitives.detail-sections", loader: () => import("@plugins/primitives/plugins/detail-sections/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/dom/plugins/audio-context", id: "primitives.dom.audio-context", loader: () => import("@plugins/primitives/plugins/dom/plugins/audio-context/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/element-fullscreen", id: "primitives.dom.element-fullscreen", loader: () => import("@plugins/primitives/plugins/dom/plugins/element-fullscreen/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/media-element", id: "primitives.dom.media-element", loader: () => import("@plugins/primitives/plugins/dom/plugins/media-element/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/speech-synthesis", id: "primitives.dom.speech-synthesis", loader: () => import("@plugins/primitives/plugins/dom/plugins/speech-synthesis/lint"), dependsOn: [] },

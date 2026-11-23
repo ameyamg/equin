@@ -1,5 +1,10 @@
 import { holdReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import { speechSupport } from "@plugins/primitives/plugins/dom/plugins/speech-synthesis/web";
+import {
+  openAudioContext,
+  type AudioGraphContext,
+  type OwnedAudioContext,
+} from "@plugins/primitives/plugins/dom/plugins/audio-context/web";
 import type { Instrument } from "../../core";
 
 /**
@@ -10,7 +15,7 @@ import type { Instrument } from "../../core";
  * press or a tap — the user gesture browsers require before audio may start.
  */
 export class PartyAudio {
-  private ctx: AudioContext | null = null;
+  private audio: OwnedAudioContext | null = null;
   private out: AudioNode | null = null;
   /** Sounds started and not ended yet, and the page's reload hold while any rings. */
   private sounding = 0;
@@ -33,18 +38,19 @@ export class PartyAudio {
     this.releaseHold = null;
   }
 
-  private context(): { ctx: AudioContext; out: AudioNode } {
-    if (!this.ctx || !this.out) {
-      const ctx = new AudioContext();
+  private context(): { ctx: AudioGraphContext; out: AudioNode } {
+    if (!this.audio || !this.out) {
+      const audio = openAudioContext();
+      const { ctx } = audio;
       const comp = ctx.createDynamicsCompressor();
       const gain = ctx.createGain();
       gain.gain.value = 0.55;
       comp.connect(gain).connect(ctx.destination);
-      this.ctx = ctx;
+      this.audio = audio;
       this.out = comp;
     }
-    if (this.ctx.state === "suspended") void this.ctx.resume();
-    return { ctx: this.ctx, out: this.out };
+    if (this.audio.ctx.state === "suspended") void this.audio.requestResume();
+    return { ctx: this.audio.ctx, out: this.out };
   }
 
   tone(
@@ -144,8 +150,8 @@ export class PartyAudio {
   dispose(): void {
     this.sounding = 0;
     this.endHold();
-    void this.ctx?.close();
-    this.ctx = null;
+    this.audio?.close();
+    this.audio = null;
     this.out = null;
   }
 }

@@ -175,10 +175,11 @@ one held down — the one thing a value check cannot tell you.
 - Description: The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/audio/instruments` ×3
     - `config_v2` ×3
     - `apps/chord/vocabulary` ×2
+    - `primitives/dom/audio-context` ×2
     - `primitives/latest-ref` ×2
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `primitives/css/card.Card`

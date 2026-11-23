@@ -6640,6 +6640,10 @@
       "name": "@equin/plugin-primitives-dom-after-layout",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/audio-context": {
+      "name": "@equin/plugin-primitives-dom-audio-context",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/auto-scroll": {
       "name": "@equin/plugin-primitives-dom-auto-scroll",
       "version": "0.0.1",
@@ -11568,6 +11572,8 @@
     "@equin/plugin-primitives-dom": ["@equin/plugin-primitives-dom@workspace:plugins/primitives/plugins/dom"],
 
     "@equin/plugin-primitives-dom-after-layout": ["@equin/plugin-primitives-dom-after-layout@workspace:plugins/primitives/plugins/dom/plugins/after-layout"],
+
+    "@equin/plugin-primitives-dom-audio-context": ["@equin/plugin-primitives-dom-audio-context@workspace:plugins/primitives/plugins/dom/plugins/audio-context"],
 
     "@equin/plugin-primitives-dom-auto-scroll": ["@equin/plugin-primitives-dom-auto-scroll@workspace:plugins/primitives/plugins/dom/plugins/auto-scroll"],
 

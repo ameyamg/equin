@@ -82,7 +82,7 @@ export function startScheduling(
   source: Pick<Score, "notes" | "pedalEvents">,
   timelines: TimelineStore,
   resolveVoices: (trackId: string) => InstrumentVoices | undefined,
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   opts: { restSounds?: boolean } = {},
 ): ScheduleHandle {
   const byStart = (a: Note, b: Note): number => a.start - b.start;

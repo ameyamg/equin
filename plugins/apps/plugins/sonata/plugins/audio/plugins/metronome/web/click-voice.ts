@@ -36,7 +36,7 @@ const SILENCE = 0.0001;
  * without rebuilding the voice.
  */
 export function createClickVoices(
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   destination: AudioNode,
   getVolume: () => number,
 ): InstrumentVoices {

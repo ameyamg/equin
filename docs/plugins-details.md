@@ -1431,10 +1431,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/chord/plugins/piano/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/piano/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/chord/plugins/piano/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/piano/REFERENCE.md)
               - `apps/sonata/audio/instruments` ×3
               - `config_v2` ×3
               - `apps/chord/vocabulary` ×2
+              - `primitives/dom/audio-context` ×2
               - `primitives/latest-ref` ×2
               - `apps/sonata/primitives/keyboard.Keyboard`
               - `primitives/css/card.Card`
@@ -6564,6 +6565,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.FieldRenderer`
               - `primitives/app-shell.AppShellBrand`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/dom/audio-context.AudioGraphContext`
+              - `primitives/dom/audio-context.openAudioContext`
+              - `primitives/dom/audio-context.OwnedAudioContext`
               - `primitives/dom/element-fullscreen.FullscreenSupport`
               - `primitives/dom/element-fullscreen.useFullscreenSupport`
               - `primitives/dom/reload-readiness.holdReload`
@@ -9309,22 +9313,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SonataSession.Effect` "audio-engine" → `AudioEngine`
                   - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
                   - `songPeekPane.Actions` "volume" → `VolumeControl`
-                - Uses:
-                  - `apps/sonata/audio/instruments.InstrumentVoices`
-                  - `apps/sonata/audio/instruments.SonataAudio`
-                  - `apps/sonata/audio/instruments.useInstrumentAssets`
-                  - `apps/sonata/library.sonataPlayerPane`
-                  - `apps/sonata/library.songPeekPane`
-                  - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
-                  - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
-                  - `apps/sonata/session.SonataSession`
-                  - `apps/sonata/session.useSession`
-                  - `apps/sonata/track-mixer.useMutedTrackIds`
-                  - `apps/sonata/track-mixer.useTrackInstrumentMap`
-                  - `apps/sonata/track-mixer.useTrackVolumeMap`
+                - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/engine/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/engine/REFERENCE.md)
+                  - `apps/sonata/audio/instruments` ×3
+                  - `apps/sonata/track-mixer` ×3
+                  - `apps/sonata/library` ×2
+                  - `apps/sonata/primitives/toolbar-control` ×2
+                  - `apps/sonata/session` ×2
+                  - `primitives/css/spacing` ×2
+                  - `primitives/dom/audio-context` ×2
                   - `primitives/css/slider.Slider`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
                   - `primitives/dom/reload-readiness.useReloadHold`
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useLatestRef`
@@ -43478,6 +43475,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`music`** — Umbrella for music shared across apps: the chord box (a chord's degree colour, numeral and tile), the ambient engine (generative WebAudio music and sound effects), and the background music service (the music apps offer, played from the page root so it outlives the app, one at a time across the browser's tabs, with the action bar's music button).
   - Plugins:
     - **`ambient`** — Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds), each an endless procedural form rather than a loop — core's createComposer walks sections (intro, verse, chorus, bridge, break) over the mood's progressions, moves key now and then, and gives each section a melodic motif stated, answered and varied, fresh from a new seed every start — written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck / setGain and sound effects (step, blip, enter, whoosh, chime); createAmbientHost() is one engine shared by everything on the page that holds it (a view and a background player alike): its AudioContext built suspended after the next paint once first retained (constructing one blocks the main thread while the browser opens the audio output, so never inside a gesture nor the task that retains it — a click mounting a holder runs its effects), or at once by an unlock() that comes first, resumed by unlock() or set({ on: true }), closed on the last release; useAmbientHost(host) holds it while mounted and reads its status.
+      - Web:
+        - Uses:
+          - `primitives/dom/audio-context.openAudioContext`
+          - `primitives/dom/audio-context.OwnedAudioContext`
+        - Exports (types):
+          - `Ambient`
+          - `AmbientHost`
+          - `AmbientSfx`
+          - `AmbientSnapshot`
+          - `AmbientStatus`
+        - Exports (values):
+          - `createAmbient`
+          - `createAmbientHost`
+          - `useAmbientHost`
       - Core:
         - Uses: `packages/seeded-random.mulberry32`
         - Exports (types):
@@ -43500,17 +43511,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SECTION_KINDS`
       - Cross-plugin:
         - Imported by: `apps/isle/world-view`
-      - Web:
-        - Exports (types):
-          - `Ambient`
-          - `AmbientHost`
-          - `AmbientSfx`
-          - `AmbientSnapshot`
-          - `AmbientStatus`
-        - Exports (values):
-          - `createAmbient`
-          - `createAmbientHost`
-          - `useAmbientHost`
     - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views; a root host of every scope of which one runs, so a page holding the service only for a scope — the website's live demo — plays it too); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on — never across a closed desktop window (useSurfaceShowsAppsSideBySide: leaving there is closing the app); music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps (and not left by closing its desktop window), it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
       - Web:
         - Slots: `BackgroundMusic.Source`
@@ -54833,6 +54833,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `commitInPhase`
               - `observeInPhase`
               - `runAsAfterLayout`
+        - **`audio-context`** — An AudioContext with one owner of its resume and close: openAudioContext(options?) builds the context and answers an OwnedAudioContext — ctx (an AudioGraphContext: the context typed without resume / suspend / close, for building the graph), requestResume() → running | closed (closed by this owner while the resume was pending — the teardown of a page left before any gesture, never a crash) and close() (once; a second call is a no-op). Any other rejection, an InvalidStateError on a context the owner did not close included, throws an AudioContextError carrying the caller's stack. Its lint rule (no-raw-audio-context) sends every other new AudioContext and raw .resume() promise here.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/chord/piano`
+              - `apps/keyboard-party/party`
+              - `apps/sonata/audio/engine`
+              - `music/ambient`
+          - Exemptions:
+            - Exempts itself from: `audio-context/no-raw-audio-context` — `web/internal/owned-audio-context.ts` (sanctioned)
+            - Exempted by: `primitives/dom/audio-context` (0 debt)
+          - Web:
+            - Exports (types):
+              - `AudioGraphContext`
+              - `OwnedAudioContext`
+              - `ResumeOutcome`
+            - Exports (values):
+              - `AudioContextError`
+              - `openAudioContext`
         - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
           - Web:
             - Contributes: `Core.Root` → `BrowserHoldRelease`

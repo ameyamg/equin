@@ -153,22 +153,15 @@ notes through the same scheduler against the same store.
     - `SonataSession.Effect` "audio-engine" → `AudioEngine`
     - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
     - `songPeekPane.Actions` "volume" → `VolumeControl`
-  - Uses:
-    - `apps/sonata/audio/instruments.InstrumentVoices`
-    - `apps/sonata/audio/instruments.SonataAudio`
-    - `apps/sonata/audio/instruments.useInstrumentAssets`
-    - `apps/sonata/library.sonataPlayerPane`
-    - `apps/sonata/library.songPeekPane`
-    - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
-    - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
-    - `apps/sonata/session.SonataSession`
-    - `apps/sonata/session.useSession`
-    - `apps/sonata/track-mixer.useMutedTrackIds`
-    - `apps/sonata/track-mixer.useTrackInstrumentMap`
-    - `apps/sonata/track-mixer.useTrackVolumeMap`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/audio/instruments` ×3
+    - `apps/sonata/track-mixer` ×3
+    - `apps/sonata/library` ×2
+    - `apps/sonata/primitives/toolbar-control` ×2
+    - `apps/sonata/session` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/dom/audio-context` ×2
     - `primitives/css/slider.Slider`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/dom/reload-readiness.useReloadHold`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`

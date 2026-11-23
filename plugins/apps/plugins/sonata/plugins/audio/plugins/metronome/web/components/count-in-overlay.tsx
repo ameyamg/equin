@@ -23,7 +23,7 @@ import "./count-in-overlay.css";
 export function CountInOverlay() {
   const { countIn, heardNow } = useSession();
   const graph = useAudioGraph();
-  const ctx = graph?.ctx ?? null;
+  const ctx = graph?.audio.ctx ?? null;
 
   // A bare frame counter purely to drive re-renders while the lead-in runs; the
   // remaining count is DERIVED in render from the live audio clock below (so the

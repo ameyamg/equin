@@ -666,6 +666,7 @@ export const browserHost = {
     "primitives.diff-view",
     "primitives.diff-view.swipe-compare",
     "primitives.dom.after-layout",
+    "primitives.dom.audio-context",
     "primitives.dom.auto-scroll",
     "primitives.dom.copy-source-text",
     "primitives.dom.dom-selection",

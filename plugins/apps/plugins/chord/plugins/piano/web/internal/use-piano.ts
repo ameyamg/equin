@@ -6,6 +6,10 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { holdReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
+import {
+  openAudioContext,
+  type OwnedAudioContext,
+} from "@plugins/primitives/plugins/dom/plugins/audio-context/web";
 
 /** How long a struck chord rings, in seconds. */
 const RING_SECONDS = 1.4;
@@ -22,7 +26,7 @@ const GAIN_GLIDE_SECONDS = 0.03;
 
 /** The Chord app's piano: one AudioContext, one voice set and its level, for this screen. */
 type PianoGraph = {
-  ctx: AudioContext;
+  audio: OwnedAudioContext;
   voices: InstrumentVoices;
   gain: GainNode;
 };
@@ -92,7 +96,7 @@ export function usePiano(volume: number): Piano {
     if (graph === null) return;
     graph.gain.gain.setTargetAtTime(
       volume,
-      graph.ctx.currentTime,
+      graph.audio.ctx.currentTime,
       GAIN_GLIDE_SECONDS,
     );
   }, [volume]);
@@ -104,7 +108,7 @@ export function usePiano(volume: number): Piano {
       graphRef.current = null;
       if (graph === null) return;
       graph.voices.dispose();
-      if (graph.ctx.state !== "closed") void graph.ctx.close();
+      graph.audio.close();
     },
     [stopRinging],
   );
@@ -119,20 +123,27 @@ export function usePiano(volume: number): Piano {
             "No default instrument is registered on SonataAudio.Instrument: the piano cannot play",
           );
         }
-        const ctx = new AudioContext();
+        const audio = openAudioContext();
+        const { ctx } = audio;
         const gain = ctx.createGain();
         gain.gain.value = volumeRef.current;
         gain.connect(ctx.destination);
         graph = {
-          ctx,
+          audio,
           voices: instrument.createVoices(ctx, gain, assetsRef.current),
           gain,
         };
         graphRef.current = graph;
       }
-      const { ctx, voices } = graph;
+      const { audio, voices } = graph;
+      const { ctx } = audio;
       // A context created or suspended outside a gesture starts suspended.
-      if (ctx.state === "suspended") await ctx.resume();
+      // Unmounted before the browser allowed sound: the owner closed it.
+      if (
+        ctx.state === "suspended" &&
+        (await audio.requestResume()).kind === "closed"
+      )
+        return;
       await voices.loaded;
       // Unmounted while the samples loaded: nothing left to play into.
       if (graphRef.current !== graph) return;
