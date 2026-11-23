@@ -45465,9 +45465,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by: `debug/heap-snapshot` (0 debt)
     - **`process-alive`** — Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown, a non-pid refused; isProcessGroupAlive(pgid) the same for kill(-pgid, 0) — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
           - `infra` ×13
-          - `framework` ×8
+          - `framework` ×9
           - `conversations` ×2
           - `debug` ×2
           - `packages` ×2

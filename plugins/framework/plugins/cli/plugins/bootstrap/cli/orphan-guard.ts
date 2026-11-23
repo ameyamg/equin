@@ -1,4 +1,8 @@
-import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  readEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 export const ORPHAN_EXIT_CODE = 140; // 128 + 12
 
 // The poll installed by `installOrphanGuard`, held at module scope so
@@ -39,16 +43,49 @@ export function installOrphanGuard(onOrphan: () => void): void {
   // Env rather than a declaration because it is set by the SPAWNER, before this
   // process exists, and so is knowable here in the pre-install phase.
   if (readEnv("BUILD_DETACHED")) return;
-  // Likewise an op the foreground hand-off detached (op-runtime
-  // foreground-handoff.ts): its spawner exits at the agent's deadline BY DESIGN,
-  // and `./equin await` is its handle from then on.
-  if (readEnv("OP_HANDED_OFF")) return;
-  if (process.ppid === 1) {
+  // An op the foreground hand-off detached (cli/foreground-handoff): its
+  // spawner exits at the agent's deadline BY DESIGN, so being reparented is not
+  // the end of it — but the AGENT that started it going is. Its owner is that
+  // agent's process (OP_HANDED_OFF holds its pid): `./equin await` is the
+  // agent's handle on the op, and once the agent is gone nobody can ever call
+  // it. Watching nothing instead let a handed-off `./equin test` whose agent
+  // never awaited it spin for 11 h on a cpu slot after its conversation ended
+  // (2026-11-23, att-1795282326-bhmmsy).
+  const handedOff = readEnv("OP_HANDED_OFF");
+  if (handedOff !== undefined) {
+    const owner = handOffOwnerPid(handedOff);
+    // This process is the op; whatever it starts (a re-exec, a nested
+    // `./equin`) has a live parent to follow — this op — and must end when
+    // it does, not when the agent does.
+    unsetEnv("OP_HANDED_OFF");
+    watchFor(() => !isProcessAlive(owner), onOrphan);
+    return;
+  }
+  watchFor(() => process.ppid === 1, onOrphan);
+}
+
+/**
+ * The owning agent's pid an `OP_HANDED_OFF` value names. Anything else is a
+ * spawner bug, and an op that cannot name its owner could outlive it: thrown.
+ */
+export function handOffOwnerPid(value: string): number {
+  const pid = Number(value);
+  if (!Number.isSafeInteger(pid) || pid <= 1) {
+    throw new Error(
+      `OP_HANDED_OFF must be the pid of the agent that owns this handed-off op, got ${JSON.stringify(value)}`,
+    );
+  }
+  return pid;
+}
+
+// Checked at once (already orphaned at launch), then on the 2s poll.
+function watchFor(orphaned: () => boolean, onOrphan: () => void): void {
+  if (orphaned()) {
     onOrphan();
     return;
-  } // already orphaned at launch
+  }
   orphanPoll = setInterval(() => {
-    if (process.ppid === 1) onOrphan();
+    if (orphaned()) onOrphan();
   }, 2000);
   orphanPoll.unref();
 }

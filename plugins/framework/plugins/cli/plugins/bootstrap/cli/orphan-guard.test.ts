@@ -1,7 +1,9 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { withEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core/testing";
 import { afterEach, expect, test } from "bun:test";
 import {
   disarmOrphanGuard,
+  handOffOwnerPid,
   installOrphanGuard,
   ORPHAN_EXIT_CODE,
 } from "./orphan-guard";
@@ -49,6 +51,37 @@ test("BUILD_DETACHED skips arming entirely", async () => {
     // Nothing was installed, so disarm has nothing to cancel and must not throw.
     expect(() => disarmOrphanGuard()).not.toThrow();
   });
+});
+
+test("a handed-off op whose owning agent is gone ends at once", async () => {
+  // A pid that WAS a process: spawned, exited and reaped.
+  const gone = Bun.spawn(["true"]);
+  await gone.exited;
+  await withEnv({ OP_HANDED_OFF: String(gone.pid) }, () => {
+    let fired = false;
+    installOrphanGuard(() => {
+      fired = true;
+    });
+    expect(fired).toBe(true);
+  });
+});
+
+test("a handed-off op lives on while its owning agent does, whoever its parent is", async () => {
+  await withEnv({ OP_HANDED_OFF: String(process.pid) }, () => {
+    let fired = false;
+    installOrphanGuard(() => {
+      fired = true;
+    });
+    expect(fired).toBe(false);
+    // Read once: what this op starts follows the op, not the agent.
+    expect(readEnv("OP_HANDED_OFF")).toBeUndefined();
+  });
+});
+
+test("a hand-off that names no owner is refused", () => {
+  expect(() => handOffOwnerPid("1")).toThrow("OP_HANDED_OFF");
+  expect(() => handOffOwnerPid("yes")).toThrow("OP_HANDED_OFF");
+  expect(handOffOwnerPid("4242")).toBe(4242);
 });
 
 test("ORPHAN_EXIT_CODE is the documented 128 + 12", () => {

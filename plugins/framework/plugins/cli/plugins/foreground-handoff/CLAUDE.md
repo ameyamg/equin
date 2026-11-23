@@ -21,9 +21,10 @@ queue included, are 11% of tests and 20% of checks (op-log, 30 days).
 2. The CLI mapper (`cli/bin/register-commands.ts`) sees the deadline on a
    top-level hand-off command and calls `runHandedOff` instead of the action.
 3. `runHandedOff` re-runs the same argv as a **detached** child (own process
-   group, stdout/stderr to a temp file, `OP_HANDED_OFF` set so its orphan guard
-   stays off, the deadline unset so nothing below it hands off again) and
-   streams the file to its own stdout.
+   group, stdout/stderr to a temp file, the deadline unset so nothing below it
+   hands off again) and streams the file to its own stdout. `OP_HANDED_OFF`
+   names the op's owner — the agent's Claude Code process (`CLAUDE_PID`) — and
+   its orphan guard follows that pid instead of its parent.
    - The op finishes in time → its exit code is the call's. Indistinguishable
      from running in place.
    - The deadline comes first → print the hand-off (pid, `./equin await <op>`,
@@ -31,6 +32,12 @@ queue included, are 11% of tests and 20% of checks (op-log, 30 days).
      running.
    - The launcher is interrupted or orphaned first → SIGTERM the op's group,
      as an in-place op would have died.
+4. A handed-off op ends (exit 140, its runner's group with it, its grant
+   released) once its owning agent is gone: `./equin await` is the agent's only
+   handle on it, so nobody could ever read its verdict. Before this, the op
+   watched nothing — on 2026-11-23 a `./equin test` handed off under a
+   `| grep | head` that hid the hand-off notice spun for 11 h on a cpu slot after
+   its conversation had ended.
 
 The launcher is not an op: it writes no marker and takes no grant. The child is
 the op, so `./equin await` finds it by its marker like any other.

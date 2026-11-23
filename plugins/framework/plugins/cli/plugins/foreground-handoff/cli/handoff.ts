@@ -14,6 +14,9 @@ import { wallNow } from "@plugins/packages/plugins/deadline/core";
 
 const READ_CHUNK_BYTES = 64 * 1024;
 
+/** Claude Code exports its own pid under this name to every command it runs. */
+const AGENT_PID_ENV = "CLAUDE_PID";
+
 /** Signals that end this launcher gracefully — and, with it, the op it owns. */
 const ENDING_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
 
@@ -34,7 +37,9 @@ function signalExitCode(signal: NodeJS.Signals): number {
  *   code is this process's — indistinguishable from running in place.
  * - **Deadline:** print where it stands and how to get its verdict, leave it
  *   running, exit 70 (`./equin await`'s "still running" code). The op's
- *   orphan guard is disarmed (`OP_HANDED_OFF`), so this exit does not kill it.
+ *   orphan guard follows the AGENT instead of this launcher (`OP_HANDED_OFF`
+ *   holds the agent's pid), so this exit does not kill it — the agent's does:
+ *   once the agent is gone, nobody can `./equin await` the op any more.
  * - **This launcher is interrupted or orphaned** before the deadline (the user
  *   stopped the call): the op is SIGTERMed with it, as an in-place op would
  *   have died — a hand-off is the deadline's answer, not an interrupt's.
@@ -50,12 +55,13 @@ export async function runHandedOff(
   // (everything in it was streamed out already). Left behind, one per
   // foreground check / test, it piled up — 2,700+ in /tmp on 2026-11-05.
   // A handed-off op's log outlives the call on purpose: its path is printed.
+  const owner = handOffOwner();
   const logDir = mkdtempSync(join(tmpdir(), `equin-${op}-`));
   const logPath = join(logDir, "output.log");
   const writeFd = adoptFd(openSync(logPath, "a"));
   const env = { ...process.env };
   unsetEnv("FOREGROUND_DEADLINE", env);
-  setEnv("OP_HANDED_OFF", "1", env);
+  setEnv("OP_HANDED_OFF", String(owner), env);
   const child = spawn(process.execPath, process.argv.slice(1), {
     cwd: process.cwd(),
     env,
@@ -126,4 +132,23 @@ export async function runHandedOff(
       `  Its full output, so far and from here on: ${logPath}\n`,
   );
   process.exit(AWAIT_EXIT.stillRunning);
+}
+
+/**
+ * The agent this hand-off's op belongs to: the Claude Code process that ran
+ * the foreground call, which exports its own pid to every command it runs. Only
+ * a foreground call of an agent has a deadline (the `foreground-deadline`
+ * guard is a Claude Code hook), so an owner is always there — and an op handed
+ * off with none would outlive everyone who could await it: thrown, before
+ * anything starts.
+ */
+function handOffOwner(): number {
+  const raw = process.env[AGENT_PID_ENV];
+  const pid = Number(raw);
+  if (raw === undefined || !Number.isSafeInteger(pid) || pid <= 1) {
+    throw new Error(
+      `foreground hand-off: no owning agent — ${AGENT_PID_ENV} is ${JSON.stringify(raw)}, expected the pid of the Claude Code process that ran this call`,
+    );
+  }
+  return pid;
 }

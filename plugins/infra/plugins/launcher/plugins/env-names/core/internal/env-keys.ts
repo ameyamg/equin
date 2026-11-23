@@ -143,7 +143,7 @@ export const RUNTIME_WITHHELD_ENV = {
   OP_OPPORTUNISTIC:
     "marks an op that runs only because the host is idle and yields to any other work (`1`): it acquires its grant on the background lane at low priority and is stamped opportunistic on its marker and op-log record, so the idle signal does not count it as work; set by the backend for the idle test batch it supervises (debug/tests/idle-runner), read by cli/op-runtime direct-op.ts",
   OP_HANDED_OFF:
-    "marks an op detached by the foreground hand-off, meant to outlive the call that started it; set by the hand-off for that one op (cli/op-runtime foreground-handoff.ts), read by its orphan guard",
+    "the pid of the agent that owns an op detached by the foreground hand-off — the op outlives the call that started it, never that agent; set by the hand-off for that one op (cli/foreground-handoff handoff.ts), read by its orphan guard (cli/bootstrap orphan-guard.ts), which ends the op once that pid is gone",
   BUILD_IN_PROGRESS:
     "marks the check pass a build spawns, set by that build (tooling/checks/core run-context.ts)",
   CHECK_JOBS:
