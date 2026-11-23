@@ -104,7 +104,7 @@ export const browserToolSpecs = {
   }),
   browser_navigate: spec(
     "drive",
-    'Navigate a tab (opening the first one when there is none) to a route of this worktree\'s build, an absolute URL, or "back" / "forward".',
+    'Navigate a tab (opening the first one when there is none) to a route of this worktree\'s build, an absolute URL, or "back" / "forward". The public site (https://equin.ai) is not a test target: reproduce a visitor report on your own build (`./equin build --composition website`) first, and open equin.ai only for what only the deployed site shows (its server and CDN answers, the deployed files, real-network timings) or to confirm a deploy.',
     {
       url: z
         .string()
