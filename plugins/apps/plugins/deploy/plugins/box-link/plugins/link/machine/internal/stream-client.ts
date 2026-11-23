@@ -3,7 +3,10 @@ import {
   readNdjson,
 } from "@plugins/infra/plugins/ndjson-stream/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInRootContext,
+  runTracked,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import {
   BOX_LINK_STREAM_PATH,
@@ -85,6 +88,12 @@ function errorText(err: unknown): string {
  * watchdog (awake time: a sleep is the wake kick's to handle, not a timeout).
  * A malformed frame or line is a protocol bug — reported, and the attempt
  * ends as failed.
+ *
+ * Metered per unit of work, never as one op: the request (until the box
+ * answers) and each frame's handling are each a `bg` entry of their own. The
+ * stream itself stays open for as long as the link is up — hours — and as
+ * one entry its whole life read as "own time" when it ended
+ * (report-1795399008-z56qqe: a 27-min stream filed as a 1,651 s slow op).
  */
 async function attempt(
   transport: StreamTransport,
@@ -107,7 +116,9 @@ async function attempt(
     arm();
     let res: Response;
     try {
-      res = await transport(BOX_LINK_STREAM_PATH, inner.signal);
+      res = await runTracked("box-link: stream connect", () =>
+        transport(BOX_LINK_STREAM_PATH, inner.signal),
+      );
     } catch (err) {
       if (outer.aborted) return { kind: "aborted" };
       if (inner.signal.reason instanceof WatchdogFired) {
@@ -176,12 +187,15 @@ async function attempt(
             };
           case "frame": {
             const frame = read.frame;
-            if (frame.kind === "hello") events.hello(frame);
-            else if (frame.kind === "beat") {
+            if (frame.kind === "beat") {
               beats += 1;
               if (beats >= 2) heardBeat = true;
-              events.beat(frame);
-            } else events.signal(frame.source, frame.payload);
+            }
+            await runTracked("box-link: stream frame", () => {
+              if (frame.kind === "hello") events.hello(frame);
+              else if (frame.kind === "beat") events.beat(frame);
+              else events.signal(frame.source, frame.payload);
+            });
             break;
           }
         }
@@ -245,7 +259,6 @@ export interface StreamClient {
 }
 
 export function createStreamClient(
-  label: string,
   transport: StreamTransport,
   events: StreamEvents,
 ): StreamClient {
@@ -264,17 +277,28 @@ export function createStreamClient(
     clearWait();
     const ctl = new AbortController();
     running = ctl;
-    void runTracked(`box-link: stream ${label}`, async () => {
+    // The stream's life is no one's work: run outside whatever context
+    // enabled or kicked it (a boot hook, a request), unmetered — its connect
+    // and frames are metered one by one inside `attempt`.
+    void runInRootContext(async () => {
       const startedAt = Date.now();
       const end = await attempt(transport, events, ctl.signal);
       if (running === ctl) running = null;
       if (end.kind === "aborted" || !enabled) return;
       if (end.kind === "route-missing") {
-        events.routeMissing(end.error);
+        const { error } = end;
+        await runTracked("box-link: stream end", () => {
+          events.routeMissing(error);
+        });
         return;
       }
       if (end.heardBeat) backoffMs = BACKOFF_MIN_MS;
-      events.failed({ error: end.error, answered: end.answered, startedAt });
+      const failure = { error: end.error, answered: end.answered, startedAt };
+      await runTracked("box-link: stream end", () => {
+        events.failed(failure);
+      });
+      // Disabled, or kicked into a new attempt, while the end was handled.
+      if (!enabled || running !== null) return;
       const wait = backoffMs;
       backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS);
       cancelWait = armAwakeDeadline(wait, () => {

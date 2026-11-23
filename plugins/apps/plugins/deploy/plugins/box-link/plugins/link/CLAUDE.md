@@ -45,6 +45,13 @@ a 404 leaves it idle until kicked. A malformed frame or line is reported
 box streams (`box-link:box-stream-failed` — the box's own code threw, and the
 box files no report main sees).
 
+Metered per unit of work, never as one op: the request until the box answers
+(`box-link: stream connect`), each frame's handling (`box-link: stream frame`)
+and the attempt's end (`box-link: stream end`) are `bg` entries of their own;
+the stream's life runs in the root context, unmetered. As one entry, a stream
+open for its whole link's life read as "own time" when it ended (a 27-min
+stream filed as a 1,651 s slow op, report-1795399008-z56qqe).
+
 Request-level outcomes map onto the reducer, on evidence: 404 → `outdated
 (route-missing)`; the box ANSWERING with a failure (a non-OK status, the
 stream it closed, a bad frame) → a `down` failure; the tunnel's exit → an

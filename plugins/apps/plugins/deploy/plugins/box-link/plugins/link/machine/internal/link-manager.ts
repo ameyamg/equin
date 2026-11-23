@@ -207,7 +207,7 @@ function streamFor(
   transport: StreamTransport,
   evidence: TunnelEvidence | null,
 ): StreamClient {
-  return createStreamClient(deploymentId, transport, {
+  return createStreamClient(transport, {
     hello(frame) {
       evidence?.heard(deploymentId);
       const hello = {
