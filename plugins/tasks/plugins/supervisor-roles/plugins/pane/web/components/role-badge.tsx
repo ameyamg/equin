@@ -1,13 +1,14 @@
 import type { ReactElement } from "react";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useTask } from "@plugins/tasks/web";
-import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { TaskLink } from "@plugins/tasks/plugins/task-detail/web";
 import { taskSupervisors } from "@plugins/tasks/plugins/supervisor-roles/core";
 import { useRoles } from "../internal/reads";
 import { RoleIcon } from "./role-icon";
@@ -96,7 +97,6 @@ function RootSupervisor({
   rootTitle: string;
 }): ReactElement {
   const owner = useLive(taskSupervisors, { id: rootId });
-  const openPane = useOpenPane();
   const result = mapRow(owner, (r) => r?.supervisor ?? null);
   if (result.status === "loading")
     return <Loading variant="block" className="h-5 w-24" />;
@@ -112,23 +112,20 @@ function RootSupervisor({
   const roleId = result.data;
   if (roleId === null) return <NoSupervisor />;
   return (
-    <Inline gap="sm">
-      <SupervisorRoleBadge roleId={roleId} />
-      <Text as="span" variant="caption" tone="muted">
-        from{" "}
-        <button
-          type="button"
-          {...openPane.link(
-            taskDetailPane,
-            { taskId: rootId },
-            { mode: "swap" },
-          )}
-          className="hover:text-foreground underline underline-offset-2"
-        >
-          {rootTitle}
-        </button>
-      </Text>
-    </Inline>
+    // Yields width, so the "from" link (TaskLink, one line) ellipsizes
+    // instead of widening the header row.
+    <Stack direction="row" align="center" gap="sm" className={yieldClass("x")}>
+      <Rigid>
+        <SupervisorRoleBadge roleId={roleId} />
+      </Rigid>
+      <TaskLink
+        taskId={rootId}
+        title={rootTitle}
+        prefix="from"
+        variant="caption"
+        tone="muted"
+      />
+    </Stack>
   );
 }
 

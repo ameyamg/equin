@@ -52109,13 +52109,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 190 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×52
               - `primitives` ×34
               - `conversations` ×28
               - `debug` ×18
               - `page` ×11
-              - `tasks` ×9
+              - `tasks` ×10
               - `ui` ×9
               - `infra` ×4
               - `shell` ×4
@@ -52296,13 +52296,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 132 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×40
               - `primitives` ×20
               - `conversations` ×19
               - `debug` ×8
+              - `tasks` ×7
               - `page` ×6
-              - `tasks` ×6
               - `ui` ×6
               - `plugin-meta` ×4
               - `review` ×4
@@ -52573,13 +52573,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 152 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×37
               - `conversations` ×29
               - `primitives` ×21
               - `debug` ×14
+              - `tasks` ×10
               - `page` ×8
-              - `tasks` ×8
               - `ui` ×6
               - `plugin-meta` ×4
               - `review` ×4
@@ -53364,14 +53364,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 485 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 486 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
               - `conversations` ×56
               - `page` ×27
               - `debug` ×25
               - `ui` ×22
-              - `tasks` ×20
+              - `tasks` ×21
               - `fields` ×13
               - `apps-core` ×11
               - `plugin-meta` ×10
@@ -53499,11 +53499,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×10
               - `conversations` ×8
               - `debug` ×3
+              - `tasks` ×3
               - `ui` ×3
               - `fields` ×2
               - `infra/claude-cli`
@@ -58182,12 +58183,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 220 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×79
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
-          - `tasks` ×12
+          - `tasks` ×10
           - `primitives` ×9
           - `apps-core` ×7
           - `plugin-meta` ×6
@@ -65345,7 +65346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `adhoc-actions` "open" → `OpenAdhocAction`
               - `backlog-actions` "adopt" → `AdoptAction`
               - `backlog-actions` "drop" → `DropAction`
-            - Uses: 73 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md)
+            - Uses: 76 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `network/live/live-state` ×5
               - `primitives/data-view` ×5
@@ -65356,8 +65357,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints` ×2
               - `primitives/css/badge` ×2
               - `primitives/css/control-panel` ×2
+              - `primitives/css/rigid` ×2
               - `primitives/editable-field` ×2
               - `primitives/link-gesture` ×2
+              - `tasks/task-detail` ×2
               - `tasks` ×2
               - `conversations/conversation-view.useConversationOpener`
               - `conversations.useConversationById`
@@ -65369,13 +65372,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/inline.Inline`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/switch.Switch`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
               - `primitives/icon-picker.IconPicker`
               - `primitives/loading.Loading`
@@ -65385,7 +65388,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/text-editor.TextEditor`
               - `shell/notifications.useToast`
               - `shell.Shell`
-              - `tasks/task-detail.taskDetailPane`
               - `tasks/tasks-core.useTaskConversations`
               - `ui/icons.Icon`
             - Exports (values):
@@ -65757,6 +65759,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.rowOrStale`
           - `network/live.useLive`
           - `primitives/app-shell.opensPane`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.Rigid`
+          - `primitives/css/text.Text`
+          - `primitives/css/text.TextTone`
+          - `primitives/css/text.TextVariant`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/yield.yieldClass`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/file-links.FileLinksWorkspaceProvider`
           - `primitives/pane.Pane`
@@ -65770,11 +65780,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskDetail`
           - `taskDetailPane`
           - `TaskDetailSlots`
+          - `TaskLink`
           - `tasksRootPane`
           - `useFlushAll`
           - `useRegisterFlush`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/density --space-lg`
+        - Uses tokens:
+          - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/density --space-lg`
         - Imported by:
           - `active-data/task`
           - `active-data/task-link`
@@ -66016,7 +66029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, the page it was filed from, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
-        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
           - `tasks/task-detail` ×3
           - `network/live/live-state` ×2
           - `primitives/css/text` ×2
@@ -66027,7 +66040,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/fill.Fill`
           - `primitives/css/spacing.Stack`
           - `primitives/editable-field.useEditableField`
-          - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
           - `tasks/supervisor-roles/pane.TaskSupervisorControl`
           - `tasks/task-mandate.TaskMandateControl`
@@ -66036,15 +66048,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-track.TaskTrackControl`
       - Cross-plugin:
         - Uses tokens:
-          - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/type-scale --font-scale`
-          - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-size-title`
-          - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --font-weight-semibold`
-          - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-title`
     - **`task-ids`** — The task / attempt / conversation id kinds (defineIdKind): mint, branded type, validation and inline recognition for `task-…`, `att-…` and `conv-…` (legacy alias `claude-…`). A leaf, so infra/worktree can read the attempt kind without a cycle through tasks-core.
       - Core:
@@ -66120,18 +66128,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `network/live/live-state.ResourceErrorInline`
           - `network/live/live-state.ResourceResult`
+          - `primitives/css/rigid.Rigid`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Select`
           - `primitives/css/ui-kit.SelectContent`
           - `primitives/css/ui-kit.SelectItem`
           - `primitives/css/ui-kit.SelectTrigger`
           - `primitives/css/ui-kit.SelectValue`
+          - `primitives/css/yield.yieldClass`
           - `primitives/loading.Loading`
-          - `primitives/pane.useOpenPane`
           - `shell/notifications.useToast`
           - `tasks.useTask`
-          - `tasks/task-detail.taskDetailPane`
+          - `tasks/task-detail.TaskLink`
         - Exports (values): `TaskMandateControl`
       - Server:
         - Uses:
@@ -66152,9 +66160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteTaskMandate`
           - `putTaskMandate`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `tasks/task-header`
     - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is added to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, added to the agent's system prompt at launch, after Claude Code's own, as a <special_instructions> block.
       - Web:

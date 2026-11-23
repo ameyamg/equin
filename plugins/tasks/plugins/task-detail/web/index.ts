@@ -9,6 +9,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 export { TaskDetail as TaskDetailSlots } from "./slots";
 export { useFlushAll, useRegisterFlush } from "./context";
 export { TaskDetail } from "./components/task-detail";
+export { TaskLink } from "./components/task-link";
 export { tasksRootPane, taskDetailPane } from "./panes";
 
 export default {

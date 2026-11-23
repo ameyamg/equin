@@ -30,6 +30,14 @@
     - `network/live.rowOrStale`
     - `network/live.useLive`
     - `primitives/app-shell.opensPane`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.Rigid`
+    - `primitives/css/text.Text`
+    - `primitives/css/text.TextTone`
+    - `primitives/css/text.TextVariant`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/pane.Pane`
@@ -43,11 +51,14 @@
     - `TaskDetail`
     - `taskDetailPane`
     - `TaskDetailSlots`
+    - `TaskLink`
     - `tasksRootPane`
     - `useFlushAll`
     - `useRegisterFlush`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/density --space-lg`
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/density --space-lg`
   - Imported by:
     - `active-data/task`
     - `active-data/task-link`

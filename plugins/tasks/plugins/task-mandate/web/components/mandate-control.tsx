@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useTask } from "@plugins/tasks/web";
@@ -139,7 +141,10 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
   };
 
   return (
-    <Stack direction="row" align="center" gap="sm">
+    // Yields width: the control is a cell of the header's row, so the source
+    // link (TaskLink, one line) ellipsizes instead of widening the row.
+    <Stack direction="row" align="center" gap="sm" className={yieldClass("x")}>
+      <Rigid>
       <Select
         // base-ui resolves the collapsed trigger label from `items`.
         items={{
@@ -165,6 +170,7 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
           ))}
         </SelectContent>
       </Select>
+      </Rigid>
       {inherited && effective.sourceTaskId !== null && (
         <MandateSource sourceTaskId={effective.sourceTaskId} />
       )}

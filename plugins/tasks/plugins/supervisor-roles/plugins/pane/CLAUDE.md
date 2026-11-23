@@ -58,7 +58,7 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `adhoc-actions` "open" → `OpenAdhocAction`
     - `backlog-actions` "adopt" → `AdoptAction`
     - `backlog-actions` "drop" → `DropAction`
-  - Uses: 73 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 76 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `network/live/live-state` ×5
     - `primitives/data-view` ×5
@@ -69,8 +69,10 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `infra/endpoints` ×2
     - `primitives/css/badge` ×2
     - `primitives/css/control-panel` ×2
+    - `primitives/css/rigid` ×2
     - `primitives/editable-field` ×2
     - `primitives/link-gesture` ×2
+    - `tasks/task-detail` ×2
     - `tasks` ×2
     - `conversations/conversation-view.useConversationOpener`
     - `conversations.useConversationById`
@@ -82,13 +84,13 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/icon-picker.IconPicker`
     - `primitives/loading.Loading`
@@ -98,7 +100,6 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `primitives/text-editor.TextEditor`
     - `shell/notifications.useToast`
     - `shell.Shell`
-    - `tasks/task-detail.taskDetailPane`
     - `tasks/tasks-core.useTaskConversations`
     - `ui/icons.Icon`
   - Exports (values):
