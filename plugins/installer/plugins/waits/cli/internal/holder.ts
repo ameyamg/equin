@@ -1,6 +1,13 @@
-import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import {
+  armAwakeDeadline,
+  awakeClock,
+  wallNow,
+} from "@plugins/packages/plugins/deadline/core";
 import { readOpRecords } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
-import type { OpRecord } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import {
+  awakeWithin,
+  type OpRecord,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import type { GrantHooks } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { WaitHolder, WaitOn } from "@plugins/installer/core";
 import {
@@ -72,7 +79,7 @@ export function installGrantHooks(): GrantHooks | undefined {
 
 function openWait(on: WaitOn, holder: WaitHolder | null): OpenInstallWait {
   reportInstallWait("start", on, ...(holder === null ? [] : [holder]));
-  const watch = holder === null ? null : watchHolder(holder.op, Date.now());
+  const watch = holder === null ? null : watchHolder(holder.op);
   let ended = false;
   return {
     end() {
@@ -111,10 +118,16 @@ function oldestWorking(match: (r: OpRecord) => boolean): WaitHolder | null {
 }
 
 // ── The stall rule: waiting on a holder that stopped making progress ─────────
+//
+// Both halves are judged on AWAKE time (`packages/sleep-clock`'s rule): a
+// sleeping Mac runs neither the holder nor the install, so a night's sleep
+// must not read as a holder quiet for hours on wake. The install's own wait is
+// timed in this process on the awake clock; the holder's quiet span is the
+// op log's wall span minus the sleeps its record holds (`awakeWithin`).
 
-/** How long the install waits on a holder before it looks at it. */
+/** How long (awake) the install waits on a holder before it looks at it. */
 export const STALL_WAIT_MS = 2 * 60_000;
-/** How long the holder must have shown no progress to count as stuck. */
+/** How long (awake) the holder must have shown no progress to count as stuck. */
 export const HOLDER_QUIET_MS = 10 * 60_000;
 
 /**
@@ -130,25 +143,27 @@ function holderLastProgress(record: OpRecord): number {
 }
 
 /**
- * The stall rule's verdict at `now`, for a wait that began at `waitStart`:
- * stuck (symptom: waited past STALL_WAIT_MS; fact: the holder is still
- * running and showed no progress for HOLDER_QUIET_MS), or the next instant it
- * could become so — a deadline, re-armed only when the holder moved, never a
- * fixed-interval look.
+ * The stall rule's verdict for a wait that has lasted `waitedMs` of awake
+ * time, with `record` read at the wall instant `now` (the axis its sleeps sit
+ * on): stuck (symptom: waited past STALL_WAIT_MS; fact: the holder is still
+ * running and showed no progress for HOLDER_QUIET_MS while the machine was
+ * awake), or how much more awake time until it could become so — a deadline,
+ * re-armed only when the holder moved, never a fixed-interval look.
  */
 export function judgeHolder(
   record: OpRecord | undefined,
-  waitStart: number,
+  waitedMs: number,
   now: number,
 ):
   | { stuck: true; quietSince: number }
-  | { stuck: false; recheckAt: number | null } {
+  | { stuck: false; recheckInMs: number | null } {
   if (record === undefined || record.outcome !== "running")
-    return { stuck: false, recheckAt: null };
+    return { stuck: false, recheckInMs: null };
   const quietSince = holderLastProgress(record);
-  const due = Math.max(waitStart + STALL_WAIT_MS, quietSince + HOLDER_QUIET_MS);
-  if (now >= due) return { stuck: true, quietSince };
-  return { stuck: false, recheckAt: due };
+  const quietMs = awakeWithin(record, quietSince, now);
+  const left = Math.max(STALL_WAIT_MS - waitedMs, HOLDER_QUIET_MS - quietMs);
+  if (left <= 0) return { stuck: true, quietSince };
+  return { stuck: false, recheckInMs: left };
 }
 
 interface StallWatch {
@@ -156,28 +171,36 @@ interface StallWatch {
 }
 
 /** Watch the holder while the step waits on it; report a stall once. */
-function watchHolder(opId: string, waitStart: number): StallWatch {
-  let timer: ReturnType<typeof setTimeout> | null = null;
+function watchHolder(opId: string): StallWatch {
+  const waitStart = awakeClock();
+  let cancel: (() => void) | null = null;
   let reported = false;
   const check = (): void => {
-    timer = null;
+    cancel = null;
     const record = readOpRecords().find((r) => r.opId === opId);
-    const verdict = judgeHolder(record, waitStart, Date.now());
+    const verdict = judgeHolder(
+      record,
+      awakeClock() - waitStart,
+      // The wall axis the record's sleeps were placed on; judgeHolder takes
+      // them out, so this is an instant, not an age.
+      Date.now(),
+    );
     if (verdict.stuck && record !== undefined) {
       reported = true;
       reportInstallStall(stallWords(record, verdict.quietSince));
       return;
     }
-    if (!verdict.stuck && verdict.recheckAt !== null) arm(verdict.recheckAt);
+    if (!verdict.stuck && verdict.recheckInMs !== null)
+      arm(verdict.recheckInMs);
   };
-  const arm = (at: number): void => {
-    timer = setTimeout(check, Math.max(0, at - Date.now()));
-    timer.unref();
+  const arm = (ms: number): void => {
+    // A watch on someone else's work: never what keeps this process alive.
+    cancel = armAwakeDeadline(ms, check, { unref: true });
   };
-  arm(waitStart + STALL_WAIT_MS);
+  arm(STALL_WAIT_MS);
   return {
     stop() {
-      if (timer !== null) clearTimeout(timer);
+      cancel?.();
       if (reported) reportInstallResolved();
     },
   };

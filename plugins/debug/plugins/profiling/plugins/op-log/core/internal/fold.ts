@@ -617,6 +617,33 @@ function liveWaits(
   };
 }
 
+/**
+ * The awake time inside a wall span of an op — `[fromMs, toMs]`, epoch ms —
+ * judged from the op's own record: the span minus every sleep the record
+ * holds inside it. For a reader judging another process's op on awake time
+ * ("no progress for N minutes while the machine ran"), without re-reading the
+ * sleep clock beside a stale wall instant.
+ *
+ * A running op's sleeps reach the instant its record was read at; a `toMs`
+ * past that read counts the rest as awake. Where the sleep could not be told
+ * (off macOS, a writer without stamps, a reboot) the record holds none and
+ * this is the wall span — never in the op's favour.
+ */
+export function awakeWithin(
+  record: Pick<OpRecord, "requestedAt" | "sleeps">,
+  fromMs: number,
+  toMs: number,
+): number {
+  if (!(toMs > fromMs)) return 0;
+  const requestedMs = Date.parse(record.requestedAt);
+  const span: Span = [fromMs - requestedMs, toMs - requestedMs];
+  return (
+    toMs -
+    fromMs -
+    overlap([span], union(record.sleeps.map(sleepSpan), Infinity))
+  );
+}
+
 /** Everything the read model derives from a state at `now`, in ONE place. */
 function resolve(
   s: OpFoldState,

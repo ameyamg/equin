@@ -82,7 +82,6 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
 - Exemptions:
   - Exempted by:
     - `framework/server-core` (1 debt)
-    - `installer/waits` (1 debt)
     - `network/live/change-feed` (1 debt)
 - Core:
   - Exports (types):

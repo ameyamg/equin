@@ -27821,6 +27821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `advanceSleeps`
               - `applyOpEvent`
+              - `awakeWithin`
               - `BEHIND_LONE_BUILD_REASON`
               - `emptyOpState`
               - `foldOpLines`
@@ -42344,8 +42345,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stallWords`
       - Cross-plugin:
         - Imported by: `framework/cli/build`
-      - Exemptions:
-        - Exempts itself from: `deadline/no-unstated-wall-age` — `cli/internal/holder.ts` (debt)
     - **`window`** — The installer window: equin-installer, a small wry/tao Rust app (rust/) that runs install.sh as its child — events on fd 3, decisions on fd 4 — and draws the stream in a page bundled into the binary (standalone-page/). Built locally as the installer-window dependency; `./equin installer window` runs it over this checkout's install.sh.
       - Cli:
         - Uses: `infra/jobs/supervised-job.cliExecContext`
@@ -45053,7 +45052,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempted by:
           - `framework/server-core` (1 debt)
-          - `installer/waits` (1 debt)
           - `network/live/change-feed` (1 debt)
       - Core:
         - Exports (types):

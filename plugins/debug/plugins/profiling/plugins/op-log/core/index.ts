@@ -36,6 +36,7 @@ export type { LineOp } from "./internal/wait-line";
 export {
   advanceSleeps,
   applyOpEvent,
+  awakeWithin,
   emptyOpState,
   foldOpLines,
   isOpEvent,

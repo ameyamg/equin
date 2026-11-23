@@ -20,6 +20,12 @@ export interface AwakeDeadlineOptions {
   startedAt?: number;
   /** The awake clock (injected for tests). */
   clock?: AwakeClock;
+  /**
+   * Let the process exit while this deadline is the only thing pending — a
+   * watch that reports on work, not work itself (the timer's `unref()` on Bun
+   * and Node; nothing to do in a browser, whose timers hold no process).
+   */
+  unref?: boolean;
 }
 
 /**
@@ -44,12 +50,17 @@ export function armAwakeDeadline(
   const startedAt = opts.startedAt ?? clock();
   let timer: ReturnType<typeof setTimeout>;
   const left = (): number => budgetMs - (clock() - startedAt);
+  const set = (ms: number): void => {
+    timer = setTimeout(check, ms);
+    // A browser timer is a number, with no `unref`: the optional call is the guard.
+    if (opts.unref === true) (timer as { unref?: () => void }).unref?.();
+  };
   const check = (): void => {
     const ms = left();
     // Under a millisecond left is the timer's own granularity, not sleep.
-    if (ms >= 1) timer = setTimeout(check, Math.min(ms, MAX_TIMER_MS));
+    if (ms >= 1) set(Math.min(ms, MAX_TIMER_MS));
     else onExpire();
   };
-  timer = setTimeout(check, Math.min(Math.max(0, left()), MAX_TIMER_MS));
+  set(Math.min(Math.max(0, left()), MAX_TIMER_MS));
   return () => clearTimeout(timer);
 }

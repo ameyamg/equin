@@ -27,6 +27,13 @@ describe("armAwakeDeadline", () => {
     expect(fired).toBe(1);
   });
 
+  test("an unref'd deadline still expires (it only stops holding the process open)", async () => {
+    let fired = 0;
+    armAwakeDeadline(20, () => fired++, { unref: true });
+    await wait(60);
+    expect(fired).toBe(1);
+  });
+
   test("cancel stops it", async () => {
     let fired = 0;
     const cancel = armAwakeDeadline(20, () => fired++);
