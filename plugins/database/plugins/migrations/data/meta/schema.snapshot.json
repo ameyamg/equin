@@ -1,6 +1,6 @@
 {
-  "id": "c4b2ce34-6384-4200-99fe-98868fe315ce",
-  "prevId": "1ca08fdc-8cf4-424b-a0ff-c066f1ae1720",
+  "id": "bd35ef04-0887-4cae-9dd5-96466fa0794e",
+  "prevId": "c4b2ce34-6384-4200-99fe-98868fe315ce",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -10399,6 +10399,32 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.queue_dead_jobs_reported": {
+      "name": "queue_dead_jobs_reported",
+      "schema": "",
+      "columns": {
+        "death_id": {
+          "name": "death_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reported_at": {
+          "name": "reported_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.slow_op_callers": {
       "name": "slow_op_callers",
       "schema": "",
@@ -14957,6 +14983,46 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.report_fix_claims_unknown": {
+      "name": "report_fix_claims_unknown",
+      "schema": "",
+      "columns": {
+        "report_id": {
+          "name": "report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "claim_commit": {
+          "name": "claim_commit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seen_at": {
+          "name": "seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "report_fix_claims_unknown_report_id_claim_commit_pk": {
+          "name": "report_fix_claims_unknown_report_id_claim_commit_pk",
+          "columns": [
+            "report_id",
+            "claim_commit"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

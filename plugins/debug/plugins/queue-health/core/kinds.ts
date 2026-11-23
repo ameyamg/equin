@@ -19,7 +19,8 @@ const ClassOccupancySchema = z.object({
 
 // The jsonb payload for a `queue-dead-job` report. One report per (jobName,
 // cause) — the cause being `lastError` normalized (`deadJobFingerprint`) — so
-// the payload carries that group's rollup: how many terminally-dead rows, the
+// the payload carries that occurrence's rollup: how many NEW terminally-dead
+// rows of the cause this check found (a death is reported once), the
 // attempt counters, the error text, and a sample graphile job id for
 // hand-inspection in the queue pane.
 export const QueueDeadJobPayloadSchema = z.object({

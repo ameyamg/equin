@@ -1108,7 +1108,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - Machine:
   - Exports (types):
     - `BacklogJobStat`
-    - `DeadJobErrorStat`
+    - `DeadJobDeath`
     - `DeadJobGroupStat`
     - `DeadJobStat`
     - `ForfeitedSlot`
@@ -1134,7 +1134,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `onQueueActivity`
     - `PICKUP_WINDOW_MS`
     - `queryBacklogByJobName`
-    - `queryDeadJobsByError`
+    - `queryDeadJobDeathIds`
+    - `queryDeadJobDeaths`
     - `queryDeadJobStats`
     - `queryOldestWaiting`
     - `queryQueueBacklog`

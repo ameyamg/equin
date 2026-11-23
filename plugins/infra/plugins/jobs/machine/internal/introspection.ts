@@ -199,59 +199,95 @@ export async function queryDeadJobStats(): Promise<DeadJobStat[]> {
   }));
 }
 
-// Terminally-dead rows grouped by (jobName, exact last error): the raw material
-// for attributing deaths to their CAUSE rather than to their job alone. One job
-// can die for several unrelated reasons at once (2026-11-04: `worktree.prepare`
-// dying of a new boot race while an older cause's report was still open), and a
-// per-job rollup keeps only the latest error, so the others vanish from it.
-//
-// The exact text still carries per-occurrence tokens (run ids, job ids), so the
-// caller folds these rows by a normalized cause; that normalization belongs to
-// the reports layer, which this plugin cannot import. Newest death first, so a
-// fold that keeps a cause's first group keeps its latest error and sample.
-// Bounded by the dead rows themselves, which the hourly dead-job GC archives.
-export interface DeadJobErrorStat {
+/**
+ * One death of one job row: the raw material for attributing deaths to their
+ * CAUSE rather than to their job alone (the caller folds them by a normalized
+ * cause; that normalization belongs to the reports layer, which this plugin
+ * cannot import). One job can die for several unrelated reasons at once
+ * (2026-11-04: `worktree.prepare` dying of a new boot race while an older
+ * cause's report was still open).
+ *
+ * A dead row sits in the queue until the dead-job GC archives it (hourly, and
+ * at boot), so a reader sampling the queue sees the SAME death on every sample:
+ * `deathId` is what tells a death already seen from a new one — the row's id
+ * and the `run_at` its last failure wrote. Every failure moves `run_at`
+ * forward (graphile's `fail_jobs`: `greatest(now(), run_at) + backoff`; the
+ * stuck-lock sweeper's reclaim: `greatest(run_at, now())`), and a retry
+ * (Debug → Queue) re-schedules it to now — so a row's next death is a new id,
+ * while a dead row that only sits there keeps its own.
+ */
+export interface DeadJobDeath {
+  deathId: string;
+  jobId: string;
   jobName: string;
   lastError: string | null;
-  deadCount: number;
   attempts: number;
   maxAttempts: number;
-  sampleJobId: string;
 }
 
-const DeadJobErrorStatRowSchema = z.object({
-  job_name: z.string(),
-  last_error: z.string().nullable(),
-  dead_count: z.number(),
-  attempts: z.number(),
-  max_attempts: z.number(),
-  sample_job_id: z.string(),
-});
+// The one spelling of a death's id, correlated on `j` like every fragment here.
+const deathIdExpr = sql`j.id::text || '@' || (extract(epoch FROM j.run_at) * 1000000)::bigint::text`;
 
-export async function queryDeadJobsByError(): Promise<DeadJobErrorStat[]> {
+/**
+ * The `deathId` of every terminally-dead row — ids only, so a reader that
+ * already knows most of them reads no error text (a supervised child's
+ * carries ~2 KB of transcript). Bounded by the dead rows themselves, which the
+ * dead-job GC archives.
+ */
+export async function queryDeadJobDeathIds(): Promise<string[]> {
   const rows = await executeRows(db, {
-    label: "queryDeadJobsByError",
-    row: DeadJobErrorStatRowSchema,
+    label: "queryDeadJobDeathIds",
+    row: z.object({ death_id: z.string() }),
     query: sql`
-    SELECT ${jobNameExpr}                                          AS job_name,
-           j.last_error                                            AS last_error,
-           count(*)::int                                           AS dead_count,
-           max(j.attempts)::int                                    AS attempts,
-           max(j.max_attempts)::int                                AS max_attempts,
-           (array_agg(j.id::text ORDER BY j.updated_at DESC))[1]   AS sample_job_id
+    SELECT ${deathIdExpr} AS death_id
       FROM ${queueJobsFrom}
      WHERE ${deadJobPredicate}
-     GROUP BY 1, 2
-     ORDER BY max(j.updated_at) DESC
+  `,
+  });
+  return rows.map((r) => r.death_id);
+}
+
+const DeadJobDeathRowSchema = z.object({
+  death_id: z.string(),
+  job_id: z.string(),
+  job_name: z.string(),
+  last_error: z.string().nullable(),
+  attempts: z.number(),
+  max_attempts: z.number(),
+});
+
+/**
+ * The deaths named by `deathIds` that are still in the queue, newest first —
+ * so a fold that keeps a cause's first death keeps its latest error and
+ * sample. One array parameter, however many ids.
+ */
+export async function queryDeadJobDeaths(
+  deathIds: readonly string[],
+): Promise<DeadJobDeath[]> {
+  if (deathIds.length === 0) return [];
+  const rows = await executeRows(db, {
+    label: "queryDeadJobDeaths",
+    row: DeadJobDeathRowSchema,
+    query: sql`
+    SELECT ${deathIdExpr}       AS death_id,
+           j.id::text           AS job_id,
+           ${jobNameExpr}       AS job_name,
+           j.last_error         AS last_error,
+           j.attempts::int      AS attempts,
+           j.max_attempts::int  AS max_attempts
+      FROM ${queueJobsFrom}
+     WHERE ${deadJobPredicate}
+       AND ${deathIdExpr} = ANY(${sql.param([...deathIds])}::text[])
+     ORDER BY j.updated_at DESC, j.id DESC
   `,
   });
   return rows.map((r) => ({
+    deathId: r.death_id,
+    jobId: r.job_id,
     jobName: r.job_name,
     lastError: r.last_error,
-    deadCount: r.dead_count,
     attempts: r.attempts,
     maxAttempts: r.max_attempts,
-    sampleJobId: r.sample_job_id,
   }));
 }
 

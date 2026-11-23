@@ -19,6 +19,7 @@ import { fatalReportHandler, serverReportHandler } from "./internal/fatal";
 import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
 import {
   _reportFingerprintsSeen,
+  _reportFixClaimsUnknown,
   _reportFixDays,
   _reportFixes,
   _reportTrendDays,
@@ -96,6 +97,17 @@ export default {
       table: _reportFixes,
       reason:
         "Fixes of main's reports, recorded from main's history and main's deploys; a fork holds none of those reports.",
+    }),
+    // Main's history's claims for reports main does not hold, already filed.
+    ExcludeFromFork({
+      table: _reportFixClaimsUnknown,
+      reason:
+        "Fix claims main's history makes for reports main's database does not hold, recorded by main's ingest; a fork ingests no claims.",
+    }),
+    ExcludeFromChangeFeed({
+      table: _reportFixClaimsUnknown,
+      reason:
+        "Read only by the fix ledger's ingest, in process; no live reader.",
     }),
     // The report history (./internal/trend-triggers.ts): kept by triggers on
     // every write of `reports` and `report_fixes`; read on demand by the

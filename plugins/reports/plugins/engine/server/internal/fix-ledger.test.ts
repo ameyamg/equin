@@ -22,7 +22,12 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { mountProducersForTest } from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
-import { collectContributions } from "@plugins/framework/plugins/server-core/core";
+import {
+  collectContributions,
+  serverErrorSink,
+  sinkHandler,
+  type ServerErrorReport,
+} from "@plugins/framework/plugins/server-core/core";
 import { clearCollectedContributions } from "@plugins/framework/plugins/server-core/core/testing";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { _notifications } from "@plugins/shell/plugins/notifications/server";
@@ -31,7 +36,7 @@ import { reportIdKind, type ReportId } from "@plugins/reports/core";
 import { writeReport } from "./record-report";
 import { reportsProducer } from "./producer";
 import { ringRowBell } from "./bell";
-import { _reportFixes } from "./tables";
+import { _reportFixClaimsUnknown, _reportFixes } from "./tables";
 import {
   recordFixClaims,
   stampFixesContainedIn,
@@ -302,6 +307,98 @@ describe("fix ledger (real DB)", () => {
         regressedAt: first,
         regressedCommit: later,
       });
+    });
+  });
+  // One wrong claim is one fact: history names it on every later read (each
+  // advance of main re-reads a day of it), and it used to be re-filed each
+  // time — report-1794543026-sp3rlj, 760 occurrences from three commits.
+  describe("a claim for a report this database does not hold", () => {
+    const UNKNOWN = reportIdKind.key("report-fix-ledger-unknown");
+    let filed: ServerErrorReport[] = [];
+    const handler = sinkHandler(
+      serverErrorSink,
+      () => (r: ServerErrorReport) => {
+        filed.push(r);
+      },
+    );
+    beforeAll(() => handler.attach());
+    afterAll(() => handler.detach());
+
+    test("is filed once, however many passes read it, and a new claiming commit is filed once more", async () => {
+      filed = [];
+      const claim = { reportId: UNKNOWN, commit: fix, landedAt: new Date() };
+      for (let pass = 0; pass < 3; pass++) {
+        expect(await recordFixClaims([claim], repo, t.db)).toBe(0);
+      }
+      expect(filed.map((r) => r.errorType)).toEqual(["UnknownFixedReport"]);
+      expect(filed[0]?.message).toContain(fix.slice(0, 12));
+      expect(filed[0]?.message).toContain(UNKNOWN);
+
+      // Another commit naming the same id — here a Report-fixed-by claim
+      // made by `later` — is another fact: filed once too.
+      const reclaim = { ...claim, claimedBy: later };
+      for (let pass = 0; pass < 2; pass++) {
+        await recordFixClaims([reclaim, claim], repo, t.db);
+      }
+      expect(filed).toHaveLength(2);
+      expect(filed[1]?.message).toContain(later.slice(0, 12));
+      expect(filed[1]?.message).toContain("Report-fixed-by");
+      // Both stay recorded as unknown, and nothing landed in the ledger.
+      expect(
+        await t.db
+          .select()
+          .from(_reportFixClaimsUnknown)
+          .where(eq(_reportFixClaimsUnknown.reportId, UNKNOWN)),
+      ).toHaveLength(2);
+      expect(
+        await t.db
+          .select()
+          .from(_reportFixes)
+          .where(eq(_reportFixes.reportId, UNKNOWN)),
+      ).toHaveLength(0);
+    });
+
+    test("named twice in one batch, it is filed once", async () => {
+      filed = [];
+      const twice = reportIdKind.key("report-fix-ledger-unknown-twice");
+      const claim = { reportId: twice, commit: before, landedAt: new Date() };
+      await recordFixClaims([claim, claim], repo, t.db);
+      expect(filed).toHaveLength(1);
+    });
+
+    test("it still lands once its report exists", async () => {
+      const late = reportIdKind.key("report-fix-ledger-unknown-late");
+      const claim = { reportId: late, commit: fix, landedAt: new Date() };
+      expect(await recordFixClaims([claim], repo, t.db)).toBe(0);
+      await writeReport(
+        {
+          id: late,
+          kind: "crash",
+          fingerprint: "fp-unknown-late",
+          worktree: "wt-test",
+          source: "server-crash",
+          message: "late report",
+          url: null,
+          userAgent: null,
+          data: {},
+          limited: false,
+          noise: { ifSkew: false, ifLive: false },
+          staleOrigin: false,
+          skewProven: false,
+          clientId: null,
+          buildId: null,
+          commit: before,
+          occurredAt: new Date(),
+          afterWake: null,
+        },
+        t.db,
+      );
+      expect(await recordFixClaims([claim], repo, t.db)).toBe(1);
+      const [row] = await t.db
+        .select()
+        .from(_reports)
+        .where(eq(_reports.id, late));
+      expect(row?.fixState).toBe("pending");
     });
   });
 });

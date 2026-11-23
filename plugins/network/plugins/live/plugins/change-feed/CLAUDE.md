@@ -503,6 +503,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `database/table-mirror/source`
     - `debug/latency-ledger`
     - `debug/op-rate`
+    - `debug/queue-health`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/jobs/in-process`

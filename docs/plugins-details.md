@@ -25032,13 +25032,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 183 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 184 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×50
       - `conversations` ×22
       - `tasks` ×20
       - `infra` ×18
       - `page` ×14
-      - `debug` ×11
+      - `debug` ×12
       - `active-data` ×8
       - `database` ×7
       - `primitives` ×4
@@ -25127,8 +25127,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
-          - `debug` ×8
+        - Imported by: 36 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+          - `debug` ×9
           - `infra` ×7
           - `database` ×5
           - `apps` ×4
@@ -28337,7 +28337,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "queue-slot-blocked"
           - `report-kind` "queue-slot-hog"
           - `report-kind` "queue-wedged"
+          - `fork-data-exclusion` "queue_dead_jobs_reported"
+          - `change-feed-exclusion` "queue_dead_jobs_reported"
         - Uses: `config_v2.ConfigV2`
+        - DB schema: `plugins/debug/plugins/queue-health/server/internal/tables.ts`
         - Resources:
           - `queue-health.pulse` (push, notified)
           - `queue-health.verdict` (push, notified)
@@ -28350,7 +28353,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs.onQueueActivity`
           - `infra/jobs.PICKUP_WINDOW_MS`
           - `infra/jobs.queryBacklogByJobName`
-          - `infra/jobs.queryDeadJobsByError`
+          - `infra/jobs.queryDeadJobDeathIds`
+          - `infra/jobs.queryDeadJobDeaths`
           - `infra/jobs.queryDeadJobStats`
           - `infra/jobs.queryOldestWaiting`
           - `infra/jobs.queryQueueBacklog`
@@ -39727,7 +39731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Exports (types):
           - `BacklogJobStat`
-          - `DeadJobErrorStat`
+          - `DeadJobDeath`
           - `DeadJobGroupStat`
           - `DeadJobStat`
           - `ForfeitedSlot`
@@ -39753,7 +39757,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onQueueActivity`
           - `PICKUP_WINDOW_MS`
           - `queryBacklogByJobName`
-          - `queryDeadJobsByError`
+          - `queryDeadJobDeathIds`
+          - `queryDeadJobDeaths`
           - `queryDeadJobStats`
           - `queryOldestWaiting`
           - `queryQueueBacklog`
@@ -44221,6 +44226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/table-mirror/source`
               - `debug/latency-ledger`
               - `debug/op-rate`
+              - `debug/queue-health`
               - `debug/slow-ops`
               - `debug/trace/engine`
               - `infra/jobs/in-process`
@@ -61171,14 +61177,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `change-producer` "reports"
           - `fork-data-exclusion` "report_fingerprints_seen"
+          - `fork-data-exclusion` "report_fix_claims_unknown"
           - `fork-data-exclusion` "report_fix_days"
           - `fork-data-exclusion` "report_fixes"
           - `fork-data-exclusion` "report_trend_days"
           - `fork-data-exclusion` "reports"
-          - `db-trigger` "reports.trend"
           - `change-feed-exclusion` "report_fingerprints_seen"
+          - `change-feed-exclusion` "report_fix_claims_unknown"
           - `change-feed-exclusion` "report_fix_days"
           - `change-feed-exclusion` "report_trend_days"
+          - `db-trigger` "reports.trend"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
         - Uses: 36 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `reports` ×10

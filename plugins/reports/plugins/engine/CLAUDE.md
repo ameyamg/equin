@@ -230,6 +230,13 @@ from forks; `server/internal/fix-ledger.ts`):
   once the fix is live, is — `regresses`). Push refuses a retroactive claim
   for a report that already has a fix: the newest claim is the standing one,
   and an older commit must not stand in for the fix in force.
+  A claim naming a report main's database does not hold (a typo'd id, another
+  instance's report, one swept before its claim was read) is filed as an
+  `UnknownFixedReport` server error ONCE per claiming commit and remembered in
+  `report_fix_claims_unknown`: every advance of main re-reads a day of
+  history (all of it when the ledger is empty), and before that table one
+  wrong trailer re-filed the crash on every pass (report-1794543026-sp3rlj,
+  760 occurrences from three commits).
 - **Deployed** — main's backend pin AND its served bundle's `.build-commit`
   contain the commit (`stampDeployedFixes`, at `onAllReady` — a deploy restarts
   main — and on a restart-skip adoption). So "fixed" never precedes the code
@@ -300,14 +307,16 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Contributes:
     - `change-producer` "reports"
     - `fork-data-exclusion` "report_fingerprints_seen"
+    - `fork-data-exclusion` "report_fix_claims_unknown"
     - `fork-data-exclusion` "report_fix_days"
     - `fork-data-exclusion` "report_fixes"
     - `fork-data-exclusion` "report_trend_days"
     - `fork-data-exclusion` "reports"
-    - `db-trigger` "reports.trend"
     - `change-feed-exclusion` "report_fingerprints_seen"
+    - `change-feed-exclusion` "report_fix_claims_unknown"
     - `change-feed-exclusion` "report_fix_days"
     - `change-feed-exclusion` "report_trend_days"
+    - `db-trigger` "reports.trend"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
   - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×10

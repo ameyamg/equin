@@ -14,6 +14,9 @@ import { wedgedKind } from "./internal/wedged-kind";
 import { queueHealthTool } from "./internal/mcp-tool";
 import { handleQueueHealthSummary } from "./internal/summary-endpoint";
 import { queuePulseServed, queueVerdictServed } from "./internal/pulse";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
+import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
+import { _queueDeadJobsReported } from "../server/internal/tables";
 
 export { queueHealthTickOnce } from "./internal/watchdog";
 
@@ -33,6 +36,16 @@ export default {
     slotBlockedKind,
     classStarvedKind,
     wedgedKind,
+    ExcludeFromFork({
+      table: _queueDeadJobsReported,
+      reason:
+        "Which of this database's dead queue rows were reported; a fork inherits no queue rows (graphile_worker is excluded), so it inherits none of their deaths.",
+    }),
+    ExcludeFromChangeFeed({
+      table: _queueDeadJobsReported,
+      reason:
+        "Read only by the watchdog's own dead-job check, in process; no live reader.",
+    }),
   ],
   // The watchdog is a timer on this backend's event loop, started and
   // stopped exactly like the jobs plugin's stuck-lock sweeper — see the long

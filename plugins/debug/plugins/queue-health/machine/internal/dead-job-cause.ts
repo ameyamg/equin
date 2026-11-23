@@ -1,5 +1,4 @@
 import { normalizeMessage } from "@plugins/packages/plugins/error-subject/core";
-import type { DeadJobErrorStat } from "@plugins/infra/plugins/jobs/machine";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import type { QueueDeadJobPayload } from "../../core";
 
@@ -46,18 +45,28 @@ export function deadJobFingerprint(d: QueueDeadJobPayload): string {
   return `queue-dead-job:${d.jobName}:${hash53(deadJobCause(d.lastError)).toString(36)}`;
 }
 
+/** The deaths of one job that share one cause, as one report occurrence files them. */
+export interface DeadJobGroup {
+  jobName: string;
+  lastError: string | null;
+  deadCount: number;
+  attempts: number;
+  maxAttempts: number;
+  sampleJobId: string;
+}
+
 /**
- * Fold the queue's dead rows, grouped by their EXACT last error, into one group
+ * Fold groups (one per death, as `reportNewDeaths` hands them) into one group
  * per (jobName, cause): the exact text still carries per-occurrence ids, so
  * forty deaths of one cause arrive as forty groups and leave as one. Counts
  * add; attempt counters keep the worst; the error and sample job shown are
- * those of the first exact group — the newest, as `queryDeadJobsByError`
- * orders them — every one of which normalizes the same.
+ * those of the first group — the newest, as `queryDeadJobDeaths` orders
+ * them — every one of which normalizes the same.
  */
 export function foldDeadJobsByCause(
-  rows: readonly DeadJobErrorStat[],
-): DeadJobErrorStat[] {
-  const groups = new Map<string, DeadJobErrorStat>();
+  rows: readonly DeadJobGroup[],
+): DeadJobGroup[] {
+  const groups = new Map<string, DeadJobGroup>();
   for (const row of rows) {
     const key = `${row.jobName}\0${deadJobCause(row.lastError)}`;
     const group = groups.get(key);

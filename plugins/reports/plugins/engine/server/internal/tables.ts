@@ -54,6 +54,28 @@ export const _reportFixes = pgTable(
   ],
 );
 
+// Fix claims main's history makes for a report main's database does not hold —
+// a typo'd id, a report of another instance, or one swept before its claim was
+// read. Such a claim cannot land in `report_fixes` (it references `reports`),
+// so it is recorded here: the fact is filed as a server error ONCE, when the
+// claim is first read, and every later ingest (each advance of main re-reads a
+// day of history; an empty ledger re-reads all of it) knows it. Without it,
+// one wrong trailer re-filed the crash on every pass: report-1794543026-sp3rlj,
+// 760 occurrences from three commits, 2026-11-13 → 11-20. Keyed by the commit
+// that MAKES the claim (the push's newest commit, or the `Report-fixed-by`
+// commit), so another commit naming the same id is a new fact. Bounded by the
+// wrong claims history holds — a handful, ever; nothing deletes them, since
+// history keeps naming them. Main's only, like `report_fixes`.
+export const _reportFixClaimsUnknown = pgTable(
+  "report_fix_claims_unknown",
+  {
+    reportId: text("report_id").notNull(),
+    claimCommit: text("claim_commit").notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.reportId, t.claimCommit] })],
+);
+
 // The report history that outlives the reports themselves. `reports` rows are
 // swept after 7 days (./retention.ts) and a report's fixes go with it (the
 // cascade above), and `hourly` keeps 24 hours — so "is the app converging?"

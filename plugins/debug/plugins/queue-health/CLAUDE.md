@@ -72,7 +72,7 @@ modeled on that sweeper byte for byte — module-level timer, `start`/`stop` pai
 **Cadence is a module constant (`TICK_MS = 30_000`), not config**, for the same
 reason the sweeper's `SWEEP_INTERVAL_MS` is: it is a property of the detector,
 not a threshold an operator tunes. 30s gives six samples per three-minute wedge
-window, so one slow or skipped tick cannot false-negative. `queryDeadJobStats()`
+window, so one slow or skipped tick cannot false-negative. The dead-job check
 runs only every 10th tick — a dead-letter stays dead, and that preserves the
 5-minute cadence the old scheduled monitor gave it.
 
@@ -175,8 +175,7 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   (`attempts >= max_attempts AND locked_at IS NULL`, the same predicate
   `reconcileDeadJobs` uses). **One report per (jobName, cause)** (fingerprint
   `queue-dead-job:<jobName>:<cause hash>`, `machine/internal/dead-job-cause.ts`):
-  `queryDeadJobsByError` groups the dead rows by their exact last error, and the
-  watchdog folds those by the error normalized the way a crash's message
+  `queryDeadJobDeaths` lists the dead rows, and the watchdog folds them by the error normalized the way a crash's message
   identity is (`normalizeMessage`, `reports/core` — run ids, job ids and
   numbers stripped). So a retry-storm of one broken job collapses to a single
   report, and a NEW reason the same job dies opens its own report, task and
@@ -187,6 +186,16 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   that recorded none is dead-lettered with its transcript's end
   (`infra/jobs/supervised-job`'s ledger), which sits after a ~200-character
   prefix, so the cause keeps up to 4000 normalized characters, not crash's 200.
+  **Each death is reported once** (`machine/internal/dead-job-ledger.ts`): a
+  dead row stays in the queue until the dead-job GC archives it (up to an
+  hour), and the check samples every 5 minutes, so it used to file the same
+  death on every sample (2026-11-17: `desktop.fullscreen-budget` run 25ff3aa9,
+  10 occurrences in 45 min). The deaths already reported are kept in
+  `queue_dead_jobs_reported` (keyed by the jobs plugin's `deathId`: row id +
+  the `run_at` its last failure wrote, so a retried row that dies again is a
+  new death) and pruned once the queue no longer holds them; a check files an
+  occurrence only for new deaths, `deadCount` = how many of that cause. A table,
+  not memory, so a restart does not re-file the queue's dead rows.
 - **`queue-backlog`** (variant `warning`, escalates to STALLED) — depth/stall.
   Trips when `readyCount > backlogDepthThreshold` **or** the oldest ready job is
   overdue past `oldestOverdueMinutes`. `stalled = lockedCount === 0 && overdue`
@@ -444,7 +453,10 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `report-kind` "queue-slot-blocked"
     - `report-kind` "queue-slot-hog"
     - `report-kind` "queue-wedged"
+    - `fork-data-exclusion` "queue_dead_jobs_reported"
+    - `change-feed-exclusion` "queue_dead_jobs_reported"
   - Uses: `config_v2.ConfigV2`
+  - DB schema: `plugins/debug/plugins/queue-health/server/internal/tables.ts`
   - Resources:
     - `queue-health.pulse` (push, notified)
     - `queue-health.verdict` (push, notified)
@@ -457,7 +469,8 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `infra/jobs.onQueueActivity`
     - `infra/jobs.PICKUP_WINDOW_MS`
     - `infra/jobs.queryBacklogByJobName`
-    - `infra/jobs.queryDeadJobsByError`
+    - `infra/jobs.queryDeadJobDeathIds`
+    - `infra/jobs.queryDeadJobDeaths`
     - `infra/jobs.queryDeadJobStats`
     - `infra/jobs.queryOldestWaiting`
     - `infra/jobs.queryQueueBacklog`

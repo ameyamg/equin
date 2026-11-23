@@ -7,7 +7,8 @@ import {
   type HoldClass,
 } from "@plugins/infra/plugins/jobs/server";
 import {
-  queryDeadJobsByError,
+  queryDeadJobDeathIds,
+  queryDeadJobDeaths,
   queryQueueBacklog,
   queryBacklogByJobName,
   queryRunningJobs,
@@ -23,7 +24,7 @@ import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/ser
 import { queueHealthConfig } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 import { blockedTrip, sampleOf, type JobSpanSample } from "./profile-delta";
-import { foldDeadJobsByCause } from "./dead-job-cause";
+import { reportNewDeaths } from "./dead-job-ledger";
 import {
   awakeMs,
   judgeBacklog,
@@ -394,11 +395,16 @@ async function checkClassStarvation(
   }
 }
 
-// Terminally-dead jobs grouped by (jobName, cause) → one report per distinct
-// cause of each job's deaths (`foldDeadJobsByCause`).
+// Terminally-dead jobs NOT REPORTED YET, grouped by (jobName, cause) → one
+// occurrence per distinct cause of the new deaths (`foldDeadJobsByCause`). A
+// death the queue still holds was reported by an earlier check: the same fact,
+// not a new occurrence (`dead-job-ledger.ts`). `deadCount` is how many new
+// deaths of that cause this check found.
 async function checkDeadJobs(): Promise<void> {
-  for (const s of foldDeadJobsByCause(await queryDeadJobsByError())) {
-    await recordReport({
+  await reportNewDeaths(
+    { ids: queryDeadJobDeathIds, deaths: queryDeadJobDeaths },
+    async (s) => {
+      const filed = await recordReport({
       kind: "queue-dead-job",
       source: "server-queue-monitor",
       data: {
@@ -412,8 +418,12 @@ async function checkDeadJobs(): Promise<void> {
       message: `${s.jobName} ×${s.deadCount}${
         s.lastError ? ` — ${firstLine(s.lastError)}` : ""
       }`,
-    });
-  }
+      });
+      // A collapsed occurrence wrote no row: its deaths stay unreported, for a
+      // check after the fan-out window refills.
+      return filed.outcome !== "collapsed";
+    },
+  );
 }
 
 // Queue depth/stall, on AWAKE overdue time (`judgeBacklog`): the oldest ready

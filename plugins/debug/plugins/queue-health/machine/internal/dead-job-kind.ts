@@ -62,7 +62,7 @@ function renderDescription(row: ReportRow, d: QueueDeadJobPayload): string {
   );
   lines.push("");
   lines.push(`**Job:** \`${d.jobName}\``);
-  lines.push(`**Dead rows:** ${d.deadCount}`);
+  lines.push(`**New deaths:** ${d.deadCount}`);
   lines.push(`**Attempts:** ${d.attempts} / ${d.maxAttempts}`);
   if (d.sampleJobId) lines.push(`**Sample job id:** ${d.sampleJobId}`);
   if (d.lastError) {

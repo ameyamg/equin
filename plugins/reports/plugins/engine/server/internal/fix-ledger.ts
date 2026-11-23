@@ -26,7 +26,7 @@ import { restateByMetadata } from "@plugins/shell/plugins/notifications/server";
 import { _reports } from "@plugins/reports/server";
 import { fixStandingOf, type ReportId } from "@plugins/reports/core";
 import { reportsProducer } from "./producer";
-import { _reportFixes } from "./tables";
+import { _reportFixClaimsUnknown, _reportFixes } from "./tables";
 import {
   placeableFixClaims,
   readFixClaims,
@@ -141,7 +141,12 @@ export async function ingestFixClaims(step: BootStep): Promise<void> {
   if (recorded > 0) await step("stamp-new", () => stampDeployedFixes());
 }
 
-/** `claims` without those `report_fixes` already holds (by report and commit). */
+/**
+ * `claims` without those `report_fixes` already holds (by report and commit).
+ * A claim for a report this database does not hold stays in: it costs this
+ * pass its placement, and `recordFixClaims` files it only the first time
+ * (`report_fix_claims_unknown`) — and lands it, should the report appear.
+ */
 async function unrecordedClaims(
   claims: readonly FixClaim[],
 ): Promise<FixClaim[]> {
@@ -157,6 +162,11 @@ async function unrecordedClaims(
     );
   const have = new Set(rows.map((r) => `${r.reportId}\0${r.commit}`));
   return claims.filter((c) => !have.has(`${c.reportId}\0${c.commit}`));
+}
+
+/** The commit that makes claim `c`: the `Report-fixed-by` commit, else the fix's own. */
+function claimCommitOf(c: FixClaim): string {
+  return c.claimedBy ?? c.commit;
 }
 
 /**
@@ -190,13 +200,10 @@ export async function recordFixClaims(
         )
     ).map((r) => r.id),
   );
-  for (const c of claims) {
-    if (known.has(c.reportId)) continue;
-    reportServerError({
-      message: `[reports] commit ${(c.claimedBy ?? c.commit).slice(0, 12)} on main names report ${c.reportId} (${c.claimedBy === undefined ? "Fixes-report" : "Report-fixed-by"}), which main's database does not hold`,
-      errorType: "UnknownFixedReport",
-    });
-  }
+  await fileUnknownClaims(
+    claims.filter((c) => !known.has(c.reportId)),
+    conn,
+  );
   const landed = claims
     .filter((c) => known.has(c.reportId))
     .map(({ reportId, commit, landedAt }) => ({ reportId, commit, landedAt }));
@@ -222,6 +229,41 @@ export async function recordFixClaims(
       );
   }
   return inserted.length;
+}
+
+/**
+ * File every claim in `unknown` (claims for reports this database does not
+ * hold) not filed before, and remember it in `report_fix_claims_unknown` — one
+ * fact, one server error, however many passes re-read the commit. The insert's
+ * RETURNING is the dedupe: a claim already recorded returns nothing.
+ */
+async function fileUnknownClaims(
+  unknown: readonly FixClaim[],
+  conn: NodePgDatabase,
+): Promise<void> {
+  if (unknown.length === 0) return;
+  const fresh = await conn
+    .insert(_reportFixClaimsUnknown)
+    .values(
+      unknown.map((c) => ({
+        reportId: c.reportId,
+        claimCommit: claimCommitOf(c),
+      })),
+    )
+    .onConflictDoNothing()
+    .returning({
+      reportId: _reportFixClaimsUnknown.reportId,
+      claimCommit: _reportFixClaimsUnknown.claimCommit,
+    });
+  // Each newly recorded claim files once, even if `unknown` names it twice.
+  const toFile = new Set(fresh.map((r) => `${r.reportId}\0${r.claimCommit}`));
+  for (const c of unknown) {
+    if (!toFile.delete(`${c.reportId}\0${claimCommitOf(c)}`)) continue;
+    reportServerError({
+      message: `[reports] commit ${claimCommitOf(c).slice(0, 12)} on main names report ${c.reportId} (${c.claimedBy === undefined ? "Fixes-report" : "Report-fixed-by"}), which main's database does not hold`,
+      errorType: "UnknownFixedReport",
+    });
+  }
 }
 
 /**
