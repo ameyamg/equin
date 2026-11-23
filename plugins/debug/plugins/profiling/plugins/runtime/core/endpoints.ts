@@ -129,6 +129,8 @@ const gateMeterSchema = z.object({
   kind: z.enum(["queue", "io"]),
   count: z.number(),
   totalMs: z.number(),
+  // The union of the waits' intervals: wall time at least one was in progress.
+  busyTotalMs: z.number(),
   // The longest single wait, and the longest the queue held without a break
   // (the worst burst's drain time) — what a waiter felt, not a sum.
   maxWaitMs: z.number(),

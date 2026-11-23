@@ -55,25 +55,53 @@ export function computeRollup(
 // One gate's cumulative wait meter, as the profiler reports it (`GateMeter`).
 export interface GateReading {
   layer: string;
+  kind: "queue" | "io";
   count: number;
+  /** Σ every wait's ms, concurrent waits summed. */
   totalMs: number;
+  /** The union of the waits' intervals: wall time at least one was in progress. */
+  busyTotalMs: number;
 }
 
 // The previous tick's reading of every gate, by layer.
-export type GateBaseline = Map<string, { count: number; totalMs: number }>;
+export type GateBaseline = Map<
+  string,
+  { count: number; totalMs: number; busyTotalMs: number }
+>;
 
 export interface GateTrip {
   layer: string;
-  /** ms waited on the gate this window, summed across waiters. */
+  kind: "queue" | "io";
+  /** The ms the gate is judged on this window (see `judgedMs`). */
   msDelta: number;
+  /** Σ every wait's ms this window, concurrent waits summed. */
+  summedMsDelta: number;
   /** Waits charged on the gate this window. */
   waitsDelta: number;
 }
 
-// The gates whose waiters waited more than `budgetMs` in total this window,
-// diffing each reading against `baseline` (updated in place, so it holds this
-// tick's readings for the next). Same rules as `windowDelta`: a gate seen for
-// the first time seeds and trips nothing; a reset takes the whole reading.
+// What a gate's window is judged on, by what its waiters waited FOR:
+//   • `queue` — capacity on a shared gate: each waiter is an op that lost its
+//     own wait, so the waits SUM (total time ops lost queued).
+//   • `io` — work another party did (a child process, the disk, a worker):
+//     concurrent waits are parallel work, so the UNION — the wall time the
+//     layer's work was outstanding. A sum would charge a job's four git lanes
+//     four times: main's healthy fsmonitor pass at 11:00 UTC on 2026-11-23 ran
+//     78 children 4 at a time in 19.7 s of wall and summed 75.9 s, past the
+//     60 s budget (report-1795138817-crebd9). The worst overlapping-pass
+//     windows of 2026-11-22 had git outstanding 62–117 awake s: still past it.
+function judgedMs(
+  kind: GateReading["kind"],
+  d: { totalMs: number; busyTotalMs: number },
+): number {
+  return kind === "io" ? d.busyTotalMs : d.totalMs;
+}
+
+// The gates whose window, judged by `judgedMs`, is past `budgetMs`, diffing
+// each reading against `baseline` (updated in place, so it holds this tick's
+// readings for the next). Same rules as `windowDelta`: a gate seen for the
+// first time seeds and trips nothing; a reset (its count fell) takes the whole
+// reading.
 export function gateTrips(
   readings: readonly GateReading[],
   baseline: GateBaseline,
@@ -82,13 +110,27 @@ export function gateTrips(
   const trips: GateTrip[] = [];
   for (const g of readings) {
     const prev = baseline.get(g.layer);
-    baseline.set(g.layer, { count: g.count, totalMs: g.totalMs });
-    const msDelta = windowDelta(prev?.totalMs, g.totalMs);
-    if (msDelta === null || msDelta <= budgetMs) continue;
+    baseline.set(g.layer, {
+      count: g.count,
+      totalMs: g.totalMs,
+      busyTotalMs: g.busyTotalMs,
+    });
+    if (prev === undefined) continue;
+    // One reset decision for every field (the count only grows between
+    // resets): judged per field, a reset's new union could read as a small
+    // gain while its sum is taken whole.
+    const reset = g.count < prev.count;
+    const delta = (p: number, c: number) => (reset ? c : c - p);
+    const totalMs = delta(prev.totalMs, g.totalMs);
+    const busyTotalMs = delta(prev.busyTotalMs, g.busyTotalMs);
+    const msDelta = judgedMs(g.kind, { totalMs, busyTotalMs });
+    if (msDelta <= budgetMs) continue;
     trips.push({
       layer: g.layer,
+      kind: g.kind,
       msDelta,
-      waitsDelta: windowDelta(prev?.count, g.count) ?? 0,
+      summedMsDelta: totalMs,
+      waitsDelta: delta(prev.count, g.count),
     });
   }
   return trips;

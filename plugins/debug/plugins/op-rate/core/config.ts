@@ -145,15 +145,16 @@ export const opRateConfig = defineConfig({
       description:
         "File an op-time report when a job label consumes more than this many ms of its own time (waits excluded) within one monitor window (backfills/syncs run long, so this is loose).",
     }),
-    // A gate's budget: the ms its waiters spent queued on it in one window
-    // (summed across concurrent waiters). Ops are judged on their own time, so
-    // the time they queued is judged here instead, against the gate.
+    // A gate's budget: the ms its waiters spent on it in one window — summed
+    // across waiters for a queue gate, the union (wall time outstanding) for an
+    // io layer (a child process, the disk, a worker). Ops are judged on their
+    // own time, so the time they waited is judged here instead, against the gate.
     waitMsPerWindow: intField({
       default: 60000,
       min: 0,
       label: "Gate wait ms per window",
       description:
-        "File an op-time report against a gate (read-admit, db-acquire, heavy-read-local, …) when the operations queued on it waited more than this many ms in total within one monitor window.",
+        "File an op-time report against a gate (read-admit, db-acquire, heavy-read-local, …) when the operations queued on it waited more than this many ms in total within one monitor window — or, for work another process does (git, the disk, a worker), when that work was outstanding more than this many ms of the window.",
     }),
     rollupFactor: intField({
       default: 4,

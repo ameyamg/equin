@@ -1451,6 +1451,18 @@ export interface GateMeter {
   count: number;
   /** Σ their ms — a sum across concurrent waiters, so it can exceed wall. */
   totalMs: number;
+  /**
+   * The UNION of their intervals: the time at least one wait on the layer was
+   * in progress, so never more than wall. For an `io` layer this is what the
+   * work cost its waiters — a job running four git children at once waited
+   * as long as the longest-running lane, not four times that (a healthy
+   * fsmonitor pass: 19.7 s of wall, 75.9 s summed — main, 2026-11-23).
+   * Kept on a `Track` of at most `TRACK_SPAN_CAP` disjoint stretches: a long
+   * wait that ends after more than that many separate short ones on its
+   * layer is clipped to the oldest kept — an under-count (e.g. a minute-long
+   * `git fetch` beside a hundred spaced-out short git calls).
+   */
+  busyTotalMs: number;
   /** The longest single wait — what one waiter felt at worst. */
   maxWaitMs: number;
   /**
@@ -1470,6 +1482,9 @@ export interface GateMeter {
 }
 
 const gateMeters = new Map<string, GateMeter>();
+
+// Per layer: the union of every metered wait (`GateMeter.busyTotalMs`).
+const gateMeterUnions = new Map<string, Track>();
 
 // Per layer: the meter's current busy stretch (every wait, filed or not).
 // Waits are charged as they end, so they arrive nearly in order; one that
@@ -1494,10 +1509,14 @@ function meterGateWait(
       count: 1,
       totalMs: ms,
       maxWaitMs: ms,
+      busyTotalMs: 0,
       longestBusyMs: 0,
     };
     gateMeters.set(layer, m);
   }
+  let union = gateMeterUnions.get(layer);
+  if (!union) gateMeterUnions.set(layer, (union = newTrack(-Infinity)));
+  m.busyTotalMs += contribute(union, wait.t0, wait.t1);
   // Admitted with room: the queue did not hold. And `io` work is no queue:
   // concurrent children or file calls overlapping are not a stretch it held.
   if (ms <= 0 || kind === "io") return;
@@ -3631,6 +3650,7 @@ export function resetRuntimeProfile(): void {
   laneClaims.clear();
   gateBusy.clear();
   gateMeterStretches.clear();
+  gateMeterUnions.clear();
   gateMeters.clear();
   sinceMs = now();
 }

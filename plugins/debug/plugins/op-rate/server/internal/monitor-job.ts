@@ -76,7 +76,8 @@ const lastWallMs = new Map<string, number>();
 
 // The waits an op is judged without are not dropped: each gate's metered
 // queue/io waits (`getRuntimeProfile().gates`, charged once per wait where it
-// happens) are diffed here by layer and judged against `waitMsPerWindow` — the
+// happens) are diffed here by layer and judged against `waitMsPerWindow` (a
+// queue gate on its waits' sum, an io layer on their union — `gateTrips`) — the
 // gate's congestion over the window, against the gate (with its holders),
 // instead of as N innocent waiters. (slow-ops' `wait <layer>` is the other
 // view: one op's wait past its bar, or a stretch where the leftover waits of
@@ -114,7 +115,9 @@ type PerOpTrip =
   | {
       type: "gate-wait";
       layer: string;
-      delta: number; // ms waited on the gate in window (the rank key)
+      gateKind: "queue" | "io";
+      delta: number; // the gate's judged ms in window (the rank key)
+      summedDelta: number; // Σ its waits' ms, concurrent waits summed
       waitsDelta: number;
       budgetMs: number;
       holders: readonly GateHolder[];
@@ -257,7 +260,9 @@ export const opRateMonitorJob = defineJob({
       perOp.push({
         type: "gate-wait",
         layer: t.layer,
+        gateKind: t.kind,
         delta: t.msDelta,
+        summedDelta: t.summedMsDelta,
         waitsDelta: t.waitsDelta,
         budgetMs: cfg.waitMsPerWindow,
         holders: holdersOf.get(t.layer) ?? [],
@@ -311,6 +316,7 @@ export const opRateMonitorJob = defineJob({
             kind: WAIT_KIND,
             label: h.layer,
             msInWindow: h.delta,
+            ...(h.gateKind === "io" && { summedMsInWindow: h.summedDelta }),
             callsInWindow: h.waitsDelta,
             windowMs: WINDOW_MS,
             budgetMs: h.budgetMs,
@@ -319,7 +325,10 @@ export const opRateMonitorJob = defineJob({
             }),
             ...(trace ? { traceId: trace.id } : {}),
           },
-          message: `wait ${h.layer} — ${(h.delta / 1000).toFixed(1)}s/window waited across ${h.waitsDelta} waits (budget ${(h.budgetMs / 1000).toFixed(1)}s)`,
+          message:
+            h.gateKind === "io"
+              ? `wait ${h.layer} — work outstanding ${(h.delta / 1000).toFixed(1)}s/window across ${h.waitsDelta} waits (${(h.summedDelta / 1000).toFixed(1)}s summed; budget ${(h.budgetMs / 1000).toFixed(1)}s)`
+              : `wait ${h.layer} — ${(h.delta / 1000).toFixed(1)}s/window waited across ${h.waitsDelta} waits (budget ${(h.budgetMs / 1000).toFixed(1)}s)`,
         });
       } else {
         // Evidence FIRST: captureTrace grabs the coherent-instant flight window

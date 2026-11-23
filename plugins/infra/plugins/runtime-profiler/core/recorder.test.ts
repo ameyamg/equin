@@ -440,6 +440,7 @@ describe("gate meters — every queue wait metered once, against its gate", () =
         kind: "queue",
         count: 1,
         totalMs: 30,
+        busyTotalMs: 30,
         maxWaitMs: 30,
         longestBusyMs: 30,
       },
@@ -448,6 +449,7 @@ describe("gate meters — every queue wait metered once, against its gate", () =
         kind: "queue",
         count: 1,
         totalMs: 7,
+        busyTotalMs: 7,
         maxWaitMs: 7,
         longestBusyMs: 7,
       },
@@ -456,10 +458,29 @@ describe("gate meters — every queue wait metered once, against its gate", () =
         kind: "io",
         count: 1,
         totalMs: 5,
+        busyTotalMs: 5,
         maxWaitMs: 5,
         longestBusyMs: 0,
       },
     ]);
+  });
+
+  test("concurrent waits on one layer sum in totalMs but union in busyTotalMs", async () => {
+    // One job running four children at once, then one more after a gap:
+    // [0,10] ×4 and [20,25]. The job waited 15 ms of wall, not 45.
+    await recordEntrySpan("job", "pass", async () => {
+      fakeNow = 10;
+      for (let i = 0; i < 4; i++) chargeWait("spawn:git", 10, "io");
+      fakeNow = 25;
+      chargeWait("spawn:git", 5, "io");
+      // A wait ending later but reaching back over the gap fills it.
+      fakeNow = 26;
+      chargeWait("spawn:git", 12, "io"); // [14, 26]
+    });
+    const g = getRuntimeProfile().gates.find((m) => m.layer === "spawn:git")!;
+    expect(g.count).toBe(6);
+    expect(g.totalMs).toBe(57);
+    expect(g.busyTotalMs).toBe(22); // [0,10] ∪ [14,26]
   });
 
   test("own time excludes waits and holds: wait-heavy entries and held leaves cost ~0", async () => {

@@ -51,7 +51,23 @@ function renderDescription(row: ReportRow, d: OpTimePayload): string {
   const budgetSecs = (d.budgetMs / 1000).toFixed(1);
   const avgMs = d.callsInWindow > 0 ? Math.round(d.msInWindow / d.callsInWindow) : 0;
 
-  if (d.kind === "wait" && d.label) {
+  if (d.kind === "wait" && d.label && d.summedMsInWindow !== undefined) {
+    lines.push(
+      `Work on \`${d.label}\` (done by another process, the disk or a worker ` +
+        `on this backend's behalf) was outstanding for **${secs}s** of a single ` +
+        `monitor window (${d.callsInWindow} waits, ` +
+        `${(d.summedMsInWindow / 1000).toFixed(1)}s summed across concurrent ` +
+        `ones) — past the budget of ${budgetSecs}s. Look at who started that ` +
+        `work (the trace's open spans): is it called needlessly, run twice at ` +
+        `once, or individually slow?`,
+    );
+    lines.push("");
+    lines.push(`**Layer:** \`${d.label}\``);
+    if (d.holders && d.holders.length > 0) {
+      lines.push(`**Holders when it tripped:**`);
+      for (const h of d.holders) lines.push(`- \`${h}\``);
+    }
+  } else if (d.kind === "wait" && d.label) {
     lines.push(
       `Operations waited **${secs}s** in total on the \`${d.label}\` gate ` +
         `within a single monitor window (${d.callsInWindow} waits) — past the ` +

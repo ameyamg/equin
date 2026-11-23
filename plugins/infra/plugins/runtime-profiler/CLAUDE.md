@@ -236,7 +236,9 @@ caller) and records no span: it is no `db` op.
 An op is judged on its own time (`selfTotalMs`: wall minus waits, declared holds
 and child executions), so the time it waited must be judged somewhere else, once:
 a wait's charge meters every `queue` / `io` wait per layer (`GateMeter`: `count`,
-`totalMs`, and what a waiter felt: `maxWaitMs`, the longest single wait, and
+`totalMs` — summed across concurrent waits —, `busyTotalMs` — their union, the
+wall time at least one was in progress, kept on a `Track` like an entry's —,
+and what a waiter felt: `maxWaitMs`, the longest single wait, and
 `longestBusyMs`, the longest the queue held without a break — every wait,
 filed or not), ONCE per wait where it happens — never per ancestor and never per
 label. A `join` is not metered (it is the joined run's time, which that run's

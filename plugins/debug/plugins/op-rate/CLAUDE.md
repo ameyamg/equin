@@ -33,6 +33,22 @@ against `waitMsPerWindow` as `op-time` with `kind: "wait"`, `label: <layer>`
 congestion reported once, against what held it. A per-op report carries
 `wallMsInWindow` beside its own `msInWindow` for context.
 
+**A queue gate is judged on the sum, an `io` layer on the union.** On a queue
+gate (`read-admit`, `db-acquire`) each waiter is an op that lost its own wait,
+so the waits sum. On an `io` layer (a child process `spawn:<program>` /
+`git:<subcommand>`, the disk `fs-*`, a worker `worker:<daemon>`) concurrent
+waits are parallel work, so the gate is judged on their union — the wall time
+the layer's work was outstanding (`GateMeter.busyTotalMs`); the report carries
+the sum as `summedMsInWindow`, for context. Summing charged a job's parallel
+lanes once each: main's healthy fsmonitor pass (11:00 UTC 2026-11-23, 78 git
+children four at a time) ran 19.7 s of wall and summed 75.9 s, past the 60 s
+budget (report-1795138817-crebd9). Replayed over the 58 traces of 2026-11-21/22
+the sum fired on, the union (a lower bound from each trace) was 9–56 s for
+single passes, and 62–117 s for the five worst windows where fsmonitor passes
+overlapped (four at once): the union still fires on those. It misses the milder
+overlap windows (41–56 s), whose real cost was duplicated git (a few CPU-s)
+and the passes' lock failures, which the job's failure report already files.
+
 - **`op-rate`** (variant `warning`) — an op (`${kind}:${label}`) called far more
   than it usually is in that kind of window (see *op-rate judges each op against
   its own history*). **One report per distinct hot op** (fingerprint

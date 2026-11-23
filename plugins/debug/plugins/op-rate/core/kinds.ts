@@ -52,9 +52,11 @@ export type OpRatePayload = z.infer<typeof OpRatePayloadSchema>;
 //     many labels each under its own per-op budget. `topLabels` carries the
 //     top-10 contributing labels with their ms deltas; no single op to point at,
 //     so no `traceId`.
-//   • gate      (`kind: "wait"`, `label` the layer) — the ms ops queued on one
-//     gate in the window, past `waitMsPerWindow`; `callsInWindow` counts the
-//     waits, `holders` names who held the gate when it tripped.
+//   • gate      (`kind: "wait"`, `label` the layer) — the ms ops waited on one
+//     gate in the window, past `waitMsPerWindow`: summed for a queue gate, the
+//     union for an `io` layer (wall time its work was outstanding — then
+//     `summedMsInWindow` carries the sum, for context); `callsInWindow` counts
+//     the waits, `holders` names who held the gate when it tripped.
 // `msInWindow` is OWN time for an op (its waits excluded — they are the
 // gate's); `wallMsInWindow` is its wall time, for context.
 export const OpTimePayloadSchema = z.object({
@@ -62,6 +64,7 @@ export const OpTimePayloadSchema = z.object({
   label: z.string().optional(),
   msInWindow: z.number(),
   wallMsInWindow: z.number().optional(),
+  summedMsInWindow: z.number().optional(),
   holders: z.array(z.string()).max(10).optional(),
   callsInWindow: z.number().int(),
   windowMs: z.number().int(),

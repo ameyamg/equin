@@ -34,7 +34,7 @@
   "dbMsPerWindow": 60000,
   // File an op-time report when a job label consumes more than this many ms of its own time (waits excluded) within one monitor window (backfills/syncs run long, so this is loose).
   "jobMsPerWindow": 120000,
-  // File an op-time report against a gate (read-admit, db-acquire, heavy-read-local, …) when the operations queued on it waited more than this many ms in total within one monitor window.
+  // File an op-time report against a gate (read-admit, db-acquire, heavy-read-local, …) when the operations queued on it waited more than this many ms in total within one monitor window — or, for work another process does (git, the disk, a worker), when that work was outstanding more than this many ms of the window.
   "waitMsPerWindow": 60000,
   // Per-kind rollup trips when the sum of a kind's per-op ms deltas exceeds its per-kind ms budget times this factor — catching cost smeared across many labels, each under its own per-op budget.
   "rollupFactor": 4
