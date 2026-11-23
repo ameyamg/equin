@@ -1,5 +1,6 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { readPid, isRunning } from "@plugins/infra/plugins/launcher/server";
+import { readPid } from "@plugins/infra/plugins/launcher/server";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import {
   awaitProcessGone,
@@ -36,7 +37,7 @@ const run: CliAction<[], { disable?: boolean }> = async (opts) => {
   // A gateway no service manager owns: a `start` without one, or one from
   // before the gateway was a service.
   const pid = await readPid();
-  if (pid !== null && isRunning(pid)) {
+  if (pid !== null && isProcessAlive(pid)) {
     console.log(`Stopping the gateway (PID ${pid})...`);
     await terminateProcess(pid);
     stopped = true;

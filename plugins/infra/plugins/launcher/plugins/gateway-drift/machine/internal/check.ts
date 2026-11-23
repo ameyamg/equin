@@ -18,11 +18,11 @@ import {
   DEV_GATEWAY_LOG_LEVEL,
   devGatewayLaunchOptions,
   gatewayLaunchFlags,
-  isRunning,
   readGatewayGeneration,
   readPid,
 } from "@plugins/infra/plugins/launcher/server";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 import { principalStamp } from "@plugins/framework/plugins/principal/core";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import {
@@ -293,7 +293,7 @@ async function runningCommand(dialAddress: string): Promise<string | null> {
   // line is not the serving one's, so it is no answer either.
   if (gen.kind === "unreachable") return null;
   const pid = await readPid();
-  if (pid === null || !isRunning(pid)) return null;
+  if (pid === null || !isProcessAlive(pid)) return null;
   const proc = `/proc/${pid}/cmdline`;
   if (await exists(proc)) {
     return (await readFile(proc, "utf-8"))

@@ -193,7 +193,6 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `liveSupervisedIncarnations`
     - `onDaemonActivity`
     - `parsePidFile`
-    - `pidAlive`
     - `readPidFile`
     - `stopOnCodeAdopted`
   - Register: `defineFileWatcher('daemon.pid-files')`

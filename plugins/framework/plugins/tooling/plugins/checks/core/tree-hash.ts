@@ -17,6 +17,7 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // Looser than the metadata-read bound used elsewhere in the check tree,
 // because `add -A` + `write-tree` below genuinely walk the whole working tree:
@@ -492,18 +493,8 @@ function sweepDeadScratch(realIndex: AppPath): void {
   for (const entry of readdirSync(dir)) {
     if (!entry.startsWith(prefix)) continue;
     const pid = SCRATCH_SUFFIX.exec(entry.slice(prefix.length))?.[1];
-    if (pid === undefined || isAlive(Number(pid))) continue;
+    if (pid === undefined || isProcessAlive(Number(pid))) continue;
     rmSync(joinAppPath(dir, entry), { force: true });
-  }
-}
-
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    // EPERM: it runs, as another user.
-    return (err as NodeJS.ErrnoException).code !== "ESRCH";
   }
 }
 

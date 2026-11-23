@@ -2,10 +2,7 @@ import { basename } from "node:path";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import {
-  pidAlive,
-  readPidFile,
-} from "@plugins/infra/plugins/spawn/plugins/daemon/server";
+import { readPidFile } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
 import {
   cloneNamedBinary,
@@ -21,6 +18,7 @@ import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { hibernatedSdkConversationIds } from "../../server/internal/rows";
 import { readAgentOptions } from "./agent-process";
 import { agentBinDir, agentOptionsPath, agentPidPath } from "./paths";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // Waking a hibernated conversation starts its agent, and the agent's claude is
 // a clone named for the conversation (`named-claude.ts`). macOS scans an
@@ -132,5 +130,5 @@ async function agentMayRun(id: string): Promise<boolean> {
   const read = await readPidFile(agentPidPath(id));
   if (read.kind === "absent") return false;
   if (read.kind === "unreadable") return true;
-  return pidAlive(read.pid);
+  return isProcessAlive(read.pid);
 }

@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * The scratch root a test run hands its runners as `TMPDIR`: every dir a test
@@ -67,18 +68,6 @@ function sweepDeadRuns(): void {
     // Not a run root (nothing else is written here, but a stray name must not
     // be read as pid 0 — `kill(0, 0)` signals our own process group).
     if (!Number.isInteger(pid) || pid <= 0) continue;
-    if (!isAlive(pid)) removeRoot(join(PARENT, name));
-  }
-}
-
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    // EPERM: the pid exists under another user — alive, not ours to judge.
-    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
-    if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
-    throw err;
+    if (!isProcessAlive(pid)) removeRoot(join(PARENT, name));
   }
 }

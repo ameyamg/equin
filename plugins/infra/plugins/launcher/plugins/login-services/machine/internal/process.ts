@@ -1,28 +1,10 @@
 import { SERVICE_STOP_TIMEOUT_S, SERVICE_STOP_WAIT_MS } from "../../core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * Waiting out a stopped service's process — the step between `unload` and the
  * next `load` (`reconcile.ts`), and `./equin stop`'s last word.
- *
- * Here rather than in `infra/launcher`'s `server` barrel (where it was): a
- * machine half may not reach it there without a launcher ↔ login-services
- * import cycle, and a `server/` file may not import this `machine` barrel —
- * so the liveness probe is this file's own, the launcher keeping `isRunning`
- * for its pidfile reads.
  */
-
-/** Whether `pid` names a live process (EPERM: it exists, we just may not signal it). */
-function processExists(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EPERM") return true;
-    if (code === "ESRCH") return false;
-    throw err;
-  }
-}
 
 /**
  * Wait for a stopped process to be gone. Throws if it outlives
@@ -45,10 +27,10 @@ export async function awaitProcessGone(
   budgetMs: number = SERVICE_STOP_WAIT_MS,
 ): Promise<void> {
   const deadline = performance.now() + budgetMs;
-  while (processExists(pid) && performance.now() < deadline) {
+  while (isProcessAlive(pid) && performance.now() < deadline) {
     await Bun.sleep(100);
   }
-  if (processExists(pid)) {
+  if (isProcessAlive(pid)) {
     throw new Error(
       `Process ${pid} is still running ${budgetMs / 1000}s after being stopped; refusing to carry on as if it were gone.`,
     );
@@ -65,10 +47,10 @@ export async function awaitProcessGone(
 export async function terminateProcess(pid: number): Promise<void> {
   if (!signal(pid, "SIGTERM")) return;
   const killAt = performance.now() + SERVICE_STOP_TIMEOUT_S * 1000;
-  while (processExists(pid) && performance.now() < killAt) {
+  while (isProcessAlive(pid) && performance.now() < killAt) {
     await Bun.sleep(100);
   }
-  if (processExists(pid)) signal(pid, "SIGKILL");
+  if (isProcessAlive(pid)) signal(pid, "SIGKILL");
   await awaitProcessGone(
     pid,
     SERVICE_STOP_WAIT_MS - SERVICE_STOP_TIMEOUT_S * 1000,

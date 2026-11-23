@@ -3,7 +3,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { sentinelStatusDir } from "../data-dirs";
 export {
   createStatusWriter,
-  isPidAlive,
   isStatusFilename,
   readSentinelWatch,
 } from "./internal/status-file";

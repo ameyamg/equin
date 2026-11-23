@@ -29,6 +29,7 @@ import type {
   WaitHolder,
   WaitOn,
 } from "@plugins/installer/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * How a `./equin` command reports itself to the install that runs it as one
@@ -311,17 +312,6 @@ function readRequest(file: string): InstallFollowRequest | null {
   return parsed as InstallFollowRequest;
 }
 
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
-    if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
-    throw err;
-  }
-}
-
 function attachedFd(): number | null {
   return follower?.fd ?? null;
 }
@@ -335,7 +325,7 @@ function followerFd(): number | null {
     request === null ||
     request.since === undefined ||
     request.followedBy !== undefined ||
-    !alive(request.pid)
+    !isProcessAlive(request.pid)
   )
     return null;
   let fd: number;

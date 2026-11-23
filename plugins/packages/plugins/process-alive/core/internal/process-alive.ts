@@ -14,11 +14,27 @@
  * sweeper woken first.
  */
 export function isProcessAlive(pid: number): boolean {
-  if (!Number.isSafeInteger(pid) || pid <= 0) {
-    throw new Error(`[process-alive] not a pid: ${pid}`);
+  return signalZero(pid, pid);
+}
+
+/**
+ * Whether any process of the group `pgid` is still alive: `kill(-pgid, 0)`,
+ * with {@link isProcessAlive}'s reading of ESRCH and EPERM. A group outlives
+ * its leader — an orphaned member keeps its pgid after re-parenting — so a
+ * caller that signals work as a group judges its liveness as one too. On
+ * macOS a member still tearing down after a SIGKILL answers EPERM for a few
+ * milliseconds: alive, which only defers a caller's close to its next look.
+ */
+export function isProcessGroupAlive(pgid: number): boolean {
+  return signalZero(pgid, -pgid);
+}
+
+function signalZero(id: number, target: number): boolean {
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new Error(`[process-alive] not a pid: ${id}`);
   }
   try {
-    process.kill(pid, 0);
+    process.kill(target, 0);
     return true;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;

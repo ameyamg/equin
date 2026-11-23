@@ -29,6 +29,7 @@ import {
   linkSealedDep,
   type Ready,
 } from "@plugins/infra/plugins/deps/deps";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /** What to bundle, and where its bundles live. */
 export interface DaemonBundleSpec {
@@ -563,18 +564,6 @@ async function tryHold(final: AppPath): Promise<OwnedFd | null> {
   return null;
 }
 
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EPERM") return true;
-    if (code === "ESRCH") return false;
-    throw err;
-  }
-}
-
 /** The pid a staging or trash dir was named with. */
 function ownerPid(name: string, prefix: string): number {
   const pid = Number.parseInt(name.slice(prefix.length), 10);
@@ -597,7 +586,7 @@ async function reclaimBundles(home: AppPath, keep: string): Promise<string[]> {
       const prefix = name.startsWith(STAGING_PREFIX)
         ? STAGING_PREFIX
         : TRASH_PREFIX;
-      if (!pidAlive(ownerPid(name, prefix)))
+      if (!isProcessAlive(ownerPid(name, prefix)))
         await rm(path, { recursive: true, force: true });
       continue;
     }

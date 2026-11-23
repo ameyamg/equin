@@ -174,6 +174,7 @@ the shared Playwright harness.
   - Uses:
     - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreeDataDir`
+    - `packages/process-alive.isProcessAlive`
     - `packages/timed-fs.readFile`
     - `packages/timed-fs.readFileSync`
   - Exports (types):

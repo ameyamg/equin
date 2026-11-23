@@ -28878,7 +28878,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SentinelVitalsRead`
             - Exports (values):
               - `createStatusWriter`
-              - `isPidAlive`
               - `isStatusFilename`
               - `readSentinelVitals`
               - `readSentinelWatch`
@@ -32801,6 +32800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/paths.worktreeArtifacts`
               - `infra/paths.worktreeDataDir`
+              - `packages/process-alive.isProcessAlive`
               - `packages/timed-fs.readFile`
               - `packages/timed-fs.readFileSync`
             - Exports (types):
@@ -33897,7 +33897,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 101 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 102 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `packages/shared-work` ×9
@@ -33915,12 +33915,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths/repo-root` ×2
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
+              - `packages/process-alive` ×2
               - `reports/outbox/file` ×2
               - `infra/file-sink.defineFileSink`
               - `packages/deadline.wallNow`
               - `packages/flock.flockTry`
               - `packages/owned-fd.openOwnedFdSync`
-              - `packages/process-alive.isOrphanedTemp`
               - `packages/semaphore.createSemaphore`
               - `packages/single-flight.singleFlight`
               - `packages/string-hash.sha256Hex`
@@ -34739,7 +34739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isGeneratedArtifactPath`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 41 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 42 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `infra/paths` ×5
               - `framework/cli/cli-name` ×4
               - `framework/tooling/guards/bypass` ×4
@@ -34758,6 +34758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names.envName`
               - `infra/paths/repo-root.REPO_ROOT`
               - `packages/deadline.wallNow`
+              - `packages/process-alive.isProcessAlive`
               - `packages/string-hash.hashHex`
             - Exports (types):
               - `AllowVerdict`
@@ -38516,7 +38517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports.ReportRow`
             - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
-            - Uses: 51 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
               - `infra/git/main-slots/boot-lease` ×21
               - `packages/timed-fs` ×6
               - `infra/paths` ×5
@@ -38528,6 +38529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names.readEnv`
               - `infra/paths/repo-root.REPO_ROOT`
               - `infra/spawn.getMainRepoRoot`
+              - `packages/process-alive.isProcessAlive`
               - `packages/sleep-clock.clockStampNow`
             - Exports (types):
               - `DrainSlowPayload`
@@ -39917,6 +39919,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
               - `infra/paths.worktreeArtifacts`
               - `infra/runtime-identity.runtimeNamespace`
+              - `packages/process-alive.isProcessAlive`
+              - `packages/process-alive.isProcessGroupAlive`
               - `packages/timed-fs.readFile`
               - `packages/timed-fs.readFileSync`
               - `packages/timed-fs.stat`
@@ -40024,7 +40028,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `handOverGateway`
           - `hasPgBouncerPackage`
           - `isGatewayListening`
-          - `isRunning`
           - `listenFlag`
           - `LOOPBACK_BIND`
           - `pgbouncerConnection`
@@ -41810,7 +41813,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveSupervisedIncarnations`
               - `onDaemonActivity`
               - `parsePidFile`
-              - `pidAlive`
               - `readPidFile`
               - `stopOnCodeAdopted`
             - Register: `defineFileWatcher('daemon.pid-files')`
@@ -45430,16 +45432,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/proc-linux.ts`, `core/internal/peak-footprint.ts` (debt)
         - Exempted by: `debug/heap-snapshot` (0 debt)
-    - **`process-alive`** — Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
+    - **`process-alive`** — Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown, a non-pid refused; isProcessGroupAlive(pgid) the same for kill(-pgid, 0) — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
       - Cross-plugin:
-        - Imported by:
-          - `framework/tooling/checks`
-          - `framework/tooling/web-artifacts`
-          - `infra/corpus-index`
+        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
+          - `infra` ×13
+          - `framework` ×8
+          - `conversations` ×2
+          - `debug` ×2
+          - `packages` ×2
+          - `apps/browser/engine`
+          - `installer`
+      - Exemptions:
+        - Exempts itself from: `process-alive/no-signal-zero-probe` — `core/internal/process-alive.ts` (sanctioned)
+        - Exempted by: `packages/process-alive` (0 debt)
       - Core:
         - Exports (values):
           - `isOrphanedTemp`
           - `isProcessAlive`
+          - `isProcessGroupAlive`
           - `writerPidOf`
     - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the build names backends from, and the checkout's `verbs` link to the machine-wide process-names data dir, where `./equin` runs each CLI verb as `equin · <verb>` — one clone per verb machine-wide, since macOS scans every fresh executable name on its first exec.
       - Core:
@@ -45623,6 +45633,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock.waitForFlock`
           - `packages/owned-fd.openOwnedFdSync`
           - `packages/owned-fd.OwnedFd`
+          - `packages/process-alive.isProcessAlive`
           - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `Flight`

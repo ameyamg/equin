@@ -85,6 +85,7 @@ import {
   unbundledExecutable,
   type ServiceExecutable,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -201,22 +202,12 @@ function pidFile(): AppPath {
 export async function readPid(): Promise<number | null> {
   try {
     const n = parseInt((await readFile(pidFile(), "utf-8")).trim(), 10);
-    return isNaN(n) ? null : n;
+    // A pidfile that names no process (blank, 0, negative) reads as none:
+    // `kill(0, …)` would signal our own process group.
+    return Number.isSafeInteger(n) && n > 0 ? n : null;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return null;
-  }
-}
-
-export function isRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EPERM") return true; // process exists but we can't signal it
-    if (code === "ESRCH") return false; // process does not exist
-    throw err;
   }
 }
 
@@ -726,7 +717,7 @@ export async function awaitGatewayReady(opts: {
     async () => {
       // Death check FIRST, every tick — this is the case worth reporting fast,
       // and its evidence (the gateway's own last output) is already on disk.
-      if (!isRunning(pid)) {
+      if (!isProcessAlive(pid)) {
         throw new Error(
           `Gateway exited during startup (PID ${pid}). Last output:\n${await gatewayLogTail()}`,
         );
@@ -1091,9 +1082,9 @@ export async function teardownSelfContainedApp(
   // 1. Gateway — kill and wait, so the supervisor watchdog is gone before we touch
   // PG/PgBouncer (else it would restart them out from under us).
   const gwPid = await readPidFile(gatewayPidFile(root));
-  if (gwPid !== null && isRunning(gwPid)) {
+  if (gwPid !== null && isProcessAlive(gwPid)) {
     signalPid(gwPid, "SIGTERM");
-    await retryUntil(async () => (isRunning(gwPid) ? null : true), {
+    await retryUntil(async () => (isProcessAlive(gwPid) ? null : true), {
       delay: exponential({ initial: 50, max: 500 }),
       deadline: GATEWAY_STOP_TIMEOUT_MS,
       onDeadline: () => {
@@ -1113,9 +1104,9 @@ export async function teardownSelfContainedApp(
   if (pgPid !== null && opts.postgres === "immediate") {
     signalPid(pgPid, "SIGQUIT");
   }
-  if (pgPid !== null && opts.postgres === "fast" && isRunning(pgPid)) {
+  if (pgPid !== null && opts.postgres === "fast" && isProcessAlive(pgPid)) {
     signalPid(pgPid, "SIGINT");
-    await retryUntil(async () => (isRunning(pgPid) ? null : true), {
+    await retryUntil(async () => (isProcessAlive(pgPid) ? null : true), {
       delay: exponential({ initial: 50, max: 500 }),
       deadline: PG_FAST_STOP_TIMEOUT_MS,
       onDeadline: () => {

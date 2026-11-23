@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { isOrphanedTemp, isProcessAlive, writerPidOf } from "./process-alive";
+import {
+  isOrphanedTemp,
+  isProcessAlive,
+  isProcessGroupAlive,
+  writerPidOf,
+} from "./process-alive";
 
 const TMP = /\.tmp\.(\d+)$/;
 
@@ -24,6 +29,26 @@ describe("isProcessAlive", () => {
   test("a non-pid throws", () => {
     expect(() => isProcessAlive(0)).toThrow();
     expect(() => isProcessAlive(-3)).toThrow();
+  });
+});
+
+describe("isProcessGroupAlive", () => {
+  test("this process's own group is alive", () => {
+    // process.getgid is not the pgid; the test runner leads no group of its
+    // own guaranteed, so judge the group a detached child leads.
+    const child = Bun.spawn(["sleep", "5"], { detached: true });
+    expect(isProcessGroupAlive(child.pid)).toBe(true);
+    child.kill("SIGKILL");
+  });
+
+  test("a group whose leader exited (and that had no other member) is gone", async () => {
+    const child = Bun.spawn(["true"], { detached: true });
+    await child.exited;
+    expect(isProcessGroupAlive(child.pid)).toBe(false);
+  });
+
+  test("a non-pgid throws", () => {
+    expect(() => isProcessGroupAlive(0)).toThrow();
   });
 });
 

@@ -2,10 +2,7 @@ import { basename, dirname, sep } from "node:path";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import {
-  pidAlive,
-  readPidFile,
-} from "@plugins/infra/plugins/spawn/plugins/daemon/server";
+import { readPidFile } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { PS } from "@plugins/infra/plugins/paths/server";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
@@ -16,6 +13,7 @@ import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { killAgentPid } from "./agent-process";
 import { agentPidsRoot } from "./paths";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // An agent process no pid file names is invisible to every backend: liveness,
 // stop and every reaper go through the pid file (`agent-process.ts`), so once
@@ -130,7 +128,7 @@ export function pidFileVerdict(
         ? { kind: "named" }
         : {
             kind: "orphan",
-            why: `its pid file names pid ${String(read.pid)}${pidAlive(read.pid) ? "" : " (dead)"}`,
+            why: `its pid file names pid ${String(read.pid)}${isProcessAlive(read.pid) ? "" : " (dead)"}`,
           };
   }
 }

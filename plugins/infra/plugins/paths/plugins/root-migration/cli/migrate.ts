@@ -29,10 +29,7 @@ import {
   type DataRootLayout,
 } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { listWorktreeOps } from "@plugins/infra/plugins/worktree/server";
-import {
-  pidAlive,
-  readPidFile,
-} from "@plugins/infra/plugins/spawn/plugins/daemon/server";
+import { readPidFile } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -64,6 +61,7 @@ import { visitFiles } from "./files";
 import { moveClaudeProjects } from "./claude-projects";
 import { rewriteDbValue } from "./rewrite";
 import { staleCheckouts } from "./checkouts";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // `./equin data-dir migrate`: the effects of the plan `./plan.ts` decides.
 // Design: research/2026-10-26-global-equin-data-dir-migration-v2.md
@@ -124,7 +122,7 @@ async function liveAgents(): Promise<LiveAgent[]> {
     for (const name of readdirSync(dir)) {
       if (!name.endsWith(".pid")) continue;
       const read = await readPidFile(joinAppPath(dir, name));
-      if (read.kind === "pid" && pidAlive(read.pid))
+      if (read.kind === "pid" && isProcessAlive(read.pid))
         live.push({
           what: `agent ${name.slice(0, -".pid".length)} of ${namespace} (pid ${read.pid})`,
           pid: read.pid,
@@ -219,7 +217,7 @@ async function stopByPid(
   signal: NodeJS.Signals,
   ms: number,
 ): Promise<void> {
-  if (!pidAlive(pid)) return;
+  if (!isProcessAlive(pid)) return;
   console.log(`Stopping ${what} (${signal})…`);
   try {
     process.kill(pid, signal);
@@ -228,7 +226,7 @@ async function stopByPid(
     if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
   }
   const deadline = performance.now() + ms;
-  while (pidAlive(pid)) {
+  while (isProcessAlive(pid)) {
     if (performance.now() > deadline) {
       throw new Error(
         `${what} is still running ${ms / 1000}s after ${signal}; nothing was moved. Stop it, then rerun.`,

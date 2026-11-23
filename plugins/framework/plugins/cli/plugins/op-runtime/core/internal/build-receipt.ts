@@ -8,6 +8,7 @@ import {
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * What became of a build. `running` is written once the build lock is granted;
@@ -128,24 +129,10 @@ function parseReceipt(path: string, raw: string): BuildReceipt {
   }
 }
 
-/** `true` iff a process with this pid exists (any owner). */
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ESRCH") return false;
-    // EPERM means it exists but belongs to another user — still alive.
-    if (code === "EPERM") return true;
-    throw err;
-  }
-}
-
 export function resolveReceipt(receipt: BuildReceipt | null): ResolvedReceipt {
   if (receipt === null) return { kind: "none" };
   if (receipt.status === "running") {
-    return pidAlive(receipt.pid)
+    return isProcessAlive(receipt.pid)
       ? { kind: "running", receipt }
       : { kind: "interrupted", receipt };
   }

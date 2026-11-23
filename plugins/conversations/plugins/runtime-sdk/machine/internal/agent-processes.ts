@@ -9,10 +9,7 @@ import {
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
-import {
-  parsePidFile,
-  pidAlive,
-} from "@plugins/infra/plugins/spawn/plugins/daemon/server";
+import { parsePidFile } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import {
   asNamespace,
   namespaceParts,
@@ -28,6 +25,7 @@ import {
 import { sdkAgentPidsDir } from "../../data-dirs";
 import { sdkConversationIdsOf } from "../../server/internal/rows";
 import { agentPidPath, agentPidsRoot } from "./paths";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 const PID_SUFFIX = ".pid";
 
@@ -120,7 +118,7 @@ export async function runningAgentAccount(
     throw err;
   }
   const read = parsePidFile(text);
-  if (read.kind !== "pid" || !pidAlive(read.pid))
+  if (read.kind !== "pid" || !isProcessAlive(read.pid))
     return { kind: "not-running" };
   return {
     kind: "running",
@@ -133,7 +131,7 @@ export async function runningAgentAccount(
 /** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
 export async function liveAgentIds(namespace: string): Promise<string[]> {
   return (await pidFileAgents(namespace))
-    .filter((a) => pidAlive(a.pid))
+    .filter((a) => isProcessAlive(a.pid))
     .map((a) => a.id);
 }
 
@@ -176,7 +174,7 @@ export async function stopCheckoutAgents(checkout: string): Promise<void> {
   for (const namespace of await entries(agentPidsRoot())) {
     if (!servedFrom(namespace, checkout)) continue;
     for (const { pid } of await pidFileAgents(namespace)) {
-      if (!pidAlive(pid)) continue;
+      if (!isProcessAlive(pid)) continue;
       try {
         process.kill(pid, "SIGTERM");
       } catch (err) {
@@ -257,7 +255,9 @@ async function countAgents(): Promise<AgentProcesses> {
   let own = 0;
   for (const namespace of [...byNamespace.keys()].sort()) {
     // An agent killed outright leaves its pid file: liveness is read now.
-    const agents = byNamespace.get(namespace)!.filter((a) => pidAlive(a.pid));
+    const agents = byNamespace
+      .get(namespace)!
+      .filter((a) => isProcessAlive(a.pid));
     const running = agents.length;
     if (namespace === here) own = running;
     else if (running > 0) elsewhere.push({ namespace, running });

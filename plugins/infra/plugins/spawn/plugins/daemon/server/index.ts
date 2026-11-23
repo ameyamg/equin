@@ -11,7 +11,6 @@ export {
   liveSupervisedIncarnations,
   onDaemonActivity,
   parsePidFile,
-  pidAlive,
   readPidFile,
   stopOnCodeAdopted,
 } from "./internal/registry";

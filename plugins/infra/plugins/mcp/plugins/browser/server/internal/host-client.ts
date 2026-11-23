@@ -40,6 +40,7 @@ import {
   type HostToolResult,
 } from "../../shared/protocol";
 import { revertSessionWritesOn } from "../../shared/revert";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * The backend's half of the agent browser: find the machine's host, launch it
@@ -100,18 +101,6 @@ function ownCodeId(): Promise<string> {
   }));
 }
 
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EPERM") return true;
-    if (code === "ESRCH") return false;
-    throw err;
-  }
-}
-
 /** The machine's agent browser, read from the host's own status file. */
 export async function readAgentBrowserStatus(): Promise<AgentBrowserStatus> {
   let raw: string;
@@ -136,7 +125,9 @@ export async function readAgentBrowserStatus(): Promise<AgentBrowserStatus> {
   }
   const host = parsed.data;
   if (host.state === "exited") return { kind: "exited", host };
-  return alive(host.pid) ? { kind: "running", host } : { kind: "died", host };
+  return isProcessAlive(host.pid)
+    ? { kind: "running", host }
+    : { kind: "died", host };
 }
 
 export const agentBrowserStatusServed = serveValue(agentBrowserStatus, {

@@ -15,6 +15,7 @@ import {
 import { opRowToFoldState } from "../../core/internal/schemas";
 import { readCursor, type OpStoreDb } from "./store";
 import { _opLogOps } from "./tables";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // The orphan reconciler: an op hard-killed mid-flight (SIGKILL, OOM, power loss)
 // never writes its terminal, so its row would read "in flight" forever. This
@@ -111,20 +112,6 @@ export async function reconcileOps(
 
 // ── liveness ────────────────────────────────────────────────────────────────
 
-// Signal 0 checks existence without delivering anything. EPERM: alive, but
-// another user's.
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EPERM") return true;
-    if (code === "ESRCH") return false;
-    throw err;
-  }
-}
-
 /**
  * Is this op's process still running?
  *
@@ -146,6 +133,6 @@ export async function isOpLive(op: ReconcileCandidate): Promise<boolean> {
   }
   const markers = slug ? await listWorktreeOps(slug) : [];
   if (markers.some((m) => m.opId === op.opId)) return true;
-  if (op.identity.pid !== null) return isPidAlive(op.identity.pid);
+  if (op.identity.pid !== null) return isProcessAlive(op.identity.pid);
   return markers.length > 0;
 }

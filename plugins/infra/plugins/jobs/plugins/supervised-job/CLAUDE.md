@@ -843,6 +843,8 @@ construction, and the job and the body it spawns cannot drift apart.
     - `infra/host-fs/user-path.asAppPath`
     - `infra/paths.worktreeArtifacts`
     - `infra/runtime-identity.runtimeNamespace`
+    - `packages/process-alive.isProcessAlive`
+    - `packages/process-alive.isProcessGroupAlive`
     - `packages/timed-fs.readFile`
     - `packages/timed-fs.readFileSync`
     - `packages/timed-fs.stat`

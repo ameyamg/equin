@@ -46,7 +46,7 @@ import {
   type SlotLeaseMode,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import { dirname } from "node:path";
-import { isAlive } from "./alive";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 import { clearSlotHanded, readSlotHanded } from "./handoff";
 import { withSlotPool } from "./pool-lock";
 
@@ -422,7 +422,7 @@ export async function readSlotHolders(slot: AppPath): Promise<SlotHolder[]> {
   const holders: SlotHolder[] = [];
   const now = new Date();
   for (const { file, holder } of await readRecords(admin)) {
-    if (!isAlive(holder.pid)) {
+    if (!isProcessAlive(holder.pid)) {
       await reapRecord(admin, slot, file, holder);
       continue;
     }
@@ -523,7 +523,7 @@ export async function reapDeadHolders(slot: AppPath): Promise<void> {
     if (records.length === 0) return;
     const unheld = (await probeSlotLock(slot)) === "unheld";
     for (const { file, holder } of records) {
-      if (unheld || !isAlive(holder.pid))
+      if (unheld || !isProcessAlive(holder.pid))
         await reapRecord(admin, slot, file, holder);
     }
   });

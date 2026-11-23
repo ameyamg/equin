@@ -13,6 +13,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 import { liveOpsDir } from "../../data-dirs";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // A per-op, crash-safe liveness marker for a long-running operation (build,
 // push, check, test, e2e — the `OpKind` vocabulary declared once in this
@@ -114,17 +115,6 @@ export const TMP_SUFFIX = ".tmp";
 // create and rename (a microsecond window); only then is it reaped.
 const STALE_TMP_MS = 60_000;
 
-// Signal 0 probes existence without delivering anything. EPERM: alive, but
-// another user's. Only for LEGACY markers — a v2 marker's liveness is its lock.
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "EPERM";
-  }
-}
-
 type MarkerJson = {
   v?: unknown;
   kind?: unknown;
@@ -210,7 +200,7 @@ async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
       return info ? { kind: "live", info } : { kind: "dead" };
     }
     const info = infoFromParsed(slug, parsed);
-    if (info && isPidAlive(info.pid)) return { kind: "live", info };
+    if (info && isProcessAlive(info.pid)) return { kind: "live", info };
     reap = true;
     return { kind: "dead" };
   } finally {

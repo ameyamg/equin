@@ -30,6 +30,7 @@ import {
   type EngineHostStatus,
   type EngineStatus,
 } from "../../shared/host-files";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * The backend's half of the browser engine: find the machine's host, launch
@@ -87,18 +88,6 @@ function ownCodeId(): Promise<string> {
   }));
 }
 
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EPERM") return true;
-    if (code === "ESRCH") return false;
-    throw err;
-  }
-}
-
 /** The machine's engine host, read from its own status file. */
 export async function readEngineStatus(): Promise<EngineStatus> {
   let raw: string;
@@ -123,7 +112,9 @@ export async function readEngineStatus(): Promise<EngineStatus> {
   }
   const host = parsed.data;
   if (host.state === "exited") return { kind: "exited", host };
-  return alive(host.pid) ? { kind: "running", host } : { kind: "died", host };
+  return isProcessAlive(host.pid)
+    ? { kind: "running", host }
+    : { kind: "died", host };
 }
 
 /** The host's Unix socket path. */

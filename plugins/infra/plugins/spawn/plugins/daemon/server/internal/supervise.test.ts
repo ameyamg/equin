@@ -17,12 +17,12 @@ import {
   daemonRecentRuns,
   listDaemons,
   liveSupervisedIncarnations,
-  pidAlive,
   stopOnCodeAdopted,
   type DaemonInstance,
   type DaemonTransition,
   type ProcessSpawnContext,
 } from "./registry";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // The supervision loop, driven with real child processes and Bun Workers: a
 // child that dies at once ends in ONE loud give-up; a healthy one respawns
@@ -405,7 +405,7 @@ describe("respawnNow", () => {
     const pid = inst.pid;
     expect(inst.respawnNow()).toBe("already-alive");
     expect(inst.pid).toBe(pid);
-    expect(pid !== null && pidAlive(pid)).toBe(true);
+    expect(pid !== null && isProcessAlive(pid)).toBe(true);
   });
 
   test("throws once the instance is stopped", async () => {
@@ -676,7 +676,7 @@ describe("launchDetached", () => {
     expect(r.states.some((t) => t.state === "exited")).toBe(false);
     process.kill(pid, "SIGKILL");
     // An orphan: launchd reaps it a moment later; until then kill(0) sees it.
-    while (pidAlive(pid)) await Bun.sleep(10);
+    while (isProcessAlive(pid)) await Bun.sleep(10);
     expect(inst.state).toBe("exited");
   });
 

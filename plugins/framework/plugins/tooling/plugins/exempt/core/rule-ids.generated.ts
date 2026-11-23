@@ -161,6 +161,7 @@ export type ExemptableRuleId =
   | "plugin-tree/no-uncached-tree-in-checks"
   | "polling-safety/no-refetch-interval"
   | "principal/no-origin-header-read"
+  | "process-alive/no-signal-zero-probe"
   | "process-memory/no-rss-memory"
   | "product-name:legacy"
   | "product-name:legacy-id"

@@ -38,6 +38,7 @@ import {
   asNamespace,
   isNamespace,
 } from "@plugins/infra/plugins/namespace/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 interface State {
   window: WindowEntry[];
@@ -103,16 +104,6 @@ interface RawReceipt {
   url?: string;
 }
 
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    // ESRCH: gone. EPERM: alive but owned by another user.
-    return (err as NodeJS.ErrnoException).code === "EPERM";
-  }
-}
-
 function minutesSince(iso: string | undefined): string {
   if (!iso) return "";
   const started = Date.parse(iso);
@@ -143,7 +134,7 @@ function receiptLiveness(worktree: string): Liveness {
   // `running` with a dead pid means killed before it could rewrite the receipt —
   // still finished, just without a verdict of its own.
   if (raw.status === "running") {
-    return raw.pid != null && pidAlive(raw.pid)
+    return raw.pid != null && isProcessAlive(raw.pid)
       ? {
           kind: "running",
           what: `${what}${minutesSince(raw.startedAt)}, pid ${raw.pid},`,
@@ -299,8 +290,8 @@ function subjectLiveness(
   }
   if (s.startsWith("pid:")) {
     const pid = Number(s.slice("pid:".length));
-    if (Number.isFinite(pid)) {
-      return pidAlive(pid)
+    if (Number.isSafeInteger(pid) && pid > 0) {
+      return isProcessAlive(pid)
         ? { kind: "running", what: `Process ${pid}`, wakesYou: false }
         : { kind: "finished", verdict: `pid ${pid} has exited` };
     }

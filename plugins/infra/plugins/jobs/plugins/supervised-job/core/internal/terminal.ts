@@ -13,6 +13,10 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { assertRunId, assertRunKindId } from "./ids";
+import {
+  isProcessAlive,
+  isProcessGroupAlive,
+} from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * The marker body: `<status> <signal-or-dash>`, one line, exactly two fields.
@@ -160,17 +164,7 @@ export const HARD_KILL_EXIT_CODE = -1;
  */
 export function isRunAlive(pid: number | null): boolean {
   if (pid == null) return false;
-  return signalProbe(pid) || signalProbe(-pid);
-}
-
-/** `process.kill(target, 0)`: `true` on success or EPERM, `false` on ESRCH. */
-function signalProbe(target: number): boolean {
-  try {
-    process.kill(target, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "EPERM";
-  }
+  return isProcessAlive(pid) || isProcessGroupAlive(pid);
 }
 
 /**

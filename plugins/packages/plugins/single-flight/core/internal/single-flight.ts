@@ -15,6 +15,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /** Who ran (or is running) a flight's work. */
 export interface FlightLeader {
@@ -320,18 +321,6 @@ function readLeader(path: AppPath): FlightLeader | null {
   const read = readJson(path);
   if (read.kind === "absent") return null;
   const parsed = LeaderSchema.safeParse(read.value);
-  if (!parsed.success || !isPidAlive(parsed.data.pid)) return null;
+  if (!parsed.success || !isProcessAlive(parsed.data.pid)) return null;
   return parsed.data;
-}
-
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ESRCH") return false;
-    if (code === "EPERM") return true;
-    throw err;
-  }
 }

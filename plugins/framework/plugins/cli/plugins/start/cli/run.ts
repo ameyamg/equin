@@ -58,7 +58,6 @@ import { listenPortOf } from "@plugins/infra/plugins/launcher/plugins/gateway-dr
 import {
   assertSupportedHost,
   readPid,
-  isRunning,
   spawnGatewayDaemon,
   gatewayLaunchSpec,
   awaitGatewayReady,
@@ -90,6 +89,7 @@ import {
   type ReconcileOutcome,
   type ServiceForUser,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // What this command prints follows the installer message rules
 // (`infra/launcher/installer-notice`): a person installing equin reads it, so
@@ -591,7 +591,9 @@ async function startAsLoginService(
   // A gateway the manager does not own: started by a `start` from before the
   // gateway was a service.
   const legacyPid =
-    pidfilePid !== null && pidfilePid !== managedPid && isRunning(pidfilePid)
+    pidfilePid !== null &&
+    pidfilePid !== managedPid &&
+    isProcessAlive(pidfilePid)
       ? pidfilePid
       : null;
 
@@ -861,7 +863,7 @@ function describeStart(
  */
 async function startDetached(opts: Opts, steps: Steps): Promise<void> {
   const existingPid = await readPid();
-  const pidAlive = existingPid !== null && isRunning(existingPid);
+  const pidAlive = existingPid !== null && isProcessAlive(existingPid);
 
   if (!pidAlive && (await answeredByOurs(steps.port.record.port))) return;
 

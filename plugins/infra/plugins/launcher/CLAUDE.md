@@ -397,7 +397,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `handOverGateway`
     - `hasPgBouncerPackage`
     - `isGatewayListening`
-    - `isRunning`
     - `listenFlag`
     - `LOOPBACK_BIND`
     - `pgbouncerConnection`

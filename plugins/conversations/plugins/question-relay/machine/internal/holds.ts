@@ -6,6 +6,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { RelayState } from "../../core/schemas";
 import { _pendingQuestions as t } from "../../server/internal/tables";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // The relay as a question-hold source for the status reconciler: a
 // conversation's LATEST held question decides. `open` with a live holder is a
@@ -15,7 +16,7 @@ export const relayQuestionHolds = QuestionHolds.define({
   async read(ids) {
     const holds = new Map<string, QuestionHold>();
     for (const row of await latestHolds(ids)) {
-      if (row.state === "open" && isPidAlive(row.relayPid)) {
+      if (row.state === "open" && isProcessAlive(row.relayPid)) {
         holds.set(row.conversationId, "open");
       }
     }
@@ -25,20 +26,6 @@ export const relayQuestionHolds = QuestionHolds.define({
     await abandonDeadHolds(ids);
   },
 });
-
-/** Is `pid` a live process on this host? */
-export function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    // EPERM: it exists, owned by someone else.
-    if (code === "EPERM") return true;
-    if (code === "ESRCH") return false;
-    throw err;
-  }
-}
 
 /** Each conversation's LATEST held question (state + holder). */
 export async function latestHolds(
@@ -68,7 +55,7 @@ export async function abandonDeadHolds(
     .where(
       and(inArray(t.conversationId, [...conversationIds]), eq(t.state, "open")),
     );
-  const dead = open.filter((r) => !isPidAlive(r.relayPid));
+  const dead = open.filter((r) => !isProcessAlive(r.relayPid));
   if (dead.length === 0) return [];
   return db
     .update(t)

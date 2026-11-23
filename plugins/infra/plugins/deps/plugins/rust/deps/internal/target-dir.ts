@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import type { BuildContext } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { cargoTargetDir } from "../../data-dirs";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * The shared target cache's layout. A crate's warm target dir is
@@ -208,20 +209,8 @@ async function publish(
 async function sweepAbandoned(stagingRoot: string): Promise<void> {
   for (const name of await readdir(stagingRoot)) {
     const pid = Number(name.split(".").at(-2));
-    if (!Number.isInteger(pid) || pid <= 0 || isAlive(pid)) continue;
+    if (!Number.isInteger(pid) || pid <= 0 || isProcessAlive(pid)) continue;
     await rm(join(stagingRoot, name), { recursive: true, force: true });
-  }
-}
-
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    // EPERM: alive, someone else's.
-    if (isCode(err, "EPERM")) return true;
-    if (isCode(err, "ESRCH")) return false;
-    throw err;
   }
 }
 

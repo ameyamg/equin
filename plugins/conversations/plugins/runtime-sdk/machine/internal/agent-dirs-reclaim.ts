@@ -3,13 +3,11 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  pidAlive,
-  readPidFile,
-} from "@plugins/infra/plugins/spawn/plugins/daemon/server";
+import { readPidFile } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { AGENT_OPTIONS_FILE, type AgentLaunchOptions } from "../../core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // An agent's directory (`<agentsRoot>/<ns>/<conversationId>/`: launch.json,
 // events.jsonl, agent.log) is worth something only while its conversation can
@@ -374,7 +372,7 @@ async function agentMayRun(pidFile: AppPath): Promise<boolean> {
   const read = await readPidFile(pidFile);
   if (read.kind === "absent") return false;
   if (read.kind === "unreadable") return true;
-  return pidAlive(read.pid);
+  return isProcessAlive(read.pid);
 }
 
 /** The subdirectories of `dir`; none when it does not exist. */

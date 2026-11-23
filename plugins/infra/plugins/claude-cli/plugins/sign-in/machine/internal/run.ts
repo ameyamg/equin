@@ -29,6 +29,7 @@ import {
   signInArgs,
 } from "./cli-output";
 import { currentSignInFlow, publishSignInFlow } from "./flow-state";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // The computer's one sign-in: Claude Code's own `auth login`, run as a child
 // of this backend. Claude Code stores the login itself; the app never sees a
@@ -75,18 +76,6 @@ function runDirName(id: string): string {
   return `${process.pid}-${id}`;
 }
 
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
-    // EPERM: alive, owned by someone else.
-    if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
-    throw err;
-  }
-}
-
 /**
  * Remove the folders of runs whose backend is gone (killed mid-sign-in).
  * Every backend on the machine shares
@@ -96,7 +85,7 @@ function isAlive(pid: number): boolean {
 async function sweepOrphanedRuns(root: AppPath): Promise<void> {
   for (const name of await readdir(root)) {
     const pid = Number(name.split("-", 1)[0]);
-    if (Number.isInteger(pid) && pid > 0 && isAlive(pid)) continue;
+    if (Number.isInteger(pid) && pid > 0 && isProcessAlive(pid)) continue;
     await rm(joinAppPath(root, name), { recursive: true, force: true });
   }
 }

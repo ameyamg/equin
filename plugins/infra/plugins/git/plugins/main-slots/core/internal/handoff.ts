@@ -8,7 +8,7 @@ import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { checkoutAdminDir } from "@plugins/infra/plugins/paths/core";
-import { isAlive } from "./alive";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 import {
   SLOT_HANDED_FILE,
   slotHandedLockFile,
@@ -187,7 +187,7 @@ async function handerLives(slot: AppPath, mark: SlotHanded): Promise<boolean> {
     case "lock":
       return handerHolds(slot, mark.handoff);
     case "pid":
-      return isAlive(mark.pid);
+      return isProcessAlive(mark.pid);
   }
 }
 

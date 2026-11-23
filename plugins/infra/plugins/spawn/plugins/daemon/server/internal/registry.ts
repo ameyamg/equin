@@ -722,15 +722,3 @@ export async function readPidFile(path: AppPath): Promise<PidFileRead> {
   }
   return parsePidFile(raw);
 }
-
-/** Whether a process exists (EPERM: it does, we just may not signal it). */
-export function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
-    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
-    throw err;
-  }
-}

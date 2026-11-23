@@ -15,7 +15,6 @@ import {
 } from "@plugins/conversations/plugins/agent-launch/server";
 import {
   defineDaemon,
-  pidAlive,
   readPidFile,
   type DaemonInstance,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
@@ -52,6 +51,7 @@ import {
   claudeUsagePath,
   ownAgentPidsDir,
 } from "./paths";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // The agent process itself: started detached — its own session and process
 // group, so the backend's restart (which signals the backend's whole group) or
@@ -309,7 +309,7 @@ const PROCESS_QUERY_TIMEOUT_MS = 30_000;
 export async function livePid(id: string): Promise<number | null> {
   const pidFile = agentPidPath(id);
   const read = await readPidFile(pidFile);
-  if (read.kind !== "pid" || !pidAlive(read.pid)) return null;
+  if (read.kind !== "pid" || !isProcessAlive(read.pid)) return null;
   const ps = await spawnCaptured(
     [PS, "-ww", "-o", "command=", "-p", String(read.pid)],
     { timeoutMs: PROCESS_QUERY_TIMEOUT_MS },

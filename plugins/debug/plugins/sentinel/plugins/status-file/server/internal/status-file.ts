@@ -17,6 +17,7 @@ import {
   writeJsonAtomic,
   type JsonFileRead,
 } from "./json-file";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // The host-global status files: main's sentinel host writes its own file on
 // every supervision transition (a handful of writes a day); every backend reads
@@ -43,18 +44,6 @@ export function statusFilename(pid: number): string {
 /** Whether a file in the watcher's directory is a host's status file. */
 export function isStatusFilename(name: string): boolean {
   return STATUS_FILE_RE.test(name);
-}
-
-/** Whether a process with this pid exists. EPERM means it exists but is not ours. */
-export function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    if (isErrno(err, "ESRCH")) return false;
-    if (isErrno(err, "EPERM")) return true;
-    throw err;
-  }
 }
 
 /** Every host's status file in `dir`, by pid; `[]` when the dir does not exist. */
@@ -106,7 +95,7 @@ async function readNewestRecord(
 /** What a backend serves: the newest host's status, and whether it is alive. */
 export async function readSentinelWatch(
   dir: AppPath,
-  alive: (pid: number) => boolean = isPidAlive,
+  alive: (pid: number) => boolean = isProcessAlive,
 ): Promise<SentinelWatch> {
   const read = await readNewestRecord(dir);
   switch (read.kind) {
@@ -140,7 +129,7 @@ export function createStatusWriter(
 ): (status: SentinelStatus) => Promise<void> {
   const pid = opts.pid ?? process.pid;
   const claimedAt = opts.claimedAt ?? Date.now();
-  const alive = opts.alive ?? isPidAlive;
+  const alive = opts.alive ?? isProcessAlive;
   let reclaimed = false;
   // Writes land in call order, one at a time: they share one temp file, and the
   // last status written must be the one the rename leaves behind.

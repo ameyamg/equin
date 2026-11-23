@@ -73,7 +73,8 @@ import {
   readFileSync,
   readlinkSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { isRunning, readPid } from "@plugins/infra/plugins/launcher/server";
+import { readPid } from "@plugins/infra/plugins/launcher/server";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 // Own-plugin, so relative — the `@plugins/infra/plugins/paths/core` alias would
 // name this plugin from inside itself. Same shape as `check/index.ts`, and it
 // keeps the script working off the table's full surface rather than only the
@@ -444,7 +445,7 @@ async function liveGatewayPid(): Promise<number | null> {
 
 async function refuseIfGatewayAlive(): Promise<void> {
   const pid = await liveGatewayPid();
-  if (pid === null || !isRunning(pid)) return;
+  if (pid === null || !isProcessAlive(pid)) return;
   console.error(
     [
       "",

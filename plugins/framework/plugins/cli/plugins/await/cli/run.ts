@@ -43,6 +43,7 @@ import {
   linePositionText,
   type OpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 /**
  * How far back a just-finished op still counts as the thing the caller meant.
@@ -64,15 +65,6 @@ const HEARTBEAT_MS = 15_000;
 
 function opsDirOf(slug: Namespace): string {
   return `${worktreeDataDir(slug)}/ops`;
-}
-
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "EPERM";
-  }
 }
 
 function liveOpIds(ops: WorktreeOpInfo[]): Set<string> {
@@ -273,7 +265,7 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
       awaited,
       liveOpIds(await listWorktreeOps(slug)),
       recordsById(),
-      isPidAlive,
+      isProcessAlive,
     );
     return allSettled(states);
   };

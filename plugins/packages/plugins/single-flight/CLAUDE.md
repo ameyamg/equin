@@ -101,6 +101,7 @@ verdict re-run, a stale verdict never adopted, different keys in parallel.
     - `packages/flock.waitForFlock`
     - `packages/owned-fd.openOwnedFdSync`
     - `packages/owned-fd.OwnedFd`
+    - `packages/process-alive.isProcessAlive`
     - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `Flight`

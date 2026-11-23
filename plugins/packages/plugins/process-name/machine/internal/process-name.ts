@@ -19,6 +19,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 // macOS names a process by the FILE it executed (`p_comm`, what Activity
 // Monitor and `ps -c` show), so every Bun process reads `bun`. `process.title`
@@ -136,20 +137,8 @@ async function removeOrphanStaging(dir: AppPath): Promise<void> {
   for (const entry of await readdir(dir)) {
     const pid = STAGING_RE.exec(entry)?.[1];
     if (pid === undefined) continue;
-    if (Number(pid) === process.pid || pidAlive(Number(pid))) continue;
+    if (Number(pid) === process.pid || isProcessAlive(Number(pid))) continue;
     await rm(joinAppPath(dir, entry), { force: true });
-  }
-}
-
-/** Whether a process with this pid exists (EPERM: it does, as another user). */
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
-    if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
-    throw err;
   }
 }
 

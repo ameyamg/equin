@@ -4,7 +4,6 @@ import { attachGateway, gatewayDaemon } from "./internal/gateway-daemon";
 export {
   assertSupportedHost,
   readPid,
-  isRunning,
   isGatewayListening,
   awaitGatewayReady,
   hasPgBouncerPackage,

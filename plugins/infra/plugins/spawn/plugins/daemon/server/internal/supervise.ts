@@ -6,7 +6,6 @@ import {
   claimInstance,
   closeRun,
   openRun,
-  pidAlive,
   releaseInstance,
   setState,
   type AttachOptions,
@@ -28,6 +27,7 @@ import {
   unprobedScopeHost,
 } from "@plugins/packages/plugins/systemd-scope/core";
 import { holdPidFile, type HeldPidFile, type HeldRead } from "./pid-file-watch";
+import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 
 type DeclState = ReturnType<typeof newDeclState>;
 
@@ -541,7 +541,11 @@ function followPidFile(
     const current = held.current();
     if (current === null) return; // not read yet: still `starting`
     const { read } = current;
-    if (read.kind === "pid" && read.pid !== lastPid && pidAlive(read.pid)) {
+    if (
+      read.kind === "pid" &&
+      read.pid !== lastPid &&
+      isProcessAlive(read.pid)
+    ) {
       // A pid we have not followed yet, and it is alive: a new incarnation.
       if (rec.info.pid !== null) {
         rec.info.lastExit = {
@@ -564,7 +568,7 @@ function followPidFile(
       if (
         read.kind === "pid" &&
         read.pid === rec.info.pid &&
-        pidAlive(read.pid)
+        isProcessAlive(read.pid)
       ) {
         return; // still the same live process
       }

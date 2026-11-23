@@ -16,7 +16,6 @@
   - Exports (types): `SentinelVitalsRead`
   - Exports (values):
     - `createStatusWriter`
-    - `isPidAlive`
     - `isStatusFilename`
     - `readSentinelVitals`
     - `readSentinelWatch`
