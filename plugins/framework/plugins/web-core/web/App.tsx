@@ -179,8 +179,14 @@ function createOnDemandPlugins(
 // The loaded plugins disagree with the list catalog the page was shipped (see
 // `catalogMismatches`): an entry that never loaded — a companion the page
 // lacks, whose owner degrades with no error of its own — or one whose fact the
-// build wrote differently. Same funnel as a boot problem.
-function reportCatalogMismatch(message: string): void {
+// build wrote differently. Same funnel as a boot problem. ONE report per
+// page load, naming every disagreement: they are one fact about this page —
+// and one crash row either way, its fingerprint being the error type + stack.
+function reportCatalogMismatch(problems: readonly [string, ...string[]]): void {
+  const message =
+    problems.length === 1
+      ? problems[0]
+      : `${problems.length} disagreements with the page's list catalog:\n${problems.map((p) => `- ${p}`).join("\n")}`;
   console.error(`[list-catalog] ${message}`);
   void report({
     kind: "crash",
@@ -634,13 +640,13 @@ function PageApp() {
       // build wrote into the page's list catalog. An entry still absent is one
       // the page lacks (a companion: its owner is degrading silently right
       // now); one that differs is a fact the build could not see right.
-      for (const message of await catalogMismatches(
+      const [first, ...more] = await catalogMismatches(
         registry,
         latestCatalog.read(),
         (id) => pagePlugins.has(id),
         yieldToMain,
-      ))
-        reportCatalogMismatch(message);
+      );
+      if (first !== undefined) reportCatalogMismatch([first, ...more]);
     })().catch((err: unknown) => {
       // After the first render the app is on screen and its own crash
       // collector reports an unhandled rejection: leave it to that.

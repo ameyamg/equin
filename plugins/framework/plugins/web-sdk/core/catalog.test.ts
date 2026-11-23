@@ -162,4 +162,31 @@ describe("catalogMismatches", () => {
       expect.stringContaining("needs its companion elsewhere"),
     ]);
   });
+
+  it("compares the registry as of the catalog it was handed, though plugins join while it yields", async () => {
+    // The demo's scope loads its on-demand plugins while the check yields: the
+    // page commits the fuller catalog, then appends them. The check, holding
+    // the catalog of its start, must not see them (report-1795406104-bhmfiu).
+    const registry = createPluginRegistry();
+    registry.append([owner]);
+    const page: WebCatalog = {
+      lists: LISTS,
+      entries: [],
+      companionProviders: {},
+    };
+    let joined = false;
+    const scopeLoadsMidway = () => {
+      if (!joined) {
+        joined = true;
+        registry.append([
+          plugin("late", [Labels({ label: "late", component: Nothing })]),
+        ]);
+      }
+      return Promise.resolve();
+    };
+    expect(
+      await catalogMismatches(registry, page, all, scopeLoadsMidway),
+    ).toEqual([]);
+    expect(joined).toBe(true);
+  });
 });

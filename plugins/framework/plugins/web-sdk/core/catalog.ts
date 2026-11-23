@@ -72,7 +72,11 @@ export function catalogEntriesOf(
  *   owner degrading silently: blank icons, a cell drawn as text).
  *
  * `step` is awaited between lists, so the page's main thread is never held
- * for the whole catalog.
+ * for the whole catalog. The registry is read ONCE, before the first `step`,
+ * in the same synchronous turn as `shipped` was handed over: a scope that
+ * loads its on-demand plugins while the check yields commits a fuller catalog
+ * and appends its plugins after that turn, so the check compares one instant
+ * of both — never the new plugins against the catalog that predates them.
  */
 export async function catalogMismatches(
   registry: PluginRegistry,
@@ -83,13 +87,17 @@ export async function catalogMismatches(
   const reader = readerOf(registry);
   const catalog = indexCatalog(shipped);
   const problems: string[] = [];
-  const declared = reader.declared();
+  // The registry as of `shipped`, read synchronously (see above): what each
+  // declared list holds, before anything below yields.
+  const declared = reader
+    .declared()
+    .map((d) => ({ ...d, contributions: reader.read(d.slot) }));
   // Every plugin the page loaded that contributes anywhere, first: an entry
   // missing from one list is "never loaded" only for a plugin seen nowhere.
   const loaded = new Set<string>();
-  for (const { slot, id, pluginId } of declared) {
+  for (const { slot, id, pluginId, contributions } of declared) {
     loaded.add(pluginId);
-    for (const c of reader.read(slot)) loaded.add(String(c._pluginId));
+    for (const c of contributions) loaded.add(String(c._pluginId));
     if (slot.meta.catalog !== undefined) continue;
     if (!catalog.lists.has(id)) {
       problems.push(
@@ -97,10 +105,10 @@ export async function catalogMismatches(
       );
     }
   }
-  for (const { slot, id } of declared) {
+  for (const { slot, id, contributions } of declared) {
     if (slot.meta.catalog !== undefined) continue;
     const live = new Map<string, string[]>();
-    for (const c of reader.read(slot)) {
+    for (const c of contributions) {
       const plugin = String(c._pluginId);
       let list = live.get(plugin);
       if (list === undefined) live.set(plugin, (list = []));
