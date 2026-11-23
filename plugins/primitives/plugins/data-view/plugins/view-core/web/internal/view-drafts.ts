@@ -5,8 +5,7 @@ import {
   defineStore,
   useStore,
   type Store,
-  isKeyInScope,
-  onStorageScopeCleared,
+  onStorageCleared,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import type { DraftMap } from "./draft-values";
 
@@ -39,10 +38,9 @@ type DraftStore = Store<Record<string, { type: string }>>;
  * module writes it while the page lives.
  */
 const cache = new Map<string, DraftMap>();
-// A wiped scope (the demo's Reset) takes its drafts with it, here too.
-onStorageScopeCleared((id) => {
-  for (const key of [...cache.keys()])
-    if (isKeyInScope(key, id)) cache.delete(key);
+// Wiped entries (the demo's Reset of its scope) takes its drafts with it, here too.
+onStorageCleared((wiped) => {
+  for (const key of [...cache.keys()]) if (wiped(key)) cache.delete(key);
 });
 
 /** One surface's drafts, in the composition scope the caller renders in. */

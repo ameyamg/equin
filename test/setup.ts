@@ -3,6 +3,8 @@
 // vitest.config.ts `setupFiles`).
 
 import { afterEach, beforeEach, vi } from "vitest";
+import { declareNoLayoutEngine } from "@plugins/primitives/plugins/dom/plugins/box-presence/web/testing";
+import { resetBrowserStorage } from "@plugins/primitives/plugins/dom/plugins/web-storage/web/testing";
 
 // The locale and timezone are pinned by `vitest.config.ts` (`test.env`), not
 // here: a process reads its default locale once, when it starts, and nothing
@@ -151,7 +153,8 @@ Element.prototype.getAnimations = function (): Animation[] {
 
 // jsdom under vitest exposes a non-functional `localStorage` (Node's
 // `--localstorage-file` stub). Install a deterministic in-memory Storage so code
-// under test that persists to localStorage works and starts each file clean.
+// under test that persists to localStorage works; `resetBrowserStorage` below
+// empties it (and sessionStorage) before every test.
 class MemoryStorage implements Storage {
   private store = new Map<string, string>();
   get length(): number {
@@ -226,3 +229,19 @@ Object.defineProperty(navigator, "locks", {
   value: inertLocks,
   configurable: true,
 });
+
+// jsdom has no layout engine: `getClientRects()` is `[]` for every element, so
+// anything asking the layout engine "does this element generate a box?" would
+// see the whole document as hidden (every popover closed itself on open,
+// 2026-11-19). Declared once, before any test renders: `generatesBox`
+// (`dom/box-presence`, the one seam the `no-raw-box-presence` lint rule sends
+// every such read through) then answers from computed `display`.
+declareNoLayoutEngine();
+
+// Every test starts on empty Web Storage, and with no module holding a copy of
+// what an earlier test stored or left pending (kept-state's batched writes,
+// view-core's draft cache — every `onStorageCleared` listener). Per test, not
+// per file: a test that persists a selection made the next one start on it
+// (the metrics board, 2026-11-17). A test that seeds storage does it inside
+// the test, or in its own `beforeEach` (which runs after this one).
+beforeEach(resetBrowserStorage);

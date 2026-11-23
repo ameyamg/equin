@@ -260,5 +260,8 @@ export default defineBoundaries({
     "plugins/framework/plugins/tooling/plugins/checks/plugins/registry/core/check.generated.ts",
     "plugins/framework/plugins/tooling/plugins/lint/core/lint.generated.ts",
     "eslint.config.ts",
+    // The jsdom test host's root: it declares the host's facts (no layout
+    // engine) and wires the per-test resets plugins own (Web Storage).
+    "test/setup.ts",
   ],
 });

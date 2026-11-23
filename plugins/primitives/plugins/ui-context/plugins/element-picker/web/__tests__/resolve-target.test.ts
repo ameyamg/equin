@@ -1,8 +1,9 @@
 import { describe, test, expect, afterEach } from "vitest";
 import { resolveTarget } from "../internal/resolve-target";
 
-// jsdom has no layout engine: every element reports zero client rects and
-// `elementFromPoint` is unimplemented. Both are stubbed per test — geometry via
+// jsdom has no layout engine: every element reports zero client rects (whether
+// it generates a box at all is answered from computed display — box-presence)
+// and `elementFromPoint` is unimplemented. Both are stubbed per test — geometry via
 // `box()`, and the browser's hit test via `seed()` (which is precisely the input
 // `resolveTarget` is built to *distrust*, so faking it is the point).
 
@@ -84,11 +85,11 @@ describe("resolveTarget", () => {
 
   test("traverses boxless marker spans without ever selecting one", () => {
     // The slot middleware's `display:contents` span generates no box of its own.
-    document.body.innerHTML = `<div id="bar"><span id="marker" data-slot-id="X"><button id="b"></button></span></div>`;
+    document.body.innerHTML = `<div id="bar"><span id="marker" data-slot-id="X" style="display: contents"><button id="b"></button></span></div>`;
     const bar = document.getElementById("bar")!;
     const button = document.getElementById("b")!;
     box(bar, 0, 0, 200, 32);
-    box(button, 100, 4, 128, 28); // the marker span itself keeps jsdom's zero rects
+    box(button, 100, 4, 128, 28); // the marker span itself generates no box
     seed(bar);
 
     expect(resolveTarget(110, 16)).toBe(button);

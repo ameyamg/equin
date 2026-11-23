@@ -5,6 +5,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 /**
  * How the bar reads a width: the element's LAYOUT border-box width, in its own
@@ -64,16 +65,16 @@ export function layoutWidthPx(el: Element): number {
  * that measures zero, and the two are what the `no-slack` 0px branch has to
  * tell apart.
  *
- * `getClientRects()` because it is already this file's neighbour's spelling for
- * the same question: `measureRowOverflow` in `adaptive-bar.tsx` filters out
- * elements generating NO boxes with the identical predicate, and a second
- * spelling for one question is precisely the drift this primitive's docs spend
- * paragraphs preventing. It also beats every alternative. `offsetParent` is an
- * ancestor comparison the bar bans elsewhere and is `null` for the
- * `fixed`-positioned solo placement. `isConnected` answers about the document,
- * not about layout. `checkVisibility()` is newer than the WebKit `tauri/` ships
- * and folds in `content-visibility`, whose skipped subtree still has a real
- * width from its host.
+ * Asked through `generatesBox` (`dom/box-presence`), the one spelling of the
+ * question — `measureRowOverflow` in `adaptive-bar.tsx` filters out elements
+ * generating NO boxes with the same call, and a second spelling for one
+ * question is precisely the drift this primitive's docs spend paragraphs
+ * preventing. It also beats every alternative. `offsetParent` is an ancestor
+ * comparison the bar bans elsewhere and is `null` for the `fixed`-positioned
+ * solo placement. `isConnected` answers about the document, not about layout.
+ * `checkVisibility()` is newer than the WebKit `tauri/` ships and folds in
+ * `content-visibility`, whose skipped subtree still has a real width from its
+ * host.
  *
  * `visibility: hidden` deliberately still counts as rendered, and so still
  * faults: it changes nothing about layout, so the width the row reads there is
@@ -81,7 +82,7 @@ export function layoutWidthPx(el: Element): number {
  */
 export type IsRendered = (el: Element) => boolean;
 
-const domIsRendered: IsRendered = (el) => el.getClientRects().length > 0;
+const domIsRendered: IsRendered = generatesBox;
 
 /** Everything the bar asks the layout engine, read for one decision. */
 export interface MeasureBundle {
@@ -147,12 +148,10 @@ export function useLayoutMeasured(): boolean {
 /**
  * Test-only. See {@link MeasureWidth}.
  *
- * `isRendered` defaults to `() => true` precisely so the `no-slack` 0px branch
- * stays drivable from jsdom: jsdom returns `[]` from `getClientRects()` for
- * every element, so the real predicate would answer "not rendered" everywhere
- * and quietly make that branch dead code in the one suite that can reach it.
- * A supplied width is by definition a width something gave the row, so a test
- * that says nothing about rendered-ness means "rendered".
+ * `isRendered` defaults to `() => true`: a supplied width is by definition a
+ * width something gave the row, so a test that says nothing about
+ * rendered-ness means "rendered" — and the `no-slack` 0px branch stays
+ * drivable from jsdom whatever the test's DOM looks like.
  */
 export function AdaptiveBarMeasure({
   measure,
@@ -267,7 +266,7 @@ export function foreignCellsPx(
 ): number {
   let total = 0;
   for (const cell of foreignCells(root, own)) {
-    if (cell.getClientRects().length > 0) {
+    if (generatesBox(cell)) {
       const floor = foreignFloorPx(cell, getComputedStyle(cell));
       laidOutFloor.set(cell, floor);
       total += gapPx + floor;

@@ -8,6 +8,7 @@ import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { targetKey, type HintTarget } from "../../core";
 import { inScope } from "./scope-key";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 /**
  * The page's anchor registry: every element a `useHintAnchor` ref is attached
@@ -108,10 +109,7 @@ function isRendered(el: HTMLElement): boolean {
   // checkVisibility is Safari 17.4+ (newer than the browser floor).
   if (typeof el.checkVisibility === "function")
     return el.checkVisibility({ visibilityProperty: true });
-  return (
-    el.getClientRects().length > 0 &&
-    getComputedStyle(el).visibility !== "hidden"
-  );
+  return generatesBox(el) && getComputedStyle(el).visibility !== "hidden";
 }
 
 /**

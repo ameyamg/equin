@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-box-presence",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Whether an element generates a box at all (generatesBox) — the one layout read every \"is this anchor / child / cell drawn?\" question goes through, so a host without a layout engine (jsdom) answers it from computed display instead of an always-empty getClientRects()."
+}

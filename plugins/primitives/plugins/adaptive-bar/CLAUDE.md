@@ -153,7 +153,7 @@ The six kinds (`AdaptiveBarFaultKind`):
     verified (hosts change under a mounted bar), capped by `MAX_SLACK_PROBES`
     (each is a forced reflow).
   - **0px row with occupants relocated**: first, does the row generate a box?
-    (`getClientRects().length > 0` via the seam's `isRendered`.)
+    (`generatesBox` from `dom/box-presence`, via the seam's `isRendered`.)
     - A `display: none` surface — keep-alive body, collapsed miller column —
       is no reading at all; `visibility: hidden` counts. (An unfocused surface
       tab and a minimized window are `content-visibility: hidden`: they keep
@@ -194,8 +194,8 @@ The six kinds (`AdaptiveBarFaultKind`):
 `no-slack` is ungated — a differential measurement through the seam, so jsdom
 can drive it (`web/__tests__/no-slack.test.tsx`).
 
-`AdaptiveBarMeasure` defaults `isRendered` to `() => true` (jsdom's
-`getClientRects()` is always `[]`), so always ask through the seam, never the
+`AdaptiveBarMeasure` defaults `isRendered` to `() => true` (a supplied width
+is a width something gave the row), so always ask through the seam, never the
 DOM directly.
 
 **Remedies differ by fault; don't merge the kinds:**
@@ -533,6 +533,7 @@ half in the panel reads as two broken navigations.
     - `primitives/css/ui-kit.useRegionForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/box-presence.generatesBox`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`

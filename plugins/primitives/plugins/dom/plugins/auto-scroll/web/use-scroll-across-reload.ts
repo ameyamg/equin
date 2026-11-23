@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { listenForNavigation } from "./announce-navigation";
 import { useScrollRevival } from "./scroll-revival";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 /**
  * This document. An offset saved under another one was saved before a reload
@@ -89,7 +90,7 @@ export function useScrollAcrossReload(
       // A scroller with no layout box (under `display: none` — a hidden tab
       // being unloaded) reads 0, which is not where the reader left it: keep
       // what was saved while it was shown.
-      if (el.getClientRects().length === 0) return;
+      if (!generatesBox(el)) return;
       const top = el.scrollTop;
       if (top > 0) store.write(key, { top, doc: DOCUMENT_ID });
       else store.remove(key);

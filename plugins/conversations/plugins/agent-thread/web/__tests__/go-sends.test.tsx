@@ -6,19 +6,13 @@
  */
 
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  PluginProvider,
-  type LoadedPlugin,
-} from "@plugins/framework/plugins/web-sdk/core";
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import type { LoadedPlugin } from "@plugins/framework/plugins/web-sdk/core";
 import { TextEditorSlots } from "@plugins/primitives/plugins/text-editor/web";
 import { activeDataPlugin } from "@plugins/active-data/web/testing";
 import { goPlugin } from "@plugins/active-data/plugins/go/web/testing";
-import {
-  fakeFetchEndpoint,
-  withTransport,
-} from "@plugins/infra/plugins/endpoints/web/testing";
+import { fakeFetchEndpoint } from "@plugins/infra/plugins/endpoints/web/testing";
+import { renderInApp } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import type { ConversationEntry } from "@plugins/conversations/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { groupThread } from "../../core";
@@ -99,16 +93,10 @@ function Thread({ prepareTurn }: { prepareTurn?: PrepareTurn }) {
 
 async function clickGo(prepareTurn?: PrepareTurn) {
   const fake = fakeFetchEndpoint();
-  const Transport = withTransport(fake);
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <Transport>
-        <PluginProvider plugins={[slotsPlugin, activeDataPlugin, goPlugin]}>
-          <Thread prepareTurn={prepareTurn} />
-        </PluginProvider>
-      </Transport>
-    </QueryClientProvider>,
-  );
+  renderInApp(<Thread prepareTurn={prepareTurn} />, {
+    transport: fake.transport,
+    plugins: [slotsPlugin, activeDataPlugin, goPlugin],
+  });
 
   await screen.findByText("push it");
   // The unit's ▶ (an inline span) — not the composer's own Send button.

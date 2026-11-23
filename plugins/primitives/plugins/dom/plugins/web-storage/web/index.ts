@@ -7,9 +7,8 @@ import { WebStorageSlots } from "./slots";
 export {
   clearStorageScope,
   defineStore,
-  isKeyInScope,
   onStorageFailure,
-  onStorageScopeCleared,
+  onStorageCleared,
   removeEntriesWhere,
   storageFailureReportSink,
   type LegacyKeys,
@@ -22,6 +21,7 @@ export {
   type StoreWrite,
   type StorageFailure,
   type WhenFull,
+  type WipedKeys,
   type WriteFailureReason,
 } from "./internal/store";
 export { scanArea, type AreaBucket, type AreaScan } from "./internal/scan";

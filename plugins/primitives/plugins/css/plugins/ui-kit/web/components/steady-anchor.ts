@@ -1,6 +1,7 @@
 import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { useMemo, type RefObject } from "react";
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 /**
  * A popover's anchor lost its box while the popover was positioned against it
@@ -50,7 +51,7 @@ export interface SteadyAnchor {
 
 function boxCause(el: Element): PopoverAnchorLostFault["cause"] | null {
   if (!el.isConnected) return "detached";
-  return el.getClientRects().length === 0 ? "no-box" : null;
+  return generatesBox(el) ? null : "no-box";
 }
 
 function displayNoneAncestor(el: Element): Element | null {

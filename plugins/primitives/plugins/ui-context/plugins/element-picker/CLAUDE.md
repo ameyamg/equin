@@ -109,7 +109,7 @@ every build — including a composition this plugin is not in.
     - `InlineChip.Tag` "ui-context" → `UiContextTag`
     - `SlotRender.ItemAttrs`
     - `SlotRender.ItemMiddleware`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
     - `primitives/ui-context` ×4
     - `primitives/css/coords` ×3
@@ -124,6 +124,7 @@ every build — including a composition this plugin is not in.
     - `primitives/css/text.Text`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/z-layers/stack.defineZLayer`
+    - `primitives/dom/box-presence.generatesBox`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.TooltipDoc`

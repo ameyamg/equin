@@ -9,8 +9,7 @@ import {
   defineStore,
   useStore,
   type Store,
-  isKeyInScope,
-  onStorageScopeCleared,
+  onStorageCleared,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import type { PageSource } from "../../core";
@@ -42,10 +41,10 @@ const pastedCutStore = defineStore({
 });
 // By full key, so a cut is pasted once per composition scope it lives in.
 const pastedThisSession = new Set<string>();
-// A wiped scope (the demo's Reset) forgets its pastes, here too.
-onStorageScopeCleared((id) => {
+// Wiped entries (the demo's Reset of its scope) forgets its pastes, here too.
+onStorageCleared((wiped) => {
   for (const key of [...pastedThisSession])
-    if (isKeyInScope(key, id)) pastedThisSession.delete(key);
+    if (wiped(key)) pastedThisSession.delete(key);
 });
 
 type CutStore = Store<true>;

@@ -3,6 +3,7 @@ import {
   RAIL_OWED_START_VAR,
   RAIL_START_VAR,
 } from "@plugins/primitives/plugins/css/plugins/rail/core";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 /**
  * A rail this large is not a rail — it is `var()`'s fallback arriving to say the
@@ -235,7 +236,7 @@ function checkAlignment(
       pending.push(...child.children);
       continue;
     }
-    if (child.getClientRects().length === 0) continue;
+    if (!generatesBox(child)) continue;
     // A string compare, not a pixel one: it is the DECLARATION that makes a
     // child its own region, and two different declarations that happen to
     // resolve to the same length are still two regions.
@@ -272,7 +273,7 @@ function checkBleeds(
 ): void {
   const offenders: string[] = [];
   for (const bleeder of root.querySelectorAll(BLEED_SELECTOR)) {
-    if (bleeder.getClientRects().length === 0) continue;
+    if (!generatesBox(bleeder)) continue;
     // Inside a nested region it bleeds by THAT region's rail, which is that
     // region's business (and its own guard's report, if it has one).
     if (

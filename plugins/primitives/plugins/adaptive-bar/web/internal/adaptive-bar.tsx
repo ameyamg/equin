@@ -105,6 +105,7 @@ import {
 import { AdaptiveBarYield, yieldFloorPx } from "./bar-yield";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { rendersNothing } from "./presence";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 const moreHorizIcon = symbol("more-horiz");
 
@@ -2261,7 +2262,7 @@ function measureRowOverflow(
     // zeros — at the viewport origin, which would fabricate a full-width LEFT
     // overflow on every bar. The layout harness documents the same trap for
     // `display: none` slots.
-    if (el.getClientRects().length === 0) return;
+    if (!generatesBox(el)) return;
     const r = el.getBoundingClientRect();
     spans.push({ id, left: toLayout(r.left), right: toLayout(r.right) });
   };

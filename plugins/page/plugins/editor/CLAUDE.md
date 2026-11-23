@@ -2313,15 +2313,15 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 104 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 103 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
-    - `primitives/dom/web-storage` ×5
     - `primitives/text-editor/caret-trigger` ×5
     - `primitives/undo-redo` ×5
     - `infra/endpoints` ×4
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/dom/dom-selection` ×4
+    - `primitives/dom/web-storage` ×4
     - `primitives/kept-state` ×4
     - `primitives/networking` ×4
     - `primitives/slot-render` ×4

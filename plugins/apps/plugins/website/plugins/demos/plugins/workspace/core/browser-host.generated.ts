@@ -669,6 +669,7 @@ export const browserHost = {
     "primitives.dom.after-layout",
     "primitives.dom.audio-context",
     "primitives.dom.auto-scroll",
+    "primitives.dom.box-presence",
     "primitives.dom.copy-source-text",
     "primitives.dom.dom-selection",
     "primitives.dom.element-fullscreen",

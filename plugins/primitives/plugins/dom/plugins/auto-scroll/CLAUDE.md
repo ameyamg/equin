@@ -266,6 +266,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses:
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/box-presence.generatesBox`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.useInView`
     - `primitives/dom/web-storage.defineStore`

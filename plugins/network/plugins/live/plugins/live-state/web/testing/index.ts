@@ -26,3 +26,7 @@ export type {
 // What the notifications client files to `resourceErrorReportSink`, for a test
 // that registers the sink and asserts the reports a failing read files.
 export type { ResourceErrorInfo } from "../resource-error-reporter";
+// The app's provider stack around a test's tree — transport, live-state
+// client + cache, plugin registry — in one call.
+export { renderInApp } from "./render-in-app";
+export type { RenderInAppOptions } from "./render-in-app";

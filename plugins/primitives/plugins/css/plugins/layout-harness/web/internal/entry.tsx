@@ -21,6 +21,7 @@ import type { HarnessWindow } from "./harness-window";
 // themselves never import it (so they stay Bun-safe). Bundling it here means the
 // measured page paints with the exact tokens/utilities the live app uses.
 import "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 // ── The browser side of the geometry harness ────────────────────────
 //
@@ -312,7 +313,7 @@ function railHostOf(
   ) {
     if (getComputedStyle(el).getPropertyValue("--rail-start") !== published)
       break;
-    if (el.getClientRects().length > 0) host = el;
+    if (generatesBox(el)) host = el;
     if (el === containerEl) break;
   }
   return host ?? containerEl;
@@ -621,134 +622,134 @@ Promise.all([loadExhibits(), loadMeasuredFace()]).then(
     const exhibits = measurableExhibits(loaded);
     byId = new Map(exhibits.map((f) => [f.id, f]));
 
-  (window as HarnessWindow).__renderFixture = (id, width, falsify) => {
-    const fixture = byId.get(id);
-    if (!fixture)
-      throw new Error(`__renderFixture: unknown exhibit id "${id}"`);
-    // The harness wrapper itself carries `data-geo="container"` (the width box).
-    // A fixture that authors its OWN inner `[data-geo="container"]` is honored by
-    // __measure's innermost-container precedence.
-    // `data-theme-scope` alongside `data-geo-root`, on the SAME element that
-    // entry.html seeds the density ramp on. app.css declares its derived tokens
-    // (`--hover-fill`, the whole `--cp-*` panel geometry) at
-    // `:root, [data-theme-scope]`, and most of them read a density var. Custom
-    // property substitution happens where the property is DECLARED, so anchored
-    // on `:root` alone — where the harness seeds nothing — every one of them
-    // computes to guaranteed-invalid and inherits down invalid: a
-    // `grid-template-columns: var(--cp-gutter) …` then falls back to `none` and
-    // the measured grid silently collapses to one column. Marking this element a
-    // theme scope makes app.css re-declare them here, against the seeded ramp,
-    // so the harness reads the tokens from their single source instead of the
-    // page restating them.
-    const tree = createElement(
-      "div",
-      {
-        // A FRESH MOUNT per fixture, and per falsified/clean run of one.
-        //
-        // Every mutation in `applyMutation` writes INLINE STYLES imperatively —
-        // React knows nothing about them. One root renders every fixture in
-        // turn, so when two fixtures happen to share an element shape React
-        // reconciles rather than remounts, hands the second one the first one's
-        // DOM nodes, and the mutation's styles ride along into a run that never
-        // asked for them. The second fixture then measures the FIRST one's
-        // falsification and fails for a reason that is not in its own source.
-        //
-        // Keying on the fixture makes those nodes unreachable: React tears the
-        // old tree down and builds a new one, so a mutation cannot outlive the
-        // run that applied it. Widths within one run still reconcile, which is
-        // what a measure-then-decide primitive (`AdaptiveBar`) needs to see a
-        // width CHANGE rather than a first mount.
-        key: `${id}::${falsify ? "mutated" : "clean"}`,
-        "data-geo-root": "",
-        "data-theme-scope": "",
-      },
-      createElement(
+    (window as HarnessWindow).__renderFixture = (id, width, falsify) => {
+      const fixture = byId.get(id);
+      if (!fixture)
+        throw new Error(`__renderFixture: unknown exhibit id "${id}"`);
+      // The harness wrapper itself carries `data-geo="container"` (the width box).
+      // A fixture that authors its OWN inner `[data-geo="container"]` is honored by
+      // __measure's innermost-container precedence.
+      // `data-theme-scope` alongside `data-geo-root`, on the SAME element that
+      // entry.html seeds the density ramp on. app.css declares its derived tokens
+      // (`--hover-fill`, the whole `--cp-*` panel geometry) at
+      // `:root, [data-theme-scope]`, and most of them read a density var. Custom
+      // property substitution happens where the property is DECLARED, so anchored
+      // on `:root` alone — where the harness seeds nothing — every one of them
+      // computes to guaranteed-invalid and inherits down invalid: a
+      // `grid-template-columns: var(--cp-gutter) …` then falls back to `none` and
+      // the measured grid silently collapses to one column. Marking this element a
+      // theme scope makes app.css re-declare them here, against the seeded ramp,
+      // so the harness reads the tokens from their single source instead of the
+      // page restating them.
+      const tree = createElement(
         "div",
-        { "data-geo": "container", style: { width, position: "relative" } },
-        fixture.render(),
-      ),
-    );
-    // flushSync so the subtree is committed synchronously; __measure (called
-    // after a rAF tick from the driver) then sees the final layout.
-    flushSync(() => ensureRoot().render(tree));
-    if (falsify) {
-      const scope = container.querySelector<HTMLElement>(
-        '[data-geo="container"]',
+        {
+          // A FRESH MOUNT per fixture, and per falsified/clean run of one.
+          //
+          // Every mutation in `applyMutation` writes INLINE STYLES imperatively —
+          // React knows nothing about them. One root renders every fixture in
+          // turn, so when two fixtures happen to share an element shape React
+          // reconciles rather than remounts, hands the second one the first one's
+          // DOM nodes, and the mutation's styles ride along into a run that never
+          // asked for them. The second fixture then measures the FIRST one's
+          // falsification and fails for a reason that is not in its own source.
+          //
+          // Keying on the fixture makes those nodes unreachable: React tears the
+          // old tree down and builds a new one, so a mutation cannot outlive the
+          // run that applied it. Widths within one run still reconcile, which is
+          // what a measure-then-decide primitive (`AdaptiveBar`) needs to see a
+          // width CHANGE rather than a first mount.
+          key: `${id}::${falsify ? "mutated" : "clean"}`,
+          "data-geo-root": "",
+          "data-theme-scope": "",
+        },
+        createElement(
+          "div",
+          { "data-geo": "container", style: { width, position: "relative" } },
+          fixture.render(),
+        ),
       );
-      if (!scope)
-        throw new Error("__renderFixture: container missing after render");
-      // The commit is not the whole render: what a primitive applies in its
-      // after-layout pass (`dom/after-layout` — the adaptive bar docks its
-      // occupants there) lands before the frame paints. The mutation is a
-      // WRITE in that same batch, so it runs after every read the commit
-      // queued and before any later resize is observed.
-      afterLayout(() => () => applyMutation(scope, falsify));
-    }
-  };
-
-  (window as HarnessWindow).__measure = () => {
-    // Prefer the INNERMOST `[data-geo="container"]` so a fixture that authors its
-    // own container (e.g. pin/menu-indicator-over-label's relative div) measures
-    // against it rather than the harness width wrapper.
-    const containers = [
-      ...container.querySelectorAll<HTMLElement>('[data-geo="container"]'),
-    ];
-    if (containers.length === 0)
-      throw new Error("__measure: no [data-geo='container']");
-    const containerEl = containers.reduce((innermost, el) =>
-      innermost.contains(el) ? el : innermost,
-    );
-    const slots: MeasuredFixture["slots"] = {};
-    const order: string[] = [];
-    for (const el of container.querySelectorAll<HTMLElement>("[data-geo]")) {
-      const key = el.getAttribute("data-geo")!;
-      if (key === "container") continue;
-      if (el === containerEl) continue;
-      // An element that generates NO BOXES is not a geometry participant, and
-      // measuring it invents one. `display:none` makes `getBoundingClientRect()`
-      // all zeros, so a hidden slot would report a 0×0 box at the viewport
-      // origin — which "overlaps" every sibling by its full width and "clips"
-      // past every container edge. Both are artefacts of asking a
-      // non-participant where it is.
-      //
-      // Skipping it here (rather than in each oracle rule) makes it identical to
-      // a slot the fixture did not render at all, which every rule already
-      // tolerates — `noOverlap` and `noClip` both skip absent slots. Any fixture
-      // with a conditionally-shown affordance needs this; the adaptive bar's `⋯`
-      // trigger, hidden while nothing has overflowed, was the first.
-      if (el.getClientRects().length === 0) continue;
-      order.push(key);
-      slots[key] = {
-        box: box(el),
-        truncates: el.scrollWidth > el.clientWidth,
-        contentLeft: contentLeftOf(el),
-        opticalCenter: opticalCenterOf(el),
-      };
-    }
-    // The rail is read where the CHILDREN read it — from inside the region, off
-    // the harness's own marker — because custom properties inherit downward and
-    // the region publishes on its own box, a descendant of the container. A
-    // fixture that authors its own children has no marker, so the container is
-    // asked instead; those fixtures assert no `railAlignment`, and the fields
-    // are then simply the ambient rail, whatever it is.
-    const marker = container.querySelector<HTMLElement>(
-      `[${RAIL_MARKER_ATTR}]`,
-    );
-    const railHost = marker ? railHostOf(marker, containerEl) : containerEl;
-    const rail = resolveRail(marker ?? containerEl);
-    const railRect = railHost.getBoundingClientRect();
-    return {
-      container: box(containerEl),
-      slots,
-      order,
-      // The padding box, not the border box: a region's border sits outside the
-      // rail it publishes.
-      railOrigin:
-        railRect.left + px(getComputedStyle(railHost).borderLeftWidth),
-      railStart: rail.start,
-      railEnd: rail.end,
+      // flushSync so the subtree is committed synchronously; __measure (called
+      // after a rAF tick from the driver) then sees the final layout.
+      flushSync(() => ensureRoot().render(tree));
+      if (falsify) {
+        const scope = container.querySelector<HTMLElement>(
+          '[data-geo="container"]',
+        );
+        if (!scope)
+          throw new Error("__renderFixture: container missing after render");
+        // The commit is not the whole render: what a primitive applies in its
+        // after-layout pass (`dom/after-layout` — the adaptive bar docks its
+        // occupants there) lands before the frame paints. The mutation is a
+        // WRITE in that same batch, so it runs after every read the commit
+        // queued and before any later resize is observed.
+        afterLayout(() => () => applyMutation(scope, falsify));
+      }
     };
-  };
+
+    (window as HarnessWindow).__measure = () => {
+      // Prefer the INNERMOST `[data-geo="container"]` so a fixture that authors its
+      // own container (e.g. pin/menu-indicator-over-label's relative div) measures
+      // against it rather than the harness width wrapper.
+      const containers = [
+        ...container.querySelectorAll<HTMLElement>('[data-geo="container"]'),
+      ];
+      if (containers.length === 0)
+        throw new Error("__measure: no [data-geo='container']");
+      const containerEl = containers.reduce((innermost, el) =>
+        innermost.contains(el) ? el : innermost,
+      );
+      const slots: MeasuredFixture["slots"] = {};
+      const order: string[] = [];
+      for (const el of container.querySelectorAll<HTMLElement>("[data-geo]")) {
+        const key = el.getAttribute("data-geo")!;
+        if (key === "container") continue;
+        if (el === containerEl) continue;
+        // An element that generates NO BOXES is not a geometry participant, and
+        // measuring it invents one. `display:none` makes `getBoundingClientRect()`
+        // all zeros, so a hidden slot would report a 0×0 box at the viewport
+        // origin — which "overlaps" every sibling by its full width and "clips"
+        // past every container edge. Both are artefacts of asking a
+        // non-participant where it is.
+        //
+        // Skipping it here (rather than in each oracle rule) makes it identical to
+        // a slot the fixture did not render at all, which every rule already
+        // tolerates — `noOverlap` and `noClip` both skip absent slots. Any fixture
+        // with a conditionally-shown affordance needs this; the adaptive bar's `⋯`
+        // trigger, hidden while nothing has overflowed, was the first.
+        if (!generatesBox(el)) continue;
+        order.push(key);
+        slots[key] = {
+          box: box(el),
+          truncates: el.scrollWidth > el.clientWidth,
+          contentLeft: contentLeftOf(el),
+          opticalCenter: opticalCenterOf(el),
+        };
+      }
+      // The rail is read where the CHILDREN read it — from inside the region, off
+      // the harness's own marker — because custom properties inherit downward and
+      // the region publishes on its own box, a descendant of the container. A
+      // fixture that authors its own children has no marker, so the container is
+      // asked instead; those fixtures assert no `railAlignment`, and the fields
+      // are then simply the ambient rail, whatever it is.
+      const marker = container.querySelector<HTMLElement>(
+        `[${RAIL_MARKER_ATTR}]`,
+      );
+      const railHost = marker ? railHostOf(marker, containerEl) : containerEl;
+      const rail = resolveRail(marker ?? containerEl);
+      const railRect = railHost.getBoundingClientRect();
+      return {
+        container: box(containerEl),
+        slots,
+        order,
+        // The padding box, not the border box: a region's border sits outside the
+        // rail it publishes.
+        railOrigin:
+          railRect.left + px(getComputedStyle(railHost).borderLeftWidth),
+        railStart: rail.start,
+        railEnd: rail.end,
+      };
+    };
 
     (window as HarnessWindow).__fixturesReady = true;
   },

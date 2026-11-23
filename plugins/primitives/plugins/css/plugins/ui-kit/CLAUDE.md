@@ -456,6 +456,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/motion.useSizeMotion`
     - `primitives/css/rail.useRailGuard`
     - `primitives/dom/after-layout.afterLayout`
+    - `primitives/dom/box-presence.generatesBox`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/kept-state.useTransient`
     - `primitives/latest-ref.useEventCallback`

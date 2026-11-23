@@ -63,7 +63,10 @@ server state is. So a store is **per composition scope by default**:
 - `clearStorageScope(id)` removes every entry of one `PluginScope` — the
   demo's Reset (`DemoScope`), after its subtree unmounted. The page's own
   entries have no scope id, so it cannot reach them. A module that keeps what
-  it read in memory drops it on `onStorageScopeCleared` (`isKeyInScope`).
+  it read (or is about to write) in memory drops it on
+  `onStorageCleared((wiped) => …)`, `wiped(key)` answering for a store's full
+  key — the same signal a test host's `resetBrowserStorage()` (`web/testing`,
+  run by the shared jsdom setup before each test) fires for everything.
 
 Tests outside React use `storageScopeOf(id)` from `web/testing`.
 
@@ -130,13 +133,13 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `StoreUsage`
     - `StoreWrite`
     - `WhenFull`
+    - `WipedKeys`
     - `WriteFailureReason`
   - Exports (values):
     - `clearStorageScope`
     - `defineStore`
-    - `isKeyInScope`
+    - `onStorageCleared`
     - `onStorageFailure`
-    - `onStorageScopeCleared`
     - `removeEntriesWhere`
     - `scanArea`
     - `storageFailureReportSink`
@@ -193,6 +196,7 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
   - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
     - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.
     - `QuotaStorage` — An in-memory Storage with a byte quota, throwing the browser's `QuotaExceededError` past it — the condition the 2026-10-19 incident hit and jsdom never produces.
+    - `resetBrowserStorage` — Empty both areas and forget every owner's accounting, then tell every `onStorageCleared` listener that everything went — what a test host runs before each test, so no test starts on what an earlier one stored (or left pending in a module).
     - `storageScopeOf` — The storage scope a component would read with `useStorageScope()` — `null` for the page's own, a composition id for a `PluginScope` — for a test that reads or writes a scoped store outside React.
     - `writeEntryUnchecked` — Writes `value` under a declared owner's page-scope key `id`, stamped with the owner's current schema but never parsed against it — an entry this build wrote that its own schema refuses (a corrupt one).
 - Sub-plugins:

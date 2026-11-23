@@ -6664,6 +6664,10 @@
       "name": "@equin/plugin-primitives-dom-auto-scroll-follow-motion",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/box-presence": {
+      "name": "@equin/plugin-primitives-dom-box-presence",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/copy-source-text": {
       "name": "@equin/plugin-primitives-dom-copy-source-text",
       "version": "0.0.1",
@@ -11600,6 +11604,8 @@
     "@equin/plugin-primitives-dom-auto-scroll": ["@equin/plugin-primitives-dom-auto-scroll@workspace:plugins/primitives/plugins/dom/plugins/auto-scroll"],
 
     "@equin/plugin-primitives-dom-auto-scroll-follow-motion": ["@equin/plugin-primitives-dom-auto-scroll-follow-motion@workspace:plugins/primitives/plugins/dom/plugins/auto-scroll/plugins/follow-motion"],
+
+    "@equin/plugin-primitives-dom-box-presence": ["@equin/plugin-primitives-dom-box-presence@workspace:plugins/primitives/plugins/dom/plugins/box-presence"],
 
     "@equin/plugin-primitives-dom-copy-source-text": ["@equin/plugin-primitives-dom-copy-source-text@workspace:plugins/primitives/plugins/dom/plugins/copy-source-text"],
 

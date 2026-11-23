@@ -34680,6 +34680,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `reports/main-thread-stall`
                   - `runs`
                   - `shell/notifications`
+              - Exemptions:
+                - Exempts itself from: `box-presence/no-raw-box-presence` — `core/internal/busy.ts` (sanctioned)
         - **`exempt`** — Inverted exemptions: a plugin declares, in its own exempt/index.ts, which of its files may violate which lint rule or check — with a reason, and a task when it is debt. The manifest types, the generated rule-id union, the file-category vocabulary rule owners scope by, and the one loader + hit-recording matcher the ESLint config, the type-check worker and the check runner all read.
           - Cross-plugin:
             - Imported by:
@@ -35604,7 +35606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
       - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
       - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-    - Uses: 29 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
+    - Uses: 30 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
       - `network/live/live-state` ×3
       - `primitives/css/ui-kit` ×3
       - `primitives/overlay/popup-open` ×3
@@ -35619,6 +35621,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/theme-boundary.Theme`
       - `primitives/css/viewport-overlay.ViewportOverlay`
       - `primitives/css/z-layers/stack.defineZLayer`
+      - `primitives/dom/box-presence.generatesBox`
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/dom/scroll-reveal.revealElement`
       - `primitives/latest-ref.useEventCallback`
@@ -44531,8 +44534,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
               - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
               - `NotificationsClient`
+              - `renderInApp` — `render(ui)` under the provider stack the app mounts around every surface (`web-core`'s `App`): the transport, the live-state client and its query cache (`createLiveStateHarness` — a fresh pair per test, disposed when it finishes), and the plugin registry.
               - `resetResourceContractMismatches` — Forget every mismatch — tests only (via `web/testing`).
-              - Types: `LiveStateHarness`, `LiveStateHarnessOptions`, `ResourceErrorInfo`
+              - Types: `LiveStateHarness`, `LiveStateHarnessOptions`, `RenderInAppOptions`, `ResourceErrorInfo`
         - **`live-state-snapshot`** — Registers the epoch handoff's switch (Hand live state over across restarts) for Settings → Config. L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "live-state-handoff"
@@ -47058,15 +47062,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 104 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 103 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
-          - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
           - `primitives/undo-redo` ×5
           - `infra/endpoints` ×4
           - `primitives/css/spacing` ×4
           - `primitives/css/ui-kit` ×4
           - `primitives/dom/dom-selection` ×4
+          - `primitives/dom/web-storage` ×4
           - `primitives/kept-state` ×4
           - `primitives/networking` ×4
           - `primitives/slot-render` ×4
@@ -51047,6 +51051,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.useRegionForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/yield.yieldClass`
+          - `primitives/dom/box-presence.generatesBox`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
@@ -52171,6 +52176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
               - `primitives/dom/after-layout.afterLayout`
+              - `primitives/dom/box-presence.generatesBox`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --chrome-pad-x`
           - Exemptions:
@@ -52448,6 +52454,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/radio-group` (0 debt)
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
         - **`rail`** — Web half of the rail contract: useRailGuard, the dev-only structural guard a region owner attaches to its own box. It measures every child's content edge against the rail the region published and names whoever applied an inset on top of it — the double-inset that looks reasonable at every call site and is only visible as content indented twice.
+          - Web:
+            - Uses: `primitives/dom/box-presence.generatesBox`
+            - Exports (values): `useRailGuard`
           - Core:
             - Uses:
               - `primitives/css/space-ramp.rampClass`
@@ -52472,8 +52481,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit`
               - `primitives/data-view`
               - `primitives/detail-sections`
-          - Web:
-            - Exports (values): `useRailGuard`
         - **`resizable`** — Resizable panel groups in the ui-kit look (react-resizable-panels): ResizablePanelGroup, ResizablePanel and ResizableHandle.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -53113,6 +53120,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/motion.useSizeMotion`
               - `primitives/css/rail.useRailGuard`
               - `primitives/dom/after-layout.afterLayout`
+              - `primitives/dom/box-presence.generatesBox`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/kept-state.useTransient`
               - `primitives/latest-ref.useEventCallback`
@@ -54479,9 +54487,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Contributes: `IdKinds.Kind` "view"
-            - Uses: 50 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `primitives/css/ui-kit` ×16
-              - `primitives/dom/web-storage` ×5
+              - `primitives/dom/web-storage` ×4
               - `config_v2` ×3
               - `primitives/css/text` ×3
               - `network/live/live-state` ×2
@@ -54895,6 +54903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/dom/box-presence.generatesBox`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/in-view.useInView`
               - `primitives/dom/web-storage.defineStore`
@@ -54962,6 +54971,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/dom/auto-scroll`
               - Core:
                 - Exports (values): `FOLLOW_MOTION_ATTR`
+        - **`box-presence`** — Whether an element generates a box at all: generatesBox(el) — false when it left the document, is display: contents, or sits under display: none; visibility: hidden and a 0×0 box still count. The one layout read behind every "is this anchor / cell / child drawn?" question (a popover's anchor-lost rule, the adaptive bar, the rail guard), so a host without a layout engine (jsdom, which answers getClientRects() with [] for every element) declares itself once and is answered from computed display. Its lint rule (no-raw-box-presence) sends every other getClientRects().length read here.
+          - Cross-plugin:
+            - Imported by:
+              - `hints`
+              - `primitives/adaptive-bar`
+              - `primitives/css/layout-harness`
+              - `primitives/css/rail`
+              - `primitives/css/ui-kit`
+              - `primitives/dom/auto-scroll`
+              - `primitives/ui-context/element-picker`
+          - Exemptions:
+            - Exempts itself from: `box-presence/no-raw-box-presence` — `web/internal/generates-box.ts` (sanctioned)
+            - Exempted by:
+              - `framework/tooling/e2e-harness/page-ready` (0 debt)
+              - `primitives/dom/box-presence` (0 debt)
+          - Web:
+            - Exports (values): `generatesBox`
+          - Test helpers:
+            - Web: `@plugins/primitives/plugins/dom/plugins/box-presence/web/testing`
+              - `declareNoLayoutEngine` — Declare this process a host with no layout engine (jsdom).
         - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText — exported beside the handler, so importing them ships it — and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
           - Web:
             - Contributes: `Core.Root` → `CopySourceTextHost`
@@ -55375,13 +55404,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StoreUsage`
               - `StoreWrite`
               - `WhenFull`
+              - `WipedKeys`
               - `WriteFailureReason`
             - Exports (values):
               - `clearStorageScope`
               - `defineStore`
-              - `isKeyInScope`
+              - `onStorageCleared`
               - `onStorageFailure`
-              - `onStorageScopeCleared`
               - `removeEntriesWhere`
               - `scanArea`
               - `storageFailureReportSink`
@@ -55438,6 +55467,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
               - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.
               - `QuotaStorage` — An in-memory Storage with a byte quota, throwing the browser's `QuotaExceededError` past it — the condition the 2026-10-19 incident hit and jsdom never produces.
+              - `resetBrowserStorage` — Empty both areas and forget every owner's accounting, then tell every `onStorageCleared` listener that everything went — what a test host runs before each test, so no test starts on what an earlier one stored (or left pending in a module).
               - `storageScopeOf` — The storage scope a component would read with `useStorageScope()` — `null` for the page's own, a composition id for a `PluginScope` — for a test that reads or writes a scoped store outside React.
               - `writeEntryUnchecked` — Writes `value` under a declared owner's page-scope key `id`, stamped with the owner's current schema but never parsed against it — an entry this build wrote that its own schema refuses (a corrupt one).
           - Plugins:
@@ -56190,8 +56220,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/dom/web-storage.defineStore`
           - `primitives/dom/web-storage.LegacyKeys`
+          - `primitives/dom/web-storage.onStorageCleared`
           - `primitives/dom/web-storage.removeEntriesWhere`
           - `primitives/dom/web-storage.ScopedStore`
+          - `primitives/dom/web-storage.StorageScope`
           - `primitives/dom/web-storage.Store`
           - `primitives/dom/web-storage.StoreSpec`
           - `primitives/dom/web-storage.useStore`
@@ -60061,7 +60093,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` "ui-context" → `UiContextTag`
               - `SlotRender.ItemAttrs`
               - `SlotRender.ItemMiddleware`
-            - Uses: 33 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
+            - Uses: 34 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
               - `primitives/css/ui-kit` ×5
               - `primitives/ui-context` ×4
               - `primitives/css/coords` ×3
@@ -60076,6 +60108,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/css/z-layers/stack.defineZLayer`
+              - `primitives/dom/box-presence.generatesBox`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/tooltip.TooltipDoc`

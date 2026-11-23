@@ -1,3 +1,4 @@
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 /**
  * Hit-testing for the inspector overlay — "what is under this pixel?".
  *
@@ -89,8 +90,7 @@ function deepestAt(
   // middleware's marker spans) and empty inlines — are traversed but never
   // selected: there is no box to have pointed at, and their children carry the
   // real geometry.
-  const boxless =
-    style.display === "contents" || el.getClientRects().length === 0;
+  const boxless = !generatesBox(el);
   if (!boxless && !containsPoint(el, x, y)) return null;
 
   let best: Hit | null = boxless ? null : { el, depth };

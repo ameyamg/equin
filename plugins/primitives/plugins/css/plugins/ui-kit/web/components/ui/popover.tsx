@@ -19,6 +19,7 @@ import {
   type PopoverAnchorLostFault,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/steady-anchor";
 import { useTransient } from "@plugins/primitives/plugins/kept-state/web";
+import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 
 /**
  * Whether this popover has ever been open. Once it has, its content stays
@@ -144,7 +145,7 @@ function Popover({
       }
       queueMicrotask(() => {
         const { anchor } = fault;
-        if (anchor.isConnected && anchor.getClientRects().length === 0)
+        if (anchor.isConnected && !generatesBox(anchor))
           actionsRef.current?.close();
       });
     },

@@ -341,7 +341,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/overlay/popup-open` ×3
@@ -356,6 +356,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/z-layers/stack.defineZLayer`
+    - `primitives/dom/box-presence.generatesBox`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/latest-ref.useEventCallback`

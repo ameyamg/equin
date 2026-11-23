@@ -482,6 +482,7 @@ somehow is not.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
     - `primitives/dom/after-layout.afterLayout`
+    - `primitives/dom/box-presence.generatesBox`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --chrome-pad-x`
 - Exemptions:

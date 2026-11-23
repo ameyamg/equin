@@ -908,31 +908,34 @@ export function removeEntriesWhere(
 }
 
 /**
+ * Which full keys a wipe removed: every entry of one composition scope
+ * (`clearStorageScope`), or every entry there is (`resetBrowserStorage`, a
+ * test host starting each test on empty storage).
+ */
+export type WipedKeys = (key: string) => boolean;
+
+const clearedListeners = new Set<(wiped: WipedKeys) => void>();
+
+/**
+ * Observe a wipe — for a module that keeps what it read from (or is about to
+ * write to) a store in memory, keyed by the store's full key, so a wiped
+ * entry is not served from, or written back by, a copy that outlived it.
+ * Returns the unsubscribe.
+ */
+export function onStorageCleared(
+  listener: (wiped: WipedKeys) => void,
+): () => void {
+  clearedListeners.add(listener);
+  return () => clearedListeners.delete(listener);
+}
+
+/**
  * Remove every entry written inside the `PluginScope` of composition `id`, of
  * every owner and in both areas — for a scope whose whole state is thrown away
  * at once (the demo's Reset). By the scope's id rather than a `StorageScope`:
  * the one who ends a scope renders outside it. The page's own entries have no
  * scope id, so they can never be wiped this way.
  */
-const scopeClearedListeners = new Set<(id: string) => void>();
-
-/**
- * Observe `clearStorageScope` — for a module that keeps what it read from a
- * scoped store in memory (keyed by the store's full key), so a wiped scope is
- * not served from a copy that outlived it. Returns the unsubscribe.
- */
-export function onStorageScopeCleared(
-  listener: (id: string) => void,
-): () => void {
-  scopeClearedListeners.add(listener);
-  return () => scopeClearedListeners.delete(listener);
-}
-
-/** Whether `key` (a store's full key) was written in the scope `id`. */
-export function isKeyInScope(key: string, id: string): boolean {
-  return parseStoreKey(key)?.scope === id;
-}
-
 export function clearStorageScope(id: string): void {
   if (!SCOPE_PATTERN.test(id))
     throw new Error(
@@ -964,7 +967,8 @@ export function clearStorageScope(id: string): void {
       listenersOf(state, key);
     }
   }
-  for (const l of scopeClearedListeners) l(id);
+  const wiped: WipedKeys = (key) => parseStoreKey(key)?.scope === id;
+  for (const l of clearedListeners) l(wiped);
   if (changed) notifyChanged();
 }
 
@@ -991,4 +995,27 @@ export function writeUncheckedEntry(
     envelope(state, value, Date.now()),
   );
   if (state.entries !== "unavailable") state.entries = null;
+}
+
+/**
+ * Empty both areas and forget every owner's accounting, then tell every
+ * `onStorageCleared` listener that everything went — what a test host runs
+ * before each test, so no test starts on what an earlier one stored (or left
+ * pending in a module). Not in the barrel: a page never wipes another
+ * deploy's entries, nor its own.
+ */
+export function resetBrowserStorage(): void {
+  for (const area of ["local", "session"] as const) openArea(area)?.clear();
+  for (const state of owners.values()) {
+    state.entries = null;
+    state.used = 0;
+    state.pageUsed = 0;
+    state.evicted = 0;
+    state.refusedOverCap = 0;
+    state.refusedByBrowser = 0;
+    state.announcedOtherSchema.clear();
+  }
+  const everything: WipedKeys = () => true;
+  for (const l of clearedListeners) l(everything);
+  notifyChanged();
 }

@@ -14,10 +14,11 @@
  */
 
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
-import type {
-  LegacyKeys,
-  StorageScope,
-  Store,
+import {
+  onStorageCleared,
+  type LegacyKeys,
+  type StorageScope,
+  type Store,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 
 const DRAFT_SYNC_EVENT = `${LEGACY_IDS.browserKeyPrefix}:draft-updated`;
@@ -134,6 +135,17 @@ interface PendingWrite {
 const pending = new Map<string, PendingWrite>();
 let frame: number | null = null;
 let flushOnHide = false;
+
+// A write still pending for a wiped entry (a scope the demo's Reset threw
+// away, or a test host's reset) must not land after the wipe: it would bring
+// back what was thrown away, and `readDraft` would answer from it meanwhile.
+onStorageCleared((wiped) => {
+  for (const key of [...pending.keys()]) if (wiped(key)) pending.delete(key);
+  if (pending.size === 0 && frame !== null) {
+    cancelAnimationFrame(frame);
+    frame = null;
+  }
+});
 
 /**
  * Flush when the page goes away or hides — installed with the first batched

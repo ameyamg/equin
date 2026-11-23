@@ -217,8 +217,10 @@ processes, writes). What is left is work held in ordinary component state, and
   - Uses:
     - `primitives/dom/web-storage.defineStore`
     - `primitives/dom/web-storage.LegacyKeys`
+    - `primitives/dom/web-storage.onStorageCleared`
     - `primitives/dom/web-storage.removeEntriesWhere`
     - `primitives/dom/web-storage.ScopedStore`
+    - `primitives/dom/web-storage.StorageScope`
     - `primitives/dom/web-storage.Store`
     - `primitives/dom/web-storage.StoreSpec`
     - `primitives/dom/web-storage.useStore`

@@ -8,7 +8,8 @@ import {
  * A popover's anchor that loses its box (detached, or hidden under
  * `display: none`) must not hand Floating UI the empty rect at the viewport's
  * origin — that is the panel jumping to the screen's top-left corner. jsdom
- * draws no layout, so the anchor's boxes are stubbed.
+ * draws no layout: whether the anchor has a box is its computed `display`
+ * (`generatesBox`, answered from it under jsdom), and its rect is stubbed.
  */
 
 afterEach(() => {
@@ -24,8 +25,9 @@ function steadyAnchor(target: Element) {
   );
 }
 
-function boxed(el: Element, rect: DOMRect | null) {
-  el.getClientRects = () => (rect ? [rect] : []) as unknown as DOMRectList;
+/** Give `el` a box at `rect`, or take its box away (`display: none`). */
+function boxed(el: HTMLElement, rect: DOMRect | null) {
+  el.style.display = rect ? "" : "none";
   el.getBoundingClientRect = () => rect ?? new DOMRect();
 }
 
@@ -46,7 +48,6 @@ describe("steadyAnchor", () => {
     anchor.getBoundingClientRect();
 
     bar.style.display = "none";
-    boxed(btn, null);
     expect(anchor.getBoundingClientRect().x).toBe(1276);
     expect(anchor.getBoundingClientRect().y).toBe(7);
     expect(faults).toHaveLength(1);
