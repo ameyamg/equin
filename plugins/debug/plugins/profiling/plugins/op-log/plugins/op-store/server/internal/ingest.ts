@@ -3,7 +3,10 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { open, type FileHandle } from "node:fs/promises";
-import type { OpLine } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import {
+  parseOpLine,
+  type OpLine,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
   planSegments,
   SEED_BYTES,
@@ -80,15 +83,16 @@ export function parseLines(text: string): OpLine[] {
       );
       continue;
     }
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      typeof (parsed as { opId?: unknown }).opId !== "string"
-    ) {
-      console.warn(`[op-store] skipped a non-op line: ${raw.slice(0, 200)}`);
+    // A line of a newer writer (an event kind this reader does not know) is
+    // skipped loudly, never folded: the log is shared by every checkout.
+    const line = parseOpLine(parsed);
+    if (line.kind === "skipped") {
+      console.warn(
+        `[op-store] skipped an op-log line (${line.reason}${line.detail === null ? "" : `: ${line.detail}`}): ${raw.slice(0, 200)}`,
+      );
       continue;
     }
-    out.push(parsed as OpLine);
+    out.push(line.line);
   }
   return out;
 }

@@ -27812,6 +27812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OpWait`
               - `OpWaitSpan`
               - `OutcomeByKind`
+              - `ParsedOpLine`
               - `RawOpRecord`
               - `SleepStamp`
               - `TerminalOutcome`
@@ -27830,6 +27831,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `linePositionText`
               - `liveTimes`
               - `orphanedOps`
+              - `parseOpLine`
+              - `parseOpLines`
               - `reconcilerCompletedEvent`
               - `sumWaits`
               - `toOpRecord`

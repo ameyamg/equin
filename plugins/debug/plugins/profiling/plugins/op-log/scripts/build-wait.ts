@@ -24,6 +24,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
   foldOpLines,
+  parseOpLine,
   toOpRecords,
   type OpLine,
   type OpRecord,
@@ -40,17 +41,25 @@ const days = Number(process.argv[2] ?? 7);
 if (!Number.isInteger(days) || days < 1)
   throw new Error("usage: build-wait.ts [days ≥ 1]");
 
+/** Lines this script cannot fold (a newer writer's event kind), by reason. */
+const skipped = new Map<string, number>();
+
 function* opLines(): Generator<OpLine> {
   for (const file of [`${OP_LOG_FILE}.2`, `${OP_LOG_FILE}.1`, OP_LOG_FILE]) {
     if (!existsSync(file)) continue;
     for (const line of readFileSync(file, "utf8").split("\n")) {
       if (line.trim() === "") continue;
+      let value: unknown;
       try {
-        yield JSON.parse(line) as OpLine;
+        value = JSON.parse(line);
       } catch (err) {
         // A torn line at a rotation boundary: the rest of the op still folds.
         if (!(err instanceof SyntaxError)) throw err;
+        continue;
       }
+      const parsed = parseOpLine(value);
+      if (parsed.kind === "line") yield parsed.line;
+      else skipped.set(parsed.reason, (skipped.get(parsed.reason) ?? 0) + 1);
     }
   }
 }
@@ -60,6 +69,8 @@ const records = toOpRecords(
   Date.now(),
   readSleepNow(),
 );
+for (const [reason, count] of skipped)
+  console.warn(`skipped ${count} op-log line(s) this script cannot fold (${reason})`);
 
 const waitMs = (r: OpRecord, kind: WaitKind): number =>
   r.waits

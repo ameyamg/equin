@@ -214,6 +214,7 @@ through `foldOpLines`. The before/after ruler of
     - `OpWait`
     - `OpWaitSpan`
     - `OutcomeByKind`
+    - `ParsedOpLine`
     - `RawOpRecord`
     - `SleepStamp`
     - `TerminalOutcome`
@@ -232,6 +233,8 @@ through `foldOpLines`. The before/after ruler of
     - `linePositionText`
     - `liveTimes`
     - `orphanedOps`
+    - `parseOpLine`
+    - `parseOpLines`
     - `reconcilerCompletedEvent`
     - `sumWaits`
     - `toOpRecord`

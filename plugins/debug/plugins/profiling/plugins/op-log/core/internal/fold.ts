@@ -338,6 +338,15 @@ function applyV2Change(
     case "granted":
       next.grantedAt = ev.at;
       return next;
+    default: {
+      // Unreachable for a parsed line: `parseOpLine` skips an event kind this
+      // reader does not know (a newer writer on the shared log). A new kind on
+      // the wire type without a case here is a tsc error.
+      const unknown: never = ev;
+      throw new Error(
+        `op-log fold: unhandled event kind ${JSON.stringify((unknown as { e: unknown }).e)}`,
+      );
+    }
   }
 }
 

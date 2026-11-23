@@ -1,5 +1,6 @@
 import {
   foldOpLines,
+  parseOpLines,
   toOpRecords,
   waitersAhead,
   type LineOp,
@@ -27,9 +28,28 @@ import {
  * history and not a failure.
  */
 function readOpLines(): OpLine[] {
-  const result = opLogSink.readJsonlTailSync<OpLine>();
+  const result = opLogSink.readJsonlTailSync<unknown>();
   if (result.kind === "missing") return []; // no op has ever run on this host
-  return result.records;
+  const { lines, skipped } = parseOpLines(result.records);
+  reportSkipped(skipped);
+  return lines;
+}
+
+/**
+ * Skip keys already reported by this process: one stderr line per kind of skip
+ * (a newer writer's event kind), not one per read — a waiting op reads the log
+ * on every wait. Bounded by the distinct skip kinds, not by the reads.
+ */
+const reportedSkips = new Set<string>();
+
+function reportSkipped(skipped: ReadonlyMap<string, number>): void {
+  for (const [key, count] of skipped) {
+    if (reportedSkips.has(key)) continue;
+    reportedSkips.add(key);
+    console.warn(
+      `[op-log] skipped ${count} op-log line(s) this reader cannot fold (${key}) — written by a newer or foreign writer`,
+    );
+  }
 }
 
 /** Every op in the live log, folded through the one reducer. */

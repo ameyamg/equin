@@ -33,6 +33,8 @@ export {
   waitersAhead,
 } from "./internal/wait-line";
 export type { LineOp } from "./internal/wait-line";
+export { parseOpLine, parseOpLines } from "./internal/parse";
+export type { ParsedOpLine } from "./internal/parse";
 export {
   advanceSleeps,
   applyOpEvent,
