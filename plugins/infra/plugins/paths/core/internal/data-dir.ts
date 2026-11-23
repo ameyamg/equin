@@ -287,9 +287,10 @@ const APP_DIR_RECLAIM_REASON =
 /**
  * The data root ITSELF.
  *
- * Its ONE legitimate use is handing the root to a child process as its
+ * Its legitimate uses: handing the root to a child process as its
  * `EQUIN_DIR` (the gateway spawn, a release launch, a remote deploy's
- * env line). `join(dataRoot(), …)` is exactly what `defineDataDir` exists to
+ * env line), and measuring the volume it sits on (`statfs(dataRoot())`, a
+ * box's disk meter in deploy/box-link). `join(dataRoot(), …)` is exactly what `defineDataDir` exists to
  * replace — a joined root is an undeclared directory, which is the failure mode
  * this whole registry is here to make impossible.
  *

@@ -50,10 +50,17 @@ export interface StreamFailure {
   startedAt: number;
 }
 
-/** Why one attempt ended. */
+/**
+ * Why one attempt ended. `heardBeat`: the box sent a SECOND beat — the stream
+ * outlived a whole beat interval, so it reached steady state, which is what
+ * resets the backoff. A hello alone does not, nor a first beat: a box whose
+ * first (or second) sample throws says hello on every attempt, and resetting
+ * on it would reconnect every few seconds forever (each one a catch-up
+ * mirror pull and a state write).
+ */
 type AttemptEnd =
   | { kind: "route-missing"; error: string }
-  | { kind: "failed"; error: string; answered: boolean; heardHello: boolean }
+  | { kind: "failed"; error: string; answered: boolean; heardBeat: boolean }
   | { kind: "aborted" };
 
 class WatchdogFired extends Error {
@@ -94,7 +101,8 @@ async function attempt(
       inner.abort(new WatchdogFired()),
     );
   };
-  let heardHello = false;
+  let heardBeat = false;
+  let beats = 0;
   try {
     arm();
     let res: Response;
@@ -107,7 +115,7 @@ async function attempt(
           kind: "failed",
           error: inner.signal.reason.message,
           answered: false,
-          heardHello,
+          heardBeat,
         };
       }
       // No answer: the tunnel died, or it is up and nothing answers behind
@@ -116,7 +124,7 @@ async function attempt(
         kind: "failed",
         error: `the stream request failed: ${errorText(err)}`,
         answered: false,
-        heardHello,
+        heardBeat,
       };
     }
     if (res.status === 404) {
@@ -132,7 +140,7 @@ async function attempt(
         kind: "failed",
         error: `the box answered HTTP ${String(res.status)}`,
         answered: true,
-        heardHello,
+        heardBeat,
       };
     }
     try {
@@ -143,11 +151,17 @@ async function attempt(
           case "skip":
             break;
           case "producer-error":
+            // The box's own code threw while streaming: an equin bug on the
+            // box, which files no report main can see — so main files it.
+            reportServerError({
+              message: `[box-link] the box's stream failed: ${read.message}`,
+              scope: "box-link:box-stream-failed",
+            });
             return {
               kind: "failed",
               error: `the box's stream failed: ${read.message}`,
               answered: true,
-              heardHello,
+              heardBeat,
             };
           case "malformed":
             reportServerError({
@@ -158,15 +172,16 @@ async function attempt(
               kind: "failed",
               error: `a malformed frame: ${read.message}`,
               answered: true,
-              heardHello,
+              heardBeat,
             };
           case "frame": {
             const frame = read.frame;
-            if (frame.kind === "hello") {
-              heardHello = true;
-              events.hello(frame);
-            } else if (frame.kind === "beat") events.beat(frame);
-            else events.signal(frame.source, frame.payload);
+            if (frame.kind === "hello") events.hello(frame);
+            else if (frame.kind === "beat") {
+              beats += 1;
+              if (beats >= 2) heardBeat = true;
+              events.beat(frame);
+            } else events.signal(frame.source, frame.payload);
             break;
           }
         }
@@ -176,7 +191,7 @@ async function attempt(
         kind: "failed",
         error: "the box closed the stream",
         answered: true,
-        heardHello,
+        heardBeat,
       };
     } catch (err) {
       if (outer.aborted) return { kind: "aborted" };
@@ -185,7 +200,7 @@ async function attempt(
           kind: "failed",
           error: err.message,
           answered: false,
-          heardHello,
+          heardBeat,
         };
       }
       if (err instanceof NdjsonParseError) {
@@ -197,7 +212,7 @@ async function attempt(
           kind: "failed",
           error: err.message,
           answered: true,
-          heardHello,
+          heardBeat,
         };
       }
       // The connection broke mid-stream (the tunnel or the box went away).
@@ -205,7 +220,7 @@ async function attempt(
         kind: "failed",
         error: `the stream broke: ${errorText(err)}`,
         answered: false,
-        heardHello,
+        heardBeat,
       };
     }
   } finally {
@@ -218,7 +233,8 @@ async function attempt(
 /**
  * One deployment's stream client: while enabled, it holds the stream open,
  * reconnecting after a failure with a bounded backoff (a bound around a
- * network peer — the box — not a fix for our own code; reset by a hello).
+ * network peer — the box — not a fix for our own code; reset by a second beat,
+ * never by a hello alone — see {@link AttemptEnd}).
  * A 404 leaves it idle until `kick()`. `kick()` reconnects now (skipping a
  * backoff wait), `disable()` drops the stream and any wait.
  */
@@ -257,7 +273,7 @@ export function createStreamClient(
         events.routeMissing(end.error);
         return;
       }
-      if (end.heardHello) backoffMs = BACKOFF_MIN_MS;
+      if (end.heardBeat) backoffMs = BACKOFF_MIN_MS;
       events.failed({ error: end.error, answered: end.answered, startedAt });
       const wait = backoffMs;
       backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS);

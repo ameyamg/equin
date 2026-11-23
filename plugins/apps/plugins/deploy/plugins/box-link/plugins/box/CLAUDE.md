@@ -31,7 +31,9 @@ whose own stream a demo's stand-in box is read through.
 - **Memory** — `packages/host-memory`'s `readHostMemory`: in use = total
   minus what the system can hand out. An OS it cannot read throws (the
   stream ends loudly, never made-up meters).
-- **Disk** — `statfs` on the install (`REPO_ROOT`), df's arithmetic.
+- **Disk** — `statfs` on the data root (`dataRoot()`), df's arithmetic. Never
+  the checkout: in a released (compiled) box `REPO_ROOT` is the virtual
+  `/$bunfs/root`, which statfs answers ENOENT.
 - **Build** — `buildId` is the commit the served bundle was built from
   (`build/server-build-id`'s `getServerCommit`), `null` when the dist names
   none.

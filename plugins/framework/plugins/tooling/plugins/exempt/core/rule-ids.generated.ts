@@ -176,6 +176,7 @@ export type ExemptableRuleId =
   | "reactive-server-io/no-reactive-server-io"
   | "relocate:moved-plugins-unnamed"
   | "repo-root/no-depth-counted-path"
+  | "repo-root/no-statfs-of-repo-root"
   | "repo-walk-safety/no-adhoc-repo-listing"
   | "repo-walk-safety/no-adhoc-repo-walk"
   | "report-sink/collect-through-companion"

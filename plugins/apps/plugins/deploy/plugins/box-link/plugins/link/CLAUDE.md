@@ -38,9 +38,12 @@ One per deployment, enabled while its tunnel is ready (a stand-in's always):
 `GET /api/host-only/box-link/stream` (over the socket with `fetch(…, { unix
 })`), frames read with `readNdjson` + `readBoxFrame`. A 45 s watchdog (three
 missed beats, on awake time) aborts it. A failure reconnects with a bounded
-backoff (2 s → 2 min, reset by a hello — a bound around a network peer); a
-404 leaves it idle until kicked. A malformed frame or line is reported
-(`box-link:stream-frame`) and ends the attempt.
+backoff (2 s → 2 min, reset by a second beat — a bound around a network peer; never
+by a hello or a first beat alone, or a box whose sample throws would reconnect every few s);
+a 404 leaves it idle until kicked. A malformed frame or line is reported
+(`box-link:stream-frame`) and ends the attempt, and so is a producer error the
+box streams (`box-link:box-stream-failed` — the box's own code threw, and the
+box files no report main sees).
 
 Request-level outcomes map onto the reducer, on evidence: 404 → `outdated
 (route-missing)`; the box ANSWERING with a failure (a non-OK status, the

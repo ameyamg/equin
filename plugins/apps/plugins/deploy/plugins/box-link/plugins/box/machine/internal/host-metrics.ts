@@ -87,8 +87,9 @@ const memoryIo: HostMemoryIo = {
  * minus what the system can hand out); disk the filesystem holding the
  * install's data (`dataRoot()` — its database, attachments, releases; never
  * `REPO_ROOT`, which in a released binary is the bundle's virtual `/$bunfs`
- * root, which `statfs` cannot read). Throws on a host it cannot read — a failed beat ends
- * the stream loudly rather than sending made-up meters.
+ * root, which `statfs` cannot read — `repo-root/no-statfs-of-repo-root`).
+ * Throws on a host it cannot read — a failed beat ends the stream loudly
+ * rather than sending made-up meters.
  */
 export function createHostSampler(): { read(): Promise<BoxHostMetrics> } {
   let prev: CpuTicks | null = null;
