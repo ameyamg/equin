@@ -61,6 +61,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "heavy"],
+    why: "Needs --path to a list of 30+ rows and scrolls up to 3200 rows in up to 2000 steps.",
+  },
+} satisfies E2eScript;
 
 const PAGE = requirePage(
   "live-pages-scroll.ts --path <route> [--click <text>] [--view <type>] [--scroller <css>] [--width <px>] [--expect-placeholders] [--rows N] [--expect N] [--out <prefix>]",

@@ -41,6 +41,17 @@ import {
   withBrowser,
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["arguments", "native-helper"],
+    why: "Verifies a staged/packaged release bundle at a required --url.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "Usage: bun plugins/release/e2e/release-boot-verify.ts --url <url> [--expect-selector <css>] [--expect-text <substr>] [--settle <ms>] [--out <path>]";

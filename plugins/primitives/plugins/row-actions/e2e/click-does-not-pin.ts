@@ -26,6 +26,14 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 /** Pages sidebar tree row — the selectors `row-actions-overflow.ts` proved stable. */
 const ROW_SELECTOR = arg("row", '[data-ui-owner^="TreeRowChrome"]');

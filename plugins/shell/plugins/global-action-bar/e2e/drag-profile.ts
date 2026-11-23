@@ -15,6 +15,17 @@ import {
   pathUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Chrome-traced CPU/restyle profile of bar drags, for a person to read.",
+  },
+} satisfies E2eScript;
 
 const path = arg("path", "/sonata");
 const rounds = numArg("rounds", 3);

@@ -35,6 +35,17 @@ import {
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { isContentHost } from "@plugins/infra/plugins/namespace/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Mints a hostile prototype into the prototypes dir every worktree shares, for the run.",
+  },
+} satisfies E2eScript;
 
 const r = report("frame: content isolation probe");
 const app = new URL(pathUrl("/"));

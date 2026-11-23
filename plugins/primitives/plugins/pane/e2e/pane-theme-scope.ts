@@ -53,6 +53,17 @@ import {
   withBrowser,
   type Session,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --page <blockId>.",
+  },
+} satisfies E2eScript;
 
 type Page = Session["page"];
 

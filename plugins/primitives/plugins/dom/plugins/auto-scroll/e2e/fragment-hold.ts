@@ -19,6 +19,17 @@ import {
   pageUrl,
   report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["native-helper"],
+    why: "Runs Playwright's WebKit with an iPhone profile, which the harness does not install.",
+  },
+} satisfies E2eScript;
 
 const FRAGMENT =
   "#:~:text=A%20review%20queue%2C%20so%20I%20never%20lose%20track%20of%20the%20tasks%20I%20launched";

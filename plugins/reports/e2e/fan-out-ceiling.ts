@@ -3,6 +3,17 @@ import {
   numArg,
   report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["external-effects"],
+    why: "Files 30 real reports plus a report-storm row.",
+  },
+} satisfies E2eScript;
 
 // Drives the cross-fingerprint fan-out ceiling against a deployed backend.
 //

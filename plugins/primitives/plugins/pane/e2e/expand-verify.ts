@@ -23,6 +23,14 @@ import {
   type Harness,
   type Session,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 // "Expand pane", not "Expand": bare "Expand" is already the accessible name of
 // every tree-row chevron, collapsible header and span lane, so a pane action

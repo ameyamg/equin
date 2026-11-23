@@ -86,6 +86,42 @@ channel that silently outranks the derivation, which nothing in the repo ever
 set) and was deleted with it, so a second env-shaped target has to be
 unspellable rather than merely absent today.
 
+## Every script declares what it is
+
+A module under a plugin's `e2e/` is a **helper** — another module imports it
+(the shared module graph's runtime edges), it is the folder's `index.ts`
+barrel, or it holds declarations only (types, functions, constants: it does
+nothing when run, whoever reaches it by `import type`) — or a **script**
+(nothing imports it and it executes). A helper declares nothing. A script
+declares, at top level, as literals:
+
+```ts
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",          // "test": the exit code is the verdict · "tool": an artifact/measurement for a person
+  target: "build",       // "build" (this checkout's deploy) · { composition: "website" } · "none" (no app)
+  writes: true,          // changes its deploy's data → needs a writable build, never main
+  run: "auto",           // or { manual: ["timing", "heavy"], why: "one specific sentence" }
+} satisfies E2eScript;
+```
+
+`run.manual` reasons are a closed list (`MANUAL_REASONS`): `external-effects`
+(files real reports, touches real accounts), `accounts`, `timing`, `heavy`,
+`stateful` (git, push, `~/.equin`, the checkout, other worktrees), `native-helper`,
+`arguments` (needs caller-chosen arguments), `interactive`. `"auto"` means safe
+and meaningful unattended: no arguments, on an agent build, deterministic,
+minutes at most, cleaning up after itself. When in doubt, `manual`.
+
+A module loaded BY PATH rather than imported (a bundler entry) declares
+`{ kind: "helper", why: "<who loads it>" }`.
+
+This is what a runner selects by — never a name pattern (`*-verify.ts`, a
+`finish()` call). tsc checks the values (`satisfies`); `e2e-harness:scripts-declared`
+holds every module to the split, reads each declaration statically (importing a
+script runs it — hence literals only) and rejects `writes: false` on a script
+calling `openDeployDb`, and `writes: true` with `target: "none"`.
+
 ## A script that goes green without exercising the app is worse than no script
 
 It gets cited as evidence. Three mechanisms here exist only to make that outcome

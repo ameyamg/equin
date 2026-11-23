@@ -18,6 +18,17 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Lists field vs button heights on the screen chosen by --path/--click for a person to read.",
+  },
+} satisfies E2eScript;
 
 interface FieldSample {
   slot: string;

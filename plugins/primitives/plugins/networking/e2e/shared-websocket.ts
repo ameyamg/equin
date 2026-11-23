@@ -25,6 +25,14 @@ import {
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import type { Page } from "playwright";
 import { tapSharedSocket, type SocketTap } from "./index";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const WS = "/ws/notifications";
 /** How long a push may take to reach a tab over a live connection. */

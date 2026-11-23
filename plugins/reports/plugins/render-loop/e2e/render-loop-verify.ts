@@ -22,6 +22,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { ANIMATION_HOST_ATTR, RENDER_LOOP } from "../core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["external-effects"],
+    why: "Files real render-loop reports into the deploy.",
+  },
+} satisfies E2eScript;
 
 interface Filed {
   message: string;

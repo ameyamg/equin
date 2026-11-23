@@ -47,6 +47,17 @@ import {
   thawTab,
 } from "@plugins/infra/plugins/mcp/plugins/browser/core";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["external-effects", "heavy", "arguments"],
+    why: "Freezes and crashes tabs in 8-12 s phases, files real stall reports, and needs --no-record.",
+  },
+} satisfies E2eScript;
 
 interface StallRow extends Record<string, unknown> {
   data: {

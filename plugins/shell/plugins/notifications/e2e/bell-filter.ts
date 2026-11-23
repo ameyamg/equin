@@ -50,6 +50,14 @@ import {
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import type { Page } from "playwright";
 import { AUDIENCES, type Audience } from "@plugins/audience/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 /** Both live-state sockets (worktree + central). */
 const LIVE_SOCKETS = ["/ws/notifications", "/ws/central-notifications"];

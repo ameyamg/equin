@@ -21,6 +21,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["interactive"],
+    why: "Photographs the bar's mark; the ring shot needs a build started in parallel (--wait-ring).",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? "/tmp/collapsed-mark";
 const waitRing = Number(arg("wait-ring") ?? "0");

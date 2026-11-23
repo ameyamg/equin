@@ -59,6 +59,17 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { EFFORT_UNSET_LABEL } from "@plugins/conversations/plugins/effort-provider/core";
 import type { Locator, Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --task <taskId>.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? "/tmp/launch-options";
 

@@ -46,6 +46,14 @@ import {
 } from "@plugins/primitives/plugins/data-view/plugins/custom-columns/e2e";
 import { CUSTOM_COLUMNS_SET } from "@plugins/primitives/plugins/data-view/plugins/custom-columns/core";
 import { runRowKey, runs } from "@plugins/runs/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/runs-custom-columns";
 const RUNS = { surface: "runs", store: "runs/runs.jsonc" };

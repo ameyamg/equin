@@ -40,6 +40,14 @@ import {
   waitFor,
   waitForNetworkIdle,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 const OUT = "/tmp/dialog-box";
 const PANEL = '[data-slot="dialog-panel"]';

@@ -41,6 +41,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { notificationIdKind } from "@plugins/shell/plugins/notifications/core";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy"],
+    why: "Leak test: 10 iterations each waiting out a toast, with heap snapshots.",
+  },
+} satisfies E2eScript;
 
 const iterations = numArg("iterations", 10);
 const out =

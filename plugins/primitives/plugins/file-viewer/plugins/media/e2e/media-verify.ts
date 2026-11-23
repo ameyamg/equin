@@ -12,6 +12,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --file pointing at a host media file; reports player state.",
+  },
+} satisfies E2eScript;
 
 const file = arg("file");
 if (!file) throw new Error("--file <host path> is required");

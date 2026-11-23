@@ -4,6 +4,17 @@
 //   ./equin run plugins/ui/plugins/segmented-progress-bar/plugins/arc/e2e/pin-verify.ts --path /agents/c/<id>
 import { pageUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { withBrowser } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --path to a conversation whose header shows the arc.",
+  },
+} satisfies E2eScript;
 
 const url = pageUrl();
 await withBrowser(async (h) => {

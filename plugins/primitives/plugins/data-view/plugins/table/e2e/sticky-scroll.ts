@@ -35,6 +35,17 @@ import {
   withBrowser,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Default routes name a hardcoded view id and deployment id that must exist in the deploy.",
+  },
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/sticky-scroll";
 // A flat table in the pane's `Scroll` (the Tasks "Sidequests flat" view —

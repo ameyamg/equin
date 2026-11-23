@@ -21,6 +21,17 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Stays 95 s per path per CPU throttle to measure profiler cost.",
+  },
+} satisfies E2eScript;
 
 const PATHS = (arg("paths") ?? "/").split(",");
 const CPUS = (arg("cpu") ?? "1,4,6").split(",").map(Number);

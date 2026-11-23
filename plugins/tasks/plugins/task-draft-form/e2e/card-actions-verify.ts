@@ -45,6 +45,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --task <taskId>.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? "/tmp/draft-card-actions";
 /**

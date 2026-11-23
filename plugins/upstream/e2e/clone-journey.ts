@@ -45,6 +45,17 @@ import {
 } from "@plugins/framework/plugins/product-name/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { runMigrationJourney } from "./migration-journey";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["stateful", "heavy"],
+    why: "Builds temp git repos, runs the real CLI migration journey and a --dry-run push to this checkout's remote.",
+  },
+} satisfies E2eScript;
 
 const GIT_TIMEOUT_MS = 60_000;
 

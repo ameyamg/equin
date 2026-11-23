@@ -12,9 +12,11 @@
 import pinnedPlaywrightInvocation from "./pinned-playwright-invocation";
 import browserThroughHarness from "./browser-through-harness";
 import targetNotEnvDerived from "./target-not-env-derived";
+import scriptsDeclared from "./scripts-declared";
 
 export default [
   pinnedPlaywrightInvocation,
   browserThroughHarness,
   targetNotEnvDerived,
+  scriptsDeclared,
 ];

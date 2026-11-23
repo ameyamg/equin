@@ -45,6 +45,17 @@ import {
   numArg,
   targetNamespace,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["timing"],
+    why: "Trigger-time baseline measurement appended to a plan doc, not a verdict.",
+  },
+} satisfies E2eScript;
 
 const REPEATS = numArg("repeats", 3);
 const JSON_OUT = arg("json");
