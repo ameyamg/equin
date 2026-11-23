@@ -50,5 +50,8 @@ export const _testDigestGeneration = testDigestGeneration.table;
 
 const testFileStatus = defineEntity(testFileStatusEntityRef, {
   primaryKey: "path",
+  // A row derived before the own counts existed has none: 0 until the file's
+  // next recompute (its digest moves, or a run of it is ingested).
+  columns: { ownPassed: { default: 0 }, ownFailed: { default: 0 } },
 });
 export const _testFileStatus = testFileStatus.table;

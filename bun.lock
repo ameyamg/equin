@@ -3966,6 +3966,10 @@
       "name": "@equin/plugin-framework-cli-test-digest",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/test/plugins/main-standing": {
+      "name": "@equin/plugin-framework-cli-test-main-standing",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/test/plugins/record": {
       "name": "@equin/plugin-framework-cli-test-record",
       "version": "0.0.1",
@@ -10346,6 +10350,8 @@
     "@equin/plugin-framework-cli-test": ["@equin/plugin-framework-cli-test@workspace:plugins/framework/plugins/cli/plugins/test"],
 
     "@equin/plugin-framework-cli-test-digest": ["@equin/plugin-framework-cli-test-digest@workspace:plugins/framework/plugins/cli/plugins/test/plugins/digest"],
+
+    "@equin/plugin-framework-cli-test-main-standing": ["@equin/plugin-framework-cli-test-main-standing@workspace:plugins/framework/plugins/cli/plugins/test/plugins/main-standing"],
 
     "@equin/plugin-framework-cli-test-record": ["@equin/plugin-framework-cli-test-record@workspace:plugins/framework/plugins/cli/plugins/test/plugins/record"],
 

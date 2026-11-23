@@ -1,6 +1,7 @@
 import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { db } from "@plugins/database/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   defineFileWatcher,
@@ -15,7 +16,7 @@ import {
   testRunRecordOpId,
 } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
 import { testRunRecordsDir } from "@plugins/framework/plugins/cli/plugins/test/data-dirs";
-import { ingestedOpIds, ingestRunRecord } from "../../server";
+import { ingestedOpIds, ingestRunRecord, testRunsIngested } from "../../server";
 
 // The harvest's ingest on THIS backend: every `./equin test` run on the host
 // leaves a record in the host-global records dir; each serving backend reads
@@ -38,6 +39,8 @@ const reportedBad = new Set<string>();
 
 export type IngestPassResult = {
   ingested: number;
+  /** Of those, the records with a file that did not pass. */
+  withFailures: number;
   skipped: number;
   malformed: number;
 };
@@ -54,7 +57,7 @@ export async function ingestPass(dir: string): Promise<IngestPassResult> {
     names = await readdir(dir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT")
-      return { ingested: 0, skipped: 0, malformed: 0 };
+      return { ingested: 0, withFailures: 0, skipped: 0, malformed: 0 };
     throw err;
   }
   const byOpId = new Map<string, string>();
@@ -63,7 +66,12 @@ export async function ingestPass(dir: string): Promise<IngestPassResult> {
     if (opId !== null) byOpId.set(opId, name);
   }
   const seen = await ingestedOpIds(db, [...byOpId.keys()]);
-  const result: IngestPassResult = { ingested: 0, skipped: 0, malformed: 0 };
+  const result: IngestPassResult = {
+    ingested: 0,
+    withFailures: 0,
+    skipped: 0,
+    malformed: 0,
+  };
   for (const [opId, name] of byOpId) {
     if (seen.has(opId)) continue;
     const path = join(dir, name);
@@ -98,7 +106,11 @@ export async function ingestPass(dir: string): Promise<IngestPassResult> {
       result.malformed++;
       continue;
     }
-    if (await ingestRunRecord(db, parsed.data)) result.ingested++;
+    if (await ingestRunRecord(db, parsed.data, runtimeNamespace())) {
+      result.ingested++;
+      if (parsed.data.files.some((f) => f.outcome !== "passed"))
+        result.withFailures++;
+    }
   }
   return result;
 }
@@ -117,7 +129,8 @@ const passes = createCoalescer({
   name: "tests.ingest-passes",
   run: () =>
     runTracked("tests:ingest-pass", async () => {
-      await ingestPass(testRunRecordsDir.path);
+      const { withFailures } = await ingestPass(testRunRecordsDir.path);
+      if (withFailures > 0) await testRunsIngested.emit({ withFailures });
     }),
 });
 

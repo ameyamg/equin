@@ -33,6 +33,8 @@ export async function ingestedOpIds(
 export async function ingestRunRecord(
   db: Db,
   record: TestRunRecord,
+  /** This checkout's namespace (`recomputeFileStatus`'s own runs). */
+  ownSlug: string,
 ): Promise<boolean> {
   return db.transaction(async (tx) => {
     const finishedAt = new Date(record.finishedAt);
@@ -93,6 +95,7 @@ export async function ingestRunRecord(
     await recomputeFileStatus(
       tx,
       record.files.map((f) => f.path),
+      ownSlug,
     );
     return true;
   });

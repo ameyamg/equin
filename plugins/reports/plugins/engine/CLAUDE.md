@@ -317,8 +317,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `change-feed-exclusion` "report_trend_days"
     - `db-trigger` "reports.trend"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×10
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×11
     - `build/server-build-id` ×4
     - `shell/notifications` ×4
     - `database/db-triggers` ×2
@@ -367,7 +367,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×14
     - `conversations` ×5
     - `infra` ×4
@@ -380,6 +380,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `integrations/github-events`
     - `page/place/google`
     - `stats/scoreboard`
+    - `tasks/supervisor-roles/events/report-streams`
 - Exemptions:
   - Exempts itself from:
     - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)

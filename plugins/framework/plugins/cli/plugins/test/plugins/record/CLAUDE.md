@@ -20,6 +20,7 @@ The test harvest's file formats as zod schemas — a leaf every writer
     - `debug/tests/idle-runner`
     - `framework/cli/push/test-gate`
     - `framework/cli/test`
+    - `framework/cli/test/main-standing`
 - Core:
   - Exports (types):
     - `CheckoutDigests`

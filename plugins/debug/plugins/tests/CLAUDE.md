@@ -19,12 +19,35 @@ harvested like any other.
 
 A result is keyed by (path, digest). The checkout's own digests
 (`test_checkout_digests`) come from `./equin test-digest`, run as the
-`tests.checkout-digests` supervised job only while the page is open: the
-`tests.digest-generation` value's `whileSubscribed` asks for it on subscribe
-and on every advance of main, and the child answers `unchanged` when the tree
-hash is the stored one. The status rule is `deriveStatus` (core, pure);
-`recomputeFileStatus` (server) is the ONLY writer of `test_file_status`, run
-after each ingested record (its files) and each new digest set (all).
+`tests.checkout-digests` supervised job, and the child answers `unchanged`
+when the tree hash is the stored one:
+
+- **on main, always**: at every boot (`tests.checkout-digests-boot`, a host
+  warm-up — every push restarts main, and a ref reaction is skipped while the
+  backend is down) and on every advance of main. Main's verdicts follow its
+  head: its runner (`plugins/idle-runner`) re-runs what an advance affected;
+- elsewhere only while the page is open: the `tests.digest-generation`
+  value's `whileSubscribed` asks on subscribe and on every advance of main.
+
+The status rule is `deriveStatus` (core, pure); `recomputeFileStatus`
+(server) is the ONLY writer of `test_file_status`, run after each ingested
+record (its files) and each new digest set (the files whose digest moved, or
+that came or went).
+
+- **One row, one code.** The row's last result (`lastOutcome`, origin, op,
+  cases, duration) is the newest result on the CURRENT digest — what the
+  status is derived from — and only for a `stale` file the newest at any
+  digest. Never a newer run of other code beside it (a row once read
+  "failing" from main's run next to "passed" from an agent's run of its own
+  change).
+- **Own runs** (`ownPassed` / `ownFailed`): of the current-digest results,
+  the ones this checkout's own runs recorded — `slug` = this backend's
+  namespace, the one definition of "main's own run" (failing-report's judge
+  uses the same). Main's runner selection reads them: one own failure is
+  confirmed by a second run, and a failure only another checkout saw on this
+  very code is verified here.
+- An ingest pass that took in runs with failures emits `tests.runsIngested`
+  (the runner's next selection).
 
 - Not known yet is a state: until the first digests land the page shows the
   computing state, never an empty tree.
@@ -44,7 +67,7 @@ files a task about the `test-file` subject under the Tests category.
 
 ## Plugin reference
 
-- Description: Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), and the Tests task category Investigate files under.
+- Description: Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), the tests.runsIngested event (an ingest pass took in runs with failures), and the Tests task category Investigate files under.
 - Web:
   - Slots:
     - `tests.actions`
@@ -112,13 +135,16 @@ files a task about the `test-file` subject under the Tests category.
     - `_testFileResults`
     - `_testFileStatus`
     - `_testRuns`
+    - `_testRunsIngestedTriggers`
     - `ingestedOpIds`
     - `ingestRunRecord`
     - `recomputeFileStatus`
     - `testDigestsSettled`
+    - `testRunsIngested`
   - Register:
     - `defineJob('tests.results-cap')`
     - `defineTriggerEvent('tests.digestsSettled')`
+    - `defineTriggerEvent('tests.runsIngested')`
   - Resources:
     - `tests.case-failures` (keyed)
     - `tests.case-failures:rows` (keyed, point)
@@ -138,6 +164,7 @@ files a task about the `test-file` subject under the Tests category.
     - `defineSupervisedJob('tests.checkout-digests')`
     - `defineSupervisedJob('tests.run-now')`
     - `defineRefReaction('tests.checkout-digests (refs/heads/main)')`
+    - `defineWarmup('tests.checkout-digests-boot')`
     - `defineWarmup('tests.ingest-catch-up')`
   - Routes: `POST /api/debug/tests/run-now`
 - Core:
@@ -219,6 +246,6 @@ files a task about the `test-file` subject under the Tests category.
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Sub-plugins:
   - **`failing-report`** — Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind…
-  - **`idle-runner`** — Runs stale and never-run test files while the host is idle: on host.idleBegan it brings the checkout's test digests current; each tests.digestsSettled (and each batch's end, after its record is…
+  - **`idle-runner`** — The checkout's test runner: runs the test files whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run) — on main whenever an opportunistic op may run, so…
 
 <!-- AUTOGENERATED:END -->

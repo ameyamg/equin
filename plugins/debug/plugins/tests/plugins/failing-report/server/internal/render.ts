@@ -17,17 +17,23 @@ export function renderTestFailingTask(
   d: TestFailingPayload,
 ): { title: string; description: string } {
   const lines: string[] = [
-    `Main's idle test runner (Debug → Tests) saw \`${d.path}\`` +
+    `Main's test runner (Debug → Tests) saw \`${d.path}\`` +
       (d.pluginId === null ? "" : ` (plugin \`${d.pluginId}\`)`) +
-      " go from passing to failing, and a second run on the " +
-      "same code confirmed it — so this is not a single flaky run.",
+      (d.lastPassed === null
+        ? " fail on main's code"
+        : " go from passing to failing") +
+      ", and a second run on the same code confirmed it — so this is not a single flaky run.",
     "",
     "**Where it started:**",
-    runLine("last passed on main", d.lastPassed),
+    d.lastPassed === null
+      ? "- last passed on main: no pass on record (broken before the kept results, or never passed on main)"
+      : runLine("last passed on main", d.lastPassed),
     runLine("first seen failing on main", d.firstFailed),
     runLine("latest failure", d.latest),
-    `The culprit is in \`git log ${shortCommit(d.lastPassed.commit)}..${shortCommit(d.firstFailed.commit)}\` ` +
-      "(main's checkout tests whatever main is at, so the range can span several pushes).",
+    d.lastPassed === null
+      ? `The culprit is at or before \`${shortCommit(d.firstFailed.commit)}\`.`
+      : `The culprit is in \`git log ${shortCommit(d.lastPassed.commit)}..${shortCommit(d.firstFailed.commit)}\` ` +
+        "(main's checkout tests whatever main is at, so the range can span several pushes).",
     "",
     "**What to do:**",
     `1. Reproduce from a worktree: \`./equin test ${d.path}\`.`,

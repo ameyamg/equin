@@ -1,6 +1,6 @@
 {
-  "id": "f108b2c5-c416-49de-bb41-94cd069cc92f",
-  "prevId": "373e6477-675d-435a-a183-93e770d88539",
+  "id": "0a0faba0-895b-4848-977f-736176c3e30c",
+  "prevId": "f108b2c5-c416-49de-bb41-94cd069cc92f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11208,6 +11208,20 @@
           "primaryKey": false,
           "notNull": true
         },
+        "own_passed": {
+          "name": "own_passed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "own_failed": {
+          "name": "own_failed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "history": {
           "name": "history",
           "type": "jsonb",
@@ -19169,6 +19183,66 @@
     },
     "public.tests_digestsSettled_triggers": {
       "name": "tests_digestsSettled_triggers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "job_name": {
+          "name": "job_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_with": {
+          "name": "job_with",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "one_shot": {
+          "name": "one_shot",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tests_runsIngested_triggers": {
+      "name": "tests_runsIngested_triggers",
       "schema": "",
       "columns": {
         "id": {

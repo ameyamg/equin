@@ -5,7 +5,7 @@
  * checkout no longer has.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
@@ -23,6 +23,9 @@ import {
 } from "./tables";
 
 let t: TestDb;
+
+/** The namespace whose runs are the checkout's own. */
+const OWN = "main-ns";
 
 beforeAll(async () => {
   t = await createTestDb({ prefix: "debug_tests_status" });
@@ -45,12 +48,13 @@ function record(
   opId: string,
   at: string,
   files: [path: string, digest: string, outcome: "passed" | "failed"][],
+  slug = "wt",
 ): TestRunRecord {
   return {
     v: 1,
     opId,
     repo: "/repo",
-    slug: "wt",
+    slug,
     origin: "agent",
     head: null,
     treeHash: "tree",
@@ -113,15 +117,15 @@ describe("ingest + recomputeFileStatus", () => {
     const r2 = record("op-2", "2026-11-11T11:00:00.000Z", [
       [F.flaky, "cur", "failed"],
     ]);
-    expect(await ingestRunRecord(t.db, r1)).toBe(true);
-    expect(await ingestRunRecord(t.db, r2)).toBe(true);
+    expect(await ingestRunRecord(t.db, r1, OWN)).toBe(true);
+    expect(await ingestRunRecord(t.db, r2, OWN)).toBe(true);
     // A record not yet seen changes nothing when ingested again.
-    expect(await ingestRunRecord(t.db, r1)).toBe(false);
+    expect(await ingestRunRecord(t.db, r1, OWN)).toBe(false);
     expect((await t.db.select().from(_testRuns)).length).toBe(2);
     expect((await t.db.select().from(_testFileResults)).length).toBe(5);
     expect((await t.db.select().from(_testCaseFailures)).length).toBe(3);
 
-    await recomputeFileStatus(t.db, "all");
+    await recomputeFileStatus(t.db, "all", OWN);
     expect(await statuses()).toEqual({
       [F.fail]: "failing",
       [F.flaky]: "flaky",
@@ -140,7 +144,7 @@ describe("ingest + recomputeFileStatus", () => {
       pluginId: "a",
       generation: "g2",
     });
-    const { deleted } = await recomputeFileStatus(t.db, "all");
+    const { deleted } = await recomputeFileStatus(t.db, "all", OWN);
     expect(deleted).toBe(4);
     expect(await statuses()).toEqual({ [F.pass]: "passing" });
   });
@@ -153,9 +157,56 @@ describe("ingest + recomputeFileStatus", () => {
       status: "failing",
       currentPassed: 0,
       currentFailed: 1,
+      ownPassed: 0,
+      ownFailed: 0,
       history: [],
     });
-    await recomputeFileStatus(t.db, [F.fail, F.pass]);
+    await recomputeFileStatus(t.db, [F.fail, F.pass], OWN);
     expect(await statuses()).toEqual({ [F.pass]: "passing" });
+  });
+
+  test("the row's last result is about the code its status is (never a newer run of other code), and own runs are counted apart", async () => {
+    const path = "b/mixed.test.ts";
+    await t.db.insert(_testCheckoutDigests).values({
+      path,
+      digest: "main",
+      runner: "bun:test",
+      pluginId: "b",
+      generation: "g3",
+    });
+    // Main failed it twice on its code; an agent then passed it on ITS
+    // change (another digest) — newer, but about other code.
+    await ingestRunRecord(
+      t.db,
+      record(
+        "op-m1",
+        "2026-11-12T10:00:00.000Z",
+        [[path, "main", "failed"]],
+        OWN,
+      ),
+      OWN,
+    );
+    await ingestRunRecord(
+      t.db,
+      record("op-w1", "2026-11-12T10:30:00.000Z", [[path, "main", "failed"]]),
+      OWN,
+    );
+    await ingestRunRecord(
+      t.db,
+      record("op-w2", "2026-11-12T11:00:00.000Z", [[path, "branch", "passed"]]),
+      OWN,
+    );
+    const [row] = await t.db
+      .select()
+      .from(_testFileStatus)
+      .where(eq(_testFileStatus.path, path));
+    expect(row).toMatchObject({
+      status: "failing",
+      lastOutcome: "failed",
+      lastOpId: "op-w1",
+      currentFailed: 2,
+      ownFailed: 1,
+      ownPassed: 0,
+    });
   });
 });

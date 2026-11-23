@@ -36,6 +36,8 @@ const UPSERT_SET = Object.fromEntries(
 export async function recomputeFileStatus(
   exec: DbExec,
   paths: readonly string[] | "all",
+  /** This checkout's namespace: the `slug` of the runs that are its own. */
+  ownSlug: string,
 ): Promise<{ upserted: number; deleted: number }> {
   if (paths !== "all" && paths.length === 0) return { upserted: 0, deleted: 0 };
   const scope = paths === "all" ? null : [...new Set(paths)];
@@ -100,13 +102,26 @@ export async function recomputeFileStatus(
 
   const rows: StatusRow[] = digestRows.map((d) => {
     const list = byPath.get(d.path) ?? [];
-    const last = list[0];
+    // The result the row shows beside its status: the newest on the CURRENT
+    // digest — the results the status is derived from — and only when there
+    // is none (stale) the newest at any digest. Never a newer result about
+    // other code: a row read "failing" (main's code) next to "passed" (an
+    // agent's run of its own change).
+    const last = list.find((r) => r.digest === d.digest) ?? list[0];
     let currentPassed = 0;
     let currentFailed = 0;
+    let ownPassed = 0;
+    let ownFailed = 0;
     for (const r of list) {
       if (r.digest !== d.digest) continue;
-      if (r.outcome === "passed") currentPassed++;
-      else currentFailed++;
+      const own = r.slug === ownSlug;
+      if (r.outcome === "passed") {
+        currentPassed++;
+        if (own) ownPassed++;
+      } else {
+        currentFailed++;
+        if (own) ownFailed++;
+      }
     }
     const history: StatusHistoryEntry[] = list
       .slice(0, STATUS_HISTORY_MAX)
@@ -133,6 +148,8 @@ export async function recomputeFileStatus(
       durationMs: last?.durationMs ?? null,
       currentPassed,
       currentFailed,
+      ownPassed,
+      ownFailed,
       history,
     };
   });

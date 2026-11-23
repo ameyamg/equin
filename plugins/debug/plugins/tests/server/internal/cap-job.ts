@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { and, eq, gt, inArray, notExists, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { RESULTS_KEPT_PER_FILE } from "../../core";
 import { chunked } from "./db-exec";
@@ -54,7 +55,11 @@ export async function capResults(): Promise<{ deleted: number }> {
           ),
       ),
     );
-  await recomputeFileStatus(db, [...new Set(over.map((r) => r.path))]);
+  await recomputeFileStatus(
+    db,
+    [...new Set(over.map((r) => r.path))],
+    runtimeNamespace(),
+  );
   return { deleted: over.length };
 }
 

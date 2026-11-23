@@ -93,7 +93,7 @@ function payloadLines(p: VisitorPayload | null): string[] {
 export function renderWebsiteVisitorTask(
   row: Pick<ReportRow, "count">,
   e: WebsiteVisitorError,
-  category: ReportCategory,
+  category: VisitorCategory,
 ): { title: string; description: string } {
   const where = e.hostname ?? e.deploymentId;
   const what = e.errorType ?? e.siteKind ?? "error";
@@ -130,8 +130,16 @@ export function renderWebsiteVisitorTask(
   };
 }
 
+/**
+ * The visitor kinds' categories: a site runs no tests, so a `test` category a
+ * site somehow stamped is imported as an error — shown, never dropped.
+ */
+type VisitorCategory = Exclude<ReportCategory, "test">;
+const visitorCategory = (c: ReportCategory): VisitorCategory =>
+  c === "test" ? "error" : c;
+
 /** How a filed task names what the visitor hit, per category. */
-const TASK_NOUN: Record<ReportCategory, string> = {
+const TASK_NOUN: Record<VisitorCategory, string> = {
   error: "Website visitor error",
   "slow-op": "Website visitor slowness",
 };
@@ -142,7 +150,7 @@ const TASK_NOUN: Record<ReportCategory, string> = {
  * Slow-op reports stream, a warning bell), never the error ones.
  */
 const KIND_OF: Record<
-  ReportCategory,
+  VisitorCategory,
   {
     kind: string;
     notif: string;
@@ -173,12 +181,15 @@ const KIND_OF: Record<
 export function importedKindOf(
   record: Pick<SiteReportRecord, "kind" | "category">,
 ): string {
-  if (record.category !== null) return KIND_OF[record.category].kind;
+  if (record.category !== null)
+    return KIND_OF[visitorCategory(record.category)].kind;
   const local = reportKindCategory(record.kind);
-  return KIND_OF[local.kind === "registered" ? local.category : "error"].kind;
+  return KIND_OF[
+    local.kind === "registered" ? visitorCategory(local.category) : "error"
+  ].kind;
 }
 
-function websiteVisitorKind(category: ReportCategory) {
+function websiteVisitorKind(category: VisitorCategory) {
   const k = KIND_OF[category];
   return ReportKind({
     kind: k.kind,

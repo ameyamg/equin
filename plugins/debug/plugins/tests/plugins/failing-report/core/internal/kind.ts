@@ -31,8 +31,12 @@ export const TestFailingPayloadSchema = z.object({
   path: z.string(),
   /** The plugin the file belongs to (null when the digest named none). */
   pluginId: z.string().nullable(),
-  /** The newest run of main's checkout in which the file passed. */
-  lastPassed: RunRefSchema,
+  /**
+   * The newest run of main's checkout in which the file passed; null when
+   * main has no pass of it on record (broken before the kept results, or
+   * never passed here).
+   */
+  lastPassed: RunRefSchema.nullable(),
   /** The first run of main's checkout after that pass in which it failed. */
   firstFailed: RunRefSchema,
   /** The run this occurrence is about (the newest failure on the current code). */
@@ -73,7 +77,10 @@ export function testFailingMessage(d: TestFailingPayload): string {
       ? "does not load"
       : `fails (${d.failedCaseCount} case${d.failedCaseCount === 1 ? "" : "s"})`;
   return (
-    `test ${d.path} ${what} on main — passed at ${shortCommit(d.lastPassed.commit)}, ` +
+    `test ${d.path} ${what} on main — ` +
+    (d.lastPassed === null
+      ? "no pass on record, "
+      : `passed at ${shortCommit(d.lastPassed.commit)}, `) +
     `failing since ${shortCommit(d.firstFailed.commit)}`
   );
 }

@@ -6,14 +6,13 @@ import {
 } from "@plugins/framework/plugins/tooling/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  MAIN_COMPOSITION_ID,
-  namespaceFor,
-} from "@plugins/infra/plugins/namespace/core";
-import {
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
-import { unsetEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  envEntries,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { openRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/cli";
 import {
   testDigests,
@@ -21,7 +20,6 @@ import {
 } from "@plugins/framework/plugins/cli/plugins/test/plugins/digest/core";
 import { TESTS_FAILED_EXIT } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
 import {
-  affectedTests,
   buildVerdictIndex,
   describeJudgement,
   isProvingPass,
@@ -29,10 +27,16 @@ import {
   restsOnMergeBase,
   type FailureJudgement,
   type VerdictIndex,
-} from "../../core";
+} from "@plugins/framework/plugins/cli/plugins/test/plugins/main-standing/core";
+import {
+  mainSlug as mainNamespace,
+  readTestRunRecords,
+  standingLines,
+  standingOnMain,
+} from "@plugins/framework/plugins/cli/plugins/test/plugins/main-standing/cli";
 import type { TestRunRecord } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
-import { readTestRunRecords } from "./records";
 import { withScratchCheckout } from "./scratch-checkout";
+import { affectedTests } from "../../core";
 
 // A wedge-breaker for one metadata read, not a latency budget.
 const GIT_TIMEOUT_MS = 30_000;
@@ -76,7 +80,9 @@ async function runTests(
   console.log(`\n$ (${root}) ./${CLI_NAME} test <${files.length} files>`);
   // Never the foreground hand-off: the gate waits for the verdict itself, and
   // a handed-off run would exit before it had one.
-  const env = { ...process.env };
+  // The gate judges each failure against main itself (and prints main's
+  // report for it): the run need not print its own standing lines too.
+  const env = { ...process.env, ...envEntries({ TEST_NO_STANDING: "1" }) };
   unsetEnv("FOREGROUND_DEADLINE", env);
   const { exitCode } = await spawnPassthrough(
     [join(root, CLI_NAME), "test", ...files],
@@ -174,7 +180,7 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
   );
   if (affected.length === 0) return { ok: true };
 
-  const mainSlug = namespaceFor(MAIN_COMPOSITION_ID, { kind: "main" });
+  const mainSlug = mainNamespace();
   let records = await readTestRunRecords();
   const known = buildVerdictIndex(records, mainSlug);
   const toRun = affected.filter((f) => {
@@ -280,7 +286,8 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
   }
 
   console.log("");
-  if (preExisting.length > 0) printPreExisting(preExisting);
+  if (preExisting.length > 0)
+    await printPreExisting(root, preExisting, base, known);
   if (batchOnly.length > 0)
     console.error(
       [
@@ -360,20 +367,32 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
 }
 
 /**
- * Failures that are not this change's doing — said loudly anyway, so a file
- * that is red on main is never silently waved through, and a case the
- * evidence never saw fail is named.
+ * Failures that are not this change's doing — said loudly anyway, with main's
+ * report and owner task for each (`standingLines`, the same lines `./equin
+ * test` prints), so a file that is red on main is never silently waved
+ * through, and a case the evidence never saw fail is named.
  */
-function printPreExisting(items: readonly Failing[]): void {
-  const lines = [
-    "Already failing on main — not this change's doing, not blocking:",
-  ];
+async function printPreExisting(
+  root: AppPath,
+  items: readonly Failing[],
+  base: ReadonlyMap<string, string>,
+  index: VerdictIndex,
+): Promise<void> {
+  const standing = await standingOnMain(
+    root,
+    items.map((i) => ({
+      path: i.file,
+      failedCaseIds:
+        i.judgement.kind === "pre-existing" ? i.judgement.newCases : [],
+    })),
+    { index, baseDigests: base },
+  );
+  const lines = ["Not blocking:", ...standingLines(standing)];
   for (const i of items) {
-    lines.push(`  ${i.file}`, `    ${describeJudgement(i.judgement)}`);
     if (i.judgement.kind === "pre-existing" && i.judgement.newCases.length > 0)
       lines.push(
-        `    WARNING: ${i.judgement.newCases.length} failing case(s) no run on main saw fail — check they are not this change's:`,
-        ...i.judgement.newCases.slice(0, 10).map((c) => `      ${c}`),
+        `WARNING: ${i.file} — ${i.judgement.newCases.length} failing case(s) no run on main saw fail; check they are not this change's:`,
+        ...i.judgement.newCases.slice(0, 10).map((c) => `  ${c}`),
       );
   }
   lines.push("");

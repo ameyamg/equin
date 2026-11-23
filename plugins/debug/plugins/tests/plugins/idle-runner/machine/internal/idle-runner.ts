@@ -12,23 +12,33 @@ import {
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { readHostIdleRecord } from "@plugins/infra/plugins/host/plugins/idle/server";
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { _testFileStatus } from "@plugins/debug/plugins/tests/server";
 import {
   ingestRunRecordsNow,
   requestCheckoutDigests,
 } from "@plugins/debug/plugins/tests/machine";
 import { fileTestFailingReports } from "@plugins/debug/plugins/tests/plugins/failing-report/machine";
-import { selectIdleBatch } from "./select-batch";
+import { selectIdleBatch, type BatchPool } from "./select-batch";
 
-// The idle runner: while the host is idle (infra/host/idle — no agent working,
-// no op running, no duress, for 10 min), run the test files whose status on
-// the current code is unknown, one small batch after another, and stop the
-// moment the host is needed.
+// The test runner of a checkout: runs the files whose verdict on the current
+// code it still owes, one small batch after another.
 //
-//   host.idleBegan       → bring the checkout's digests current (idle CPU)
-//   tests.digestsSettled → next batch, if still idle and none is running
-//   a batch ended        → ingest its record, then the next batch
-//   host.idleEnded       → cancel the running batch (one batch lost at most)
+// On MAIN its verdicts follow main's head: the due files (to confirm, seen
+// failing elsewhere, stale, never run — `duePool`) run whenever the host lets
+// an opportunistic op run, idle or not. Everywhere else, and for main's
+// 7-day re-verify sweep, only while the host is idle (infra/host/idle — no
+// agent working, no op running, no duress, for 10 min).
+//
+//   main boot / advance  → digests brought to the new tree (debug/tests)
+//   tests.digestsSettled → next batch
+//   tests.runsIngested   → next batch (a failure seen elsewhere is due)
+//   a batch ended        → ingest its record, judge it, then the next batch
+//   main advanced        → cancel the running batch (its tree moved: its
+//                          harvest would be skipped)
+//   host.idleBegan       → digests current, then the next batch
+//   host.idleEnded       → cancel a running SWEEP batch
 //
 // Each batch is an ordinary `./equin test`, OPPORTUNISTIC
 // (`EQUIN_OP_OPPORTUNISTIC`: background lane, low priority, not counted as
@@ -38,93 +48,114 @@ import { selectIdleBatch } from "./select-batch";
 const idleRunLog = defineLogSink({
   id: "tests-idle-runs",
   description:
-    "Test-status page: the `./equin test` batches run while the computer is idle.",
+    "Test-status page: the `./equin test` batches this checkout's test runner ran (main: whenever a verdict is owed; elsewhere while the computer is idle).",
 });
 
-/** Every batch holds this one lock: at most one runs, and it is what idleEnded cancels. */
-const IDLE_LOCK = "idle";
-/** Names the batch lock to the by-lock verbs — `lock` ignores the paths. */
-const ANY_BATCH = { paths: [IDLE_LOCK] };
+/** Each pool's batches hold their own lock; at most one batch runs at all. */
+const POOLS: readonly BatchPool[] = ["due", "sweep"];
 
-// How many batches of THIS idle period already took each file. A file a run
-// cannot give a verdict (its record skipped: the tree moved mid-run) keeps its
-// status, and would otherwise be picked again and again while idle — so a
-// file is taken once, twice only for its confirmation run (`toConfirm`).
-// Process memory on purpose: a restart starts a fresh chain, and a new idle
-// period a fresh count.
-const takenThisIdle = new Map<string, number>();
-
-// Files of main that failed once after passing (`fileTestFailingReports`'s
-// `confirm`): the next batch runs them again first, so a failure is believed
-// only once a second run on the same code repeats it. Process memory: a
-// restart forgets them, and they are judged again on their next run.
-const toConfirm = new Set<string>();
+// How many batches of this process took each (file, digest). A file a run
+// cannot give a verdict (its record skipped: the tree moved mid-run; a wedged
+// runner) keeps its status and would be picked again and again — so it is
+// taken at most twice on the same code. Process memory: a restart (every push
+// on main) starts over, which re-tries such a file at most twice per push.
+const taken = new Map<string, number>();
+const TAKES_PER_DIGEST = 2;
+const takeKey = (path: string, digest: string) => `${path}\0${digest}`;
 
 export const idleBatchJob = defineSupervisedJob({
   name: "tests.idle-batch",
   description:
-    "Runs a small batch of test files whose status on the current code is unknown while the computer is idle, so Debug → Tests fills in without costing anyone time.",
-  input: z.object({ paths: z.array(z.string()).min(1) }),
+    "Runs a small batch of test files whose verdict on the current code is owed (on main whenever it is owed, elsewhere while the computer is idle), so Debug → Tests and main's test reports follow the code without costing anyone time.",
+  input: z.object({
+    paths: z.array(z.string()).min(1),
+    pool: z.enum(["due", "sweep"]),
+  }),
   channel: idleRunLog,
   runAttempts: 1,
   // Failing tests are the page's data (the run's record), never a failed job.
   verdictExits: [TESTS_FAILED_EXIT],
-  lock: () => IDLE_LOCK,
+  lock: (input) => input.pool,
   argv: (input) => ({
     argv: [`./${CLI_NAME}`, "test", ...input.paths],
     cwd: REPO_ROOT,
     envOverrides: envEntries({ OP_OPPORTUNISTIC: "1", TEST_ORIGIN: "idle" }),
   }),
   onEnded: async (_runId, _terminal, meta) => {
-    // Cancelled: the host stopped being idle — nothing follows.
+    // Cancelled: the host stopped being idle, or main moved — what follows
+    // is decided by whoever cancelled it.
     if (meta.cancelled) return;
     // Its verdicts must be in the statuses the next selection reads.
     await ingestRunRecordsNow();
     try {
       // A file of main that went from passing to failing (confirmed) is
-      // filed; one that failed once is run again first.
-      const { confirm } = await fileTestFailingReports(meta.input.paths);
-      for (const p of confirm) toConfirm.add(p);
+      // filed; one that failed once is due again (derived from its status).
+      await fileTestFailingReports(meta.input.paths);
     } finally {
-      // A filing error stays loud, but never stops the idle chain.
+      // A filing error stays loud, but never stops the chain.
       await idleNextJob.enqueue({});
     }
   },
 });
 
-/** Start the next batch — only while the host is idle and no batch runs. */
+async function batchRunning(): Promise<boolean> {
+  for (const pool of POOLS)
+    if (
+      (await latestSupervisedRun(idleBatchJob, { paths: [pool], pool }))?.open
+    )
+      return true;
+  return false;
+}
+
+/** Start the next batch — when one is owed (main) or the host is idle, and none runs. */
 export async function startNextIdleBatch(
   now: number = Date.now(),
 ): Promise<void> {
-  if ((await readHostIdleRecord())?.state !== "idle") return;
-  if ((await latestSupervisedRun(idleBatchJob, ANY_BATCH))?.open) return;
+  const idle = (await readHostIdleRecord())?.state === "idle";
+  // Only main owes verdicts whatever the host is doing; a worktree's runner
+  // fills its page in only while nothing else wants the machine.
+  if (!idle && !isMain()) return;
+  if (await batchRunning()) return;
   const rows = await db
     .select({
       path: _testFileStatus.path,
+      digest: _testFileStatus.digest,
       status: _testFileStatus.status,
       lastOutcome: _testFileStatus.lastOutcome,
       lastRanAt: _testFileStatus.lastRanAt,
       durationMs: _testFileStatus.durationMs,
+      currentPassed: _testFileStatus.currentPassed,
+      currentFailed: _testFileStatus.currentFailed,
+      ownPassed: _testFileStatus.ownPassed,
+      ownFailed: _testFileStatus.ownFailed,
     })
     .from(_testFileStatus);
-  const confirming = rows.filter(
-    (r) => toConfirm.has(r.path) && (takenThisIdle.get(r.path) ?? 0) < 2,
-  );
-  const paths = selectIdleBatch(
-    rows.filter((r) => !takenThisIdle.has(r.path)),
+  const batch = selectIdleBatch(
+    rows.filter(
+      (r) => (taken.get(takeKey(r.path, r.digest)) ?? 0) < TAKES_PER_DIGEST,
+    ),
     now,
-    confirming,
+    { idle },
   );
-  if (paths.length === 0) return;
-  for (const p of paths) toConfirm.delete(p);
-  for (const p of paths) takenThisIdle.set(p, (takenThisIdle.get(p) ?? 0) + 1);
-  await idleBatchJob.enqueue({ paths });
+  if (batch === null) return;
+  const digestOf = new Map(rows.map((r) => [r.path, r.digest]));
+  for (const p of batch.paths) {
+    const key = takeKey(p, digestOf.get(p)!);
+    taken.set(key, (taken.get(key) ?? 0) + 1);
+  }
+  await idleBatchJob.enqueue(batch);
+}
+
+/** Cancel the running batch of each of `pools`. */
+async function cancelBatches(pools: readonly BatchPool[]): Promise<void> {
+  for (const pool of pools)
+    await cancelSupervisedJobByLock(idleBatchJob, { paths: [pool], pool });
 }
 
 export const idleNextJob = defineJob({
   name: "tests.idle-next",
   description:
-    "Picks the next test files to run while the computer is idle — stale and last failing first, then never run, then the oldest — and starts them.",
+    "Picks the next test files to run — the ones whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run), and while the computer is idle the oldest verdicts — and starts them.",
   hold: "seconds",
   input: z.object({}),
   event: z.unknown(),
@@ -145,7 +176,6 @@ export const idleBeganJob = defineJob({
   event: z.unknown(),
   dedup: "singleton",
   run: async () => {
-    takenThisIdle.clear();
     // Its end (tests.digestsSettled) starts the first batch.
     await requestCheckoutDigests();
   },
@@ -154,12 +184,25 @@ export const idleBeganJob = defineJob({
 export const idleEndedJob = defineJob({
   name: "tests.idle-ended",
   description:
-    "When the computer stops being idle, stops the idle test run in progress so it never competes with real work.",
+    "When the computer stops being idle, stops the idle-only (sweep) test run in progress so it never competes with real work; a batch of owed verdicts on main keeps running at low priority.",
   hold: "seconds",
   input: z.object({}),
   event: z.unknown(),
   dedup: "singleton",
   run: async () => {
-    await cancelSupervisedJobByLock(idleBatchJob, ANY_BATCH);
+    await cancelBatches(isMain() ? ["sweep"] : POOLS);
+  },
+});
+
+/**
+ * Main moved: a batch running now tests a tree that is going away (its
+ * harvest is skipped once the checkout changes under it), so it is cancelled;
+ * the new digests' settling starts the next one, on the new code.
+ */
+export const batchOnMainAdvance = defineRefReaction({
+  name: "tests.idle-batch",
+  refName: "refs/heads/main",
+  run: async () => {
+    if (isMain()) await cancelBatches(POOLS);
   },
 });

@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { TestRunRecord } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
-import {
-  affectedTests,
-  isProvingPass,
-  judgeFailure,
-  restsOnMergeBase,
-} from "./judge";
+import { isProvingPass, judgeFailure, restsOnMergeBase } from "./judge";
 import { buildVerdictIndex } from "./verdicts";
 
 const MAIN = "main-ns";
@@ -53,22 +48,6 @@ function record(opts: {
     ),
   };
 }
-
-describe("affectedTests", () => {
-  test("a moved digest or a new file is affected; an unchanged or deleted one is not", () => {
-    const head = new Map([
-      ["a.test.ts", "1"],
-      ["b.test.ts", "2"],
-      ["new.test.ts", "3"],
-    ]);
-    const base = new Map([
-      ["a.test.ts", "1"],
-      ["b.test.ts", "old"],
-      ["gone.test.ts", "4"],
-    ]);
-    expect(affectedTests(head, base)).toEqual(["b.test.ts", "new.test.ts"]);
-  });
-});
 
 describe("isProvingPass", () => {
   test("a pass with no case run proves nothing", () => {

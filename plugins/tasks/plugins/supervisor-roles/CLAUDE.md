@@ -284,6 +284,7 @@ tools — are `plugins/sessions`.
 - Cross-plugin:
   - Imported by:
     - `tasks`
+    - `tasks/reports-investigation`
     - `tasks/supervisor-roles/events`
     - `tasks/supervisor-roles/pane`
     - `tasks/supervisor-roles/sessions`

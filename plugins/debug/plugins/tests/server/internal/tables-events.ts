@@ -16,3 +16,19 @@ export const { event: testDigestsSettled, table: _testDigestsSettledTriggers } =
     name: "tests.digestsSettled",
     filters: {},
   });
+
+export interface TestRunsIngestedPayload {
+  /** Ingested records with at least one file that did not pass. */
+  withFailures: number;
+  [key: string]: unknown;
+}
+
+// An ingest pass took in runs with failures (any checkout's: an agent's run
+// of main's own code is evidence main verifies). For the runner that picks
+// files by status: a failure seen elsewhere at main's digest is due on main.
+// No filter columns.
+export const { event: testRunsIngested, table: _testRunsIngestedTriggers } =
+  defineTriggerEvent<TestRunsIngestedPayload>({
+    name: "tests.runsIngested",
+    filters: {},
+  });

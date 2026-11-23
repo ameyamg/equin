@@ -6,11 +6,20 @@ import {
 } from "../../core";
 import { renderTestFailingTask } from "./render";
 
+/** Distinct broken test files one window may report: every test file of a
+ * large plugin breaking at once, still one report each. */
+const TEST_FAILING_FAN_OUT = 500;
+
 /**
  * The `test-failing` report kind: one row per test file of main that went
  * from passing to failing (confirmed by a second failing run), filed by main's
- * idle test runner. Category `error`, so the Error reports supervisor stream
- * carries it, with the fix ledger of every report.
+ * test runner. Category `test`: the Broken tests supervisor stream OWNS it —
+ * each report gets its one fix task, in the backlog of the role that stream is
+ * routed to — and the fix ledger closes it like every report.
+ *
+ * Its fan-out ceiling is raised: one push can break many tests at once, and
+ * past the default 20 new fingerprints per window the rest would fold into a
+ * storm rollup — files with no report and so no owner.
  */
 export const testFailingKind = ReportKind({
   kind: TEST_FAILING_KIND,
@@ -20,7 +29,8 @@ export const testFailingKind = ReportKind({
     tag: "[test-failing]",
     notif: "A test started failing on main",
     variant: "error",
-    category: "error",
+    category: "test",
+    fanOutPerWindow: TEST_FAILING_FAN_OUT,
   },
   renderTask: (row: ReportRow) =>
     renderTestFailingTask(row, TestFailingPayloadSchema.parse(row.data)),

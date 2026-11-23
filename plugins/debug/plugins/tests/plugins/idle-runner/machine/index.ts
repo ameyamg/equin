@@ -4,8 +4,12 @@ import {
   hostIdleBegan,
   hostIdleEnded,
 } from "@plugins/infra/plugins/host/plugins/idle/server";
-import { testDigestsSettled } from "@plugins/debug/plugins/tests/server";
 import {
+  testDigestsSettled,
+  testRunsIngested,
+} from "@plugins/debug/plugins/tests/server";
+import {
+  batchOnMainAdvance,
   idleBatchJob,
   idleBeganJob,
   idleEndedJob,
@@ -14,13 +18,25 @@ import {
 
 export default {
   description:
-    "Runs stale and never-run test files while the host is idle: on host.idleBegan it brings the checkout's test digests current; each tests.digestsSettled (and each batch's end, after its record is ingested) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle — while the host is still idle; host.idleEnded cancels the running batch.",
-  register: [idleBatchJob, idleNextJob, idleBeganJob, idleEndedJob],
+    "The checkout's test runner: runs the test files whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run) — on main whenever an opportunistic op may run, so main's verdicts follow its head; elsewhere, and for the 7-day re-verify sweep, only while the host is idle. Each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle; an advance of main cancels the running batch (main), host.idleEnded the running sweep.",
+  register: [
+    idleBatchJob,
+    idleNextJob,
+    idleBeganJob,
+    idleEndedJob,
+    batchOnMainAdvance,
+  ],
   contributions: [
     Trigger({ on: hostIdleBegan, do: idleBeganJob, with: {}, oneShot: false }),
     Trigger({ on: hostIdleEnded, do: idleEndedJob, with: {}, oneShot: false }),
     Trigger({
       on: testDigestsSettled,
+      do: idleNextJob,
+      with: {},
+      oneShot: false,
+    }),
+    Trigger({
+      on: testRunsIngested,
       do: idleNextJob,
       with: {},
       oneShot: false,

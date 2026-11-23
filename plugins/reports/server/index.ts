@@ -8,7 +8,10 @@ export { _reports } from "./internal/tables";
 export { reportInvestigationSink } from "./internal/investigation-sink";
 export { ReportRecorded } from "./internal/recorded-signal";
 export type { ReportRecordedListener } from "./internal/recorded-signal";
-export type { InvestigationTaskRequest } from "./internal/investigation-sink";
+export type {
+  InvestigationRequester,
+  InvestigationTaskRequest,
+} from "./internal/investigation-sink";
 export { ReportNoiseRule } from "./internal/noise-rules";
 export type {
   ReportNoiseRuleSpec,

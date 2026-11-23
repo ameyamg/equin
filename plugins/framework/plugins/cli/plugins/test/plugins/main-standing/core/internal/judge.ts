@@ -1,22 +1,6 @@
 import type { RecordedVerdict, VerdictIndex } from "./verdicts";
 
 /**
- * Every test file whose digest moved between the merge base and HEAD — the
- * files the change can affect: its closure, its runner's inputs or the npm
- * resolutions changed, or it is new. A file gone at HEAD is nobody's test.
- * Sorted.
- */
-export function affectedTests(
-  head: ReadonlyMap<string, string>,
-  base: ReadonlyMap<string, string>,
-): string[] {
-  return [...head]
-    .filter(([path, digest]) => base.get(path) !== digest)
-    .map(([path]) => path)
-    .sort();
-}
-
-/**
  * A pass that proves the code at its digest: it ran at least one case. A file
  * whose every case skipped (a platform or env `skipIf`) passes having
  * verified nothing.

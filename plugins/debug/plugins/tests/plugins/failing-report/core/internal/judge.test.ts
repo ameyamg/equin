@@ -45,7 +45,7 @@ describe("judgeFailingFile", () => {
     const v = judgeFailingFile("cur", rs);
     expect(v.kind).toBe("report");
     if (v.kind !== "report") return;
-    expect(v.lastPassed.commit).toBe("pass2");
+    expect(v.lastPassed?.commit).toBe("pass2");
     expect(v.firstFailed.commit).toBe("fail1");
     expect(v.latest.commit).toBe("fail3");
     expect(v.latest.outcome).toBe("not-loaded");
@@ -65,16 +65,18 @@ describe("judgeFailingFile", () => {
     });
   });
 
-  test("a file that never passed in this checkout is quiet", () => {
+  test("a confirmed failure with no pass of main's on record is reported, saying so", () => {
     const rs = history(
       { outcome: "passed", ownCheckout: false },
       { outcome: "failed", digest: "cur" },
       { outcome: "failed", digest: "cur" },
     );
-    expect(judgeFailingFile("cur", rs)).toEqual({
-      kind: "quiet",
-      reason: "never-passed-here",
-    });
+    const v = judgeFailingFile("cur", rs);
+    expect(v.kind).toBe("report");
+    if (v.kind !== "report") return;
+    expect(v.lastPassed).toBeNull();
+    // The oldest of main's failures is where it was first seen.
+    expect(v.firstFailed.opId).toBe(rs.at(-2)!.opId);
   });
 
   test("failures only another checkout saw are quiet", () => {
@@ -110,11 +112,7 @@ describe("judgeFailingFile", () => {
     const v = judgeFailingFile("cur", rs, known);
     expect(v.kind).toBe("report");
     if (v.kind !== "report") return;
-    expect(v.lastPassed.commit).toBe("pass");
+    expect(v.lastPassed?.commit).toBe("pass");
     expect(v.firstFailed.commit).toBe("fail");
-    expect(judgeFailingFile("cur", rs)).toEqual({
-      kind: "quiet",
-      reason: "never-passed-here",
-    });
   });
 });

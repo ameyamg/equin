@@ -212,6 +212,14 @@ export const testFileStatusFields = {
   /** Results on the current digest that passed / did not. */
   currentPassed: intField(),
   currentFailed: intField(),
+  /**
+   * Of those, the ones THIS checkout's own runs recorded (its namespace's —
+   * on main: the idle runner's, never an agent's run of the same code). What
+   * main's runner selection reads: a failure seen only elsewhere is verified
+   * here, and one own failure is confirmed by a second run.
+   */
+  ownPassed: intField({ default: 0 }),
+  ownFailed: intField({ default: 0 }),
   history: jsonField({
     schema: cappedList(StatusHistoryEntrySchema, { max: STATUS_HISTORY_MAX }),
     default: [],

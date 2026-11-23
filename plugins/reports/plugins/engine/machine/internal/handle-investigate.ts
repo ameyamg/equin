@@ -12,6 +12,6 @@ export const handleInvestigate = implementMachine(
   investigateReportEndpoint,
   async ({ params }) => {
     if (!params.id) throw new HttpError(400, "id required");
-    return investigateReport(params.id);
+    return investigateReport(params.id, { kind: "person" });
   },
 );

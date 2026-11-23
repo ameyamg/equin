@@ -1,6 +1,15 @@
 import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { join, relative, resolve } from "path";
-import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  mainSlug,
+  standingLines,
+  standingOnMain,
+  type FailingFile,
+} from "@plugins/framework/plugins/cli/plugins/test/plugins/main-standing/cli";
 import { readAwakeClock } from "@plugins/packages/plugins/sleep-clock/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
@@ -483,6 +492,43 @@ function runnerOutcome(
 }
 
 /**
+ * Under a failing run, where each failing file stands on main (main-standing):
+ * already failing there — its report and owner task, so the failure is not
+ * diagnosed and filed again — or not, so it is most likely this checkout's.
+ * Not on main's own checkout (nothing to compare against) nor when the caller
+ * judges the failures itself (`TEST_NO_STANDING`: the push gate). Main's
+ * reports unreadable is said beside the judgements (`reportsError`).
+ */
+async function printStanding(
+  root: string,
+  slug: string,
+  runners: readonly HarvestRunner[],
+): Promise<void> {
+  if (readEnv("TEST_NO_STANDING") === "1" || slug === mainSlug()) return;
+  const failing: FailingFile[] = [];
+  for (const r of runners) {
+    if (r.wedged || r.report === null) continue;
+    const report = r.report;
+    for (const path of r.files) {
+      const stats = report.byFile[path];
+      if (stats !== undefined && stats.failed > 0)
+        failing.push({
+          path,
+          failedCaseIds: report.failureDetails
+            .filter((d) => d.file === path)
+            .map((d) => d.caseId),
+        });
+      // Missing from a red runner's report: it did not load.
+      else if (stats === undefined && r.exitCode !== 0)
+        failing.push({ path, failedCaseIds: [] });
+    }
+  }
+  if (failing.length === 0) return;
+  const result = await standingOnMain(asAppPath(root), failing);
+  console.error(standingLines(result).join("\n"));
+}
+
+/**
  * The run-level single-flight for a test run: an identical `./equin test`
  * already in flight in this worktree — the same test FILES (however the paths
  * that selected them were spelled), on the same TREE — is joined instead of
@@ -775,6 +821,7 @@ const run: CliAction<[string[]], object> = async (paths) => {
           });
         if (failed.length === 0) return "success";
         console.error(`\nFAILED: ${failed.join(", ")}`);
+        await printStanding(root, slug, harvested);
         return "failed";
       }),
         { units: grant.units },

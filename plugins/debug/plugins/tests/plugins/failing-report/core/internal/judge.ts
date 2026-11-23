@@ -6,7 +6,7 @@ export interface JudgedResult {
   digest: string;
   outcome: TestOutcome;
   finishedAt: Date;
-  /** The run was this checkout's (main's) own — not another worktree's. */
+  /** The run was this checkout's (main's) own — its namespace's, not another worktree's. */
   ownCheckout: boolean;
   /** The commit the run tested; null when its record named none. */
   commit: string | null;
@@ -29,7 +29,8 @@ export const CONFIRMING_FAILURES = 2;
  * reported (and can be marked Regressed after a fix).
  */
 export interface KnownBreak {
-  lastPassed: JudgedRun;
+  /** Null when the report was filed with no pass of main's on record. */
+  lastPassed: JudgedRun | null;
   firstFailed: JudgedRun;
 }
 
@@ -40,15 +41,20 @@ export type FailingVerdict =
       reason:
         | "no-verdict-on-current-code"
         | "passes-on-current-code"
-        | "not-seen-failing-here"
-        | "never-passed-here";
+        | "not-seen-failing-here";
     }
   /** One failure of main's after a pass: run the file once more before saying anything. */
   | { kind: "confirm" }
   /** Went from passing to failing, confirmed: file (or bump) its report. */
   | {
       kind: "report";
-      lastPassed: JudgedRun;
+      /**
+       * Main's last pass before the break; null when main has no pass on
+       * record (the file broke before the results cap's window, or never
+       * passed here): reported all the same — a confirmed failure of main's
+       * own code with no owner would otherwise stay silent forever.
+       */
+      lastPassed: JudgedRun | null;
       firstFailed: JudgedRun;
       latest: JudgedRun & { outcome: Exclude<TestOutcome, "passed"> };
       failuresOnCurrentCode: number;
@@ -69,10 +75,10 @@ const runOf = (r: JudgedResult): JudgedRun => ({
  *   current digest failed. A pass on it (any checkout's: same digest, same
  *   code) means the file is flaky (the Tests page says so), never a report.
  * - Only what MAIN's checkout saw counts: the failures are this checkout's own
- *   runs, and the file passed in this checkout before — a file that never
- *   passed on main is not a regression, and a worktree's run says nothing
- *   about main. `known` (the file's existing report) stands in for a pass the
- *   results cap has dropped.
+ *   runs — a worktree's run says nothing about main. The break starts at
+ *   main's last pass; with none on record (the results cap dropped it, or the
+ *   file never passed here) `known` (the file's existing report) stands in,
+ *   else the report says there is no pass on record (`lastPassed: null`).
  * - Flakiness: one failure is not enough. A single failure of main's on the
  *   current code answers `confirm` — the idle runner runs the file once more —
  *   and only {@link CONFIRMING_FAILURES} of main's failures with no pass
@@ -96,25 +102,21 @@ export function judgeFailingFile(
   if (latest === undefined || latest.outcome === "passed")
     return { kind: "quiet", reason: "not-seen-failing-here" };
   const lastPass = results.find((r) => r.ownCheckout && r.outcome === "passed");
-  if (lastPass === undefined && known === null)
-    return { kind: "quiet", reason: "never-passed-here" };
   if (own.length < CONFIRMING_FAILURES) return { kind: "confirm" };
-  let lastPassed: JudgedRun;
+  let lastPassed: JudgedRun | null;
   let firstFailed: JudgedRun;
-  if (lastPass !== undefined) {
-    const since = lastPass.finishedAt.getTime();
+  if (lastPass === undefined && known !== null) {
+    ({ lastPassed, firstFailed } = known);
+  } else {
+    const since = lastPass?.finishedAt.getTime() ?? -Infinity;
     const ownFailuresSincePass = results.filter(
       (r) =>
         r.ownCheckout &&
         r.outcome !== "passed" &&
         r.finishedAt.getTime() > since,
     );
-    lastPassed = runOf(lastPass);
+    lastPassed = lastPass === undefined ? null : runOf(lastPass);
     firstFailed = runOf(ownFailuresSincePass.at(-1) ?? latest);
-  } else if (known !== null) {
-    ({ lastPassed, firstFailed } = known);
-  } else {
-    return { kind: "quiet", reason: "never-passed-here" };
   }
   return {
     kind: "report",

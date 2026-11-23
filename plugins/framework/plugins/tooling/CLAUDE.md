@@ -47,8 +47,8 @@
     - `repoSnapshotOver`
     - `WHOLE_TREE_FILE_CALLS`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×16
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×17
     - `infra` ×2
     - `plugin-meta` ×2
     - `review/plugin-changes`

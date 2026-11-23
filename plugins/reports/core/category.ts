@@ -7,6 +7,8 @@
  *   invariant.
  * - `slow-op`: something was too slow or too big — a stall, a slow
  *   interaction, a blown budget.
+ * - `test`: a test of the app's own code fails on main — the code is
+ *   checked, not run by a user: its own stream and owner.
  */
-export const REPORT_CATEGORIES = ["error", "slow-op"] as const;
+export const REPORT_CATEGORIES = ["error", "slow-op", "test"] as const;
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number];

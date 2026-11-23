@@ -138,6 +138,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the file a bun:test process stamps with its awake clock every 30 s, set by `./equin test` for the runner it spawns so it can tell a run whose event loop stopped (cli/test run.ts, test/bun-preload.ts)",
   TEST_DOM_FILES:
     "the list file naming exactly the jsdom test files one vitest run executes, set by `./equin test` for the vitest it spawns and read by vitest.config.ts as its `include` — vitest has no exact-path argument (cli/test run.ts, test-layout core)",
+  TEST_NO_STANDING:
+    "marks a `./equin test` run whose caller judges each failure against main itself (`1`): the run skips printing each failing file's standing on main; set by the push test gate for the runs it spawns (cli/push test-gate), read by cli/test run.ts",
   TEST_ORIGIN:
     "who started one `./equin test` run (agent | run-now | idle), stamped into the run's harvest record; set by the backend for the run it supervises (debug/tests), read by cli/test run.ts — unset means an agent typed it",
   OP_OPPORTUNISTIC:

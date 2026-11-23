@@ -63,7 +63,7 @@ export async function readTestRunRecords(): Promise<TestRunRecord[]> {
   // (its own run's) that is unreadable reads as NO VERDICT, which refuses.
   if (unreadable.length > 0)
     console.error(
-      `test gate: ${unreadable.length} unreadable test-run record(s) in ${dir} ignored (truncated or not a record): ${unreadable.slice(0, 5).join(", ")}`,
+      `test records: ${unreadable.length} unreadable test-run record(s) in ${dir} ignored (truncated or not a record): ${unreadable.slice(0, 5).join(", ")}`,
     );
   return records.filter((r): r is TestRunRecord => r !== null);
 }

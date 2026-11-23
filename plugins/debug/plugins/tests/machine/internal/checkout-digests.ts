@@ -4,7 +4,11 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import {
+  isMain,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
@@ -49,7 +53,7 @@ function digestsFile(): string {
 export const checkoutDigestsJob = defineSupervisedJob({
   name: "tests.checkout-digests",
   description:
-    "Computes every test file's digest for this checkout when its code changed and the Debug → Tests page is open, so harvested verdicts can be matched against the current code.",
+    "Computes every test file's digest for this checkout when its code changed — on main at every boot and advance, elsewhere while the Debug → Tests page is open — so harvested verdicts can be matched against the current code.",
   input: z.object({ unlessTree: z.string().nullable() }),
   channel: digestsLog,
   runAttempts: 1,
@@ -86,6 +90,26 @@ export const checkoutDigestsJob = defineSupervisedJob({
       return;
     }
     await db.transaction(async (tx) => {
+      // Only the files whose digest moved (or that came or went) change
+      // status: the rest keep theirs. On main this runs on every push, and
+      // re-deriving all ~3k rows each time read every kept result.
+      const before = new Map(
+        (
+          await tx
+            .select({
+              path: _testCheckoutDigests.path,
+              digest: _testCheckoutDigests.digest,
+            })
+            .from(_testCheckoutDigests)
+        ).map((r) => [r.path, r.digest]),
+      );
+      const after = new Set(out.files.map((f) => f.path));
+      const moved = [
+        ...out.files
+          .filter((f) => before.get(f.path) !== f.digest)
+          .map((f) => f.path),
+        ...[...before.keys()].filter((path) => !after.has(path)),
+      ];
       await tx.delete(_testCheckoutDigests);
       for (let i = 0; i < out.files.length; i += CHUNK)
         await tx.insert(_testCheckoutDigests).values(
@@ -107,7 +131,7 @@ export const checkoutDigestsJob = defineSupervisedJob({
         elapsedMs: out.elapsedMs,
         error: null,
       });
-      await recomputeFileStatus(tx, "all");
+      await recomputeFileStatus(tx, moved, runtimeNamespace());
     });
     await testDigestsSettled.emit({ outcome: "computed" });
   },
@@ -200,11 +224,30 @@ export const digestGenerationServed = serveValue(testDigestGeneration, {
   },
 });
 
-/** Main moved while the page is open: its digests may have too. */
+/**
+ * Main moved: its digests may have too. On MAIN always — main's verdicts
+ * follow its head, so its runner re-runs what an advance affected — and
+ * elsewhere while the page is open. (When main's own checkout has not moved
+ * yet, the child answers `unchanged`; the boot warm-up below catches the
+ * tree the restarted backend serves.)
+ */
 export const digestsOnMainAdvance = defineRefReaction({
   name: "tests.checkout-digests",
   refName: "refs/heads/main",
   run: async () => {
-    if (watchers > 0) await requestCheckoutDigests();
+    if (isMain() || watchers > 0) await requestCheckoutDigests();
   },
+});
+
+/**
+ * Main's boot: every push restarts main, and a ref reaction is skipped while
+ * the backend is down — so the advance that matters most is the one it would
+ * miss. The new process serves the new tree: bring the digests to it.
+ */
+export const digestsAtMainBoot = defineWarmup({
+  name: "tests.checkout-digests-boot",
+  description:
+    "Brings main's test digests to the code it now serves, so its test runner re-runs what the last push affected.",
+  scope: "host",
+  run: () => requestCheckoutDigests(),
 });

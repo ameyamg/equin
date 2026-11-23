@@ -1,56 +1,70 @@
 # failing-report
 
-The `test-failing` report: a test file of MAIN that went from passing to
-failing. Nothing in the workflow runs tests (push and build run checks, main's
-auto-build is a build), so without it a red test on main stays silent until
-someone opens Debug → Tests. The only runner on main is the idle runner
-(`../idle-runner`); this plugin turns its verdicts into reports, so they go
-through the usual Reports flow — investigation, the fix ledger, Regressed.
+The `test-failing` report: a test file of MAIN that fails on main's code,
+confirmed. Main's test runner (`../idle-runner`) runs what main's advances
+affect; this plugin turns its verdicts into reports, so they go through the
+usual Reports flow — one owner task, the fix ledger, Regressed.
+Design: `research/2026-11-23-global-broken-test-ownership.md`.
 
 ## When a file is reported — `judgeFailingFile` (core, pure)
 
-After each idle batch, once its record is ingested, the idle runner hands the
+After each batch on main, once its record is ingested, the runner hands the
 batch's paths to `fileTestFailingReports` (machine, main only). Each file is
 judged over its recorded results:
 
 - **Failing now**: every result on the file's CURRENT digest failed (a failed
   case or a file that did not load). A pass on it — any checkout's: same
   digest, same code — means `flaky`, never a report.
-- **Seen by main**: only MAIN's own runs (`test_runs.repo` is this checkout)
-  count as failures, and the file must have passed in main's checkout before.
-  A file that never passed on main is not a regression, and a worktree's run
-  says nothing about main.
-- **Confirmed**: one failure of main's answers `confirm`; the idle runner
-  queues the file (`toConfirm`, process memory) and its next batch runs it
-  first. Only a SECOND failure of main's on the same code, with no pass, files
-  the report. A flaky file passes the second run and ends `flaky` on the Tests
-  page.
-- **Past the results cap**: `tests.results-cap` keeps 32 results per file, so
-  a long-broken file loses its last pass. The file's existing report
-  (`KnownBreak`: its last-passed and first-failed runs) stands in for it, so
-  it keeps being reported — and a fix can still be marked Regressed.
+- **Seen by main**: only MAIN's own runs (their `slug` is main's namespace —
+  the one definition, shared with the status recompute) count as failures; a
+  worktree's run says nothing about main, but it makes the file due on main
+  (the runner's "seen failing elsewhere").
+- **Confirmed**: one failure of main's answers `confirm` — the file stays due
+  by its status (`ownFailed` 1) and the runner's next batch runs it first.
+  Only a SECOND failure of main's on the same code, with no pass, files the
+  report. A flaky file passes the second run and ends `flaky`.
+- **Where it started**: main's last pass before the break, and its first
+  failure after it (the commit range to bisect). Past the results cap
+  (`tests.results-cap` keeps 32 per file) the file's existing report
+  (`KnownBreak`) stands in for a dropped pass. With neither — broken before
+  the kept results, or never passed on main — it is reported all the same,
+  `lastPassed: null` ("no pass on record"): a confirmed failure of main's own
+  code must never stay silent.
 
 One row per file (fingerprint `test-failing:<path>`); every later confirmed
 failing run of it is another occurrence, its commit the commit the RUN tested
-(`test_runs.head_sha`; null when the run named none), not the backend's pin — so a fix pushed with
-`--fixes-report` is marked Regressed if the file fails again on code containing
-it. The payload names the latest run's failing cases (first line, ≤ 10), the
-last run of main that passed and the first one after it that failed (the
-commit range to bisect). The files of one batch are one incident: one bell.
+(`test_runs.head_sha`; null when the run named none), not the backend's pin —
+so a fix pushed with `--fixes-report` is marked Regressed if the file fails
+again on code containing it. The files of one batch are one incident: one
+bell. The kind raises its fan-out ceiling (500), and an occurrence folded into
+a storm rollup is not marked filed: one push breaking many tests still files
+each one.
 
 A file that passes again files nothing — like every report kind, a row is
 closed by its fix (the fix ledger), not by the problem going quiet.
 
-Not covered: a file already failing when this shipped, or whose confirmation
-a restart forgot, is judged on its next run (a new digest, or the weekly
-re-verify). Only the idle batch's files are judged: a Run now of main is
-counted, but judged when the idle runner next runs the file.
+## One owner per report
+
+The kind's category is `test`, so the **Broken tests** supervisor stream
+(`tasks/supervisor-roles/events/report-streams`) carries it — a stream that
+OWNS its reports: each open report gets exactly one investigation task
+(system-filed, in the backlog of the role the stream is routed to; a plain
+Reports task while it is routed to none), on its occurrence and, for one
+recorded before or whose task was dropped, at main's boot.
+
+## Agents see it: `cli/`
+
+`readKnownTestReports(paths)` reads main's `test-failing` reports by file —
+the report id, its owner task, its fix state — for `./equin test` and the
+push gate (`framework/cli/test/main-standing`): an agent whose test fails is
+told the failure is already known on main, and where its owner is, instead
+of diagnosing and filing it again.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind: one row per test file of main that went from passing to failing (fingerprint = file path), filed by main's idle test runner once a second run on the same code confirmed the failure. Category error, so the Error reports supervisor stream carries it; its task names the failing cases and the commit range where they started failing.
+- Description: Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind: one row per test file failing on main's code (fingerprint = file path), filed by main's test runner once a second run of main's on the same code confirmed the failure. Category test, so the Broken tests supervisor stream owns it (one investigation task per report, in the backlog of the role it is routed to); a raised fan-out ceiling, so one push breaking many tests still files each; its task names the failing cases and the commit range where they started failing.
 - Web:
   - Contributes: `Reports.KindView` → `TestFailingSummary`
   - Uses: `reports.Reports`
@@ -78,8 +92,13 @@ counted, but judged when the idle runner next runs the file.
     - `testFailingMessage`
     - `TestFailingPayloadSchema`
 - Cross-plugin:
-  - Imported by: `debug/tests/idle-runner`
+  - Imported by:
+    - `debug/tests/idle-runner`
+    - `framework/cli/test/main-standing`
 - Machine:
   - Exports (values): `fileTestFailingReports`
+- Cli:
+  - Exports (types): `KnownTestReport`
+  - Exports (values): `readKnownTestReports`
 
 <!-- AUTOGENERATED:END -->

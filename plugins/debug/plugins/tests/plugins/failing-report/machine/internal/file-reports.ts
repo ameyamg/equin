@@ -1,7 +1,9 @@
 import { desc, eq, and, inArray, asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import {
+  isMain,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
 import { recordReportIncident } from "@plugins/reports/plugins/engine/server";
 import type { ReportInput } from "@plugins/reports/core";
 import { _reports } from "@plugins/reports/server";
@@ -72,22 +74,24 @@ async function knownBreakOf(path: string): Promise<KnownBreak | null> {
     .limit(1);
   if (row === undefined) return null;
   const d = TestFailingPayloadSchema.parse(row.data);
-  return { lastPassed: unref(d.lastPassed), firstFailed: unref(d.firstFailed) };
+  return {
+    lastPassed: d.lastPassed === null ? null : unref(d.lastPassed),
+    firstFailed: unref(d.firstFailed),
+  };
 }
 
 /**
  * Judge the files an idle batch just ran (their verdicts already ingested) and
- * file a `test-failing` report for each that went from passing to failing on
- * main, confirmed (`judgeFailingFile`). One incident per batch: files broken
- * by one push ring one bell. Answers the files that need a confirmation run
- * (one failure of main's after a pass). Main only — a worktree's failing test
- * is its agent's own feedback loop.
+ * file a `test-failing` report for each that fails on main, confirmed
+ * (`judgeFailingFile`). One incident per batch: files broken by one push ring
+ * one bell. A file that failed once is due again by its status (the runner's
+ * `toConfirm`), never through a queue here. Main only — a worktree's failing
+ * test is its agent's own feedback loop.
  */
 export async function fileTestFailingReports(
   paths: readonly string[],
-): Promise<{ confirm: string[] }> {
-  const confirm: string[] = [];
-  if (!isMain() || paths.length === 0) return { confirm };
+): Promise<void> {
+  if (!isMain() || paths.length === 0) return;
   const digests = await db
     .select({
       path: _testCheckoutDigests.path,
@@ -96,7 +100,7 @@ export async function fileTestFailingReports(
     })
     .from(_testCheckoutDigests)
     .where(inArray(_testCheckoutDigests.path, [...paths]));
-  if (digests.length === 0) return { confirm };
+  if (digests.length === 0) return;
   const rows = await db
     .select({
       path: _testFileResults.path,
@@ -104,7 +108,7 @@ export async function fileTestFailingReports(
       digest: _testFileResults.digest,
       outcome: _testFileResults.outcome,
       finishedAt: _testFileResults.finishedAt,
-      repo: _testRuns.repo,
+      slug: _testFileResults.slug,
       commit: _testRuns.headSha,
       failedCases: _testFileResults.failedCases,
     })
@@ -121,6 +125,7 @@ export async function fileTestFailingReports(
       desc(_testFileResults.finishedAt),
       desc(_testFileResults.opId),
     );
+  const own = runtimeNamespace();
   const byPath = new Map<string, JudgedResult[]>();
   const failedCasesOf = new Map<string, number>();
   for (const r of rows) {
@@ -132,7 +137,9 @@ export async function fileTestFailingReports(
       digest: r.digest,
       outcome: r.outcome,
       finishedAt: r.finishedAt,
-      ownCheckout: r.repo === REPO_ROOT,
+      // One definition of main's own run, shared with the status recompute:
+      // its namespace's.
+      ownCheckout: r.slug === own,
       commit: r.commit,
     });
   }
@@ -141,10 +148,16 @@ export async function fileTestFailingReports(
   const keys: string[] = [];
   for (const d of digests) {
     const results = byPath.get(d.path) ?? [];
-    let verdict = judgeFailingFile(d.digest, results);
-    if (verdict.kind === "quiet" && verdict.reason === "never-passed-here")
-      verdict = judgeFailingFile(d.digest, results, await knownBreakOf(d.path));
-    if (verdict.kind === "confirm") confirm.push(d.path);
+    // With no pass of main's on record, the file's existing report says
+    // where its break started (a pass the results cap dropped).
+    const ownPass = results.some(
+      (r) => r.ownCheckout && r.outcome === "passed",
+    );
+    const verdict = judgeFailingFile(
+      d.digest,
+      results,
+      ownPass ? null : await knownBreakOf(d.path),
+    );
     if (verdict.kind !== "report") continue;
     const key = `${verdict.latest.opId}:${d.path}`;
     if (filed.has(key)) continue;
@@ -164,7 +177,7 @@ export async function fileTestFailingReports(
     const data: TestFailingPayload = {
       path: d.path,
       pluginId: d.pluginId,
-      lastPassed: ref(verdict.lastPassed),
+      lastPassed: verdict.lastPassed === null ? null : ref(verdict.lastPassed),
       firstFailed: ref(verdict.firstFailed),
       latest: { ...ref(verdict.latest), outcome: verdict.latest.outcome },
       failuresOnCurrentCode: verdict.failuresOnCurrentCode,
@@ -191,8 +204,12 @@ export async function fileTestFailingReports(
     keys.push(key);
   }
   if (inputs.length > 0) {
-    await recordReportIncident(inputs);
-    for (const k of keys) filed.add(k);
+    const results = await recordReportIncident(inputs);
+    // An occurrence folded into a storm rollup has no report row, so it is
+    // not filed: the file's next run files it again. (A shed one replays by
+    // itself.)
+    results.forEach((r, i) => {
+      if (r.outcome !== "collapsed") filed.add(keys[i]!);
+    });
   }
-  return { confirm };
 }

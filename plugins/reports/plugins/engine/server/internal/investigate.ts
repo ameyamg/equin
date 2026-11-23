@@ -5,7 +5,11 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { _reports, reportInvestigationSink } from "@plugins/reports/server";
+import {
+  _reports,
+  reportInvestigationSink,
+  type InvestigationRequester,
+} from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
 import { renderReportTask } from "./uninvestigated";
 import { reportIdKind } from "@plugins/reports/core";
@@ -29,6 +33,7 @@ const taskCreationLocks = new Map<string, Promise<void>>();
 // linked to a live task) is enforced by the registered handler.
 export async function investigateReport(
   reportId: string,
+  requestedBy: InvestigationRequester,
 ): Promise<{ taskId: string }> {
   // Serialize concurrent callers for the same report. A request arriving while
   // another is mid-creation waits on the prior promise, then re-reads the row
@@ -73,6 +78,7 @@ export async function investigateReport(
           title,
           description: `${description}\n\n${DEBUG_SKILL_HINT}`,
           filedFrom: "reports.engine",
+          requestedBy,
         });
         if (!result) {
           throw new Error(

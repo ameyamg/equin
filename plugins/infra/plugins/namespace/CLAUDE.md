@@ -135,11 +135,11 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `namespaceUrl`
     - `resolveNamespaceAlias`
 - Cross-plugin:
-  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `framework` ×16
+    - `debug` ×12
     - `infra` ×12
-    - `debug` ×11
     - `conversations` ×7
     - `build` ×6
     - `database` ×3
