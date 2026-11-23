@@ -31,9 +31,22 @@ Invariants:
   `data-migration-dml-only`), so a `.sql` without one must never be flagged.
 
 The pure verdict logic (`classifyMigrationMetadata(J, S, L, headerIds)`) is
-exported and unit-tested in `check/index.test.ts`; the impure reads stay in
-`run()`. It is a pure function of the working tree (no git/DB/drizzle), so it
-uses the default tree-hash caching — no `cacheSignature`.
+exported and unit-tested in `check/index.test.ts`.
+
+## A fold check: its cost does not grow with the migrations
+
+The header ids and legacy keys come from one line per migration, so a body
+that read the data dir itself made one file read per migration (~475 on
+2026-11-23 — read through `readStartAsync`, which the whole-tree meter did not
+see, so it counted 9). It is a `defineFoldCheck` over the migrations core's
+`snapshotHeadsFold`, the same fold and records as `snapshot-chain-intact`: a
+cold store reads each file once as shared record work, a pass after an edit
+only the edited files. The body reads the journal alone (1 own file call).
+
+It is a pure function of the working tree (no git/DB/drizzle) and reads it only
+through the recording file set — the data dir's membership, each folded file's
+blob, the journal — so it is input-keyed: an edit outside the data dir replays
+the PASS.
 
 Why each existing migration check misses this gap:
 

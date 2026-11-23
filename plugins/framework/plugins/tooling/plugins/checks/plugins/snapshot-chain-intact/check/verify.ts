@@ -4,7 +4,6 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { resolve } from "path";
 import type { CheckResult } from "@plugins/framework/plugins/tooling/core";
-import type { RepoPaths } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 // The DAG's edges (prevId + merge-node parents), the per-file facts and the
 // published set are the migrations plugin's: the CLI's tip join reads the
 // same definitions, so this check cannot accept a history the generator would
@@ -12,39 +11,18 @@ import type { RepoPaths } from "@plugins/framework/plugins/tooling/plugins/check
 import {
   analyzeSnapshotDag,
   combineSnapshotFacts,
-  isSnapshotFactsFile,
   judgeSchemaSnapshot,
-  LEGACY_SNAPSHOTS_FILE,
   MIGRATIONS_DATA_DIR,
   NULL_SNAPSHOT_ID,
   publishedMigrationBasenames,
-  SNAPSHOT_HEAD_BYTES,
   snapshotBodies,
   snapshotFactsOf,
   snapshotNodesOf,
   type SnapshotDag,
   type SnapshotDagProblem,
+  type SnapshotHeads,
   type SnapshotNode,
 } from "@plugins/database/plugins/migrations/core";
-import type {
-  SnapshotHeads,
-  SnapshotScanContext,
-} from "./snapshot-chain-intact.scan";
-
-/** The data dir's layout, handed to the import-free scan as its context. */
-export const SNAPSHOT_SCAN_CONTEXT: SnapshotScanContext = {
-  dataDir: MIGRATIONS_DATA_DIR,
-  wholeFile: `meta/${LEGACY_SNAPSHOTS_FILE}`,
-  headChars: SNAPSHOT_HEAD_BYTES,
-};
-
-/** The data-dir files the fold reads (repo-relative): what `isSnapshotFactsFile` names. */
-export function snapshotFactsFiles(repo: Pick<RepoPaths, "under">): string[] {
-  const prefix = `${MIGRATIONS_DATA_DIR}/`;
-  return repo
-    .under(MIGRATIONS_DATA_DIR)
-    .filter((p) => isSnapshotFactsFile(p.slice(prefix.length)));
-}
 
 /**
  * Every snapshot id that must have a body, and does not: each merge node

@@ -24,7 +24,7 @@ import {
 // filesystem tooling (drizzle-kit staging, the published set, the snapshot
 // DAG), and this runner runs on every host.
 import {
-  migrationClaimId,
+  resolveMigrationRefs,
   parseMigration,
   type Supersession,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
@@ -412,49 +412,8 @@ export function planSchemaSteps(
     }),
   );
 
-  const byClaimId = new Map<string, { m: Migration; index: number }>();
-  for (const [index, m] of migrations.entries()) {
-    const id = migrationClaimId(m.file);
-    const prior = byClaimId.get(id);
-    if (prior) {
-      throw new Error(
-        `migrations ${prior.m.file} and ${m.file} share the claim id "${id}" (same timestamp and slug) — a claim could not tell them apart.`,
-      );
-    }
-    byClaimId.set(id, { m, index });
-  }
-
-  // claimed file → its claimer, with every claim validated.
-  const claimer = new Map<Migration, Migration>();
-  for (const [index, s] of migrations.entries()) {
-    const p = parsed.get(s)!;
-    if (p.kind !== "phased") continue;
-    for (const id of p.claims) {
-      const target = byClaimId.get(id);
-      if (!target) {
-        throw new Error(
-          `migration ${s.file} claims "${id}", but no migration file has that timestamp and slug.`,
-        );
-      }
-      if (parsed.get(target.m)!.kind === "phased") {
-        throw new Error(
-          `migration ${s.file} claims ${target.m.file}, which is a phased schema migration — only data migrations can be claimed.`,
-        );
-      }
-      if (target.index >= index) {
-        throw new Error(
-          `migration ${s.file} claims ${target.m.file}, which sorts after it — a claimed data migration must sort before its claimer.`,
-        );
-      }
-      const prior = claimer.get(target.m);
-      if (prior) {
-        throw new Error(
-          `migration ${target.m.file} is claimed by both ${prior.file} and ${s.file}.`,
-        );
-      }
-      claimer.set(target.m, s);
-    }
-  }
+  // claimed file → its claimer; every claim and adoption on disk validated.
+  const claimer = resolveMigrationRefs(migrations, (m) => parsed.get(m)!);
 
   // Superseding files whose lineage this database already applied, and the
   // files they adopt. A superseding file adopts itself (its own delta is the
@@ -463,34 +422,16 @@ export function planSchemaSteps(
   const adopted: { file: string; via: string[]; by: string }[] = [];
   const adoptedFiles = new Set<Migration>();
   const superseded = new Set<string>();
-  const byHash = new Map(migrations.map((m, index) => [m.hash, { m, index }]));
-  for (const [index, m] of migrations.entries()) {
+  const byHash = new Map(migrations.map((m) => [m.hash, m]));
+  for (const m of migrations) {
     const p = parsed.get(m)!;
     if (p.kind !== "phased" || p.supersedes === null) continue;
     for (const h of lineageHashes(p.supersedes)) superseded.add(h);
     const targets: Migration[] = [m];
     if (p.adopts.length > 0) {
       targets.length = 0;
-      for (const h of p.adopts) {
-        const target = byHash.get(h);
-        if (!target) {
-          throw new Error(
-            `migration ${m.file} adopts ${h}, but no migration file has that hash.`,
-          );
-        }
-        const t = parsed.get(target.m)!;
-        if (t.kind !== "phased" || t.adopts.length > 0) {
-          throw new Error(
-            `migration ${m.file} adopts ${target.m.file}, which is not a phased schema migration — only one can be adopted.`,
-          );
-        }
-        if (target.index >= index) {
-          throw new Error(
-            `migration ${m.file} adopts ${target.m.file}, which sorts after it — an adopted migration must sort before its adoption file.`,
-          );
-        }
-        targets.push(target.m);
-      }
+      // Each one resolved (`resolveMigrationRefs` above).
+      for (const h of p.adopts) targets.push(byHash.get(h)!);
     }
     const pendingTargets = targets.filter((t) => pending.has(t));
     if (pendingTargets.length === 0) continue;

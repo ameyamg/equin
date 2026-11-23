@@ -4,6 +4,7 @@ import {
   renderMergeSnapshotMigration,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { findPhaseErrors, type MigrationFile } from "./migration-phases-valid";
+import { phaseFactsOf } from "./migration-phases-valid.scan";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 const MARKER = LEGACY_IDS.migrationMarker;
@@ -22,12 +23,12 @@ function phased(expand: string, contract: string, claims: string[]): string {
 
 const data = (file: string): MigrationFile => ({
   file,
-  sql: "UPDATE a SET b = 1;",
+  facts: phaseFactsOf("UPDATE a SET b = 1;"),
   isSchema: false,
 });
 const schema = (file: string, sql: string): MigrationFile => ({
   file,
-  sql,
+  facts: phaseFactsOf(sql),
   isSchema: true,
 });
 
@@ -114,10 +115,12 @@ describe("findPhaseErrors — adoption files", () => {
   const ADOPT = "20260904_000000_a0a0a0a0__adopt_published.sql";
   const adoption = (hash: string, isSchema: boolean): MigrationFile => ({
     file: ADOPT,
-    sql: renderAdoptionMigration([hash], {
-      direct: ["38bc8c97"],
-      inherited: [],
-    }),
+    facts: phaseFactsOf(
+      renderAdoptionMigration([hash], {
+        direct: ["38bc8c97"],
+        inherited: [],
+      }),
+    ),
     isSchema,
   });
 

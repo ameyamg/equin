@@ -31,7 +31,9 @@ The DAG is read from one line per migration, so a body that read the data dir
 itself made one file call per migration: 1,017 on a fresh clone (no cached
 records) on 2026-11-21, over the 1,000 a check may make undeclared
 (`wholeTreeRead`), and growing with every migration landed. It is a
-`defineFoldCheck` instead: `check/snapshot-chain-intact.scan.ts` keeps each
+`defineFoldCheck` instead: the migrations core's `snapshotHeadsFold`
+(`core/internal/snapshot-heads.scan.ts`, shared with
+`migration-metadata-consistent`, so both read the same records) keeps each
 data-dir file's head (a `.sql`'s first line, a snapshot's first
 `SNAPSHOT_HEAD_BYTES`, `legacy-snapshots.json` whole) as a plugin record kept
 along the directory tree. A cold store reads each file once as shared record

@@ -304,7 +304,11 @@ build when a branch-local schema migration is not phased, when a statement no
 longer classifies into the section it sits in, or when the runner's own
 `planSchemaSteps` refuses the files on disk (a claim resolving to no data
 migration, to one sorting after its claimer, or to one already claimed) — so a
-claim error fails the build, not the boot.
+claim error fails the build, not the boot. The claim and adoption rules are
+one function, `resolveMigrationRefs` (the `phases` leaf), which the planner
+and the check both call — the check over what its fold keeps of each file
+(`check/migration-phases-valid.scan.ts`: the phase grammar's facts, no SQL),
+so its own body reads no migration and its cost does not grow with them.
 
 ## Supersession (a reset keeps identity)
 
@@ -764,7 +768,9 @@ only agreement that matters.
     - `SnapshotDag`
     - `SnapshotDagProblem`
     - `SnapshotFacts`
+    - `SnapshotHeads`
     - `SnapshotNode`
+    - `SnapshotScanContext`
     - `Statement`
     - `StatementClass`
     - `StatementOp`
@@ -824,9 +830,12 @@ only agreement that matters.
     - `schemaSnapshotPath`
     - `schemaSnapshotState`
     - `SNAPSHOT_HEAD_BYTES`
+    - `SNAPSHOT_SCAN_CONTEXT`
     - `snapshotAncestors`
     - `snapshotBodies`
+    - `snapshotFactsFiles`
     - `snapshotFactsOf`
+    - `snapshotHeadsFold`
     - `snapshotNodesOf`
     - `splitStatements`
     - `stageDrizzleOut`

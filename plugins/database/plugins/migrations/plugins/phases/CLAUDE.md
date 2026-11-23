@@ -19,6 +19,7 @@ CLI and snapshot tooling, which need the computer.
 - Core:
   - Uses: `framework/product-name.LEGACY_IDS`
   - Exports (types):
+    - `MigrationRefs`
     - `ParsedMigration`
     - `PhasedMigration`
     - `SnapshotLineage`
@@ -30,6 +31,7 @@ CLI and snapshot tooling, which need the computer.
     - `renderMergeSnapshotMigration`
     - `renderPhasedMigration`
     - `renderSnapshotHeader`
+    - `resolveMigrationRefs`
     - `snapshotLineage`
 - Cross-plugin:
   - Imported by:

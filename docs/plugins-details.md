@@ -25679,7 +25679,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SnapshotDag`
           - `SnapshotDagProblem`
           - `SnapshotFacts`
+          - `SnapshotHeads`
           - `SnapshotNode`
+          - `SnapshotScanContext`
           - `Statement`
           - `StatementClass`
           - `StatementOp`
@@ -25739,9 +25741,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `schemaSnapshotPath`
           - `schemaSnapshotState`
           - `SNAPSHOT_HEAD_BYTES`
+          - `SNAPSHOT_SCAN_CONTEXT`
           - `snapshotAncestors`
           - `snapshotBodies`
+          - `snapshotFactsFiles`
           - `snapshotFactsOf`
+          - `snapshotHeadsFold`
           - `snapshotNodesOf`
           - `splitStatements`
           - `stageDrizzleOut`
@@ -25793,6 +25798,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: `framework/product-name.LEGACY_IDS`
             - Exports (types):
+              - `MigrationRefs`
               - `ParsedMigration`
               - `PhasedMigration`
               - `SnapshotLineage`
@@ -25804,6 +25810,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderMergeSnapshotMigration`
               - `renderPhasedMigration`
               - `renderSnapshotHeader`
+              - `resolveMigrationRefs`
               - `snapshotLineage`
           - Cross-plugin:
             - Imported by:

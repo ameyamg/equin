@@ -47,6 +47,18 @@ export {
   snapshotFactsOf,
   snapshotNodesOf,
 } from "./internal/snapshot-dag";
+// The data dir's snapshot-bearing heads as a fold (one plugin record per
+// file), for the checks that read the lineage without reading every migration
+// in their own body: snapshot-chain-intact, migration-metadata-consistent.
+export { snapshotHeadsFold } from "./internal/snapshot-heads.scan";
+export type {
+  SnapshotHeads,
+  SnapshotScanContext,
+} from "./internal/snapshot-heads.scan";
+export {
+  SNAPSHOT_SCAN_CONTEXT,
+  snapshotFactsFiles,
+} from "./internal/snapshot-heads";
 // The data dir's files as the snapshot readers read them: off disk, or a
 // caller's own file set (a check's recorded `ctx.repo()`, so its read-set
 // covers every file the verdict read).

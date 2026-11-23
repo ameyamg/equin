@@ -1,15 +1,15 @@
 import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { publishedMigrationTreesSignature } from "@plugins/database/plugins/migrations/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { snapshotHeadsFold } from "./snapshot-chain-intact.scan";
 import {
+  publishedMigrationTreesSignature,
   SNAPSHOT_SCAN_CONTEXT,
-  snapshotChainVerdict,
   snapshotFactsFiles,
-} from "./verify";
+  snapshotHeadsFold,
+} from "@plugins/database/plugins/migrations/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { snapshotChainVerdict } from "./verify";
 
-// A fold check: each data-dir file's snapshot head is its record
-// (./snapshot-chain-intact.scan.ts), so the check's own body reads no
+// A fold check: each data-dir file's snapshot head is its record (the
+// migrations core's `snapshotHeadsFold`), so the check's own body reads no
 // migration — its cost no longer grows with the number of migrations.
 const check = defineFoldCheck({
   id: "snapshot-chain-intact",

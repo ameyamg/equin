@@ -25,6 +25,9 @@ import {
   MIGRATIONS_DATA_DIR,
   NULL_SNAPSHOT_ID,
   publishedMigrationTreesSignature,
+  SNAPSHOT_SCAN_CONTEXT,
+  snapshotFactsFiles,
+  snapshotHeadsFold,
 } from "@plugins/database/plugins/migrations/core";
 import {
   renderMergeSnapshotMigration,
@@ -35,12 +38,7 @@ import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import { snapshotHeadsFold } from "./snapshot-chain-intact.scan";
-import {
-  SNAPSHOT_SCAN_CONTEXT,
-  snapshotChainVerdict,
-  snapshotFactsFiles,
-} from "./verify";
+import { snapshotChainVerdict } from "./verify";
 
 /** The check's run, as `defineFoldCheck` drives it: fold the selected files, then judge. */
 const verifySnapshotChain = async (files: RepoSnapshot) =>

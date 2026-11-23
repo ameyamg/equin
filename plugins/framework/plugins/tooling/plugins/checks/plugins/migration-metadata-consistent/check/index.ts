@@ -1,18 +1,15 @@
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
-  readdirSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
-import { join, resolve } from "path";
-import {
+  combineSnapshotFacts,
   MIGRATIONS_DATA_DIR,
-  readLegacySnapshots,
-  readSnapshotNodes,
+  SCHEMA_SNAPSHOT_FILE,
+  SNAPSHOT_SCAN_CONTEXT,
+  snapshotFactsFiles,
+  snapshotFactsOf,
+  snapshotHeadsFold,
+  snapshotNodesOf,
 } from "@plugins/database/plugins/migrations/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Pure classifier (no fs/git) — exported for unit testing.
@@ -68,24 +65,46 @@ export function classifyMigrationMetadata(
   return { orphanSql, orphanJournal, orphanLegacy, duplicateHeaderIds };
 }
 
-const check: Check = {
+const JOURNAL = `${MIGRATIONS_DATA_DIR}/meta/_journal.json`;
+const JOURNAL_SCHEMA = z.object({
+  entries: z.array(z.object({ tag: z.string() })),
+});
+
+// A fold check: the header ids and legacy keys come from the migrations core's
+// `snapshotHeadsFold` (one plugin record per data-dir file, shared with
+// snapshot-chain-intact), so the body reads no migration of its own — its cost
+// no longer grows with the number of migrations. INPUT-KEYED: every input is
+// the recording file set's — the data dir's membership, each folded file's
+// blob, and the journal read below — so an edit outside the data dir replays
+// the verdict.
+const check = defineFoldCheck({
   id: "migration-metadata-consistent",
   description:
     "journal entries, .sql files, legacy snapshot entries and snapshot headers cross-reference each other",
-  async run() {
-    const root = await getWorktreeRoot();
-    const dir = asAppPath(resolve(root, MIGRATIONS_DATA_DIR));
-    const metaDir = join(dir, "meta");
-
-    const journal = JSON.parse(readFileSync(join(metaDir, "_journal.json"), "utf8"));
-    const journalTags = (journal.entries as Array<{ tag: string }>).map((e) => e.tag);
-
-    const sqlTags = readdirSync(dir)
-      .filter((f) => f.endsWith(".sql"))
-      .map((f) => f.slice(0, -".sql".length));
-
-    const legacyTags = [...(readLegacySnapshots(dir)?.keys() ?? [])];
-    const headerIds = (await readSnapshotNodes(dir))
+  inputKeyed: true,
+  context: () => SNAPSHOT_SCAN_CONTEXT,
+  files: (repo) => snapshotFactsFiles(repo),
+  // The journal: one file, read through the recorded file set.
+  async facts(ctx) {
+    const text = await (await ctx.repo()).read(JOURNAL);
+    if (text === null) throw new Error(`${JOURNAL} is missing`);
+    return JOURNAL_SCHEMA.parse(JSON.parse(text));
+  },
+  fold: snapshotHeadsFold,
+  verdict(heads, { facts: journal }) {
+    const journalTags = journal.entries.map((e) => e.tag);
+    // The tip file is snapshot-chain-intact's to judge, never read here.
+    const facts = combineSnapshotFacts(
+      heads
+        .filter(([rel]) => rel !== `meta/${SCHEMA_SNAPSHOT_FILE}`)
+        .map(([rel, head]) => snapshotFactsOf(rel, head)),
+    );
+    const sqlTags = heads
+      .map(([rel]) => rel)
+      .filter((rel) => !rel.includes("/") && rel.endsWith(".sql"))
+      .map((rel) => rel.slice(0, -".sql".length));
+    const legacyTags = (facts.legacy ?? []).map((e) => e.tag);
+    const headerIds = snapshotNodesOf(facts)
       .filter((n) => n.lineage === "header")
       .map((n) => ({ tag: n.file.slice(0, -".sql".length), id: n.id }));
 
@@ -147,6 +166,6 @@ const check: Check = {
         "restore the files from git (see published-migrations-immutable).",
     };
   },
-};
+});
 
 export default check;
