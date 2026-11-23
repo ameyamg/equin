@@ -22,7 +22,6 @@ import {
   EditableTreeLabel,
   FieldCell,
   FieldPresentationProvider,
-  dropOrderOf,
   fieldAlign,
   wearsTimeInk,
   leadingSlot,
@@ -89,6 +88,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
 import { tableHeaderOption } from "../internal/column-captions";
+import { columnLayout, TITLE_COLUMN_WIDTH } from "../internal/column-layout";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -705,7 +705,14 @@ export function NestedTableView(
   // method call on `props`, which the compiler can only key on the whole props
   // object — new on every render of the host — so the columns (and every row
   // they reach) would be rebuilt each time.
-  const { rowTone, setSort, setSectionCollapsed } = props;
+  const {
+    rowTone,
+    setSort,
+    setSectionCollapsed,
+    updateViewOptions,
+    setSortDirection,
+    hideField,
+  } = props;
   const sectionSummary = props.sectionSummary;
   const labelClassName = options.labelClassName;
   const labelClass = (row: unknown) =>
@@ -713,20 +720,19 @@ export function NestedTableView(
   const columns: ColumnDef<Line>[] = columnFields.map((f, i) => ({
     id: f.id,
     header: f.header === false ? "" : (f.header ?? f.label),
-    // The first column — the tree's label — takes the slack, as a tree row's
-    // label does, floored at the tree's label floor (10rem) so the other
-    // columns cannot squeeze it away; the others are as wide as their content.
-    width: f.width ?? (i === 0 ? "minmax(10rem, 1fr)" : undefined),
+    // The first column — the tree's label — takes the spare room past its
+    // width, as a tree row's label does: 280px (an outline — a sidebar's tree
+    // — the tree's label floor, 10rem), unless its field sets one or the
+    // user resized it; the others are as wide as their content.
+    width:
+      f.width ??
+      (i === 0
+        ? options.presentation === "outline"
+          ? "minmax(10rem, 1fr)"
+          : TITLE_COLUMN_WIDTH
+        : undefined),
+    grow: i === 0,
     align: fieldAlign(f, placement),
-    dropOrder: dropOrderOf(
-      f,
-      slots.edge.includes(f)
-        ? "edge"
-        : slots.trail.includes(f)
-          ? "trail"
-          : "title",
-      placement,
-    ),
     // The host's sortable set: a header click sorts every sibling group.
     sortable: props.sortHeader.sortable.has(f.id),
     cell: (line: Line) => {
@@ -907,6 +913,13 @@ export function NestedTableView(
     presentation: options.presentation,
     header: tableHeaderOption(options),
     tree,
+    // The user's column widths, frozen columns and column menu, stored on the
+    // view instance.
+    ...columnLayout(
+      options,
+      columns.map((c) => c.id),
+      { updateViewOptions, setSortDirection, hideField },
+    ),
     selection: props.selection
       ? { actions: props.selection.bulkActions, keep: props.selection.keep }
       : undefined,

@@ -47,3 +47,29 @@ export function cyclePrimarySort(
     ...user.filter((r) => r.fieldId !== fieldId),
   ];
 }
+
+/**
+ * A column menu's Sort ascending / Sort descending: `fieldId` becomes the
+ * PRIMARY sort in `direction`, any existing rule for it removed from its old
+ * slot, the secondary rules kept in order. A pinned field keeps its place
+ * among the pins and takes the direction (a header never displaces a pin).
+ * Pure + immutable.
+ */
+export function setPrimarySort(
+  rules: readonly SortRule[],
+  fieldId: string,
+  direction: "asc" | "desc",
+): SortRule[] {
+  const { pinned, user } = splitPinned(rules);
+  if (pinned.some((r) => r.fieldId === fieldId)) {
+    return [
+      ...pinned.map((r) => (r.fieldId === fieldId ? { ...r, direction } : r)),
+      ...user,
+    ];
+  }
+  return [
+    ...pinned,
+    { fieldId, direction },
+    ...user.filter((r) => r.fieldId !== fieldId),
+  ];
+}

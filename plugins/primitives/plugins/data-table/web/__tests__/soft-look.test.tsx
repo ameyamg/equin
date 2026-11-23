@@ -122,6 +122,8 @@ describe("DataTable grid presentation (unchanged by soft)", () => {
       "dt-grid",
       "gap-x-sm",
       "grid",
+      // The resize edge line's positioning context.
+      "relative",
     ]);
     // …and its grid hands the rail back as owed, so the rows pay it inside the
     // bled box (declared on the box, its own margin would read it).

@@ -26,7 +26,7 @@ owed (`REGION_OWED`). In the grid look (`data-table.css`, `dt-grid`) the grid
 then pads itself by the bleed and every full-span row takes the same negative
 margin: a subgrid row's margin and padding add to its edge cells' margins, so
 the -bleed and the row's +rail cancel there and **no column moves or narrows**
-— rows, rules, fills and the sticky lead cell span the region, text on the
+— rows, rules, fills and the frozen cells span the region, text on the
 rail. (Paying the rail on the row alone takes it out of the first and last
 tracks: Studio's fixed 2rem `#` column lost 16px and wrapped its label.) A
 grid table bleeding in a CLOSED region (`--rail-edge: closed` — a section card
@@ -128,7 +128,7 @@ group headers, footers — so the lines below a fold slide with it.
 
 `presentation` (default `"grid"`) is how the table looks. `grid` is the header
 row, a hairline under every row (`border-b border-border/30`), a faint hover
-tint and an accent fill on the selected row, and the wide-table behaviour
+tint and an accent fill on the selected row, and the sideways behaviour
 below. `outline` is a sidebar's look: no header row (nor first-group labels;
 group headers pin at `stickyHeaderOffset`), no row rules, and each row is the
 tree row's rounded pill — `hover:bg-accent` on a row that is not selected, and
@@ -148,9 +148,9 @@ on the row, `rolePickClass(fallback, false)` on each cell). The table's
 box is the optional frame (`rounded-soft-frame p-soft-frame shadow-soft-frame
 bg-soft-frame-fill border-soft-frame-border`, all none by default, an
 inline-size container) and sits ON the rail as a margin; the grid inside sets
-`--rail-owed-*: 0px`, so rows, group bands and footers pay no rail again. Its
-columns give way by `dropOrder` (`useColumnFit`'s `drop` mode) — it never
-scrolls sideways; a revealed cluster takes the trailing track as in grid. The
+`--rail-owed-*: 0px`, so rows, group bands and footers pay no rail again. Wider
+than its box it scrolls sideways like a grid table (no frozen columns: a soft
+row pads itself); a revealed cluster takes the trailing track as in grid. The
 windowed body's first estimate is 48px (`softRowH`'s default). The grid and
 outline looks are untouched by it.
 
@@ -187,8 +187,8 @@ rows read as a render loop).
 **An outline with its labels** (`header: true`): the column-header row a file
 listing wants over tree rows. It takes the outline rows' inset and a tree row's
 height, a breath under its rule; every column after the first reads
-as meta (`text-caption text-row-meta`). Its columns give way by `dropOrder` in a
-narrow box (`useColumnFit`'s `drop` mode) — it never scrolls sideways. Nested,
+as meta (`text-caption text-row-meta`). Its columns squeeze into a narrow box —
+it never scrolls sideways. Nested,
 `tree.headerLeading` puts the first label over the rows' labels (a depth-0
 row's lead inset and disclosure slot).
 
@@ -233,55 +233,80 @@ inside the tree head when the rows nest, after the disclosure. The checkbox
 reveals on the row's `group/row-actions` hover and stops its own press from
 reaching the row (no activation, no drag start).
 
-## Wide tables: column fit, sideways scroll, sticky first column
+## Widths, sideways scroll, frozen columns
 
-A grid table goes **wide** only where something can scroll it sideways: inside
-ui-kit's `SidewaysScroll` region (opened by a vertical `Scroll`, ended by every
-`Surface` but `base` — a card, a well, a floating card — and by `OverlayPanel` —
-popovers, menus, dialogs), AND with that `Scroll` the nearest ancestor clipping
-it horizontally (a DOM walk in `useColumnFit`, for an ad-hoc clipping box).
-Anywhere else — and in `outline` presentation (a sidebar) — it squeezes into
-its box as it always did: no fit, no pinned column, no overflow. A context, not
-the DOM walk alone, because a card draws a box without clipping (a table would
-spill past its border), and because it crosses portals the right way.
+Notion's model (`research/2026-11-23-primitives-data-table-resizable-columns.md`):
+every column has a width, columns never drop, and a table wider than its box
+scrolls sideways.
 
-- **Fit.** `useColumnFit` (`web/internal/use-column-fit.ts`) decides which
-  columns show. A column whose `ColumnDef.dropOrder` is set gives way, lowest
-  first, until the first column keeps its minimum — `fitAlignedColumns`
-  (`core`). A column without one never drops; the first column never
-  does. Minimums come from the track (`trackMin`, `core`): a length is itself,
-  `minmax(a, b)` is `a`, a content- or space-sized track is its header label,
-  measured once per column id while shown and kept while dropped (so the fit
-  knows when it fits again). The room is the table's box, but never past the
-  scroller's visible right edge, in the unscrolled frame. Nested (`tree`), the
-  first column's floor is 160px, the tree's label floor.
-- **Overflow.** The grid is `min-width: min-content`, every header label
-  `nowrap` (so an `auto` track floors at its label; body cells are `min-w-0`
-  truncation leaves), and a `minmax(0, …)` track is laid out floored at its
-  measured label in px (`floorAtLabel` — not `min-content`, which for a
-  truncating cell is its whole unwrapped text). So no column collapses below its
-  label; past that the grid is wider than its box. Its box then carries `data-scrolls-x`, which turns
-  the enclosing `Scroll` into the sideways scroller (and an inline-size
-  container), and `Scroll`'s CSS keeps everything but the table in place: the
-  boxes on the path to the table grow to it, and everything off that path (the
-  DataView's toolbar band, a stats band above) pins `left: 0` at
-  `max-width: 100cqi` — see `css/scroll`'s CLAUDE.md.
-- **Sticky first column.** Column 0's header label and every row's first cell
-  are `<Sticky edge="left" layer="base">` (below the `raised` header and group
-  bands, above the other cells). The cell is opaque: `--chrome-mask` under a
-  `linear-gradient` of the row's own tint. A grid row paints its tint through
-  `--dt-row-tint` (`[background-color:var(--dt-row-tint)]`; hover, selected and
-  a decoration's `highlighted` set it), never a `bg-*` class, so the pinned cell
-  follows every row state. It reaches over the row's rail inset and the column
-  gap (negative margin, paid back as padding) so nothing peeks past it.
+- **Widths.** `columnWidths` (px by column id) is the caller's stored state: a
+  column with one is laid out at exactly that width — `minmax(<w>px, 1fr)` when
+  it `ColumnDef.grow`s (the title: it takes the spare room, never shrinking below
+  its width); one without keeps its `width` track.
+- **Resize.** `onColumnResize` present → every header but a `ColumnDef.fixed`
+  one carries a grip straddling its right edge (`ColumnGrip`, movable's
+  `useDragGesture`: capture at drag start, a 4px threshold so a press is still a
+  click, the click a drag ends on swallowed). The column is drawn at its live
+  width during the drag (local state — the grid template only; rows are not
+  re-rendered), with a full-height accent line at its edge (also on grip hover)
+  and a px badge; one `onColumnResize` on release. The floor is the header label,
+  at least 48px. A double-click fits the column to its content: its track laid
+  out as `max-content` for one synchronous read (`maxContentTrackPx` — the header
+  label and every row in the DOM, whatever truncates them now).
+- **No dropping.** There is no `dropOrder`. `fitAlignedColumns` stays in `core`
+  only for the list view's trailing slots (`use-slot-widths.ts`).
+- **Sideways scroll** (`useColumnFit`, `web/internal/use-column-fit.ts`) — a
+  `grid` or `soft` table; an `outline` (a sidebar's tree) squeezes into its box:
+  - In ui-kit's `SidewaysScroll` region (opened by a vertical `Scroll`, ended by
+    every `Surface` but `base` and by `OverlayPanel`), with that `Scroll` the
+    nearest box clipping it horizontally (a DOM walk), the **pane** scrolls: while
+    the grid is wider, its box carries `data-scrolls-x`, which turns the `Scroll`
+    into the sideways scroller (and an inline-size container), and `Scroll`'s CSS
+    keeps everything but the table in place — the boxes on the path grow to it,
+    everything off it (the DataView's toolbar, a stats band) pins `left: 0` at
+    `max-width: 100cqi` (`css/scroll`'s CLAUDE.md). The toolbar stays put.
+  - Anywhere else — a card, a popover, a plain box — the table's **own box**
+    scrolls: `overflow-x: auto` only while the grid is wider than it (so a table
+    that fits keeps its sticky header pinned to the page), and it publishes its
+    visible width as `--dt-view-w` for the full-span bands. While it scrolls, the
+    box is the sticky rows' scrollport, so they ignore `stickyHeaderOffset` (an
+    offset meant for the page's scroller would push the header over the first
+    rows) and no longer pin to the page vertically — the price of a card that
+    scrolls sideways.
+  - The grid is `min-width: min-content`, every header label `nowrap`, and a
+    `minmax(0, …)` track floored at its measured label (`floorAtLabel`, measured
+    once per column id) — so no column collapses below its label; past that the
+    grid is wider than its box.
+- **Frozen columns.** Nothing is sticky by default. `frozenColumns: n` (grid
+  presentation only) pins columns `< n`: each header label and body cell is a
+  `<Sticky edge="left" layer="base">` (`FrozenCell`), column 0 at 0 and column
+  `i` at `var(--dt-frz-<i>)` — the summed width of the columns before it, read
+  from the grid's resolved tracks in the fit's resize observer and written as
+  CSS vars on the grid (never per-row state; a row receives only the count). A
+  frozen cell is opaque — `--chrome-mask` under a `linear-gradient` of the row's
+  own tint: a grid row paints its tint through `--dt-row-tint`
+  (`[background-color:var(--dt-row-tint)]`; hover, selected and a decoration's
+  `highlighted` set it), never a `bg-*` class, so the pinned cell follows every
+  row state. It reaches over the column gap on its right (and column 0 over the
+  row's rail inset) so nothing peeks past it. The last frozen column casts an
+  edge shadow once scrolled (`dt-frozen-edge`, data-table.css): a scroll-driven
+  animation on the nearest scroller's inline axis — no listener; an engine
+  without scroll timelines draws none.
+- **Column menu.** `columnMenu` present → a header click opens the column's
+  menu (ui-kit `DropdownMenu`, the header cell its trigger): Sort ascending /
+  descending (a sortable column; the current direction checked from
+  `sortState`), Freeze up to here / Unfreeze columns (on the last frozen one;
+  where the table can scroll sideways), Fit to content (a resizable column),
+  Hide. Absent → a header click sorts, as it always did — every other
+  `DataTable` caller is unchanged.
 - **Full-span bands** — group headers (`left: 0`), group and table footers, a
   tree's placeholder lines — pin their content to the left edge at
-  `max-width: 100cqi`, so a label or a fold line stays readable however far the
-  table scrolled.
+  `max-width: var(--dt-view-w, 100cqi)` whenever the table scrolls sideways, so a
+  label or a fold line stays readable however far the table scrolled.
 
-Pinned by `data-view/plugins/table/e2e/sticky-scroll.ts` (Studio explorer
-nested + Debug → Claude CLI Calls flat, 390 / 820 / 1440, light and dark).
-Verified in Chromium only (the e2e harness drives Chromium).
+Pinned by `data-view/plugins/table/e2e/sticky-scroll.ts` (Debug → Claude CLI
+Calls in the pane's scroller, and a card table: resize + persistence, no drop on
+narrowing, sideways scroll, freeze). Verified in Chromium only.
 
 ## Rows are memoized: every row prop must keep its identity
 
@@ -340,8 +365,8 @@ step renders, to check a caller.
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×4
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×11
     - `primitives/css/sticky/stack` ×3
     - `primitives/css/text` ×3
     - `primitives/multi-select` ×3
@@ -354,9 +379,12 @@ step renders, to check a caller.
     - `primitives/css/center.Center`
     - `primitives/css/scroll.useScrollsSideways`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/z-layers.zLayerClass`
+    - `primitives/dom/movable.useDragGesture`
     - `ui/icons.Icon`
   - Exports (types):
     - `ColumnDef`
+    - `DataTableColumnMenu`
     - `DataTableGroup`
     - `DataTableParts`
     - `DataTablePresentation`
@@ -369,12 +397,13 @@ step renders, to check a caller.
     - `DATA_TABLE_VIRTUALIZE_THRESHOLD`
     - `DataTable`
 - Cross-plugin:
-  - Uses tokens: 44 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 48 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×23
+    - `ui/tokens/color-palette` ×8
     - `ui/tokens/density` ×7
-    - `ui/tokens/color-palette` ×6
-    - `ui/tokens/type-scale` ×6
+    - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
+    - `ui/tokens/font-family --letter-spacing`
   - Imported by:
     - `apps/studio/contributions`
     - `apps/studio/contributions/tables/columns`

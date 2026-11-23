@@ -4,16 +4,29 @@ import {
   Fragment,
   memo,
   useCallback,
+  useLayoutEffect,
   useMemo,
+  useRef,
+  useState,
   type CSSProperties,
+  type ReactElement,
   type ReactNode,
 } from "react";
 import {
   cn,
   ControlSizeProvider,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   SingleLineProvider,
   useSidewaysScroll,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useDragGesture } from "@plugins/primitives/plugins/dom/plugins/movable/web";
+import { zLayerClass } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
 import {
   RowActions,
   rowActionsAnchor,
@@ -51,6 +64,7 @@ import {
 } from "@plugins/primitives/plugins/multi-select/web";
 import type {
   ColumnDef,
+  DataTableColumnMenu,
   DataTableGroup,
   DataTableParts,
   DataTablePresentation,
@@ -60,7 +74,7 @@ import type {
   DataTableTree,
 } from "./types";
 import { useDataTable } from "./use-data-table";
-import { NESTED_LEAD_MIN_PX, useColumnFit } from "./use-column-fit";
+import { frozenLeftVar, useColumnFit } from "./use-column-fit";
 import {
   runActivation,
   type Activation,
@@ -122,6 +136,14 @@ const SORT_ICON_UNSORTED_CLASS = cn(
 const arrowDownwardIcon = symbol("arrow-downward");
 const arrowUpwardIcon = symbol("arrow-upward");
 const unfoldMoreIcon = symbol("unfold-more");
+const pushPinIcon = symbol("push-pin");
+const keepOffIcon = symbol("keep-off");
+const fitWidthIcon = symbol("fit-width");
+const visibilityOffIcon = symbol("visibility-off");
+
+/** The narrowest a user can drag a column: its header label, but never below
+ *  this. */
+const MIN_COLUMN_PX = 48;
 
 /** A decoration without `provide`: the row's content as is. */
 const identity = (content: ReactNode): ReactNode => content;
@@ -249,25 +271,73 @@ const OUTLINE_INSET_NESTED: CSSProperties = {
   paddingInline: "0 var(--space-xs)",
 };
 /**
- * The sticky first cell reaches over its row's rail inset on the left and over
- * the column gap on the right (negative margin, paid back as padding), so
- * nothing scrolling under it shows on either side while it is pinned, and its
- * content still sits on the rail.
+ * A frozen cell reaches over the column gap on its right (negative margin,
+ * paid back as padding), so nothing scrolling under it shows beside it while
+ * it is pinned; the first column's also reaches over its row's rail inset on
+ * the left, its content still on the rail. Column 0 pins at 0, every other
+ * frozen column at the summed width of the columns before it
+ * (`frozenLeftVar`, measured by `useColumnFit`).
  */
-const LEAD_EDGE: CSSProperties = {
-  marginLeft: `calc(-1 * ${RAIL_START})`,
-  paddingLeft: RAIL_START,
+const FROZEN_GAP: CSSProperties = {
   marginRight: "calc(-1 * var(--space-sm))",
   paddingRight: "var(--space-sm)",
 };
-/** A body row's sticky first cell: opaque — the surface, under the row's own
- *  tint — so it matches the row at rest, hovered, selected or highlighted. */
-const LEAD_CELL: CSSProperties = {
-  ...LEAD_EDGE,
+const LEAD_EDGE: CSSProperties = {
+  ...FROZEN_GAP,
+  marginLeft: `calc(-1 * ${RAIL_START})`,
+  paddingLeft: RAIL_START,
+};
+/** A body row's frozen cell: opaque — the surface, under the row's own tint —
+ *  so it matches the row at rest, hovered, selected or highlighted. */
+const FROZEN_FILL: CSSProperties = {
   backgroundColor: "var(--chrome-mask)",
   backgroundImage:
     "linear-gradient(var(--dt-row-tint, transparent), var(--dt-row-tint, transparent))",
 };
+
+/**
+ * The width column `index` takes laid out as `max-content`: the widest content
+ * it draws (header label and the rows in the DOM), whatever truncates it now —
+ * the grid's tracks swapped for one synchronous layout read, then put back.
+ */
+function maxContentTrackPx(
+  grid: HTMLElement,
+  index: number,
+  tracks: readonly string[],
+): number {
+  const previous = grid.style.gridTemplateColumns;
+  const probe = [...tracks];
+  probe[index] = "max-content";
+  grid.style.gridTemplateColumns = probe.join(" ");
+  const px = parseFloat(
+    getComputedStyle(grid).gridTemplateColumns.split(" ")[index] ?? "0",
+  );
+  grid.style.gridTemplateColumns = previous;
+  return px;
+}
+
+/** How many leading columns pin: `frozenColumns`, clamped to the columns — in
+ *  a grid table only (a soft row pads itself; an outline never scrolls
+ *  sideways). */
+function frozenCountOf(
+  presentation: DataTablePresentation,
+  frozenColumns: number,
+  columnCount: number,
+): number {
+  if (presentation !== "grid") return 0;
+  return Math.max(0, Math.min(frozenColumns, columnCount));
+}
+
+/** Frozen column `c`'s edge style: where it pins, and what it reaches over. */
+function frozenEdge(c: number): CSSProperties {
+  return c === 0
+    ? LEAD_EDGE
+    : { ...FROZEN_GAP, left: `var(${frozenLeftVar(c)}, 0px)` };
+}
+/** A frozen body cell: its edge, filled. */
+function frozenCell(c: number): CSSProperties {
+  return { ...frozenEdge(c), ...FROZEN_FILL };
+}
 /**
  * A soft table's box sits on the rail (a margin, like an outline pill) and is
  * the rail's OWNER for everything inside it: the grid publishes nothing owed,
@@ -329,21 +399,7 @@ const NOWRAP: CSSProperties = { whiteSpace: "nowrap" };
  * exactly while the table overflows it (see `Scroll`), so `100cqi` is the
  * visible width then — and the viewport, which caps nothing, otherwise.
  */
-const SPAN_PIN: CSSProperties = { maxWidth: "100cqi" };
-
-/**
- * Nested, the first column holds the tree head (indent, guides, disclosure)
- * before the name, so it keeps the tree's label floor: past that the table
- * scrolls sideways rather than squeezing the names away.
- */
-const NESTED_LEAD_EDGE: CSSProperties = {
-  ...LEAD_EDGE,
-  minWidth: NESTED_LEAD_MIN_PX,
-};
-const NESTED_LEAD_CELL: CSSProperties = {
-  ...LEAD_CELL,
-  minWidth: NESTED_LEAD_MIN_PX,
-};
+const SPAN_PIN: CSSProperties = { maxWidth: "var(--dt-view-w, 100cqi)" };
 
 /** The selection checkbox's hover reveal: `SelectionCheckbox` reveals on a BARE
  *  `group-hover`, and a table row's named group is the row-actions anchor. */
@@ -369,7 +425,7 @@ export function DataTable<TRow>({
   keepMountedRowKeys,
   openKeys: hostOpenKeys,
   controlSize = "xs",
-  stickyHeaderOffset = "0px",
+  stickyHeaderOffset: pageHeaderOffset = "0px",
   columnHeader = "row",
   density = "comfortable",
   presentation = "grid",
@@ -377,45 +433,88 @@ export function DataTable<TRow>({
   tree,
   selection,
   parts,
+  columnWidths,
+  onColumnResize,
+  frozenColumns = 0,
+  columnMenu,
 }: DataTableProps<TRow>) {
-  // A grid table in a region that may scroll it sideways (`wide`: a pane's
-  // `Scroll`, no card / popover / clipping box in between — see
-  // `useColumnFit`) scrolls when its columns do not fit — after the ones that
-  // may drop have — with its first column pinned. An outline (a sidebar), or a
-  // table in a card or a popover, keeps squeezing into its box: no pinned
-  // column, nothing dropped.
-  const sideways = useSidewaysScroll();
+  // A grid or soft table never drops a column: wider than its box, it scrolls
+  // sideways — by its pane's `Scroll` when it sits in that `Scroll`'s
+  // sideways region, else by its own box (a card, a popover). An outline (a
+  // sidebar's tree) keeps squeezing into its box.
+  const inSidewaysRegion = useSidewaysScroll();
   // An outline's revealed cluster overlays its row's trailing edge (the tree
   // row's), so it reserves no track: a sidebar's labels keep the width a hidden
   // cluster would take. A persistent cluster is painted at rest and needs room.
   const hasActionsTrack =
     !!rowPersistentActions || (!!rowActions && presentation !== "outline");
   const soft = presentation === "soft";
+  const sideways = presentation !== "outline";
+  // Columns `< frozenCount` pin to the scroller's left edge. A grid table only:
+  // a soft row pads itself and an outline never scrolls sideways.
+  const frozenCount = frozenCountOf(
+    presentation,
+    frozenColumns,
+    columns.length,
+  );
+  // The column being dragged wider or narrower, drawn at its live width until
+  // the drag ends (one `onColumnResize`, on release).
+  const [drag, setDrag] = useState<{ id: string; px: number } | null>(null);
+  // The column whose resize grip the pointer is on (its edge line shows).
+  const [gripHover, setGripHover] = useState<string | null>(null);
+  // Each column's own track: its stored (or dragged) width — `minmax(w, 1fr)`
+  // for the column that takes the spare room — else its `width`.
+  const baseTracks = columns.map((col) => {
+    const px = drag?.id === col.id ? drag.px : columnWidths?.[col.id];
+    if (px === undefined) return col.width ?? "auto";
+    return col.grow ? `minmax(${px}px, 1fr)` : `${px}px`;
+  });
   // Destructured: render never reads a member off the hook output (the refs
   // rule flags member access on a value carrying refs).
   const {
-    wide: pinLead,
-    shown: shownColumns,
+    scroller,
     tracks: columnTracks,
+    boxStyle,
+    frozenStyle,
     containerRef: fitContainerRef,
     gridRef: fitGridRef,
-  } = useColumnFit(columns, {
-    // A grid table in a sideways-scroll region goes wide; a soft table, or an
-    // outline with its labels, drops columns in its box; anything else
-    // squeezes.
-    mode:
-      presentation === "grid"
-        ? sideways
-          ? "wide"
-          : "none"
-        : soft || header
-          ? "drop"
-          : "none",
-    nested: !!tree,
-    hasActionsTrack,
+  } = useColumnFit(columns, baseTracks, {
+    mode: sideways ? "sideways" : "none",
+    inSidewaysRegion,
+    frozen: frozenCount,
   });
-  // The grid's ref: the keyboard host's and the column fit's, one stable callback.
-  const gridRef = useComposedRef<HTMLElement>(tree?.containerRef, fitGridRef);
+  // Full-span bands pin to the visible part of a table that scrolls sideways.
+  const pinBands = scroller !== null;
+  // While its own box scrolls it sideways, that box is the sticky rows'
+  // scrollport (it never scrolls vertically): an offset meant for the page's
+  // scroller (a DataView toolbar above) would push the header down over the
+  // first rows, so they pin flush.
+  const stickyHeaderOffset = boxStyle ? "0px" : pageHeaderOffset;
+  // The grid element itself, for the fit-to-content measure and the edge line.
+  const [gridEl, setGridEl] = useState<HTMLElement | null>(null);
+  // The grid's ref: the keyboard host's, the column fit's and ours, one
+  // stable callback.
+  const gridRef = useComposedRef<HTMLElement>(
+    tree?.containerRef,
+    useComposedRef<HTMLElement>(fitGridRef, setGridEl),
+  );
+  // The accent line along the right edge of the column being resized (or
+  // whose grip is hovered), the table's full height: placed under the grip,
+  // written straight to the line's style (a layout read, no re-render).
+  const edgeId = drag?.id ?? gripHover;
+  const edgeLineRef = useRef<HTMLSpanElement | null>(null);
+  useLayoutEffect(() => {
+    const line = edgeLineRef.current;
+    const grid = gridEl;
+    if (!line || !grid || edgeId === null) return;
+    const grip = grid.querySelector<HTMLElement>(
+      `[data-column-grip="${CSS.escape(edgeId)}"]`,
+    );
+    if (!grip) return;
+    const g = grip.getBoundingClientRect();
+    const box = grid.getBoundingClientRect();
+    line.style.left = `${g.left + g.width / 2 - box.left - grid.clientLeft}px`;
+  });
   const { rows, sortState, toggleSort } = useDataTable(
     data,
     columns,
@@ -508,8 +607,8 @@ export function DataTable<TRow>({
   // header row. Its label spans the leading tracks up to the first labelled
   // column — so it needs at least one unlabelled leading track, and a group to
   // ride. Otherwise it falls back to the header row (see DataTableColumnHeader).
-  const firstLabelled = shownColumns.findIndex((col) => !!col.header);
-  const leadSpan = firstLabelled === -1 ? shownColumns.length : firstLabelled;
+  const firstLabelled = columns.findIndex((col) => !!col.header);
+  const leadSpan = firstLabelled === -1 ? columns.length : firstLabelled;
   // An outline has no column labels at all — neither a header row nor labels
   // on the first group.
   const showHeader = header ?? presentation !== "outline";
@@ -522,14 +621,47 @@ export function DataTable<TRow>({
     groups.length > 0 &&
     leadSpan > 0;
 
+  // The narrowest a column may be dragged or fitted: its header label.
+  const floorOf = (id: string): number => {
+    const label = gridEl?.querySelector<HTMLElement>(
+      `[data-slot='data-table-header'] [data-column-id="${CSS.escape(id)}"]`,
+    );
+    return Math.max(
+      MIN_COLUMN_PX,
+      Math.ceil(label?.getBoundingClientRect().width ?? 0),
+    );
+  };
+  // A column's laid-out width: its resolved track.
+  const trackPx = (index: number): number => {
+    const grid = gridEl;
+    if (!grid) return 0;
+    return parseFloat(
+      getComputedStyle(grid).gridTemplateColumns.split(" ")[index] ?? "0",
+    );
+  };
+  // Fit to content: the widest content the column draws, never below its
+  // label.
+  const fitColumn = (id: string) => {
+    const index = columns.findIndex((c) => c.id === id);
+    if (!gridEl || index === -1 || !onColumnResize) return;
+    const px = maxContentTrackPx(gridEl, index, [
+      ...columnTracks,
+      ...(hasActionsTrack ? ["auto"] : []),
+    ]);
+    onColumnResize(id, Math.max(floorOf(id), Math.ceil(px)));
+  };
+
   const headerCells = () =>
-    shownColumns.map((col, c) => {
+    columns.map((col, c) => {
       const sortable = col.sortable ?? !!col.value;
       const active = sortState?.columnId === col.id;
-      // The fit measures a content-sized column's minimum on its label,
-      // which never wraps — so the label is also the narrowest an `auto` track
-      // gets. An inline box, so its width is the label's. Whether an
-      // unsorted column shows its arrow is the `sortIcon` token's call.
+      const menu = columnMenu && !col.fixed ? columnMenu : undefined;
+      const resizable = !!onColumnResize && !col.fixed;
+      const isFrozen = c < frozenCount;
+      // A wide table's minimum for a content-sized column is its label, which
+      // never wraps — so the label is also the narrowest an `auto` track gets.
+      // An inline box, so its width is the label's. Whether an unsorted
+      // column shows its arrow is the `sortIcon` token's call.
       const label = (
         <span data-column-id={col.id}>
           {col.header}
@@ -545,42 +677,96 @@ export function DataTable<TRow>({
         c === 0 && outlineHeader && tree?.headerLeading
           ? tree.headerLeading(label)
           : label;
+      const dragged = drag?.id === col.id ? drag.px : null;
+      const content = (
+        <>
+          {lead}
+          {resizable && (
+            <ColumnGrip
+              columnId={col.id}
+              lit={edgeId === col.id}
+              onHover={setGripHover}
+              onDragStart={() => ({
+                from: trackPx(c),
+                floor: floorOf(col.id),
+              })}
+              onDrag={(px) => setDrag({ id: col.id, px })}
+              onDragEnd={(px) => {
+                setDrag(null);
+                onColumnResize(col.id, px);
+              }}
+              onFit={() => fitColumn(col.id)}
+            />
+          )}
+          {dragged !== null && <WidthBadge px={dragged} />}
+        </>
+      );
       const cellProps = {
         className: cn(
           HEADER_CELL_CLASS,
           active && HEADER_SORTED_CLASS,
           alignClass(col.align),
-          sortable && HEADER_SORTABLE_CLASS,
+          (sortable || menu) && HEADER_SORTABLE_CLASS,
+          // The grip and the width badge hang off the cell.
+          resizable && !isFrozen && "relative",
         ),
-        onClick: sortable ? () => toggleSort(col.id) : undefined,
+        // With a column menu, a click opens it (the menu's trigger); without
+        // one, a click sorts.
+        onClick: !menu && sortable ? () => toggleSort(col.id) : undefined,
         "data-part": parts?.columnHeader,
       };
-      // The first column's label pins with the cells below it — the cell
-      // itself, so it stays the click target that sorts. A plain span like
-      // the `Text` beside it (no variant: the header row's typography).
-      return c === 0 && pinLead ? (
+      // A frozen column's label pins with the cells below it — the cell
+      // itself, so it stays the click target. A plain span like the `Text`
+      // beside it (no variant: the header row's typography).
+      const cell = isFrozen ? (
         <Sticky
           key={col.id}
           as="span"
           edge="left"
-          layer="base"
+          // Above the header's other cells, which are positioned (`relative`,
+          // for their resize grips — `raised`) and would otherwise paint over
+          // it as they scroll under.
+          layer="nav"
           mask
           {...cellProps}
-          style={{ ...(tree ? NESTED_LEAD_EDGE : LEAD_EDGE), ...NOWRAP }}
+          className={cn(
+            cellProps.className,
+            c === frozenCount - 1 && "dt-frozen-edge",
+          )}
+          style={{ ...frozenEdge(c), ...NOWRAP }}
         >
-          {label}
+          {content}
         </Sticky>
       ) : (
-        // Wide, a label never wraps (it is the track's floor); squeezed, it
-        // wraps as it always did.
+        // Sideways, a label never wraps (it is the track's floor); squeezed,
+        // it wraps as it always did.
         <Text
           as="span"
           key={col.id}
           {...cellProps}
-          style={pinLead ? NOWRAP : undefined}
+          style={sideways ? NOWRAP : undefined}
         >
-          {lead}
+          {content}
         </Text>
+      );
+      if (!menu) return cell;
+      return (
+        <ColumnMenu
+          key={col.id}
+          trigger={cell}
+          columnId={col.id}
+          menu={menu}
+          sortable={sortable}
+          direction={active ? sortState!.direction : null}
+          freeze={
+            !sideways || presentation !== "grid"
+              ? null
+              : c === frozenCount - 1
+                ? "unfreeze"
+                : "freeze"
+          }
+          onFit={resizable ? () => fitColumn(col.id) : undefined}
+        />
       );
     });
 
@@ -602,8 +788,8 @@ export function DataTable<TRow>({
       }
     : undefined;
   const template = [
-    // A grid table floors a flexible column at its label (`floorAtLabel`), so
-    // overflowing scrolls it rather than collapsing the column to nothing.
+    // A sideways table floors a flexible column at its label (`floorAtLabel`),
+    // so overflowing scrolls it rather than collapsing the column to nothing.
     ...columnTracks,
     ...(hasActionsTrack ? ["auto"] : []),
   ].join(" ");
@@ -632,7 +818,7 @@ export function DataTable<TRow>({
           // eslint-disable-next-line layout/no-adhoc-layout -- full-span line spanning the subgrid table's column tracks (a tree's placeholder child)
           className="col-span-full rail-follow"
         >
-          <PinToView active={pinLead}>{span}</PinToView>
+          <PinToView active={pinBands}>{span}</PinToView>
         </div>
       );
     }
@@ -642,7 +828,7 @@ export function DataTable<TRow>({
         key={key}
         row={row}
         rowId={key}
-        columns={shownColumns}
+        columns={columns}
         selected={key === selectedRowId}
         rowActivation={rowActivation}
         onRowOpen={onRowOpen}
@@ -655,7 +841,7 @@ export function DataTable<TRow>({
         presentation={presentation}
         tree={tree}
         selectable={!!selection}
-        pinLead={pinLead}
+        frozen={frozenCount}
         metaColumns={outlineHeader}
         parts={parts}
       />
@@ -674,7 +860,7 @@ export function DataTable<TRow>({
           line,
           line.first ? firstGroupLabels : undefined,
           foldProps,
-          pinLead,
+          pinBands,
         );
       case "footer":
         return (
@@ -684,7 +870,7 @@ export function DataTable<TRow>({
             // eslint-disable-next-line layout/no-adhoc-layout -- full-span group-footer row spanning the subgrid table's column tracks
             className="col-span-full"
           >
-            <PinToView active={pinLead}>{line.group.footer}</PinToView>
+            <PinToView active={pinBands}>{line.group.footer}</PinToView>
           </div>
         );
     }
@@ -701,28 +887,31 @@ export function DataTable<TRow>({
   const table = (
     <ControlSizeProvider size={controlSize}>
       {/* The table's box: what the fit measures the room in, and what it
-          marks `data-scrolls-x` while the grid is wider (useColumnFit). */}
+          marks `data-scrolls-x` while the grid is wider than a page scroller
+          — or what scrolls sideways itself, anywhere else (useColumnFit). */}
       <div
         ref={fitContainerRef}
         data-part={parts?.table}
         className={soft ? SOFT_FRAME_CLASS : undefined}
-        style={soft ? SOFT_BOX : REGION_BLEED}
+        style={{ ...(soft ? SOFT_BOX : REGION_BLEED), ...boxStyle }}
       >
         <div
           // A grid table's rows bleed to a paid region's edge without moving a
           // column (`dt-grid`, data-table.css). An outline row is a pill ON
           // the rail (its own margin), so it takes only the owed rail.
+          // `relative`: the resize edge line hangs off it.
           // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
           className={cn(
-            soft ? "grid gap-x-soft" : "grid gap-x-sm",
+            soft ? "relative grid gap-x-soft" : "relative grid gap-x-sm",
             presentation === "grid" && "dt-grid",
           )}
           style={{
             gridTemplateColumns: template,
-            // A grid table never squeezes a column below its track's minimum
-            // (a content-sized one: its label); past that it overflows.
-            minWidth: pinLead ? "min-content" : undefined,
+            // A sideways table never squeezes a column below its track's
+            // minimum (a content-sized one: its label); past that it overflows.
+            minWidth: sideways ? "min-content" : undefined,
             ...(soft ? SOFT_GRID_RAIL : REGION_OWED),
+            ...frozenStyle,
           }}
           // Nesting rows make the grid a treegrid, and the grid the keyboard
           // host: a key on a focused row walks the painted lines.
@@ -748,7 +937,7 @@ export function DataTable<TRow>({
               data-part={parts?.headerRow}
               // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
               className={cn(
-                "col-span-full grid grid-cols-subgrid",
+                "group/dt-header col-span-full grid grid-cols-subgrid",
                 // A soft header is borderless: a height and the room under it.
                 !soft && "border-b",
                 // Every subgrid row — this header, each data row, each group header —
@@ -851,9 +1040,20 @@ export function DataTable<TRow>({
               // eslint-disable-next-line layout/no-adhoc-layout -- full-span footer row spanning the subgrid table's column tracks
               className="col-span-full"
             >
-              <PinToView active={pinLead}>{footer}</PinToView>
+              <PinToView active={pinBands}>{footer}</PinToView>
             </div>
           ) : null}
+          {edgeId !== null && (
+            <span
+              ref={edgeLineRef}
+              aria-hidden
+              // eslint-disable-next-line layout/no-adhoc-layout -- the resize edge line: absolutely placed under the dragged column's grip, the grid's full height
+              className={cn(
+                "pointer-events-none absolute inset-y-0 -ml-px w-0.5 bg-primary",
+                zLayerClass("float"),
+              )}
+            />
+          )}
         </div>
       </div>
     </ControlSizeProvider>
@@ -921,7 +1121,7 @@ function DataTableRowImpl<TRow>({
   presentation,
   tree,
   selectable,
-  pinLead,
+  frozen,
   metaColumns,
   parts,
 }: {
@@ -952,8 +1152,9 @@ function DataTableRowImpl<TRow>({
   tree: DataTableTree<TRow> | undefined;
   /** Draw the multi-select checkbox ahead of the first cell. */
   selectable: boolean;
-  /** Pin the first cell to the scroller's left edge (grid presentation). */
-  pinLead: boolean;
+  /** How many leading cells pin to the scroller's left edge (grid
+   *  presentation; `DataTableProps.frozenColumns`). */
+  frozen: number;
   /** Draw every column after the first as meta (a labelled outline). */
   metaColumns: boolean;
   parts: DataTableParts | undefined;
@@ -1112,7 +1313,15 @@ function DataTableRowImpl<TRow>({
                       : null}
                 </AlignedCell>
               );
-              if (c > 0) return cell;
+              if (c > 0) {
+                return c < frozen ? (
+                  <FrozenCell key={col.id} column={c} last={c === frozen - 1}>
+                    {cell}
+                  </FrozenCell>
+                ) : (
+                  cell
+                );
+              }
               // The first cell carries the row's head: the checkbox ahead of it,
               // and — when the rows nest — the tree head around both.
               const head = selectable ? (
@@ -1134,18 +1343,10 @@ function DataTableRowImpl<TRow>({
                 cell
               );
               const lead = tree ? tree.leading(row, head) : head;
-              return pinLead ? (
-                <Sticky
-                  key={col.id}
-                  as="div"
-                  edge="left"
-                  layer="base"
-                  // eslint-disable-next-line layout/no-adhoc-layout -- the pinned first grid cell must shrink to its track so its label truncates
-                  className="min-w-0"
-                  style={tree ? NESTED_LEAD_CELL : LEAD_CELL}
-                >
+              return frozen > 0 ? (
+                <FrozenCell key={col.id} column={0} last={frozen === 1}>
                   {lead}
-                </Sticky>
+                </FrozenCell>
               ) : (
                 <Fragment key={col.id}>{lead}</Fragment>
               );
@@ -1189,6 +1390,212 @@ function DataTableRowImpl<TRow>({
         </>,
       )}
     </div>
+  );
+}
+
+/**
+ * A frozen body cell: pinned to the scroller's left edge at its column's
+ * offset, opaque over what scrolls under it, the last one casting the edge
+ * shadow once scrolled (`dt-frozen-edge`, data-table.css). A box around the
+ * cell so it fills its track whatever the cell's own width.
+ */
+function FrozenCell({
+  column,
+  last,
+  children,
+}: {
+  column: number;
+  last: boolean;
+  children: ReactNode;
+}): ReactNode {
+  return (
+    <Sticky
+      as="div"
+      edge="left"
+      layer="base"
+      // eslint-disable-next-line layout/no-adhoc-layout -- the pinned grid cell must shrink to its track so its label truncates
+      className={cn("min-w-0", last && "dt-frozen-edge")}
+      style={frozenCell(column)}
+    >
+      {children}
+    </Sticky>
+  );
+}
+
+/**
+ * A column header's resize grip: a strip straddling the header cell's right
+ * edge. Dragging it resizes the column live (`onDrag`, never below `floor`)
+ * and reports the width once, on release (`onDragEnd`); a double-click fits
+ * the column to its content. Its presses never reach the header cell — no
+ * sort, no menu — and the click a drag ends on is swallowed (`useDragGesture`).
+ */
+function ColumnGrip({
+  columnId,
+  lit,
+  onHover,
+  onDragStart,
+  onDrag,
+  onDragEnd,
+  onFit,
+}: {
+  columnId: string;
+  /** The edge line shows for this column: the grip's own hairline hides. */
+  lit: boolean;
+  onHover: (columnId: string | null) => void;
+  /** The drag began: the column's width now, and the narrowest it may get. */
+  onDragStart: () => { from: number; floor: number };
+  onDrag: (px: number) => void;
+  onDragEnd: (px: number) => void;
+  onFit: () => void;
+}): ReactNode {
+  const range = useRef({ from: 0, floor: MIN_COLUMN_PX, px: 0 });
+  const onPointerDown = useDragGesture({
+    onStart: () => {
+      const { from, floor } = onDragStart();
+      range.current = { from, floor, px: from };
+    },
+    onMove: ({ dx }) => {
+      const { from, floor } = range.current;
+      const px = Math.max(floor, Math.round(from + dx));
+      if (px === range.current.px) return;
+      range.current.px = px;
+      onDrag(px);
+    },
+    onEnd: () => {
+      onDragEnd(range.current.px);
+      onHover(null);
+    },
+  });
+  return (
+    <span
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize column"
+      data-column-grip={columnId}
+      // eslint-disable-next-line layout/no-adhoc-layout -- resize grip: a pointer strip straddling the header cell's right edge
+      className={cn(
+        "group/grip absolute inset-y-0 -right-1.5 w-3 cursor-col-resize touch-none",
+        zLayerClass("raised"),
+      )}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onPointerDown(e);
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onFit();
+      }}
+      onPointerEnter={() => onHover(columnId)}
+      onPointerLeave={() => onHover(null)}
+    >
+      {/* The grip's hairline, shown while the header is hovered. */}
+      <span
+        aria-hidden
+        // eslint-disable-next-line layout/no-adhoc-layout -- the grip's hairline, centred in its strip
+        className={cn(
+          "pointer-events-none absolute inset-y-1 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-border opacity-0 transition-opacity group-hover/dt-header:opacity-100",
+          lit && "invisible",
+        )}
+      />
+    </span>
+  );
+}
+
+/** The live width of the column being dragged, over its header. */
+function WidthBadge({ px }: { px: number }): ReactNode {
+  return (
+    <span
+      // eslint-disable-next-line layout/no-adhoc-layout -- the drag's width badge, centred on the header cell's trailing edge
+      className={cn(
+        "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-primary px-xs text-caption font-semibold tabular-nums text-primary-foreground normal-case tracking-normal",
+        zLayerClass("float"),
+      )}
+    >
+      {`${px}px`}
+    </span>
+  );
+}
+
+/**
+ * A column's menu, opened by a click on its header (the header cell is the
+ * trigger): Sort ascending / descending, Freeze up to here / Unfreeze columns,
+ * Fit to content, Hide — each offered as the caller's handlers and the
+ * column allow.
+ */
+function ColumnMenu({
+  trigger,
+  columnId,
+  menu,
+  sortable,
+  direction,
+  freeze,
+  onFit,
+}: {
+  trigger: ReactElement;
+  columnId: string;
+  menu: DataTableColumnMenu;
+  sortable: boolean;
+  /** The column's current sort direction, `null` when it does not sort. */
+  direction: "asc" | "desc" | null;
+  /** Which freeze item it offers; `null` where the table cannot freeze. */
+  freeze: "freeze" | "unfreeze" | null;
+  /** Fit to content, on a resizable column. */
+  onFit: (() => void) | undefined;
+}): ReactNode {
+  const { onSort, onFreeze, onHide } = menu;
+  const sorts = !!onSort && sortable;
+  const freezes = !!onFreeze && freeze !== null;
+  const lower = [freezes, onFit !== undefined, onHide !== undefined].some(
+    Boolean,
+  );
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger} nativeButton={false} />
+      <DropdownMenuContent align="start">
+        {sorts && (
+          <DropdownMenuRadioGroup
+            value={direction}
+            onValueChange={(value: "asc" | "desc") => onSort(columnId, value)}
+          >
+            <DropdownMenuRadioItem value="asc" closeOnClick>
+              <Icon icon={arrowUpwardIcon} />
+              Sort ascending
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="desc" closeOnClick>
+              <Icon icon={arrowDownwardIcon} />
+              Sort descending
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        )}
+        {sorts && lower && <DropdownMenuSeparator />}
+        {freezes &&
+          (freeze === "unfreeze" ? (
+            <DropdownMenuItem onClick={() => onFreeze(null)}>
+              <Icon icon={keepOffIcon} />
+              Unfreeze columns
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => onFreeze(columnId)}>
+              <Icon icon={pushPinIcon} />
+              Freeze up to here
+            </DropdownMenuItem>
+          ))}
+        {onFit && (
+          <DropdownMenuItem onClick={onFit}>
+            <Icon icon={fitWidthIcon} />
+            Fit to content
+          </DropdownMenuItem>
+        )}
+        {onHide && (
+          <DropdownMenuItem onClick={() => onHide(columnId)}>
+            <Icon icon={visibilityOffIcon} />
+            Hide
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -1375,7 +1782,7 @@ function renderGroupHeader<TRow>(
   labels: FirstGroupLabels | undefined,
   foldProps: RowFoldProps,
   /** Pin the band to the visible part of a sideways-scrolling table. */
-  pinLead: boolean,
+  pinBand: boolean,
 ): ReactNode {
   const { group } = line;
   return labels ? (
@@ -1414,7 +1821,7 @@ function renderGroupHeader<TRow>(
       className="col-span-full rail-follow"
       // Pinned on the left too, as wide as the table's box: a sideways
       // scroll leaves the label (and its count) in view.
-      style={pinLead ? GROUP_BAND_PIN : undefined}
+      style={pinBand ? GROUP_BAND_PIN : undefined}
     >
       {group.header}
     </StickyStackItem>

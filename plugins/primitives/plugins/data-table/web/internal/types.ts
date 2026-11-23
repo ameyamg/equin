@@ -44,12 +44,35 @@ export interface ColumnDef<TRow> {
    */
   numeric?: (row: TRow) => boolean;
   /**
-   * When the table runs out of room, the order this column gives way in: lower
-   * drops first, until the first column keeps its minimum. A column without one
-   * never drops — whatever still does not fit scrolls sideways. The first column
-   * never drops. Grid presentation only.
+   * The column takes the table's spare room: laid out as `minmax(<w>, 1fr)`
+   * where `<w>` is its stored width ({@link DataTableProps.columnWidths}), so
+   * it grows into what the other columns leave and never shrinks below the
+   * width the user gave it. Without a stored width its `width` track stands.
+   * A table's title column.
    */
-  dropOrder?: number;
+  grow?: boolean;
+  /**
+   * A column the user does not adjust from its header — a cover thumbnail: no
+   * resize grip and no column menu (a click on its header sorts it, as in a
+   * table without {@link DataTableProps.columnMenu}).
+   */
+  fixed?: boolean;
+}
+
+/**
+ * What a header click offers when {@link DataTableProps.columnMenu} is passed:
+ * the column's menu. Each handler present adds its items; the table renders
+ * the menu (ui-kit's `DropdownMenu`, anchored on the header cell).
+ */
+export interface DataTableColumnMenu {
+  /** Sort ascending / Sort descending — on a sortable column. The checked one
+   *  reads `sortState`. */
+  onSort?: (columnId: string, direction: "asc" | "desc") => void;
+  /** Freeze up to here (this column's id) / Unfreeze columns (`null`, on the
+   *  last frozen column) — offered where the table can scroll sideways. */
+  onFreeze?: (columnId: string | null) => void;
+  /** Hide the column. */
+  onHide?: (columnId: string) => void;
 }
 
 /**
@@ -127,8 +150,8 @@ export type DataTableDensity = "comfortable" | "compact";
  *   a hairline BETWEEN rows (hidden around the hovered one), one header row
  *   and an optional frame around the whole table — every metric from the
  *   DataView token group's `soft*` / `cell*`
- *   tokens (`ui/tokens/data-view`). Its columns give way by `dropOrder` in a
- *   narrow box; it never scrolls sideways.
+ *   tokens (`ui/tokens/data-view`). Like `grid`, it scrolls sideways when its
+ *   columns are wider than its box.
  */
 export type DataTablePresentation = "grid" | "outline" | "soft";
 
@@ -301,8 +324,8 @@ export interface DataTableProps<TRow> {
    * sidebar's look). An outline that keeps its column labels — a file
    * listing's Name / Modified / Size over tree rows — passes `true`: its
    * header then takes the outline rows' inset and geometry, and its columns
-   * give way by `dropOrder` when the box is narrow (it never scrolls
-   * sideways). `false` drops the labels in any presentation (nor does
+   * squeeze into the box (it never scrolls sideways). `false` drops the
+   * labels in any presentation (nor does
    * `columnHeader="first-group"` put them on the first group). Every
    * presentation's labels take the DataView `columnHeader*` / `sortIcon`
    * tokens.
@@ -317,6 +340,31 @@ export interface DataTableProps<TRow> {
   tree?: DataTableTree<TRow>;
   /** Checkbox multi-select — see {@link DataTableSelection}. */
   selection?: DataTableSelection;
+  /**
+   * Each column's width in px, by column id — the caller's stored widths. A
+   * column with one is laid out at exactly that width (`minmax(<w>px, 1fr)`
+   * when it {@link ColumnDef.grow}s); one without keeps its `width` track.
+   */
+  columnWidths?: Readonly<Record<string, number>>;
+  /**
+   * The user resized a column: dragged its header's right edge (one call, on
+   * release) or double-clicked it (fit to content). Present → every header
+   * but a {@link ColumnDef.fixed} one carries the resize grip; the caller
+   * stores the width and hands it back through `columnWidths`.
+   */
+  onColumnResize?: (columnId: string, px: number) => void;
+  /**
+   * How many leading columns stay in view while the table scrolls sideways
+   * (each pinned at the summed width of the columns before it, the last one
+   * casting an edge shadow once scrolled). Default `0`: nothing is sticky
+   * sideways. Ignored in `outline`, which never scrolls sideways.
+   */
+  frozenColumns?: number;
+  /**
+   * The column menu a header click opens — see {@link DataTableColumnMenu}.
+   * Absent → a header click sorts, as it always did.
+   */
+  columnMenu?: DataTableColumnMenu;
   /**
    * `data-part` names to stamp on the table's elements, so a caller with a
    * part vocabulary (data-view's `DataViewPart`) can address them — the

@@ -81,6 +81,7 @@ function renderTable(
 ) {
   const { grouped = true, ...rest } = overrides;
   const setSort = vi.fn();
+  const setSortDirection = vi.fn();
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
     placement: {},
@@ -96,6 +97,9 @@ function renderTable(
         : undefined,
     },
     setSort,
+    setSortDirection,
+    updateViewOptions: () => {},
+    hideField: () => {},
     // Every field is header-sortable here (a client-side array source).
     sortHeader: { active: [], sortable: new Set(FIELDS.map((f) => f.id)) },
     setFilter: () => {},
@@ -112,7 +116,7 @@ function renderTable(
       <TableView {...(props as DataViewRenderProps<unknown>)} />
     </PluginProvider>,
   );
-  return { ...utils, setSort };
+  return { ...utils, setSort, setSortDirection };
 }
 
 /** The subgrid row a cell's text sits in. */
@@ -131,8 +135,9 @@ describe("data-view table: columnHeader", () => {
     ).toBeNull();
   });
 
-  it('"first-group" puts the labels on the first group header, with no header row', () => {
-    const { getAllByText, getByText, container, setSort } = renderTable({
+  it('"first-group" puts the labels on the first group header, with no header row', async () => {
+    const { getAllByText, getByText, findByText, container, setSortDirection } =
+      renderTable({
       options: { columnHeader: "first-group" },
     });
     const bands = container.querySelectorAll(
@@ -153,9 +158,10 @@ describe("data-view table: columnHeader", () => {
     expect(labelCell.textContent).toContain("Build");
     expect(band.textContent).not.toContain("Queue");
     expect(getByText("Queue")).toBeTruthy();
-    // Sort-on-click is kept on the relocated label.
+    // The column menu is kept on the relocated label.
     fireEvent.click(labels[0]!);
-    expect(setSort).toHaveBeenCalledWith("waited");
+    fireEvent.click(await findByText("Sort ascending"));
+    expect(setSortDirection).toHaveBeenCalledWith("waited", "asc");
   });
 
   it('"first-group" ungrouped falls back to the header row', () => {
@@ -171,8 +177,9 @@ describe("data-view table: columnHeader", () => {
 });
 
 describe("data-view table: FieldDef.header", () => {
-  it("header: false leaves the header cell empty but the column sortable", () => {
-    const { queryByText, getByText, setSort } = renderTable({ grouped: false });
+  it("header: false leaves the header cell empty but the column sortable", async () => {
+    const { queryByText, getByText, findByText, setSortDirection } =
+      renderTable({ grouped: false });
     expect(queryByText("Phase")).toBeNull();
     expect(queryByText("Title")).toBeNull();
     // The header row's cells, in column order: phase, title, waited.
@@ -180,7 +187,8 @@ describe("data-view table: FieldDef.header", () => {
     const cells = Array.from(headerRow.children) as HTMLElement[];
     expect(cells.map((c) => c.textContent)).toEqual(["", "", "waited"]);
     fireEvent.click(cells[0]!);
-    expect(setSort).toHaveBeenCalledWith("phase");
+    fireEvent.click(await findByText("Sort descending"));
+    expect(setSortDirection).toHaveBeenCalledWith("phase", "desc");
   });
 });
 

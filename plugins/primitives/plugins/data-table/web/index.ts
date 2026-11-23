@@ -6,6 +6,7 @@ export {
 } from "./internal/data-table";
 export type {
   ColumnDef,
+  DataTableColumnMenu,
   DataTableProps,
   DataTableGroup,
   DataTableParts,

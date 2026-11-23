@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { SortRule } from "../../core";
-import { cyclePrimarySort } from "./sort-cycle";
+import { cyclePrimarySort, setPrimarySort } from "./sort-cycle";
 
 describe("cyclePrimarySort", () => {
   it("seeds a primary asc rule from an empty list", () => {
@@ -124,5 +124,52 @@ describe("cyclePrimarySort", () => {
       ]);
       expect(cyclePrimarySort(once, "folders")).toEqual(rules);
     });
+  });
+});
+
+describe("setPrimarySort", () => {
+  it("seeds a primary rule in the given direction", () => {
+    expect(setPrimarySort([], "name", "desc")).toEqual([
+      { fieldId: "name", direction: "desc" },
+    ]);
+  });
+
+  it("sets the primary's direction, keeping the secondary rules", () => {
+    const rules: SortRule[] = [
+      { fieldId: "name", direction: "asc" },
+      { fieldId: "num", direction: "desc" },
+    ];
+    expect(setPrimarySort(rules, "name", "desc")).toEqual([
+      { fieldId: "name", direction: "desc" },
+      { fieldId: "num", direction: "desc" },
+    ]);
+    expect(setPrimarySort(rules, "name", "asc")).toEqual(rules);
+  });
+
+  it("promotes a secondary field to primary, removing it from its old slot", () => {
+    const rules: SortRule[] = [
+      { fieldId: "name", direction: "asc" },
+      { fieldId: "num", direction: "asc" },
+    ];
+    expect(setPrimarySort(rules, "num", "desc")).toEqual([
+      { fieldId: "num", direction: "desc" },
+      { fieldId: "name", direction: "asc" },
+    ]);
+  });
+
+  it("keeps a pinned rule in place, taking the direction", () => {
+    const rules: SortRule[] = [
+      { fieldId: "pin", direction: "asc", pinned: true },
+      { fieldId: "name", direction: "asc" },
+    ];
+    expect(setPrimarySort(rules, "pin", "desc")).toEqual([
+      { fieldId: "pin", direction: "desc", pinned: true },
+      { fieldId: "name", direction: "asc" },
+    ]);
+    expect(setPrimarySort(rules, "num", "asc")).toEqual([
+      { fieldId: "pin", direction: "asc", pinned: true },
+      { fieldId: "num", direction: "asc" },
+      { fieldId: "name", direction: "asc" },
+    ]);
   });
 });

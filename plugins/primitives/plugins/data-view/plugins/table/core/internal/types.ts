@@ -63,6 +63,22 @@ export interface TableViewOptions<TRow = unknown> {
    * Code passes `header`; this key is the user's.
    */
   columnCaptions?: "auto" | "shown" | "hidden";
+  /**
+   * The user's column widths, px by field id — set by dragging a header's
+   * right edge or by Fit to content, stored on the view instance (its config
+   * row) beside `columnCaptions`. A column without one keeps its field's
+   * `width`; the title column takes the spare room past its width. The user's,
+   * never the code's.
+   */
+  columnWidths?: Readonly<Record<string, number>>;
+  /**
+   * The last frozen column, by field id — a header menu's Freeze up to here:
+   * every column up to it stays in view while the table scrolls sideways. A
+   * field id, not a count, so the freeze survives hiding and reordering
+   * columns (a hidden one freezes nothing until it shows again). Absent:
+   * nothing is frozen. The user's, never the code's.
+   */
+  frozenUpTo?: string;
 
   // --- Nesting (a hierarchical source only) ---
 

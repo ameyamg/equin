@@ -8,8 +8,7 @@
       "icon": "account-tree",
       "source": "deps",
       "view": {
-        "type": "table",
-        "presentation": "outline"
+        "type": "table"
       }
     },
     {
@@ -20,7 +19,6 @@
       "source": "created",
       "view": {
         "type": "table",
-        "presentation": "outline",
         "filter": {
           "kind": "group",
           "id": "hide-completed",

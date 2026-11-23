@@ -94,6 +94,10 @@ Authored terse (`{ name, view }`); view-core's `normalizeRows` derives `id`;
 - `filter` — a `FilterGroup` tree.
 - `groupBy` — a `GroupByRule`.
 - `fold`, `properties`.
+- `columnWidths` (`Record<fieldId, px>`) and `frozenUpTo` (a field id) — the
+  table's column layout, written by its header (a resize grip, the column
+  menu) through `DataViewRenderProps.updateViewOptions`; read back from
+  `options` (`TableViewOptions`), never in `configSchema`.
 - `nesting` (`"nested" | "flat" | "roots"`) and `filterScope`
   (`"rows" | "roots"`, nested table only) — both written by the **Sub-items**
   settings section (a `hierarchy`, or rows that `attach`).
@@ -460,9 +464,10 @@ field type (kind)  →  recipe rules  →  surface `place`  →  user's Property
 - **Priority** (what gives way first when narrow, from last): `emphasis`, then
   the slot's rank (`SLOT_RANK`: title > lead > edge > afterTitle > line2 >
   trail), then drawing order in the slot — never the recipe's rule order.
-  Tables give `trail` / `edge` columns a drop order from it (`dropOrderOf`),
-  and the list drops its trailing fields in the same order when they would
-  starve the title; `lead` and `title` never drop.
+  The list drops its trailing fields in that order (`dropOrderOf`) when they
+  would starve the title; `lead` and `title` never drop. A table drops
+  nothing: its columns keep their widths and it scrolls sideways (data-table,
+  "Widths, sideways scroll, frozen columns").
 - **Form follows the slot** (`ViewSlots[slot].form` → `FieldCell context`):
   `glyph` in a lead draws a state's option as its icon / dot alone
   (`OptionGlyph`); `token` on a card's line; `cell` elsewhere.
@@ -1760,6 +1765,13 @@ DataViewProps.density (and switcher's)
     `shown`/`hidden` win, `auto` → `header ?? presentation !== "outline"`.
   - Three-way on purpose (a switch has no "default" position).
   - The list's `columnCaptions` is a plain switch (default off).
+- **Column widths, freeze, the header menu** — every column resizes from its
+  header edge (double-click fits it), stored per view as `columnWidths`; the
+  title column takes the spare room past its width (280px unless the field
+  sets one); a header click opens the column's menu (Sort ascending /
+  descending → `setSortDirection`, Freeze up to here / Unfreeze → `frozenUpTo`,
+  Fit to content, Hide → `hideField`, the Properties write). Nothing is frozen
+  by default (`web/internal/column-layout.ts`, both tables).
 - **Label look is the theme's** for every `DataTable`: `columnHeader*` tokens and
   `sortIcon` (`hover` default / `sorted` / `always`).
 - Under `presentation: "outline"` the nested table mounts `FieldPresentationProvider`
@@ -2063,7 +2075,8 @@ is a new child plugin with zero consumer changes.
 2. In `web/index.ts`:
    `DataViewSlots.View({ type: "<view>", title, icon, component, … })`.
    - `component: ComponentType<DataViewRenderProps<unknown>>` receives **raw**
-     `rows`, `fields`, `rowKey`, `ViewState`, bound `setSort` / `setFilter`,
+     `rows`, `fields`, `rowKey`, `ViewState`, bound `setSort` /
+     `setSortDirection` / `setFilter` / `hideField` / `updateViewOptions`,
      activation, `searchAccessor`, `hierarchy` (only while nesting), opaque
      `options`, `emptyState`, … and applies its own processing (`useFlatRows`).
    - Re-cast from `unknown` at the component boundary.
@@ -2362,7 +2375,8 @@ arrangements.
   so stacked DataViews hand off. `mask` paints `bg-chrome-mask`.
 - **`PaneChrome` provides the scroll**; a non-pane host supplies its own scroller.
 - **Wide tables** mark `data-scrolls-x`; the pane's `Scroll` scrolls sideways too,
-  moving only the table (`css/scroll`, `data-table` "Wide tables").
+  moving only the table (`css/scroll`, `data-table` "Widths, sideways scroll,
+  frozen columns"). A table in a card scrolls its own box instead.
 
 **Dev guards** (`use-dev-guards.ts`, `console.error`, never throw):
 

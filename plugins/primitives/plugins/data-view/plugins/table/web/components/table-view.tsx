@@ -14,7 +14,6 @@ import {
   FieldCell,
   NestedSectionIndent,
   drawnFields,
-  dropOrderOf,
   fieldAlign,
   wearsTimeInk,
   resolveCover,
@@ -47,6 +46,7 @@ import {
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
 import { tableHeaderOption } from "../internal/column-captions";
+import { columnLayout, TITLE_COLUMN_WIDTH } from "../internal/column-layout";
 import {
   CoverCell,
   StackedTitleCell,
@@ -272,9 +272,6 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     header: f.header === false ? "" : (f.header ?? f.label),
     width: f.width,
     align: fieldAlign(f, placement),
-    // What gives way in a narrow table: the trailing columns, least important
-    // first, then the edge; the lead and the title never drop.
-    dropOrder: dropOrderOf(f, slotOf.get(f.id)!, placement),
     value: f.value ? (row: unknown) => coerce(f.value!(row)) : undefined,
     // The host's sortable set, never `value`'s presence: a field showing a
     // value its list cannot order by (a live source's derived or unsortable
@@ -308,14 +305,25 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
         </AggregateCount>
       );
     },
-    // The title takes the slack unless its field sets a width.
-    ...(f === titleField ? { width: f.width ?? "minmax(0,1fr)" } : undefined),
+    // The title takes the spare room past its width (280px unless its field
+    // sets one, or the user resized it).
+    ...(f === titleField
+      ? { width: f.width ?? TITLE_COLUMN_WIDTH, grow: true }
+      : undefined),
   }));
   // The props a render calls are read into locals first: `props.x?.(…)` is a
   // method call on `props`, which the compiler can only key on the whole props
   // object — new on every render of the host — so the columns and row
   // actions (and every row they reach) would be rebuilt each time.
-  const { hasChildren, setSort, setSectionCollapsed, sectionSummary } = props;
+  const {
+    hasChildren,
+    setSort,
+    setSectionCollapsed,
+    sectionSummary,
+    updateViewOptions,
+    setSortDirection,
+    hideField,
+  } = props;
   const hasChildrenOf = (row: unknown): boolean =>
     hasChildren?.(rowKey(row, 0)) ?? false;
   const columns: ColumnDef<unknown>[] = thumb
@@ -325,6 +333,8 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
           header: "",
           width: "auto",
           sortable: false,
+          // Neither resized nor hidden from its header: it is no field.
+          fixed: true,
           cell: (row: unknown) => (
             <CoverCell
               content={thumb.coverOf(row)}
@@ -384,6 +394,13 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     presentation:
       options.presentation === "soft" ? ("soft" as const) : undefined,
     parts: TABLE_PARTS,
+    // The user's column widths, frozen columns and column menu, stored on the
+    // view instance.
+    ...columnLayout(
+      options,
+      columns.map((c) => c.id),
+      { updateViewOptions, setSortDirection, hideField },
+    ),
   };
 
   // Ungrouped renders as one flat body; grouped interleaves a header row per

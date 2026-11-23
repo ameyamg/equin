@@ -53522,6 +53522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/pin`
               - `primitives/css/sticky`
               - `primitives/css/viewport-overlay`
+              - `primitives/data-table`
               - `primitives/overlay/surface-overlay`
           - Web:
             - Exports (types):
@@ -53584,8 +53585,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: 29 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
-          - `primitives/css/ui-kit` ×4
+        - Uses: 38 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+          - `primitives/css/ui-kit` ×11
           - `primitives/css/sticky/stack` ×3
           - `primitives/css/text` ×3
           - `primitives/multi-select` ×3
@@ -53598,9 +53599,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/scroll.useScrollsSideways`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/z-layers.zLayerClass`
+          - `primitives/dom/movable.useDragGesture`
           - `ui/icons.Icon`
         - Exports (types):
           - `ColumnDef`
+          - `DataTableColumnMenu`
           - `DataTableGroup`
           - `DataTableParts`
           - `DataTablePresentation`
@@ -53613,12 +53617,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DATA_TABLE_VIRTUALIZE_THRESHOLD`
           - `DataTable`
       - Cross-plugin:
-        - Uses tokens: 44 vars — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+        - Uses tokens: 48 vars — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
           - `ui/tokens/data-view` ×23
+          - `ui/tokens/color-palette` ×8
           - `ui/tokens/density` ×7
-          - `ui/tokens/color-palette` ×6
-          - `ui/tokens/type-scale` ×6
+          - `ui/tokens/type-scale` ×7
           - `ui/tokens/shape` ×2
+          - `ui/tokens/font-family --letter-spacing`
         - Imported by:
           - `apps/studio/contributions`
           - `apps/studio/contributions/tables/columns`
@@ -54508,8 +54513,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 95 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
-              - `primitives/data-view` ×48
+            - Uses: 94 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+              - `primitives/data-view` ×47
               - `primitives/tree` ×20
               - `primitives/data-table` ×7
               - `primitives/latest-ref` ×4
@@ -55254,6 +55259,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/landing/screenshot/chrome`
               - `hints/ask`
               - `page/prototype`
+              - `primitives/data-table`
               - `shell/global-action-bar`
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Gestures are batched per frame and a batch is wasted when no scroller on its chain scrolled or has room left; a two-stage physics (a saturating pull, drawn through a critically damped spring) turns bursty trackpad input into one smooth out-and-back. A touch pulling down past the top is the phone's pull to refresh instead: the page stays put, a disc drops in from the top edge and letting go once it is armed reloads the page (left to the browser when the page scrolls as a document). A touch the page claimed with touch-action (a dial, a slider) is never a wasted scroll; and the touch-claim guard enforces the claim — a setPointerCapture on a touch whose touch-action still lets the browser pan both ways is reported (UnclaimedTouchDragError), since the browser would take that drag.
           - Web:
@@ -68881,12 +68887,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 158 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 159 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×25
               - `plugin-meta` ×23
               - `debug` ×20
-              - `primitives` ×14
+              - `primitives` ×15
               - `reports` ×7
               - `infra` ×5
               - `tasks` ×5

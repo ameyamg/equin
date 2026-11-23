@@ -1,227 +1,247 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useScrollsSideways } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { fitAlignedColumns, floorAtLabel, trackMin } from "../../core";
-import type { ColumnDef } from "./types";
+import { floorAtLabel } from "../../core";
 
-/** The narrowest the first column of a NESTED table gets before a column gives
- *  way — the tree's own label floor, so a deep row keeps a readable name. */
+/** The narrowest the first column of a NESTED table gets — the tree's own
+ *  label floor, so a deep row keeps a readable name (past it the table
+ *  scrolls sideways). */
 export const NESTED_LEAD_MIN_PX = 160;
+
+/**
+ * What the table may do when its columns are wider than its box. `sideways`:
+ * scroll sideways — every column keeps its width, the narrowest a column gets
+ * is its header label (a grid or soft table). `none`: squeeze every column
+ * into the box (an outline — a sidebar's tree).
+ */
+export type ColumnFitMode = "sideways" | "none";
+
+/**
+ * Who scrolls a sideways table. `page`: the pane's own `Scroll` (the table sits
+ * in ui-kit's `SidewaysScroll` region, and that `Scroll` is the nearest box
+ * clipping it horizontally) — it then scrolls on both axes, so the sticky
+ * header and the frozen columns pin to the same edges, and the DataView's
+ * toolbar stays put (`css/scroll`). `own`: anywhere else (a card, a popover, a
+ * plain box), the table's own box scrolls sideways while the grid is wider.
+ */
+export type SidewaysScroller = "page" | "own";
 
 /** What the fit reads off the laid-out table, once per resize. */
 interface Room {
-  /** What the grid can have before it overflows: its box, but never past the
-   *  scroller's visible right edge (a wide table grows the boxes around it). */
+  scroller: SidewaysScroller;
+  /** What the grid can have before it overflows. */
   available: number;
-  /** A row's inline padding (the rail). */
-  pad: number;
-  /** The grid's column gap. */
-  gap: number;
-  /** The reserved trailing actions track. */
-  actions: number;
   /** The grid's own laid-out width — wider than `available` when it overflows. */
   grid: number;
-  /** One `rem` in px, for a track spelled in rem. */
-  rem: number;
-  /** The measured minimum of every content-sized column seen so far, by id. */
+  /** The measured header label of every column seen so far, by id. */
   measured: ReadonlyMap<string, number>;
+  /** Where each frozen column pins, px from the scroller's left edge. */
+  frozenLefts: readonly number[];
 }
 
-/**
- * What the fit may do. `wide`: drop columns, then overflow sideways with the
- * first column pinned (a grid table in a sideways-scroll region). `drop`: drop
- * columns, never overflow (an outline with its column labels — its box is a
- * sidebar's or a listing's, which does not scroll sideways). `none`: every
- * column shows and squeezes (an outline without labels, a table in a card).
- */
-export type ColumnFitMode = "wide" | "drop" | "none";
-
-export interface ColumnFit<TRow> {
-  /**
-   * The table goes wide: `enabled` (a grid table in a `SidewaysScroll`
-   * region), and the nearest ancestor clipping it horizontally is that
-   * region's `Scroll` (`data-scroll-x-host`) — not some ad-hoc clipping box in
-   * between. Only then does it pin its first column, fit its columns and
-   * overflow; otherwise it squeezes into its box as it always did.
-   */
-  wide: boolean;
-  /** The columns that fit, in their own order. */
-  shown: ColumnDef<TRow>[];
-  /** Each shown column's grid track (`floorAtLabel` once measured). */
+export interface ColumnFit {
+  /** Who scrolls the table sideways once measured; `null` while it squeezes
+   *  (`none`) or has not been measured yet. */
+  scroller: SidewaysScroller | null;
+  /** Each column's grid track (`floorAtLabel` once measured). */
   tracks: string[];
+  /** The table box's own style while its box is the scroller: `overflow-x`
+   *  while the grid is wider, and the visible width full-span bands pin to. */
+  boxStyle: CSSProperties | undefined;
+  /** The grid's style: each frozen column's pin offset as `--dt-frz-<i>`
+   *  (`frozenLeftVar`), read by that column's sticky cells. */
+  frozenStyle: CSSProperties | undefined;
   containerRef: (el: HTMLElement | null) => void;
   gridRef: (el: HTMLElement | null) => void;
 }
 
 /**
- * Which columns a grid table shows in the room it has, and whether it still
- * overflows. A column whose field declares `dropOrder` gives way — lowest
- * first (`fitAlignedColumns`) —
- * until the first column keeps its minimum; a column with none never does, so
- * what is left scrolls sideways (the last resort).
+ * How a table lays its columns out when they are wider than its box. Nothing
+ * ever drops: a `sideways` table floors each flexible track at its header
+ * label (`floorAtLabel` — a `minmax(0, …)` column would otherwise collapse to
+ * nothing) and scrolls — by its pane's `Scroll` (`data-scrolls-x`, see
+ * `useScrollsSideways`) or by its own box (`overflow-x: auto`, only while the
+ * grid is wider, so a table that fits keeps its sticky header pinned to the
+ * page).
  *
- * A column's minimum is its grid track's (`trackMin`): a length is itself,
- * `minmax(a, b)` is `a`. A content- or space-sized track is measured once, on
- * its header label (nowrap, so it is the narrowest the grid lets that track be
- * — the grid's `min-width: min-content` says the same thing in CSS), while the
- * column is shown, and cached by column id: a dropped column has no header left
- * to measure, so the cache is what tells the fit when it fits again. The room
- * is the same whatever subset shows, so the fit settles in one step.
- *
- * Until measured — and in a box with no layout (jsdom) — every column shows.
+ * A label is measured once per column id on its header cell (nowrap, so it is
+ * the narrowest the grid lets that track be). Until measured — and in a box
+ * with no layout (jsdom) — the tracks are the columns' own.
  */
-export function useColumnFit<TRow>(
-  columns: ColumnDef<TRow>[],
-  opts: { mode: ColumnFitMode; nested: boolean; hasActionsTrack: boolean },
-): ColumnFit<TRow> {
-  const { mode, nested, hasActionsTrack } = opts;
+export function useColumnFit(
+  columns: readonly { id: string }[],
+  baseTracks: readonly string[],
+  opts: { mode: ColumnFitMode; inSidewaysRegion: boolean; frozen: number },
+): ColumnFit {
+  const { mode, inSidewaysRegion, frozen } = opts;
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [grid, setGrid] = useState<HTMLElement | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
-  // Measured once per column id and kept while the column is dropped — the
-  // fit needs it to know when the column fits again.
   const measured = useRef(new Map<string, number>());
+  const template = baseTracks.join(" ");
   const columnIds = columns.map((c) => c.id).join("\u0000");
 
   useResizeObserver(
-    // The scroller too: once the table overflows, its own box no longer
-    // follows the pane, so a wider pane must still re-fit.
+    // The scroller too: once the table overflows a page scroller, its own box
+    // no longer follows the pane, so a wider pane must still re-measure.
     () =>
       [container, grid, container && scrollerOf(container)].filter(
         (el): el is HTMLElement => !!el,
       ),
     () => {
       if (!container || !grid) return;
-      // A table no scroll host can scroll sideways never goes wide.
-      if (mode === "none" || (mode === "wide" && !sidewaysHost(container))) {
+      if (mode === "none") {
         setRoom(null);
         return;
       }
       const box = container.getBoundingClientRect();
-      // A box with no layout says nothing about the room: every column stays.
+      // A box with no layout says nothing about the room.
       if (box.width === 0) return;
-      // While the table overflows, the boxes around it grow to it (the
-      // DataView root fits the table, so its band can pin), and so does this
-      // one: the room is what the scroller shows to the right of the box's
-      // start, whichever is narrower.
-      const scroller = mode === "wide" ? scrollerOf(container) : null;
-      // Both edges in the scroller's UNSCROLLED frame: a sideways scroll
-      // moves the box, not the room.
-      const visible = scroller
-        ? scroller.getBoundingClientRect().left +
-          scroller.clientLeft +
-          scroller.clientWidth -
-          (box.left + scroller.scrollLeft)
-        : box.width;
-      const available = Math.min(box.width, visible);
+      const scroller: SidewaysScroller =
+        inSidewaysRegion && sidewaysHost(container) ? "page" : "own";
+      let available: number;
+      if (scroller === "page") {
+        // While the table overflows, the boxes around it grow to it (the
+        // DataView root fits the table, so its band can pin), and so does this
+        // one: the room is what the scroller shows to the right of the box's
+        // start, whichever is narrower — both edges in the scroller's
+        // UNSCROLLED frame (a sideways scroll moves the box, not the room).
+        const pane = scrollerOf(container);
+        const visible = pane
+          ? pane.getBoundingClientRect().left +
+            pane.clientLeft +
+            pane.clientWidth -
+            (box.left + pane.scrollLeft)
+          : box.width;
+        available = Math.min(box.width, visible);
+      } else {
+        // The box is the scroller: its content box is the room.
+        const style = getComputedStyle(container);
+        available =
+          container.clientWidth -
+          parseFloat(style.paddingLeft) -
+          parseFloat(style.paddingRight);
+      }
       const header = grid.querySelector<HTMLElement>(
         "[data-slot='data-table-header']",
       );
-      if (!header) return;
-      for (const cell of header.querySelectorAll<HTMLElement>(
-        "[data-column-id]",
-      )) {
-        const id = cell.dataset.columnId!;
-        if (measured.current.has(id)) continue;
-        // The label's own inline box: its width is the label's, whatever
-        // the track does.
-        measured.current.set(id, Math.ceil(cell.getBoundingClientRect().width));
+      if (header) {
+        for (const cell of header.querySelectorAll<HTMLElement>(
+          "[data-column-id]",
+        )) {
+          const id = cell.dataset.columnId!;
+          if (measured.current.has(id)) continue;
+          // The label's own inline box: its width is the label's, whatever
+          // the track does.
+          measured.current.set(
+            id,
+            Math.ceil(cell.getBoundingClientRect().width),
+          );
+        }
       }
-      const headerStyle = getComputedStyle(header);
-      const gridStyle = getComputedStyle(grid);
-      const tracks = gridStyle.gridTemplateColumns.split(" ").map(parseFloat);
       const next: Room = {
+        scroller,
         available,
-        // The header row's inset: padding, and margin (an outline row sits
-        // on the rail by its margin).
-        pad:
-          parseFloat(headerStyle.paddingLeft) +
-          parseFloat(headerStyle.paddingRight) +
-          parseFloat(headerStyle.marginLeft) +
-          parseFloat(headerStyle.marginRight),
-        gap: parseFloat(gridStyle.columnGap) || 0,
-        actions: hasActionsTrack ? (tracks[tracks.length - 1] ?? 0) : 0,
         grid: grid.getBoundingClientRect().width,
-        rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
         measured: new Map(measured.current),
+        frozenLefts: frozen > 1 ? frozenLefts(grid, frozen) : [],
       };
       setRoom((prev) =>
         prev &&
+        prev.scroller === next.scroller &&
         prev.available === next.available &&
-        prev.pad === next.pad &&
-        prev.gap === next.gap &&
-        prev.actions === next.actions &&
         prev.grid === next.grid &&
-        prev.rem === next.rem &&
-        prev.measured.size === next.measured.size
+        prev.measured.size === next.measured.size &&
+        prev.frozenLefts.join() === next.frozenLefts.join()
           ? prev
           : next,
       );
     },
-    // Before paint: a pane narrowing (a preview opening beside a listing)
-    // lays the table out with the columns that fit in the same frame, never
-    // one frame of every column squeezed first.
+    // Before paint: a pane narrowing lays the table out at its floors in the
+    // same frame, never one frame of collapsed columns first.
     {
-      deps: [container, grid, mode, hasActionsTrack, columnIds],
+      deps: [
+        container,
+        grid,
+        mode,
+        inSidewaysRegion,
+        template,
+        columnIds,
+        frozen,
+      ],
       beforePaint: true,
     },
   );
 
-  const shown = useMemo(() => {
-    if (!room || columns.length < 2) return columns;
-    const minOf = (col: ColumnDef<TRow>): number => {
-      const t = trackMin(col.width, room.rem);
-      return t.kind === "px" ? t.px : (room.measured.get(col.id) ?? 0);
-    };
-    const [lead, ...rest] = columns;
-    const droppable = rest.filter((c) => c.dropOrder !== undefined);
-    const fixed = rest.filter((c) => c.dropOrder === undefined);
-    const budget =
-      room.available -
-      room.pad -
-      (hasActionsTrack ? room.actions + room.gap : 0) -
-      fixed.reduce((sum, c) => sum + minOf(c) + room.gap, 0);
-    const kept = new Set(
-      fitAlignedColumns(
-        droppable.map((col) => ({
-          col,
-          px: minOf(col),
-          dropOrder: col.dropOrder,
-        })),
-        {
-          budget,
-          gap: room.gap,
-          minLabel: Math.max(minOf(lead!), nested ? NESTED_LEAD_MIN_PX : 0),
-        },
-      ).map((c) => c.col),
-    );
-    return columns.filter((c) => c.dropOrder === undefined || kept.has(c));
-  }, [room, columns, nested, hasActionsTrack]);
-
-  // Only a wide table floors its tracks at their labels: that is what lets it
-  // overflow rather than collapse a column. A dropping table squeezes what is
-  // left, as it always did.
-  const wideRoom = mode === "wide" ? room : null;
-  const tracks = shown.map((col) =>
-    wideRoom
-      ? floorAtLabel(col.width, wideRoom.measured.get(col.id))
-      : (col.width ?? "auto"),
+  const sidewaysRoom = mode === "sideways" ? room : null;
+  const tracks = baseTracks.map((track, i) =>
+    sidewaysRoom
+      ? floorAtLabel(track, sidewaysRoom.measured.get(columns[i]!.id))
+      : track,
+  );
+  const overflowing =
+    !!sidewaysRoom && sidewaysRoom.grid > sidewaysRoom.available + 0.5;
+  // In a page scroller, while the grid is wider its box marks itself and the
+  // path up to the scroller: the `Scroll` then scrolls sideways too (and only
+  // then), so the pane is the one scroller on both axes.
+  useScrollsSideways(
+    container,
+    overflowing && sidewaysRoom.scroller === "page",
   );
 
-  const overflowing = !!wideRoom && wideRoom.grid > wideRoom.available + 0.5;
-  // While the grid is wider, its box marks itself and the path up to the
-  // scroller: the `Scroll` then scrolls sideways too (and only then), so the
-  // pane is the one scroller on both axes and the sticky header and first
-  // column pin to the same edges.
-  useScrollsSideways(container, overflowing);
-
   return {
-    wide: wideRoom !== null,
-    shown,
+    scroller: sidewaysRoom?.scroller ?? null,
     tracks,
+    boxStyle:
+      overflowing && sidewaysRoom.scroller === "own"
+        ? ({
+            overflowX: "auto",
+            // What a full-span band pins to (`SPAN_PIN`): the box's visible
+            // width — the box is no container (an inline-size container
+            // contributes no width to a box sized by its content, a popover).
+            "--dt-view-w": `${sidewaysRoom.available}px`,
+          } as CSSProperties)
+        : undefined,
+    frozenStyle:
+      sidewaysRoom && sidewaysRoom.frozenLefts.length > 0
+        ? (Object.fromEntries(
+            sidewaysRoom.frozenLefts.map((px, i) => [
+              frozenLeftVar(i + 1),
+              `${px}px`,
+            ]),
+          ) as CSSProperties)
+        : undefined,
     containerRef: setContainer,
     gridRef: setGrid,
   };
+}
+
+/** The CSS var a frozen column's cells read their pin offset from (column 0
+ *  pins at 0 and reads none). */
+export function frozenLeftVar(column: number): string {
+  return `--dt-frz-${column}`;
+}
+
+/**
+ * Where frozen columns 1…n-1 pin: each at the summed width of the columns
+ * before it, read from the grid's resolved tracks — never from the cells,
+ * which a sideways scroll has already moved while they are pinned. Column 0's
+ * cell reaches over its row's rail inset to the row's edge (`LEAD_EDGE`), so
+ * its pinned box starts where the row does; every other column's cell starts
+ * at its track, which sits the grid's start padding (the region bleed) plus
+ * the tracks and gaps before it from the row's edge.
+ */
+function frozenLefts(grid: HTMLElement, frozen: number): number[] {
+  const style = getComputedStyle(grid);
+  const tracks = style.gridTemplateColumns.split(" ").map(parseFloat);
+  const gap = parseFloat(style.columnGap) || 0;
+  let x = parseFloat(style.paddingLeft) || 0;
+  const out: number[] = [];
+  for (let i = 1; i < frozen && i < tracks.length; i++) {
+    x += (tracks[i - 1] ?? 0) + gap;
+    out.push(Math.round(x));
+  }
+  return out;
 }
 
 /**
@@ -229,7 +249,7 @@ export function useColumnFit<TRow>(
  * ancestor that clips it horizontally is a scroll host (`Scroll` marks itself
  * `data-scroll-x-host`). A DOM walk, not a React context, because a context
  * crosses portals: a table in a popover opened from a pane is in the pane's
- * React tree but in the popover's box, which must keep it squeezing.
+ * React tree but in the popover's box.
  */
 function sidewaysHost(el: HTMLElement): boolean {
   for (let n = el.parentElement; n; n = n.parentElement) {

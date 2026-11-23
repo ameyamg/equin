@@ -50,3 +50,26 @@
     border-bottom-color: transparent;
   }
 }
+
+/* The last frozen column's edge shadow, cast once the table has scrolled
+   sideways: a scroll-driven animation on the nearest scroller's inline axis
+   (the table's own box, or the pane's `Scroll` — whichever scrolls it), so the
+   shadow follows the scroll with no listener. An engine without scroll
+   timelines draws no shadow. */
+@supports (animation-timeline: scroll()) {
+  .dt-frozen-edge {
+    animation: dt-frozen-edge linear both;
+    animation-timeline: scroll(nearest inline);
+    animation-range: 0px 24px;
+  }
+}
+@keyframes dt-frozen-edge {
+  from {
+    box-shadow: none;
+  }
+  to {
+    box-shadow:
+      1px 0 0 var(--border),
+      8px 0 12px -6px color-mix(in oklab, var(--foreground) 22%, transparent);
+  }
+}

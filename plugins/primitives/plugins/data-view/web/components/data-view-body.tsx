@@ -12,6 +12,8 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { useAppliedQuery } from "../internal/use-applied-query";
+import { setPrimarySort } from "../internal/sort-cycle";
+import { withFieldHidden } from "../internal/use-properties-controller";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   isHostedToolbar,
@@ -894,6 +896,37 @@ function DataViewBodyInner<TRow>(
     }
     viewModel.setSort(activeViewId, fieldId);
   });
+  const setViewSortDirection = useEventCallback(
+    (fieldId: string, direction: "asc" | "desc") => {
+      if (!sortableIds.has(fieldId)) {
+        throw new Error(
+          `DataView "${storageKey}": setSortDirection("${fieldId}") names a field this list cannot sort by`,
+        );
+      }
+      viewModel.setSortRules(
+        activeViewId,
+        setPrimarySort(activeState.sort, fieldId, direction),
+      );
+    },
+  );
+  const updateViewOptions = useEventCallback(
+    (patch: Readonly<Record<string, unknown>>) =>
+      viewModel.actions.updateView(
+        activeViewId,
+        patch as unknown as Parameters<typeof viewModel.actions.updateView>[1],
+        { merge: true },
+      ),
+  );
+  const hideField = useEventCallback((fieldId: string) =>
+    viewModel.setProperties(
+      activeViewId,
+      withFieldHidden(
+        fields as FieldDef<unknown>[],
+        activeState.properties ?? null,
+        fieldId,
+      ),
+    ),
+  );
   const setViewFilter = useEventCallback(
     (filter: Parameters<DataViewRenderProps<unknown>["setFilter"]>[0]) =>
       viewModel.setFilter(activeViewId, filter),
@@ -1638,6 +1671,9 @@ function DataViewBodyInner<TRow>(
           rowKey: rowKey as DataViewRenderProps<unknown>["rowKey"],
           state: effectiveState,
           setSort: setViewSort,
+          setSortDirection: setViewSortDirection,
+          updateViewOptions,
+          hideField,
           sortHeader,
           setFilter: setViewFilter,
           rowActivation:

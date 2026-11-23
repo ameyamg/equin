@@ -18,30 +18,39 @@ single-sort. `mapPrimary(rules)` maps the **primary** rule of
 a server-ordered source, whose rows arrive sorted) onto data-table's
 single-column `SortState` indicator — so the header arrow shows on whichever
 column is sorted first; secondary rules paint no header arrow (the sort popover
-is the full multi-sort surface). A header click routes through
-`props.setSort(columnId)` → the model's primary-rule cycle (asc → desc → drop the
-primary, or promote a new column to primary asc), **preserving secondary rules** —
-so a header click never wipes a multi-sort.
+is the full multi-sort surface). A header click opens
+the column's menu (data-table's `columnMenu`): Sort ascending / Sort descending
+→ `props.setSortDirection(columnId, dir)` → the model's `setPrimarySort` (the
+column becomes the primary rule in that direction), **preserving secondary
+rules** — so a header never wipes a multi-sort. `setSort` (the cycle) is no
+longer reached from a header.
 
 **A header sorts only on `props.sortHeader.sortable`** — the Sort control's
 sortable fields, passed per column as `ColumnDef.sortable` (data-table's
 additive flag; it defaults to "has a `value`" for its other consumers). A field
 showing a value is not necessarily one its list can order by: under a live
 source a derived or unsortable column's header would otherwise persist a rule
-the source refuses, replacing the list with its error. The host's `setSort`
-throws for a field outside the set. Pinned by `web/__tests__/header-sort.test.tsx`.
+the source refuses, replacing the list with its error. The host's `setSort` / `setSortDirection`
+throw for a field outside the set. Pinned by `web/__tests__/header-sort.test.tsx`.
 
 **Columns are the placement** (`TABLE_SLOTS`; data-view CLAUDE.md,
 "Placement"): the `lead` field first (its whole cell), the `title` column
-(taking the slack, `minmax(0,1fr)` unless its field sets a width; its
-`afterTitle` and `line2` fields stacked in it — `StackedTitleCell`), then the
-`trail` columns and the `edge` column last. Alignment is `fieldAlign` (number-
-like kinds end). Every `trail` / `edge` column gets a `ColumnDef.dropOrder`
-from the placement's priority (`dropOrderOf`): in a narrow pane trailing
-columns give way least important first, the edge after them, before the table
-scrolls sideways with its first column pinned — `data-table`'s CLAUDE.md
-("Wide tables"). Both the flat and the nested table do this; `presentation:
-"outline"` does neither.
+(`grow`: the spare room past its width, `minmax(280px, 1fr)` unless its field
+sets a width; its `afterTitle` and `line2` fields stacked in it —
+`StackedTitleCell`), then the `trail` columns and the `edge` column last.
+Alignment is `fieldAlign` (number-like kinds end).
+
+**Column layout** (`web/internal/column-layout.ts`, both tables): no column
+ever drops. Each column's width is the user's, stored on the view instance
+(`TableViewOptions.columnWidths`, written by a header-edge drag or Fit to
+content through `updateViewOptions`); a table wider than its box scrolls
+sideways (the pane's, or its own box in a card). Nothing is frozen by default;
+the column menu's Freeze up to here stores `frozenUpTo` (a field id, so it
+survives hiding and reordering columns) and passes `frozenColumns` = its index
+among the drawn columns + 1. Hide is `props.hideField` (the Properties write).
+The cover column is `fixed` (no grip, no menu). `presentation: "outline"`
+squeezes instead (data-table's CLAUDE.md, "Widths, sideways scroll, frozen
+columns").
 
 Surface options reach `DataTable` straight through: `viewOptions.table`
 (`TableViewOptions.columnHeader`), `FieldDef.header` (mapped as
@@ -145,7 +154,7 @@ drag.
   (on the first column's cell, after the host's `rowTone`), `addLabel`,
   `expandAll`; `presentation` and `header` apply to both modes.
   Column labels over tree rows are an outline table with `header: true`
-  (columns dropping by priority — the file explorer).
+  (columns squeezing into the box — the file explorer).
 
 **`presentation: "grid" | "outline" | "soft"`** is `DataTable.presentation`: `grid` is
 the header row and ruled rows; `outline` (a sidebar's look) drops the header and
@@ -185,7 +194,8 @@ the field writes back, else its read cell — classed by `rowTone` then
 `trailing` sits at rest at the row's end, after every column (where a tree
 row puts it, after its chips), in the persistent track, clipped past 12rem so
 one row's wide trailing cannot squeeze every row's label. The first column takes the slack
-(`minmax(10rem, 1fr)` unless the field sets a width) and clips a deep row's
+(`minmax(280px, 1fr)` — an outline's `minmax(10rem, 1fr)` — unless the field
+sets a width or the user resized it) and clips a deep row's
 indent at its edge. Pinned by
 `web/__tests__/nested-*.test.tsx` (filter scope, row keys, guides and
 presentation, lazy children / open / keys / link rows, leading field, sort
@@ -202,8 +212,8 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 95 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×48
+  - Uses: 94 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×47
     - `primitives/tree` ×20
     - `primitives/data-table` ×7
     - `primitives/latest-ref` ×4

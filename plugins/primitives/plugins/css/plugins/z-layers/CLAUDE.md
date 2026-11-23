@@ -112,6 +112,7 @@ to neither tier.
     - `primitives/css/pin`
     - `primitives/css/sticky`
     - `primitives/css/viewport-overlay`
+    - `primitives/data-table`
     - `primitives/overlay/surface-overlay`
 - Web:
   - Exports (types):

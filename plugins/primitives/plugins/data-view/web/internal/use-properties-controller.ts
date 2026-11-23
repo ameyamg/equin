@@ -59,6 +59,80 @@ function arrayMove<T>(items: T[], from: number, to: number): T[] {
 }
 
 /**
+ * The ordered display list. Unconfigured (`null`) → the schema's own default
+ * body set shown (every field except those declaring `visible: false`), in
+ * schema order. Explicit list → the stored entries in stored order (dropping
+ * ids the schema no longer carries), then the fields it does not list
+ * appended HIDDEN in schema order — a field added after the view was
+ * customized arrives hidden, at the end of its band.
+ */
+function propertyItems<TRow>(
+  fields: FieldDef<TRow>[],
+  properties: readonly PropertyEntry[] | null,
+): PropertyItem<TRow>[] {
+  if (properties == null) {
+    // Seeded from the schema's own default (`FieldDef.visible`), NOT from a
+    // hardcoded `true` — otherwise a `visible: false` field would render
+    // shown here while `resolveBodyFields` kept it out of the body, and the
+    // toggle would silently do nothing on its first click.
+    return fields.map((field) => ({
+      field,
+      visible: field.visible !== false,
+    }));
+  }
+  const byId = new Map(fields.map((f) => [f.id, f]));
+  const listed = new Set<string>();
+  const ordered: PropertyItem<TRow>[] = [];
+  for (const entry of properties) {
+    const field = byId.get(entry.id);
+    if (!field || listed.has(entry.id)) continue;
+    listed.add(entry.id);
+    ordered.push({
+      field,
+      visible: !entry.hidden,
+      ...(entry.slot ? { slot: entry.slot } : {}),
+    });
+  }
+  for (const field of fields) {
+    if (!listed.has(field.id)) ordered.push({ field, visible: false });
+  }
+  // Band by band, matching `resolveBodyFields`. Two things follow, and both
+  // are the point: a section is one contiguous run (so the list draws one
+  // heading per source), and the displayed order still IS the body order —
+  // the commit below writes exactly this order back.
+  return orderItemsBySection(ordered, fields);
+}
+
+/** The stored Properties list for `items`, in their order — every field, the
+ *  switched-off ones `hidden`. */
+function propertyEntriesOf<TRow>(
+  items: readonly PropertyItem<TRow>[],
+): PropertyEntry[] {
+  return items.map((i) => ({
+    id: i.field.id,
+    ...(i.visible ? {} : { hidden: true as const }),
+    ...(i.slot ? { slot: i.slot } : {}),
+  }));
+}
+
+/**
+ * The Properties list with `fieldId` hidden in place — the write a Properties
+ * toggle makes (`usePropertiesController`), for a view that hides a field on
+ * its own (a table column's Hide).
+ */
+export function withFieldHidden<TRow>(
+  fields: FieldDef<TRow>[],
+  properties: readonly PropertyEntry[] | null,
+  fieldId: string,
+): PropertyEntry[] {
+  return propertyEntriesOf(
+    propertyItems(fields, properties).map((i) =>
+      i.field.id === fieldId ? { ...i, visible: false } : i,
+    ),
+  );
+}
+
+/**
  * Builder-facing controller for the per-view-instance Properties list (Notion
  * "Properties"). Mirrors `useSortController`'s shape (memoized facade, flat):
  * every action computes the next ordered `items` immutably, then commits the
@@ -78,58 +152,18 @@ export function usePropertiesController<TRow>(
   properties: readonly PropertyEntry[] | null,
   setProperties: (entries: PropertyEntry[] | null) => void,
 ): PropertiesController<TRow> {
-  // The ordered display list. Unconfigured (`null`) → the schema's own default
-  // body set shown (every field except those declaring `visible: false`), in
-  // schema order. Explicit list → the stored entries in stored order (dropping
-  // ids the schema no longer carries), then the fields it does not list appended
-  // HIDDEN in schema order — a field added after the view was customized
-  // arrives hidden, at the end of its band.
-  const items = useMemo<PropertyItem<TRow>[]>(() => {
-    if (properties == null) {
-      // Seeded from the schema's own default (`FieldDef.visible`), NOT from a
-      // hardcoded `true` — otherwise a `visible: false` field would render
-      // shown here while `resolveBodyFields` kept it out of the body, and the
-      // toggle would silently do nothing on its first click.
-      return fields.map((field) => ({
-        field,
-        visible: field.visible !== false,
-      }));
-    }
-    const byId = new Map(fields.map((f) => [f.id, f]));
-    const listed = new Set<string>();
-    const ordered: PropertyItem<TRow>[] = [];
-    for (const entry of properties) {
-      const field = byId.get(entry.id);
-      if (!field || listed.has(entry.id)) continue;
-      listed.add(entry.id);
-      ordered.push({
-        field,
-        visible: !entry.hidden,
-        ...(entry.slot ? { slot: entry.slot } : {}),
-      });
-    }
-    for (const field of fields) {
-      if (!listed.has(field.id)) ordered.push({ field, visible: false });
-    }
-    // Band by band, matching `resolveBodyFields`. Two things follow, and both
-    // are the point: a section is one contiguous run (so the list draws one
-    // heading per source), and the displayed order still IS the body order —
-    // the commit below writes exactly this order back.
-    return orderItemsBySection(ordered, fields);
-  }, [fields, properties]);
+  // The ordered display list (`propertyItems`).
+  const items = useMemo<PropertyItem<TRow>[]>(
+    () => propertyItems(fields, properties),
+    [fields, properties],
+  );
 
   const isCustomized = properties != null;
 
   return useMemo(() => {
     // Commit every field in `next` list order — the single write path.
     const commit = (next: PropertyItem<TRow>[]) =>
-      setProperties(
-        next.map((i) => ({
-          id: i.field.id,
-          ...(i.visible ? {} : { hidden: true as const }),
-          ...(i.slot ? { slot: i.slot } : {}),
-        })),
-      );
+      setProperties(propertyEntriesOf(next));
 
     const toggle = (id: string) => {
       commit(

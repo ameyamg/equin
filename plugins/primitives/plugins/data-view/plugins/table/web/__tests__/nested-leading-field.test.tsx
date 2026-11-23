@@ -82,6 +82,9 @@ function renderTable(
       properties: opts.properties?.map((id) => ({ id })),
     },
     setSort: () => {},
+    setSortDirection: () => {},
+    updateViewOptions: () => {},
+    hideField: () => {},
     sortHeader: { active: [], sortable: new Set<string>() },
     setFilter: () => {},
     setExpanded: () => {},
@@ -144,7 +147,9 @@ describe("data-view nested table lead field", () => {
       el.innerHTML
         .replace(/(DndDescribedBy|DndLiveRegion)-\d+/g, "$1")
         // The fold host's per-instance id (`useId`).
-        .replace(/data-row-fold-host="[^"]*"/g, "data-row-fold-host");
+        .replace(/data-row-fold-host="[^"]*"/g, "data-row-fold-host")
+        // Each column menu trigger's per-instance id (`useId`).
+        .replace(/ id="[^"]*"/g, " id");
     const html = markup(renderTable([name, note]).container);
     cleanup();
     const hidden = renderTable([avatar, name, note], {

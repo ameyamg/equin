@@ -36,7 +36,10 @@ const FIELDS: FieldDef<Row>[] = [
 
 afterEach(cleanup);
 
-function renderTable(setSort: (fieldId: string) => void) {
+function renderTable(
+  setSortDirection: (fieldId: string, direction: "asc" | "desc") => void,
+  hideField: (fieldId: string) => void = () => {},
+) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
     placement: {},
@@ -45,7 +48,10 @@ function renderTable(setSort: (fieldId: string) => void) {
     rowKey: (r) => r.id,
     // Server-ordered: the pipeline's sort is empty, the active one is not.
     state: { sort: [], query: "", filter: null },
-    setSort,
+    setSort: () => {},
+    setSortDirection,
+    updateViewOptions: () => {},
+    hideField,
     sortHeader: {
       active: [{ fieldId: "name", direction: "asc" }],
       sortable: new Set(["name"]),
@@ -66,13 +72,22 @@ function renderTable(setSort: (fieldId: string) => void) {
 }
 
 describe("data-view table header sort", () => {
-  it("toggles sort only on a sortable field", () => {
-    const setSort = vi.fn();
-    const { getByText } = renderTable(setSort);
+  it("a header click opens the column's menu; it sorts only a sortable field", async () => {
+    const setSortDirection = vi.fn();
+    const hideField = vi.fn();
+    const { getByText, findByText, queryByText } = renderTable(
+      setSortDirection,
+      hideField,
+    );
+    // A click no longer sorts: it opens the menu.
     fireEvent.click(getByText("Link"));
-    expect(setSort).not.toHaveBeenCalled();
+    fireEvent.click(await findByText("Hide"));
+    expect(hideField).toHaveBeenCalledWith("url");
+    expect(queryByText("Sort ascending")).toBeNull();
+    expect(setSortDirection).not.toHaveBeenCalled();
     fireEvent.click(getByText("Name"));
-    expect(setSort).toHaveBeenCalledWith("name");
+    fireEvent.click(await findByText("Sort descending"));
+    expect(setSortDirection).toHaveBeenCalledWith("name", "desc");
   });
 
   it("draws the sort affordance on sortable headers only, active from the active sort", () => {

@@ -92,6 +92,9 @@ function renderTable(
     rowKey: (r) => r.id,
     state: { sort: [], query: "", filter: null },
     setSort: () => {},
+    setSortDirection: () => {},
+    updateViewOptions: () => {},
+    hideField: () => {},
     sortHeader: { active: [], sortable: new Set<string>() },
     setFilter: () => {},
     setExpanded: () => {},
@@ -340,20 +343,24 @@ describe("data-view nested table: the open gesture", () => {
 });
 
 describe("data-view nested table: the column header", () => {
-  it("draws the field titles over the columns, and sorts from them", () => {
-    const setSort = vi.fn();
-    const { getByText } = renderTable({
-      setSort,
+  it("draws the field titles over the columns, and sorts from them", async () => {
+    const setSortDirection = vi.fn();
+    const { getByText, findByText } = renderTable({
+      setSort: () => {},
+      setSortDirection,
+      updateViewOptions: () => {},
+      hideField: () => {},
       sortHeader: {
         active: [{ fieldId: "size", direction: "desc" }],
         sortable: new Set(["name", "size"]),
       },
     });
     fireEvent.click(getByText("Size"));
-    expect(setSort).toHaveBeenCalledWith("size");
+    fireEvent.click(await findByText("Sort ascending"));
+    expect(setSortDirection).toHaveBeenCalledWith("size", "asc");
     // A field that does not sort is a plain title.
     fireEvent.click(getByText("Modified"));
-    expect(setSort).toHaveBeenCalledTimes(1);
+    expect(setSortDirection).toHaveBeenCalledTimes(1);
     expect(getByText("2 KB")).toBeTruthy();
   });
 });

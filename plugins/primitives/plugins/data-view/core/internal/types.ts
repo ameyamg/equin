@@ -1495,6 +1495,25 @@ export interface DataViewRenderProps<TRow> {
    */
   setSort: (fieldId: string) => void;
   /**
+   * Makes `fieldId` THIS view's primary sort, in `direction` (a column menu's
+   * Sort ascending / Sort descending): secondary rules kept, pinned rules in
+   * front (`setPrimarySort`). Throws for a field outside `sortHeader.sortable`,
+   * as `setSort` does.
+   */
+  setSortDirection: (fieldId: string, direction: "asc" | "desc") => void;
+  /**
+   * Merges `patch` into THIS view's stored options (its config row's view
+   * value — the keys the view reads back from `options`), e.g. the table's
+   * `columnWidths` / `frozenUpTo`. A key set to `undefined` is dropped.
+   */
+  updateViewOptions: (patch: Readonly<Record<string, unknown>>) => void;
+  /**
+   * Hides `fieldId` in THIS view's Properties list — the same write a
+   * Properties toggle makes (the whole list, the field `hidden`), so it comes
+   * back from Properties where it was.
+   */
+  hideField: (fieldId: string) => void;
+  /**
    * What a view's column headers show and offer. `active`: the view's sort
    * rules, for DISPLAY (a header's arrow) — `state.sort` is emptied under a
    * server-ordered source, whose rows arrive sorted. `sortable`: the fields a

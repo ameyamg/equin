@@ -56,6 +56,9 @@ function renderTable(options: TableViewOptions<Row>, nested = false) {
     rowKey: (r) => r.id,
     state: { sort: [], query: "", filter: null },
     setSort: () => {},
+    setSortDirection: () => {},
+    updateViewOptions: () => {},
+    hideField: () => {},
     sortHeader: {
       active: [{ fieldId: "name", direction: "asc" }],
       sortable: new Set(["name", "size"]),

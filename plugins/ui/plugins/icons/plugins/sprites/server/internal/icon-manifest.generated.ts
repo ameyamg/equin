@@ -204,6 +204,7 @@ export const ICON_MANIFEST: {
     "insights",
     "install-desktop",
     "keep",
+    "keep-off",
     "key",
     "keyboard",
     "keyboard-arrow-down",

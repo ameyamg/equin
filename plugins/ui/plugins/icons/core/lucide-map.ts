@@ -230,6 +230,7 @@ export const LUCIDE_MAP = {
   insights: "chart-line",
   "install-desktop": "monitor-down",
   keep: "pin",
+  "keep-off": "pin-off",
   key: "key",
   keyboard: "keyboard",
   "keyboard-arrow-down": "chevron-down",
