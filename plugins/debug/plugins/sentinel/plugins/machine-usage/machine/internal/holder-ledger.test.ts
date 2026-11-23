@@ -108,13 +108,16 @@ const tree = (bytes: number, peakBytes = bytes) => ({
 test("an ended holder's peak is recorded, and its work's reservation follows the record", async () => {
   let now = Date.parse("2026-11-13T12:00:00Z");
   const recorded: HolderPeakRecord[] = [];
-  // Nine earlier test holders: one more makes the work measured.
-  const earlier: HolderPeakRecord[] = Array.from({ length: 9 }, () => ({
+  // Nine earlier test holders: one more makes the work measured. The last of
+  // them also peaked at 2 GB — a reservation rests on two holders, never one
+  // (host-admission's HOLDER_PEAK_CORROBORATION), so the new holder's 2 GB
+  // lifts it only because another holder reached it too.
+  const earlier: HolderPeakRecord[] = Array.from({ length: 9 }, (_, i) => ({
     t: new Date(now - 3_600_000).toISOString(),
     work: "test",
     units: 1,
     lane: "background",
-    peakBytes: 1 * GB,
+    peakBytes: (i === 8 ? 2 : 1) * GB,
     samples: 3,
     seenMs: 60_000,
   }));

@@ -57,6 +57,7 @@ describe("deploy.deployments", () => {
       [
         "compositionId",
         "createdAt",
+        "edge",
         "hostnames",
         "id",
         "loopbackPort",
