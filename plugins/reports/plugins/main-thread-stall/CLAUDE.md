@@ -269,20 +269,40 @@ the tab was never frozen long enough to need one):
   clipped to the interaction → `script` / `forced-style-layout` (with
   `forcedBy`, the function that forced the most) / `style-layout` (the
   frame's own pass, less scripts run inside it — ResizeObserver callbacks) /
-  `withheld` / `other`; plus Event Timing's input delay / processing /
-  presentation.
-- **Judged on what the page spent** (`pageOwnMs`): its own time less the
-  rendering the browser **withheld** (`withheldOf`) — inside each long frame,
-  the wait for its render step that no script filled and no task blocked
-  (LoAF `blockingDuration`), less a vsync's 50 ms. A visible page with a free
-  thread renders within a vsync of asking, so a long free wait is the
-  browser's: a renderer throttled to ~1 frame/s (signature: ~1 s frames,
-  blocking 0, little script). Counted from the handlers' start, and only when
-  ≥ 2 long frames each waited ≥ 500 ms free (`throttled`): one suppressed
-  frame is the page's own (a view transition awaiting its update — pane-morph
-  waits up to 1.5 s). It stays on the slow-op and payload
-  (`breakdown.withheldMs`), never in the verdict; null on a stall (the
-  watchdog holds capped scripts, so free time cannot be told).
+  `withheld` / `frame wait` / `other`; plus Event Timing's input delay /
+  processing / presentation.
+- **An idle thread waiting for its frame** (`withheldOf`): inside each long
+  frame, the wait for its render step that no script filled and no task
+  blocked (LoAF `blockingDuration`), less a vsync's 50 ms, counted from the
+  handlers' start. A visible page with a free thread renders within a vsync
+  of asking, so a long free wait is either the browser withholding frames
+  (an occluded or off-screen window, an automated browser, a power-throttled
+  renderer) or the page's own compositor / GPU work not done yet (raster,
+  layers, filters, decodes on a weak GPU). LoAF cannot see which; only the
+  frame cadence can, so it is split by what the frames PROVE (`throttled`):
+  - **`withheld`** — the browser's, never in the verdict (`pageOwnMs` takes
+    it out): ≥ 2 long frames each waited ≥ 500 ms free (a renderer at
+    ~1 frame/s), or one did and its render step came on the browser's 1 Hz
+    clock — 1000 ± 50 ms after the render step of the long frame right before
+    it, the two back to back (≤ 16 ms apart, so no unseen frame rendered
+    between; `onRenderClock`, read against the tab's 10 s frame ring, so the
+    frame before may precede the click). GPU work takes as long as it takes;
+    it does not land on a 1 s grid. On 14 days of equin.ai visitor reports
+    the 16 back-to-back frames that waited ≥ 500 ms free stepped 953–1017 ms
+    (10) or 605–823 / 1405 ms, nothing in between.
+  - **`frame wait`** (`frameWaitMs`) — the same wait with no such proof: one
+    long frame alone (a view transition holding its update looks the same —
+    pane-morph waits up to 1.5 s), or off the clock. Counted as the page's
+    own time, so a real compositor / GPU cost is still reported — but named
+    as a wait, not as the top script. Before 2026-11-23 it was inside
+    `other`, and the message named the top script beside it: visitors'
+    `other 1613 ms (H (MessagePort.onmessage))` for a 96 ms script
+    (report-1795412123-gfakfw), which sent an investigation after React.
+  - The one-line summary names a function only beside a layer a script spent
+    (`layerCulprit`: script → the top function, forced style/layout → what
+    forced it); beside a wait or `other` it names none.
+  Both are null on a stall (the watchdog holds capped scripts, so free time
+  cannot be told) and on reports filed before they were measured.
 - **Shown throughout or not judged**: a page hidden or Page-Lifecycle-frozen
   anywhere from input to paint is skipped (it paints only once shown).
 - `focus` (at input, at paint) is evidence: a trusted input to an unfocused
@@ -439,6 +459,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `interactionTargetKey`
     - `interactionTargetLabel`
     - `InteractionTargetSchema`
+    - `layerCulprit`
     - `mainThreadStallFingerprint`
     - `MainThreadStallPayloadSchema`
     - `mainThreadStallSummary`

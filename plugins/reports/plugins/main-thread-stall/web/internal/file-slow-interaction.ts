@@ -3,6 +3,7 @@ import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/c
 import {
   coarseClient,
   dominantLayer,
+  layerCulprit,
   interactionTargetLabel,
   slowInteractionSummary,
   type SlowInteractionDraft,
@@ -18,10 +19,16 @@ import { INTERACTION, type InteractionVerdict } from "./interaction-judge";
 const OPERATION_KIND = "interaction";
 const REPORT_KIND = "slow-interaction";
 
+// A layer a script spent names its script; a wait or `other` names itself
+// (a script beside an idle wait is not what took the time).
 function variantOf(d: SlowInteractionDraft): string {
-  if (d.forcedBy && dominantLayer(d.breakdown).layer === "forced style/layout")
+  const layer = dominantLayer(d.breakdown).layer;
+  if (d.forcedBy && layer === "forced style/layout")
     return `forced by ${d.forcedBy}`;
-  return d.topFunction ?? "unattributed";
+  return (
+    layerCulprit(layer, d.topFunction, d.forcedBy) ??
+    (layer === "style/layout" ? (d.topFunction ?? "unattributed") : layer)
+  );
 }
 
 /**
@@ -47,6 +54,8 @@ export async function fileSlowInteraction(
       script: d.breakdown.scriptMs,
       "forced-style-layout": d.breakdown.forcedStyleLayoutMs,
       "style-layout": d.breakdown.styleLayoutMs,
+      "render-withheld": d.breakdown.withheldMs ?? 0,
+      "frame-wait": d.breakdown.frameWaitMs ?? 0,
       "render-other": d.breakdown.otherMs,
     },
     detail: { variant: variantOf(d) },

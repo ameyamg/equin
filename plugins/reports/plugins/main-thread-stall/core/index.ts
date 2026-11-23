@@ -23,6 +23,7 @@ export type {
 } from "./main-thread-stall-kind";
 export {
   dominantLayer,
+  layerCulprit,
   InteractionBreakdownSchema,
   interactionTargetKey,
   interactionTargetLabel,

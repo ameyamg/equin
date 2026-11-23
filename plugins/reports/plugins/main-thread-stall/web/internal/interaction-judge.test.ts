@@ -6,6 +6,7 @@ import {
   frameClaimed,
   judgeInteraction,
   longestEntry,
+  onRenderClock,
   ownEnd,
   pageOwnMs,
   phasesOf,
@@ -75,6 +76,7 @@ describe("attribute", () => {
       forcedStyleLayoutMs: 250,
       styleLayoutMs: 120,
       withheldMs: 0,
+      frameWaitMs: 0,
       otherMs: 80,
     });
     expect(a.forcedBy).toBe("commitRoot (MessagePort.onmessage)");
@@ -112,6 +114,7 @@ describe("attribute", () => {
       forcedStyleLayoutMs: 60,
       styleLayoutMs: 200,
       withheldMs: 0,
+      frameWaitMs: 0,
       otherMs: 100,
     });
   });
@@ -127,6 +130,7 @@ describe("attribute", () => {
       forcedStyleLayoutMs: 0,
       styleLayoutMs: 0,
       withheldMs: 0,
+      frameWaitMs: 0,
       otherMs: 300,
     });
     expect(a.topFunction).toBeNull();
@@ -223,6 +227,9 @@ describe("withheld rendering", () => {
     expect(throttled([held])).toBe(false);
     const a = attribute({ start: 0, end: 1408 }, [held], 0);
     expect(a.breakdown.withheldMs).toBe(0);
+    // The free wait is named, and stays the page's: 1390 − 60 script − 50.
+    expect(a.breakdown.frameWaitMs).toBe(1280);
+    expect(a.breakdown.otherMs).toBe(1408 - 60 - 5 - 1280);
     expect(judgeInteraction(pageOwnMs(1408, a.breakdown), 1, false)).toBe(
       "report",
     );
@@ -237,6 +244,149 @@ describe("withheld rendering", () => {
   test("not measured without the frames' every script (the stall path)", () => {
     const a = attribute(w0r9u4n, throttledFrames, null);
     expect(a.breakdown.withheldMs).toBeNull();
+    expect(a.breakdown.frameWaitMs).toBeNull();
+  });
+});
+
+// One long free wait alone looks the same whether the browser withheld the
+// frame or the page's own compositor / GPU work held it — unless its render
+// step came on the browser's 1 Hz clock. Real visitor frames (equin.ai),
+// performance clock, ms from the click.
+describe("the browser's render clock", () => {
+  // report-1795138820-4se9ex (Windows Chrome, /demo/at/agents): a short frame
+  // rendered at +68, the next began 11 ms after it and waited free ~840 ms for
+  // a render step at +1034 — 966 ms after the last one.
+  const clocked: RawFrame[] = [
+    frame(1, 71, [script(9, 7, "sg (DIV.onclick)")], 71, {
+      renderStart: 68,
+      blocking: 0,
+    }),
+    frame(
+      82,
+      1059,
+      [
+        script(82, 40, "H (MessagePort.onmessage)", 16),
+        script(125, 49, "runQueued (TimerHandler:setTimeout)", 16),
+        script(1048, 11, "(anonymous) (ResizeObserverCallback)", 6),
+      ],
+      1035,
+      { renderStart: 1034, blocking: 24 },
+    ),
+    frame(1065, 1115, [], 1115, { renderStart: 1115, blocking: 0 }),
+  ];
+
+  test("one long free wait on the 1 s clock is withheld — the page's own share is recorded only", () => {
+    expect(onRenderClock(clocked[1]!, clocked)).toBe(true);
+    expect(throttled(clocked)).toBe(true);
+    const a = attribute({ start: 0, end: 1096 }, clocked, 3);
+    // Frame 1: 65 − 7 script − 50; frame 2: 839 − 50.
+    expect(a.breakdown.withheldMs).toBe(8 + 789);
+    expect(a.breakdown.frameWaitMs).toBe(0);
+    const own = pageOwnMs(1093, a.breakdown);
+    expect(own).toBe(296);
+    expect(judgeInteraction(own, 1, false)).toBe("record");
+  });
+
+  test("off the clock it stays the page's — named as a frame wait, still reported", () => {
+    // report-1795199821-710zfl (Windows Chrome, /demo/at/sonata): the same
+    // shape, but the render step came 758 ms after the last one.
+    const off: RawFrame[] = [
+      frame(
+        -16,
+        383,
+        [
+          script(-16, 10, "sg (DIV.onclick)"),
+          script(245, 11, "H (MessagePort.onmessage)"),
+        ],
+        383,
+        { renderStart: 377, blocking: 0 },
+      ),
+      frame(
+        390,
+        1175,
+        [
+          script(976, 54, "H (MessagePort.onmessage)", 25),
+          script(1138, 12, "(anonymous) (ResizeObserverCallback)", 6),
+          script(1151, 16, "(anonymous) (ResizeObserverCallback)", 11),
+        ],
+        1136,
+        { renderStart: 1135, blocking: 44 },
+      ),
+    ];
+    expect(onRenderClock(off[1]!, off)).toBe(false);
+    expect(throttled(off)).toBe(false);
+    const a = attribute({ start: 0, end: 1168 }, off, 0);
+    expect(a.breakdown.withheldMs).toBe(0);
+    // Frame 1 from the click (its handler ran before): 377 − 11 script − 50;
+    // frame 2: 647 − 50.
+    expect(a.breakdown.frameWaitMs).toBe(316 + 597);
+    expect(judgeInteraction(pageOwnMs(1168, a.breakdown), 1, false)).toBe(
+      "report",
+    );
+  });
+
+  test("with no frame just before it, one long wait is not proven", () => {
+    // report-1795412123-gfakfw (Windows Chrome, /demo files → Back): one
+    // 2063 ms frame begun before the click, its render step at +1676.
+    const alone = frame(
+      -352,
+      1711,
+      [
+        script(41, 96, "H (MessagePort.onmessage)", 34),
+        script(1677, 28, "(anonymous) (ResizeObserverCallback)", 8),
+      ],
+      1677,
+      { renderStart: 1676, blocking: 81 },
+    );
+    expect(throttled([alone])).toBe(false);
+    const a = attribute({ start: 0, end: 1744 }, [alone], 1);
+    expect(a.breakdown.withheldMs).toBe(0);
+    expect(a.breakdown.frameWaitMs).toBeGreaterThan(1400);
+    // What is left: the 81 ms its tasks blocked, a vsync's slack, the tail.
+    expect(a.breakdown.otherMs).toBeLessThan(200);
+  });
+
+  test("the frame before may precede the interaction", () => {
+    // Performance-clock times (positive); the click at 1000.
+    const before = frame(600, 700, [], 700, {
+      renderStart: 690,
+      blocking: 0,
+    });
+    const waited = frame(705, 1700, [], 1700, {
+      renderStart: 1695,
+      blocking: 0,
+    });
+    expect(onRenderClock(waited, [before, waited])).toBe(true);
+    expect(throttled([waited], [before, waited])).toBe(true);
+    expect(throttled([waited])).toBe(false);
+  });
+
+  test("not against a frame before it that never rendered — no clock to measure from", () => {
+    // A long task with no render step, then one frame GPU work held ~1 s.
+    const task = frame(0, 120, [script(0, 120, "onMessage (MessagePort.onmessage)")]);
+    const held = frame(125, 1100, [], 1100, { renderStart: 1095, blocking: 0 });
+    expect(onRenderClock(held, [task, held])).toBe(false);
+    expect(throttled([task, held])).toBe(false);
+  });
+
+  test("the clock's slack is ± 50 ms", () => {
+    const before = frame(0, 100, [], 100, { renderStart: 90, blocking: 0 });
+    const at = (render: number) =>
+      frame(100, render + 5, [], render + 5, { renderStart: render, blocking: 0 });
+    expect(onRenderClock(at(1140), [before, at(1140)])).toBe(true);
+    expect(onRenderClock(at(1141), [before, at(1141)])).toBe(false);
+    expect(onRenderClock(at(1040), [before, at(1040)])).toBe(true);
+    expect(onRenderClock(at(1039), [before, at(1039)])).toBe(false);
+  });
+
+  test("not when an unseen frame could have rendered between them", () => {
+    const before = frame(0, 100, [], 100, { renderStart: 90, blocking: 0 });
+    // Begun 40 ms after the last frame ended: room for a short frame between.
+    const waited = frame(140, 1095, [], 1095, {
+      renderStart: 1090,
+      blocking: 0,
+    });
+    expect(onRenderClock(waited, [before, waited])).toBe(false);
   });
 });
 

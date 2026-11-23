@@ -34,13 +34,22 @@ export const INTERACTION = {
   // normal wait for the next vsync (LoAF's own long-frame bar): only the rest
   // is rendering the browser withheld.
   WITHHELD_SLACK_MS: 50,
-  // A throttled renderer withholds frame after frame: only when at least
+  // A throttled renderer withholds frame after frame: when at least
   // THROTTLED_FRAMES long frames inside the interaction each waited this long
-  // (free) for their render step is the wait the browser's. One suppressed
-  // frame is the page's own (a view transition awaiting its update, a
-  // compositor busy rastering what the page drew).
+  // (free) for their render step, the wait is the browser's.
   THROTTLED_WAIT_MS: 500,
   THROTTLED_FRAMES: 2,
+  // …or when one such frame's render step came on the browser's own 1 Hz
+  // clock: RENDER_CLOCK_MS (± RENDER_CLOCK_SLACK_MS) after the render step of
+  // the long frame just before it, the two frames back to back (the next one
+  // begun within CONTIGUOUS_MS of the last's end, so no unseen frame rendered
+  // between). Work the page gave the compositor or GPU takes as long as it
+  // takes; it does not land on a 1 s grid. On 14 days of equin.ai visitor
+  // reports, the 16 back-to-back frames that waited ≥ 500 ms free stepped
+  // 953–1017 ms (10 of them) or 605–823 / 1405 ms — nothing in between.
+  RENDER_CLOCK_MS: 1000,
+  RENDER_CLOCK_SLACK_MS: 50,
+  CONTIGUOUS_MS: 16,
 } as const;
 
 /** One script of a long animation frame, on the page's performance clock. */
@@ -91,11 +100,16 @@ const overlaps = (f: { start: number; end: number }, w: InteractionWindow) =>
  * Where an interaction's time went, from the long frames inside it: every
  * script clipped to the window (its forced style/layout pro rata), the frame's
  * own style/layout pass less the scripts that ran inside it (ResizeObserver
- * callbacks run there), the rendering the browser withheld (`withheldOf`,
- * counted from `withheldFrom` — the handlers' start, never the input delay —
- * and only from a throttled renderer: `throttled`), and the rest as `other`.
- * The five sum to the window. `withheldFrom` null: not measured (the frames'
- * scripts are capped, so their free time cannot be told) — `withheldMs` null.
+ * callbacks run there), the thread's free wait for its render step
+ * (`withheldOf`, counted from `withheldFrom` — the handlers' start, never the
+ * input delay) — `withheld` when the frames prove a throttled renderer
+ * (`throttled`), else `frameWait`, the page's — and the rest as `other`. The
+ * six sum to the window. `withheldFrom` null: not measured (the frames'
+ * scripts are capped, so their free time cannot be told) — both null.
+ *
+ * `frames` may hold frames outside the window (the tab's recent ring): only
+ * the ones overlapping it are attributed, and the frame just before one of
+ * them is what places its render step on the browser's clock.
  */
 export function attribute(
   w: InteractionWindow,
@@ -143,16 +157,18 @@ export function attribute(
         end: w.end,
       });
   }
-  if (!throttled(inside)) withheldMs = 0;
   const total = w.end - w.start;
   // Never more than the window less what the page ran.
-  withheldMs = Math.min(
+  const freeMs = Math.min(
     withheldMs,
     Math.max(0, total - scriptMs - forcedMs - styleLayoutMs),
   );
+  const browsers = throttled(inside, frames);
+  withheldMs = browsers ? freeMs : 0;
+  const frameWaitMs = browsers ? 0 : freeMs;
   const otherMs = Math.max(
     0,
-    total - scriptMs - forcedMs - styleLayoutMs - withheldMs,
+    total - scriptMs - forcedMs - styleLayoutMs - freeMs,
   );
   let topFunction: string | null = null;
   let forcedBy: string | null = null;
@@ -174,6 +190,7 @@ export function attribute(
       forcedStyleLayoutMs: Math.round(forcedMs),
       styleLayoutMs: Math.round(styleLayoutMs),
       withheldMs: withheldFrom === null ? null : Math.round(withheldMs),
+      frameWaitMs: withheldFrom === null ? null : Math.round(frameWaitMs),
       otherMs: Math.round(otherMs),
     },
     topFunction,
@@ -184,23 +201,30 @@ export function attribute(
 }
 
 /**
- * The rendering the browser withheld from one long frame, inside the window:
- * the frame's wait for its render step (its start → render start, clipped to
- * the window) that no script filled, less every ms its tasks blocked (LoAF's
+ * One long frame's free wait for its render step, inside the window: the
+ * frame's wait for its render step (its start → render start, clipped to the
+ * window) that no script filled, less every ms its tasks blocked (LoAF's
  * `blockingDuration` counts work no script attribution names) and less a
- * vsync's slack. A frame waits for its render step only while the browser
- * gives it no frame: with the thread free, a visible page renders within a
- * vsync of asking, so a long free wait is the browser's (a renderer throttled
- * to ~1 frame/s: an occluded or off-screen window, an automated browser), never
- * the page's. A frame whose tasks blocked keeps that time as theirs.
+ * vsync's slack. With the thread free, a visible page renders within a vsync
+ * of asking unless the frame is not given: by the browser (a renderer
+ * throttled to ~1 frame/s — an occluded or off-screen window, an automated
+ * browser) or by the compositor / GPU still busy with what the page drew.
+ * `throttled` tells which can be proven; `attribute` files it as withheld or
+ * as the page's frame wait. A frame whose tasks blocked keeps that time as
+ * theirs.
  */
 export function withheldOf(f: RawFrame, w: InteractionWindow): number {
   return Math.max(0, freeWait(f, w) - INTERACTION.WITHHELD_SLACK_MS);
 }
 
+/** When a frame's render step began: its end when it had none. */
+function renderAtOf(f: RawFrame): number {
+  return f.renderStart > 0 ? f.renderStart : f.end;
+}
+
 /** A frame's wait for its render step, inside `w`, that no script filled and no task blocked. */
 function freeWait(f: RawFrame, w: InteractionWindow): number {
-  const renderAt = f.renderStart > 0 ? f.renderStart : f.end;
+  const renderAt = renderAtOf(f);
   const from = Math.max(f.start, w.start);
   const to = Math.min(renderAt, w.end);
   if (to <= from) return 0;
@@ -211,17 +235,50 @@ function freeWait(f: RawFrame, w: InteractionWindow): number {
 }
 
 /**
- * Whether the frames show a renderer the browser throttled: THROTTLED_FRAMES
- * of them each waited THROTTLED_WAIT_MS or more, free, for their render step
- * (over the whole frame — the cadence is the renderer's, not the click's).
+ * Whether the frames show a renderer the browser throttled — over each whole
+ * frame (the cadence is the renderer's, not the click's):
+ * - THROTTLED_FRAMES of `inside` each waited THROTTLED_WAIT_MS or more, free,
+ *   for their render step (a renderer at ~1 frame/s, frame after frame); or
+ * - one of `inside` did, and its render step came on the browser's 1 Hz clock
+ *   (`onRenderClock`, read against `all` — the frame before it may precede
+ *   the interaction).
+ * One long free wait with neither is not proven: the page's compositor or GPU
+ * work looks the same from here, so it stays the page's (`frameWaitMs`).
+ * Once proven, every inside frame's free wait counts as withheld — the
+ * renderer, not one frame, was throttled.
  */
-export function throttled(frames: readonly RawFrame[]): boolean {
-  const waited = frames.filter(
+export function throttled(
+  inside: readonly RawFrame[],
+  all: readonly RawFrame[] = inside,
+): boolean {
+  const waited = inside.filter(
     (f) =>
       freeWait(f, { start: f.start, end: f.end }) >=
       INTERACTION.THROTTLED_WAIT_MS,
   );
-  return waited.length >= INTERACTION.THROTTLED_FRAMES;
+  if (waited.length >= INTERACTION.THROTTLED_FRAMES) return true;
+  return waited.some((f) => onRenderClock(f, all));
+}
+
+/**
+ * Whether a frame's render step came RENDER_CLOCK_MS (± slack) after the
+ * render step of the long frame right before it, with no room between them for
+ * a frame we did not see (the next began within CONTIGUOUS_MS of the last's
+ * end): the renderer was handed its frames by a 1 Hz clock.
+ */
+export function onRenderClock(f: RawFrame, all: readonly RawFrame[]): boolean {
+  let prev: RawFrame | null = null;
+  for (const p of all)
+    if (p !== f && p.end <= f.start && (!prev || p.end > prev.end)) prev = p;
+  if (!prev || f.start - prev.end > INTERACTION.CONTIGUOUS_MS) return false;
+  // A frame before it with no render step gives no clock to measure from:
+  // the step would be this frame's own length.
+  if (prev.renderStart <= 0 || f.renderStart <= 0) return false;
+  const step = f.renderStart - prev.renderStart;
+  return (
+    Math.abs(step - INTERACTION.RENDER_CLOCK_MS) <=
+    INTERACTION.RENDER_CLOCK_SLACK_MS
+  );
 }
 
 /** What the page itself spent of an interaction: its own time less the rendering the browser withheld. */

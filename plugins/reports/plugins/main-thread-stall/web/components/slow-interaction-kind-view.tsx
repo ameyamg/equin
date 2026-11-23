@@ -3,6 +3,7 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
   dominantLayer,
+  layerCulprit,
   interactionTargetLabel,
   SlowInteractionPayloadSchema,
 } from "../../core";
@@ -14,7 +15,7 @@ export function SlowInteractionKindView({ report }: { report: Report }) {
   if (!parsed.success) return <>{report.message}</>;
   const d = parsed.data;
   const top = dominantLayer(d.breakdown);
-  const who = top.layer === "forced style/layout" ? d.forcedBy : d.topFunction;
+  const who = layerCulprit(top.layer, d.topFunction, d.forcedBy);
 
   return (
     <Inline gap="xs">

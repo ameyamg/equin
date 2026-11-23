@@ -42,13 +42,21 @@ export const InteractionBreakdownSchema = z.object({
   styleLayoutMs: z.number(),
   // Rendering the browser withheld: time inside long frames, before their
   // render step, when the thread ran no script and no task of it blocked
-  // (LoAF blockingDuration) — it was free, and no frame was given to it. A
-  // page cannot cause that (no view transition or render-blocking resource
-  // was open); a throttled renderer does: an occluded or off-screen window,
-  // an automated browser, a starved compositor. Each frame keeps its first
-  // WITHHELD_SLACK_MS as a normal wait for vsync. Never part of what the
-  // page is judged on. Null: filed before it was measured (inside `otherMs`).
+  // (LoAF blockingDuration) — it was free, and no frame was given to it —
+  // counted only when the frames prove a throttled renderer (`throttled`:
+  // frame after frame waiting, or a render step on the browser's 1 Hz clock).
+  // A page cannot cause that; an occluded or off-screen window, an automated
+  // browser, a power-throttled renderer does. Each frame keeps its first
+  // WITHHELD_SLACK_MS as a normal wait for vsync. Never part of what the page
+  // is judged on. Null: filed before it was measured (inside `otherMs`).
   withheldMs: z.number().nullable().default(null),
+  // The same free wait for a render step when nothing proves the browser
+  // withheld it: the thread was idle and the frame came late, which is the
+  // page's own compositor / GPU cost (raster, layers, filters, decodes) or a
+  // throttle without a signature — LoAF cannot tell them apart. Part of the
+  // page's time; named so it is never read as the top script's. Null: filed
+  // before it was measured (inside `otherMs`), or not measurable (a stall).
+  frameWaitMs: z.number().nullable().default(null),
   // The rest: paint, compositing, render steps outside scripts, or waiting —
   // time no long frame accounts for.
   otherMs: z.number(),
@@ -82,6 +90,7 @@ export function dominantLayer(b: InteractionBreakdown): {
     | "forced style/layout"
     | "style/layout"
     | "withheld rendering"
+    | "waiting for a frame"
     | "other";
   ms: number;
 } {
@@ -90,7 +99,26 @@ export function dominantLayer(b: InteractionBreakdown): {
     { layer: "forced style/layout", ms: b.forcedStyleLayoutMs },
     { layer: "style/layout", ms: b.styleLayoutMs },
     { layer: "withheld rendering", ms: b.withheldMs ?? 0 },
+    { layer: "waiting for a frame", ms: b.frameWaitMs ?? 0 },
     { layer: "other", ms: b.otherMs },
   ] as const;
   return layers.reduce((a, c) => (c.ms > a.ms ? c : a));
+}
+
+/**
+ * The function a one-line summary names beside its dominant layer: only a
+ * layer a script spent — its top function, or what forced the style/layout.
+ * Beside a wait (withheld, waiting for a frame, other) or the frame's own
+ * style/layout pass, a script's name reads as if it took the time: visitors'
+ * 1.4–1.6 s idle waits were filed as `other 1613 ms (H (MessagePort.onmessage))`
+ * for a 96 ms script.
+ */
+export function layerCulprit(
+  layer: ReturnType<typeof dominantLayer>["layer"],
+  topFunction: string | null,
+  forcedBy: string | null,
+): string | null {
+  if (layer === "forced style/layout") return forcedBy ?? topFunction;
+  if (layer === "script") return topFunction;
+  return null;
 }

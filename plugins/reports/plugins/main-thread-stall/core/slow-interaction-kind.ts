@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   dominantLayer,
+  layerCulprit,
   InteractionBreakdownSchema,
   interactionTargetKey,
   interactionTargetLabel,
@@ -106,9 +107,6 @@ export function slowInteractionFingerprint(d: SlowInteractionDraft): string {
 /** The one-line summary used as the report message and the task title stem. */
 export function slowInteractionSummary(d: SlowInteractionDraft): string {
   const top = dominantLayer(d.breakdown);
-  const who =
-    d.forcedBy && top.layer === "forced style/layout"
-      ? d.forcedBy
-      : d.topFunction;
+  const who = layerCulprit(top.layer, d.topFunction, d.forcedBy);
   return `Slow interaction ${d.durationMs} ms — ${interactionTargetLabel(d.target)} — ${top.layer} ${top.ms} ms${who ? ` (${who})` : ""}`;
 }

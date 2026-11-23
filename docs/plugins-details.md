@@ -61535,6 +61535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `interactionTargetKey`
           - `interactionTargetLabel`
           - `InteractionTargetSchema`
+          - `layerCulprit`
           - `mainThreadStallFingerprint`
           - `MainThreadStallPayloadSchema`
           - `mainThreadStallSummary`

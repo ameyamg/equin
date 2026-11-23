@@ -1,6 +1,7 @@
 import type { ReportRow } from "@plugins/reports/server";
 import {
   dominantLayer,
+  layerCulprit,
   interactionTargetLabel,
   SlowInteractionPayloadSchema,
   slowInteractionSummary,
@@ -20,7 +21,9 @@ const LAYER_HINTS: Record<ReturnType<typeof dominantLayer>["layer"], string> = {
   "style/layout":
     "The frame's own style and layout pass was the cost: the change touched a large subtree (a class or theme change high in the tree, a remount of a big pane). Reduce what the change restyles, or what mounts at once.",
   "withheld rendering":
-    "The thread was free and the browser gave it no frame: inside the long frames, the wait for the render step was neither script nor a blocking task. A visible page renders within a vsync of asking, so this is the browser throttling the renderer (an occluded or off-screen window, an automated browser driving a background window, a starved compositor) — not the page. Check `focus` (a click in an unfocused window is driven from outside) and the frame cadence (~1 s frames with blocking 0 is a renderer throttled to 1 frame/s) before looking at the code; the page's own share is what is left.",
+    "The thread was free and the browser gave it no frame, and the frames prove it was the browser: several long frames each waited ≥ 500 ms for their render step, or a render step came exactly on a 1 s clock after the frame before it — a renderer throttled to ~1 frame/s (an occluded or off-screen window, an automated browser driving a background window, a power-saving renderer). Not the page: check `focus` (a click in an unfocused window is driven from outside) before looking at the code; the page's own share is what is left.",
+  "waiting for a frame":
+    "The thread was idle and its render step came late: no script ran and no task blocked while the frame waited to be rendered. Nothing proves the browser withheld it (no 1 s cadence, no run of throttled frames), so it is counted as the page's: the compositor or GPU still busy with what the page drew (large or many layers, blur / backdrop-filter, big image or video decodes, many concurrent animations — on a weak GPU) is the likely cause, a browser throttle without a signature the other. The scripts in the frames are NOT the cost. Look at `focus`, the browser and OS, and what the screen animates or composites around the moment (Performance panel: the GPU and Compositor tracks); a foreground repro on a strong machine that paints at once points at the visitor's GPU or browser.",
   other:
     "No long frame accounts for most of it: paint and compositing (large or many layers, filters, shadows), or the thread was busy with work under 50 ms per task. Record it in the Performance panel.",
 };
@@ -75,14 +78,20 @@ function renderDescription(row: ReportRow, d: SlowInteractionPayload): string {
     `- **style/layout (the frame's own pass):** ${b.styleLayoutMs} ms`,
   );
   lines.push(
-    `- **withheld rendering (thread free, no frame given):** ${b.withheldMs === null ? "not measured (filed before it was)" : `${b.withheldMs} ms`}`,
+    `- **withheld rendering (thread free, the browser proven to hold the frame):** ${b.withheldMs === null ? "not measured (filed before it was)" : `${b.withheldMs} ms`}`,
+  );
+  lines.push(
+    `- **waiting for a frame (thread free, not proven the browser's — counted as the page's):** ${b.frameWaitMs === null ? "not measured (filed before it was, inside other)" : `${b.frameWaitMs} ms`}`,
   );
   lines.push(`- **other (paint, compositing, short tasks):** ${b.otherMs} ms`);
   lines.push("");
   lines.push(
     `**Most of it is ${top.layer} (${top.ms} ms).** ${LAYER_HINTS[top.layer]}`,
   );
-  if (d.topFunction) lines.push(`Top function: \`${d.topFunction}\`.`);
+  if (d.topFunction)
+    lines.push(
+      `Top function: \`${d.topFunction}\`${layerCulprit(top.layer, d.topFunction, d.forcedBy) ? "" : ` (the script with the most time in the frames — not where most of it went)`}.`,
+    );
   if (d.frames.length > 0) {
     lines.push("");
     lines.push("**Long frames (oldest first), their longest scripts:**");
