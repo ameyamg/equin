@@ -6,7 +6,7 @@ import {
   readHostMemory,
   type HostMemoryIo,
 } from "@plugins/packages/plugins/host-memory/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { dataRoot } from "@plugins/infra/plugins/paths/core";
 import type { BoxHostMetrics } from "@plugins/apps/plugins/deploy/plugins/box-link/core";
 
 /** Cumulative CPU time, all cores: how much of it was busy, out of how much. */
@@ -85,7 +85,9 @@ const memoryIo: HostMemoryIo = {
  * share over the time since the previous `read()` of THIS sampler (`null` on
  * the first). Memory is what `packages/host-memory` reads (in use = total
  * minus what the system can hand out); disk the filesystem holding the
- * install (`REPO_ROOT`). Throws on a host it cannot read — a failed beat ends
+ * install's data (`dataRoot()` — its database, attachments, releases; never
+ * `REPO_ROOT`, which in a released binary is the bundle's virtual `/$bunfs`
+ * root, which `statfs` cannot read). Throws on a host it cannot read — a failed beat ends
  * the stream loudly rather than sending made-up meters.
  */
 export function createHostSampler(): { read(): Promise<BoxHostMetrics> } {
@@ -95,7 +97,7 @@ export function createHostSampler(): { read(): Promise<BoxHostMetrics> } {
       const [ticks, memory, disk] = await Promise.all([
         readCpuTicks(),
         readHostMemory(process.platform, memoryIo),
-        statfs(REPO_ROOT),
+        statfs(dataRoot()),
       ]);
       if (memory.kind === "unsupported") {
         throw new Error(
