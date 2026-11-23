@@ -36,6 +36,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { withHostServices } from "@plugins/framework/plugins/server-core/core/testing";
+import { registerPluginJobs } from "@plugins/infra/plugins/jobs/server/testing";
 import { JobQueue } from "@plugins/infra/plugins/jobs/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { createInProcessQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server/testing";
@@ -102,7 +103,7 @@ beforeAll(async () => {
   t = await createTestDb({ prefix: "spawn_dead_letter_test" });
   await runMigrations(t.db);
   await installTaskDerivedSchema(t.db);
-  await spawnConversationJob.register();
+  await registerPluginJobs(["conversations"]);
 });
 
 afterAll(async () => {

@@ -32473,8 +32473,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Server: `@plugins/framework/plugins/browser-server/plugins/test-host/server/testing`
               - `portableClosureOf` — The portable `dependsOn` closure of `roots` in the app's server registry: only edges to portable server barrels (derived from their closures, `serverPortabilityOf`) are followed, and each entry's edges are kept to the graph — the graph a browser host boots (`browser-host-gen` does the same; its build guard proves the portable code loads no other barrel).
-              - `registryClosureOf` — The `dependsOn` closure of `roots` in the app's server registry, every edge followed — the graph `bootPluginGraph`'s `exec` mode boots (it loads the desktop's edges as they are).
-              - `withPortableHost` — `graph` as a host without the computer boots it, for a suite booting a slice of the registry (`bootPluginGraph` / `bootBrowserHost`) in its own process:
+              - `registryClosureOf` — The `dependsOn` closure of `roots` in the app's server registry, every edge followed — the graph `bootTestHost` boots (it loads the desktop's edges as they are).
+              - `withPortableHost` — `graph` as a host without the computer boots it, for a suite booting a slice of the registry (`bootTestHost` / `bootBrowserHost`) in its own process:
     - **`central-core`**
       - Core:
         - Uses:
@@ -33595,7 +33595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runExec`
       - Test helpers:
         - Core: `@plugins/framework/plugins/server-core/core/testing`
-          - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
+          - `bootTestHost` — The one way a suite boots a plugin graph of its own: `bootPluginGraph` in the `test` mode — the graph's schema OWNED (migrations, the derived layer, the queue schema set up), since the suite's fresh database has no serving backend to set it up.
           - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
           - `clearListEntries` — Forget the installed list entries.
           - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
@@ -33606,6 +33606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installWebListEntries` — Install the build's web-list entries (the generated table).
           - `isHostService` — True IFF `value` is a service `defineHostService` made — test support (`core/testing`), for a suite reading which services a module exports.
           - `isolateHostServices` — Isolate this test file's declared host services: from here on no service is declared (so a graph the suite boots is not asked for the `bun test` preload's desktop providers, and the services the suite declares are its own), and once the file's tests are done the process's declared set comes back exactly as it was — the suite's own services gone, the preload's back for every later suite in the same bun process.
+          - `registerPluginTokens` — Run the `register` tokens `select` keeps of `pluginPaths` the way a booted desktop host does, for a headless suite (an unbooted host): each plugin's `register` list — its server half's, then its machine half's — read from the app's generated registries and run through the boot's own register phase (so a registry records the plugin it was declared in).
           - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
           - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
           - `runSettledPhase` — The settled phase of a SERVING host (`serve`, `browser`): every plugin's `onSettled`, once the host is already serving and every post-ready phase has resolved — post-serving catch-up work (infra/warmup drains every declared warm-up here). `exec` has no path to it: a short-lived child must never run heavy post-serving work, and this function is the only caller of the hook.
@@ -39810,6 +39811,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Server: `@plugins/infra/plugins/jobs/server/testing`
           - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
+          - `registerPluginJobs` — Register the jobs `pluginPaths` register, for a headless suite whose code enqueues them (`job.enqueue` refuses a job no register phase registered) — read from each plugin's own `register` list, as a booted host's register phase reads it, never a hand-picked `someJob.register()`.
       - Plugins:
         - **`attempt-audit`** — Job attempt audit: registers a handler on the jobs plugin's attempt seam and files every failed job attempt as a job-attempt-failed report (error) — retried or not — then restates that occurrence once its run settles: recovered on attempt N, or gave up and why (last attempt failed, worker died, cancelled, superseded). The report stays open for investigation either way; job_attempt_reports links each unsettled attempt to its report occurrence, durably across restarts.
           - Server:

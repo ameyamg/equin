@@ -50,7 +50,7 @@ import type { LoadedServerPlugin, ServerPluginDefinition } from "./types";
 
 // ── The boot sequence, once, for both boot MODES ────────────────────────────
 //
-// A backend process boots in one of three modes, and they share this file so
+// A process boots a graph in one of four modes, and they share this file so
 // they cannot drift:
 //
 // - `serve` — the gateway-spawned, long-lived backend (`../bin/index.ts`). Runs
@@ -63,6 +63,12 @@ import type { LoadedServerPlugin, ServerPluginDefinition } from "./types";
 //   settled phase.
 // - `exec` — a short-lived process that runs ONE registered piece of work and
 //   exits (`../cli/run-exec.ts`). Runs `bootPluginGraph` and nothing else.
+//   It only VERIFIES its database's schema (`./schema-role.ts`).
+// - `test` — a suite booting a graph of its own on a database only it uses
+//   (`./testing/boot-test-host.ts`, the one way a test boots a graph). Serves
+//   nothing, like `exec`, but OWNS its schema: nothing else will set it up.
+//   Its own mode rather than `exec`, so a test host cannot become a schema
+//   verifier by picking the closest-looking production mode.
 //
 // The mode split is stated as a discriminated union (`BootSpec`) rather than a
 // boolean, so the one phase that differs INSIDE the sequence — serve binding its
@@ -153,6 +159,9 @@ export type BootSpec = {
       ) => void | Promise<void>;
     }
   | { mode: "exec" }
+  // A suite's own graph (`./testing/boot-test-host.ts`): no socket, its schema
+  // owned.
+  | { mode: "test" }
   // A Web Worker in the page (`./browser-host.ts`): the portable graph only,
   // no socket — the page reaches it over a MessagePort.
   | { mode: "browser" }
@@ -543,7 +552,11 @@ const WAVE_SLOWEST_JOURNALED = 3;
 // `UNSAFE_installDurableHooks`. This is the only place plugins write to
 // global registries. A failure here is fatal: a half-initialized registry
 // would let `onReady` run against an inconsistent world.
-async function runRegisterPhase(ordered: LoadedServerPlugin[]): Promise<void> {
+// Exported for one other caller, `./testing/register-plugins.ts`: a headless
+// suite registering a few plugins' tokens the way this phase does.
+export async function runRegisterPhase(
+  ordered: LoadedServerPlugin[],
+): Promise<void> {
   for (const p of ordered) {
     for (const r of p.register ?? []) {
       const end = profilerStart(`register:${p.id}`, "register", p.id, p.id);

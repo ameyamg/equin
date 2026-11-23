@@ -3,7 +3,8 @@ import type { BootMode } from "./boot-mode";
 // ── Who owns this database's schema ──────────────────────────────────────────
 //
 // Exactly one kind of process sets a database's schema up: the one that serves
-// it (`serve`, and a `browser` host, which is the only process on its PGlite).
+// it (`serve`, and a `browser` host, which is the only process on its PGlite) —
+// and a `test` host, the only process on the fresh database its suite booted.
 // An `exec` child — a supervised job's body, ~800 a day on main — boots out of
 // the same checkout while the serving backend is live, so a child that ran the
 // boot DDL itself (migrations, triggers, views, the job queue's schema) waited
@@ -92,6 +93,11 @@ export function schemaRoleFor(mode: BootMode): SchemaRole {
   switch (mode) {
     case "serve":
     case "browser":
+    // A suite's own graph on its own fresh database: nobody else will ever set
+    // that schema up, so a verifier there could only wait and then refuse
+    // (the four portable boot tests, broken 2026-11-15 to 11-23 by booting as
+    // `exec`).
+    case "test":
       return { kind: "owner", owner: OWNER };
     case "exec":
       return { kind: "verifier", yieldAdmission };

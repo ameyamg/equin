@@ -37,7 +37,10 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import { installQueueSchema } from "@plugins/infra/plugins/jobs/server/testing";
+import {
+  installQueueSchema,
+  registerPluginJobs,
+} from "@plugins/infra/plugins/jobs/server/testing";
 import type { DbExecutor } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   installTaskDerivedSchema,
@@ -66,9 +69,11 @@ let raceDb: NodePgDatabase;
 setDefaultTimeout(120_000);
 
 beforeAll(async () => {
-  // The commit enqueues the workspace's own job (a worktree's DB fork) through
-  // the registry, which no register phase fills here.
+  // The commit enqueues the spawn job and the workspace's own job (a
+  // worktree's DB fork), each registered by its plugin, as a booted host's
+  // register phase does.
   installWorkspaceImpl(worktreeWorkspace);
+  await registerPluginJobs(["conversations", "database/plugins/fork"]);
   t = await createTestDb({ prefix: "autolaunch_test" });
   await runMigrations(t.db);
   await installQueueSchema(t.connectionString);

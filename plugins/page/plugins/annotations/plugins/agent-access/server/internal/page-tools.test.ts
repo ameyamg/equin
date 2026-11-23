@@ -22,7 +22,7 @@
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { sql } from "drizzle-orm";
-import { bootPluginGraph } from "@plugins/framework/plugins/server-core/core/testing";
+import { bootTestHost } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   registryClosureOf,
   withPortableHost,
@@ -112,9 +112,7 @@ const caller = { conversationId: CONVERSATION };
 
 describe.if(IN_CHILD)("pageTools on a portable host", () => {
   beforeAll(async () => {
-    await bootPluginGraph({
-      mode: "exec",
-      listEntries: { kind: "not-shipped", reason: "a test boot" },
+    await bootTestHost({
       entries: await withPortableHost(
         registryClosureOf([SUBJECT, "page/plugins/text"]),
       ),

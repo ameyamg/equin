@@ -1,7 +1,9 @@
 // Which boot mode THIS process is in — `serve` (the gateway-spawned, long-lived
 // backend), `exec` (a short-lived child that runs one registered piece of
 // work and exits) or `browser` (the portable graph booted in a page's Web
-// Worker, `./browser-host.ts`). See `./boot-stages.ts` for the split.
+// Worker, `./browser-host.ts`) — or `test`: a suite booting a graph of its
+// own on a database it alone uses (`./testing/boot-test-host.ts`). See
+// `./boot-stages.ts` for the split.
 //
 // Both modes run the same `register` and `onReadyBlocking` phases, so a plugin
 // whose hook in one of those phases makes a claim about the SERVING backend
@@ -13,7 +15,7 @@
 // Set once, by the shared boot sequence, before any plugin module loads — so
 // every phase hook can read it, and a read before boot throws rather than
 // guessing.
-export type BootMode = "serve" | "exec" | "browser";
+export type BootMode = "serve" | "exec" | "browser" | "test";
 
 let mode: BootMode | undefined;
 

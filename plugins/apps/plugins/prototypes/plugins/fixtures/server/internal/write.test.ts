@@ -32,7 +32,7 @@ import {
   loadResourceByKey,
 } from "@plugins/framework/plugins/server-core/core";
 import {
-  bootPluginGraph,
+  bootTestHost,
   runPostReadyPhases,
   serverEntryFor,
 } from "@plugins/framework/plugins/server-core/core/testing";
@@ -156,11 +156,10 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
   const fixture = IN_CHILD ? testFixture() : null;
 
   beforeAll(async () => {
-    // `exec` mode: the app registry's edges are the desktop's, which reach a
-    // few non-portable server barrels a worker's own graph does not.
-    const ordered = await bootPluginGraph({
-      mode: "exec",
-      listEntries: { kind: "not-shipped", reason: "a test boot" },
+    // Not a browser host's boot: the app registry's edges are the desktop's,
+    // which reach a few non-portable server barrels a worker's own graph does
+    // not.
+    const ordered = await bootTestHost({
       entries: await withPortableHost([
         ...registryClosureOf([...SUBJECT_ENTRY.dependsOn, ...HOST_PLUMBING]),
         SUBJECT_ENTRY,

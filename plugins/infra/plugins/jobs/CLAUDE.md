@@ -67,7 +67,12 @@ A runner resolves a row's handler by name from its registry, filled from every
 plugin's `register: [...]`. A job no plugin lists is an "unknown job" on every
 runner, so `job.enqueue` throws unless THIS factory is the one registered under
 its name — the mistake fails at the enqueue site, not as a dead row per run. A
-test that enqueues a job it defines calls `job.register()`.
+test that enqueues a job it defines calls `job.register()`; a headless test
+whose code enqueues a PLUGIN's job calls `registerPluginJobs([plugin])`
+(`server/testing`), which runs the job tokens of that plugin's own `register`
+list through the boot's register phase, once per test process — never
+`importedJob.register()` by hand (lint `jobs/no-imported-job-register`), a
+second hand-kept source that collides with every suite registering the plugin.
 
 That refusal fires only once something enqueues — on main, for
 `task-title.generate` (2026-11-17), after build, check and tests had passed. So
@@ -76,7 +81,7 @@ calls `assertDefinedJobsRegistered()` (`server/internal/registry.ts`), which
 throws naming every job a loaded module defined (`defineJob` at module eval)
 that no `register` list registered — failing `./equin build` on the worktree
 that made the mistake. Only in `serve`: it loads its composition's whole graph,
-while `exec` is also how suites boot partial graphs, a test process holds every
+while `exec` and `test` boot partial graphs, a test process holds every
 suite's fixtures, and a browser host loads `server/` modules whose jobs their
 `machine/` half registers.
 
@@ -1153,6 +1158,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - Test helpers:
   - Server: `@plugins/infra/plugins/jobs/server/testing`
     - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
+    - `registerPluginJobs` — Register the jobs `pluginPaths` register, for a headless suite whose code enqueues them (`job.enqueue` refuses a job no register phase registered) — read from each plugin's own `register` list, as a booted host's register phase reads it, never a hand-picked `someJob.register()`.
 - Sub-plugins:
   - **`attempt-audit`** — Job attempt audit: registers a handler on the jobs plugin's attempt seam and files every failed job attempt as a job-attempt-failed report (error) — retried or not — then restates that occurrence…
   - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from the one crontab parse every…

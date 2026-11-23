@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { withHostServices } from "@plugins/framework/plugins/server-core/core/testing";
+import { registerPluginJobs } from "@plugins/infra/plugins/jobs/server/testing";
 import {
   JobQueue,
   type JobQueueImpl,
@@ -17,8 +18,9 @@ test("passes and releases share one serial lane; a release is one pending row pe
     },
   } as unknown as JobQueueImpl;
 
-  await fsmonitorReconcileJob.register();
-  await fsmonitorReleaseJob.register();
+  await registerPluginJobs([
+    "conversations/plugins/workspace/plugins/worktree",
+  ]);
   await withHostServices([JobQueue.provide(queue)], async () => {
     await fsmonitorReconcileJob.enqueue({});
     await fsmonitorReleaseJob.enqueue({ attemptId: "att-1" });

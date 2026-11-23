@@ -571,6 +571,17 @@ export const jobRegistry = new Map<string, RegisteredJob>();
 // by `assertDefinedJobsRegistered` once the register phase is over.
 const definedJobs: { name: string; registered: () => boolean }[] = [];
 
+// Every `enqueue` a `defineJob` made: a register token carrying one IS a job's
+// token — `defineJob`'s own, or a wrapper's that spreads it (`defineSupervisedJob`,
+// `defineRetention`). Read by `isJobToken`.
+const jobEnqueues = new WeakSet<object>();
+
+/** Whether `token` (a plugin's `register` entry) registers a job. */
+export function isJobToken(token: object): boolean {
+  const enqueue = (token as { enqueue?: unknown }).enqueue;
+  return typeof enqueue === "function" && jobEnqueues.has(enqueue);
+}
+
 // Internal payload shape the worker sees. `workflowRunId` is baked only where
 // the run is not the row: a keyed dedup (`${name}:${key}`) and a resume row
 // (the suspended run's id). Absent otherwise — the worker derives the run from
@@ -654,7 +665,9 @@ export function defineJob<
       throw new Error(
         `[jobs] ${spec.name} is enqueued but not registered in this backend — ` +
           `add it to its plugin's \`register\` list. No runner can run a job ` +
-          `no plugin registered: the row would be dead-lettered as an unknown job.`,
+          `no plugin registered: the row would be dead-lettered as an unknown job. ` +
+          `(A headless test registers the plugin that lists it: ` +
+          `\`registerPluginJobs([...])\` from jobs' server/testing.)`,
       );
     }
     if (spec.cannotRunHere !== undefined) {
@@ -780,6 +793,7 @@ export function defineJob<
       });
     },
   };
+  jobEnqueues.add(enqueue);
   definedJobs.push({
     name: spec.name,
     registered: () => jobRegistry.get(spec.name)?.enqueue === enqueue,

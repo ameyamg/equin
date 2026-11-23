@@ -28,7 +28,10 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
-import { installQueueSchema } from "@plugins/infra/plugins/jobs/server/testing";
+import {
+  installQueueSchema,
+  registerPluginJobs,
+} from "@plugins/infra/plugins/jobs/server/testing";
 import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
 import { _trashEntries } from "@plugins/infra/plugins/trash/server";
 import {
@@ -63,6 +66,8 @@ beforeAll(async () => {
   t = await createTestDb({ prefix: "reminders_test" });
   await runMigrations(t.db);
   await installQueueSchema(t.connectionString);
+  // The reconcile enqueues the fire job its plugin registers.
+  await registerPluginJobs(["page/plugins/inline-date"]);
   collectContributions([
     {
       id: "inline-date-reconcile-test",

@@ -10,7 +10,7 @@ import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
  * memory host storage). Only the graph under test must be portable, not this
  * harness.
  *
- * Booted through the one boot sequence (`bootPluginGraph`, `exec` mode: load
+ * Booted through the one boot sequence (`bootTestHost`, the `test` mode: load
  * waves, register, collect, the host-service assert, the `onReadyBlocking`
  * barrier — so the real migrations and the real schema layer run on PGlite,
  * which also proves the history applies on PGlite's Postgres). Then tasks and
@@ -29,7 +29,7 @@ import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { loadResourceByKey } from "@plugins/framework/plugins/server-core/core";
-import { bootPluginGraph } from "@plugins/framework/plugins/server-core/core/testing";
+import { bootTestHost } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   registryClosureOf,
   withPortableHost,
@@ -80,9 +80,7 @@ if (!IN_CHILD) {
 
 describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
   beforeAll(async () => {
-    await bootPluginGraph({
-      mode: "exec",
-      listEntries: { kind: "not-shipped", reason: "a test boot" },
+    await bootTestHost({
       entries: await withPortableHost(registryClosureOf([SUBJECT])),
     });
   });

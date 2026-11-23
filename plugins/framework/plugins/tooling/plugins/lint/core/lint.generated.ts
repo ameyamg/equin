@@ -81,6 +81,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/host-fs/plugins/blocking-fs", id: "infra.host-fs.blocking-fs", loader: () => import("@plugins/infra/plugins/host-fs/plugins/blocking-fs/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/host-fs/plugins/user-path", id: "infra.host-fs.user-path", loader: () => import("@plugins/infra/plugins/host-fs/plugins/user-path/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/data-files", id: "infra.paths.data-files", loader: () => import("@plugins/infra/plugins/paths/plugins/data-files/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/repo-root", id: "infra.paths.repo-root", loader: () => import("@plugins/infra/plugins/paths/plugins/repo-root/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/lint"), dependsOn: [] },

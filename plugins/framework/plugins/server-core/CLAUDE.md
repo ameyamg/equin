@@ -10,9 +10,9 @@ See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture 
 2. Each plugin declares its routes via a `ServerPluginDefinition` (`core/types.ts`). At startup the entry point flattens them into two lookup tables: `httpRoutes` (`"METHOD /path"` → handler) and `wsRoutes` (`"/path"` → `WsHandler`).
 3. Plugins also serve live state (see "Live state" below). Append-only firehoses (terminal, log tails) use a dedicated WS route. There is no SSE path — raw `text/event-stream` in TS is forbidden (`./equin check no-raw-sse`).
 
-## Boot modes: `serve`, `exec` and `browser`
+## Boot modes: `serve`, `exec`, `browser` and `test`
 
-A backend process boots in one of three modes. All run the ONE sequence in
+A process boots a plugin graph in one of four modes. All run the ONE sequence in
 `core/boot-stages.ts` — a second copy is the thing that rots, so add a phase
 there, not in a composition root, unless it is genuinely serve-only.
 
@@ -60,6 +60,14 @@ there, not in a composition root, unless it is genuinely serve-only.
   the warm-ups produce). `framework/browser-server`'s
   `serveOverPort` carries them to the page. Hosts install no probes: no heap
   reader means no memory checkpoints, no wyhash means the portable `hash64`.
+- **`test`** — a suite booting a graph of its own, on a database only it uses
+  (`bootTestHost({ entries })` from `core/testing`, the one way a suite boots a
+  graph; the portable boot tests hand it `test-host`'s `withPortableHost`).
+  Runs what `exec` runs (and the post-ready phases if the suite calls them),
+  but OWNS its schema (below): nothing else will set its fresh database up. A
+  mode of its own so a suite cannot pick `exec` and silently become a schema
+  verifier — four portable boot tests did, failing with `SchemaNotReadyError`
+  from 2026-11-15 (cda6e0e246).
 
 | phase                                          | `serve` | `exec` | `browser` |
 | ---------------------------------------------- | ------- | ------ | --------- |
@@ -84,7 +92,7 @@ the post-ready phases: a serving host whose graph registered a DB-backed
 resource must have booted `network/live/change-feed` (its mark: the relation
 bases it sets in `onReadyBlocking`), or boot throws "DB-backed live reads on a
 host with no change feed never recompute". Only serving hosts reach it — `exec`
-and partial-graph test boots (`bootPluginGraph` alone) do not.
+and test boots (`bootTestHost` alone) do not.
 
 The **preload-declare assert** (`assertPreloadedResourcesDeclared`,
 `core/resources.ts`) throws when a resource registered with `preload` has no
@@ -241,7 +249,7 @@ was not filed. `server-core/no-process-crash-listener` rejects any other
 ### Only the serving host sets the schema up: `BootHookContext.schema`
 
 Every boot hook is handed `schema: SchemaRole` (`core/schema-role.ts`), decided
-by the boot mode: `{ kind: "owner", owner }` in `serve` and `browser`,
+by the boot mode: `{ kind: "owner", owner }` in `serve`, `browser` and `test`,
 `{ kind: "verifier" }` in `exec`. The boot-DDL chokepoints take the owner
 token as a REQUIRED argument — `DatabaseDriver.bootDdl(owner, fn)`, a
 committing `applySchemaLayer({ commit: true, owner })`, the job queue's
@@ -424,7 +432,7 @@ two and no row lists them. Today's services: `database.driver`,
   desktop's providers (the machine halves that `.provide(` one) to
   `provideHostServicesUnbooted` (`core/testing`); `get()` reads them whenever no
   graph is booted. Booted means a collect that `assertHostServices` proved (what
-  `bootPluginGraph` does) — a suite's bare `collectContributions` of a few hooks
+  `bootPluginGraph` does, `bootTestHost` included) — a suite's bare `collectContributions` of a few hooks
   boots nothing, so it never takes the preload's providers from the next test
   file. Providers never switch silently: a collect over a booted graph with no
   re-assert or `clearCollectedContributions` between makes `get()` throw (a
@@ -436,7 +444,7 @@ two and no row lists them. Today's services: `database.driver`,
   replaces the whole process-wide set.
 - **The boot sequence is `core/boot-stages.ts`** — off the core barrel (the two
   composition roots import it by path), reachable by a suite through
-  `core/testing` (`bootPluginGraph`, `serverEntries`, `serverEntryFor`).
+  `core/testing` (`bootTestHost`, `serverEntries`, `serverEntryFor`).
 - **Host probes.** `core` runs on every host, so the macOS memory probe (bun:ffi,
   `bin/phys-footprint.ts`) and the native snapshot hash (`Bun.hash`) are installed
   by `bin/host-probes.ts` (`installMemoryProbe`, `installHeapReader` —
@@ -859,7 +867,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `runExec`
 - Test helpers:
   - Core: `@plugins/framework/plugins/server-core/core/testing`
-    - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
+    - `bootTestHost` — The one way a suite boots a plugin graph of its own: `bootPluginGraph` in the `test` mode — the graph's schema OWNED (migrations, the derived layer, the queue schema set up), since the suite's fresh database has no serving backend to set it up.
     - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
     - `clearListEntries` — Forget the installed list entries.
     - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
@@ -870,6 +878,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `installWebListEntries` — Install the build's web-list entries (the generated table).
     - `isHostService` — True IFF `value` is a service `defineHostService` made — test support (`core/testing`), for a suite reading which services a module exports.
     - `isolateHostServices` — Isolate this test file's declared host services: from here on no service is declared (so a graph the suite boots is not asked for the `bun test` preload's desktop providers, and the services the suite declares are its own), and once the file's tests are done the process's declared set comes back exactly as it was — the suite's own services gone, the preload's back for every later suite in the same bun process.
+    - `registerPluginTokens` — Run the `register` tokens `select` keeps of `pluginPaths` the way a booted desktop host does, for a headless suite (an unbooted host): each plugin's `register` list — its server half's, then its machine half's — read from the app's generated registries and run through the boot's own register phase (so a registry records the plugin it was declared in).
     - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
     - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
     - `runSettledPhase` — The settled phase of a SERVING host (`serve`, `browser`): every plugin's `onSettled`, once the host is already serving and every post-ready phase has resolved — post-serving catch-up work (infra/warmup drains every declared warm-up here). `exec` has no path to it: a short-lived child must never run heavy post-serving work, and this function is the only caller of the hook.

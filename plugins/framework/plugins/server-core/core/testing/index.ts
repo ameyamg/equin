@@ -48,8 +48,9 @@ export {
 export { withHostServices } from "../host-service";
 
 // The one boot sequence, for a suite that boots a plugin graph of its own (the
-// portable boot test boots task-category's closure on PGlite).
-export { bootPluginGraph } from "../boot-stages";
+// portable boot test boots task-category's closure on PGlite) — in the `test`
+// mode, which owns its schema; never a production mode a suite could pick.
+export { bootTestHost } from "./boot-test-host";
 
 // …and its post-ready phases (`onReady` → `onAllReady`), for a suite that
 // drives the booted graph the way a serving host has it: watchers, the job
@@ -64,6 +65,11 @@ export { runSettledPhase } from "../boot-stages";
 // suite that boots a slice of it: each entry's loader and its codegen-derived
 // `dependsOn`, from which a `dependsOn` closure is the graph to boot.
 export { serverEntries } from "../server.generated";
+
+// A headless suite registering some tokens of a few plugins' `register` lists
+// from the app's registries, the way a booted host does — the substrate of a
+// registry kind's own helper (jobs' `registerPluginJobs`).
+export { registerPluginTokens } from "./register-plugins";
 
 // A registry entry for a plugin the app's registry does not hold (a host
 // provider, which no composition bundles), loaded the way the

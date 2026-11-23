@@ -43,7 +43,7 @@ function closureOf(
 
 /**
  * The `dependsOn` closure of `roots` in the app's server registry, every edge
- * followed — the graph `bootPluginGraph`'s `exec` mode boots (it loads the
+ * followed — the graph `bootTestHost` boots (it loads the
  * desktop's edges as they are). A root not in the registry fails loudly.
  */
 export function registryClosureOf(roots: readonly string[]): Entry[] {
@@ -165,7 +165,7 @@ type LoadedBarrel = Record<string, unknown> & {
 
 /**
  * `graph` as a host without the computer boots it, for a suite booting a
- * slice of the registry (`bootPluginGraph` / `bootBrowserHost`) in its own
+ * slice of the registry (`bootTestHost` / `bootBrowserHost`) in its own
  * process:
  *
  * - the committed migrations and config, read off disk (`committedFromDisk`);
