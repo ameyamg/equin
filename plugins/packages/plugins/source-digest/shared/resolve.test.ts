@@ -63,7 +63,6 @@ test("agrees with Bun.resolveSync on every import of a backend's and central's c
   const queue = [...seen];
   const disagreements: string[] = [];
   let imports = 0;
-  let importMapOnly = 0;
   while (queue.length > 0) {
     const file = queue.pop()!;
     for (const specifier of scan(file, await readFile(file, "utf8"))) {
@@ -79,7 +78,6 @@ test("agrees with Bun.resolveSync on every import of a backend's and central's c
         // an edge the runtime loads nothing for; anything else, the resolver
         // refuses too.
         if (isImportMapOnlySpecifier(specifier)) {
-          importMapOnly++;
           expect(await resolver.resolve(specifier, file)).toEqual({
             kind: "import-map",
             specifier,
@@ -117,9 +115,8 @@ test("agrees with Bun.resolveSync on every import of a backend's and central's c
   // The closure really was walked (not an entry that moved).
   expect(seen.size).toBeGreaterThan(1000);
   expect(imports).toBeGreaterThan(5000);
-  // The website demo's generated scenario (reached through every plugin's
-  // `core/`) holds one: the edge that once made every walk refuse.
-  expect(importMapOnly).toBeGreaterThan(0);
+  // Whether the closure holds an import-map edge at all depends on what the
+  // repo contains; that branch is held by the synthetic import-map test below.
 }, 60_000);
 
 let dir: string;
@@ -184,6 +181,8 @@ test("a name only a page's import map answers is an import-map edge — until a 
   await tree({ "a.ts": "" });
   const importer = join(dir, "a.ts");
   const spec = "@browser-host/apps/plugins/x";
+  // The runtime loads nothing for it (the walk's import-map branch), …
+  expect(() => Bun.resolveSync(spec, dir)).toThrow(/Cannot find/);
   expect(await createImportResolver().resolve(spec, importer)).toEqual({
     kind: "import-map",
     specifier: spec,

@@ -501,7 +501,7 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
   // The ledger's real summary value: an external serveValue whose loader is
   // imported (./query) and reads the excluded tables through raw SQL, read on
   // the real files with the repo's own tsconfig.
-  test("the latency ledger's real contributions exclude its four tables, and its summary value passes", async () => {
+  test("the latency ledger's real contributions exclude only its own tables, and its summary value passes", async () => {
     const disk: Files = {
       has: () => true,
       read: (rel) =>
@@ -529,12 +529,21 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
       return out;
     };
     const exclusions = await findFeedExclusions(ts, analysis, candidatesFor);
-    expect([...exclusions.get(LEDGER)!.sqlNames].sort()).toEqual([
-      "latency_ledger_host_minute",
-      "latency_ledger_interaction",
-      "latency_ledger_minute",
-      "latency_ledger_thread_minute",
-    ]);
+    // Whatever tables the ledger excludes, each resolves to one of its own
+    // declared tables — read off its tables module, never a pinned list.
+    const declared = new Set(
+      [
+        ...(await disk.read(`${LEDGER}/server/internal/tables.ts`))!.matchAll(
+          /pgTable\(\s*"([^"]+)"/g,
+        ),
+      ].map((m) => m[1]!),
+    );
+    const excluded = exclusions.get(LEDGER)!;
+    expect(excluded.sqlNames.size).toBeGreaterThan(0);
+    expect(excluded.declarations.size).toBe(excluded.sqlNames.size);
+    expect(
+      [...excluded.sqlNames].filter((name) => !declared.has(name)),
+    ).toEqual([]);
     const r = await scanDbBackedNotify(
       ts,
       analysis,
