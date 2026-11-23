@@ -15,7 +15,6 @@ import { deletePrototype } from "@plugins/apps/plugins/prototypes/plugins/state/
 import { usePrototypeState } from "@plugins/apps/plugins/prototypes/plugins/state/web";
 import {
   prototypeDetailPane,
-  TitleActionButton,
   usePrototypeDetail,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeGalleryRow } from "../slots";
@@ -102,9 +101,7 @@ export function DeleteHeaderAction() {
   const back = prototypeDetailPane.useBack();
   const deleteNow = useDeletePrototype();
   const { pending, restore } = useRestorePrototype();
-  const disabled = (
-    <TitleActionButton icon={deleteIcon} label="Delete" disabled />
-  );
+  const disabled = <IconButton icon={deleteIcon} label="Delete" disabled />;
   return matchResource(result, {
     loading: () => disabled,
     error: (error) => (
@@ -122,7 +119,7 @@ export function DeleteHeaderAction() {
       if (meta === undefined) return disabled;
       if (state.deletedAt !== null) {
         return (
-          <TitleActionButton
+          <IconButton
             icon={restoreIcon}
             label="Restore prototype"
             loading={pending}
@@ -131,7 +128,7 @@ export function DeleteHeaderAction() {
         );
       }
       return (
-        <TitleActionButton
+        <IconButton
           icon={deleteIcon}
           label="Delete prototype"
           onClick={() =>

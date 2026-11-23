@@ -2,10 +2,7 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import {
-  TitleActionButton,
-  usePrototypeDetail,
-} from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeGalleryRow } from "../slots";
 import {
   usePrototypeState,
@@ -56,7 +53,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 
 /**
  * The detail pane header's Done toggle: the done circle in both
- * states — the accent ink once done — so ticking it
+ * states — filled (the icon's active form) once done — so ticking it
  * never moves the header. Disabled until the state is known, rather than
  * claiming "not done"; a failed read is the error icon, whose click retries.
  */
@@ -65,9 +62,7 @@ export function DoneHeaderAction() {
   const read = usePrototypeState(name);
   const { pending, setState } = useSetPrototypeState();
   if (read.status === "loading") {
-    return (
-      <TitleActionButton icon={checkCircleIcon} label="Mark as done" disabled />
-    );
+    return <IconButton icon={checkCircleIcon} label="Mark as done" disabled />;
   }
   if (read.status === "error") {
     return (
@@ -82,9 +77,9 @@ export function DoneHeaderAction() {
   }
   const done = read.data.done;
   return (
-    <TitleActionButton
+    <IconButton
       icon={checkCircleIcon}
-      on={done}
+      active={done}
       label={done ? "Done — click to reopen" : "Mark as done"}
       aria-pressed={done}
       loading={pending}

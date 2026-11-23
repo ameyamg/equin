@@ -8388,7 +8388,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 97 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 98 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `infra/endpoints` ×5
@@ -8443,6 +8443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/portal-host.PortalHost`
               - `primitives/relative-time.RelativeTime`
+              - `primitives/row-actions.RowActions`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
@@ -8492,7 +8493,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `roomPerFrame`
               - `sameExtent`
               - `SizeChip`
-              - `TitleActionButton`
               - `useFrameNames`
               - `useFramePicks`
               - `useFrameSrc`
@@ -8618,9 +8618,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `prototypeDetailPane.Actions` "copy-id" → `CopyIdAction`
             - Uses:
               - `apps/prototypes/canvas.prototypeDetailPane`
-              - `apps/prototypes/canvas.TitleActionButton`
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
+              - `primitives/icon-button.IconButton`
         - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves the prototypes tree (the app's prototypesFiles root over the `apps/prototypes` data dir — the computer's disk on the desktop, memory in a browser host) on every host: the raw files and recorded versions' files (picked options ?<option>=<value> stamped onto a document's <html>: data-* for a choice, a --<name> custom property for a color), the list + version live-state resources, a watch over the tree that auto-reloads open iframes on a real edit, the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the root's ledger), and each prototype's version history through the PrototypeHistoryStore host service (the per-prototype history resource, restore, and checkpointPrototype). Minting a prototype from the checkout's template is its machine/ half's.
           - Web:
             - Contributes: `IdKinds.Kind` "proto"
@@ -8918,10 +8918,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeCardActions` "done" → `DoneCardAction`
               - `PrototypeCardActions` "delete" → `DeleteCardAction`
               - `trash-actions` "restore" → `RestoreCardAction`
-            - Uses: 40 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
               - `primitives/data-view` ×8
               - `infra/endpoints` ×5
-              - `apps/prototypes/canvas` ×4
+              - `apps/prototypes/canvas` ×3
               - `apps/prototypes/state` ×3
               - `network/live/live-state` ×3
               - `primitives/pane` ×3
@@ -56128,8 +56128,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 141 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×47
+        - Imported by: 142 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×48
           - `primitives` ×23
           - `conversations` ×21
           - `tasks` ×9
@@ -58708,6 +58708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --control-height-xs`
           - `ui/tokens/density --space-2xs`
         - Imported by:
+          - `apps/prototypes/canvas`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `conversations/conversation-view/jsonl-viewer/tool-call`

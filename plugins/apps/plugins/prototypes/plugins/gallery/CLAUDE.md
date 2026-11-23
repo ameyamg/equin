@@ -172,10 +172,10 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeCardActions` "delete" → `DeleteCardAction`
     - `trash-actions` "restore" → `RestoreCardAction`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×8
     - `infra/endpoints` ×5
-    - `apps/prototypes/canvas` ×4
+    - `apps/prototypes/canvas` ×3
     - `apps/prototypes/state` ×3
     - `network/live/live-state` ×3
     - `primitives/pane` ×3

@@ -78,7 +78,6 @@ export { SizeChip } from "./components/size-chip";
 export { AddFrameRail } from "./components/add-frame-rail";
 export type { AddFrameHandlers } from "./components/add-frame-rail";
 export { useFrameNames } from "./components/canvas";
-export { TitleActionButton } from "./components/title-action";
 
 export default {
   description:

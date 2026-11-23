@@ -24,6 +24,7 @@ import {
   WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { ColorPicker } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import { SwitchIndicator } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import {
@@ -470,25 +471,33 @@ function OptionRow({
             />
           )}
         </Fill>
-        <Stack direction="row" gap="none" className={rigidClass()}>
-          {multi ? (
+      </ControlSizeProvider>
+      {/* Link / spread: the row's own hover actions, each its own cluster so
+          an ON toggle rests on screen (filled) while an off one shows only
+          when the row is hovered — and neither moves when the other flips. */}
+      <Stack direction="row" gap="none" className={rigidClass()}>
+        {multi ? (
+          <RowActions pin={null} alwaysVisible={linked}>
             <IconButton
               icon={linkIcon}
+              active={linked}
               label={
                 linked
                   ? "Same in every frame — click to unlink"
                   : "Keep the same in every frame"
               }
               aria-pressed={linked}
-              className={rowActionClass(linked)}
               onClick={() =>
                 dispatch({ type: "toggleLink", id: frame.id, option })
               }
             />
-          ) : null}
-          {spread || spreadValues(option, value).length > 1 ? (
+          </RowActions>
+        ) : null}
+        {spread || spreadValues(option, value).length > 1 ? (
+          <RowActions pin={null} alwaysVisible={spread}>
             <IconButton
               icon={viewColumnIcon}
+              active={spread}
               label={
                 spread
                   ? `Gather back into one frame`
@@ -497,24 +506,16 @@ function OptionRow({
                     : `One frame per ${label.toLowerCase()}`
               }
               aria-pressed={spread}
-              className={rowActionClass(spread)}
               onClick={() => {
                 onClose();
                 dispatch({ type: "toggleSpread", id: frame.id, option });
               }}
             />
-          ) : null}
-        </Stack>
-      </ControlSizeProvider>
+          </RowActions>
+        ) : null}
+      </Stack>
     </Row>
   );
-}
-
-/** A row's link / spread: .4 until its row is hovered (or it is on, in the accent). */
-function rowActionClass(on: boolean): string {
-  return on
-    ? "text-primary-text"
-    : "opacity-40 transition-opacity group-hover:opacity-100 focus-visible:opacity-100";
 }
 
 /**

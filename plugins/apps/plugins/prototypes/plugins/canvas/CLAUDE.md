@@ -386,8 +386,10 @@ other.
   launcher, Back, the `Prototypes / <title>` trail, then these) IS the action
   bar. The canvas contributes nothing there (its controls are drawn on the
   canvas, so every canvas has them); `copy-id` the copy button; `gallery` the
-  tag chip and the Done toggle — drawn as a `TitleActionButton` (compact, a step
-  quieter, the accent while on, hidden under 900px). Order:
+  tag chip, the Done toggle and Delete. The buttons are plain `IconButton`s at
+  the header's own density (no wrapper: a toggle shows its on state as the
+  icon's `active` form); on a narrow window the header's bar folds them
+  behind its `⋯`. Order:
   `config/apps/prototypes/canvas/`.
 - **`PrototypeFrameActions`** — a frame's header actions, handed
   `{ frame, meta }`. The canvas ships Keep only and Close; `present`
@@ -483,7 +485,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 97 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 98 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `infra/endpoints` ×5
@@ -538,6 +540,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/row-actions.RowActions`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
@@ -587,7 +590,6 @@ navigation, so it starts from nothing remembered.
     - `roomPerFrame`
     - `sameExtent`
     - `SizeChip`
-    - `TitleActionButton`
     - `useFrameNames`
     - `useFramePicks`
     - `useFrameSrc`

@@ -206,6 +206,7 @@ each, moved, never drawn twice — and unfolds once the row has room again.
     - `ui/tokens/density --control-height-xs`
     - `ui/tokens/density --space-2xs`
   - Imported by:
+    - `apps/prototypes/canvas`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `conversations/conversation-view/jsonl-viewer/tool-call`

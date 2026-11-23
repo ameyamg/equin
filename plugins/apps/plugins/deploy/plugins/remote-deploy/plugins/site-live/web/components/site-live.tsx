@@ -162,8 +162,8 @@ const DEPLOY_TIP =
   "Build, upload and switch with no downtime — reverted on its own if the new version fails its health check";
 const RESTART_TIP = "Restart equin's service on the server";
 
-/** The row's action button as it looks: the label, and the reason it is blocked. */
-function RowActionButton({
+/** The site row's Deploy / Restart button as it looks: the label, and the reason it is blocked. */
+function DeployOrRestartButton({
   site,
   action,
   blocked,
@@ -210,7 +210,7 @@ function LiveRowAction({
   const run = useEndpointMutation(runDeployment);
   const running = action.kind === "restart" && action.running;
   return (
-    <RowActionButton
+    <DeployOrRestartButton
       site={site}
       action={action}
       blocked={
@@ -246,7 +246,7 @@ export function SiteDeployAction({
   if (deployment === undefined) {
     // The record is still on its way: the button, held until it lands.
     return (
-      <RowActionButton
+      <DeployOrRestartButton
         site={site}
         action={action}
         blocked={action.kind === "deploy" ? action.blocked : null}
@@ -264,7 +264,7 @@ export function SiteDeployActionExhibit({
   const action = rowActionOf(site);
   if (action.kind === "hidden") return null;
   return (
-    <RowActionButton
+    <DeployOrRestartButton
       site={site}
       action={action}
       blocked={action.kind === "deploy" ? action.blocked : null}

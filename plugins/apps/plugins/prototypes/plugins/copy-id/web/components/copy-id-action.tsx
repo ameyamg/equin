@@ -1,8 +1,6 @@
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import {
-  TitleActionButton,
-  usePrototypeDetail,
-} from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const checkIcon = symbol("check");
@@ -20,7 +18,7 @@ export function CopyIdAction() {
   const { name } = usePrototypeDetail();
   const { copy, copied } = useCopyToClipboard(name);
   return (
-    <TitleActionButton
+    <IconButton
       icon={copied ? checkIcon : contentCopyIcon}
       label="Copy prototype ID"
       tooltip={copied ? "Copied" : "Copy prototype ID"}
