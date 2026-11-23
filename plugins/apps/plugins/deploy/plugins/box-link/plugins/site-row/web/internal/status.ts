@@ -69,7 +69,7 @@ const REFUSAL_FIX: Record<LinkRefusal, string> = {
  * | Site | Status |
  * |---|---|
  * | live, up to date | `ok` |
- * | live, behind main | `info` (a new version waits — not a problem) |
+ * | live, behind main | `ok` (main moves on every push — the summary names the commits) |
  * | deploying | `info`, transitioning |
  * | restarting (a Restart site run, even while down) | `info`, transitioning |
  * | reconnecting | `attention`, transitioning |
@@ -143,9 +143,10 @@ export function siteStatus(site: SiteHealth): HealthStatus {
       summary: `${prefix} · ${releaseName(site)} · deploy failed`,
     };
   }
-  const behind = site.release.kind === "known" && site.release.behindMain > 0;
+  // Behind main is the normal state (main moves on every push): the summary
+  // names the commit count, the dot stays green.
   return {
-    state: behind ? "info" : "ok",
+    state: "ok",
     summary: `${prefix} · ${releaseWords(site)}`,
   };
 }

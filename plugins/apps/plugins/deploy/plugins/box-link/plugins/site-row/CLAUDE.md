@@ -14,7 +14,7 @@ key = deployment id, title = hostname ?? composition, status = `siteStatus`
 | Site | Status | Summary |
 |---|---|---|
 | live, up to date | `ok` | Live · a1b2c3d · up to date |
-| behind main | `info` | Live · a1b2c3d · 142 commits behind main |
+| behind main | `ok` | Live · a1b2c3d · 142 commits behind main |
 | deploying | `info`, transitioning | Deploying · since 7:01 PM |
 | reconnecting | `attention`, transitioning | Live · a1b2c3d · reconnecting… |
 | deploy failed | `attention` | Live · a1b2c3d · deploy failed |
@@ -87,7 +87,7 @@ retries or opens anything.
 
 ## Plugin reference
 
-- Description: The health report's deployed-site rows: one row per deployment from deploy.site-health (titled by its hostname; ok while live and up to date, info (blue) while behind main, info and transitioning while deploying, attention while reconnecting, after a failed deploy or with a release too old for the link, critical while down, unreachable or refused), and its body — the alert (what is wrong, in one sentence) over blocks — drawn from three render slots the owning plugins contribute to — SiteLive.Glance (the title line's figure), SiteLive.Section (body blocks) and SiteLive.Action (the footer's controls), each told the deployment and its health. Contributes its own Server block (CPU / memory / disk from the last heartbeat, uptime or last heard, dimmed when stale), Retry now and Open site.
+- Description: The health report's deployed-site rows: one row per deployment from deploy.site-health (titled by its hostname; ok while live (up to date or behind main — the summary names the commits), info and transitioning while deploying, attention while reconnecting, after a failed deploy or with a release too old for the link, critical while down, unreachable or refused), and its body — the alert (what is wrong, in one sentence) over blocks — drawn from three render slots the owning plugins contribute to — SiteLive.Glance (the title line's figure), SiteLive.Section (body blocks) and SiteLive.Action (the footer's controls), each told the deployment and its health. Contributes its own Server block (CPU / memory / disk from the last heartbeat, uptime or last heard, dimmed when stale), Retry now and Open site.
 - Web:
   - Slots:
     - `SiteLive.Glance`
