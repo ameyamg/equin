@@ -12,8 +12,9 @@ one widget for which "a labelled row" is a lossless smaller form of itself — s
 it is the one that declares the `"row"` rung to
 `@plugins/primitives/plugins/action-presentation`
 (`useActionForm({ shrinksTo: ["row"] })`). When a bar runs out of room and
-relocates it, it renders as a `PanelActionRow`; `variant`, `className`, `tooltip`
-and `side` are inert in that form. Every action built on it inherits the rung for
+relocates it, it renders as a `PanelActionRow`; `className`, `tooltip` and
+`side` are inert in that form, and `variant="destructive"` becomes a destructive
+row (the same tone as its menu-item form). Every action built on it inherits the rung for
 free — including the ones inside a `RowActions` cluster, which are plain
 `IconButton`s — and with no bar above (every ordinary call site) the hook is a
 constant `"full"` and the declaration a no-op.

@@ -31,6 +31,11 @@ export interface PanelActionRowProps
   /** Raw shortcut string (e.g. `"mod+k"`), formatted for display. */
   shortcut?: string;
   /**
+   * `"destructive"` draws the row in the destructive tone (label and icon) —
+   * the row twin of a destructive button, and of a destructive menu item.
+   */
+  variant?: "default" | "destructive";
+  /**
    * Typed as a plain DOM handler so the SAME handler drops into either form:
    * React's event-handler types are bivariant, so an inline button's
    * `MouseEventHandler<HTMLButtonElement>` and this row's own element type are
@@ -79,11 +84,13 @@ export function PanelActionRow({
   label,
   disabled,
   shortcut,
+  variant = "default",
   onClick,
   onAuxClick,
   onMouseDown,
   ...rest
 }: PanelActionRowProps) {
+  const destructive = variant === "destructive";
   // The row rung IS the panel form, so this row says it is on a menu surface
   // itself (panel-row corners, menu headings). The panel cannot say it: a
   // parked occupant is RENDERED in the bar's React tree and only moved into the
@@ -92,7 +99,13 @@ export function PanelActionRow({
     <MenuSurfaceProvider value={true}>
     <Row
         {...rest}
-      icon={<Icon icon={icon} active={active} />}
+        icon={
+          <Icon
+            icon={icon}
+            active={active}
+            className={destructive ? "text-destructive" : undefined}
+          />
+        }
       onClick={onClick}
       onAuxClick={onAuxClick}
       onMouseDown={onMouseDown}
@@ -106,7 +119,7 @@ export function PanelActionRow({
       {/* The one flexible cell: the label absorbs the slack and ellipsizes, so a
           long action name cannot push the shortcut out of the panel. */}
       <Fill>
-        <Text>{label}</Text>
+          <Text tone={destructive ? "destructive" : "default"}>{label}</Text>
       </Fill>
       {shortcut ? <Kbd>{formatShortcutLabel(shortcut)}</Kbd> : null}
     </Row>

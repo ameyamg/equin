@@ -11,9 +11,11 @@ import {
 
 // The browser's own row actions. Each is ONE component drawn two ways — an
 // icon button in the row's hover cluster (or its `⋯`), a menu item in the
-// right-click menu (`MenuItemForm`) — and acts on `useActionTargets(row)`:
-// the row, or the selection a right-click was opened on. An action the
-// targets cannot take renders nothing, so neither place offers it.
+// right-click menu (`MenuItemForm`). One contributed with `selection: true`
+// acts on `useActionTargets(row)` — the row, or the selection a right-click
+// was opened on; the others act on their row, and a menu opened on several
+// entries leaves them out. An action its targets cannot take renders
+// nothing, so neither place offers it.
 
 const revealIcon = symbol("folder-open");
 const renameIcon = symbol("drive-file-rename-outline");
@@ -34,10 +36,8 @@ function counted(paths: readonly string[], one: string, many: string): string {
 /** Open with default app — a file of the computer's disk (not inside an archive). */
 export function OpenAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   const host = useEntryActionHost();
-  const targets = useActionTargets(row);
   const openHostFile = useOpenHostFile();
   if (
-    targets.length !== 1 ||
     row.kind === "dir" ||
     !host.system.capabilities.openNative ||
     !host.onDisk(row.path)
@@ -56,9 +56,8 @@ export function OpenAction({ row }: ItemActionProps<EntryRow>): ReactNode {
 /** Reveal in Finder — the entry selected in a Finder window. */
 export function RevealAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   const host = useEntryActionHost();
-  const targets = useActionTargets(row);
   const openHostFile = useOpenHostFile();
-  if (targets.length !== 1 || !host.system.capabilities.openNative) return null;
+  if (!host.system.capabilities.openNative) return null;
   return (
     <IconButton
       icon={revealIcon}
@@ -71,12 +70,7 @@ export function RevealAction({ row }: ItemActionProps<EntryRow>): ReactNode {
 /** Rename — the row's name opens for editing in place. */
 export function RenameAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   const host = useEntryActionHost();
-  const targets = useActionTargets(row);
-  if (
-    targets.length !== 1 ||
-    !host.system.capabilities.edit ||
-    !host.onDisk(row.path)
-  ) {
+  if (!host.system.capabilities.edit || !host.onDisk(row.path)) {
     return null;
   }
   return (

@@ -1862,6 +1862,12 @@ Contribute an action once; every view draws it in its trailing affordance.
 Plus optional `useActive?: Hook<(row) => boolean>`.
 `placement: "cluster" | "primary"`.
 
+`selection?: true` says the action acts on a whole selection. A host that draws
+the set for several selected rows at once (the file explorer's right-click menu
+on a selection) draws only those, reading the selection through its own API;
+an action that does not declare it is left out there, never handed one row of
+many.
+
 **The rest rule** (`web/internal/item-action-rest.ts`, `itemActionRests`):
 
 - `persistent` rests unless it declares `useActive` (then only while active);

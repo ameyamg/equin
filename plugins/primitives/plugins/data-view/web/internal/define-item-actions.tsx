@@ -30,6 +30,15 @@ export interface ItemActionContribution<TRow> {
    * action per row, so keep it cheap (a store/selector read).
    */
   useActive?: Hook<(row: TRow) => boolean>;
+  /**
+   * Whether this action acts on a whole selection. A host that draws the set
+   * for several selected rows at once (the file explorer's right-click menu
+   * on a selection) draws only the actions that say so — reading the
+   * selection is the host's own API — and leaves the rest out, so an action
+   * written for one row is never offered where it would act on one of many.
+   * Default `false`: a row's own cluster always acts on its one row.
+   */
+  selection?: boolean;
 }
 
 export interface ItemActions<TRow>

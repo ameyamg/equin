@@ -75,7 +75,10 @@ export function EntryMenu({
     <CursorAnchoredMenu anchor={menu?.anchor ?? null} onClose={onClose}>
       {target?.kind === "entry" && (
         <MenuTargets paths={target.paths}>
-          <RowActionItems row={target.row} />
+          <RowActionItems
+            row={target.row}
+            selection={target.paths.length > 1}
+          />
         </MenuTargets>
       )}
       {canCreate && (
@@ -115,7 +118,14 @@ export function EntryMenu({
  * closes renders nothing (single-entry actions on a selection), so a rule
  * never doubles up or closes off an end.
  */
-function RowActionItems({ row }: { row: EntryRow }): ReactNode {
+function RowActionItems({
+  row,
+  selection,
+}: {
+  row: EntryRow;
+  /** Opened on several entries: only the actions that act on a selection. */
+  selection: boolean;
+}): ReactNode {
   const slot = FileBrowserSlots.RowActions;
   const order = useReorderedEntries(
     slot.id,
@@ -149,6 +159,12 @@ function RowActionItems({ row }: { row: EntryRow }): ReactNode {
     );
   return flat(state.entries).map((entry) => {
     if (!isNodeData(entry)) {
+      // An action written for one row is left out of a selection's menu
+      // (`ItemActionContribution.selection`) — a contributor's included, so
+      // a new one never acts on just one of the entries the menu names.
+      if (selection && (entry as { selection?: boolean }).selection !== true) {
+        return null;
+      }
       return (
         <MenuItemForm key={`${entry._pluginId ?? ""}:${String(entry.id)}`}>
           {renderIsolated(slot, entry, props)}

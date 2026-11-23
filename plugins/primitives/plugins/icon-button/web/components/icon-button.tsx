@@ -61,8 +61,8 @@ const ICON_BUTTON_LADDER = { shrinksTo: ["row", "menu-item"] } as const;
  * the one widget for which "a labelled row" is a lossless smaller form of
  * itself — and therefore the one that declares the `"row"` rung. When a bar runs
  * out of room and relocates it behind a `⋯`, the same action renders as that
- * row. The full-form-only dials — `variant`, `className`, `tooltip`, `tooltipSide` —
- * are INERT in that form.
+ * row. The full-form-only dials — `className`, `tooltip`, `tooltipSide` — are
+ * INERT in that form; `variant="destructive"` carries over as a destructive row.
  */
 export function IconButton({
   icon,
@@ -128,6 +128,7 @@ export function IconButton({
         active={active}
         label={label}
         shortcut={shortcut}
+        variant={variant === "destructive" ? "destructive" : "default"}
       />
     );
   }

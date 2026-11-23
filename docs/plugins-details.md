@@ -50988,6 +50988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useActionForm`
           - `useHoldShrink`
       - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --destructive`
         - Imported by:
           - `apps-core/tab-bar`
           - `apps/file-explorer/browser`
@@ -68472,10 +68473,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 562 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 563 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×125
               - `conversations` ×97
-              - `primitives` ×79
+              - `primitives` ×80
               - `debug` ×42
               - `page` ×34
               - `plugin-meta` ×28

@@ -99,7 +99,8 @@ Takes the **raw** shortcut string and formats it through the same
 `formatShortcutLabel` as the full form, so the two cannot drift. `IconButton` is
 the one widget that declares `"row"` — it *is* the generic
 `{ icon, label, onClick }` shape — so everything built on it inherits the rung,
-and `variant` / `className` / `tooltip` / `side` are INERT in that form.
+and `className` / `tooltip` / `side` are INERT in that form — `variant` carries
+over only as `"destructive"` (the row's `variant`), a tone every form shares.
 
 ## `MenuItemForm` — the same action, as a menu item
 
@@ -156,6 +157,7 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
     - `useActionForm`
     - `useHoldShrink`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --destructive`
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/file-explorer/browser`

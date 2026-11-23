@@ -125,13 +125,37 @@ export default {
     FileBrowserSlots.RowActions({ id: "open", component: OpenAction }),
     FileBrowserSlots.RowActions({ id: "reveal", component: RevealAction }),
     FileBrowserSlots.RowActions({ id: "rename", component: RenameAction }),
-    FileBrowserSlots.RowActions({ id: "copy", component: CopyAction }),
-    FileBrowserSlots.RowActions({ id: "cut", component: CutAction }),
-    FileBrowserSlots.RowActions({ id: "paste", component: PasteAction }),
+    FileBrowserSlots.RowActions({
+      id: "copy",
+      component: CopyAction,
+      selection: true,
+    }),
+    FileBrowserSlots.RowActions({
+      id: "cut",
+      component: CutAction,
+      selection: true,
+    }),
+    FileBrowserSlots.RowActions({
+      id: "paste",
+      component: PasteAction,
+      selection: true,
+    }),
     FileBrowserSlots.RowActions({ id: "extract", component: ExtractAction }),
-    FileBrowserSlots.RowActions({ id: "compress", component: CompressAction }),
+    FileBrowserSlots.RowActions({
+      id: "compress",
+      component: CompressAction,
+      selection: true,
+    }),
     FileBrowserSlots.RowActions({ id: "copy-path", component: CopyPathAction }),
-    FileBrowserSlots.RowActions({ id: "trash", component: TrashAction }),
-    FileBrowserSlots.RowActions({ id: "delete", component: DeleteAction }),
+    FileBrowserSlots.RowActions({
+      id: "trash",
+      component: TrashAction,
+      selection: true,
+    }),
+    FileBrowserSlots.RowActions({
+      id: "delete",
+      component: DeleteAction,
+      selection: true,
+    }),
   ],
 } satisfies PluginDefinition;
