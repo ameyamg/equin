@@ -981,7 +981,6 @@ export const browserHost = {
     "shell.notifications.native",
     "tasks.automations",
     "tasks.outcome-report",
-    "tasks.reports-investigation",
     "tasks.sidequest-autopilot",
     "tasks.supervisor-roles.spend",
     "tasks.task-triage",

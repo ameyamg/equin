@@ -1,4 +1,4 @@
-// @hash dd9a6205474e
+// @hash 2d9657057aa7
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,7 +8,6 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   "items": [
-    "plugin-meta.plugin-health:health",
     "plugin-meta.plugin-view.inclusion:inclusion",
     "plugin-meta.plugin-view.dependencies:dependencies",
     "plugin-meta.plugin-view.dependencies:dependents",

@@ -11,8 +11,7 @@ Things that start agents with nobody clicking anything. Two kinds:
   `maxLaunches` per turn-on, after which it turns itself off (the sidequest
   autopilot).
 
-Design: `research/2026-10-07-global-automations.md`; triggers, prompt and
-Report investigations: `research/2026-10-07-global-automations-triggers-and-reports-v2.md`;
+Design: `research/2026-10-07-global-automations.md`; triggers and prompt: `research/2026-10-07-global-automations-triggers-and-reports-v2.md`;
 the launch kind: `research/2026-10-10-tasks-sidequest-autopilot.md`; approval and
 the total cap: `research/2026-10-11-tasks-sidequest-autopilot-v2.md`.
 
@@ -219,7 +218,7 @@ Every run logs one line to the `automations` log channel.
 Behavior (Enabled, Model, At once for a launch kind, Push), Trigger (kind,
 schedule presets / cron, or the settle wait), the `Automations.Section`
 contributions for this automation (a render slot keyed by `automationId` —
-e.g. Report investigations' Which reports, the autopilot's Run until), Sources,
+e.g. the autopilot's Run until), Sources,
 Prompt (the template; "Customized" when the user layer supplies it, Reset to
 default through config_v2's `resetConfigField`; a template naming an unknown
 variable is not saved), History (filed and started tasks). A History row
@@ -306,10 +305,8 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `automation-detail.actions`
   - Slot contributors:
     - `Automations.Config` ← `infra.deps.updates`
-    - `Automations.Config` ← `tasks.reports-investigation`
     - `Automations.Config` ← `tasks.sidequest-autopilot`
     - `Automations.Config` ← `upstream`
-    - `Automations.Section` ← `tasks.reports-investigation`
     - `Automations.Section` ← `tasks.sidequest-autopilot`
     - `Automations.TaskDetail` ← `tasks.outcome-report`
     - `automations.actions` ← `primitives.pane`
@@ -528,7 +525,6 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `hints/ask`
     - `infra/deps/updates`
     - `tasks/outcome-report`
-    - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
     - `tasks/supervisor-roles/spend`
     - `tasks/task-triage`

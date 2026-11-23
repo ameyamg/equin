@@ -2450,8 +2450,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×105
+  - Contributes: 114 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×104
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
@@ -2735,8 +2735,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 107 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×105
+  - Contributes: 106 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×104
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getAllDescriptors`
@@ -2942,7 +2942,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×3
-  - Imported by: 129 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 128 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×39
     - `apps` ×29
     - `debug` ×17
@@ -2950,7 +2950,6 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `conversations` ×9
     - `tasks` ×6
     - `infra` ×4
-    - `plugin-meta` ×2
     - `apps-core/app-launcher`
     - `auth`
     - `build/build-logs`
@@ -2960,6 +2959,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `history/dialog`
     - `integrations/google-maps/usage`
     - `page/links`
+    - `plugin-meta/exhibits`
     - `runs`
     - `shell/notifications/pane`
     - `stats/cost`

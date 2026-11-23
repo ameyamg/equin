@@ -88,7 +88,6 @@ Ordering for both surfaces lives in
     - `apps/agent-manager/welcome`
     - `apps/home/new-app`
     - `conversations/workspace/launch-option`
-    - `plugin-meta/plugin-health`
     - `primitives/launch`
     - `tasks`
     - `tasks/auto-start/launch-option`

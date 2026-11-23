@@ -1,5 +1,6 @@
 import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
+import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   exitClean,
   flagRaise,
@@ -106,6 +107,9 @@ export const depsUpgradesAutomation = defineAutomation({
   // it calls exit_clean only when a person asks it to.
   mandate: (settings) =>
     mandatePolicy([
+      // Its prompt sends unrelated failures it meets to add_task, off the critical
+      // path: sidequests only, waiting for the user.
+      tasksFile.grant({ sidequest: { start: ["manual"] } }),
       pushPolicy.grant(settings.push),
       flagRaise.grant(true),
       exitClean.grant("on-request"),

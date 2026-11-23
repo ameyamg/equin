@@ -36,8 +36,7 @@ export default {
       },
       // NO `inherit`, deliberately — and the omission is the declaration. This
       // apply ARMS a launch, so inheriting it would start an agent for every
-      // task an agent files (including `propose_task` drafts, which are meant
-      // to wait for the user to accept them). Each filing tool decides
+      // task an agent files. Each filing tool decides
       // auto-start explicitly instead.
     }),
   ],

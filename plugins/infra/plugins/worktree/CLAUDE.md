@@ -478,7 +478,7 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
     - `infra` ×9
     - `conversations` ×4
@@ -489,7 +489,6 @@ pid liveness.
     - `stats` ×2
     - `apps/website/promo-film/seed`
     - `code-explorer`
-    - `plugin-meta/plugin-health`
     - `release/source-checkout`
     - `review/plugin-changes`
 - Exemptions:

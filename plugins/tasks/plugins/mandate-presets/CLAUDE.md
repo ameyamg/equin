@@ -58,7 +58,6 @@ the orchestration umbrella never does.
     - `hints/ask`
     - `page/annotations/todo/task-link`
     - `page/prompt/link`
-    - `plugin-meta/plugin-health`
     - `tasks`
     - `tasks/reports-investigation`
     - `tasks/supervisor-roles`

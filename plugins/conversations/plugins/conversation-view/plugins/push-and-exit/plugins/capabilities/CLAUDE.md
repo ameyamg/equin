@@ -50,7 +50,6 @@ push-and-exit's server (`Mandate.Capability`, `granted(cap)`).
     - `tasks/automations`
     - `tasks/mandate-presets`
     - `tasks/outcome-report`
-    - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
     - `upstream`
 

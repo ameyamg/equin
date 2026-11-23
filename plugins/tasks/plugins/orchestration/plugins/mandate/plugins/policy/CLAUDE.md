@@ -39,7 +39,6 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `tasks/orchestration/message/capability`
     - `tasks/orchestration/watch/capabilities`
     - `tasks/outcome-report/capability`
-    - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
     - `tasks/supervisor-roles`
     - `tasks/tasks-core`

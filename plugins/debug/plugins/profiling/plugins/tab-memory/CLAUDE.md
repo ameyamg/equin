@@ -69,8 +69,8 @@ one past the bar (`server/internal/detect.ts`, pure, tested):
   none explain it), `unattributed` (no page sampled).
 
 The report re-files every tick while the renderer stays past the bar, so its
-count reaches the Report investigations automation's recurrence bar (3)
-within ~30 minutes; it is `error`, so the default severity scope takes it.
+count climbs past 3 within ~30 minutes; it is `error`, so the Error reports
+supervisor stream carries it.
 The bell re-rings at most every 6 h.
 
 ## Measurement scripts

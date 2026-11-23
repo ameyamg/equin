@@ -165,7 +165,7 @@ First, the holds to review (listed above, per updater): \`./equin deps upgrade\`
    ones. When something regresses it narrows the batch down on its own (a lockstep group is never split), keeps every
    release that passes, and names each release responsible. Its verdict is in \`deps-upgrade.json\` in this worktree's data dir (the command prints the
    path): \`landed\`, \`culprits\` (each with what it broke), \`untested\`, and \`blind\` (what already fails without
-   any upgrade — file it with \`add_task\`, it is not this task's to fix).
+   any upgrade — file it with \`add_task\` on the \`sidequest\` track, it is not this task's to fix).
 
 2. Verdict \`upgraded\` or \`partial\`: the files now hold exactly the \`landed\` releases. Run \`./equin build\`
    and confirm \`build-status.json\` says \`ok\`. Then:
@@ -186,7 +186,7 @@ First, the holds to review (listed above, per updater): \`./equin deps upgrade\`
    why (a cooldown, a partner's publish, a hold, a prerequisite). Nothing to push; do any BLOCKED prerequisite as below.
 
 A row marked BLOCKED is a release the upgrade cannot move to on its own: do the prerequisite it names (or, when it
-is not doable from this worktree, file it as a task with \`add_task\` and say so), then upgrade again. A row marked
+is not doable from this worktree, file it with \`add_task\` on the \`sidequest\` track and say so), then upgrade again. A row marked
 HELD is listed so a hold is never silent: leave it unless its reason no longer stands, in which case delete the
 hold and let the upgrade move it. A row marked WAITING waits on someone else's release: nothing to do, it moves on
 its own once they publish (one still unpublished ${AWAIT_MAX_DAYS} days on is listed BLOCKED instead). Every

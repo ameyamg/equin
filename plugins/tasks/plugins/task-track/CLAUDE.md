@@ -25,7 +25,7 @@ default `'main'`, and holds a row only for a NON-default track:
 **absence = main** — the field's declared default, which is also what every
 list exposing the track reads for a task with no row. That default is a real
 value, not "unknown" — every filing path that does not choose a track (the
-draft form, Improve, the chain endpoint, `propose_task`) is main with no code
+draft form, Improve, the chain endpoint) is main with no code
 change. `setTaskTrack(id, "main")` deletes the row.
 
 ## Reads

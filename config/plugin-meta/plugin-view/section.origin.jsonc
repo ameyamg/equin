@@ -1,4 +1,4 @@
-// @hash dd9a6205474e
+// @hash 2d9657057aa7
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -18,7 +18,6 @@
     "plugin-meta.facets.routes.render-detail:routes",
     "plugin-meta.facets.slots.render-detail:slots",
     "plugin-meta.facets.structure.render-detail:structure",
-    "plugin-meta.plugin-health:health",
     "plugin-meta.plugin-view.dependencies:dependencies",
     "plugin-meta.plugin-view.dependencies:dependents",
     "plugin-meta.plugin-view.file-tree:file-tree",

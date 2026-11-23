@@ -20,7 +20,6 @@ pattern as `push-and-exit/plugins/capabilities`.
     - `infra/deps/updates`
     - `tasks/mandate-presets`
     - `tasks/outcome-report`
-    - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
     - `upstream`
 

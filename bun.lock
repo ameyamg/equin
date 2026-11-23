@@ -6171,10 +6171,6 @@
       "name": "@equin/plugin-plugin-meta-parse-utils-source-files",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/plugin-health": {
-      "name": "@equin/plugin-plugin-meta-plugin-health",
-      "version": "0.0.1",
-    },
     "plugins/plugin-meta/plugins/plugin-records": {
       "name": "@equin/plugin-plugin-meta-plugin-records",
       "version": "0.0.1",
@@ -11370,8 +11366,6 @@
     "@equin/plugin-plugin-meta-parse-utils": ["@equin/plugin-plugin-meta-parse-utils@workspace:plugins/plugin-meta/plugins/parse-utils"],
 
     "@equin/plugin-plugin-meta-parse-utils-source-files": ["@equin/plugin-plugin-meta-parse-utils-source-files@workspace:plugins/plugin-meta/plugins/parse-utils/plugins/source-files"],
-
-    "@equin/plugin-plugin-meta-plugin-health": ["@equin/plugin-plugin-meta-plugin-health@workspace:plugins/plugin-meta/plugins/plugin-health"],
 
     "@equin/plugin-plugin-meta-plugin-records": ["@equin/plugin-plugin-meta-plugin-records@workspace:plugins/plugin-meta/plugins/plugin-records"],
 

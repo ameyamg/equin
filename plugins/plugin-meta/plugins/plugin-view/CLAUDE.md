@@ -55,7 +55,6 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `PluginViewSlots.Section` ← `plugin-meta.facets.routes.render-detail`
     - `PluginViewSlots.Section` ← `plugin-meta.facets.slots.render-detail`
     - `PluginViewSlots.Section` ← `plugin-meta.facets.structure.render-detail`
-    - `PluginViewSlots.Section` ← `plugin-meta.plugin-health`
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.dependencies`
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.file-tree`
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.inclusion`
@@ -123,8 +122,8 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `ui/tokens/density` ×4
     - `ui/tokens/color-palette` ×3
     - `ui/tokens/shape --spacing`
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta` ×20
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta` ×19
     - `apps` ×3
     - `active-data/plugin-link`
     - `debug/mcp-tools`

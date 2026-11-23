@@ -1,4 +1,4 @@
-// @hash ae042cc6fc9a
+// @hash 9af22d9c86d4
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -12,7 +12,6 @@
   // first — what may run is the thing to review before turning it on — then
   // when it stops (Run until), then how triage reads the backlog.
   "items": [
-    "tasks.reports-investigation:report-scope",
     "tasks.sidequest-autopilot:launch-list",
     "tasks.sidequest-autopilot:run-until",
     "tasks.sidequest-autopilot:triage"

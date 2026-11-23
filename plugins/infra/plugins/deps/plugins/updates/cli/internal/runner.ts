@@ -624,7 +624,7 @@ async function upgrade(args: {
     const n = receipt.blind.reduce((a, g) => a + g.failures.length, 0);
     log(
       `\n${n} failure(s) already on the baseline: those could not catch a regression. ` +
-        "File them (add_task); they are not this upgrade's to fix.",
+        "File them (add_task, sidequest track); they are not this upgrade's to fix.",
     );
   }
   for (const c of receipt.culprits)

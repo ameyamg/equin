@@ -921,20 +921,20 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 323 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 321 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×87
     - `conversations` ×50
     - `debug` ×31
     - `ui` ×26
-    - `tasks` ×25
+    - `tasks` ×24
     - `page` ×16
     - `primitives` ×16
     - `infra` ×11
     - `build` ×9
     - `active-data` ×5
-    - `plugin-meta` ×5
     - `apps-core` ×4
     - `auth` ×4
+    - `plugin-meta` ×4
     - `companions` ×3
     - `framework` ×3
     - `integrations` ×3

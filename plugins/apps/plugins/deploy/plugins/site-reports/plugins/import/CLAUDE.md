@@ -130,8 +130,7 @@ span. The engine fences the whole body inside a code block
 ## No automatic agent
 
 `website-visitor` is in `reports/core`'s `UNTRUSTED_REPORT_SOURCES`. The
-engine's worklist, which the Report investigations automation and every other
-automation read, leaves those sources out. A report from them is investigated
+engine's worklist, which every automation reads, leaves those sources out. A report from them is investigated
 only by hand. Both briefings, the task the engine files and the first turn the
 web Investigate sends, fence the content as data and never as instructions.
 

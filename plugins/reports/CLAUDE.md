@@ -4,7 +4,7 @@ Two halves. This plugin's `server/` barrel is the PORTABLE one (`portable:
 true`, so the demo's browser worker boots it): the `reports` table, its live
 read `reports.list`, the `ReportKind` / `ReportNoiseRule` slots every kind and
 rule contributes to, the fan-out ceiling config, and the two contracts the
-engine and the investigations automation meet on (`reportInvestigationSink`,
+engine and its consumers meet on (`reportInvestigationSink`,
 `ReportRecorded` (listeners)). Everything that WRITES reports — `recordReport`, the
 routes, the process-crash handler and buffer, the change producer, retention, the noise
 backfill, investigation — is the engine,

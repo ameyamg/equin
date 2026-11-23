@@ -44,7 +44,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `textField`
     - `textSample`
 - Cross-plugin:
-  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×33
     - `conversations` ×22
     - `tasks` ×16
@@ -54,7 +54,6 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `debug` ×5
     - `build` ×2
     - `fields` ×2
-    - `plugin-meta` ×2
     - `active-data`
     - `apps-core/app-launcher`
     - `auth/apple-signing`
@@ -62,6 +61,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `hints`
     - `history/engine`
     - `integrations/github-events`
+    - `plugin-meta/composition`
     - `release`
     - `reports`
     - `review/code-review`

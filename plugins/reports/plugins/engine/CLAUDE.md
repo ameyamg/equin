@@ -77,8 +77,7 @@ the sleep interrupted times out on wake and fails that pool's clients for
 second after a 268 s sleep). It is a stated fact, never a filter: the report is
 filed, counted and alerts exactly as otherwise. The occurrences table shows it
 (After wake), and `renderReportTask` adds a **Machine wake:** line
-(`afterWakeSummary`), so the investigator — and the report-investigations
-automation's agent, which reads the same body — knows before digging. Not
+(`afterWakeSummary`), so the investigator — who reads the same body — knows before digging. Not
 de-prioritised in the worklist: "every kept occurrence followed a wake" is a
 judgement over `recent` the worklist's indexed read does not make.
 
@@ -368,7 +367,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×14
     - `conversations` ×5
     - `infra` ×4
@@ -381,7 +380,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `integrations/github-events`
     - `page/place/google`
     - `stats/scoreboard`
-    - `tasks/reports-investigation`
 - Exemptions:
   - Exempts itself from:
     - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)

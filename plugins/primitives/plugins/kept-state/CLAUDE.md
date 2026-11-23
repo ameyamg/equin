@@ -254,7 +254,7 @@ processes, writes). What is left is work held in ordinary component state, and
     - `writeDraft`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --input`
-  - Imported by: 131 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 130 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×38
     - `primitives` ×27
     - `conversations` ×13
@@ -262,8 +262,8 @@ processes, writes). What is left is work held in ordinary component state, and
     - `page` ×9
     - `ui` ×5
     - `auth` ×4
-    - `tasks` ×4
     - `debug` ×3
+    - `tasks` ×3
     - `apps-core` ×2
     - `infra` ×2
     - `screenshot` ×2

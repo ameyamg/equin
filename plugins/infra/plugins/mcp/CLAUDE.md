@@ -176,7 +176,7 @@ and without it no tool set can be computed.
     - `McpHealthSchema`
     - `mcpRequest`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks` ×7
     - `debug` ×6
     - `conversations` ×5
@@ -185,7 +185,6 @@ and without it no tool set can be computed.
     - `database/query`
     - `hints/ask`
     - `page/annotations/agent-access`
-    - `plugin-meta/plugin-health`
   - Endpoint callers: `health`
 - Exemptions:
   - Exempts itself from: `endpoints:no-raw-json-handlers` — `machine/internal/handle-mcp.ts` (sanctioned)
