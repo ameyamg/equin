@@ -20,6 +20,7 @@ export const handleCreate = implementMachine(
       icon: body.icon ?? null,
       metadata: body.metadata ?? null,
       dedupeKey: body.dedupeKey ?? null,
+      resurfaceAfterMs: body.resurfaceAfterMs,
       audience: body.audience,
     });
     return { id };

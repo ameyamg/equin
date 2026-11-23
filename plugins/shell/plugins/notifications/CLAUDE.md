@@ -201,6 +201,12 @@ the machine half) — so a toast the user had no time to read is in the bell
   only the live toast can offer (an Undo closure, a link the page's hooks
   built): drawn on the toast in place of a registry `action`, never stored; the
   bell's row of the same toast has no action. Exclusive with `action` (tsc).
+- **`dedupe`** (`{ key, resurfaceAfterMs }`) — one bell row for an event
+  several tabs raise at once (or a burst): writes with the key coalesce into
+  the row holding it (`count` bumps, its place stays), and one after the row
+  has been quiet for `resurfaceAfterMs` files a new row — the server's
+  `dedupeKey` / `resurfaceAfterMs`. Use it for an event every open tab sees
+  (the reconnect toast), or each tab files its own row.
 - **A toast another tab raised is not an arrival here unless it is a
   failure** (`announcedElsewhere` in `use-notification-arrivals.ts`): a tab's
   confirmations and observations stay that tab's toast; its errors and

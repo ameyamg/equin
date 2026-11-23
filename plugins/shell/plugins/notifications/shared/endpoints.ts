@@ -26,6 +26,9 @@ export const createNotification = defineEndpoint({
     icon: NotificationIconSchema.nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).nullable().optional(),
     dedupeKey: z.string().nullable().optional(),
+    // `writeNotification`'s re-alert window for a keyed toast (`useToast`'s
+    // `dedupe`): a write past it opens a new row, one within it coalesces.
+    resurfaceAfterMs: z.number().int().positive().optional(),
     audience: z.enum(AUDIENCES).optional(),
   }),
   response: z.object({ id: z.string() }),

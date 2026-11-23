@@ -71,7 +71,15 @@ interface ToastFields {
   icon?: SymbolRef;
   linkTo?: string;
   metadata?: Record<string, unknown>;
-  dedupeKey?: string;
+  /**
+   * Collapse the same event raised by several tabs (or in a burst) into ONE
+   * bell row: writes with the same `key` coalesce into the row holding it (its
+   * `count` bumps, its place stays), and a write after the row has been quiet
+   * for `resurfaceAfterMs` files a new row on top — the server's
+   * `dedupeKey` / `resurfaceAfterMs` (`writeNotification`). Without it every
+   * toast is its own row.
+   */
+  dedupe?: { key: string; resurfaceAfterMs: number };
   /**
    * Who it is for: a `developer` toast is shown, and kept in the bell, only in
    * Developer mode. Default `user` — everyone.
@@ -164,7 +172,8 @@ export function useToast(): Toast {
             action: args.action ?? null,
             icon: args.icon ?? null,
             metadata,
-            dedupeKey: args.dedupeKey ?? null,
+            dedupeKey: args.dedupe?.key ?? null,
+            resurfaceAfterMs: args.dedupe?.resurfaceAfterMs,
             audience: args.audience,
           },
         },

@@ -2,6 +2,10 @@ import { useEffect } from "react";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 
+// Tabs reconnecting to one restarted server do so within seconds of each other;
+// a reconnect a minute after the last one is a new episode, a new row.
+const RECONNECT_EPISODE_MS = 60_000;
+
 export function ReconnectWatcher() {
   const toast = useToast();
   useEffect(() => {
@@ -23,6 +27,14 @@ export function ReconnectWatcher() {
           category: "other",
           variant: "info",
           audience: "developer",
+          // One restart reconnects every open tab at once, and each raised its
+          // own row: ~10 rows per restart, ~1,000 a day on main (Nov 18–19,
+          // a third of all notifications). One row per reconnect episode,
+          // `×N` for the tabs that joined it.
+          dedupe: {
+            key: "health-reconnected",
+            resurfaceAfterMs: RECONNECT_EPISODE_MS,
+          },
         });
       }, 150);
     };
