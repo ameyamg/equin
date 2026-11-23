@@ -1,3 +1,4 @@
+import { isLostInTransit } from "@plugins/infra/plugins/endpoints/core";
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
@@ -26,7 +27,12 @@ import {
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { createPageSectionRegistry } from "./page-sections";
 import { followReplay } from "./replay-follow";
-import { createTracker, type LoadMilestones, type Tracker } from "./tracker";
+import {
+  createTracker,
+  type CollectSent,
+  type LoadMilestones,
+  type Tracker,
+} from "./tracker";
 
 // Page-wide telemetry: page-view analytics always reach the page's own server (D3).
 const fetchEndpoint = fetchEndpointOver(pageTransport);
@@ -35,20 +41,29 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
  * Posts one collect body. `keepalive` lets the engagement beacon sent on
  * `pagehide` outlive the page.
  *
- * Passive telemetry, the same contract as the slow-op beacon: `report: false`
- * so a failed beacon never toasts or files a report about itself, and the
- * rejection is NOT caught — it surfaces as an unhandled rejection in the
- * console, which is loud without breaking anything the visitor sees. The crash
- * collector files it only when the page's host still answers HTTP: a beacon
- * that got no answer while the host did not answer either is the visitor's
- * network (reports/crash `fetch-no-answer.ts`).
+ * Passive telemetry: `report: false`, so a failed beacon never toasts or
+ * files a report about itself. A beacon lost between the page and the site
+ * (`isLostInTransit`: no answer, an answer cut short, a proxy answering in
+ * the site's place) is the visitor's network — offline, a suspended mobile
+ * tab, a reply cut off while the tab was hidden, a corporate proxy — and
+ * harmless: the hit is not counted, the next send carries on. It resolves
+ * `{ delivered: false }` with a console warning. Every other failure — the
+ * site's own refusal or 5xx, an unreadable answer, a bug here — rejects,
+ * is left unhandled, and the crash collector files it.
  */
-function send(body: CollectBody) {
-  return fetchEndpoint(
-    collectEndpoint,
-    {},
-    { body, keepalive: true, report: false },
-  );
+async function send(body: CollectBody): Promise<CollectSent> {
+  try {
+    const response = await fetchEndpoint(
+      collectEndpoint,
+      {},
+      { body, keepalive: true, report: false },
+    );
+    return { delivered: true, response };
+  } catch (err) {
+    if (!isLostInTransit(err)) throw err;
+    console.warn(`[analytics] ${body.kind} not counted — ${err.message}`);
+    return { delivered: false };
+  }
 }
 
 let instance: Tracker | null = null;

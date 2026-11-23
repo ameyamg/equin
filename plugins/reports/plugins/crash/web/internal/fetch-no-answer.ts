@@ -19,6 +19,10 @@ import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugin
 //   back (equin.ai, 2026-11-18 00:35:17 UTC: an analytics beacon of a visitor
 //   offline for 4 min; 2026-11-18 18:13 UTC: a Firefox Android visitor's beacon
 //   from a backgrounded tab). Warned to the console, not filed.
+//
+// A backstop only: a caller to whom a lost send is harmless (the telemetry
+// beacons) catches its own loss (`isLostInTransit`, infra/endpoints) and never
+// reaches here. Never add one more kind of loss to this file: fix the caller.
 
 /**
  * The messages browsers give a fetch that got no answer. A closed, browser-owned

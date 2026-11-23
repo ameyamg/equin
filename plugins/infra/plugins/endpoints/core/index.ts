@@ -32,6 +32,7 @@ export {
   EndpointError,
   EndpointAgentWriteRefusedError,
   EndpointNetworkError,
+  isLostInTransit,
 } from "./endpoint-error";
 export type { AgentWrite } from "./agent-write";
 export { agentWriteRefusedMessage, isAgentWriteRefusal } from "./agent-write";

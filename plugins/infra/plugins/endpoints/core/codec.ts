@@ -1,7 +1,10 @@
 import type { z } from "zod";
 import { HttpError } from "./http-error";
 import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
-import { ResponseBodyDecodeError } from "./endpoint-error";
+import {
+  ResponseBodyDecodeError,
+  ResponseBodyLostError,
+} from "./endpoint-error";
 
 /**
  * A transport codec for an endpoint body/response payload.
@@ -67,7 +70,12 @@ export function json<T>(schema?: z.ZodType<T>): Codec<T> {
       // Read as text, then parse: a body that is not JSON (empty, cut short)
       // says how much of it arrived (`ResponseBodyDecodeError`), which
       // `res.json()`'s bare SyntaxError cannot.
-      const text = await res.text();
+      const text = await res.text().catch((err: unknown) => {
+        // The body stream failed mid-read: the reply was lost on the way.
+        if (err instanceof TypeError)
+          throw new ResponseBodyLostError(err.message, { cause: err });
+        throw err;
+      });
       let raw: unknown;
       try {
         raw = JSON.parse(text);

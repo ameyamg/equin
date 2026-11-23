@@ -10,6 +10,7 @@ import { landingSource } from "../internal/landing";
 import { isWithinApp } from "../internal/scope";
 import {
   createTracker,
+  type CollectSent,
   type LoadMilestones,
   type TrackerDeps,
 } from "../internal/tracker";
@@ -42,7 +43,7 @@ function harness(
   const sent: CollectBody[] = [];
   const raw: CollectBody[] = [];
   let viewport = { w: 1280, h: 800 };
-  const pending: ((r: CollectResponse) => void)[] = [];
+  const pending: ((r: CollectSent) => void)[] = [];
   const sections = new Map<string, string[]>();
   let milestones: LoadMilestones = {
     firstByteAt: null,
@@ -121,7 +122,15 @@ function harness(
     respond: async (index: number, response: CollectResponse) => {
       const resolve = pending[index];
       if (!resolve) throw new Error(`no send #${index}`);
-      resolve(response);
+      resolve({ delivered: true, response });
+      await Promise.resolve();
+      await Promise.resolve();
+    },
+    /** The `index`-th send is lost in transit, then lets its `.then` run. */
+    lose: async (index: number) => {
+      const resolve = pending[index];
+      if (!resolve) throw new Error(`no send #${index}`);
+      resolve({ delivered: false });
       await Promise.resolve();
       await Promise.resolve();
     },
@@ -335,6 +344,19 @@ describe("engagement", () => {
     h.tracker.hidden();
     await h.respond(0, { outcome: "ignored", reason: "bot" });
     expect(h.sent).toHaveLength(1);
+  });
+
+  it("sends no engagement for a pageview lost in transit, and carries on", async () => {
+    const h = harness();
+    h.tracker.pathChanged("/about");
+    h.advance(400);
+    h.tracker.hidden();
+    await h.lose(0);
+    expect(h.sent).toHaveLength(1);
+    // The next page is tracked as usual.
+    h.tracker.visible();
+    h.tracker.pathChanged("/apps");
+    expect(h.sent[1]).toMatchObject({ kind: "pageview", path: "/apps" });
   });
 
   it("does not count time while the page started hidden, but reports it as away", async () => {

@@ -1,3 +1,4 @@
+import { isLostInTransit } from "@plugins/infra/plugins/endpoints/core";
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import {
@@ -25,8 +26,8 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 // module-level buffer, ONE trailing debounce timer, a hard cap that drops the
 // oldest while carrying the drop count forward, and chunked `keepalive` POSTs
 // bounded by the server-side max. It is a `report: false` beacon: a batch is
-// retried across a backend restart (SLOW_OP_RETRY), and a batch that still
-// fails after that is dropped, loudly.
+// retried across a backend restart (SLOW_OP_RETRY); one still lost in transit
+// after that is counted in `dropped`, and any other failure rejects, loudly.
 //
 // One rule rides the flush: an item queued with its wall-clock window is
 // judged against the page's pauses inside it (`judgePagePauses`) — the time the
@@ -53,9 +54,9 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 const MAX_QUEUED = 1_000;
 
 /**
- * Items discarded by the cap since the last batch went out. Rides the next
- * batch's `dropped` field so the server records the loss instead of the loss
- * being silent — the counter half of clientLog's drop marker line.
+ * Items discarded by the cap, or lost in transit with their batch, since the
+ * last batch went out. Rides the next batch's `dropped` field so the server
+ * records the loss instead of the loss being silent — the counter half of clientLog's drop marker line.
  */
 let dropped = 0;
 
@@ -173,25 +174,39 @@ async function flush(departing = false): Promise<void> {
       // any other — only marked, so a report says who saw it.
       ...(AUTOMATED_BROWSER ? { automated: true } : {}),
     };
-    await fetchEndpoint(
-      submitClientSlowOp,
-      {},
-      {
-        body,
-        // Chrome refuses a keepalive request once the keepalive bodies in
-        // flight pass 64 KB (a TypeError, retried in vain): a batch carrying a
-        // long frame's sampled stacks (`evidence`, up to ~40 KB) can. Such a
-        // batch goes as a plain request — lost only if the page unloads under it.
-        keepalive: JSON.stringify(body).length <= KEEPALIVE_BODY_MAX,
-        retry: SLOW_OP_RETRY,
-        // Passive telemetry: a failed beacon must never toast or recurse into
-        // the report path. Once the retries run out it still rejects — a
-        // backend down past the budget is loud as an unhandled rejection.
-        report: false,
-      },
-    );
-    // Only reached when the batch landed. On a throw the tally is untouched and
-    // rides the next batch instead of vanishing with the failed request.
+    try {
+      await fetchEndpoint(
+        submitClientSlowOp,
+        {},
+        {
+          body,
+          // Chrome refuses a keepalive request once the keepalive bodies in
+          // flight pass 64 KB (a TypeError, retried in vain): a batch carrying a
+          // long frame's sampled stacks (`evidence`, up to ~40 KB) can. Such a
+          // batch goes as a plain request — lost only if the page unloads under it.
+          keepalive: JSON.stringify(body).length <= KEEPALIVE_BODY_MAX,
+          retry: SLOW_OP_RETRY,
+          // Passive telemetry: a failed beacon must never toast or recurse into
+          // the report path.
+          report: false,
+        },
+      );
+    } catch (err) {
+      // Lost between the page and the server past every retry (the page's
+      // network: offline, a suspended tab, a reply cut short, a proxy
+      // answering instead): the batch is gone, and counted — its items join
+      // `dropped`, which rides the next batch, so the server records the loss.
+      // Anything else — the server's own refusal or 5xx past the retries, a
+      // bug — rejects, and the crash collector files it.
+      if (!isLostInTransit(err)) throw err;
+      dropped += items.length;
+      console.warn(
+        `[slow-ops] ${items.length} slow-op item(s) lost in transit, counted as dropped — ${err.message}`,
+      );
+      continue;
+    }
+    // Only reached when the batch landed. On a loss the tally (grown by the
+    // lost items) rides the next batch instead of vanishing with the request.
     dropped -= carried;
   }
 }

@@ -5,6 +5,7 @@ import {
   EndpointError,
   EndpointForeignAnswerError,
   EndpointNetworkError,
+  ResponseBodyLostError,
   EndpointResponseUnreadableError,
   ResponseBodyDecodeError,
 } from "./endpoint-error";
@@ -313,7 +314,7 @@ function unreadableAnswer(route: string, res: Response, err: unknown): unknown {
   if (declared !== null && err.receivedBytes < declared) {
     return new EndpointNetworkError(
       route,
-      new TypeError(
+      new ResponseBodyLostError(
         `the answer was cut short: ${err.receivedBytes} of ${declared} bytes arrived (HTTP ${res.status})`,
       ),
     );

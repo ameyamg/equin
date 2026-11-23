@@ -8,6 +8,7 @@ import {
   EndpointResponseUnreadableError,
 } from "./endpoint-error";
 import { readEndpointResponse, sendEndpointRequest } from "./request";
+import { isLostInTransit } from "./endpoint-error";
 import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 
@@ -268,6 +269,7 @@ describe("readEndpointResponse — a 2xx it cannot decode names its request", ()
     expect((err as Error).message).toBe(
       "POST /api/x/collect: the answer was cut short: 6 of 11 bytes arrived (HTTP 200)",
     );
+    expect(isLostInTransit(err)).toBe(true);
   });
 
   test("a compressed reply's length is not compared: unreadable", async () => {
@@ -289,6 +291,7 @@ describe("readEndpointResponse — a 2xx it cannot decode names its request", ()
     const err = await failure(new Response(body, { status: 200 }));
     expect(err).toBeInstanceOf(EndpointNetworkError);
     expect((err as Error).message).toBe("POST /api/x/collect: network error");
+    expect(isLostInTransit(err)).toBe(true);
   });
 
   test("a schema mismatch passes through untouched", async () => {

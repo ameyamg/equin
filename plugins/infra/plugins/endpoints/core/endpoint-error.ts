@@ -146,3 +146,41 @@ export class EndpointNetworkError extends TypeError {
     }
   }
 }
+
+/**
+ * A reply's body lost on the way: its stream failed mid-read (the browser's
+ * `TypeError`, kept as `cause`), or fewer bytes arrived than the reply
+ * declared. Thrown by the codec and `readEndpointResponse`, which wrap it in
+ * an `EndpointNetworkError` naming the route — the mark that tells a body the
+ * network lost from a `TypeError` raised by code (`isLostInTransit`).
+ */
+export class ResponseBodyLostError extends TypeError {
+  override readonly name = "ResponseBodyLostError";
+}
+
+/**
+ * Whether a request was lost between the page and equin: the browser's fetch
+ * rejected (`FetchRequestError` — the request guard names every native fetch
+ * rejection), its reply's body was lost on the way (`ResponseBodyLostError`),
+ * or something between the two answered in equin's place
+ * (`EndpointForeignAnswerError`: a proxy's block page). The visitor's network,
+ * not a bug of either end — the browser offline, a phone's suspended tab, a
+ * reply cut off while the tab was hidden, a corporate proxy.
+ *
+ * Only a caller can say such a loss is harmless — a fire-and-forget telemetry
+ * beacon, whose next send carries on — so this is the caller's predicate:
+ * `.catch((err) => { if (isLostInTransit(err)) return dropIt(); throw err; })`.
+ * Every answer equin itself gave (a refusal, a 5xx, an unreadable 2xx), and
+ * every `TypeError` raised by code on the way (an `EndpointNetworkError`
+ * wrapping anything else), stays outside it and surfaces.
+ */
+export function isLostInTransit(
+  err: unknown,
+): err is EndpointNetworkError | EndpointForeignAnswerError {
+  if (err instanceof EndpointForeignAnswerError) return true;
+  return (
+    err instanceof EndpointNetworkError &&
+    (err.cause instanceof FetchRequestError ||
+      err.cause instanceof ResponseBodyLostError)
+  );
+}

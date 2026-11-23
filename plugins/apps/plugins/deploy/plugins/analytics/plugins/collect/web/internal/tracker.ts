@@ -15,6 +15,10 @@ import {
 import type { FirstByteSplit } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import type { LandingSource } from "./landing";
 
+/** What became of one send: answered, or lost between the page and the site. */
+export type CollectSent =
+  { delivered: true; response: CollectResponse } | { delivered: false };
+
 /**
  * Everything the tracker reads from or does to the outside world, injected so
  * the logic below is plain and testable.
@@ -35,8 +39,12 @@ export interface TrackerDeps {
    * counts from the next hit on.
    */
   consentKey: () => string | undefined;
-  /** Posts one body. A rejection is left to surface; see `send` in instance.ts. */
-  send: (body: CollectBody) => Promise<CollectResponse>;
+  /**
+   * Posts one body. A send lost in transit (the visitor's network) resolves
+   * `{ delivered: false }` — harmless, the next send carries on; any other
+   * failure rejects and is left to surface (see `send` in instance.ts).
+   */
+  send: (body: CollectBody) => Promise<CollectSent>;
   /**
    * The performance timeline (`performance.now()`): pauses while the device
    * sleeps. Times the visible stretches, so engaged time never includes sleep,
@@ -338,10 +346,12 @@ export function createTracker(deps: TrackerDeps): Tracker {
           ...source,
           ...identity(),
         })
-        .then((response) => {
-          // `ignored` (a bot) has no id: nothing to attach engagement to.
-          if (response.outcome !== "pageview") return;
-          page.pageviewId = response.pageviewId;
+        .then((sent) => {
+          // Lost on the way: the visit has no id to attach engagement to.
+          if (!sent.delivered) return;
+          // `ignored` (a bot) has no id either.
+          if (sent.response.outcome !== "pageview") return;
+          page.pageviewId = sent.response.pageviewId;
           if (page.owed) sendEngagement(page);
         });
     },

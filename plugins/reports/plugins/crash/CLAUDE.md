@@ -37,6 +37,15 @@ it): filed — a page fetch's rejection names its URL and caller
 phone's backgrounded tab), or the whole host: a console warning, no report.
 `web/internal/fetch-no-answer.ts`.
 
+This is a backstop, not where expected losses are handled. A caller to whom a
+lost send is harmless handles it itself (`isLostInTransit`, infra/endpoints),
+so its loss never reaches here: the page-telemetry beacons (analytics collect,
+the slow-op queue) do. The probe cannot judge them anyway — it runs after the
+loss, so a beacon cut off while the tab was hidden met a host that answered
+again by then and was filed (equin.ai, 2026-11-19 → 11-22: 49 analytics
+collect `EndpointNetworkError`s across 6 reports, all after the probe landed).
+Never add a filter here for one more kind of loss: fix the caller.
+
 ## A page leaving is not a crash
 
 When a document goes away (navigation, reload, closed tab, removed frame),
