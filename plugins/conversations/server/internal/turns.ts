@@ -445,7 +445,10 @@ function messageOf(err: unknown): string {
  * A hibernated conversation is resumed first, which stamps `resumingSince`
  * (its status stays `waiting`); the row is then held like any turn sent while
  * the agent comes up, and the flush delivers it once the agent answers. A resume that is refused fails the
- * turn: falling through would send it to an agent that is not there.
+ * turn: falling through would send it to an agent that is not there. The
+ * agent's start runs after the resume returns: one that fails re-hibernates the
+ * row and tells the user, and the held turn waits for the next resume, which
+ * flushes it (as for any resume whose process ended — status-reconciler).
  *
  * `resumeStopped`: a stopped (`gone` / `done`) conversation is resumed the
  * same way (Resume: status back to `starting`), and the row held for the flush.

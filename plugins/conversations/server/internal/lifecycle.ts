@@ -980,6 +980,80 @@ async function beginRespawnResume(
   };
 }
 
+/**
+ * {@link beginRespawnResume} for a request that answers before the new agent
+ * is up (Rewind, a hibernation resume): resolves once the old agent is stopped
+ * and the row marked coming up — every turn sent from then on is held for the
+ * new agent — and runs the start as its own tracked background entry, so its
+ * process start and Claude Code initialize (1–5 s) are not charged to the
+ * request. Its outcome is handled from here: `onStarted` once the agent is up;
+ * on failure (the row already put back by the create's catch) `onFailed`,
+ * still under the launch's inline hold, then the user is told on the conversation, and the rejection, left unhandled, is
+ * filed as a crash report with the agent's own output.
+ *
+ * A refusal or failure BEFORE the start (preflight, stopping the old agent)
+ * still throws to the caller.
+ */
+async function beginBackgroundRespawn(
+  row: Conversation,
+  {
+    fresh,
+    name,
+    failureTitle,
+    dedupeKey,
+    onStarted,
+    onFailed,
+  }: {
+    fresh?: boolean;
+    /** The background entry's name; its settle handling runs as `<name>-settled`. */
+    name: string;
+    failureTitle: string;
+    dedupeKey: string;
+    onStarted?: () => Promise<void>;
+    onFailed?: () => Promise<void>;
+  },
+): Promise<void> {
+  const { created } = await beginRespawnResume(row, {
+    fresh,
+    // `onFailed` runs inside the create, so still under its inline-launch
+    // hold: the row it restores is never seen settled by a reconcile (or
+    // claimed by another launch) in between.
+    runCreate: (create) =>
+      runInRootContext(() =>
+        runTracked(name, async () => {
+          try {
+            await create();
+          } catch (err) {
+            await onFailed?.();
+            throw err;
+          }
+        }),
+      ),
+  });
+  // Handled from here on, before any other await.
+  const settled = created.then(
+    async () => {
+      await onStarted?.();
+    },
+    async (err: unknown) => {
+      await recordNotification({
+        type: "conversation",
+        category: "conversations",
+        title: failureTitle,
+        description: "",
+        subjectId: row.id,
+        subjectName: conversationName(row),
+        detail: err instanceof Error ? err.message : String(err),
+        variant: "error",
+        linkTo: conversationRoute.link(agentManagerApp, { convId: row.id }),
+        dedupeKey,
+      });
+      throw err;
+    },
+  );
+  void runTracked(`${name}-settled`, () => settled);
+}
+
 // The status a row whose resume failed goes back to: the one it had, except a
 // live one — the agent was just deleted, so nothing is starting or computing,
 // and `waiting` is what a hibernated conversation shows.
@@ -1136,13 +1210,25 @@ export async function ensureResumed(id: string): Promise<ResumeOutcome> {
     if (!(await claimHibernatedResume(id, new Date()))) {
       return { kind: "not-hibernated" } as const;
     }
-    try {
-      await respawnResume(row);
-    } catch (err) {
-      // Still hibernated: the claim is released, and the next open (or sent
-      // turn) claims it again.
+    // Still hibernated after a failure: the claim is released, and the next
+    // open (or sent turn) claims it again.
+    const release = async () => {
       await updateConversation(id, { resumingSince: null });
       await setConversationHibernated(id, row.hibernatedAt);
+    };
+    // Answers once the old agent is stopped and the row stamped
+    // `resumingSince` (turns sent meanwhile are held for the new agent): the
+    // open never waits for the agent's start and its Claude Code's initialize
+    // (2026-11-23: ~2.2 s of a 2.4 s resume, report-1795096200-6tz7dr).
+    try {
+      await beginBackgroundRespawn(row, {
+        name: "conversations.hibernation-resume",
+        failureTitle: "Couldn't resume the conversation's agent",
+        dedupeKey: `conversation-resume-failed:${id}`,
+        onFailed: release,
+      });
+    } catch (err) {
+      await release();
       throw err;
     }
     return { kind: "resumed" } as const;
@@ -1260,42 +1346,19 @@ export async function rewindConversationAt(
   // click never waits for a process start and its Claude Code's initialize
   // (2026-11-19: 4.8 s of a 5.5 s rewind): every turn sent meanwhile is held
   // for the new agent, and the conversation shows it coming up.
-  const { created } = await beginRespawnResume(row, {
+  await beginBackgroundRespawn(row, {
     fresh: startsOver,
-    runCreate: (create) =>
-      runInRootContext(() =>
-        runTracked("conversations.rewind-relaunch", create),
-      ),
-  });
-  // Handled from here on, before any other await: a start that fails puts the
-  // row back itself (hibernated on the next sweep, resumed by the next sent
-  // turn); the user is told on the conversation, and the rejection, left
-  // unhandled, is filed as a crash report with the agent's own output.
-  const settled = created.then(
-    async () => {
+    name: "conversations.rewind-relaunch",
+    failureTitle: "Couldn't restart the agent after the rewind",
+    dedupeKey: `conversation-rewind-failed:${id}`,
+    onStarted: async () => {
       // Rewinding a closed conversation re-opens it, exactly like the Resume
       // button — once its agent is up, as the Resume button's does.
       if (row.status === "gone" || row.status === "done") {
         await updateTask(row.taskId, { drop: false, hold: false });
       }
     },
-    async (err: unknown) => {
-      await recordNotification({
-        type: "conversation",
-        category: "conversations",
-        title: "Couldn't restart the agent after the rewind",
-        description: "",
-        subjectId: id,
-        subjectName: conversationName(row),
-        detail: err instanceof Error ? err.message : String(err),
-        variant: "error",
-        linkTo: conversationRoute.link(agentManagerApp, { convId: id }),
-        dedupeKey: `conversation-rewind-failed:${id}`,
-      });
-      throw err;
-    },
-  );
-  void runTracked("conversations.rewind-relaunch-settled", () => settled);
+  });
   await setConversationHibernated(id, null);
 
   return { ok: true, rewindText: located.cut.messageText };
