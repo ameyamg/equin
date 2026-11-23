@@ -730,7 +730,7 @@ export const compositionsConfig = defineConfig({
         app("home", { entryPoints: ["apps.home.**"] }),
         app("pages", { entryPoints: ["apps.pages.**"] }),
         app("settings", { entryPoints: ["apps.settings.**"] }),
-        app("studio", { entryPoints: ["apps.studio.**"] }),
+        app("studio", { entryPoints: ["apps.plugin-studio.**"] }),
         // The linchpin edge is now CUT: infra.health no longer hard-imports
         // reports (its wedge watchdog emits onto a neutral report-sink that
         // reports.crash registers into), so served-baseline no longer drags

@@ -221,7 +221,7 @@ row, or on a failed re-read the row as last seen).
     - `apps/deploy/deploy-history`
     - `apps/deploy/deploy-history/investigate-failure`
     - `apps/deploy/deployments/runs-arm`
-    - `apps/studio/compositions/release`
+    - `apps/plugin-studio/compositions/release`
     - `backup`
     - `backup/runs-arm`
     - `build`

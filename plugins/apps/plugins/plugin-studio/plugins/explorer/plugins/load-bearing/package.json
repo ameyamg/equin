@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-plugin-studio-explorer-load-bearing",
+  "description": "Load-bearing badge in the explorer plugin tree row.",
+  "private": true,
+  "version": "0.0.1"
+}

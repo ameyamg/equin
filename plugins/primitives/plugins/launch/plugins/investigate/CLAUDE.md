@@ -34,7 +34,7 @@
     - `apps/deploy/site-messages/inbox`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
-    - `apps/studio/compositions/release`
+    - `apps/plugin-studio/compositions/release`
     - `build/build-fix`
     - `debug/background/investigate`
     - `debug/reports`

@@ -1,4 +1,4 @@
-// @hash 2edbc8f65dc5
+// @hash bcce067345da
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -36,7 +36,7 @@
     "apps.chord.shell:chord",
     "apps.browser.shell:browser",
     { "type": "spacer", "id": "spacer-1" },
-    "apps.studio.shell:studio",
+    "apps.plugin-studio.shell:studio",
     "apps.website.shell:website",
     "apps.deploy.shell:deploy",
     "apps.debug.shell:debug",

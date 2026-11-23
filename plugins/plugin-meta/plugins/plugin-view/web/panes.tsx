@@ -3,7 +3,7 @@ import {
   PaneChrome,
   defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
+import { studioApp } from "@plugins/apps/plugins/plugin-studio/plugins/shell/core";
 import {
   PluginDetailForId,
   usePluginDisplayName,

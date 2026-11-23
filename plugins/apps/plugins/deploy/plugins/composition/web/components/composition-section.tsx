@@ -11,8 +11,8 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
-import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
-import { compositionDetailRoute } from "@plugins/apps/plugins/studio/plugins/compositions/core";
+import { studioApp } from "@plugins/apps/plugins/plugin-studio/plugins/shell/core";
+import { compositionDetailRoute } from "@plugins/apps/plugins/plugin-studio/plugins/compositions/core";
 import { deployments } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -98,7 +98,7 @@ function CompositionCard({
           <LinkChip
             mono
             leading={<Icon icon={layersIcon} />}
-            tooltip={`Open “${item.name}” in Studio`}
+            tooltip={`Open “${item.name}” in ${studioApp.name}`}
             activation={inAppLink(
               compositionDetailRoute.link(studioApp, { id: item.id }),
             )}
@@ -109,8 +109,8 @@ function CompositionCard({
         </Cluster>
         <Text as="p" variant="caption" tone="muted">
           The plugin closure this deployment builds and ships. What is in it —
-          entry points, opted-in contributors, what it extends — is edited in
-          Studio; the deployment only says where it is served.
+          entry points, opted-in contributors, what it extends — is edited in{" "}
+          {studioApp.name}; the deployment only says where it is served.
         </Text>
       </Stack>
 

@@ -128,5 +128,10 @@
     "at": "2026-11-18T14:06:00.079Z",
     "from": "packages.vm-stat",
     "to": "packages.host-memory"
+  },
+  {
+    "at": "2026-11-23T13:55:18.926Z",
+    "from": "apps.studio",
+    "to": "apps.plugin-studio"
   }
 ]

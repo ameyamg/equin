@@ -20,6 +20,7 @@ import {
   useSyncPaneRegistry,
   useRenderSync,
 } from "@plugins/primitives/plugins/pane/web";
+import { movedAppPath } from "@plugins/primitives/plugins/pane/core";
 import { documentTitle, type RailFramingProps } from "@plugins/apps-core/core";
 import {
   Apps,
@@ -59,8 +60,17 @@ import { resolveUnmatchedUrl } from "../internal/unmatched-url";
  * post-redirect URL, and the preserved route is `[]`/pending (an unmatched URL
  * seeds no resolved route). Nothing stale survives the rewrite.
  */
-function redirectTo(url: string) {
-  window.history.replaceState(window.history.state ?? {}, "", url);
+/**
+ * Replace the address bar. `reparse` writes an entry with no tab snapshot, so
+ * the tabs layer re-reads the URL instead of restoring the snapshot the old
+ * address was stamped with.
+ */
+function redirectTo(url: string, reparse = false) {
+  window.history.replaceState(
+    reparse ? {} : (window.history.state ?? {}),
+    "",
+    url,
+  );
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.dispatchEvent(new CustomEvent("shell:navigate"));
 }
@@ -127,6 +137,15 @@ export function AppsLayout() {
   // (theme/rail) legitimately follows the focused tab via `activeApp`; URL
   // adjudication legitimately follows the URL — kept apart.
   const urlMatchedId = matchAppForPath(pathname, apps)?.id;
+  // An address under an app's former base path (`/studio/x` after the app
+  // moved to `/plugins`) is that app's page under its new name — the same 301
+  // an HTTP host answers. Rewritten in place: nothing is lost, only renamed.
+  const movedTo = urlMatchedId
+    ? null
+    : movedAppPath(
+        pathname,
+        apps.map((a) => a.app),
+      );
   const home = useHomeApp();
   const homeEntry = home.kind === "app" ? home.app : undefined;
   const homePath = homeEntry?.app.basePath;
@@ -138,16 +157,24 @@ export function AppsLayout() {
   // canonicalize, nor a broken link.
   const barePrefix = pathname === "/" && currentRoutePrefix() !== undefined;
   const outcome = resolveUnmatchedUrl({
-    matched: !!urlMatchedId || barePrefix,
+    matched: !!urlMatchedId || barePrefix || movedTo !== null,
     home: home.kind,
     isBareRoot: pathname === "/" && !barePrefix,
     deferredComplete,
     anyAppShellLoadError,
   });
 
+  // Follow a moved app to its new base path (search, hash and a surface
+  // mode's route prefix kept). Not destructive: the page is the same one.
+  useEffect(() => {
+    if (movedTo === null) return;
+    const { search, hash } = window.location;
+    redirectTo((currentRoutePrefix() ?? "") + movedTo + search + hash, true);
+  }, [movedTo]);
+
   // Canonicalize bare `/` to the composition's home app — the one its manifest
-  // declares, never whichever app registered first. This is the ONLY raw `replaceState`
-  // redirect in the app, and it is DESTRUCTIVE — it overwrites the address bar —
+  // declares, never whichever app registered first. This is the only DESTRUCTIVE
+  // raw `replaceState` redirect in the app — it overwrites the address bar —
   // so it fires ONLY where there is nothing to destroy. A non-bare unmatched
   // path is a broken link, not a path to canonicalize: it keeps its URL and gets
   // the not-found surface below.

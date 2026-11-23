@@ -546,10 +546,10 @@ remote is built here.
     - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/remote-deploy`
-    - `apps/studio/compositions/release`
-    - `apps/studio/compositions/release/release-artifact`
-    - `apps/studio/compositions/release/release-info`
-    - `apps/studio/compositions/release/release-logs`
+    - `apps/plugin-studio/compositions/release`
+    - `apps/plugin-studio/compositions/release/release-artifact`
+    - `apps/plugin-studio/compositions/release/release-info`
+    - `apps/plugin-studio/compositions/release/release-logs`
     - `auth/apple-signing`
     - `framework/cli/deploy`
     - `framework/cli/release`

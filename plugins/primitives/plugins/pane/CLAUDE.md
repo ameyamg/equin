@@ -1163,6 +1163,7 @@ out of the way: **what it opens takes its column**.
     - `joinBasePath`
     - `joinUrlParts`
     - `MissingRouteParamError`
+    - `movedAppPath`
     - `normalizeRoutePath`
     - `onlySurfaceViews`
     - `parseSegmentParts`

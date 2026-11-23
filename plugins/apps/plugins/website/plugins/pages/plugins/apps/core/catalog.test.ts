@@ -14,7 +14,7 @@ import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import { placesApp } from "@plugins/apps/plugins/places/plugins/shell/core";
 import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
-import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
+import { studioApp } from "@plugins/apps/plugins/plugin-studio/plugins/shell/core";
 import { APPS } from "./catalog";
 
 // The catalog copies each app's glyph as text (importing an app's shell would

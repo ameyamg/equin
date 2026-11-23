@@ -242,7 +242,7 @@ try {
     }
 
     // 7b. Studio's plugin Files section (collapsed until opened).
-    await boot(page, pathUrl("/studio/p/apps.file-explorer.git"), {
+    await boot(page, pathUrl("/plugins/p/apps.file-explorer.git"), {
       settleMs: 1500,
     });
     await page.getByText("Files", { exact: true }).first().click();

@@ -157,7 +157,7 @@ how the caller obtained it.
   - Imported by:
     - `apps/deploy/deploy-history`
     - `apps/events/sources/source-detail/runs`
-    - `apps/studio/compositions/release`
+    - `apps/plugin-studio/compositions/release`
     - `runs`
 - Exemptions:
   - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-custom-column-defs.ts` (debt)

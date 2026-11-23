@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-plugin-studio-contributions-tables-indexes",
+  "description": "Table indexes section in the table detail view.",
+  "private": true,
+  "version": "0.0.1"
+}

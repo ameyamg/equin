@@ -506,7 +506,7 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deploy-secrets/approvals`
-    - `apps/studio/compositions/contributors`
+    - `apps/plugin-studio/compositions/contributors`
     - `framework/cli/build`
     - `framework/cli/deploy`
     - `framework/tooling/codegen`

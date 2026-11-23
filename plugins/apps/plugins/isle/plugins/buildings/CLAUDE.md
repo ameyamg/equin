@@ -71,10 +71,10 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `Isle.Building` ← `apps.mail.isle-building`
     - `Isle.Building` ← `apps.pages.isle-building`
     - `Isle.Building` ← `apps.places.isle-building`
+    - `Isle.Building` ← `apps.plugin-studio.isle-building`
     - `Isle.Building` ← `apps.prototypes.isle-building`
     - `Isle.Building` ← `apps.settings.isle-building`
     - `Isle.Building` ← `apps.sonata.isle-building`
-    - `Isle.Building` ← `apps.studio.isle-building`
   - Exports (types): `IsleBuildingContribution`
   - Exports (values):
     - `Isle`
@@ -174,10 +174,10 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `apps/mail/isle-building`
     - `apps/pages/isle-building`
     - `apps/places/isle-building`
+    - `apps/plugin-studio/isle-building`
     - `apps/prototypes/isle-building`
     - `apps/settings/isle-building`
     - `apps/sonata/isle-building`
-    - `apps/studio/isle-building`
 - Test helpers:
   - Core: `@plugins/apps/plugins/isle/plugins/buildings/core/testing`
     - `boxWithin` — Whether `inner` lies inside `outer`, give or take `tolerance` px on each side.

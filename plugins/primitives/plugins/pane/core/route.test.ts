@@ -3,6 +3,7 @@ import {
   defineApp,
   defineRoute,
   MissingRouteParamError,
+  movedAppPath,
   normalizeRoutePath,
   fillSegment,
   indexKeyedSuffix,
@@ -547,5 +548,21 @@ describe("segmentCollision", () => {
     expect(segmentCollision("at/:url*", "at")).toBe(null);
     expect(segmentCollision("exhibit/:id*", "exhibit-stage/:id*")).toBe(null);
     expect(segmentCollision("at/:url*", "browse/:dir")).toBe(null);
+  });
+});
+
+describe("movedAppPath", () => {
+  const apps = [
+    { basePath: "/plugins", formerBasePaths: ["/studio"] },
+    { basePath: "/agents" },
+  ];
+  test("moves a path under a former base path to the current one", () => {
+    expect(movedAppPath("/studio", apps)).toBe("/plugins");
+    expect(movedAppPath("/studio/explorer", apps)).toBe("/plugins/explorer");
+    expect(movedAppPath("/studio;view.x=y", apps)).toBe("/plugins;view.x=y");
+  });
+  test("leaves every other path alone", () => {
+    expect(movedAppPath("/studios", apps)).toBeNull();
+    expect(movedAppPath("/agents/c/1", apps)).toBeNull();
   });
 });

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-plugin-studio-compositions-draft-actions",
+  "description": "Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.",
+  "private": true,
+  "version": "0.0.1"
+}

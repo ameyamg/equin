@@ -27,6 +27,12 @@
 //   - apps/plugins/keyboard-party/plugins/party: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
+//   - apps/plugins/plugin-studio/plugins/compositions: dependency closure (imported by an eager plugin)
+//   - apps/plugins/plugin-studio/plugins/compositions/plugins/release: dependency closure (imported by an eager plugin)
+//   - apps/plugins/plugin-studio/plugins/explorer: dependency closure (imported by an eager plugin)
+//   - apps/plugins/plugin-studio/plugins/explorer/plugins/membership: dependency closure (imported by an eager plugin)
+//   - apps/plugins/plugin-studio/plugins/graph: dependency closure (imported by an eager plugin)
+//   - apps/plugins/plugin-studio/plugins/membership-tint: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/files: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/icons: dependency closure (imported by an eager plugin)
@@ -38,12 +44,6 @@
 //   - apps/plugins/sonata/plugins/primitives/plugins/glass: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/session: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/view-options: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/compositions: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/compositions/plugins/release: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/explorer: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/explorer/plugins/membership: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/graph: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/membership-tint: dependency closure (imported by an eager plugin)
 //   - apps/plugins/website/plugins/pages/plugins/guide: dependency closure (imported by an eager plugin)
 
 export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
@@ -152,6 +152,27 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/places/plugins/place-details",
   "apps/plugins/places/plugins/places-core",
   "apps/plugins/places/plugins/places-map",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/closure-tree",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/contributors",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/draft-actions",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/entry-points",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/home",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/membership-summary",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-artifact",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-info",
+  "apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-logs",
+  "apps/plugins/plugin-studio/plugins/contributions",
+  "apps/plugins/plugin-studio/plugins/contributions/plugins/tables",
+  "apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/columns",
+  "apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/foreign-keys",
+  "apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/indexes",
+  "apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/row-count",
+  "apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/sample-rows",
+  "apps/plugins/plugin-studio/plugins/explorer/plugins/child-count",
+  "apps/plugins/plugin-studio/plugins/explorer/plugins/collapsed",
+  "apps/plugins/plugin-studio/plugins/explorer/plugins/excluded",
+  "apps/plugins/plugin-studio/plugins/explorer/plugins/load-bearing",
+  "apps/plugins/plugin-studio/plugins/isle-building",
   "apps/plugins/prototypes/plugins/compare",
   "apps/plugins/prototypes/plugins/compare/plugins/exhibit",
   "apps/plugins/prototypes/plugins/compare/plugins/route",
@@ -229,27 +250,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/transcription",
   "apps/plugins/sonata/plugins/transport-bar",
   "apps/plugins/sonata/plugins/transpose",
-  "apps/plugins/studio/plugins/compositions/plugins/closure-tree",
-  "apps/plugins/studio/plugins/compositions/plugins/contributors",
-  "apps/plugins/studio/plugins/compositions/plugins/draft-actions",
-  "apps/plugins/studio/plugins/compositions/plugins/entry-points",
-  "apps/plugins/studio/plugins/compositions/plugins/home",
-  "apps/plugins/studio/plugins/compositions/plugins/membership-summary",
-  "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-artifact",
-  "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-info",
-  "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-logs",
-  "apps/plugins/studio/plugins/contributions",
-  "apps/plugins/studio/plugins/contributions/plugins/tables",
-  "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns",
-  "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys",
-  "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes",
-  "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count",
-  "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows",
-  "apps/plugins/studio/plugins/explorer/plugins/child-count",
-  "apps/plugins/studio/plugins/explorer/plugins/collapsed",
-  "apps/plugins/studio/plugins/explorer/plugins/excluded",
-  "apps/plugins/studio/plugins/explorer/plugins/load-bearing",
-  "apps/plugins/studio/plugins/isle-building",
   "apps/plugins/website/plugins/app-tiles",
   "apps/plugins/website/plugins/demos/plugins/workspace",
   "apps/plugins/website/plugins/improve",

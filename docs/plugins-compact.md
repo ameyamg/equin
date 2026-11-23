@@ -22,10 +22,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`mail`** [exempt] [13 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [18 sub-plugins] — Notion-like pages app.
     - **`places`** [test helpers] [exempt] [10 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
+    - **`plugin-studio`** [exempt] [28 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`prototypes`** [test helpers] [18 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
     - **`settings`** [5 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [86 sub-plugins] — Sonata — extensible piano and music app.
-    - **`studio`** [exempt] [28 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`website`** [test helpers] [33 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the…

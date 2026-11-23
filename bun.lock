@@ -969,6 +969,122 @@
       "name": "@equin/plugin-apps-places-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/plugin-studio": {
+      "name": "@equin/plugin-apps-plugin-studio",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/closure-tree": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-closure-tree",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/contributors": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-contributors",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/draft-actions": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-draft-actions",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/entry-points": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-entry-points",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/home": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-home",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/membership-summary": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-membership-summary",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-release",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-artifact": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-release-release-artifact",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-info": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-release-release-info",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-logs": {
+      "name": "@equin/plugin-apps-plugin-studio-compositions-release-release-logs",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/contributions": {
+      "name": "@equin/plugin-apps-plugin-studio-contributions",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables": {
+      "name": "@equin/plugin-apps-plugin-studio-contributions-tables",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/columns": {
+      "name": "@equin/plugin-apps-plugin-studio-contributions-tables-columns",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/foreign-keys": {
+      "name": "@equin/plugin-apps-plugin-studio-contributions-tables-foreign-keys",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/indexes": {
+      "name": "@equin/plugin-apps-plugin-studio-contributions-tables-indexes",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/row-count": {
+      "name": "@equin/plugin-apps-plugin-studio-contributions-tables-row-count",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/sample-rows": {
+      "name": "@equin/plugin-apps-plugin-studio-contributions-tables-sample-rows",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/explorer": {
+      "name": "@equin/plugin-apps-plugin-studio-explorer",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/child-count": {
+      "name": "@equin/plugin-apps-plugin-studio-explorer-child-count",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/collapsed": {
+      "name": "@equin/plugin-apps-plugin-studio-explorer-collapsed",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/excluded": {
+      "name": "@equin/plugin-apps-plugin-studio-explorer-excluded",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/load-bearing": {
+      "name": "@equin/plugin-apps-plugin-studio-explorer-load-bearing",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/membership": {
+      "name": "@equin/plugin-apps-plugin-studio-explorer-membership",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/graph": {
+      "name": "@equin/plugin-apps-plugin-studio-graph",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/isle-building": {
+      "name": "@equin/plugin-apps-plugin-studio-isle-building",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/membership-tint": {
+      "name": "@equin/plugin-apps-plugin-studio-membership-tint",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/plugin-studio/plugins/shell": {
+      "name": "@equin/plugin-apps-plugin-studio-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes": {
       "name": "@equin/plugin-apps-prototypes",
       "version": "0.0.1",
@@ -1454,122 +1570,6 @@
     },
     "plugins/apps/plugins/sonata/plugins/voicing": {
       "name": "@equin/plugin-apps-sonata-voicing",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio": {
-      "name": "@equin/plugin-apps-studio",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions": {
-      "name": "@equin/plugin-apps-studio-compositions",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree": {
-      "name": "@equin/plugin-apps-studio-compositions-closure-tree",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/contributors": {
-      "name": "@equin/plugin-apps-studio-compositions-contributors",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/draft-actions": {
-      "name": "@equin/plugin-apps-studio-compositions-draft-actions",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/entry-points": {
-      "name": "@equin/plugin-apps-studio-compositions-entry-points",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/home": {
-      "name": "@equin/plugin-apps-studio-compositions-home",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/membership-summary": {
-      "name": "@equin/plugin-apps-studio-compositions-membership-summary",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/release": {
-      "name": "@equin/plugin-apps-studio-compositions-release",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-artifact": {
-      "name": "@equin/plugin-apps-studio-compositions-release-release-artifact",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-info": {
-      "name": "@equin/plugin-apps-studio-compositions-release-release-info",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-logs": {
-      "name": "@equin/plugin-apps-studio-compositions-release-release-logs",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/contributions": {
-      "name": "@equin/plugin-apps-studio-contributions",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables": {
-      "name": "@equin/plugin-apps-studio-contributions-tables",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns": {
-      "name": "@equin/plugin-apps-studio-contributions-tables-columns",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys": {
-      "name": "@equin/plugin-apps-studio-contributions-tables-foreign-keys",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes": {
-      "name": "@equin/plugin-apps-studio-contributions-tables-indexes",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count": {
-      "name": "@equin/plugin-apps-studio-contributions-tables-row-count",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows": {
-      "name": "@equin/plugin-apps-studio-contributions-tables-sample-rows",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/explorer": {
-      "name": "@equin/plugin-apps-studio-explorer",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/explorer/plugins/child-count": {
-      "name": "@equin/plugin-apps-studio-explorer-child-count",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/explorer/plugins/collapsed": {
-      "name": "@equin/plugin-apps-studio-explorer-collapsed",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/explorer/plugins/excluded": {
-      "name": "@equin/plugin-apps-studio-explorer-excluded",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing": {
-      "name": "@equin/plugin-apps-studio-explorer-load-bearing",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/explorer/plugins/membership": {
-      "name": "@equin/plugin-apps-studio-explorer-membership",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/graph": {
-      "name": "@equin/plugin-apps-studio-graph",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/isle-building": {
-      "name": "@equin/plugin-apps-studio-isle-building",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/membership-tint": {
-      "name": "@equin/plugin-apps-studio-membership-tint",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/shell": {
-      "name": "@equin/plugin-apps-studio-shell",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website": {
@@ -8899,6 +8899,64 @@
 
     "@equin/plugin-apps-places-shell": ["@equin/plugin-apps-places-shell@workspace:plugins/apps/plugins/places/plugins/shell"],
 
+    "@equin/plugin-apps-plugin-studio": ["@equin/plugin-apps-plugin-studio@workspace:plugins/apps/plugins/plugin-studio"],
+
+    "@equin/plugin-apps-plugin-studio-compositions": ["@equin/plugin-apps-plugin-studio-compositions@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-closure-tree": ["@equin/plugin-apps-plugin-studio-compositions-closure-tree@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/closure-tree"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-contributors": ["@equin/plugin-apps-plugin-studio-compositions-contributors@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/contributors"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-draft-actions": ["@equin/plugin-apps-plugin-studio-compositions-draft-actions@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/draft-actions"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-entry-points": ["@equin/plugin-apps-plugin-studio-compositions-entry-points@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/entry-points"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-home": ["@equin/plugin-apps-plugin-studio-compositions-home@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/home"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-membership-summary": ["@equin/plugin-apps-plugin-studio-compositions-membership-summary@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/membership-summary"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-release": ["@equin/plugin-apps-plugin-studio-compositions-release@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-release-release-artifact": ["@equin/plugin-apps-plugin-studio-compositions-release-release-artifact@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-artifact"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-release-release-info": ["@equin/plugin-apps-plugin-studio-compositions-release-release-info@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-info"],
+
+    "@equin/plugin-apps-plugin-studio-compositions-release-release-logs": ["@equin/plugin-apps-plugin-studio-compositions-release-release-logs@workspace:plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/plugins/release-logs"],
+
+    "@equin/plugin-apps-plugin-studio-contributions": ["@equin/plugin-apps-plugin-studio-contributions@workspace:plugins/apps/plugins/plugin-studio/plugins/contributions"],
+
+    "@equin/plugin-apps-plugin-studio-contributions-tables": ["@equin/plugin-apps-plugin-studio-contributions-tables@workspace:plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables"],
+
+    "@equin/plugin-apps-plugin-studio-contributions-tables-columns": ["@equin/plugin-apps-plugin-studio-contributions-tables-columns@workspace:plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/columns"],
+
+    "@equin/plugin-apps-plugin-studio-contributions-tables-foreign-keys": ["@equin/plugin-apps-plugin-studio-contributions-tables-foreign-keys@workspace:plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/foreign-keys"],
+
+    "@equin/plugin-apps-plugin-studio-contributions-tables-indexes": ["@equin/plugin-apps-plugin-studio-contributions-tables-indexes@workspace:plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/indexes"],
+
+    "@equin/plugin-apps-plugin-studio-contributions-tables-row-count": ["@equin/plugin-apps-plugin-studio-contributions-tables-row-count@workspace:plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/row-count"],
+
+    "@equin/plugin-apps-plugin-studio-contributions-tables-sample-rows": ["@equin/plugin-apps-plugin-studio-contributions-tables-sample-rows@workspace:plugins/apps/plugins/plugin-studio/plugins/contributions/plugins/tables/plugins/sample-rows"],
+
+    "@equin/plugin-apps-plugin-studio-explorer": ["@equin/plugin-apps-plugin-studio-explorer@workspace:plugins/apps/plugins/plugin-studio/plugins/explorer"],
+
+    "@equin/plugin-apps-plugin-studio-explorer-child-count": ["@equin/plugin-apps-plugin-studio-explorer-child-count@workspace:plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/child-count"],
+
+    "@equin/plugin-apps-plugin-studio-explorer-collapsed": ["@equin/plugin-apps-plugin-studio-explorer-collapsed@workspace:plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/collapsed"],
+
+    "@equin/plugin-apps-plugin-studio-explorer-excluded": ["@equin/plugin-apps-plugin-studio-explorer-excluded@workspace:plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/excluded"],
+
+    "@equin/plugin-apps-plugin-studio-explorer-load-bearing": ["@equin/plugin-apps-plugin-studio-explorer-load-bearing@workspace:plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/load-bearing"],
+
+    "@equin/plugin-apps-plugin-studio-explorer-membership": ["@equin/plugin-apps-plugin-studio-explorer-membership@workspace:plugins/apps/plugins/plugin-studio/plugins/explorer/plugins/membership"],
+
+    "@equin/plugin-apps-plugin-studio-graph": ["@equin/plugin-apps-plugin-studio-graph@workspace:plugins/apps/plugins/plugin-studio/plugins/graph"],
+
+    "@equin/plugin-apps-plugin-studio-isle-building": ["@equin/plugin-apps-plugin-studio-isle-building@workspace:plugins/apps/plugins/plugin-studio/plugins/isle-building"],
+
+    "@equin/plugin-apps-plugin-studio-membership-tint": ["@equin/plugin-apps-plugin-studio-membership-tint@workspace:plugins/apps/plugins/plugin-studio/plugins/membership-tint"],
+
+    "@equin/plugin-apps-plugin-studio-shell": ["@equin/plugin-apps-plugin-studio-shell@workspace:plugins/apps/plugins/plugin-studio/plugins/shell"],
+
     "@equin/plugin-apps-prototypes": ["@equin/plugin-apps-prototypes@workspace:plugins/apps/plugins/prototypes"],
 
     "@equin/plugin-apps-prototypes-canvas": ["@equin/plugin-apps-prototypes-canvas@workspace:plugins/apps/plugins/prototypes/plugins/canvas"],
@@ -9122,64 +9180,6 @@
     "@equin/plugin-apps-sonata-view-options": ["@equin/plugin-apps-sonata-view-options@workspace:plugins/apps/plugins/sonata/plugins/view-options"],
 
     "@equin/plugin-apps-sonata-voicing": ["@equin/plugin-apps-sonata-voicing@workspace:plugins/apps/plugins/sonata/plugins/voicing"],
-
-    "@equin/plugin-apps-studio": ["@equin/plugin-apps-studio@workspace:plugins/apps/plugins/studio"],
-
-    "@equin/plugin-apps-studio-compositions": ["@equin/plugin-apps-studio-compositions@workspace:plugins/apps/plugins/studio/plugins/compositions"],
-
-    "@equin/plugin-apps-studio-compositions-closure-tree": ["@equin/plugin-apps-studio-compositions-closure-tree@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree"],
-
-    "@equin/plugin-apps-studio-compositions-contributors": ["@equin/plugin-apps-studio-compositions-contributors@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/contributors"],
-
-    "@equin/plugin-apps-studio-compositions-draft-actions": ["@equin/plugin-apps-studio-compositions-draft-actions@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/draft-actions"],
-
-    "@equin/plugin-apps-studio-compositions-entry-points": ["@equin/plugin-apps-studio-compositions-entry-points@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/entry-points"],
-
-    "@equin/plugin-apps-studio-compositions-home": ["@equin/plugin-apps-studio-compositions-home@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/home"],
-
-    "@equin/plugin-apps-studio-compositions-membership-summary": ["@equin/plugin-apps-studio-compositions-membership-summary@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/membership-summary"],
-
-    "@equin/plugin-apps-studio-compositions-release": ["@equin/plugin-apps-studio-compositions-release@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release"],
-
-    "@equin/plugin-apps-studio-compositions-release-release-artifact": ["@equin/plugin-apps-studio-compositions-release-release-artifact@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-artifact"],
-
-    "@equin/plugin-apps-studio-compositions-release-release-info": ["@equin/plugin-apps-studio-compositions-release-release-info@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-info"],
-
-    "@equin/plugin-apps-studio-compositions-release-release-logs": ["@equin/plugin-apps-studio-compositions-release-release-logs@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-logs"],
-
-    "@equin/plugin-apps-studio-contributions": ["@equin/plugin-apps-studio-contributions@workspace:plugins/apps/plugins/studio/plugins/contributions"],
-
-    "@equin/plugin-apps-studio-contributions-tables": ["@equin/plugin-apps-studio-contributions-tables@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables"],
-
-    "@equin/plugin-apps-studio-contributions-tables-columns": ["@equin/plugin-apps-studio-contributions-tables-columns@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns"],
-
-    "@equin/plugin-apps-studio-contributions-tables-foreign-keys": ["@equin/plugin-apps-studio-contributions-tables-foreign-keys@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys"],
-
-    "@equin/plugin-apps-studio-contributions-tables-indexes": ["@equin/plugin-apps-studio-contributions-tables-indexes@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes"],
-
-    "@equin/plugin-apps-studio-contributions-tables-row-count": ["@equin/plugin-apps-studio-contributions-tables-row-count@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count"],
-
-    "@equin/plugin-apps-studio-contributions-tables-sample-rows": ["@equin/plugin-apps-studio-contributions-tables-sample-rows@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows"],
-
-    "@equin/plugin-apps-studio-explorer": ["@equin/plugin-apps-studio-explorer@workspace:plugins/apps/plugins/studio/plugins/explorer"],
-
-    "@equin/plugin-apps-studio-explorer-child-count": ["@equin/plugin-apps-studio-explorer-child-count@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/child-count"],
-
-    "@equin/plugin-apps-studio-explorer-collapsed": ["@equin/plugin-apps-studio-explorer-collapsed@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/collapsed"],
-
-    "@equin/plugin-apps-studio-explorer-excluded": ["@equin/plugin-apps-studio-explorer-excluded@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/excluded"],
-
-    "@equin/plugin-apps-studio-explorer-load-bearing": ["@equin/plugin-apps-studio-explorer-load-bearing@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing"],
-
-    "@equin/plugin-apps-studio-explorer-membership": ["@equin/plugin-apps-studio-explorer-membership@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/membership"],
-
-    "@equin/plugin-apps-studio-graph": ["@equin/plugin-apps-studio-graph@workspace:plugins/apps/plugins/studio/plugins/graph"],
-
-    "@equin/plugin-apps-studio-isle-building": ["@equin/plugin-apps-studio-isle-building@workspace:plugins/apps/plugins/studio/plugins/isle-building"],
-
-    "@equin/plugin-apps-studio-membership-tint": ["@equin/plugin-apps-studio-membership-tint@workspace:plugins/apps/plugins/studio/plugins/membership-tint"],
-
-    "@equin/plugin-apps-studio-shell": ["@equin/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@equin/plugin-apps-website": ["@equin/plugin-apps-website@workspace:plugins/apps/plugins/website"],
 

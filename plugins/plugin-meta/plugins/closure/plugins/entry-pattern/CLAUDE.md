@@ -22,8 +22,8 @@ facets.
   - Exports (values): `parseEntryPattern`
 - Cross-plugin:
   - Imported by:
-    - `apps/studio/compositions/entry-points`
-    - `apps/studio/graph`
+    - `apps/plugin-studio/compositions/entry-points`
+    - `apps/plugin-studio/graph`
     - `framework/cli/release`
     - `plugin-meta/closure`
     - `plugin-meta/composition`

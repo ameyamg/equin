@@ -344,9 +344,9 @@ code, that is the bug this section exists to prevent.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/local-serve`
-    - `apps/studio/compositions`
-    - `apps/studio/compositions/draft-actions`
-    - `apps/studio/compositions/release`
+    - `apps/plugin-studio/compositions`
+    - `apps/plugin-studio/compositions/draft-actions`
+    - `apps/plugin-studio/compositions/release`
     - `apps/website/promo-film`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)

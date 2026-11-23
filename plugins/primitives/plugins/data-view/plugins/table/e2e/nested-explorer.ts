@@ -73,7 +73,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1280, height: 900 },
   });
 
-  await boot(page, pathUrl("/studio/explorer"), {
+  await boot(page, pathUrl("/plugins/explorer"), {
     marker: "[data-view-type='table']",
     settleMs: 800,
   });

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-plugin-studio-explorer",
+  "description": "Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.",
+  "private": true,
+  "version": "0.0.1"
+}

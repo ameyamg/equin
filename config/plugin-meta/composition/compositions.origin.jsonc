@@ -1,4 +1,4 @@
-// @hash b113afbdac55
+// @hash 099e1b037021
 {
   "manifests": [
     {
@@ -352,7 +352,7 @@
         "desktop"
       ],
       "entryPoints": [
-        "apps.studio.**"
+        "apps.plugin-studio.**"
       ],
       "selectedContributors": [],
       "extends": [

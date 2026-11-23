@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-plugin-studio-explorer-excluded",
+  "description": "Not-in-the-app badge in the explorer plugin tree row.",
+  "private": true,
+  "version": "0.0.1"
+}

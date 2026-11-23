@@ -4,7 +4,7 @@ import {
   RELEASE_CATEGORY_ID,
   RELEASE_LOG_CHANNEL,
 } from "@plugins/release/core";
-import { releaseDetailPane } from "@plugins/apps/plugins/studio/plugins/compositions/plugins/release/web";
+import { releaseDetailPane } from "@plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/web";
 import { releaseRunArm } from "../core";
 import { releaseRunPresentation } from "./internal/presentation";
 

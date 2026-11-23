@@ -89,7 +89,7 @@ const SURFACES: readonly Surface[] = [
     name: "op-detail",
     path: "/debug/op-profile/4dd06c58-8892-4a34-b38e-7f2e12c2a18e",
   },
-  { name: "compare", path: "/studio/compositions/compare" },
+  { name: "compare", path: "/plugins/compositions/compare" },
   { name: "conv-summary", path: "/agents/c/conv-1777333537-usf7/summary" },
   { name: "server-create", path: "/deploy/servers/server/new" },
   { name: "mail-message", path: (f) => `/mail/search/m/${f.mailMessageId}` },
@@ -140,12 +140,12 @@ const GLOBAL_SURFACES: readonly Surface[] = [
   // A section card body (`rail-x-lg`) holding a DataTable.
   {
     name: "g-studio-table-columns",
-    path: "/studio/t/build/build_runs",
+    path: "/plugins/t/build/build_runs",
     open: "Columns",
   },
   {
     name: "g-studio-table-indexes",
-    path: "/studio/t/build/build_runs",
+    path: "/plugins/t/build/build_runs",
     open: "Indexes",
   },
   // A DataTable in a pane with no region: must be identical.
@@ -155,7 +155,7 @@ const GLOBAL_SURFACES: readonly Surface[] = [
   { name: "g-reports-header", path: "/debug/reports", pane: "first" },
   {
     name: "g-contributions-header",
-    path: "/studio/contributions",
+    path: "/plugins/contributions",
     pane: "first",
   },
 ];

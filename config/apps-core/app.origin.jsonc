@@ -1,4 +1,4 @@
-// @hash 2edbc8f65dc5
+// @hash bcce067345da
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -21,10 +21,10 @@
     "apps.mail.shell:mail",
     "apps.pages.shell:pages",
     "apps.places.shell:places",
+    "apps.plugin-studio.shell:studio",
     "apps.prototypes.shell:prototypes",
     "apps.settings.shell:settings",
     "apps.sonata.shell:sonata",
-    "apps.studio.shell:studio",
     "apps.website.shell:website",
     "companions.browser-extension:browser-extension",
     "companions.menu-bar:menu-bar"

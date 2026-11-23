@@ -1,0 +1,10 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Explorer } from "@plugins/apps/plugins/plugin-studio/plugins/explorer/web";
+import { LoadBearingBadge } from "./components/load-bearing-badge";
+
+export default {
+  description: "Load-bearing badge in the explorer plugin tree row.",
+  contributions: [
+    Explorer.TreeRowBadge({ id: "load-bearing", component: LoadBearingBadge }),
+  ],
+} satisfies PluginDefinition;

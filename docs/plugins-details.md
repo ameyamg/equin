@@ -6148,10 +6148,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Isle.Building` ← `apps.mail.isle-building`
               - `Isle.Building` ← `apps.pages.isle-building`
               - `Isle.Building` ← `apps.places.isle-building`
+              - `Isle.Building` ← `apps.plugin-studio.isle-building`
               - `Isle.Building` ← `apps.prototypes.isle-building`
               - `Isle.Building` ← `apps.settings.isle-building`
               - `Isle.Building` ← `apps.sonata.isle-building`
-              - `Isle.Building` ← `apps.studio.isle-building`
             - Exports (types): `IsleBuildingContribution`
             - Exports (values):
               - `Isle`
@@ -6251,10 +6251,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/isle-building`
               - `apps/pages/isle-building`
               - `apps/places/isle-building`
+              - `apps/plugin-studio/isle-building`
               - `apps/prototypes/isle-building`
               - `apps/settings/isle-building`
               - `apps/sonata/isle-building`
-              - `apps/studio/isle-building`
           - Test helpers:
             - Core: `@plugins/apps/plugins/isle/plugins/buildings/core/testing`
               - `boxWithin` — Whether `inner` lies inside `outer`, give or take `tolerance` px on each side.
@@ -8332,6 +8332,742 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/isle-building`
               - `apps/places/page-overlay`
               - `apps/places/places-map`
+    - **`plugin-studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
+      - Plugins:
+        - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
+          - Web:
+            - Slots:
+              - `CompositionDetail.Section`
+              - `item-actions`
+              - `compositionsPane.Actions`
+              - `compositionDetailPane.Actions`
+              - `comparePane.Actions`
+            - Slot contributors:
+              - `CompositionDetail.Section` ← `apps.plugin-studio.compositions.closure-tree`
+              - `CompositionDetail.Section` ← `apps.plugin-studio.compositions.contributors`
+              - `CompositionDetail.Section` ← `apps.plugin-studio.compositions.draft-actions`
+              - `CompositionDetail.Section` ← `apps.plugin-studio.compositions.entry-points`
+              - `CompositionDetail.Section` ← `apps.plugin-studio.compositions.home`
+              - `CompositionDetail.Section` ← `apps.plugin-studio.compositions.membership-summary`
+              - `CompositionDetail.Section` ← `apps.plugin-studio.compositions.release`
+              - `item-actions` ← `apps.plugin-studio.compositions`
+              - `compositionsPane.Actions` ← `primitives.pane`
+              - `compositionDetailPane.Actions` ← `primitives.pane`
+              - `comparePane.Actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "composition-compare"
+              - `Pane.Register` "composition-detail"
+              - `Pane.Register` "compositions"
+              - `item-actions` "delete" → `DeleteAction`
+              - `Studio.Sidebar` "Compositions"
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/plugin-studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/plugin-studio/plugins/compositions/REFERENCE.md)
+              - `plugin-meta/composition` ×8
+              - `primitives/pane` ×5
+              - `primitives/data-view` ×3
+              - `build/serve-composition` ×2
+              - `primitives/css/text` ×2
+              - `primitives/css/ui-kit` ×2
+              - `primitives/kept-state` ×2
+              - `apps/plugin-studio/explorer/membership.DIFF_LEGEND`
+              - `apps/plugin-studio/shell.Studio`
+              - `infra/launcher/gateway-port.usePagePort`
+              - `network/live/live-state.ResourceErrorInline`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/link-chip.LinkChip`
+              - `primitives/css/row.Row`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/detail-sections.defineDetailSections`
+              - `primitives/dom/web-storage.useStore`
+              - `primitives/icon-button.IconButton`
+              - `primitives/loading.Loading`
+              - `ui/icons.Icon`
+            - Exports (values):
+              - `comparePane`
+              - `CompositionDetail`
+              - `compositionDetailPane`
+              - `compositionNameDraft`
+              - `compositionsPane`
+          - Core:
+            - Uses: `primitives/pane.defineRoute`
+            - Exports (values):
+              - `compositionDetailRoute`
+              - `compositionsRoute`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --chrome-pad-x`
+              - `ui/tokens/density --space-2xs`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/font-family --font-mono`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/deploy/composition`
+              - `apps/plugin-studio/compositions/closure-tree`
+              - `apps/plugin-studio/compositions/contributors`
+              - `apps/plugin-studio/compositions/draft-actions`
+              - `apps/plugin-studio/compositions/entry-points`
+              - `apps/plugin-studio/compositions/home`
+              - `apps/plugin-studio/compositions/membership-summary`
+              - `apps/plugin-studio/compositions/release`
+          - Plugins:
+            - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
+              - Web:
+                - Contributes: `CompositionDetail.Section` "Closure" → `ClosureTreeSection`
+                - Uses:
+                  - `apps/plugin-studio/compositions.CompositionDetail`
+                  - `apps/plugin-studio/explorer.PluginTree`
+                  - `network/live.useLive`
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `plugin-meta/plugin-view.pluginViewPane`
+                  - `primitives/css/placeholder.Placeholder`
+                  - `primitives/css/scroll.Scroll`
+                  - `primitives/data-view.defineDataView`
+                  - `primitives/loading.Loading`
+                  - `primitives/pane.useOpenPane`
+            - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
+              - Web:
+                - Contributes: `CompositionDetail.Section` "Contributors" → `ContributorsSection`
+                - Uses:
+                  - `apps/plugin-studio/compositions.CompositionDetail`
+                  - `plugin-meta/composition.updateActiveDraft`
+                  - `plugin-meta/composition.useActiveComposition`
+                  - `plugin-meta/composition.useCompositionData`
+                  - `plugin-meta/composition.useGraph`
+                  - `plugin-meta/composition.useViewHost`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.SectionLabel`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/kept-state.defineKept`
+                  - `primitives/kept-state.useKept`
+                  - `primitives/search.SearchInput`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/font-family --font-mono`
+            - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
+              - Web:
+                - Contributes: `CompositionDetail.Section` "Draft" → `DraftActions`
+                - Uses:
+                  - `apps/plugin-studio/compositions.CompositionDetail`
+                  - `apps/plugin-studio/compositions.compositionDetailPane`
+                  - `apps/plugin-studio/compositions.compositionNameDraft`
+                  - `apps/plugin-studio/compositions.compositionsPane`
+                  - `build/serve-composition.useDeleteComposition`
+                  - `plugin-meta/composition.clearActive`
+                  - `plugin-meta/composition.updateActiveDraft`
+                  - `plugin-meta/composition.useActiveComposition`
+                  - `plugin-meta/composition.useManifestActions`
+                  - `plugin-meta/composition.useManifestItems`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.Input`
+                  - `primitives/kept-state.useKept`
+                  - `primitives/loading.Loading`
+                  - `primitives/pane.useOpenPane`
+                  - `ui/icons.Icon`
+            - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
+              - Web:
+                - Contributes: `CompositionDetail.Section` "Entry points" → `EntryPointsSection`
+                - Uses:
+                  - `apps/plugin-studio/compositions.CompositionDetail`
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `plugin-meta/composition.updateActiveDraft`
+                  - `plugin-meta/composition.useActiveComposition`
+                  - `plugin-meta/composition.useCompositionData`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/row.Row`
+                  - `primitives/css/scroll.Scroll`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.SectionLabel`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.ControlSizeProvider`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/loading.Loading`
+                  - `primitives/overlay/popover.InlinePopover`
+                  - `primitives/search.SearchInput`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/font-family --font-mono`
+                  - `ui/tokens/shape --spacing`
+            - **`home`** — Home app section of the Studio composition detail pane: picks the app that owns bare `/` when the composition is deployed, among the apps its bundle holds.
+              - Web:
+                - Contributes: `CompositionDetail.Section` "Home app" → `HomeSection`
+                - Uses:
+                  - `apps-core.AppEntry`
+                  - `apps-core.Apps`
+                  - `apps/plugin-studio/compositions.CompositionDetail`
+                  - `plugin-meta/composition.useActiveMembership`
+                  - `plugin-meta/composition.useManifestActions`
+                  - `plugin-meta/composition.useManifestItems`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Select`
+                  - `primitives/css/ui-kit.SelectContent`
+                  - `primitives/css/ui-kit.SelectItem`
+                  - `primitives/css/ui-kit.SelectTrigger`
+                  - `primitives/css/ui-kit.SelectValue`
+            - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
+              - Web:
+                - Contributes: `CompositionDetail.Section` "Summary" → `MembershipSummarySection`
+                - Uses:
+                  - `apps/plugin-studio/compositions.CompositionDetail`
+                  - `plugin-meta/composition.setViewHost`
+                  - `plugin-meta/composition.useActiveComposition`
+                  - `plugin-meta/composition.useActiveMembership`
+                  - `plugin-meta/composition.useViewHost`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/badge.BadgeVariant`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/toggle-chip.SegmentedControl`
+                  - `primitives/css/toggle-chip.SegmentedOption`
+            - **`release`** — Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
+              - Web:
+                - Slots:
+                  - `ReleaseDetail.Section`
+                  - `releaseDetailPane.Actions`
+                - Slot contributors:
+                  - `ReleaseDetail.Section` ← `apps.plugin-studio.compositions.release.release-artifact`
+                  - `ReleaseDetail.Section` ← `apps.plugin-studio.compositions.release.release-info`
+                  - `ReleaseDetail.Section` ← `apps.plugin-studio.compositions.release.release-logs`
+                  - `releaseDetailPane.Actions` ← `primitives.pane`
+                - Contributes:
+                  - `Pane.Register` "release-detail"
+                  - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
+                  - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
+                  - `DataViewSlots.CollectionItemAction` "release.history:investigate" → `CollectionInvestigate`
+                - Uses: 25 symbols — full list in [`plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/REFERENCE.md`](../plugins/apps/plugins/plugin-studio/plugins/compositions/plugins/release/REFERENCE.md)
+                  - `primitives/data-view` ×4
+                  - `primitives/pane` ×3
+                  - `build/serve-composition` ×2
+                  - `apps/plugin-studio/compositions.CompositionDetail`
+                  - `config_v2.useConfigResult`
+                  - `infra/endpoints.useEndpointMutation`
+                  - `network/live/live-state.matchResource`
+                  - `plugin-meta/composition.useManifestItems`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/placeholder.Placeholder`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/detail-sections.defineDetailSections`
+                  - `primitives/launch/investigate.Investigate`
+                  - `primitives/relative-time.RelativeTime`
+                  - `ui/icons.Icon`
+                - Exports (values):
+                  - `ReleaseDetail`
+                  - `releaseDetailPane`
+              - Core:
+                - Uses:
+                  - `apps/plugin-studio/compositions.compositionsRoute`
+                  - `primitives/pane.defineRoute`
+                - Exports (values): `releaseDetailRoute`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/font-family --font-mono`
+                  - `ui/tokens/shape --spacing`
+                - Imported by:
+                  - `apps/plugin-studio/compositions/release/release-artifact`
+                  - `apps/plugin-studio/compositions/release/release-info`
+                  - `apps/plugin-studio/compositions/release/release-logs`
+                  - `release/runs-arm`
+              - Plugins:
+                - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
+                  - Web:
+                    - Contributes: `ReleaseDetail.Section` "Artifact" → `ReleaseArtifact`
+                    - Uses:
+                      - `apps/plugin-studio/compositions/release.ReleaseDetail`
+                      - `infra/endpoints.useEndpointMutation`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/css/cluster.Cluster`
+                      - `primitives/css/link-chip.LinkChip`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.Button`
+                      - `primitives/link-gesture.openInBrowserTab`
+                      - `primitives/link-gesture/new-tab.NewTabGlyph`
+                      - `primitives/loading.Loading`
+                      - `ui/icons.Icon`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/font-family --font-mono`
+                      - `ui/tokens/shape --spacing`
+                      - `ui/tokens/type-scale --font-scale`
+                      - `ui/tokens/type-scale --font-size-code`
+                      - `ui/tokens/type-scale --font-weight-normal`
+                      - `ui/tokens/type-scale --line-height-code`
+                - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
+                  - Web:
+                    - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
+                    - Uses:
+                      - `apps/plugin-studio/compositions/release.ReleaseDetail`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/status-dot.StatusDot`
+                      - `primitives/css/text.Text`
+                      - `primitives/loading.Loading`
+                      - `primitives/relative-time.RelativeTime`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/color-palette --success`
+                      - `ui/tokens/color-palette --warning`
+                - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
+                  - Web:
+                    - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
+                    - Uses:
+                      - `apps/plugin-studio/compositions/release.ReleaseDetail`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/copy-to-clipboard.CopyButton`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.ControlSizeProvider`
+                      - `primitives/data-view.DataView`
+                      - `primitives/data-view.defineDataView`
+                      - `primitives/data-view.FieldDef`
+                      - `primitives/data-view.useLivePagedValuePaging`
+                      - `primitives/log-channels.LiveLogChannel`
+                      - `shell/notifications.useToast`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/density --space-xs`
+        - **`contributions`** — Central view of all plugin contributions aggregated by type.
+          - Web:
+            - Slots: `contributions.actions`
+            - Slot contributors: `contributions.actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "contributions"
+              - `Studio.Sidebar` "Contributions"
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/plugin-studio/plugins/contributions/REFERENCE.md`](../plugins/apps/plugins/plugin-studio/plugins/contributions/REFERENCE.md)
+              - `primitives/pane` ×4
+              - `plugin-meta/contributions-table` ×3
+              - `primitives/kept-state` ×2
+              - `apps/plugin-studio/shell.Studio`
+              - `network/live/live-state.ResourceErrorInline`
+              - `network/live.useLive`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
+              - `primitives/css/column.Column`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/data-table.DataTable`
+              - `primitives/filter-chips.FilterChip`
+              - `primitives/loading.Loading`
+              - `primitives/search.SearchInput`
+              - `ui/icons.Icon`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-weight-medium`
+          - Plugins:
+            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
+              - Web:
+                - Slots:
+                  - `TableDetail.Section`
+                  - `tableDetailPane.Actions`
+                - Slot contributors:
+                  - `TableDetail.Section` ← `apps.plugin-studio.contributions.tables.columns`
+                  - `TableDetail.Section` ← `apps.plugin-studio.contributions.tables.foreign-keys`
+                  - `TableDetail.Section` ← `apps.plugin-studio.contributions.tables.indexes`
+                  - `TableDetail.Section` ← `apps.plugin-studio.contributions.tables.row-count`
+                  - `TableDetail.Section` ← `apps.plugin-studio.contributions.tables.sample-rows`
+                  - `tableDetailPane.Actions` ← `primitives.pane`
+                - Contributes:
+                  - `Pane.Register` "table-detail"
+                  - `Contributions.RowActivation` "db-schema"
+                - Uses:
+                  - `plugin-meta/contributions-table.Contributions`
+                  - `plugin-meta/contributions-table.defineRowActivation`
+                  - `primitives/detail-sections.defineDetailSections`
+                  - `primitives/pane.defineRoute`
+                  - `primitives/pane.Pane`
+                  - `primitives/pane.PaneChrome`
+                - Exports (values):
+                  - `TableDetail`
+                  - `tableDetailPane`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/plugin-studio/contributions/tables/columns`
+                  - `apps/plugin-studio/contributions/tables/foreign-keys`
+                  - `apps/plugin-studio/contributions/tables/indexes`
+                  - `apps/plugin-studio/contributions/tables/row-count`
+                  - `apps/plugin-studio/contributions/tables/sample-rows`
+              - Plugins:
+                - **`columns`** — Table column definitions section in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "Columns" → `ColumnsSection`
+                    - Uses:
+                      - `apps/plugin-studio/contributions/tables.TableDetail`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/data-table.ColumnDef`
+                      - `primitives/data-table.DataTable`
+                      - `primitives/loading.Loading`
+                  - Server:
+                    - Contributes: `resource.declare` "studio.table-columns"
+                    - Uses:
+                      - `database.db`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-columns` (push, fixed, whole: one table's columns — Postgres caps a table at 1,600)
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/font-family --font-mono`
+                  - Exemptions:
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
+                  - Shared:
+                    - Exports (values): `tableColumns`
+                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "Foreign Keys" → `ForeignKeysSection`
+                    - Uses:
+                      - `apps/plugin-studio/contributions/tables.TableDetail`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/css/placeholder.Placeholder`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.SectionLabel`
+                      - `primitives/data-table.ColumnDef`
+                      - `primitives/data-table.DataTable`
+                      - `primitives/loading.Loading`
+                  - Server:
+                    - Contributes: `resource.declare` "studio.table-foreign-keys"
+                    - Uses:
+                      - `database.db`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-foreign-keys` (push, fixed, whole: the foreign keys one table declares — a column's worth at most, whole: the foreign keys pointing at one table — one per referencing column in the schema)
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/font-family --font-mono`
+                      - `ui/tokens/type-scale --font-scale`
+                      - `ui/tokens/type-scale --font-size-caption`
+                      - `ui/tokens/type-scale --font-weight-normal`
+                      - `ui/tokens/type-scale --line-height-caption`
+                  - Exemptions:
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
+                  - Shared:
+                    - Exports (values): `tableForeignKeys`
+                - **`indexes`** — Table indexes section in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "Indexes" → `IndexesSection`
+                    - Uses:
+                      - `apps/plugin-studio/contributions/tables.TableDetail`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/data-table.ColumnDef`
+                      - `primitives/data-table.DataTable`
+                      - `primitives/loading.Loading`
+                  - Server:
+                    - Contributes: `resource.declare` "studio.table-indexes"
+                    - Uses:
+                      - `database.db`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-indexes` (push, fixed, whole: one table's indexes — a handful, each declared in its schema)
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/font-family --font-mono`
+                  - Exemptions:
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
+                  - Shared:
+                    - Exports (values): `tableIndexes`
+                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "Row Count"
+                    - Uses:
+                      - `apps/plugin-studio/contributions/tables.TableDetail`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/css/inline.Inline`
+                      - `primitives/css/text.Text`
+                      - `primitives/loading.Loading`
+                  - Server:
+                    - Contributes: `resource.declare` "studio.table-row-count"
+                    - Uses:
+                      - `database.db`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-row-count` (invalidate, snapshot)
+                  - Exemptions:
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
+                  - Shared:
+                    - Exports (values): `tableRowCount`
+                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "Sample Rows" → `SampleRowsSection`
+                    - Uses:
+                      - `apps/plugin-studio/contributions/tables.TableDetail`
+                      - `network/live.useLive`
+                      - `network/live/live-state.ResourceErrorInline`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/ui-kit.Button`
+                      - `primitives/data-table.ColumnDef`
+                      - `primitives/data-table.DataTable`
+                      - `primitives/loading.Loading`
+                  - Server:
+                    - Contributes: `resource.declare` "studio.table-sample-rows"
+                    - Uses:
+                      - `database.db`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-sample-rows` (invalidate, snapshot, whole: one row's columns — Postgres caps a table at 1,600, capped: PG_MAX_COLUMNS, capped: SAMPLE_ROWS_LIMIT)
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/font-family --font-mono`
+                  - Exemptions:
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
+                  - Shared:
+                    - Exports (values): `tableSampleRows`
+        - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
+          - Web:
+            - Slots:
+              - `Explorer.TreeRowBadge`
+              - `Explorer.TreeRowAccent`
+              - `explorerPane.Actions`
+            - Slot contributors:
+              - `Explorer.TreeRowBadge` ← `apps.plugin-studio.explorer.child-count`
+              - `Explorer.TreeRowBadge` ← `apps.plugin-studio.explorer.collapsed`
+              - `Explorer.TreeRowBadge` ← `apps.plugin-studio.explorer.excluded`
+              - `Explorer.TreeRowBadge` ← `apps.plugin-studio.explorer.load-bearing`
+              - `Explorer.TreeRowBadge` ← `apps.plugin-studio.explorer.membership`
+              - `Explorer.TreeRowAccent` ← `apps.plugin-studio.explorer.membership`
+              - `explorerPane.Actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "explorer"
+              - `Studio.Sidebar` "Plugin"
+            - Uses:
+              - `apps/plugin-studio/shell.Studio`
+              - `network/live.useLive`
+              - `network/live/live-state.ResourceErrorInline`
+              - `plugin-meta/plugin-view.pluginViewPane`
+              - `primitives/css/center.Center`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.DataViewId`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.HierarchyConfig`
+              - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/pane.useOpenPane`
+              - `primitives/rank.Rank`
+              - `primitives/slot-render.defineRenderSlot`
+            - Exports (types): `TreeRowBadgeContribution`
+            - Exports (values):
+              - `Explorer`
+              - `explorerPane`
+              - `PluginTree`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/type-scale --font-weight-medium`
+            - Imported by:
+              - `apps/plugin-studio/compositions/closure-tree`
+              - `apps/plugin-studio/explorer/child-count`
+              - `apps/plugin-studio/explorer/collapsed`
+              - `apps/plugin-studio/explorer/excluded`
+              - `apps/plugin-studio/explorer/load-bearing`
+              - `apps/plugin-studio/explorer/membership`
+          - Plugins:
+            - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "child-count" → `ChildCountBadge`
+                - Uses: `apps/plugin-studio/explorer.Explorer`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/type-scale --font-scale`
+                  - `ui/tokens/type-scale --font-size-3xs`
+                  - `ui/tokens/type-scale --line-height-3xs`
+            - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "collapsed" → `CollapsedBadge`
+                - Uses:
+                  - `apps/plugin-studio/explorer.Explorer`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --info`
+                  - `ui/tokens/shape --spacing`
+            - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "excluded" → `ExcludedBadge`
+                - Uses:
+                  - `apps/plugin-studio/explorer.Explorer`
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `plugin-meta/composition.useAppExclusions`
+                  - `primitives/loading.Loading`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/shape --spacing`
+            - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
+                - Uses:
+                  - `apps/plugin-studio/explorer.Explorer`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --warning`
+                  - `ui/tokens/shape --spacing`
+            - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
+              - Web:
+                - Contributes:
+                  - `Explorer.TreeRowAccent` "membership" → `MembershipTint`
+                  - `Explorer.TreeRowBadge` "membership" → `MembershipPin`
+                - Uses:
+                  - `apps/plugin-studio/explorer.Explorer`
+                  - `apps/plugin-studio/graph.graphCanvasPane`
+                  - `apps/plugin-studio/membership-tint.STATE_TINT`
+                  - `plugin-meta/composition.DiffState`
+                  - `plugin-meta/composition.pinAsRoot`
+                  - `plugin-meta/composition.useActiveMembership`
+                  - `plugin-meta/composition.useDiffMap`
+                  - `plugin-meta/composition.useEnsureCompositionData`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.ControlSizeProvider`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/pane.useOpenPane`
+                - Exports (values):
+                  - `DIFF_LEGEND`
+                  - `DIFF_TINT`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/categorical --categorical-2`
+                  - `ui/tokens/categorical --categorical-4`
+                  - `ui/tokens/categorical --categorical-7`
+                - Imported by: `apps/plugin-studio/compositions`
+        - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
+          - Web:
+            - Slots: `graphCanvasPane.Actions`
+            - Slot contributors: `graphCanvasPane.Actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "graph"
+              - `Studio.Sidebar` "Plugin Graph"
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/plugin-studio/plugins/graph/REFERENCE.md`](../plugins/apps/plugins/plugin-studio/plugins/graph/REFERENCE.md)
+              - `plugin-meta/composition` ×4
+              - `primitives/pane` ×3
+              - `apps/plugin-studio/membership-tint` ×2
+              - `primitives/css/spacing` ×2
+              - `primitives/kept-state` ×2
+              - `apps/plugin-studio/shell.Studio`
+              - `network/live/live-state.ResourceErrorInline`
+              - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/column.Column`
+              - `primitives/css/row.Row`
+              - `primitives/css/surface.Surface`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/graph-canvas.GraphCanvas`
+              - `primitives/icon-button.IconButton`
+              - `primitives/loading.Loading`
+              - `primitives/search.SearchInput`
+            - Exports (values): `graphCanvasPane`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/density --space-2xs`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-weight-medium`
+            - Imported by: `apps/plugin-studio/explorer/membership`
+        - **`isle-building`** — Studio's building on Isle: the conservatory laboratory, a glasshouse of plants and jars.
+          - Web:
+            - Contributes: `Isle.Building` "studio"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `conservatory`
+        - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --info`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/color-palette --success`
+            - Imported by:
+              - `apps/plugin-studio/explorer/membership`
+              - `apps/plugin-studio/graph`
+          - Web:
+            - Exports (values):
+              - `STATE_LEGEND`
+              - `STATE_TINT`
+        - **`shell`** — App shell for Studio. Registers the /plugins app entry and defines Studio.Sidebar/Toolbar slots.
+          - Web:
+            - Slots:
+              - `Studio.Sidebar`
+              - `Studio.Toolbar`
+            - Slot contributors:
+              - `Studio.Sidebar` ← `apps.plugin-studio.compositions`
+              - `Studio.Sidebar` ← `apps.plugin-studio.contributions`
+              - `Studio.Sidebar` ← `apps.plugin-studio.explorer`
+              - `Studio.Sidebar` ← `apps.plugin-studio.graph`
+            - Contributes: `Apps.App` "Plugins" → `StudioLayout`
+            - Uses:
+              - `apps-core.Apps`
+              - `layouts/miller.MillerColumns`
+              - `primitives/app-shell.AppShellLayout`
+              - `primitives/slot-render.defineRenderSlot`
+            - Exports (values): `Studio`
+          - Core:
+            - Uses:
+              - `primitives/pane.defineApp`
+              - `ui/icons.symbol`
+            - Exports (values): `studioApp`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/composition`
+              - `apps/plugin-studio/compositions`
+              - `apps/plugin-studio/compositions/release`
+              - `apps/plugin-studio/contributions`
+              - `apps/plugin-studio/contributions/tables`
+              - `apps/plugin-studio/explorer`
+              - `apps/plugin-studio/graph`
+              - `apps/plugin-studio/isle-building`
+              - `plugin-meta/plugin-view`
     - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles file root (watched, its _picks ledgered).
       - Server:
         - Contributes:
@@ -12467,742 +13203,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/sources/chord-grid`
-    - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
-      - Plugins:
-        - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
-          - Web:
-            - Slots:
-              - `CompositionDetail.Section`
-              - `item-actions`
-              - `compositionsPane.Actions`
-              - `compositionDetailPane.Actions`
-              - `comparePane.Actions`
-            - Slot contributors:
-              - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`
-              - `CompositionDetail.Section` ← `apps.studio.compositions.contributors`
-              - `CompositionDetail.Section` ← `apps.studio.compositions.draft-actions`
-              - `CompositionDetail.Section` ← `apps.studio.compositions.entry-points`
-              - `CompositionDetail.Section` ← `apps.studio.compositions.home`
-              - `CompositionDetail.Section` ← `apps.studio.compositions.membership-summary`
-              - `CompositionDetail.Section` ← `apps.studio.compositions.release`
-              - `item-actions` ← `apps.studio.compositions`
-              - `compositionsPane.Actions` ← `primitives.pane`
-              - `compositionDetailPane.Actions` ← `primitives.pane`
-              - `comparePane.Actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "composition-compare"
-              - `Pane.Register` "composition-detail"
-              - `Pane.Register` "compositions"
-              - `item-actions` "delete" → `DeleteAction`
-              - `Studio.Sidebar` "Compositions"
-            - Uses: 39 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
-              - `plugin-meta/composition` ×8
-              - `primitives/pane` ×5
-              - `primitives/data-view` ×3
-              - `build/serve-composition` ×2
-              - `primitives/css/text` ×2
-              - `primitives/css/ui-kit` ×2
-              - `primitives/kept-state` ×2
-              - `apps/studio/explorer/membership.DIFF_LEGEND`
-              - `apps/studio/shell.Studio`
-              - `infra/launcher/gateway-port.usePagePort`
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/cluster.Cluster`
-              - `primitives/css/link-chip.LinkChip`
-              - `primitives/css/row.Row`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/toggle-chip.ToggleChip`
-              - `primitives/detail-sections.defineDetailSections`
-              - `primitives/dom/web-storage.useStore`
-              - `primitives/icon-button.IconButton`
-              - `primitives/loading.Loading`
-              - `ui/icons.Icon`
-            - Exports (values):
-              - `comparePane`
-              - `CompositionDetail`
-              - `compositionDetailPane`
-              - `compositionNameDraft`
-              - `compositionsPane`
-          - Core:
-            - Uses: `primitives/pane.defineRoute`
-            - Exports (values):
-              - `compositionDetailRoute`
-              - `compositionsRoute`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/density --chrome-pad-x`
-              - `ui/tokens/density --space-2xs`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
-            - Imported by:
-              - `apps/deploy/composition`
-              - `apps/studio/compositions/closure-tree`
-              - `apps/studio/compositions/contributors`
-              - `apps/studio/compositions/draft-actions`
-              - `apps/studio/compositions/entry-points`
-              - `apps/studio/compositions/home`
-              - `apps/studio/compositions/membership-summary`
-              - `apps/studio/compositions/release`
-          - Plugins:
-            - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
-              - Web:
-                - Contributes: `CompositionDetail.Section` "Closure" → `ClosureTreeSection`
-                - Uses:
-                  - `apps/studio/compositions.CompositionDetail`
-                  - `apps/studio/explorer.PluginTree`
-                  - `network/live.useLive`
-                  - `network/live/live-state.ResourceErrorInline`
-                  - `plugin-meta/plugin-view.pluginViewPane`
-                  - `primitives/css/placeholder.Placeholder`
-                  - `primitives/css/scroll.Scroll`
-                  - `primitives/data-view.defineDataView`
-                  - `primitives/loading.Loading`
-                  - `primitives/pane.useOpenPane`
-            - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
-              - Web:
-                - Contributes: `CompositionDetail.Section` "Contributors" → `ContributorsSection`
-                - Uses:
-                  - `apps/studio/compositions.CompositionDetail`
-                  - `plugin-meta/composition.updateActiveDraft`
-                  - `plugin-meta/composition.useActiveComposition`
-                  - `plugin-meta/composition.useCompositionData`
-                  - `plugin-meta/composition.useGraph`
-                  - `plugin-meta/composition.useViewHost`
-                  - `primitives/css/fill.Fill`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.SectionLabel`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
-                  - `primitives/kept-state.defineKept`
-                  - `primitives/kept-state.useKept`
-                  - `primitives/search.SearchInput`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/font-family --font-mono`
-            - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
-              - Web:
-                - Contributes: `CompositionDetail.Section` "Draft" → `DraftActions`
-                - Uses:
-                  - `apps/studio/compositions.CompositionDetail`
-                  - `apps/studio/compositions.compositionDetailPane`
-                  - `apps/studio/compositions.compositionNameDraft`
-                  - `apps/studio/compositions.compositionsPane`
-                  - `build/serve-composition.useDeleteComposition`
-                  - `plugin-meta/composition.clearActive`
-                  - `plugin-meta/composition.updateActiveDraft`
-                  - `plugin-meta/composition.useActiveComposition`
-                  - `plugin-meta/composition.useManifestActions`
-                  - `plugin-meta/composition.useManifestItems`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.Input`
-                  - `primitives/kept-state.useKept`
-                  - `primitives/loading.Loading`
-                  - `primitives/pane.useOpenPane`
-                  - `ui/icons.Icon`
-            - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
-              - Web:
-                - Contributes: `CompositionDetail.Section` "Entry points" → `EntryPointsSection`
-                - Uses:
-                  - `apps/studio/compositions.CompositionDetail`
-                  - `network/live/live-state.ResourceErrorInline`
-                  - `plugin-meta/composition.updateActiveDraft`
-                  - `plugin-meta/composition.useActiveComposition`
-                  - `plugin-meta/composition.useCompositionData`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/cluster.Cluster`
-                  - `primitives/css/row.Row`
-                  - `primitives/css/scroll.Scroll`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.SectionLabel`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.ControlSizeProvider`
-                  - `primitives/icon-button.IconButton`
-                  - `primitives/loading.Loading`
-                  - `primitives/overlay/popover.InlinePopover`
-                  - `primitives/search.SearchInput`
-                  - `ui/icons.Icon`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/font-family --font-mono`
-                  - `ui/tokens/shape --spacing`
-            - **`home`** — Home app section of the Studio composition detail pane: picks the app that owns bare `/` when the composition is deployed, among the apps its bundle holds.
-              - Web:
-                - Contributes: `CompositionDetail.Section` "Home app" → `HomeSection`
-                - Uses:
-                  - `apps-core.AppEntry`
-                  - `apps-core.Apps`
-                  - `apps/studio/compositions.CompositionDetail`
-                  - `plugin-meta/composition.useActiveMembership`
-                  - `plugin-meta/composition.useManifestActions`
-                  - `plugin-meta/composition.useManifestItems`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Select`
-                  - `primitives/css/ui-kit.SelectContent`
-                  - `primitives/css/ui-kit.SelectItem`
-                  - `primitives/css/ui-kit.SelectTrigger`
-                  - `primitives/css/ui-kit.SelectValue`
-            - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
-              - Web:
-                - Contributes: `CompositionDetail.Section` "Summary" → `MembershipSummarySection`
-                - Uses:
-                  - `apps/studio/compositions.CompositionDetail`
-                  - `plugin-meta/composition.setViewHost`
-                  - `plugin-meta/composition.useActiveComposition`
-                  - `plugin-meta/composition.useActiveMembership`
-                  - `plugin-meta/composition.useViewHost`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/badge.BadgeVariant`
-                  - `primitives/css/cluster.Cluster`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.SegmentedControl`
-                  - `primitives/css/toggle-chip.SegmentedOption`
-            - **`release`** — Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
-              - Web:
-                - Slots:
-                  - `ReleaseDetail.Section`
-                  - `releaseDetailPane.Actions`
-                - Slot contributors:
-                  - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`
-                  - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-info`
-                  - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-logs`
-                  - `releaseDetailPane.Actions` ← `primitives.pane`
-                - Contributes:
-                  - `Pane.Register` "release-detail"
-                  - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
-                  - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
-                  - `DataViewSlots.CollectionItemAction` "release.history:investigate" → `CollectionInvestigate`
-                - Uses: 25 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/plugins/release/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/plugins/release/REFERENCE.md)
-                  - `primitives/data-view` ×4
-                  - `primitives/pane` ×3
-                  - `build/serve-composition` ×2
-                  - `apps/studio/compositions.CompositionDetail`
-                  - `config_v2.useConfigResult`
-                  - `infra/endpoints.useEndpointMutation`
-                  - `network/live/live-state.matchResource`
-                  - `plugin-meta/composition.useManifestItems`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/cluster.Cluster`
-                  - `primitives/css/placeholder.Placeholder`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/detail-sections.defineDetailSections`
-                  - `primitives/launch/investigate.Investigate`
-                  - `primitives/relative-time.RelativeTime`
-                  - `ui/icons.Icon`
-                - Exports (values):
-                  - `ReleaseDetail`
-                  - `releaseDetailPane`
-              - Core:
-                - Uses:
-                  - `apps/studio/compositions.compositionsRoute`
-                  - `primitives/pane.defineRoute`
-                - Exports (values): `releaseDetailRoute`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/font-family --font-mono`
-                  - `ui/tokens/shape --spacing`
-                - Imported by:
-                  - `apps/studio/compositions/release/release-artifact`
-                  - `apps/studio/compositions/release/release-info`
-                  - `apps/studio/compositions/release/release-logs`
-                  - `release/runs-arm`
-              - Plugins:
-                - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
-                  - Web:
-                    - Contributes: `ReleaseDetail.Section` "Artifact" → `ReleaseArtifact`
-                    - Uses:
-                      - `apps/studio/compositions/release.ReleaseDetail`
-                      - `infra/endpoints.useEndpointMutation`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/css/cluster.Cluster`
-                      - `primitives/css/link-chip.LinkChip`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/text.Text`
-                      - `primitives/css/ui-kit.Button`
-                      - `primitives/link-gesture.openInBrowserTab`
-                      - `primitives/link-gesture/new-tab.NewTabGlyph`
-                      - `primitives/loading.Loading`
-                      - `ui/icons.Icon`
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/font-family --font-mono`
-                      - `ui/tokens/shape --spacing`
-                      - `ui/tokens/type-scale --font-scale`
-                      - `ui/tokens/type-scale --font-size-code`
-                      - `ui/tokens/type-scale --font-weight-normal`
-                      - `ui/tokens/type-scale --line-height-code`
-                - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
-                  - Web:
-                    - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
-                    - Uses:
-                      - `apps/studio/compositions/release.ReleaseDetail`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/css/badge.Badge`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/status-dot.StatusDot`
-                      - `primitives/css/text.Text`
-                      - `primitives/loading.Loading`
-                      - `primitives/relative-time.RelativeTime`
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --destructive`
-                      - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/color-palette --success`
-                      - `ui/tokens/color-palette --warning`
-                - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
-                  - Web:
-                    - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
-                    - Uses:
-                      - `apps/studio/compositions/release.ReleaseDetail`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/copy-to-clipboard.CopyButton`
-                      - `primitives/css/fill.Fill`
-                      - `primitives/css/line.Line`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/text.Text`
-                      - `primitives/css/ui-kit.ControlSizeProvider`
-                      - `primitives/data-view.DataView`
-                      - `primitives/data-view.defineDataView`
-                      - `primitives/data-view.FieldDef`
-                      - `primitives/data-view.useLivePagedValuePaging`
-                      - `primitives/log-channels.LiveLogChannel`
-                      - `shell/notifications.useToast`
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/density --space-xs`
-        - **`contributions`** — Central view of all plugin contributions aggregated by type.
-          - Web:
-            - Slots: `contributions.actions`
-            - Slot contributors: `contributions.actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "contributions"
-              - `Studio.Sidebar` "Contributions"
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/studio/plugins/contributions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/contributions/REFERENCE.md)
-              - `primitives/pane` ×4
-              - `plugin-meta/contributions-table` ×3
-              - `primitives/kept-state` ×2
-              - `apps/studio/shell.Studio`
-              - `network/live/live-state.ResourceErrorInline`
-              - `network/live.useLive`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/center.Center`
-              - `primitives/css/column.Column`
-              - `primitives/css/scroll.Scroll`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/data-table.DataTable`
-              - `primitives/filter-chips.FilterChip`
-              - `primitives/loading.Loading`
-              - `primitives/search.SearchInput`
-              - `ui/icons.Icon`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-weight-medium`
-          - Plugins:
-            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
-              - Web:
-                - Slots:
-                  - `TableDetail.Section`
-                  - `tableDetailPane.Actions`
-                - Slot contributors:
-                  - `TableDetail.Section` ← `apps.studio.contributions.tables.columns`
-                  - `TableDetail.Section` ← `apps.studio.contributions.tables.foreign-keys`
-                  - `TableDetail.Section` ← `apps.studio.contributions.tables.indexes`
-                  - `TableDetail.Section` ← `apps.studio.contributions.tables.row-count`
-                  - `TableDetail.Section` ← `apps.studio.contributions.tables.sample-rows`
-                  - `tableDetailPane.Actions` ← `primitives.pane`
-                - Contributes:
-                  - `Pane.Register` "table-detail"
-                  - `Contributions.RowActivation` "db-schema"
-                - Uses:
-                  - `plugin-meta/contributions-table.Contributions`
-                  - `plugin-meta/contributions-table.defineRowActivation`
-                  - `primitives/detail-sections.defineDetailSections`
-                  - `primitives/pane.defineRoute`
-                  - `primitives/pane.Pane`
-                  - `primitives/pane.PaneChrome`
-                - Exports (values):
-                  - `TableDetail`
-                  - `tableDetailPane`
-              - Cross-plugin:
-                - Imported by:
-                  - `apps/studio/contributions/tables/columns`
-                  - `apps/studio/contributions/tables/foreign-keys`
-                  - `apps/studio/contributions/tables/indexes`
-                  - `apps/studio/contributions/tables/row-count`
-                  - `apps/studio/contributions/tables/sample-rows`
-              - Plugins:
-                - **`columns`** — Table column definitions section in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "Columns" → `ColumnsSection`
-                    - Uses:
-                      - `apps/studio/contributions/tables.TableDetail`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/data-table.ColumnDef`
-                      - `primitives/data-table.DataTable`
-                      - `primitives/loading.Loading`
-                  - Server:
-                    - Contributes: `resource.declare` "studio.table-columns"
-                    - Uses:
-                      - `database.db`
-                      - `network/live.serveValue`
-                    - Resources: `studio.table-columns` (push, fixed, whole: one table's columns — Postgres caps a table at 1,600)
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/font-family --font-mono`
-                  - Exemptions:
-                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
-                  - Shared:
-                    - Exports (values): `tableColumns`
-                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "Foreign Keys" → `ForeignKeysSection`
-                    - Uses:
-                      - `apps/studio/contributions/tables.TableDetail`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/css/placeholder.Placeholder`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/text.SectionLabel`
-                      - `primitives/data-table.ColumnDef`
-                      - `primitives/data-table.DataTable`
-                      - `primitives/loading.Loading`
-                  - Server:
-                    - Contributes: `resource.declare` "studio.table-foreign-keys"
-                    - Uses:
-                      - `database.db`
-                      - `network/live.serveValue`
-                    - Resources: `studio.table-foreign-keys` (push, fixed, whole: the foreign keys one table declares — a column's worth at most, whole: the foreign keys pointing at one table — one per referencing column in the schema)
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/font-family --font-mono`
-                      - `ui/tokens/type-scale --font-scale`
-                      - `ui/tokens/type-scale --font-size-caption`
-                      - `ui/tokens/type-scale --font-weight-normal`
-                      - `ui/tokens/type-scale --line-height-caption`
-                  - Exemptions:
-                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
-                  - Shared:
-                    - Exports (values): `tableForeignKeys`
-                - **`indexes`** — Table indexes section in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "Indexes" → `IndexesSection`
-                    - Uses:
-                      - `apps/studio/contributions/tables.TableDetail`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/data-table.ColumnDef`
-                      - `primitives/data-table.DataTable`
-                      - `primitives/loading.Loading`
-                  - Server:
-                    - Contributes: `resource.declare` "studio.table-indexes"
-                    - Uses:
-                      - `database.db`
-                      - `network/live.serveValue`
-                    - Resources: `studio.table-indexes` (push, fixed, whole: one table's indexes — a handful, each declared in its schema)
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/font-family --font-mono`
-                  - Exemptions:
-                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
-                  - Shared:
-                    - Exports (values): `tableIndexes`
-                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "Row Count"
-                    - Uses:
-                      - `apps/studio/contributions/tables.TableDetail`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/css/inline.Inline`
-                      - `primitives/css/text.Text`
-                      - `primitives/loading.Loading`
-                  - Server:
-                    - Contributes: `resource.declare` "studio.table-row-count"
-                    - Uses:
-                      - `database.db`
-                      - `network/live.serveValue`
-                    - Resources: `studio.table-row-count` (invalidate, snapshot)
-                  - Exemptions:
-                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
-                  - Shared:
-                    - Exports (values): `tableRowCount`
-                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "Sample Rows" → `SampleRowsSection`
-                    - Uses:
-                      - `apps/studio/contributions/tables.TableDetail`
-                      - `network/live.useLive`
-                      - `network/live/live-state.ResourceErrorInline`
-                      - `primitives/css/scroll.Scroll`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/ui-kit.Button`
-                      - `primitives/data-table.ColumnDef`
-                      - `primitives/data-table.DataTable`
-                      - `primitives/loading.Loading`
-                  - Server:
-                    - Contributes: `resource.declare` "studio.table-sample-rows"
-                    - Uses:
-                      - `database.db`
-                      - `network/live.serveValue`
-                    - Resources: `studio.table-sample-rows` (invalidate, snapshot, whole: one row's columns — Postgres caps a table at 1,600, capped: PG_MAX_COLUMNS, capped: SAMPLE_ROWS_LIMIT)
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/font-family --font-mono`
-                  - Exemptions:
-                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
-                  - Shared:
-                    - Exports (values): `tableSampleRows`
-        - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
-          - Web:
-            - Slots:
-              - `Explorer.TreeRowBadge`
-              - `Explorer.TreeRowAccent`
-              - `explorerPane.Actions`
-            - Slot contributors:
-              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`
-              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.collapsed`
-              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.excluded`
-              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.load-bearing`
-              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.membership`
-              - `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`
-              - `explorerPane.Actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "explorer"
-              - `Studio.Sidebar` "Plugin"
-            - Uses:
-              - `apps/studio/shell.Studio`
-              - `network/live.useLive`
-              - `network/live/live-state.ResourceErrorInline`
-              - `plugin-meta/plugin-view.pluginViewPane`
-              - `primitives/css/center.Center`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/data-view.DataView`
-              - `primitives/data-view.DataViewId`
-              - `primitives/data-view.defineDataView`
-              - `primitives/data-view.FieldDef`
-              - `primitives/data-view.HierarchyConfig`
-              - `primitives/loading.Loading`
-              - `primitives/pane.defineRoute`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
-              - `primitives/pane.useOpenPane`
-              - `primitives/rank.Rank`
-              - `primitives/slot-render.defineRenderSlot`
-            - Exports (types): `TreeRowBadgeContribution`
-            - Exports (values):
-              - `Explorer`
-              - `explorerPane`
-              - `PluginTree`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/density --space-lg`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/type-scale --font-weight-medium`
-            - Imported by:
-              - `apps/studio/compositions/closure-tree`
-              - `apps/studio/explorer/child-count`
-              - `apps/studio/explorer/collapsed`
-              - `apps/studio/explorer/excluded`
-              - `apps/studio/explorer/load-bearing`
-              - `apps/studio/explorer/membership`
-          - Plugins:
-            - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
-              - Web:
-                - Contributes: `Explorer.TreeRowBadge` "child-count" → `ChildCountBadge`
-                - Uses: `apps/studio/explorer.Explorer`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/type-scale --font-scale`
-                  - `ui/tokens/type-scale --font-size-3xs`
-                  - `ui/tokens/type-scale --line-height-3xs`
-            - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
-              - Web:
-                - Contributes: `Explorer.TreeRowBadge` "collapsed" → `CollapsedBadge`
-                - Uses:
-                  - `apps/studio/explorer.Explorer`
-                  - `ui/icons.Icon`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --info`
-                  - `ui/tokens/shape --spacing`
-            - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
-              - Web:
-                - Contributes: `Explorer.TreeRowBadge` "excluded" → `ExcludedBadge`
-                - Uses:
-                  - `apps/studio/explorer.Explorer`
-                  - `network/live/live-state.ResourceErrorInline`
-                  - `plugin-meta/composition.useAppExclusions`
-                  - `primitives/loading.Loading`
-                  - `ui/icons.Icon`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/shape --spacing`
-            - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
-              - Web:
-                - Contributes: `Explorer.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
-                - Uses:
-                  - `apps/studio/explorer.Explorer`
-                  - `ui/icons.Icon`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --warning`
-                  - `ui/tokens/shape --spacing`
-            - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
-              - Web:
-                - Contributes:
-                  - `Explorer.TreeRowAccent` "membership" → `MembershipTint`
-                  - `Explorer.TreeRowBadge` "membership" → `MembershipPin`
-                - Uses:
-                  - `apps/studio/explorer.Explorer`
-                  - `apps/studio/graph.graphCanvasPane`
-                  - `apps/studio/membership-tint.STATE_TINT`
-                  - `plugin-meta/composition.DiffState`
-                  - `plugin-meta/composition.pinAsRoot`
-                  - `plugin-meta/composition.useActiveMembership`
-                  - `plugin-meta/composition.useDiffMap`
-                  - `plugin-meta/composition.useEnsureCompositionData`
-                  - `primitives/css/cluster.Cluster`
-                  - `primitives/css/ui-kit.cn`
-                  - `primitives/css/ui-kit.ControlSizeProvider`
-                  - `primitives/icon-button.IconButton`
-                  - `primitives/pane.useOpenPane`
-                - Exports (values):
-                  - `DIFF_LEGEND`
-                  - `DIFF_TINT`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/categorical --categorical-2`
-                  - `ui/tokens/categorical --categorical-4`
-                  - `ui/tokens/categorical --categorical-7`
-                - Imported by: `apps/studio/compositions`
-        - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
-          - Web:
-            - Slots: `graphCanvasPane.Actions`
-            - Slot contributors: `graphCanvasPane.Actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "graph"
-              - `Studio.Sidebar` "Plugin Graph"
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/studio/plugins/graph/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/graph/REFERENCE.md)
-              - `plugin-meta/composition` ×4
-              - `primitives/pane` ×3
-              - `apps/studio/membership-tint` ×2
-              - `primitives/css/spacing` ×2
-              - `primitives/kept-state` ×2
-              - `apps/studio/shell.Studio`
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/center.Center`
-              - `primitives/css/clip.Clip`
-              - `primitives/css/cluster.Cluster`
-              - `primitives/css/column.Column`
-              - `primitives/css/row.Row`
-              - `primitives/css/surface.Surface`
-              - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/css/ui-kit.ControlSizeProvider`
-              - `primitives/graph-canvas.GraphCanvas`
-              - `primitives/icon-button.IconButton`
-              - `primitives/loading.Loading`
-              - `primitives/search.SearchInput`
-            - Exports (values): `graphCanvasPane`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --primary`
-              - `ui/tokens/density --space-2xs`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-weight-medium`
-            - Imported by: `apps/studio/explorer/membership`
-        - **`isle-building`** — Studio's building on Isle: the conservatory laboratory, a glasshouse of plants and jars.
-          - Web:
-            - Contributes: `Isle.Building` "studio"
-            - Uses: `apps/isle/buildings.Isle`
-          - Core:
-            - Uses:
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
-              - `apps/isle/buildings.Pt`
-            - Exports (values): `conservatory`
-        - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --info`
-              - `ui/tokens/color-palette --primary`
-              - `ui/tokens/color-palette --success`
-            - Imported by:
-              - `apps/studio/explorer/membership`
-              - `apps/studio/graph`
-          - Web:
-            - Exports (values):
-              - `STATE_LEGEND`
-              - `STATE_TINT`
-        - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
-          - Web:
-            - Slots:
-              - `Studio.Sidebar`
-              - `Studio.Toolbar`
-            - Slot contributors:
-              - `Studio.Sidebar` ← `apps.studio.compositions`
-              - `Studio.Sidebar` ← `apps.studio.contributions`
-              - `Studio.Sidebar` ← `apps.studio.explorer`
-              - `Studio.Sidebar` ← `apps.studio.graph`
-            - Contributes: `Apps.App` "Studio" → `StudioLayout`
-            - Uses:
-              - `apps-core.Apps`
-              - `layouts/miller.MillerColumns`
-              - `primitives/app-shell.AppShellLayout`
-              - `primitives/slot-render.defineRenderSlot`
-            - Exports (values): `Studio`
-          - Core:
-            - Uses:
-              - `primitives/pane.defineApp`
-              - `ui/icons.symbol`
-            - Exports (values): `studioApp`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/deploy/composition`
-              - `apps/studio/compositions`
-              - `apps/studio/compositions/release`
-              - `apps/studio/contributions`
-              - `apps/studio/contributions/tables`
-              - `apps/studio/explorer`
-              - `apps/studio/graph`
-              - `apps/studio/isle-building`
-              - `plugin-meta/plugin-view`
     - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
       - Plugins:
         - **`app-tiles`** — The website's app tile: <WebsiteAppTile symbol color />, an app's glyph on its vivid website colour as a diagonal gradient on a bounded squircle.
@@ -16558,9 +16558,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/local-serve`
-          - `apps/studio/compositions`
-          - `apps/studio/compositions/draft-actions`
-          - `apps/studio/compositions/release`
+          - `apps/plugin-studio/compositions`
+          - `apps/plugin-studio/compositions/draft-actions`
+          - `apps/plugin-studio/compositions/release`
           - `apps/website/promo-film`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
@@ -43260,8 +43260,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/keyboard-party/shell`
           - `apps/mail/shell`
           - `apps/pages/shell`
+          - `apps/plugin-studio/shell`
           - `apps/settings/shell`
-          - `apps/studio/shell`
           - `layouts/host`
     - **`route-fallback`** — Loading placeholder for an unmatched pane route while the deferred plugin tier is still loading; renders null once loading settles so a genuinely-invalid URL falls through to not-found.
       - Web:
@@ -49364,7 +49364,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deploy-secrets/approvals`
-          - `apps/studio/compositions/contributors`
+          - `apps/plugin-studio/compositions/contributors`
           - `framework/cli/build`
           - `framework/cli/deploy`
           - `framework/tooling/codegen`
@@ -49382,8 +49382,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `parseEntryPattern`
           - Cross-plugin:
             - Imported by:
-              - `apps/studio/compositions/entry-points`
-              - `apps/studio/graph`
+              - `apps/plugin-studio/compositions/entry-points`
+              - `apps/plugin-studio/graph`
               - `framework/cli/release`
               - `plugin-meta/closure`
               - `plugin-meta/composition`
@@ -49518,7 +49518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Contributions.FacetTable` ← `plugin-meta.facets.routes.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.slots.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.structure.render-contributions`
-          - `Contributions.RowActivation` ← `apps.studio.contributions.tables`
+          - `Contributions.RowActivation` ← `apps.plugin-studio.contributions.tables`
           - `Contributions.RowActivation` ← `plugin-meta.facets.structure.render-contributions`
         - Uses:
           - `plugin-meta/plugin-view.pluginViewPane`
@@ -49536,8 +49536,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginChip`
       - Cross-plugin:
         - Imported by:
-          - `apps/studio/contributions`
-          - `apps/studio/contributions/tables`
+          - `apps/plugin-studio/contributions`
+          - `apps/plugin-studio/contributions/tables`
           - `plugin-meta/facets/contributions/render-contributions`
           - `plugin-meta/facets/cross-refs/render-contributions`
           - `plugin-meta/facets/db-schema/render-contributions`
@@ -53630,11 +53630,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --letter-spacing`
         - Imported by:
-          - `apps/studio/contributions`
-          - `apps/studio/contributions/tables/columns`
-          - `apps/studio/contributions/tables/foreign-keys`
-          - `apps/studio/contributions/tables/indexes`
-          - `apps/studio/contributions/tables/sample-rows`
+          - `apps/plugin-studio/contributions`
+          - `apps/plugin-studio/contributions/tables/columns`
+          - `apps/plugin-studio/contributions/tables/foreign-keys`
+          - `apps/plugin-studio/contributions/tables/indexes`
+          - `apps/plugin-studio/contributions/tables/sample-rows`
           - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
           - `conversations/conversation-view/jsonl-viewer/tool-call/runtime-profile`
           - `conversations/conversation-view/jsonl-viewer/tool-call/timeline`
@@ -54305,7 +54305,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/deploy-history`
               - `apps/events/sources/source-detail/runs`
-              - `apps/studio/compositions/release`
+              - `apps/plugin-studio/compositions/release`
               - `runs`
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-custom-column-defs.ts` (debt)
@@ -54811,10 +54811,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/pages/page-tree`
+          - `apps/plugin-studio/compositions`
+          - `apps/plugin-studio/compositions/release`
+          - `apps/plugin-studio/contributions/tables`
           - `apps/sonata/shell`
-          - `apps/studio/compositions`
-          - `apps/studio/compositions/release`
-          - `apps/studio/contributions/tables`
           - `backup`
           - `build`
           - `plugin-meta/plugin-view`
@@ -56064,7 +56064,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
         - Imported by:
-          - `apps/studio/contributions`
+          - `apps/plugin-studio/contributions`
           - `apps/website/pages/apps`
     - **`folder-picker`** — Folder-picker primitive: browse a file system's folders and pick one. FolderPicker / FolderPickerPopover take the file system (`fs`) the picked path is read on; the popover pairs a typeable path input with a breadcrumb browser, both reading that system's live folder listing (file-systems' useFolderListing).
       - Web:
@@ -56150,7 +56150,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-caption`
         - Imported by:
-          - `apps/studio/graph`
+          - `apps/plugin-studio/graph`
           - `tasks/task-graph`
     - **`hover-reveal`** — Hover/focus reveal for trailing affordances: useHoverReveal() + hoverRevealClass() couple opacity with pointer-events so a hidden control is never a live click-target (no invisible dead-zone over the blank space beside it).
       - Web:
@@ -56527,7 +56527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/site-messages/inbox`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
-              - `apps/studio/compositions/release`
+              - `apps/plugin-studio/compositions/release`
               - `build/build-fix`
               - `debug/background/investigate`
               - `debug/reports`
@@ -58273,6 +58273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `joinBasePath`
           - `joinUrlParts`
           - `MissingRouteParamError`
+          - `movedAppPath`
           - `normalizeRoutePath`
           - `onlySurfaceViews`
           - `parseSegmentParts`
@@ -60530,10 +60531,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `apps/deploy/deployments`
       - `apps/deploy/health`
       - `apps/deploy/remote-deploy`
-      - `apps/studio/compositions/release`
-      - `apps/studio/compositions/release/release-artifact`
-      - `apps/studio/compositions/release/release-info`
-      - `apps/studio/compositions/release/release-logs`
+      - `apps/plugin-studio/compositions/release`
+      - `apps/plugin-studio/compositions/release/release-artifact`
+      - `apps/plugin-studio/compositions/release/release-info`
+      - `apps/plugin-studio/compositions/release/release-logs`
       - `auth/apple-signing`
       - `framework/cli/deploy`
       - `framework/cli/release`
@@ -60601,7 +60602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldPresentation.Register` "arm:runs:release"
           - `DataViewSlots.CollectionItemAction` "runs:investigate:release" → `CollectionInvestigate`
         - Uses:
-          - `apps/studio/compositions/release.releaseDetailPane`
+          - `apps/plugin-studio/compositions/release.releaseDetailPane`
           - `network/live.FieldPresentation`
           - `primitives/css/badge.Badge`
           - `runs.investigateRuns`
@@ -62383,7 +62384,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `apps/deploy/deploy-history`
       - `apps/deploy/deploy-history/investigate-failure`
       - `apps/deploy/deployments/runs-arm`
-      - `apps/studio/compositions/release`
+      - `apps/plugin-studio/compositions/release`
       - `backup`
       - `backup/runs-arm`
       - `build`

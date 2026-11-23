@@ -238,7 +238,7 @@ const SURFACES: readonly Surface[] = [
   },
   {
     name: "entry-editor",
-    path: "/studio/compositions/comp/pages",
+    path: "/plugins/compositions/comp/pages",
     steps: [
       { click: 'button:has-text("Entry points")' },
       { click: 'button:has-text("Add")' },

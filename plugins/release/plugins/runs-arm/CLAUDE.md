@@ -80,7 +80,7 @@ quiet absence of a predicate.
     - `FieldPresentation.Register` "arm:runs:release"
     - `DataViewSlots.CollectionItemAction` "runs:investigate:release" → `CollectionInvestigate`
   - Uses:
-    - `apps/studio/compositions/release.releaseDetailPane`
+    - `apps/plugin-studio/compositions/release.releaseDetailPane`
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `runs.investigateRuns`

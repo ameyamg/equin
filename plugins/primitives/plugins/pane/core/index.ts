@@ -12,6 +12,7 @@ export {
   joinBasePath,
   joinUrlParts,
   MissingRouteParamError,
+  movedAppPath,
   normalizeRoutePath,
   onlySurfaceViews,
   parseSegmentParts,

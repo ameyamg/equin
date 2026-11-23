@@ -55,7 +55,7 @@ await withBrowser(async (h) => {
   // Deepen the Studio tab's route within the app: open the Explorer pane.
   await page.getByText("Explorer", { exact: true }).first().click();
   await page.waitForTimeout(1000);
-  const tabAUrl = page.url(); // .../studio/explorer
+  const tabAUrl = page.url(); // .../plugins/explorer
   console.log("TAB A (studio) deep URL:", tabAUrl);
   await snap(page, OUT, "4-studio-deep");
 

@@ -226,6 +226,33 @@ export function defineApp(def: {
   });
 }
 
+/** `path` is `base` or under it (an app's landing pane may write `;keys` on its base path). */
+function isUnderBasePath(base: string, path: string): boolean {
+  return (
+    base === "/" ||
+    path === base ||
+    path.startsWith(base + "/") ||
+    path.startsWith(base + ";")
+  );
+}
+
+/**
+ * Where a path under an app's FORMER base path lives now: `/studio/explorer`
+ * → `/plugins/explorer` for an app declaring `formerBasePaths: ["/studio"]`.
+ * `null` when no app moved away from it. The one mapping every host follows
+ * (the in-app address bar, the crawlable snapshot's 301s, a replayed visit).
+ */
+export function movedAppPath(
+  path: string,
+  apps: readonly Pick<AppRef, "basePath" | "formerBasePaths">[],
+): string | null {
+  for (const app of apps)
+    for (const former of app.formerBasePaths ?? [])
+      if (isUnderBasePath(former, path))
+        return app.basePath + path.slice(former.length);
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Pure per-segment substitution — the encoding shared by buildRouteUrl (web)
 // and `RouteDef.path`. Given ONE segment pattern and a flat params object,

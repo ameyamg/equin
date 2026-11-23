@@ -36,7 +36,7 @@ wires rows by matching a table's `facetId` to a `RowActivation` resolver.
     - `Contributions.FacetTable` ← `plugin-meta.facets.routes.render-contributions`
     - `Contributions.FacetTable` ← `plugin-meta.facets.slots.render-contributions`
     - `Contributions.FacetTable` ← `plugin-meta.facets.structure.render-contributions`
-    - `Contributions.RowActivation` ← `apps.studio.contributions.tables`
+    - `Contributions.RowActivation` ← `apps.plugin-studio.contributions.tables`
     - `Contributions.RowActivation` ← `plugin-meta.facets.structure.render-contributions`
   - Uses:
     - `plugin-meta/plugin-view.pluginViewPane`
@@ -54,8 +54,8 @@ wires rows by matching a table's `facetId` to a `RowActivation` resolver.
     - `PluginChip`
 - Cross-plugin:
   - Imported by:
-    - `apps/studio/contributions`
-    - `apps/studio/contributions/tables`
+    - `apps/plugin-studio/contributions`
+    - `apps/plugin-studio/contributions/tables`
     - `plugin-meta/facets/contributions/render-contributions`
     - `plugin-meta/facets/cross-refs/render-contributions`
     - `plugin-meta/facets/db-schema/render-contributions`

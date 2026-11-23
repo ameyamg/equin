@@ -1,3 +1,5 @@
+import { movedAppPath } from "@plugins/primitives/plugins/pane/core";
+
 /** What the replay needs of an app this page registers. */
 export interface LocalApp {
   basePath: string;
@@ -27,12 +29,6 @@ export function localPathOf(
   path: string,
   apps: readonly LocalApp[],
 ): string | null {
-  let moved = path;
-  for (const app of apps)
-    for (const former of app.formerBasePaths ?? [])
-      if (under(former, path)) {
-        moved = app.basePath + path.slice(former.length);
-        break;
-      }
+  const moved = movedAppPath(path, apps) ?? path;
   return apps.some((a) => under(a.basePath, moved)) ? moved : null;
 }

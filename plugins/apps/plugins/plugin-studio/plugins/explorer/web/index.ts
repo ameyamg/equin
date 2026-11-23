@@ -1,0 +1,32 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Studio } from "@plugins/apps/plugins/plugin-studio/plugins/shell/web";
+import { explorerPane } from "./panes";
+import { Explorer } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+export { Explorer } from "./slots";
+export type { TreeRowBadgeContribution } from "./slots";
+// Exported so sibling Studio panes (e.g. compositions) can open the tinted
+// Explorer tree alongside their own controls via openPane. The pane object is a
+// pure factory; registration still happens via the Pane.Register below.
+export { explorerPane } from "./panes";
+// Exported so sibling Studio surfaces (the compositions closure-tree section) can render the
+// tinted tree inline. Standalone: {plugins, selected, onSelect, storageKey?} — no pane
+// coupling. Explorer never imports compositions → DAG-safe.
+export { PluginTree } from "./components/plugin-tree";
+
+export default {
+  description:
+    "Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.",
+  contributions: [
+    Pane.Register({ pane: explorerPane }),
+    Studio.Sidebar({
+      id: "explorer",
+      title: "Plugin",
+      icon: symbol("account-tree"),
+      opens: { pane: explorerPane, params: {} },
+    }),
+  ],
+  slots: { ...Explorer, explorer: explorerPane },
+} satisfies PluginDefinition;

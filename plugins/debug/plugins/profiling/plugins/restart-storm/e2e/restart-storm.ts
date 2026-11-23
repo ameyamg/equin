@@ -60,7 +60,7 @@ const HANDOFF = arg("handoff", "off");
 const ITERATIONS = numArg("iterations", 3);
 const PATHS = arg(
   "paths",
-  "/agents,/pages,/home,/prototypes,/studio,/debug,/deploy,/settings",
+  "/agents,/pages,/home,/prototypes,/plugins,/debug,/deploy,/settings",
 ).split(",");
 const CONTEXTS = numArg("contexts", 1);
 const SETTLE_MS = numArg("settle", 8000);

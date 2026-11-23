@@ -79,9 +79,9 @@ const SURFACES: readonly Surface[] = [
   { name: "mail-inbox", path: "/mail" },
   { name: "mail-message", path: (f) => `/mail/search/m/${f.mailMessageId}` },
   { name: "sonata", path: "/sonata" },
-  { name: "studio-contributions", path: "/studio/contributions" },
-  { name: "studio-table", path: "/studio/t/build/build_runs" },
-  { name: "studio-compare", path: "/studio/compositions/compare" },
+  { name: "studio-contributions", path: "/plugins/contributions" },
+  { name: "studio-table", path: "/plugins/t/build/build_runs" },
+  { name: "studio-compare", path: "/plugins/compositions/compare" },
   { name: "prototypes", path: "/prototypes" },
   // The prototype detail: its header is a floating card (`header="card"`).
   {

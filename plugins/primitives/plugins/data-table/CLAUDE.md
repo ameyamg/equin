@@ -405,11 +405,11 @@ step renders, to check a caller.
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --letter-spacing`
   - Imported by:
-    - `apps/studio/contributions`
-    - `apps/studio/contributions/tables/columns`
-    - `apps/studio/contributions/tables/foreign-keys`
-    - `apps/studio/contributions/tables/indexes`
-    - `apps/studio/contributions/tables/sample-rows`
+    - `apps/plugin-studio/contributions`
+    - `apps/plugin-studio/contributions/tables/columns`
+    - `apps/plugin-studio/contributions/tables/foreign-keys`
+    - `apps/plugin-studio/contributions/tables/indexes`
+    - `apps/plugin-studio/contributions/tables/sample-rows`
     - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
     - `conversations/conversation-view/jsonl-viewer/tool-call/runtime-profile`
     - `conversations/conversation-view/jsonl-viewer/tool-call/timeline`

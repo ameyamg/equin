@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-plugin-studio-contributions-tables-columns",
+  "description": "Table column definitions section in the table detail view.",
+  "private": true,
+  "version": "0.0.1"
+}

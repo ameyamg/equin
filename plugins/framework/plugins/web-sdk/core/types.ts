@@ -98,7 +98,7 @@ export interface PluginDefinition {
    * gets one:
    *
    * ```ts
-   * slots: Studio,                             // → apps.studio.shell.sidebar, .toolbar
+   * slots: Studio,                             // → apps.plugin-studio.shell.sidebar, .toolbar
    * slots: { canvas: canvasPane },             // → …graph.canvas.actions
    * slots: { ...Studio, detail: detailPane },
    * ```
