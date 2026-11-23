@@ -17,6 +17,7 @@ import {
   workerLockName,
 } from "./constants";
 import type { TabToWorker, WorkerToTab } from "./protocol";
+import { WatchdogError } from "./watchdog-error";
 import { fileSlowFrame, fileStall } from "./file-stall";
 import { installInTabFallback } from "./in-tab-fallback";
 import type { InteractionBegin } from "./interaction-judge";
@@ -135,7 +136,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
         return;
       case "fatal":
         detach();
-        throw new Error(msg.message);
+        throw new WatchdogError(msg.failure);
     }
   };
 

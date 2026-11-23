@@ -2,8 +2,9 @@
 // (one per build — its identity is this script's content-addressed URL plus
 // the name the page starts it under). A frozen tab cannot report itself, so this thread pings
 // each tab at 1 Hz and notices the silence. Built by vite as its own
-// self-contained chunk: import maps do not reach workers, so it imports only
-// this plugin's own files (the web-artifacts inline audit enforces it).
+// self-contained chunk: import maps do not reach workers, so whatever it
+// imports is inlined — this plugin's own files, and through the store one pure
+// leaf (web-artifacts § "A page worker is bundled whole").
 //
 // The 1 Hz ping timer is a sanctioned exception to "no polling": detecting the
 // ABSENCE of a signal needs a clock (like the server health monitor's event-loop
@@ -17,7 +18,11 @@ import {
   stallDbName,
   workerLockName,
 } from "./internal/constants";
-import type { TabToWorker, WorkerToTab } from "./internal/protocol";
+import type {
+  TabToWorker,
+  WatchdogFailure,
+  WorkerToTab,
+} from "./internal/protocol";
 import {
   createStallMachine,
   needsClock,
@@ -25,7 +30,7 @@ import {
   type StallEffect,
   type StallEvent,
 } from "./internal/stall-machine";
-import { openStallStore, type StallStore } from "./internal/stall-store";
+import { createStallStore, type Stored } from "./internal/stall-store";
 
 interface PortLike {
   postMessage(msg: WorkerToTab): void;
@@ -57,14 +62,30 @@ function boot(): void {
   });
   const ports = new Map<string, PortLike>();
   let timer: ReturnType<typeof setInterval> | null = null;
-  const storeReady: Promise<StallStore> = openStallStore(
-    indexedDB,
-    stallDbName(prefix),
-  );
+  const store = createStallStore(indexedDB, stallDbName(prefix));
 
-  const fatal = (err: unknown): void => {
-    const message = `main-thread-stall watchdog: ${err instanceof Error ? err.message : String(err)}`;
-    for (const p of ports.values()) p.postMessage({ kind: "fatal", message });
+  const fatal =
+    (op: WatchdogFailure["op"]) =>
+    (err: unknown): void => {
+      const isError = err instanceof Error;
+      const failure: WatchdogFailure = {
+        op,
+        errorType: isError ? err.name : typeof err,
+        message: isError ? err.message : String(err),
+      };
+      for (const p of ports.values()) p.postMessage({ kind: "fatal", failure });
+    };
+
+  // The browser took the storage away: no record this time, said in the log
+  // only — the watch itself needs none.
+  const noteUnavailable = (
+    op: WatchdogFailure["op"],
+    res: Stored<unknown>,
+  ): void => {
+    if (res.kind === "done") return;
+    const { reason, name, message } = res;
+    const line = { kind: "storage-unavailable", op, reason, name, message };
+    apply([{ type: "log", line }]);
   };
 
   const apply = (effects: StallEffect[]): void => {
@@ -75,10 +96,16 @@ function boot(): void {
             ports.get(id)?.postMessage({ kind: "ping" });
           break;
         case "persist":
-          void storeReady.then((s) => s.put(e.record)).catch(fatal);
+          void store
+            .put(e.record)
+            .then((res) => noteUnavailable("persist", res))
+            .catch(fatal("persist"));
           break;
         case "forget":
-          void storeReady.then((s) => s.delete(e.id)).catch(fatal);
+          void store
+            .delete(e.id)
+            .then((res) => noteUnavailable("forget", res))
+            .catch(fatal("forget"));
           break;
         case "deliver":
           ports
@@ -141,23 +168,33 @@ function boot(): void {
   // Adopt the stalls a dead watchdog left behind (it died with a stall open,
   // or before a tab could file a finished one). Taking the dead owner's lock
   // while adopting means two booting watchdogs cannot both adopt one record.
-  void storeReady
-    .then(async (store) => {
-      for (const rec of await store.all()) {
+  void store
+    .all()
+    .then(async (stored) => {
+      if (stored.kind !== "done") {
+        noteUnavailable("adopt", stored);
+        return;
+      }
+      for (const rec of stored.value) {
         if (rec.owner === workerId) continue;
         await locks.request(
           workerLockName(prefix, rec.owner),
           { ifAvailable: true },
           async (lock) => {
             if (lock === null) return; // its owner is alive
-            const current = await store.get(rec.id);
+            const read = await store.get(rec.id);
+            if (read.kind !== "done") {
+              noteUnavailable("adopt", read);
+              return;
+            }
+            const current = read.value;
             if (current && current.owner === rec.owner)
               feed({ type: "adopt", record: current });
           },
         );
       }
     })
-    .catch(fatal);
+    .catch(fatal("adopt"));
 
   scope.onconnect = (ev) => {
     for (const port of ev.ports) {
@@ -169,7 +206,11 @@ function boot(): void {
           if (m.proto !== STALL.PROTO) {
             port.postMessage({
               kind: "fatal",
-              message: `main-thread-stall watchdog: protocol ${m.proto} ≠ ${STALL.PROTO}`,
+              failure: {
+                op: "attach",
+                errorType: "ProtocolMismatch",
+                message: `protocol ${m.proto} ≠ ${STALL.PROTO}`,
+              },
             });
             port.close();
             return;

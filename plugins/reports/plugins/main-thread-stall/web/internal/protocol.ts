@@ -46,6 +46,15 @@ export type TabToWorker =
   /** pagehide / unmount: the port is leaving. */
   | { kind: "detach" };
 
+/** Why the watchdog cannot do its job, in what the tab's report keys on. */
+export interface WatchdogFailure {
+  /** What it was doing. */
+  op: "attach" | "persist" | "forget" | "adopt";
+  /** The worker error's `name`. */
+  errorType: string;
+  message: string;
+}
+
 /** Worker → tab. */
 export type WorkerToTab =
   /**
@@ -59,5 +68,8 @@ export type WorkerToTab =
   | { kind: "file"; id: string; payload: MainThreadStallDraft }
   /** A line for the main-thread-stall log channel (a worker has no clientLog). */
   | { kind: "log"; line: Record<string, unknown> }
-  /** The worker cannot do its job (protocol mismatch, storage failed). */
-  | { kind: "fatal"; message: string };
+  /**
+   * The worker cannot do its job (protocol mismatch, a fault of its own —
+   * never storage the browser took away, which is only logged).
+   */
+  | { kind: "fatal"; failure: WatchdogFailure };

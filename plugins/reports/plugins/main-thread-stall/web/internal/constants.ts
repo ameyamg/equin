@@ -42,7 +42,7 @@ export const STALL = {
   MAX_SCRIPTS: 5,
   STRING_CAP: 300,
   // Tab ↔ worker protocol version: a loud tripwire, never a negotiation.
-  PROTO: 3,
+  PROTO: 4,
 } as const;
 
 // Every browser-visible name the watchdog takes (the SharedWorker, its Web

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-indexed-db-failure",
+  "private": true,
+  "version": "0.0.1",
+  "description": "What an IndexedDB failure is about, from the error alone: idbFailureOf(err) answers suspended (WebKit cut this context's work short because its page or process was suspended — isSuspensionAbort), unavailable (the browser's own storage failed or refused: UnknownError, QuotaExceededError, SecurityError — Safari's \"Error looking up record in object store by key range\" among them) or fault (anything else: the caller's own bug, to fail loudly). Plain functions with no other import, so a self-contained worker bundle can inline it."
+}

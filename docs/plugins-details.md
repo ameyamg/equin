@@ -32403,6 +32403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server/host-storage/stored.storagePrefix`
               - `framework/browser-server/host-storage/stored.storesDbName`
               - `packages/deadline.wallNow`
+              - `primitives/dom/indexed-db-failure.isSuspensionAbort`
               - `primitives/dom/web-locks.webLocks`
             - Exports (types):
               - `BlobFree`
@@ -45065,14 +45066,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×9
           - `database` ×6
           - `conversations` ×5
+          - `reports` ×4
           - `apps` ×3
           - `debug` ×3
           - `framework` ×3
-          - `reports` ×3
           - `network` ×2
           - `integrations/github-events`
           - `tasks/tasks-core`
@@ -55119,6 +55120,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
               - `react-compiler:no-silent-skips` — `web/internal/in-view.ts` (debt)
+        - **`indexed-db-failure`** — What an IndexedDB failure is about, from the error alone: idbFailureOf(err) answers suspended (WebKit cut this context's work short because its page or process was suspended — isSuspensionAbort), unavailable (the browser's own storage failed or refused: UnknownError, QuotaExceededError, SecurityError — Safari's "Error looking up record in object store by key range" among them) or fault (anything else: the caller's own bug, to fail loudly). Plain functions with no other import, so a self-contained worker bundle can inline it.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/browser-server/host-storage`
+              - `reports/main-thread-stall`
+          - Core:
+            - Exports (types): `IdbFailure`
+            - Exports (values):
+              - `idbFailureOf`
+              - `isSuspensionAbort`
         - **`layout-host`** — Which way the box laying a node out flows its children: useHostFlowAxis(sentinelRef, { followResize? }) reads it in the frame's after-layout phase (no forced style recalc on the commit path) — the host being the nearest ancestor that draws a box (skipping display: contents wrappers, whose width is 0 and which never resize), and row only for a row flex container (computed flex-direction alone says row for every element). Shared by the slot renderer and the reorder middleware so neither misreads a wrapped host.
           - Web:
             - Uses:

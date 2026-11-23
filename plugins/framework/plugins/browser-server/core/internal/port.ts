@@ -109,7 +109,7 @@ export type HostRefusal =
    * aborts the IndexedDB work (an upgrade creating a database, a transaction
    * in progress) of a page — or the worker serving it — suspended in the
    * back/forward cache or as a background tab, when it blocks another
-   * context on the same database (`host-storage`'s `isSuspensionAbort`).
+   * context on the same database (`primitives/dom/indexed-db-failure`'s `isSuspensionAbort`).
    * Nothing failed: the page starts the host again, on a fresh worker, once
    * it runs again.
    */

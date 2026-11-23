@@ -324,6 +324,25 @@ while adopting, so two cannot both adopt one) and files them — `ended:
 unknown`, a lower-bound duration, for one that was still open. A filing that
 failed stays stored until a later watchdog adopts it.
 
+**Storage the browser takes away is not a crash.** The records are evidence;
+the watch needs none. Each store operation answers `done` or `unavailable`
+(`primitives/dom/indexed-db-failure`: Safari suspended the worker, storage
+blocked / full, the backing store failed — "Error looking up record in object
+store by key range"; plus, here only, a transaction the browser aborted). An
+`unavailable` is a `storage-unavailable` line on the log channel: no record
+this time, the watch goes on. A write is `done` only once committed, and a
+connection the browser closed is opened again. What that costs: a record not
+written cannot be adopted, and one not deleted is adopted — so filed — again.
+
+Only what the browser DELIVERS is classified (an open's, a request's, a
+transaction's error event). What our code throws synchronously — a bad key, an
+uncloneable record, a missing store, an exception in the upgrade (kept as the
+open's error, never its bare `AbortError`) — is a fault whatever its name.
+
+Anything else is a fault: relayed (`fatal`), the tab detaches and throws a
+`WatchdogError`, whose subject (operation › error type › message class) is
+its report's identity — the throw site's stack is the same for every cause.
+
 ## The watchdog dies with its host renderer
 
 Chrome runs a SharedWorker inside one tab's renderer (the first tab's). When

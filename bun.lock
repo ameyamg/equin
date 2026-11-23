@@ -6684,6 +6684,10 @@
       "name": "@equin/plugin-primitives-dom-in-view",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/indexed-db-failure": {
+      "name": "@equin/plugin-primitives-dom-indexed-db-failure",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/layout-host": {
       "name": "@equin/plugin-primitives-dom-layout-host",
       "version": "0.0.1",
@@ -11594,6 +11598,8 @@
     "@equin/plugin-primitives-dom-gesture-origin": ["@equin/plugin-primitives-dom-gesture-origin@workspace:plugins/primitives/plugins/dom/plugins/gesture-origin"],
 
     "@equin/plugin-primitives-dom-in-view": ["@equin/plugin-primitives-dom-in-view@workspace:plugins/primitives/plugins/dom/plugins/in-view"],
+
+    "@equin/plugin-primitives-dom-indexed-db-failure": ["@equin/plugin-primitives-dom-indexed-db-failure@workspace:plugins/primitives/plugins/dom/plugins/indexed-db-failure"],
 
     "@equin/plugin-primitives-dom-layout-host": ["@equin/plugin-primitives-dom-layout-host@workspace:plugins/primitives/plugins/dom/plugins/layout-host"],
 

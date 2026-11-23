@@ -14,7 +14,8 @@ import {
   type PortEnd,
   type ServedHost,
 } from "@plugins/framework/plugins/browser-server/core";
-import { BootInterruptedError, isSuspensionAbort } from "./errors";
+import { isSuspensionAbort } from "@plugins/primitives/plugins/dom/plugins/indexed-db-failure/core";
+import { BootInterruptedError } from "./errors";
 import { declareHostStorage } from "./host-storage";
 import {
   openHostStorage,

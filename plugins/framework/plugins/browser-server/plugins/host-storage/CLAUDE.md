@@ -139,7 +139,8 @@ serveBrowserHost({
   IDBFS sync deleting a removed file, report-1795189021-x5spzw), its commit
   "Transaction was aborted while its process was suspended". Nothing cut
   short committed. `serveBrowserHost` turns those errors
-  (`isSuspensionAbort`, anywhere in the cause chain) into
+  (`primitives/dom/indexed-db-failure`'s `isSuspensionAbort`, anywhere in
+  the cause chain) into
   `BootInterruptedError` (`{ kind: "interrupted" }`): the worker retires as
   after any thrown boot, and the page — running again — starts a fresh one
   past its generation (`demo/scope`). What it left is what a fresh open
@@ -178,6 +179,7 @@ serveBrowserHost({
     - `framework/browser-server/host-storage/stored.storagePrefix`
     - `framework/browser-server/host-storage/stored.storesDbName`
     - `packages/deadline.wallNow`
+    - `primitives/dom/indexed-db-failure.isSuspensionAbort`
     - `primitives/dom/web-locks.webLocks`
   - Exports (types):
     - `BlobFree`
