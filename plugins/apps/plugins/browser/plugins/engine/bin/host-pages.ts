@@ -192,12 +192,17 @@ const LAUNCH_ARGS = [
 /**
  * macOS runs Chromium HEADED, as a background-only app (`background-app.ts`):
  * the GPU draws its pages and sites see the browser they expect, not the
- * headless shell bot checks flag. Its windows live off-screen — nobody looks
- * at them, the app's canvas shows their pages — and are never throttled or
- * occluded as the hidden windows they are. Elsewhere (Linux: no display)
- * Chromium stays the headless shell.
+ * headless shell bot checks flag. Nobody looks at its windows — the app's
+ * canvas shows their pages — so they are kept MINIMIZED (`hideWindow`): a
+ * position alone does not hide a window (macOS clamps one opened at -20000
+ * back onto a display, and Mission Control lays out every window that is not
+ * minimized wherever it sits). With the flags below a minimized window is
+ * never throttled: measured 2026-11-23, every tab of it — the front one or
+ * not — keeps painting and screencasting at full rate. Elsewhere (Linux: no
+ * display) Chromium stays the headless shell.
  */
 const HEADED = process.platform === "darwin";
+/** Where a window opens before it is minimized (macOS clamps it onto a display). */
 const OFFSCREEN = -20_000;
 const WINDOW = { width: 2560, height: 1600 };
 const HEADED_ARGS = [
@@ -292,12 +297,14 @@ async function newOwnPage(ctx: BrowserContext): Promise<Page> {
 }
 
 /**
- * Put the page's window off-screen. Chromium places a window it opens
- * (a new window, a `window.open` popup) on the screen; the launch flags only
- * position the first one.
+ * Size the page's window and minimize it, so it is in no window overview
+ * (Mission Control, App Exposé's main row). Chromium opens a window it creates
+ * (a new window, a `window.open` popup) as a normal one; the launch flags only
+ * size the first. Bounds can only be set on a normal window, hence the order.
  */
-async function moveOffscreen(cdp: CDPSession): Promise<void> {
-  const { windowId } = await cdp.send("Browser.getWindowForTarget");
+async function hideWindow(cdp: CDPSession): Promise<void> {
+  const { windowId, bounds } = await cdp.send("Browser.getWindowForTarget");
+  if (bounds.windowState === "minimized") return;
   await cdp.send("Browser.setWindowBounds", {
     windowId,
     bounds: { windowState: "normal" },
@@ -305,6 +312,10 @@ async function moveOffscreen(cdp: CDPSession): Promise<void> {
   await cdp.send("Browser.setWindowBounds", {
     windowId,
     bounds: { left: OFFSCREEN, top: OFFSCREEN, ...WINDOW },
+  });
+  await cdp.send("Browser.setWindowBounds", {
+    windowId,
+    bounds: { windowState: "minimized" },
   });
 }
 
@@ -334,7 +345,7 @@ async function register(key: string, page: Page): Promise<RemotePage> {
   byPage.set(page, rp);
   wirePage(rp);
   await cdp.send("Page.enable");
-  if (HEADED) await moveOffscreen(cdp);
+  if (HEADED) await hideWindow(cdp);
   // Every page believes it has focus (caret, :focus, focus events), whichever
   // the user looks at.
   await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true });
@@ -790,8 +801,11 @@ async function attach(
   rp.held = null;
   clearPageTimers(rp);
   await setFrozen(rp, false);
-  // Tabs of one window: only the front one renders, so the viewed page is it.
-  if (HEADED) await rp.page.bringToFront();
+  // Never bring the page to the front (`bringToFront`, `Target.activateTarget`):
+  // that restores its minimized window onto the screen. Every tab of a
+  // minimized window paints, so there is no need. Re-hide in case something
+  // else restored it (a page's `window.focus()`).
+  if (HEADED) await hideWindow(rp.cdp);
   await applyViewport(rp, msg.viewport);
   // A fresh page is about to load `msg.url`: its first state already says so
   // (never the initial about:blank — "" means the start page to the app).

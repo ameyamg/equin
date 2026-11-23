@@ -26,10 +26,16 @@ pid, `launchedBy` namespace, page/socket counts, idle deadline), and
   per build) — no Dock icon, no Cmd+Tab, no menu bar. Headed means the GPU
   draws (Metal WebGL, GPU compositing) and sites see a real browser
   (`window.chrome`, plugins); the headless shell was flagged by bot checks
-  (Google's reCAPTCHA looped). Its windows sit off-screen (launch flags, and
-  `Browser.setWindowBounds` for every page's window), unthrottled; the viewed
-  page is brought to the front of its window on attach. `LSUIElement` makes
-  Chromium abort at start — do not use it. Elsewhere: the headless shell.
+  (Google's reCAPTCHA looped). Its windows are kept **minimized**
+  (`hideWindow`: every page's window on register, again on attach), so no
+  window overview (Mission Control) shows them — an off-screen position alone
+  does not (macOS clamps it back onto a display), and a background-only app
+  cannot be hidden (`NSRunningApplication.hide` refuses). With the
+  no-backgrounding flags every tab of a minimized window paints and
+  screencasts at full rate, front tab or not, so a page is never brought to
+  the front: `bringToFront` / `Target.activateTarget` restore the window onto
+  the screen. `LSUIElement` makes Chromium abort at start — do not use it.
+  Elsewhere: the headless shell.
 - **Not an automated browser**: no `--enable-automation`, Blink's
   `AutomationControlled` off — `navigator.webdriver` is false.
 
