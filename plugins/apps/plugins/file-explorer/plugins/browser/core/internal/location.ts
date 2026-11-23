@@ -31,7 +31,15 @@ export function encodeOpenParam(dir: string, open: string): string {
 
 /** The inverse of {@link encodeOpenParam}: a full path stays, a relative one joins `dir`. */
 export function decodeOpenParam(dir: string, param: string): string {
+  return fullOpenParam(param) ?? joinPath(dir, param);
+}
+
+/**
+ * The file an open param names on its own — its full path — or `null` when it
+ * is written relative to a folder and so means nothing without one.
+ */
+export function fullOpenParam(param: string): string | null {
   return param.startsWith("/") || param === "~" || param.startsWith("~/")
     ? param
-    : joinPath(dir, param);
+    : null;
 }

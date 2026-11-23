@@ -9,6 +9,7 @@ export {
 export {
   decodeOpenParam,
   encodeOpenParam,
+  fullOpenParam,
   locationKey,
   type ExplorerLocation,
 } from "./internal/location";

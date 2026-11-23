@@ -159,6 +159,7 @@
     - `formatModified`
     - `formatModifiedFull`
     - `formatSize`
+    - `fullOpenParam`
     - `isWithin`
     - `itemCount`
     - `joinPath`

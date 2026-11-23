@@ -32,6 +32,7 @@ import {
   filesConfig,
   decodeOpenParam,
   encodeOpenParam,
+  fullOpenParam,
   parentPath,
   type ExplorerLocation,
 } from "../core";
@@ -154,7 +155,7 @@ function FilesComputerAtLegacy(): ReactNode {
   const params = filesComputerAtLegacyPane.useParams();
   return (
     <PaneChrome pane={filesComputerAtLegacyPane}>
-      <LegacyForward location={locationOf("computer", params)} />
+      <LocationForward location={locationOf("computer", params)} />
     </PaneChrome>
   );
 }
@@ -163,12 +164,12 @@ function FilesBrowserAtLegacy(): ReactNode {
   const params = filesBrowserAtLegacyPane.useParams();
   return (
     <PaneChrome pane={filesBrowserAtLegacyPane}>
-      <LegacyForward location={locationOf("browser", params)} />
+      <LocationForward location={locationOf("browser", params)} />
     </PaneChrome>
   );
 }
 
-function LegacyForward({
+function LocationForward({
   location,
 }: {
   location: ExplorerLocation;
@@ -187,8 +188,13 @@ function useFolderTitle(params: { dir: string }): string {
   return params.dir === HOME ? "Home" : baseName(params.dir);
 }
 
-function usePreviewTitle(params: { dir: string; open: string }): string {
-  return baseName(decodeOpenParam(params.dir, params.open));
+function usePreviewTitle(params: { dir?: string; open: string }): string {
+  // No `dir` when the route holds the preview without its folder column.
+  return baseName(
+    params.dir === undefined
+      ? params.open
+      : decodeOpenParam(params.dir, params.open),
+  );
 }
 
 /** The folder pane's params: the folder, and its system unless the computer's disk. */
@@ -567,10 +573,10 @@ function FilesFolderBrowser({
 function FilesPreview(): ReactNode {
   const { open } = filesPreviewPane.useParams();
   const folder = filesFolderPane.useEnclosing();
-  if (folder === null) {
-    // Only ever opened beside its folder (its declared parent).
-    throw new Error("files-preview: no folder column to its left");
-  }
+  // Files only opens it beside its folder (its declared parent), but a URL can
+  // still name it alone (`/files/preview/<file>` — typed, shared, cut short, an
+  // embed's place): a parsed route holds what the URL says.
+  if (folder === null) return <FilesPreviewWithoutFolder open={open} />;
   const path = decodeOpenParam(folder.params.dir, open);
   const fs = systemOf(folder.params.fs);
   if (fs === null) {
@@ -581,6 +587,67 @@ function FilesPreview(): ReactNode {
     );
   }
   return <FilePreviewPane pane={filesPreviewPane} fs={fs} path={path} />;
+}
+
+/**
+ * The preview in a route without its folder column. An `open` that is a full
+ * path says which folder that is: it forwards there (the folder, the file
+ * beside it), REPLACING the history entry. One written relative to a folder
+ * the route doesn't name points at no file, and says so.
+ */
+function FilesPreviewWithoutFolder({ open }: { open: string }): ReactNode {
+  const path = fullOpenParam(open);
+  // `~` and `/` are folders with nothing above them to preview them in.
+  const dir =
+    path === null || path === HOME || path === "/"
+      ? null
+      : parentPath(path, HOME);
+  if (path === null || dir === null) {
+    return (
+      <PendingFilePreviewPane pane={filesPreviewPane} name={baseName(open)}>
+        <Placeholder>
+          This link doesn’t say which folder “{baseName(open)}” is in. Open
+          Files and browse to it.
+        </Placeholder>
+      </PendingFilePreviewPane>
+    );
+  }
+  return (
+    <PendingFilePreviewPane pane={filesPreviewPane} name={baseName(path)}>
+      <FilesPreviewForward dir={dir} open={path} />
+    </PendingFilePreviewPane>
+  );
+}
+
+/**
+ * Forwards to the file's folder in the home system, the one the bare `/files`
+ * opens: `;fs` rides the folder's segment, so a route without it names none.
+ */
+function FilesPreviewForward({
+  dir,
+  open,
+}: {
+  dir: string;
+  open: string;
+}): ReactNode {
+  const home = useHomeSystem();
+  switch (home.kind) {
+    case "pending":
+      return <Loading variant="rows" />;
+    case "failed":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="the file systems here"
+          error={home.error}
+          refetch={home.refetch}
+        />
+      );
+    case "none":
+      return <Placeholder>There are no files to browse here</Placeholder>;
+    case "ready":
+      return <LocationForward location={{ fs: home.fs, dir, open }} />;
+  }
 }
 
 /**
