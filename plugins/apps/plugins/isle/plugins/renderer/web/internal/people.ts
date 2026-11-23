@@ -48,7 +48,21 @@ export interface Villager extends Walker {
   chat: { readonly line: string; readonly t0: number; until: number } | null;
   /** The line it said last, so it doesn't say it twice in a row. */
   lastLine: string | null;
+  /** At night: going to its place round the campfire, there, or (at daybreak) going back to its route. */
+  gather: Gathering | null;
 }
+
+/** A villager's night round the campfire. */
+export type Gathering =
+  /** Out of reach of the fire tonight (another island, no path): it keeps to its route. */
+  | { readonly kind: "away" }
+  | {
+      readonly kind: "going" | "seated" | "leaving";
+      /** Its place round the fire. */
+      readonly seat: Pt;
+      /** What is left of its walk there (or back). */
+      path: Pt[];
+    };
 
 const SC = 3;
 

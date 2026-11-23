@@ -43,6 +43,7 @@ import {
   type Placement,
   type Pt,
   type Resident,
+  type Square,
   type WalkGrid,
   type WorldModel,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
@@ -93,6 +94,18 @@ import {
   pickLine,
   type ChatterPlace,
 } from "./chatter";
+import {
+  clockHours,
+  drawFlames,
+  FireClicks,
+  fireStrength,
+  flaring,
+  Marshmallow,
+  seatAround,
+  Sparks,
+  Storyteller,
+  TOAST_NEAR,
+} from "./campfire";
 import { PBOX, People, type Hero, type Villager, type Walker } from "./people";
 import { drawBats, Werewolf, WOLF_BOX } from "./easter-eggs";
 import {
@@ -326,6 +339,13 @@ const TALK_LEAVE = 120;
 /** How long a line shows (s, plus a little per character), and the pause before the next while the hero stays. */
 const TALK_SHOW = 3;
 const TALK_PAUSE = 4;
+/** The hero's box while toasting a marshmallow: a person's, wide enough for the stick. */
+const MARSHMALLOW_BOX = [-60, -58, 60, 10] as const;
+/** How near (px, y squashed ×1.4) the hero comes for the villagers round the fire to greet them. */
+const FIRESIDE_NEAR = 170;
+/** How often (s) the fire re-reads the clock. */
+const FIRE_CLOCK_S = 5;
+
 /** How far (px) a walking villager keeps its feet from the edge of something solid. */
 const VILLAGER_HALF_WIDTH = 10;
 
@@ -399,6 +419,13 @@ export class IsleEngine {
   private readonly fireworks = new Fireworks(this.rnd);
   private readonly cheat = new CheatCode();
   private readonly pokes = new Pokes();
+  // the campfire's secrets
+  private readonly sparks = new Sparks(this.rnd);
+  private readonly fireClicks = new FireClicks();
+  private readonly marshmallow = new Marshmallow(this.rnd);
+  private readonly storyteller = new Storyteller(this.rnd);
+  /** How high the fire burns (by the clock, re-read every few seconds), and when it was read. */
+  private fire = { strength: 1, readAt: -Infinity, sparkAt: 0 };
   private serpent: Serpent | null = null;
   /** Engine clock (s) of the serpent's next try; set on the first frame. */
   private serpentAt = -1;
@@ -651,6 +678,7 @@ export class IsleEngine {
       attending: false,
       chat: null,
       lastLine: null,
+      gather: null,
     }));
     this.resume = opts.resume ?? null;
     this.resumeBelow = opts.resume?.below?.x ?? null;
@@ -1123,6 +1151,8 @@ export class IsleEngine {
     // round the scenery the grid marks solid (the campfire on its square)
     const solids = this.scene!.solids;
     this.villagers.forEach((v, i) => {
+      // the fire (or the way to it) may have moved: a gathering walks afresh
+      v.gather = null;
       if (v.linger) return;
       const kept = v.route
         ? layout.roads.find((r) => r.key === v.routeKey)
@@ -2050,6 +2080,21 @@ export class IsleEngine {
       this.pokes.poke(performance.now() / 1000);
       return;
     }
+    // the campfire: a burst of sparks; clicked five times running, fireworks
+    const camp = this.campAt(p);
+    if (camp) {
+      const t = performance.now() / 1000;
+      this.sparks.burst(camp.x, camp.y - 12, t, 14);
+      if (this.fireClicks.click(t) && !this.opts.reducedMotion) {
+        this.fireworks.volley(camp.x, camp.y - 30, t, 6);
+        this.pokes.line = {
+          line: "★ You found a secret! ★",
+          t0: t,
+          until: t + 3,
+        };
+      }
+      return;
+    }
     // the well: the hero walks to it and climbs in
     const well = this.wellAt(p.x, p.y);
     if (well) {
@@ -2064,6 +2109,50 @@ export class IsleEngine {
       return;
     }
     this.walkTo(p.x, p.y);
+  }
+
+  /** The campfire's square, when world point `p` is on its stones or flames (a click there stokes it). */
+  private campAt(p: { x: number; y: number }): Square | null {
+    const q = this.layout?.squares.find((s) => s.camp);
+    return q &&
+      Math.abs(p.x - q.x) < 26 &&
+      p.y > q.y - 40 * Math.min(1.3, this.fire.strength) &&
+      p.y < q.y + 14
+      ? q
+      : null;
+  }
+
+  /** Reads the clock now and then: how high the fire burns (low in the small hours, flaring at dawn). */
+  private tendFire(t: number): void {
+    if (t - this.fire.readAt < FIRE_CLOCK_S) return;
+    this.fire.readAt = t;
+    this.fire.strength = fireStrength(clockHours(new Date()));
+  }
+
+  /** The hero left standing by the fire at night toasts a marshmallow. */
+  private toast(t: number): void {
+    const camp = this.layout?.squares.find((q) => q.camp);
+    const hero = this.hero;
+    const ready =
+      !!camp &&
+      this.time === "night" &&
+      this.started &&
+      hero.placed &&
+      !hero.walking &&
+      !hero.path &&
+      !this.teleport &&
+      !this.descent &&
+      !this.below &&
+      !this.moving &&
+      Math.hypot(hero.x - camp.x, (hero.y - camp.y) * 1.4) < TOAST_NEAR;
+    const was = this.marshmallow.holding;
+    const said = this.marshmallow.step(t, ready);
+    if (camp && !was && this.marshmallow.holding)
+      hero.facing = Math.atan2(camp.y - hero.y, camp.x - hero.x);
+    if (said) {
+      this.pokes.line = said;
+      if (said.burnt && camp) this.sparks.burst(camp.x, camp.y - 14, t, 8, 0.6);
+    }
   }
 
   /** Whether world point `p` is on the hero (a click there pokes them). */
@@ -2090,6 +2179,7 @@ export class IsleEngine {
     if (!this.grid || !this.hero.placed || this.teleport) return;
     const p = this.toWorld(sx, sy);
     if (this.onHero(p)) return;
+    if (this.campAt(p)) return;
     if (this.hitBuilding(p, performance.now() / 1000)) return;
     // on the well: land at its front, and climb in once landed
     const well = this.wellAt(p.x, p.y);
@@ -2502,6 +2592,7 @@ export class IsleEngine {
       );
     }
     this.walk(dt, t);
+    this.toast(t);
     this.moveCamera(dt, t);
     // hover: re-resolved under the resting mouse every frame, eased in and out (~150 ms)
     if (this.started) {
@@ -2888,37 +2979,21 @@ export class IsleEngine {
         },
       });
     const village = layout.squares.find((q) => q.camp);
+    if (village) this.tendFire(t);
     if (village && vis(village.x, village.y)) {
       const fx = village.x;
       const fy = village.y;
+      const strength = this.fire.strength;
+      // flaring at dawn: it spits sparks by itself
+      if (flaring(strength) && t > this.fire.sparkAt) {
+        this.fire.sparkAt = t + 0.3 + this.rnd() * 0.9;
+        this.sparks.burst(fx, fy - 12, t, 2 + ((this.rnd() * 4) | 0), 0.8);
+      }
       dyn.push({
         y: fy + 4,
         d: () => {
-          for (let i = 0; i < 3; i++) {
-            const fl = Math.sin(t * 9 + i * 2) * 2.5;
-            g.fillStyle = [
-              "rgba(220,110,40,.9)",
-              "rgba(240,170,60,.9)",
-              "rgba(255,230,150,.9)",
-            ][i]!;
-            g.beginPath();
-            g.moveTo(fx - 10 + i * 3.5, fy);
-            g.quadraticCurveTo(fx + fl, fy - 30 + i * 8, fx + 10 - i * 3.5, fy);
-            g.fill();
-          }
-          for (let i = 0; i < 4; i++) {
-            const k2 = (t * 0.3 + i / 4) % 1;
-            g.fillStyle = `rgba(200,200,195,${0.25 * (1 - k2)})`;
-            g.beginPath();
-            g.arc(
-              fx + Math.sin(k2 * 5 + i) * 6,
-              fy - 34 - k2 * 60,
-              4 + k2 * 10,
-              0,
-              7,
-            );
-            g.fill();
-          }
+          drawFlames(g, fx, fy, t, strength);
+          this.sparks.draw(g, t);
         },
       });
     }
@@ -3025,6 +3100,23 @@ export class IsleEngine {
             c.restore();
           }),
         );
+    } else if (this.marshmallow.holding && village) {
+      // toasting: the stick from the hero's hand towards the flames
+      const hero = this.hero;
+      dyn.push(
+        figure(hero, MARSHMALLOW_BOX, (c) => {
+          this.people.draw(c, hero, t);
+          const side = village.x >= hero.x ? 1 : -1;
+          this.marshmallow.draw(
+            c,
+            hero.x + side * 7,
+            hero.y - 24,
+            village.x,
+            village.y - 16,
+            t,
+          );
+        }),
+      );
     } else dyn.push(person(this.hero));
     // the werewolf, out only at night
     const wolf = this.wolf;
@@ -3186,7 +3278,7 @@ export class IsleEngine {
         glow(
           village.x,
           village.y - 14,
-          220 * flick,
+          220 * flick * Math.min(1.3, this.fire.strength),
           night ? "rgba(255,140,50,.5)" : "rgba(255,150,60,.26)",
         );
       for (const [x, y, r] of scene.lights)
@@ -3527,59 +3619,160 @@ export class IsleEngine {
   }
 
   private walkVillagers(dt: number, t: number, night: boolean): void {
+    const camp = this.layout?.squares.find((q) => q.camp) ?? null;
+    this.villagers.forEach((v, i) =>
+      this.walkVillager(v, i, camp, dt, t, night),
+    );
+    if (camp) this.tellStories(camp, t);
+  }
+
+  private walkVillager(
+    v: Villager,
+    i: number,
+    camp: Square | null,
+    dt: number,
+    t: number,
+    night: boolean,
+  ): void {
     const rnd = this.rnd;
-    const hero = this.hero;
-    for (const v of this.villagers) {
-      if (this.attendHero(v, hero, dt, t, night)) continue;
-      if (v.linger) {
-        // standing by the door: a glance to the street now and then, then back
-        v.wait -= dt;
-        if (v.wait <= 0) {
-          const toDoor = v.linger.x > v.x ? 0 : Math.PI;
-          const facingDoor =
-            Math.abs(
-              Math.atan2(
-                Math.sin(v.facing - toDoor),
-                Math.cos(v.facing - toDoor),
-              ),
-            ) < 0.5;
-          v.facing = facingDoor ? Math.PI / 2 : this.lingerFacing(v);
-          v.wait = facingDoor ? 1.5 + rnd() * 2 : 4 + rnd() * 6;
-        }
-        continue;
+    // round the fire at night: facing it, listening (or telling) — not stopping for the hero
+    // (nor on the way there: the fire welcomes them)
+    if (v.gather?.kind === "seated" && camp && night) {
+      v.walking = false;
+      v.speed = 0;
+      this.turnTo(v, camp.x - v.x, camp.y - v.y, dt * 6);
+      return;
+    }
+    if (v.gather?.kind === "going") v.attending = false;
+    else if (this.attendHero(v, this.hero, dt, t, night)) return;
+    if (v.linger) {
+      // standing by the door: a glance to the street now and then, then back
+      v.wait -= dt;
+      if (v.wait <= 0) {
+        const toDoor = v.linger.x > v.x ? 0 : Math.PI;
+        const facingDoor =
+          Math.abs(
+            Math.atan2(
+              Math.sin(v.facing - toDoor),
+              Math.cos(v.facing - toDoor),
+            ),
+          ) < 0.5;
+        v.facing = facingDoor ? Math.PI / 2 : this.lingerFacing(v);
+        v.wait = facingDoor ? 1.5 + rnd() * 2 : 4 + rnd() * 6;
       }
-      if (!v.route) continue;
-      if (v.wait > 0) {
-        v.wait -= dt;
-        v.walking = false;
-        v.speed = 0;
-        continue;
+      return;
+    }
+    if (!v.route) return;
+    if (this.gatherStep(v, i, camp, dt, night)) return;
+    if (v.wait > 0) {
+      v.wait -= dt;
+      v.walking = false;
+      v.speed = 0;
+      return;
+    }
+    const nk = v.k + v.dir;
+    if (nk < 0 || nk >= v.route.length) {
+      v.dir = v.dir === 1 ? -1 : 1;
+      v.wait = 2 + rnd() * 5;
+      return;
+    }
+    const [gx, gy] = v.route[nk]!;
+    if (Math.hypot(gx - v.x, gy - v.y) < 3) {
+      v.k = nk;
+      if (rnd() < 0.01) v.wait = 1.5 + rnd() * 3;
+    } else this.stepTowards(v, gx, gy, dt);
+  }
+
+  /**
+   * A route-walking villager's night round the campfire: at night it walks
+   * (A*) to its place round the fire and stays; once the night is over it
+   * walks back to where it left its route. True while that walk (or the stay)
+   * is what it does instead of its route.
+   */
+  private gatherStep(
+    v: Villager,
+    i: number,
+    camp: Square | null,
+    dt: number,
+    night: boolean,
+  ): boolean {
+    const grid = this.grid;
+    const G = v.gather;
+    if (night && camp && grid) {
+      if (!G || G.kind === "leaving") {
+        const seat = seatAround(camp.x, camp.y, i, this.villagers.length);
+        const path = findPath(grid, v.x, v.y, seat[0], seat[1]);
+        v.gather = path ? { kind: "going", seat, path } : { kind: "away" };
       }
-      const nk = v.k + v.dir;
-      if (nk < 0 || nk >= v.route.length) {
-        v.dir = v.dir === 1 ? -1 : 1;
-        v.wait = 2 + rnd() * 5;
-        continue;
+    } else if (G && G.kind !== "leaving") {
+      const [rx, ry] = v.route![v.k]!;
+      if (G.kind === "away") {
+        v.gather = null;
+        return false;
       }
-      const [gx, gy] = v.route[nk]!;
-      const ex = gx - v.x;
-      const ey = gy - v.y;
-      const L = Math.hypot(ex, ey);
-      const sp = 46;
-      if (L < 3) {
-        v.k = nk;
-        if (rnd() < 0.01) v.wait = 1.5 + rnd() * 3;
-      } else {
-        v.walking = true;
-        v.speed = sp;
-        v.x += (ex / L) * sp * dt;
-        v.y += (ey / L) * sp * dt;
-        v.phase += sp * dt;
-        let d = Math.atan2(ey, ex) - v.facing;
-        d = Math.atan2(Math.sin(d), Math.cos(d));
-        v.facing += d * Math.min(1, dt * 8);
+      const path = grid && findPath(grid, v.x, v.y, rx, ry);
+      // no way back (the world changed under it): its route, where it left it
+      v.gather = path ? { kind: "leaving", seat: G.seat, path } : null;
+      if (!path) {
+        v.x = rx;
+        v.y = ry;
       }
     }
+    const g = v.gather;
+    if (!g || g.kind === "away") return false;
+    if (g.kind === "seated") return true;
+    const next = g.path[0];
+    if (!next) {
+      if (g.kind === "going") {
+        v.gather = { kind: "seated", seat: g.seat, path: [] };
+        v.walking = false;
+        v.speed = 0;
+      } else v.gather = null;
+      return true;
+    }
+    if (Math.hypot(next[0] - v.x, next[1] - v.y) < 3) g.path.shift();
+    else this.stepTowards(v, next[0], next[1], dt);
+    return true;
+  }
+
+  /** One frame of a villager's stroll towards (gx, gy). */
+  private stepTowards(v: Villager, gx: number, gy: number, dt: number): void {
+    const ex = gx - v.x;
+    const ey = gy - v.y;
+    const L = Math.hypot(ex, ey);
+    const sp = 46;
+    const step = Math.min(L, sp * dt);
+    v.walking = true;
+    v.speed = sp;
+    v.x += (ex / L) * step;
+    v.y += (ey / L) * step;
+    v.phase += step;
+    this.turnTo(v, ex, ey, dt * 8);
+  }
+
+  private turnTo(v: Walker, dx: number, dy: number, k: number): void {
+    let d = Math.atan2(dy, dx) - v.facing;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    v.facing += d * Math.min(1, k);
+  }
+
+  /** The stories told by the villagers gathered round the fire, and their welcome to the hero. */
+  private tellStories(camp: Square, t: number): void {
+    const round = this.villagers.filter((v) => v.gather?.kind === "seated");
+    if (!round.length) return;
+    const busyUntil = Math.max(...round.map((v) => v.chat?.until ?? -Infinity));
+    const hero = this.hero;
+    const heroNear =
+      hero.placed &&
+      Math.hypot(hero.x - camp.x, (hero.y - camp.y) * 1.4) < FIRESIDE_NEAR;
+    const said = this.storyteller.next(t, round.length, busyUntil, heroNear);
+    if (!said) return;
+    const v = round[said.who]!;
+    v.chat = {
+      line: said.line,
+      t0: t,
+      until: t + TALK_SHOW + said.line.length * 0.03,
+    };
   }
 
   /**
@@ -3653,7 +3846,8 @@ export class IsleEngine {
         Math.min(1, (t - c.t0) / 0.2) *
         Math.max(0, Math.min(1, 1 - (t - c.until) / 0.35));
       if (a <= 0) {
-        if (!v.attending) v.chat = null;
+        // gone once it has faded out (not while it is still fading in)
+        if (!v.attending && t > c.until) v.chat = null;
         continue;
       }
       const s = this.toScreen(v.x, v.y + PBOX[1] + 4);
