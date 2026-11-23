@@ -10,7 +10,8 @@
  *    key; `name` is what the user knows it as — its file name, the link's
  *    title — where a library song has its title). It has no persisted
  *    settings: every setting reads the value it was loaded with (a link's
- *    groove), else its `absent` value, and no setting can be written.
+ *    groove), else its `absent` value; a control may edit one in memory
+ *    (`useEditSongSetting`), never persisted.
  */
 export type SongIdentity = LibraryIdentity | FileIdentity;
 

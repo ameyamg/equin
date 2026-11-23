@@ -48,7 +48,8 @@ interface LoadedSong {
   loadedRawById: Readonly<Record<string, unknown>>;
   /**
    * The song's settled settings — a setting not in here is pending (or
-   * failed). For a file document, the values it was loaded with; every other
+   * failed). For a file document, the values it was loaded with and the
+   * edits made to it since (in memory — `useEditSongSetting`); every other
    * setting of it reads its `absent` value (see {@link readSetting}).
    */
   settings: ReadonlyMap<SongSettingKey<unknown>, unknown>;
@@ -108,8 +109,9 @@ export function useLoadDocument(): LoadDocument {
         values: readonly SettingValue[] = [],
       ) =>
         api.setState((prev) => {
-          // A file document's settings are the values it is loaded with —
-          // read-only, so a reload of it takes the new ones.
+          // A file document's settings start as the values it is loaded
+          // with (edited in memory after — `useEditSongSetting`), so a reload
+          // of it takes the new ones.
           const fileSettings =
             identity.kind === "file"
               ? new Map(values.map((v) => [v.key, v.value]))
@@ -273,9 +275,10 @@ const NO_LIBRARY_SONG: LibrarySong = { kind: "none" };
  * The library song this surface has loaded — `none` before any load and for a
  * file document. Every per-song setting WRITER takes its song id from here:
  * the song whose settings it reads, never the song the app shows as open
- * (which can lag the load by a render). A writer renders nothing for `none`,
- * so a file document — whose settings are read-only defaults — shows no
- * setting editor.
+ * (which can lag the load by a render). A writer that only persists renders
+ * nothing for `none`; one a file document can play with too (the groove of a
+ * previewed link) edits through `useEditSongSetting` instead, keyed on the
+ * document's identity.
  */
 export function useLibrarySong(): LibrarySong {
   return loadedSongStore.useSelector<LibrarySong>(
@@ -342,9 +345,9 @@ function useRegisteredSettings(): ReadonlySet<SongSettingKey<unknown>> {
 }
 
 /**
- * `key`'s state in `loaded`: for a file document, its `absent` value — a file
- * has no persisted settings, so the default is the truth and nothing settles
- * it. Otherwise its value once written; else its failure, when its observer
+ * `key`'s state in `loaded`: for a file document, the value it was loaded
+ * with or edited to, else its `absent` value — a file has no persisted
+ * settings, so nothing settles it. Otherwise its value once written; else its failure, when its observer
  * reported one; else pending while the composition registers it; else —
  * nothing in this composition persists it — its `absent` value, which is then
  * the truth.
@@ -402,6 +405,23 @@ export function useSongSetting<T>(key: SongSettingKey<T>): SongSetting<T> {
   );
 }
 
+/** `value` as `key`'s settled value in `prev` (the state itself when unchanged). */
+function withSetting<T>(
+  prev: LoadedSong,
+  key: SongSettingKey<T>,
+  value: T,
+): LoadedSong {
+  if (prev.settings.has(key) && Object.is(prev.settings.get(key), value)) {
+    return prev;
+  }
+  const settings = new Map(prev.settings);
+  settings.set(key, value);
+  if (!prev.failures.has(key)) return { ...prev, settings };
+  const failures = new Map(prev.failures);
+  failures.delete(key);
+  return { ...prev, settings, failures };
+}
+
 /**
  * Set `songId`'s value of one setting — its observer syncing the persisted
  * value, or a control setting it optimistically. Dropped unless `songId` is
@@ -415,21 +435,35 @@ export function useWriteSongSetting<T>(
   const api = loadedSongStore.useStoreApi();
   return useMemo(
     () => (songId: string, value: T) =>
-      api.setState((prev) => {
-        if (prev === null || !holdsLibrarySong(prev, songId)) return prev;
-        if (
-          prev.settings.has(key) &&
-          Object.is(prev.settings.get(key), value)
-        ) {
-          return prev;
-        }
-        const settings = new Map(prev.settings);
-        settings.set(key, value);
-        if (!prev.failures.has(key)) return { ...prev, settings };
-        const failures = new Map(prev.failures);
-        failures.delete(key);
-        return { ...prev, settings, failures };
-      }),
+      api.setState((prev) =>
+        prev === null || !holdsLibrarySong(prev, songId)
+          ? prev
+          : withSetting(prev, key, value),
+      ),
+    [api, key],
+  );
+}
+
+/**
+ * A control's edit of one setting of the document `identity` — a library
+ * song's (which the control also persists) or a file document's, which lives
+ * in memory only: a shared link previewed plays the user's edits (its groove
+ * changed before adding it), and nothing of it is saved. Dropped unless
+ * `identity` is the loaded document, like a source edit, so a control left
+ * over from an earlier song cannot land its value on the next one. Bails on
+ * an unchanged value.
+ */
+export function useEditSongSetting<T>(
+  key: SongSettingKey<T>,
+): (identity: SongIdentity, value: T) => void {
+  const api = loadedSongStore.useStoreApi();
+  return useMemo(
+    () => (identity: SongIdentity, value: T) =>
+      api.setState((prev) =>
+        prev === null || !sameIdentity(prev.identity, identity)
+          ? prev
+          : withSetting(prev, key, value),
+      ),
     [api, key],
   );
 }

@@ -19,6 +19,7 @@ import {
   sonataPlayerRoute,
   type SongId,
   type SongLinkKey,
+  songIdKind,
   toLinkText,
 } from "../core";
 import { Library, type LinkPreviewResult, type SongLinkValue } from "./slots";
@@ -70,21 +71,17 @@ export function withoutLink(params: PlayerParams): PlayerParams {
 }
 
 /**
- * The open song's Share button: copies a link that recreates the song on
- * another library — every `Library.SongLink` part's value (`;grid`, `;ug`,
- * `;groove`, …) and the song's title — and says so with a toast. Shown only
- * for a song a link can recreate (a `create` part has a value: a chord grid,
- * an Ultimate Guitar tab), and only once every part knows its value, so a
- * link never leaves out a part still loading. The address bar itself stays
- * the song's plain address.
- *
- * Each part reads through its own hook, so each is one {@link LinkPartReader}
- * element reporting its value up — a contributed set cannot be looped over
- * with hooks.
+ * Every `Library.SongLink` part's value for the loaded song, as its own hook
+ * reads it: `readers` must be rendered (each part reads through its own hook,
+ * so each is one {@link LinkPartReader} element reporting its value up — a
+ * contributed set cannot be looped over with hooks), and `link` is the link
+ * the song spells now — `null` while a part is not known yet.
  */
-export function ShareSongButton(): ReactNode {
+function useCurrentLink(): {
+  readers: ReactNode;
+  link: CurrentLink | null;
+} {
   const parts = Library.SongLink.useContributions();
-  const toast = useToast();
   const [values, setValues] = useState<
     Partial<Record<SongLinkKey, SongLinkValue>>
   >({});
@@ -102,12 +99,7 @@ export function ShareSongButton(): ReactNode {
     });
   }, []);
 
-  const song = rowOrStale(useCurrentSong());
-
-  // The link the song spells now, or null while a part (or the song) is not
-  // known yet, or when no part can recreate the song elsewhere.
-  let link: LinkParams | null = {};
-  let recreatable = false;
+  let link: CurrentLink | null = { params: {}, creator: null };
   for (const part of parts) {
     const value = values[part.key];
     if (value === undefined || !value.known) {
@@ -115,10 +107,53 @@ export function ShareSongButton(): ReactNode {
       break;
     }
     if (value.value === null) continue;
-    link[part.key] = value.value;
-    if (part.create !== undefined) recreatable = true;
+    link.params[part.key] = value.value;
+    if (link.creator === null && isCreator(part)) {
+      link.creator = { part, value: value.value };
+    }
   }
-  if (!recreatable || song === undefined || song === null) link = null;
+
+  const readers = parts.map((part) => (
+    <LinkPartReader key={part.key} part={part} report={report} />
+  ));
+  return { readers, link };
+}
+
+/** The link the loaded song spells now (see {@link useCurrentLink}). */
+interface CurrentLink {
+  /** Every part's value, by key — a part at its default carries none. */
+  params: LinkParams;
+  /** The first part that can recreate the song elsewhere, with its value. */
+  creator: LinkCreator | null;
+}
+
+function isCreator(part: SongLinkPart): part is CreatorPart {
+  return part.create !== undefined && part.usePreview !== undefined;
+}
+
+/**
+ * The open song's Share button: copies a link that recreates the song on
+ * another library — every `Library.SongLink` part's value (`;grid`, `;ug`,
+ * `;groove`, …) and the song's title — and says so with a toast. Shown only
+ * for a song a link can recreate (a `create` part has a value: a chord grid,
+ * an Ultimate Guitar tab), and only once every part knows its value, so a
+ * link never leaves out a part still loading. The address bar itself stays
+ * the song's plain address.
+ */
+export function ShareSongButton(): ReactNode {
+  const toast = useToast();
+  const { readers, link: current } = useCurrentLink();
+  const song = rowOrStale(useCurrentSong());
+
+  // The link the song spells now, or null while a part (or the song) is not
+  // known yet, or when no part can recreate the song elsewhere.
+  const link =
+    current === null ||
+    current.creator === null ||
+    song === undefined ||
+    song === null
+      ? null
+      : current.params;
 
   const copy = async () => {
     if (link === null || song === undefined || song === null) return;
@@ -143,9 +178,7 @@ export function ShareSongButton(): ReactNode {
 
   return (
     <>
-      {parts.map((part) => (
-        <LinkPartReader key={part.key} part={part} report={report} />
-      ))}
+      {readers}
       {link !== null && (
         <IconButton
           icon={shareIcon}
@@ -194,13 +227,7 @@ export function useLinkCreator(params: PlayerParams): LinkCreator | null {
   const parts = Library.SongLink.useContributions();
   for (const part of parts) {
     const value = params[part.key];
-    if (
-      part.create !== undefined &&
-      part.usePreview !== undefined &&
-      value !== undefined
-    ) {
-      return { part: part as CreatorPart, value };
-    }
+    if (isCreator(part) && value !== undefined) return { part, value };
   }
   return null;
 }
@@ -260,9 +287,13 @@ export function LinkPreviewReader({
 /**
  * "Add to library", beside a previewed link's title: creates the song under
  * the link's id from the creating part, then hands every other part its
- * value. Asked, never done on open, so a link only ever writes to the library
- * because its reader chose to keep it. Once the song exists, the player opens
- * it like any other. A failure (UG refusing the tab) is said in a toast.
+ * value. What it keeps is the preview AS IT IS NOW — every part's value read
+ * from the loaded document, like the Share button's (the grid edited, the
+ * groove changed in the Accompaniment section), not the link's original
+ * values. A link id that is not a song id gets a fresh one. Asked, never done on open, so a link only ever writes to the
+ * library because its reader chose to keep it. Once the song exists, the
+ * player opens it like any other. A failure (UG refusing the tab) is said in
+ * a toast.
  */
 export function AddToLibraryButton({
   songId,
@@ -272,7 +303,7 @@ export function AddToLibraryButton({
   params: PlayerParams;
 }): ReactNode {
   const parts = Library.SongLink.useContributions();
-  const creator = useLinkCreator(params);
+  const { readers, link } = useCurrentLink();
   const fetchEndpoint = useFetchEndpoint();
   const readLive = useLiveReader();
   const openDialog = useOpenDialog();
@@ -280,25 +311,28 @@ export function AddToLibraryButton({
   const toast = useToast();
   const title = linkTitle(params);
 
-  if (creator === null) {
+  if (link !== null && link.creator === null) {
     throw new Error(
-      "AddToLibraryButton: rendered for a link that names no song to create",
+      "AddToLibraryButton: the previewed song spells no part that can create it",
     );
   }
 
   const add = async () => {
+    if (link === null || link.creator === null) return;
+    const creator = link.creator;
     const ctx = { fetchEndpoint, readLive, openDialog, openSong };
+    // A link's id is typed or pasted: one that is not a song id (a
+    // hand-written `song-demo-01`) cannot be stored, so the song is made
+    // under a fresh id and opened there instead.
+    const id = songIdKind.is(songId) ? songId : songIdKind.mint();
     try {
-      await creator.part.create(ctx, {
-        id: songId,
-        title,
-        value: creator.value,
-      });
+      await creator.part.create(ctx, { id, title, value: creator.value });
       for (const part of parts) {
-        const value = params[part.key];
+        const value = link.params[part.key];
         if (part === creator.part || value === undefined) continue;
-        await part.apply?.(ctx, { id: songId, value });
+        await part.apply?.(ctx, { id, value });
       }
+      if (id !== songId) openSong({ id, title });
     } catch (err) {
       if (!(err instanceof Error)) throw err;
       toast({
@@ -312,9 +346,12 @@ export function AddToLibraryButton({
   };
 
   return (
-    <Button onClick={add}>
-      <Icon icon={addIcon} />
-      Add to library
-    </Button>
+    <>
+      {readers}
+      <Button onClick={add} disabled={link === null}>
+        <Icon icon={addIcon} />
+        Add to library
+      </Button>
+    </>
   );
 }

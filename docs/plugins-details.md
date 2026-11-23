@@ -9614,6 +9614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SongSettingsMount`
               - `swingSetting`
               - `transposeSetting`
+              - `useEditSongSetting`
               - `useFailSongSetting`
               - `useHasChords`
               - `useHasOwnNotes`
@@ -10808,7 +10809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toggleOnset`
         - **`rich`** — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
           - Plugins:
-            - **`accompaniment`** — Sonata Section: Accompaniment — the song's chords played through its groove (RhythmControls in the body). A chord-only song (chord grid, chord sheet) always plays it; a song with notes of its own (MIDI, MusicXML, a transcription) turns it on and off with the chord-mode switch (ChordModeSwitch) in the header. Available for a library song when chord mode can be offered or the song's chords are voiced.
+            - **`accompaniment`** — Sonata Section: Accompaniment — the song's chords played through its groove (RhythmControls in the body). A chord-only song (chord grid, chord sheet) always plays it; a song with notes of its own (MIDI, MusicXML, a transcription) turns it on and off with the chord-mode switch (ChordModeSwitch) in the header. Available whenever the song's chords are voiced (a shared link previewed included, its groove edited in memory until added), and for a library song when chord mode can be offered.
               - Web:
                 - Contributes: `Sonata.Section` "Accompaniment" → `AccompanimentSection`
                 - Uses:
@@ -11103,8 +11104,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
                   - `Library.SongLink` "groove"
-                - Uses: 61 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
-                  - `apps/sonata/document` ×12
+                - Uses: 62 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                  - `apps/sonata/document` ×13
                   - `primitives/css/ui-kit` ×11
                   - `network/live/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3

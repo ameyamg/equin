@@ -59,10 +59,14 @@ a newline `~`, a `;` `!`, `*` escaping a literal one — so the address reads
   once; a UG tab fetched — `unavailable` where the host cannot read UG), every
   other part's `previewSetting(value)` a per-song setting (the groove), and
   the song loads as a FILE document (`song-link:<id>`, named by the link's
-  title — nothing persisted, no setting writable) into the same immersive
-  player, the header showing the link's title and **Add to library**
-  (`AddToLibraryButton`): creates the song under the link's id, then hands
-  every other part its value (`apply`). Asked, never done on open.
+  title — nothing persisted) into the same immersive player. The preview is
+  a scratch copy: the grid can be edited and the groove changed in the
+  Accompaniment section (in memory — `useEditSongSetting`). The header shows
+  the link's title and **Add to library** (`AddToLibraryButton`): it reads
+  every part's value from the loaded document, as Share does, so it keeps the
+  preview AS IT IS NOW — creates the song under the link's id from the
+  creating part's current value, then hands every other part its current
+  value (`apply`). Asked, never done on open.
   Once the song is in the library (already, or just added), the surface
   replaces the address with the plain one (`withoutLink`) and opens it as a
   library song.

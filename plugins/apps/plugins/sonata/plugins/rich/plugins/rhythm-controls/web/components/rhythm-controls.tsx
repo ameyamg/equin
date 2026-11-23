@@ -5,7 +5,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   chordModeSetting,
-  useLibrarySong,
+  useSongDocument,
   useSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { grooveCycles } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
@@ -47,10 +47,11 @@ import { HANDS, useHandTracks } from "./hands";
  * chords at all).
  */
 export function RhythmControls() {
-  const song = useLibrarySong();
+  const { identity } = useSongDocument();
   const groove = useGroove();
-  // Only a library song's groove persists: a file document shows no editor.
-  if (song.kind === "none") return null;
+  // No document loaded: no song to accompany. A file document (a shared link
+  // previewed) edits its groove in memory — see `useGroove`.
+  if (identity === null) return null;
   switch (groove.status) {
     case "loading":
       return <Loading variant="rows" count={3} />;

@@ -8,7 +8,9 @@ import { useCallback, useSyncExternalStore } from "react";
  * but the preset id is this plugin's own column, so without an overlay "Apply
  * preset" would read the row's OLD id until the push lands — the preset
  * button would flash "edited" (the new content measured against the old
- * preset). Module-level, keyed by song, so the section body and its header switch
+ * preset). Module-level, keyed by document (`songIdentityKey` — a library
+ * song, or a shared link previewed, whose preset id lives only here, never
+ * confirmed by a row), so the section body and its header switch
  * (two `useGroove()` mounts) read one overlay, and a commit from either carries
  * the other's latest id.
  *

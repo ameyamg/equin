@@ -10,15 +10,16 @@ import { RhythmControls } from "@plugins/apps/plugins/sonata/plugins/rich/plugin
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
- * Offered for a library song (a file document's accompaniment is the default
- * one, not editable) when chord mode can be flipped OR the song's chords are
- * voiced. Every hook runs unconditionally (rules of hooks).
+ * Offered whenever the song's chords are voiced — a library song's or a file
+ * document's (a shared link previewed, whose groove is edited in memory) —
+ * and for a library song whose chord mode can be flipped (only a library song
+ * persists one). Every hook runs unconditionally (rules of hooks).
  */
 export function useAccompanimentAvailable(): boolean {
   const song = useLibrarySong();
   const chordModeAvailable = useChordModeAvailable();
   const voiced = useHasVoicedChords();
-  return song.kind === "library" && (chordModeAvailable || voiced);
+  return voiced || (song.kind === "library" && chordModeAvailable);
 }
 
 /**

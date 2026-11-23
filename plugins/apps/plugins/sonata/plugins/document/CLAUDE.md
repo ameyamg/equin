@@ -25,14 +25,20 @@ a library song:
 - A **library** song's settings are persisted by their feature plugins and
   settled by the registered observers (`SongSettingsMount`, mounted by the
   player scope).
-- A **file** document mounts no observer, and every setting reads its
-  `absent` value (`defineSongSetting(name, absent)` requires one) at once. No
-  setting can be written for it.
+- A **file** document mounts no observer, and every setting reads the value
+  it was loaded with (a shared link's groove), else its `absent` value
+  (`defineSongSetting(name, absent)` requires one), at once. Nothing of it is
+  persisted; a control may edit a setting IN MEMORY with
+  `useEditSongSetting(key)(identity, value)` (dropped unless `identity` is the
+  loaded document) — the groove of a previewed link, which "Add to library"
+  then keeps.
 
 `useLibrarySong()` answers `{ kind: "library", songId } | { kind: "none" }` for
-the LOADED document. Every setting writer (transpose stepper, track mixer, chord
-mode, key auto-detect, rhythm groove, swing) takes its song id from it — the song whose
-settings it reads — and renders nothing for `none`.
+the LOADED document. A setting writer that persists (transpose stepper, track
+mixer, chord mode, key auto-detect, swing) takes its song id from it — the song
+whose settings it reads — and renders nothing for `none`. The rhythm groove
+edits through `useEditSongSetting` with the document's identity, and persists
+only for a library song.
 
 What pairs the song with its content or its load reads them as ONE value, never
 the song id beside a separate read:
@@ -152,6 +158,7 @@ availability gates over the composed score.
     - `SongSettingsMount`
     - `swingSetting`
     - `transposeSetting`
+    - `useEditSongSetting`
     - `useFailSongSetting`
     - `useHasChords`
     - `useHasOwnNotes`

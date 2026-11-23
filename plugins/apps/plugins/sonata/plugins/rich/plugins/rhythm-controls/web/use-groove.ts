@@ -1,9 +1,10 @@
 import { useCallback, useEffect } from "react";
 import {
   grooveSetting,
-  useLibrarySong,
+  songIdentityKey,
+  useEditSongSetting,
+  useSongDocument,
   useSongSetting,
-  useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -12,8 +13,15 @@ import {
   type PortableGateInput,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import type { GrooveFields } from "../shared/groove";
-import { DEFAULT_GROOVE_PRESET_ID } from "../shared/groove-presets";
+import {
+  grooveEquals,
+  type GrooveContent,
+  type GrooveFields,
+} from "../shared/groove";
+import {
+  DEFAULT_GROOVE_PRESET_ID,
+  seedGroovePreset,
+} from "../shared/groove-presets";
 import { rhythms } from "../shared/resources";
 import { useSaveRhythm } from "./actions";
 import {
@@ -54,15 +62,22 @@ export type Groove = ResourceResult<GrooveState>;
  * `presetId` (the preset the groove was last applied from) is the row's
  * `groovePresetId` under an optimistic overlay (`pending-preset.ts`), so
  * "edited" never flickers between a commit and its push.
+ *
+ * A file document (a shared link previewed before it is added) has no row and
+ * persists nothing: its groove is the setting alone, edited in memory, and its
+ * preset id lives in the overlay only (keyed by the document) — at first the
+ * default preset's when it plays the default accompaniment, else none.
  */
 export function useGroove(): Groove {
-  const song = useLibrarySong();
-  const currentSongId = song.kind === "library" ? song.songId : null;
+  const { identity } = useSongDocument();
+  const currentSongId =
+    identity !== null && identity.kind === "library" ? identity.songId : null;
   const store = useSongSetting(grooveSetting);
-  const setGroove = useWriteSongSetting(grooveSetting);
+  const setGroove = useEditSongSetting(grooveSetting);
   const saveRhythm = useSaveRhythm();
   const row = useLive(rhythms, { id: currentSongId });
-  const pendingPreset = usePendingPreset(currentSongId);
+  const overlayKey = identity === null ? null : songIdentityKey(identity);
+  const pendingPreset = usePendingPreset(overlayKey);
 
   // The row has caught up with the last committed preset id → drop the
   // overlay (only that id: an older push never evicts a newer commit's). An
@@ -79,13 +94,16 @@ export function useGroove(): Groove {
   }
   useEffect(() => {
     if (currentSongId === null || rowPresetId === undefined) return;
-    confirmPendingPreset(currentSongId, rowPresetId);
+    confirmPendingPreset(
+      songIdentityKey({ kind: "library", songId: currentSongId }),
+      rowPresetId,
+    );
   }, [currentSongId, rowPresetId, pendingPreset]);
 
   const commit = useCallback(
     (next: GrooveFields) => {
-      if (currentSongId === null) return;
-      setGroove(currentSongId, {
+      if (identity === null || overlayKey === null) return;
+      setGroove(identity, {
         hands: { bass: next.bass, chord: next.chord },
         bassFigurationId: next.bassFigurationId,
         chordFigurationId: next.chordFigurationId,
@@ -95,7 +113,9 @@ export function useGroove(): Groove {
       });
       // The preset id is this plugin's own column (not in the setting): overlay
       // it until the row's push carries it, so "edited" never flickers.
-      setPendingPreset(currentSongId, next.presetId);
+      setPendingPreset(overlayKey, next.presetId);
+      // Only a library song's groove persists; a file document's stays in memory.
+      if (currentSongId === null) return;
       saveRhythm(currentSongId, {
         bass: next.bass,
         chord: next.chord,
@@ -107,7 +127,7 @@ export function useGroove(): Groove {
         restartOnChordChange: next.restartOnChordChange,
       });
     },
-    [setGroove, saveRhythm, currentSongId],
+    [setGroove, saveRhythm, identity, overlayKey, currentSongId],
   );
 
   // Both halves gate the groove: the setting (a SongSetting — pending, failed
@@ -129,13 +149,24 @@ export function useGroove(): Groove {
       throw new Error("useGroove: a ready gate over an unsettled input");
     }
     const live = store.value;
+    const content = {
+      bass: live.hands.bass,
+      chord: live.hands.chord,
+      bassFigurationId: live.bassFigurationId,
+      chordFigurationId: live.chordFigurationId,
+      bassVoicing: live.bassVoicing,
+      chordVoicing: live.chordVoicing,
+      restartOnChordChange: live.restartOnChordChange,
+    };
     return {
       presetId:
         pendingPreset !== NO_PENDING_PRESET
           ? pendingPreset
           : row.found
             ? row.row.groovePresetId
-            : DEFAULT_GROOVE_PRESET_ID,
+            : currentSongId !== null || playsDefaultPreset(content)
+              ? DEFAULT_GROOVE_PRESET_ID
+              : null,
       bass: live.hands.bass,
       chord: live.hands.chord,
       bassFigurationId: live.bassFigurationId,
@@ -146,4 +177,15 @@ export function useGroove(): Groove {
       commit,
     };
   });
+}
+
+/** Whether `content` sounds like the built-in default preset. */
+function playsDefaultPreset(content: GrooveContent): boolean {
+  const preset = seedGroovePreset(DEFAULT_GROOVE_PRESET_ID);
+  if (preset === null) {
+    throw new Error(
+      `rhythm-controls: no built-in "${DEFAULT_GROOVE_PRESET_ID}" groove preset`,
+    );
+  }
+  return grooveEquals(content, preset);
 }

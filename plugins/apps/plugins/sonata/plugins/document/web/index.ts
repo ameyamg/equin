@@ -31,6 +31,7 @@ export {
   useLibrarySongLoad,
   useSongSetting,
   useWriteSongSetting,
+  useEditSongSetting,
   useFailSongSetting,
   type LibrarySong,
   type LibrarySongLoad,
