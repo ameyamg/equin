@@ -25130,12 +25130,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×9
           - `infra` ×7
           - `database` ×5
           - `apps` ×4
-          - `framework` ×3
+          - `framework` ×4
           - `build` ×2
           - `network` ×2
           - `backup/sources/databases`
@@ -32953,7 +32953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/push/test-gate.runTestGate`
               - `reports/engine.resolveFixedReports`
           - Plugins:
-            - **`test-gate`** — The push's test gate: before the push mutex, run every test file whose test digest moved since the merge base (a pass already recorded at the same digest counts), and refuse the push when one newly fails — telling a test that already fails on main (its verdict at the merge base, else main's own latest) from one this change broke, and a batch-only failure (passes when run again alone) from a real one.
+            - **`test-gate`** — The push's test gate: before the push mutex, run every test file whose test digest moved since the merge base (a pass already recorded at the same digest counts), and refuse the push when one newly fails — telling a test that already fails on main (its verdict at the merge base, established by running it there in a scratch checkout when none is recorded) from one this change broke, and a batch-only failure (passes when run again alone) from a real one.
               - Cli:
                 - Uses: `plugin-meta/plugin-records.openRecordStore`
                 - Exports (types): `TestGateResult`
@@ -32971,6 +32971,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `describeJudgement`
                   - `isProvingPass`
                   - `judgeFailure`
+                  - `restsOnMergeBase`
         - **`regen-generated`** — `./equin regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
           - Cli:
             - Uses: `plugin-meta/plugin-records.openRecordStore`
@@ -39474,9 +39475,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 119 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 120 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×45
-              - `framework` ×22
+              - `framework` ×23
               - `apps` ×8
               - `debug` ×7
               - `packages` ×7
@@ -40833,9 +40834,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 149 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 150 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×39
-          - `framework` ×25
+          - `framework` ×26
           - `apps` ×19
           - `debug` ×15
           - `build` ×8
@@ -42183,11 +42184,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreePathFor`
           - `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×9
           - `infra` ×9
+          - `framework` ×5
           - `conversations` ×4
-          - `framework` ×4
           - `tasks` ×4
           - `backup` ×2
           - `build` ×2

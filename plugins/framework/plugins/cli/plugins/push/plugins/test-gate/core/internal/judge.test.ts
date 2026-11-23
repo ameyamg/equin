@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { TestRunRecord } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
-import { affectedTests, isProvingPass, judgeFailure } from "./judge";
+import {
+  affectedTests,
+  isProvingPass,
+  judgeFailure,
+  restsOnMergeBase,
+} from "./judge";
 import { buildVerdictIndex } from "./verdicts";
 
 const MAIN = "main-ns";
@@ -205,5 +210,29 @@ describe("judgeFailure", () => {
       kind: "new",
       reason: "passing-on-main",
     });
+  });
+});
+
+describe("restsOnMergeBase", () => {
+  test("only a new file or verdicts at the merge-base digest settle a failure; main's verdict elsewhere does not", () => {
+    const at = (outcome: "passed" | "failed", slug = "att-x") =>
+      record({
+        opId: `${outcome}-${slug}`,
+        slug,
+        startedAt: "2026-11-21T00:00:00Z",
+        files: [{ path: "f", digest: slug === MAIN ? "OLD" : "B", outcome }],
+      });
+    const settled = (records: TestRunRecord[], base: string | undefined) =>
+      restsOnMergeBase(
+        judgeFailure("f", base, [], buildVerdictIndex(records, MAIN)),
+      );
+    expect(settled([], undefined)).toBe(true);
+    expect(settled([at("passed")], "B")).toBe(true);
+    expect(settled([at("failed")], "B")).toBe(true);
+    expect(settled([], "B")).toBe(false);
+    // 2026-11-23: main's idle runner last passed it on 11-21 at an older
+    // digest; a breakage that landed since must not read as this change's.
+    expect(settled([at("passed", MAIN)], "B")).toBe(false);
+    expect(settled([at("failed", MAIN)], "B")).toBe(false);
   });
 });

@@ -197,3 +197,27 @@ in-mutex landing arms and their trailer semantics); sharding bun files across
 the grant; re-running an unattributed (wedged) runner's files in smaller
 batches; blocking a change that makes a file leak state into others (only
 warned: the batch-only failure is printed).
+
+## Revised after the first day (task-1795440665-z1nz0n)
+
+Two breakages reached main after the gate shipped: holder-ledger.test.ts
+(633973a4c5, landed 13:05) and deployments `core/resources.test.ts`
+(415b59ff4d, landed 12:59). Neither push could run the gate: both landed on
+main before it did (b000df31a5, 13:20). Each broke its test on its own (each
+fails at its own commit; not a combination, not the rebase).
+
+The gate then refused an unrelated push (the test-isolation task's) on those two
+files. Its merge base was main's tip, nobody had run them at that digest, and
+the third rung, main's newest verdict at ANY digest, was the idle runner's from
+11-21, before both breakages: "passing on main", so read as newly broken. The
+rung guesses about other code in both directions; a fix landed since would wave
+a real breakage through the same way.
+
+Fix: a failing file whose judgement does not rest on the merge base
+(`restsOnMergeBase`) runs at the merge base in a throwaway detached checkout,
+and is judged again on the verdict its harvest records at exactly the base
+digest (verified to match `commitSnapshot`'s). Still none → refused (`NO
+VERDICT AT THE MERGE BASE`). Strict for genuinely new breakage, and it adds
+nothing when the merge base's verdicts already exist. Main's verdicts following
+its head (task-1795431631-8vvvq1) make the extra run rarer; this makes the
+gate's answer independent of them.

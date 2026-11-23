@@ -110,6 +110,23 @@ export function judgeFailure(
     : { kind: "new", reason: "passing-on-main", evidence: [onMain] };
 }
 
+/**
+ * Whether a judgement rests on exactly the code the change started from: the
+ * file is new, or verdicts at its merge-base digest decided it. Main's own
+ * newest verdict is about whatever digest main last ran the file at, often
+ * days and many commits away from the merge base: it neither proves the base
+ * green (a breakage landed since would read as this change's) nor red (a fix
+ * landed since would wave a real breakage through). The gate establishes a
+ * merge-base verdict for every judgement that does not rest on one.
+ */
+export function restsOnMergeBase(j: FailureJudgement): boolean {
+  return (
+    j.reason === "new-file" ||
+    j.reason === "passed-at-base" ||
+    j.reason === "failed-at-base"
+  );
+}
+
 function stamp(v: RecordedVerdict): string {
   return `${v.startedAt.slice(0, 16).replace("T", " ")} UTC, ${v.slug}`;
 }

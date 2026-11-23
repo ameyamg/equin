@@ -2,5 +2,5 @@
   "name": "@equin/plugin-framework-cli-push-test-gate",
   "private": true,
   "version": "0.0.1",
-  "description": "The push's test gate: before the push mutex, run every test file whose test digest moved since the merge base (a pass already recorded at the same digest counts), and refuse the push when one newly fails — telling a test that already fails on main (its verdict at the merge base, else main's own latest) from one this change broke, and a batch-only failure (passes when run again alone) from a real one."
+  "description": "The push's test gate: before the push mutex, run every test file whose test digest moved since the merge base (a pass already recorded at the same digest counts), and refuse the push when one newly fails — telling a test that already fails on main (its verdict at the merge base, established by running it there in a scratch checkout when none is recorded) from one this change broke, and a batch-only failure (passes when run again alone) from a real one."
 }

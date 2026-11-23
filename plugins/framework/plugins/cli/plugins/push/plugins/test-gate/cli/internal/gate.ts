@@ -26,11 +26,13 @@ import {
   describeJudgement,
   isProvingPass,
   judgeFailure,
+  restsOnMergeBase,
   type FailureJudgement,
   type VerdictIndex,
 } from "../../core";
 import type { TestRunRecord } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
 import { readTestRunRecords } from "./records";
+import { withScratchCheckout } from "./scratch-checkout";
 
 // A wedge-breaker for one metadata read, not a latency budget.
 const GIT_TIMEOUT_MS = 30_000;
@@ -71,7 +73,7 @@ async function runTests(
   root: AppPath,
   files: readonly string[],
 ): Promise<{ ran: true } | { ran: false; exitCode: number }> {
-  console.log(`\n$ ./${CLI_NAME} test <${files.length} files>`);
+  console.log(`\n$ (${root}) ./${CLI_NAME} test <${files.length} files>`);
   // Never the foreground hand-off: the gate waits for the verdict itself, and
   // a handed-off run would exit before it had one.
   const env = { ...process.env };
@@ -82,6 +84,20 @@ async function runTests(
   );
   if (exitCode === 0 || exitCode === TESTS_FAILED_EXIT) return { ran: true };
   return { ran: false, exitCode };
+}
+
+/**
+ * `files` run at `commit`: `./equin test` in a throwaway detached checkout of
+ * it, removed afterwards. Its harvest records each file under the digest of
+ * that commit's code — exactly the key `judgeFailure` reads the merge base's
+ * verdicts by, so the judgement then rests on the base itself.
+ */
+async function runAtCommit(
+  root: AppPath,
+  commit: string,
+  files: readonly string[],
+): Promise<{ ran: true } | { ran: false; exitCode: number }> {
+  return withScratchCheckout(root, commit, (dir) => runTests(dir, files));
 }
 
 /**
@@ -108,7 +124,13 @@ const opIdsOf = (records: readonly TestRunRecord[]): Set<string> =>
 /** One failing file, judged, with its failing cases at HEAD. */
 interface Failing {
   file: string;
+  headCases: readonly string[];
   judgement: FailureJudgement;
+  /**
+   * Cases failing here that the merge-base run the gate made did not see fail
+   * (the file failed there too) — set when that is what made it a suspect.
+   */
+  casesOnlyHere?: readonly string[];
 }
 
 /**
@@ -185,13 +207,54 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
     else if (v.outcome !== "passed")
       failing.push({
         file: f,
+        headCases: v.failedCaseIds,
         judgement: judgeFailure(f, base.get(f), v.failedCaseIds, known),
       });
   }
-  const preExisting = failing.filter(
-    (j) => j.judgement.kind === "pre-existing",
+
+  // A failure no verdict at the merge base's code settles (main's last run of
+  // the file is about another digest, or there is none) is settled here:
+  // the file runs at the merge base, then is judged again on that verdict.
+  const unsettled = failing.filter((f) => !restsOnMergeBase(f.judgement));
+  const unknownAtBase: string[] = [];
+  if (unsettled.length > 0) {
+    console.log(
+      `\nTest gate: ${unsettled.length} failing file(s) have no recorded verdict at the merge base's code — ` +
+        `running them at ${mergeBase.slice(0, 10)} in a scratch checkout, to tell whether this change broke them.`,
+    );
+    const atBase = await runAtCommit(
+      root,
+      mergeBase,
+      unsettled.map((f) => f.file),
+    );
+    if (!atBase.ran) return refuseUnrun(atBase.exitCode);
+    records = await readTestRunRecords();
+    const withBase = buildVerdictIndex(records, mainSlug);
+    for (const f of unsettled) {
+      f.judgement = judgeFailure(
+        f.file,
+        base.get(f.file),
+        f.headCases,
+        withBase,
+      );
+      if (!restsOnMergeBase(f.judgement)) unknownAtBase.push(f.file);
+      // A merge base the gate ran itself counts as "already failing" only if
+      // it failed every case that fails here: its checkout is fresh (another
+      // directory, a database forked from main's), so a failure there can be
+      // its environment's, and a case failing only here is this change's
+      // until it fails alone too.
+      else if (
+        f.judgement.kind === "pre-existing" &&
+        f.judgement.newCases.length > 0
+      )
+        f.casesOnlyHere = f.judgement.newCases;
+    }
+  }
+  const settled = failing.filter((j) => !unknownAtBase.includes(j.file));
+  const suspects = settled.filter(
+    (j) => j.judgement.kind === "new" || j.casesOnlyHere !== undefined,
   );
-  const suspects = failing.filter((j) => j.judgement.kind === "new");
+  const preExisting = settled.filter((j) => !suspects.includes(j));
 
   // Each suspect runs once more, ON ITS OWN (its own runner process): a
   // failure caused by another file's state leaking into the shared bun process
@@ -229,7 +292,11 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
     );
 
   const noVerdict = [...new Set(missing)];
-  if (confirmed.length === 0 && noVerdict.length === 0) {
+  if (
+    confirmed.length === 0 &&
+    noVerdict.length === 0 &&
+    unknownAtBase.length === 0
+  ) {
     console.log(
       `Test gate passed in ${minutes(performance.now() - t0)}: no affected test newly fails.`,
     );
@@ -239,8 +306,14 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
     console.error(
       [
         "NEWLY FAILING — this change breaks these tests (failed in the batch and on their own, and did not fail on main):",
-        ...confirmed.map(
-          (c) => `  ${c.file}\n    ${describeJudgement(c.judgement)}`,
+        ...confirmed.map((c) =>
+          c.casesOnlyHere === undefined
+            ? `  ${c.file}\n    ${describeJudgement(c.judgement)}`
+            : [
+                `  ${c.file}`,
+                `    it fails at the merge base too, but not these ${c.casesOnlyHere.length} case(s), which fail here:`,
+                ...c.casesOnlyHere.slice(0, 10).map((k) => `      ${k}`),
+              ].join("\n"),
         ),
         "",
       ].join("\n"),
@@ -258,15 +331,29 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
       ].join("\n"),
     );
   }
-  const blocking = [...confirmed.map((c) => c.file), ...noVerdict];
+  if (unknownAtBase.length > 0)
+    console.error(
+      [
+        `NO VERDICT AT THE MERGE BASE — these fail at this change, and running them at the merge base ${mergeBase.slice(0, 10)}`,
+        "recorded nothing for its code (see the test output above), so the push cannot tell this change did not break them:",
+        ...unknownAtBase.map((f) => `  ${f}`),
+        "",
+      ].join("\n"),
+    );
+  const blocking = [
+    ...confirmed.map((c) => c.file),
+    ...noVerdict,
+    ...unknownAtBase,
+  ];
   console.error(
     [
       `Push refused by the test gate. Reproduce with:`,
       `  ./${CLI_NAME} test ${blocking.join(" ")}`,
       ``,
       `Fix the change (or the test, if the change is intended — update what it asserts), then re-run ./${CLI_NAME} push.`,
-      `If you are sure a failure is not caused by this change (it fails on main too, and main has no verdict for it),`,
-      `STOP and report it to the user — do not work around the gate.`,
+      `Each failure above was judged against the merge base's own code (run there when no verdict was recorded):`,
+      `one that fails there too is not refused. If main fixed it since, rebase onto main and push again; if you are`,
+      `still sure a failure is not this change's, STOP and report it to the user — do not work around the gate.`,
     ].join("\n"),
   );
   return { ok: false };

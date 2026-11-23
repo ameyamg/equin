@@ -478,11 +478,11 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
     - `infra` ×9
+    - `framework` ×5
     - `conversations` ×4
-    - `framework` ×4
     - `tasks` ×4
     - `backup` ×2
     - `build` ×2
