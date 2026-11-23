@@ -193,23 +193,70 @@ export async function listChangedFormattableFiles(
   );
   for (const member of expandCoupledSets(root, files)) whole.add(member);
 
-  const changed: ChangedFile[] = [];
-  for (const file of [...files].filter(isFormattable).sort()) {
+  const formattable = [...files].filter(isFormattable).sort();
+  const scoped = formattable.filter((file) => {
     const origin = origins.get(file);
-    changed.push({
+    return !whole.has(file) && origin !== undefined && origin !== null;
+  });
+  // Every base in ONE `git cat-file --batch`, never a spawn per file: each
+  // spawn is a temp dir and five file calls of its own, so a 445-file change
+  // made ~2.2k file calls and ~30 s of serial `git show`s.
+  const bases = await readBlobs(
+    root,
+    scoped.map((file) => `${baseRefs.get(file)!}:${origins.get(file)!}`),
+  );
+  const baseOf = new Map(scoped.map((file, i) => [file, bases[i]!]));
+  return formattable.map((file): ChangedFile => {
+    const base = baseOf.get(file);
+    return {
       file,
-      scope:
-        whole.has(file) || origin === undefined || origin === null
-          ? { kind: "file" }
-          : {
-              kind: "lines",
-              // Bytes at the base, exactly: `git show` adds no trailing newline.
-              base: await git(root, [
-                "show",
-                `${baseRefs.get(file)!}:${origin}`,
-              ]),
-            },
-    });
+      scope: base === undefined ? { kind: "file" } : { kind: "lines", base },
+    };
+  });
+}
+
+/**
+ * The bytes of each blob `specs` names (`<rev>:<path>`), in order, read with
+ * one `git cat-file --batch`. The protocol frames each object as
+ * `<sha> <type> <size>\n<size bytes>\n`, or `<spec> missing\n`, in request
+ * order. Every spec names a file the diff just listed at that rev, so one git
+ * cannot read is a failure, never an empty base.
+ */
+async function readBlobs(
+  root: string,
+  specs: readonly string[],
+): Promise<string[]> {
+  if (specs.length === 0) return [];
+  const result = await spawnCaptured(["git", "cat-file", "--batch"], {
+    cwd: root,
+    stdin: specs.map((spec) => `${spec}\n`).join(""),
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `git cat-file --batch failed in ${root} (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim()}`,
+    );
   }
-  return changed;
+  const buf = result.stdoutBytes;
+  const decoder = new TextDecoder();
+  const out: string[] = [];
+  let i = 0;
+  for (const spec of specs) {
+    const nl = buf.indexOf(0x0a, i);
+    if (nl < 0) {
+      throw new Error(`git cat-file --batch: output ends before ${spec}`);
+    }
+    const header = decoder.decode(buf.subarray(i, nl));
+    i = nl + 1;
+    const [, type, sizeText] = header.split(" ");
+    const size = Number.parseInt(sizeText ?? "", 10);
+    if (type !== "blob" || !Number.isFinite(size) || i + size > buf.length) {
+      throw new Error(
+        `git cat-file --batch: "${header}" for ${spec} is not a readable blob`,
+      );
+    }
+    out.push(decoder.decode(buf.subarray(i, i + size)));
+    i += size + 1; // content + trailing newline
+  }
+  return out;
 }
