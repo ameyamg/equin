@@ -25664,6 +25664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DryRunTarget`
           - `EmittedSnapshot`
           - `ExpandOp`
+          - `HistoryOnly`
           - `MigrationData`
           - `MigrationFileSet`
           - `PhasedStatements`
@@ -25678,6 +25679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SnapshotConflict`
           - `SnapshotDag`
           - `SnapshotDagProblem`
+          - `SnapshotFacts`
           - `SnapshotNode`
           - `Statement`
           - `StatementClass`
@@ -25685,6 +25687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `analyzeSnapshotDag`
           - `classifyStatement`
+          - `combineSnapshotFacts`
           - `declaredParents`
           - `DRIZZLE_CONFIG_PATH`
           - `drizzleGenerateArgv`
@@ -25696,8 +25699,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `formatSnapshotConflict`
           - `isMigrationShadowOf`
           - `isSchemaMigration`
+          - `isSnapshotFactsFile`
+          - `judgeSchemaSnapshot`
+          - `LEGACY_SNAPSHOTS_FILE`
           - `legacySnapshotFiles`
-          - `legacySnapshotFilesIn`
           - `legacySnapshotsPath`
           - `LOCAL_MAIN_REF`
           - `mergeNodeSnapshotText`
@@ -25710,6 +25715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `migrationShadowName`
           - `migrationShadowOwnerHash`
           - `MissingSnapshotBodyError`
+          - `NO_SNAPSHOT_FACTS`
           - `NULL_SNAPSHOT_ID`
           - `parseMigrationShadowName`
           - `phaseStatements`
@@ -25733,9 +25739,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `schemaMigrationFilesIn`
           - `schemaSnapshotPath`
           - `schemaSnapshotState`
-          - `schemaSnapshotStateIn`
+          - `SNAPSHOT_HEAD_BYTES`
           - `snapshotAncestors`
           - `snapshotBodies`
+          - `snapshotFactsOf`
+          - `snapshotNodesOf`
           - `splitStatements`
           - `stageDrizzleOut`
           - `UnjoinedSnapshotTipsError`

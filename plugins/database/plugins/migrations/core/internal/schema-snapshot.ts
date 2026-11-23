@@ -56,12 +56,12 @@ export interface SnapshotHead {
  * a snapshot's first two keys, and a snapshot header is its `.sql`'s first
  * line — both fit well inside this.
  */
-const HEAD_BYTES = 1024;
+export const SNAPSHOT_HEAD_BYTES = 1024;
 
 /** The first two keys of a snapshot, anchored at the start of the file. */
 const HEAD_RE = /^\{\s*"id":\s*"([^"]+)",\s*"prevId":\s*"([^"]+)"/;
 
-/** The first `HEAD_BYTES` of `path`, or null when it does not exist. */
+/** The first `SNAPSHOT_HEAD_BYTES` of `path`, or null when it does not exist. */
 export function readStart(path: AppPath): string | null {
   let fd: OwnedFd;
   try {
@@ -71,8 +71,8 @@ export function readStart(path: AppPath): string | null {
     throw err;
   }
   try {
-    const buf = Buffer.alloc(HEAD_BYTES);
-    const bytesRead = readSync(fd.fd, buf, 0, HEAD_BYTES, 0);
+    const buf = Buffer.alloc(SNAPSHOT_HEAD_BYTES);
+    const bytesRead = readSync(fd.fd, buf, 0, SNAPSHOT_HEAD_BYTES, 0);
     return buf.toString("utf8", 0, bytesRead);
   } finally {
     fd.close();
@@ -93,8 +93,8 @@ export async function readStartAsync(path: string): Promise<string | null> {
     throw err;
   }
   try {
-    const buf = Buffer.alloc(HEAD_BYTES);
-    const { bytesRead } = await handle.read(buf, 0, HEAD_BYTES, 0);
+    const buf = Buffer.alloc(SNAPSHOT_HEAD_BYTES);
+    const { bytesRead } = await handle.read(buf, 0, SNAPSHOT_HEAD_BYTES, 0);
     return buf.toString("utf8", 0, bytesRead);
   } finally {
     await handle.close();

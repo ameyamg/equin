@@ -12,6 +12,11 @@ type Check = {
 const CAST_PATTERN =
   "(\\b[a-z][a-zA-Z]*[Dd]ata\\b as [A-Z]|\\([^)]*[Dd]ata[^)]*\\?\\?[^)]*\\) as [A-Z])";
 
+// The `git grep -E` pre-filter: a portable superset of CAST_PATTERN (POSIX ERE
+// has no `\b`; macOS's git grep matched nothing with it — checks/core
+// `portable-ere.ts`). The JS pattern above stays the verdict.
+const CAST_GREP_ARG = "[Dd]ata as [A-Z]|[Dd]ata[^)]*\\?\\?[^)]*\\) as [A-Z]";
+
 const check: Check = {
   id: "no-use-resource-cast",
   // INPUT-KEYED (Stage 1). Pure `grepCode` — see no-raw-websocket for rationale.
@@ -25,7 +30,7 @@ const check: Check = {
     const matches = await grepCode({
       root,
       pattern: new RegExp(CAST_PATTERN),
-      grepArg: CAST_PATTERN,
+      grepArg: CAST_GREP_ARG,
       maskStrings: true,
     });
 

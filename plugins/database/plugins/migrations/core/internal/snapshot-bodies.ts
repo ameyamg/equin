@@ -136,19 +136,34 @@ async function readBlobs(
 }
 
 /**
+ * A resolver that reads no working-tree file: the DAG's nodes as the caller
+ * already holds them (a check's fold), every body from a merge node's parents
+ * or git — steps 4–6 only. The working-tree tip is the caller's to judge (its
+ * head is all `schemaSnapshotState` reads).
+ */
+export interface HistoryOnly {
+  history: readonly SnapshotNode[];
+}
+
+/**
  * The resolver for the data dir `dataDir` of the git checkout at `root`.
  * Nothing is read until a body is asked for.
  *
  * `files`: where the data dir's working-tree files are read — off disk by
- * default, or a check's recorded file set (`./migration-data`), so every
- * working-tree read the resolver makes is one the check's read-set holds.
+ * default, or a caller's file set (`./migration-data`); or {@link HistoryOnly}.
  * Git paths are always `dataDir`'s.
  */
 export function snapshotBodies(
   root: string,
   dataDir: AppPath,
-  files: MigrationData = diskMigrationData(dataDir),
+  source: MigrationData | HistoryOnly = diskMigrationData(dataDir),
 ): SnapshotBodies {
+  const files = "history" in source ? null : source;
+  // Read fresh each time: the generator adds and deletes nodes as it runs.
+  const nodesNow: () => Promise<readonly SnapshotNode[]> =
+    "history" in source
+      ? async () => source.history
+      : () => readSnapshotNodes(source);
   const cache = new Map<string, string>();
   const dataRel = relative(root, dataDir);
   const repoPath = (rel: string) =>
@@ -294,7 +309,7 @@ export function snapshotBodies(
       );
     computing.add(node.id);
     try {
-      const dag = analyzeSnapshotDag(await readSnapshotNodes(files));
+      const dag = analyzeSnapshotDag(await nodesNow());
       const fold = await foldMergeParents(
         dag,
         parents,
@@ -322,22 +337,24 @@ export function snapshotBodies(
 
     const tipRel = `meta/${SCHEMA_SNAPSHOT_FILE}`;
     // The head first: every body asked for reads it, and only one is the tip.
-    const tipStart = await files.start(tipRel);
-    if (tipStart !== null && headId(tipStart, tipRel) === id) {
+    const tipStart = files === null ? null : await files.start(tipRel);
+    if (
+      files !== null &&
+      tipStart !== null &&
+      headId(tipStart, tipRel) === id
+    ) {
       const tip = await files.text(tipRel);
       if (tip !== null && headId(tip, tipRel) === id) {
         cache.set(id, tip);
         return tip;
       }
     }
-    // Read fresh each miss: the generator adds and deletes nodes as it runs.
-    const node =
-      known ?? (await readSnapshotNodes(files)).find((n) => n.id === id);
+    const node = known ?? (await nodesNow()).find((n) => n.id === id);
     if (node === undefined)
       throw new Error(`snapshot ${id} is not a node of the snapshot DAG`);
     const legacyRel = `meta/${legacySnapshotFileOf(node.file)}`;
     let found: string | null = null;
-    const legacy = await files.text(legacyRel);
+    const legacy = files === null ? null : await files.text(legacyRel);
     if (legacy !== null && headId(legacy, legacyRel) === id) found = legacy;
     found ??=
       node.mergeParents !== null

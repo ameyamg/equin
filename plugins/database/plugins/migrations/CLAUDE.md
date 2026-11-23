@@ -748,6 +748,7 @@ only agreement that matters.
     - `DryRunTarget`
     - `EmittedSnapshot`
     - `ExpandOp`
+    - `HistoryOnly`
     - `MigrationData`
     - `MigrationFileSet`
     - `PhasedStatements`
@@ -762,6 +763,7 @@ only agreement that matters.
     - `SnapshotConflict`
     - `SnapshotDag`
     - `SnapshotDagProblem`
+    - `SnapshotFacts`
     - `SnapshotNode`
     - `Statement`
     - `StatementClass`
@@ -769,6 +771,7 @@ only agreement that matters.
   - Exports (values):
     - `analyzeSnapshotDag`
     - `classifyStatement`
+    - `combineSnapshotFacts`
     - `declaredParents`
     - `DRIZZLE_CONFIG_PATH`
     - `drizzleGenerateArgv`
@@ -780,8 +783,10 @@ only agreement that matters.
     - `formatSnapshotConflict`
     - `isMigrationShadowOf`
     - `isSchemaMigration`
+    - `isSnapshotFactsFile`
+    - `judgeSchemaSnapshot`
+    - `LEGACY_SNAPSHOTS_FILE`
     - `legacySnapshotFiles`
-    - `legacySnapshotFilesIn`
     - `legacySnapshotsPath`
     - `LOCAL_MAIN_REF`
     - `mergeNodeSnapshotText`
@@ -794,6 +799,7 @@ only agreement that matters.
     - `migrationShadowName`
     - `migrationShadowOwnerHash`
     - `MissingSnapshotBodyError`
+    - `NO_SNAPSHOT_FACTS`
     - `NULL_SNAPSHOT_ID`
     - `parseMigrationShadowName`
     - `phaseStatements`
@@ -817,9 +823,11 @@ only agreement that matters.
     - `schemaMigrationFilesIn`
     - `schemaSnapshotPath`
     - `schemaSnapshotState`
-    - `schemaSnapshotStateIn`
+    - `SNAPSHOT_HEAD_BYTES`
     - `snapshotAncestors`
     - `snapshotBodies`
+    - `snapshotFactsOf`
+    - `snapshotNodesOf`
     - `splitStatements`
     - `stageDrizzleOut`
     - `UnjoinedSnapshotTipsError`

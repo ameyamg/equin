@@ -15,6 +15,7 @@ import {
   currentScanView,
 } from "./scan-context";
 import { maskedSource, sliceCheckThread } from "./source-work";
+import { assertPortableEre } from "./portable-ere";
 
 // Both spawns below SCAN — `git grep` walks the tree, `git cat-file --batch`
 // streams back one blob per candidate — so unlike a `ls-files` metadata read
@@ -80,7 +81,11 @@ interface GrepCodeOptions {
   root: string;
   /** Source of truth: run in JS (global) on masked text to find real-code matches. */
   pattern: RegExp;
-  /** Narrows candidate files via `git grep -l` (fast pre-filter). */
+  /**
+   * Narrows candidate files via `git grep -l` (fast pre-filter). Without
+   * `fixed`, portable POSIX ERE only — a GNU escape (`\b`, `\s`, `\w`, `\<`)
+   * throws `NonPortableGrepPatternError` (`portable-ere.ts`).
+   */
   grepArg: string;
   /** Pass `-F` (fixed-string) instead of `-E` (extended regexp) to git grep. */
   fixed?: boolean;
@@ -154,7 +159,11 @@ export interface ImportMatch {
 
 interface GrepImportsOptions {
   root: string;
-  /** Narrows candidate files via `git grep -l` (fast pre-filter). */
+  /**
+   * Narrows candidate files via `git grep -l` (fast pre-filter). Without
+   * `fixed`, portable POSIX ERE only — a GNU escape (`\b`, `\s`, `\w`, `\<`)
+   * throws `NonPortableGrepPatternError` (`portable-ere.ts`).
+   */
   grepArg: string;
   /** Keep only imports whose specifier passes this predicate. */
   filter: (specifier: string) => boolean;
@@ -211,7 +220,11 @@ export interface CandidateSource {
 export interface ListCandidateSourcesOptions {
   /** Repo root to scan (defaults to `git rev-parse --show-toplevel`). */
   root?: string;
-  /** Narrows candidate files via `git grep -l` (fast pre-filter). */
+  /**
+   * Narrows candidate files via `git grep -l` (fast pre-filter). Without
+   * `fixed`, portable POSIX ERE only — a GNU escape (`\b`, `\s`, `\w`, `\<`)
+   * throws `NonPortableGrepPatternError` (`portable-ere.ts`).
+   */
   grepArg: string;
   /** Pass `-F` (fixed-string) instead of `-E` (extended regexp) to git grep. */
   fixed?: boolean;
@@ -259,6 +272,9 @@ async function readCandidates(
   fixed: boolean,
   pathspecs: string[],
 ): Promise<Array<{ rel: string; src: string }>> {
+  // Before the index: a recorded answer must never stand in for a pattern
+  // that means nothing on this OS (portable-ere.ts).
+  if (!fixed) assertPortableEre(grepArg);
   const tree = currentScanTree();
   const view = currentScanView();
   const index = currentGrepIndex();
@@ -330,6 +346,7 @@ export async function gitGrepList(
   // `-I`: binary files are never candidates. Every caller judges text a person
   // or agent wrote; a binary built in the checkout (a Go binary embeds its
   // build paths) only "matches" by accident, and its bytes are not source.
+  if (!fixed) assertPortableEre(grepArg);
   const args = ["git", "grep", "-l", "-z", "-I", fixed ? "-F" : "-E"];
   if (!tree) args.push("--untracked");
   args.push(grepArg);

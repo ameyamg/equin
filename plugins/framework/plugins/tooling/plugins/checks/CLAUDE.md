@@ -9,6 +9,16 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
 `true` for code constructs (`new WebSocket(`, casts). See
 [`parse-utils`](../../../../../plugin-meta/plugins/parse-utils/CLAUDE.md).
 
+**A non-fixed `grepArg` is portable POSIX ERE.** `git grep -E` uses the
+system regex library: glibc adds `\b`, `\s`, `\w`, `\<`…, macOS's does not
+(there `\b` is a literal `b`), so a pre-filter using one selected no file on a
+Mac and its check passed without looking (no-use-resource-cast, 2026-11).
+`grepCode` / `grepImports` / `listCandidateSources` / `gitGrepList` refuse a
+backslash before anything but punctuation (`core/portable-ere.ts`), on every
+OS and for patterns built at runtime too. Keep the JS `pattern` as the
+verdict and give `grepArg` a portable superset: `(^|[^A-Za-z0-9_])`,
+`[[:space:]]`, `[[:alnum:]_]`, `[0-9]`.
+
 A check that parses each candidate file (AST) rather than regex-scanning its
 lines MUST get its candidate sources from **`listCandidateSources`** (exported
 from `checks/core`), never a bare `git grep`. `git grep` searches only

@@ -35,18 +35,22 @@ export type { DrizzleGenerateOptions } from "./internal/drizzle-cli";
 // research/2026-09-30-global-clone-migrations-published-set.md §3.
 export {
   analyzeSnapshotDag,
+  combineSnapshotFacts,
   declaredParents,
+  isSnapshotFactsFile,
+  judgeSchemaSnapshot,
+  NO_SNAPSHOT_FACTS,
   NULL_SNAPSHOT_ID,
   readSnapshotNodes,
   schemaSnapshotState,
-  schemaSnapshotStateIn,
   snapshotAncestors,
+  snapshotFactsOf,
+  snapshotNodesOf,
 } from "./internal/snapshot-dag";
 // The data dir's files as the snapshot readers read them: off disk, or a
 // caller's own file set (a check's recorded `ctx.repo()`, so its read-set
 // covers every file the verdict read).
 export {
-  legacySnapshotFilesIn,
   migrationDataIn,
   schemaMigrationFilesIn,
 } from "./internal/migration-data";
@@ -57,6 +61,7 @@ export type {
 export type {
   SnapshotDag,
   SnapshotDagProblem,
+  SnapshotFacts,
   SnapshotNode,
 } from "./internal/snapshot-dag";
 // The files under data/meta/ that record the chain — the live tip body
@@ -71,9 +76,11 @@ export {
   readLegacySnapshots,
   readSnapshotHead,
   renderLegacySnapshots,
+  LEGACY_SNAPSHOTS_FILE,
   SCHEMA_SNAPSHOT_FILE,
   schemaMigrationFiles,
   schemaSnapshotPath,
+  SNAPSHOT_HEAD_BYTES,
 } from "./internal/schema-snapshot";
 // The 3-way snapshot merge, and a merge node's body as a pure function of its
 // parents: the CLI's tip join writes it, the body resolver recomputes it.
@@ -89,7 +96,7 @@ export {
   MissingSnapshotBodyError,
   snapshotBodies,
 } from "./internal/snapshot-bodies";
-export type { SnapshotBodies } from "./internal/snapshot-bodies";
+export type { HistoryOnly, SnapshotBodies } from "./internal/snapshot-bodies";
 export {
   stageDrizzleOut,
   UnjoinedSnapshotTipsError,

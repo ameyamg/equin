@@ -3,52 +3,73 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { resolve } from "path";
-import type {
-  CheckResult,
-  RepoFiles,
-} from "@plugins/framework/plugins/tooling/core";
-// The DAG's edges (prevId + merge-node parents) and the published set are the
-// migrations plugin's: the CLI's tip join reads the same definitions, so this
-// check cannot accept a history the generator would refuse, or the reverse.
+import type { CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type { RepoPaths } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+// The DAG's edges (prevId + merge-node parents), the per-file facts and the
+// published set are the migrations plugin's: the CLI's tip join reads the
+// same definitions, so this check cannot accept a history the generator would
+// refuse, or the reverse.
 import {
   analyzeSnapshotDag,
-  legacySnapshotFilesIn,
-  migrationDataIn,
+  combineSnapshotFacts,
+  isSnapshotFactsFile,
+  judgeSchemaSnapshot,
+  LEGACY_SNAPSHOTS_FILE,
   MIGRATIONS_DATA_DIR,
   NULL_SNAPSHOT_ID,
   publishedMigrationBasenames,
-  readSnapshotNodes,
-  schemaSnapshotStateIn,
+  SNAPSHOT_HEAD_BYTES,
   snapshotBodies,
-  type MigrationData,
+  snapshotFactsOf,
+  snapshotNodesOf,
   type SnapshotDag,
   type SnapshotDagProblem,
   type SnapshotNode,
 } from "@plugins/database/plugins/migrations/core";
+import type {
+  SnapshotHeads,
+  SnapshotScanContext,
+} from "./snapshot-chain-intact.scan";
+
+/** The data dir's layout, handed to the import-free scan as its context. */
+export const SNAPSHOT_SCAN_CONTEXT: SnapshotScanContext = {
+  dataDir: MIGRATIONS_DATA_DIR,
+  wholeFile: `meta/${LEGACY_SNAPSHOTS_FILE}`,
+  headChars: SNAPSHOT_HEAD_BYTES,
+};
+
+/** The data-dir files the fold reads (repo-relative): what `isSnapshotFactsFile` names. */
+export function snapshotFactsFiles(repo: Pick<RepoPaths, "under">): string[] {
+  const prefix = `${MIGRATIONS_DATA_DIR}/`;
+  return repo
+    .under(MIGRATIONS_DATA_DIR)
+    .filter((p) => isSnapshotFactsFile(p.slice(prefix.length)));
+}
 
 /**
  * Every snapshot id that must have a body, and does not: each merge node
- * (recomputed from its parents), each published header node (from git), and
- * the tip (the working tree). A branch-local ordinary node below the tip is
- * skipped — its body was overwritten by the next generation and push's regen
- * consolidates it into the one migration whose body is committed as the tip.
+ * (recomputed from its parents) and each published header node (from git).
+ * The tip's body is the working tree's tip file, whose head the caller has
+ * already matched to it (`judgeSchemaSnapshot`); an ordinary branch-local tip
+ * is not asked here, as this resolver reads no working-tree file. A
+ * branch-local ordinary node below the tip is skipped — its body was
+ * overwritten by the next generation and push's regen consolidates it into
+ * the one migration whose body is committed as the tip.
  */
 async function unresolvableBodies(
   root: AppPath,
-  data: MigrationData,
   dag: SnapshotDag,
   published: ReadonlySet<string>,
 ): Promise<string[]> {
   const bodies = snapshotBodies(
     root,
     asAppPath(resolve(root, MIGRATIONS_DATA_DIR)),
-    data,
+    { history: [...dag.byId.values()] },
   );
-  const tip = dag.tips[0]?.id;
   const asked = [...dag.byId.values()].filter(
     (n) =>
       n.lineage === "header" &&
-      (n.mergeParents !== null || n.id === tip || published.has(n.file)),
+      (n.mergeParents !== null || published.has(n.file)),
   );
   const ask = async (n: SnapshotNode): Promise<string | null> => {
     try {
@@ -143,19 +164,21 @@ async function explain(
 }
 
 /**
- * The verdict over the checkout `repo` lists. Every working-tree file it
- * reads comes through `repo`; git (the published set, the bodies of published
- * and merge nodes) is asked in `repo.root`.
+ * The verdict over the data dir's folded heads (`snapshotFactsFiles`, through
+ * `snapshotHeadsFold`); git (the published set, the bodies of published and
+ * merge nodes) is asked in `root`.
  */
-export async function verifySnapshotChain(
-  repo: RepoFiles,
+export async function snapshotChainVerdict(
+  heads: SnapshotHeads,
+  root: AppPath,
 ): Promise<CheckResult> {
-  const root = repo.root;
-  const data = migrationDataIn(repo);
-  const dag = analyzeSnapshotDag(await readSnapshotNodes(data));
+  const facts = combineSnapshotFacts(
+    heads.map(([rel, head]) => snapshotFactsOf(rel, head)),
+  );
+  const dag = analyzeSnapshotDag(snapshotNodesOf(facts));
   const first = dag.problems[0];
   if (!first) {
-    const leftover = await legacySnapshotFilesIn(data);
+    const leftover = facts.legacyFiles.map((f) => f.file);
     if (leftover.length > 0)
       return {
         ok: false,
@@ -165,7 +188,7 @@ export async function verifySnapshotChain(
           .join("\n")}`,
         hint: "Run `./equin build`: it folds them (the snapshot cutover) and keeps only meta/schema.snapshot.json.",
       };
-    const state = await schemaSnapshotStateIn(data, dag);
+    const state = judgeSchemaSnapshot(facts.tip, dag);
     if (!state.ok)
       return {
         ok: false,
@@ -174,14 +197,13 @@ export async function verifySnapshotChain(
       };
     const missing = await unresolvableBodies(
       root,
-      data,
       dag,
       await publishedMigrationBasenames(root),
     );
     if (missing.length > 0)
       return {
         ok: false,
-        message: `${missing.length} snapshot(s) have no body anywhere (working tree, merge recompute, git):\n${missing.join("\n")}`,
+        message: `${missing.length} snapshot(s) have no body anywhere (merge recompute, git):\n${missing.join("\n")}`,
         hint: "A merge node's body is recomputed from its parents; any other schema migration's body is the tip in the commit that added it. Report this — never hand-write a snapshot.",
       };
     return { ok: true };

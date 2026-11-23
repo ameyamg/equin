@@ -24,6 +24,7 @@ import {
   type MigrationData,
 } from "./migration-data";
 import {
+  LEGACY_SNAPSHOT_SUFFIX,
   LEGACY_SNAPSHOTS_FILE,
   legacySnapshotSql,
   parseLegacySnapshots,
@@ -200,65 +201,181 @@ export function snapshotAncestors(dag: SnapshotDag, id: string): Set<string> {
 }
 
 /**
- * Every schema migration under the data dir as a DAG node: one per `.sql` with
- * a snapshot header, one per `legacy-snapshots.json` entry, and one per
- * not-yet-folded `meta/<tag>_snapshot.json` whose tag is not already a legacy
- * key. Only the start of each file is read. A legacy entry whose `.sql` is gone
- * is still a node (`migration-metadata-consistent` owns that orphan).
+ * What the data dir's files say about the snapshot DAG, each file on its own
+ * bytes: a `.sql`'s snapshot header, `meta/legacy-snapshots.json`'s entries, a
+ * not-yet-folded `meta/<tag>_snapshot.json`'s head, and the tip file's head.
+ * Plain JSON, one file's facts a function of that file alone, and
+ * {@link combineSnapshotFacts} associative — so a check can keep each file's
+ * head as a plugin record (snapshot-chain-intact's fold) and re-read only the
+ * files an edit touched. {@link snapshotNodesOf} turns them
+ * into the DAG's nodes; {@link readSnapshotNodes} is the same, read in one go.
+ */
+export interface SnapshotFacts {
+  /** Each `.sql` with a snapshot header (data-dir-relative), in path order. */
+  headers: { file: string; id: string; parents: string[] }[];
+  /** `meta/legacy-snapshots.json`'s entries in file order; null without the file. */
+  legacy: { tag: string; id: string; prevId: string }[] | null;
+  /** Each `meta/<tag>_snapshot.json`'s head, by its basename, in path order. */
+  legacyFiles: { file: string; id: string; prevId: string }[];
+  /** `meta/schema.snapshot.json`'s head; null without the file. */
+  tip: SnapshotHead | null;
+}
+
+export const NO_SNAPSHOT_FACTS: SnapshotFacts = {
+  headers: [],
+  legacy: null,
+  legacyFiles: [],
+  tip: null,
+};
+
+/** Whether data-dir-relative `rel` is a file {@link snapshotFactsOf} reads. */
+export function isSnapshotFactsFile(rel: string): boolean {
+  if (!rel.includes("/")) return rel.endsWith(".sql");
+  if (!rel.startsWith("meta/")) return false;
+  const name = rel.slice("meta/".length);
+  return (
+    !name.includes("/") &&
+    (name === LEGACY_SNAPSHOTS_FILE ||
+      name === SCHEMA_SNAPSHOT_FILE ||
+      name.endsWith(LEGACY_SNAPSHOT_SUFFIX))
+  );
+}
+
+/**
+ * PURE: the facts data-dir-relative `rel` states, from `src` — the whole file,
+ * or its head: a `.sql`'s first line (its snapshot header), a snapshot's first
+ * `SNAPSHOT_HEAD_BYTES`. `legacy-snapshots.json` is read whole.
+ */
+export function snapshotFactsOf(rel: string, src: string): SnapshotFacts {
+  if (!rel.includes("/")) {
+    if (!rel.endsWith(".sql")) return NO_SNAPSHOT_FACTS;
+    const lineage = snapshotLineage(src);
+    return lineage === null
+      ? NO_SNAPSHOT_FACTS
+      : {
+          ...NO_SNAPSHOT_FACTS,
+          headers: [
+            { file: rel, id: lineage.id, parents: [...lineage.parents] },
+          ],
+        };
+  }
+  if (!isSnapshotFactsFile(rel)) return NO_SNAPSHOT_FACTS;
+  const name = rel.slice("meta/".length);
+  if (name === LEGACY_SNAPSHOTS_FILE)
+    return {
+      ...NO_SNAPSHOT_FACTS,
+      legacy: [...parseLegacySnapshots(src, rel)].map(([tag, head]) => ({
+        tag,
+        ...head,
+      })),
+    };
+  if (name === SCHEMA_SNAPSHOT_FILE)
+    return { ...NO_SNAPSHOT_FACTS, tip: parseSnapshotHead(src, rel) };
+  if (name.endsWith(LEGACY_SNAPSHOT_SUFFIX))
+    return {
+      ...NO_SNAPSHOT_FACTS,
+      legacyFiles: [{ file: name, ...parseSnapshotHead(src, rel) }],
+    };
+  return NO_SNAPSHOT_FACTS;
+}
+
+/** PURE, associative: several files' facts as one (parts in path order). */
+export function combineSnapshotFacts(
+  parts: readonly SnapshotFacts[],
+): SnapshotFacts {
+  return {
+    headers: parts.flatMap((p) => p.headers),
+    legacy: parts.find((p) => p.legacy !== null)?.legacy ?? null,
+    legacyFiles: parts.flatMap((p) => p.legacyFiles),
+    tip: parts.find((p) => p.tip !== null)?.tip ?? null,
+  };
+}
+
+/**
+ * PURE: every schema migration the facts name, as a DAG node: one per
+ * `legacy-snapshots.json` entry, one per not-yet-folded `<tag>_snapshot.json`
+ * whose tag is not already a legacy key, and one per `.sql` header. A legacy
+ * entry whose `.sql` is gone is still a node (`migration-metadata-consistent`
+ * owns that orphan).
+ */
+export function snapshotNodesOf(facts: SnapshotFacts): SnapshotNode[] {
+  const nodes: SnapshotNode[] = [];
+  const legacyTags = new Set<string>();
+  for (const { tag, id, prevId } of facts.legacy ?? []) {
+    legacyTags.add(tag);
+    nodes.push({
+      file: `${tag}.sql`,
+      id,
+      prevId,
+      mergeParents: null,
+      lineage: "legacy",
+    });
+  }
+  for (const { file, id, prevId } of facts.legacyFiles) {
+    const sql = legacySnapshotSql(file);
+    if (facts.legacy !== null && legacyTags.has(sql.slice(0, -".sql".length)))
+      continue;
+    nodes.push({
+      file: sql,
+      id,
+      prevId,
+      mergeParents: null,
+      lineage: "legacy",
+    });
+  }
+  for (const { file, id, parents } of facts.headers)
+    nodes.push({
+      file,
+      id,
+      prevId: parents[parents.length - 1]!,
+      mergeParents: parents.length > 1 ? parents : null,
+      lineage: "header",
+    });
+  return nodes;
+}
+
+/**
+ * Every schema migration under the data dir as a DAG node
+ * ({@link snapshotNodesOf}). Only the start of each `.sql` and legacy
+ * snapshot is read.
  *
- * `from`: the data dir on disk, or a `MigrationData` (a check's recorded file
- * set — `./migration-data`).
+ * `from`: the data dir on disk, or a `MigrationData` (a caller's file set —
+ * `./migration-data`).
  */
 export async function readSnapshotNodes(
   from: AppPath | MigrationData,
 ): Promise<SnapshotNode[]> {
   const data = typeof from === "string" ? diskMigrationData(from) : from;
-  const nodes: SnapshotNode[] = [];
   const legacyRel = `meta/${LEGACY_SNAPSHOTS_FILE}`;
   const legacyText = await data.text(legacyRel);
-  const legacy =
-    legacyText === null ? null : parseLegacySnapshots(legacyText, legacyRel);
-  for (const [tag, head] of legacy ?? []) {
-    nodes.push({
-      file: `${tag}.sql`,
-      ...head,
-      mergeParents: null,
-      lineage: "legacy",
-    });
-  }
+  const parts: SnapshotFacts[] = [
+    legacyText === null
+      ? NO_SNAPSHOT_FACTS
+      : snapshotFactsOf(legacyRel, legacyText),
+  ];
   for (const file of await legacySnapshotFilesIn(data)) {
-    const sql = legacySnapshotSql(file);
-    if (legacy?.has(sql.slice(0, -".sql".length))) continue;
     const rel = `meta/${file}`;
     const start = await data.start(rel);
     if (start === null) throw new Error(`${rel} was listed but cannot be read`);
-    const head = parseSnapshotHead(start, rel);
-    nodes.push({ file: sql, ...head, mergeParents: null, lineage: "legacy" });
+    parts.push(snapshotFactsOf(rel, start));
   }
   // Every header read asynchronously, through a bounded gate: a blocking read
-  // per migration held the check thread for seconds (snapshot-chain-intact).
+  // per migration held the check thread for seconds.
   const files = (await data.files()).filter((f) => f.endsWith(".sql"));
   const reads = createSemaphore(HEADER_READ_CONCURRENCY);
-  const lineages = await Promise.all(
-    files.map((file) =>
-      reads.run(async () => {
-        const start = await data.start(file);
-        return start === null ? null : snapshotLineage(start);
-      }),
-    ),
+  parts.push(
+    ...(await Promise.all(
+      files.map((file) =>
+        reads.run(async () => {
+          const start = await data.start(file);
+          return start === null
+            ? NO_SNAPSHOT_FACTS
+            : snapshotFactsOf(file, start);
+        }),
+      ),
+    )),
   );
-  for (const [i, file] of files.entries()) {
-    const lineage = lineages[i]!;
-    if (lineage === null) continue;
-    nodes.push({
-      file,
-      id: lineage.id,
-      prevId: lineage.parents[lineage.parents.length - 1]!,
-      mergeParents: lineage.parents.length > 1 ? lineage.parents : null,
-      lineage: "header",
-    });
-  }
-  return nodes;
+  return snapshotNodesOf(combineSnapshotFacts(parts));
 }
 
 /** Whether `schema.snapshot.json` is the body of the DAG's single tip. */
@@ -281,22 +398,11 @@ export function schemaSnapshotState(
   );
 }
 
-/** `schemaSnapshotState`, read through `data` (a check's recorded file set). */
-export async function schemaSnapshotStateIn(
-  data: MigrationData,
-  dag: SnapshotDag,
-): Promise<SchemaSnapshotState> {
-  if (dag.tips.length !== 1) return { ok: true };
-  const rel = `meta/${SCHEMA_SNAPSHOT_FILE}`;
-  const start = await data.start(rel);
-  return judgeSchemaSnapshot(
-    start === null ? null : parseSnapshotHead(start, rel),
-    dag,
-  );
-}
-
-/** PURE: the single-tip DAG `dag`'s verdict on a tip file whose head is `head` (null: missing). */
-function judgeSchemaSnapshot(
+/**
+ * PURE: `schemaSnapshotState` of a tip file whose head is `head` (null:
+ * missing) — what a caller holding the head already (a check's fold) judges.
+ */
+export function judgeSchemaSnapshot(
   head: SnapshotHead | null,
   dag: SnapshotDag,
 ): SchemaSnapshotState {

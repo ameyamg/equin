@@ -2,7 +2,7 @@
  * The migrations data dir's files, as the snapshot readers (`./snapshot-dag`,
  * `./schema-snapshot`, `./snapshot-bodies`) read them: off disk
  * (`diskMigrationData`, what the CLI's generate pipeline reads), or through a
- * caller's own file set — the `snapshot-chain-intact` check hands its
+ * caller's own file set — the `migration-phases-valid` check hands its
  * `ctx.repo()`, so every file its verdict reads is recorded in its input-keyed
  * read-set and a PASS is re-run exactly when one of them changes.
  *

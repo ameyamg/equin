@@ -4,34 +4,53 @@ Fails unless the schema migrations under `plugins/database/plugins/migrations/da
 form one snapshot DAG with a single root and a single tip. Each node's lineage is
 its `.sql`'s `snapshot` migration-marker header id=… parents=… or, for a migration
 from before the snapshot cutover, its `meta/legacy-snapshots.json` entry — both
-read through the migrations plugin's `core` (`readSnapshotNodes` /
-`analyzeSnapshotDag`, which reads no snapshot body), the same definition the
+parsed by the migrations plugin's `core` (`snapshotFactsOf` → `snapshotNodesOf`
+→ `analyzeSnapshotDag`, which reads no snapshot body), the same definition the
 CLI's tip join uses. Also flagged: duplicate ids, a missing parent, several
 roots, a cycle, an orphan branch, and a merge node whose `prevId` is not one of
 its parents.
 
 On a healthy DAG it then asserts the two facts about `data/meta/`: no
 per-migration `<tag>_snapshot.json` is left unfolded, and
-`meta/schema.snapshot.json` is the tip's body (`schemaSnapshotState`: its `id` is
-the tip's). `./equin build` repairs both.
+`meta/schema.snapshot.json` is the tip's body (`judgeSchemaSnapshot`: its `id`
+is the tip's). `./equin build` repairs both.
 
 Last, every header id that must have a body resolves to one through
-`snapshotBodies`: every merge node (recomputed from its parents — never read
-from git), every published header node (git) and the tip (the working tree).
-A branch-local ordinary node below the tip is skipped: push's regen
-consolidates it into the one migration whose body is committed as the tip.
-Every body is asked at once, with its node (so the data dir is not re-read per
-body), and the resolver reads all the ones git holds with one `git cat-file
---batch`.
+`snapshotBodies` in its history-only mode (`{ history: nodes }` — no
+working-tree read): every merge node (recomputed from its parents — never read
+from git) and every published header node (git). The tip's body is the
+working-tree tip file, whose head the previous step matched. A branch-local
+ordinary node below the tip is skipped: push's regen consolidates it into the
+one migration whose body is committed as the tip. Every body is asked at once,
+with its node, and the resolver reads all the ones git holds with one `git
+cat-file --batch`.
+
+## A fold check: its cost does not grow with the migrations
+
+The DAG is read from one line per migration, so a body that read the data dir
+itself made one file call per migration: 1,017 on a fresh clone (no cached
+records) on 2026-11-21, over the 1,000 a check may make undeclared
+(`wholeTreeRead`), and growing with every migration landed. It is a
+`defineFoldCheck` instead: `check/snapshot-chain-intact.scan.ts` keeps each
+data-dir file's head (a `.sql`'s first line, a snapshot's first
+`SNAPSHOT_HEAD_BYTES`, `legacy-snapshots.json` whole) as a plugin record kept
+along the directory tree. A cold store reads each file once as shared record
+work (`plugin records`, not the check's own count); a pass after an edit reads
+only the edited files. The check's own body made 14 file calls on a cold pass
+(2026-11-23; 595 before, in this checkout).
+
+The scan imports nothing: parsing is the verdict's (`snapshotFactsOf` over the
+folded heads), so the records are not keyed on the migrations barrel's ~80
+modules (`plugin-records:scan-key-width`). The layout it must know (data dir,
+the file kept whole, the head size) comes in as the fold's context.
 
 ## Input-keyed: re-run only when a migration changes
 
-The verdict reads the working tree only through `ctx.repo()` — the data dir's
-membership and every file it opens (`check/verify.ts`, `repoMigrationData`,
-handed to the migrations core readers as a `MigrationData`) — so its read-set
-holds exactly those, and an edit anywhere else replays the PASS. An edit to a
-migration, `legacy-snapshots.json` or the tip file, or a file added or removed
-under the data dir, re-runs it (`check/verify.test.ts`).
+The fold reads the working tree only through the recording file set: the data
+dir's membership (`snapshotFactsFiles`, via `under`) and each folded file's
+blob. An edit anywhere else replays the PASS. An edit to a migration,
+`legacy-snapshots.json` or the tip file, or a file added or removed under the
+data dir, re-runs it (`check/verify.test.ts`).
 
 What the tree does not hold is git, keyed by the signature,
 `publishedMigrationTreesSignature`: the data dir's tree id at each published
@@ -40,14 +59,7 @@ on `main` re-runs the check and a push that adds none does not (keying on the
 refs' commit shas re-ran it after every push anywhere). The bodies it reads
 from git are immutable objects of that history, found from HEAD's log; a
 rewrite of HEAD that loses a published commit while the data dir and every
-`main` stay put is the one change no key sees — the tree-hash slot this check
-used before did not see it either.
-
-Measured 2026-11-13 (one pass, this repo, 72 bodies): before, 4.9 s wall /
-7.1 CPU-s on every pass whatever changed (72 `git show` starts, ~3 CPU-s, and
-each body ask re-reading the 430-file data dir). After: a pass that touches no
-migration replays (two git reads for the signature, ~20 ms CPU); a pass that
-does runs in ~0.6–1.3 s wall, ~0.15 CPU-s plus one `git cat-file`.
+`main` stay put is the one change no key sees.
 
 A fork with several tips gets one of two hints. If a tip is branch-local, it is a
 rebase Y-fork: use `--reset-migration`. If every tip is published, two `main`s

@@ -32,7 +32,27 @@ import {
   renderSnapshotHeader,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import { verifySnapshotChain } from "./verify";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { snapshotHeadsFold } from "./snapshot-chain-intact.scan";
+import {
+  SNAPSHOT_SCAN_CONTEXT,
+  snapshotChainVerdict,
+  snapshotFactsFiles,
+} from "./verify";
+
+/** The check's run, as `defineFoldCheck` drives it: fold the selected files, then judge. */
+const verifySnapshotChain = async (files: RepoSnapshot) =>
+  snapshotChainVerdict(
+    await foldRepoFiles(
+      files,
+      snapshotFactsFiles(files),
+      snapshotHeadsFold,
+      SNAPSHOT_SCAN_CONTEXT,
+    ),
+    asAppPath(files.root),
+  );
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
