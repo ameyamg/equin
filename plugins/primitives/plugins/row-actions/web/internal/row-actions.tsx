@@ -239,6 +239,15 @@ export function RowActions(props: RowActionsProps) {
   return <RowActionsCluster {...props} handoffRef={handoffRef} />;
 }
 
+/**
+ * The cluster's resting TONE, as it owns their size: every action in it is
+ * muted at rest and full strength on hover (ghost's own hover), whatever text
+ * the cluster happens to sit beside — a ghost button has no colour of its own
+ * and would otherwise inherit the prose's. On the placeholder too, so the
+ * held box and the mounted one carry the same classes.
+ */
+const CLUSTER_TONE = "text-muted-foreground";
+
 /** The reserved box's size, shared by the placeholder and the mounted cluster
  *  so the two cannot disagree. Inline style: the size is a runtime count. */
 function reserveStyle(reserve: number, float: boolean): CSSProperties {
@@ -299,7 +308,10 @@ function ReservedPlaceholder({
             ? "last"
             : "first";
       }}
-      className={inFlowClass(float, cn(revealClasses, placement))}
+      className={cn(
+        CLUSTER_TONE,
+        inFlowClass(float, cn(revealClasses, placement)),
+      )}
       style={reserveStyle(reserve, float)}
     />
   );
@@ -368,6 +380,7 @@ function FoldedActions({ children }: { children: ReactNode }) {
         direction="row"
         gap="none"
         align="center"
+        className={CLUSTER_TONE}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
@@ -470,7 +483,7 @@ function RowActionsCluster(
       // the row — that margin is row, not affordance.
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
-      className={cn(chrome === "float" && FLOAT_CHIP, className)}
+      className={cn(CLUSTER_TONE, chrome === "float" && FLOAT_CHIP, className)}
     >
       <ControlSizeProvider size="xs">
         {folded ? <FoldedActions>{children}</FoldedActions> : children}

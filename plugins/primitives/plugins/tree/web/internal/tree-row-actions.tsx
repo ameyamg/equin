@@ -6,7 +6,6 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { RowMenuHelpers, RowMenuItem } from "../../core";
@@ -65,16 +64,11 @@ export function treeRowTrailing({
   const moreMenu =
     menuItems && menuItems.length > 0 ? (
       <DropdownMenu>
+        {/* A plain IconButton, like the fold and `+` beside it: the
+            cluster sizes and tones it, so the three cannot disagree. */}
         <DropdownMenuTrigger
-          aria-label="More actions"
-          // `data-popup-open` is base-ui's open-state attribute; `data-state`
-          // is Radix's and matches nothing here.
-          className="size-5 rounded-md text-muted-foreground hover:bg-background/60 data-popup-open:bg-background/60"
-        >
-          <Center axis="both" className="size-full">
-            <Icon icon={moreHorizIcon} className="size-4" />
-          </Center>
-        </DropdownMenuTrigger>
+          render={<IconButton icon={moreHorizIcon} label="More actions" />}
+        />
         <DropdownMenuContent side="bottom" align="end">
           {menuItems.map((item, i) => (
             <DropdownMenuItem key={i} onClick={item.onClick}>

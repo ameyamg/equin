@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { ToolCall } from "../../core";
-import { CopyTextAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -92,10 +93,13 @@ export function ToolSection({
         )}
         <Fill />
         {copyText !== undefined && (
-          <CopyTextAction
-            text={copyText}
-            title={`Copy ${label.toLowerCase()}`}
-          />
+          // The same always-on cluster as every row action: xs, muted at rest.
+          <RowActions pin={null} alwaysVisible>
+            <CopyButton
+              text={copyText}
+              tooltip={`Copy ${label.toLowerCase()}`}
+            />
+          </RowActions>
         )}
       </Line>
       <ContentScope fill={false}>{children}</ContentScope>

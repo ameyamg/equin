@@ -3,7 +3,6 @@ import {
   defineItemActions,
   type ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { BroadcastEntry } from "../../shared/endpoints";
@@ -42,18 +41,15 @@ export function DeleteBroadcastAction({
     );
   }
   return (
-    <ControlSizeProvider size="xs">
-      <IconButton
-        icon={deleteIcon}
-        label="Delete"
-        variant="ghost"
-        className="text-muted-foreground hover:text-destructive"
-        loading={del.saving}
-        onClick={(e) => {
-          e.stopPropagation();
-          void del.remove(row.index);
-        }}
-      />
-    </ControlSizeProvider>
+    <IconButton
+      icon={deleteIcon}
+      label="Delete"
+      variant="ghost"
+      loading={del.saving}
+      onClick={(e) => {
+        e.stopPropagation();
+        void del.remove(row.index);
+      }}
+    />
   );
 }

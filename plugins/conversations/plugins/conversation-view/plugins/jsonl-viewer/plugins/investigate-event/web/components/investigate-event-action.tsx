@@ -1,12 +1,14 @@
+import {
+  rowAction,
+  type RowAction,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { useDispatchOutcome } from "@plugins/primitives/plugins/slot-render/web";
 import { WISHES_CATEGORY_ID } from "@plugins/wish/core";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { rowActionClass } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const autoAwesomeIcon = symbol("auto-awesome");
 
@@ -21,30 +23,25 @@ const autoAwesomeIcon = symbol("auto-awesome");
  * coupling this action replaces; the raw identity stays visible in the card
  * label, the serialized event below, and the raw-json popover.
  */
-export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
+function useInvestigateEventAction(event: JsonlEvent): RowAction | null {
   const outcome = useDispatchOutcome();
   const conversationId = useJsonlConversationId();
   // Hooks first, guard second: the gate is a render decision, not a hook-order one.
   if (!outcome || outcome.matched) return null;
 
   const label = outcome.key;
-  return (
+  return {
+    kind: "button",
+    icon: autoAwesomeIcon,
+    label: `Add a renderer for ${label}`,
+    popup: (trigger) => (
     <LaunchAgentPopover
       draftKey={`add-renderer:${label}`}
       align="end"
       title="Add a renderer"
       description={`Nothing renders \`${label}\` yet, so this row falls back to raw JSON. Launch an agent to build a proper renderer for it.`}
       placeholder="Optional — what this row should show, and how…"
-      trigger={
-        <button
-          className={rowActionClass()}
-          title={`Add a renderer for ${label}`}
-          aria-label="Launch agent to add a renderer"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Icon icon={autoAwesomeIcon} className="size-3" />
-        </button>
-      }
+        trigger={trigger}
       getRequest={(userText) => {
         const body = userText.trim();
         const prompt = [
@@ -81,5 +78,10 @@ export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
         };
       }}
     />
-  );
+    ),
+  };
+}
+
+export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
+  return rowAction(useInvestigateEventAction(event));
 }

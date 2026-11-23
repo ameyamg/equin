@@ -117,6 +117,8 @@ rename throws before anything has changed.
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.rowAction`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.RowAction`
     - `conversations/conversation-view/prompt-input.useSetConversationPromptDraft`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useFetchEndpoint`
@@ -125,7 +127,6 @@ rename throws before anything has changed.
     - `network/live.useLiveReader`
     - `network/live/live-state.ResourceError`
     - `primitives/css/spacing.Stack`
-    - `primitives/icon-button.IconButton`
     - `primitives/launch.useLaunchConversation`
     - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `shell/notifications.Toast`

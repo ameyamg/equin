@@ -1,4 +1,8 @@
 import {
+  rowAction,
+  type RowAction,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -8,7 +12,6 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useTranscriptEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { RowActionButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { useGoBackToMessage } from "@plugins/conversations/plugins/conversation-view/plugins/rewind/web";
 import {
   restoreAnswerDraft,
@@ -23,8 +26,6 @@ const callSplitIcon = symbol("call-split");
 const historyIcon = symbol("history");
 const undoIcon = symbol("undo");
 
-type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
-
 /**
  * Row action on an answered question: go back to just before the answer was
  * sent, and reopen the question's form with the previous answer filled in —
@@ -37,7 +38,64 @@ type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
  * per-message rewind shows on, so the question's row is the only place that
  * can offer it.
  */
-export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
+function useChangeAnswersAction(event: JsonlEvent): RowAction | null {
+  const { convId } = conversationPane.useParams();
+  const storage = useStorageScope();
+  // The transcript this row is drawn in: a window of a long conversation
+  // still holds every event after this call, which is where its answer is.
+  const events = useTranscriptEvents();
+  const answer = findAnswer(event, events);
+  const { available, busy, run } = useGoBackToMessage({
+    convId,
+    uuid: answer?.uuid,
+    // The removed answer goes back in the form, not in the prompt editor.
+    onBack: (targetConvId, answerText) => {
+      if (answer === null || event.kind !== "tool-call") return;
+      answer.restore(storage, targetConvId, event.toolUseId, answerText);
+    },
+  });
+  if (answer === null || !available) return null;
+
+  return {
+    kind: "button",
+    icon: historyIcon,
+    label: "Change answers",
+    popup: (trigger) => (
+      <DropdownMenu>
+        <DropdownMenuTrigger render={trigger} />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem disabled={busy} onClick={() => void run("rewind")}>
+            <Icon icon={undoIcon} />
+            Rewind and answer again
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={busy} onClick={() => void run("fork")}>
+            <Icon icon={callSplitIcon} />
+            Answer again in a fork
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ),
+  };
+}
+
+/**
+ * Where this question's answer is, and how to put it back in a reopened form —
+ * or `null` when the row is not an answered question set. The answer is either
+ * an ordinary user turn (its text is the serialized answer) or the tool's
+ * result (its structured record is the answer).
+ */
+function findAnswer(
+  event: JsonlEvent,
+  events: JsonlEvent[] | undefined,
+): {
+  uuid: string | undefined;
+  restore: (
+    storage: ReturnType<typeof useStorageScope>,
+    targetConvId: string,
+    toolUseId: string,
+    answerText: string,
+  ) => void;
+} | null {
   if (event.kind !== "tool-call" || event.name !== "AskUserQuestion") {
     return null;
   }
@@ -45,108 +103,37 @@ export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
   // nothing, so there is no answer to change; its card is the generic one.
   const input = AskUserQuestionInputSchema.safeParse(event.input);
   if (!input.success) return null;
-  return <ChangeAnswersMenu event={event} questions={input.data.questions} />;
-}
-
-function ChangeAnswersMenu({
-  event,
-  questions,
-}: {
-  event: ToolCallEvent;
-  questions: Question[];
-}) {
-  const { convId } = conversationPane.useParams();
-  const storage = useStorageScope();
-  // The transcript this row is drawn in: a window of a long conversation
-  // still holds every event after this call, which is where its answer is.
-  const events = useTranscriptEvents();
+  const questions: Question[] = input.data.questions;
   const answerTurn = findAnswerTurn(events, event.toolUseId);
   if (answerTurn != null) {
-    // Answered as a message: its text is the serialized answer.
-    return (
-      <ChangeAnswersMenuFor
-        convId={convId}
-        questions={questions}
-        answerUuid={answerTurn.uuid}
-        restore={(targetConvId, questions, answerText) =>
-          restoreAnswerDraft(
-            storage,
-            targetConvId,
-            event.toolUseId,
-            questions,
-            answerText,
-          )
-        }
-      />
-    );
+    return {
+      uuid: answerTurn.uuid,
+      restore: (storage, targetConvId, toolUseId, answerText) =>
+        restoreAnswerDraft(
+          storage,
+          targetConvId,
+          toolUseId,
+          questions,
+          answerText,
+        ),
+    };
   }
   const record = event.result?.questionAnswer;
   const answerUuid = event.result?.answerUuid;
   if (record == null || answerUuid == null) return null;
-  // Answered as the tool's result: its structured record is the answer.
-  return (
-    <ChangeAnswersMenuFor
-      convId={convId}
-      questions={questions}
-      answerUuid={answerUuid}
-      restore={(targetConvId, questions) =>
-        restoreAnswerDraftFromRecord(
-          storage,
-          targetConvId,
-          event.toolUseId,
-          questions,
-          record,
-        )
-      }
-    />
-  );
+  return {
+    uuid: answerUuid,
+    restore: (storage, targetConvId, toolUseId) =>
+      restoreAnswerDraftFromRecord(
+        storage,
+        targetConvId,
+        toolUseId,
+        questions,
+        record,
+      ),
+  };
 }
 
-function ChangeAnswersMenuFor({
-  convId,
-  questions,
-  answerUuid,
-  restore,
-}: {
-  convId: string;
-  questions: Question[];
-  answerUuid: string | undefined;
-  /** Put the removed answer back in the reopened form of `targetConvId`. */
-  restore: (
-    targetConvId: string,
-    questions: Question[],
-    answerText: string,
-  ) => void;
-}) {
-  const { available, busy, run } = useGoBackToMessage({
-    convId,
-    uuid: answerUuid,
-    // The removed answer goes back in the form, not in the prompt editor.
-    onBack: (targetConvId, answerText) =>
-      restore(targetConvId, questions, answerText),
-  });
-
-  if (!available) return null;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <RowActionButton tooltip="Change answers">
-            <Icon icon={historyIcon} className="size-3" />
-          </RowActionButton>
-        }
-      />
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem disabled={busy} onClick={() => void run("rewind")}>
-          <Icon icon={undoIcon} />
-          Rewind and answer again
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy} onClick={() => void run("fork")}>
-          <Icon icon={callSplitIcon} />
-          Answer again in a fork
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
+  return rowAction(useChangeAnswersAction(event));
 }

@@ -1,11 +1,6 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { Timestamp } from "./timestamp";
+import { rowAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 export function TimestampAction({ event }: { event: JsonlEvent }) {
-  return (
-    <Timestamp
-      at={event.at}
-      className="tabular-nums text-2xs text-muted-foreground"
-    />
-  );
+  return rowAction({ kind: "time", at: event.at });
 }

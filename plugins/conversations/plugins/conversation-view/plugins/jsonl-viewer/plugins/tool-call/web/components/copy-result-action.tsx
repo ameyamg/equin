@@ -1,7 +1,16 @@
+import {
+  rowAction,
+  useCopyAction,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { CopyTextAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+
+function useCopyToolResultAction(event: JsonlEvent) {
+  return useCopyAction(
+    event.kind === "tool-call" && event.result ? event.result.content : null,
+    "Copy result",
+  );
+}
 
 export function CopyToolResultAction({ event }: { event: JsonlEvent }) {
-  if (event.kind !== "tool-call" || !event.result) return null;
-  return <CopyTextAction text={event.result.content} title="Copy result" />;
+  return rowAction(useCopyToolResultAction(event));
 }

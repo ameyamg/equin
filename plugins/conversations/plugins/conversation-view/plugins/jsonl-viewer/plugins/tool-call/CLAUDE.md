@@ -36,14 +36,15 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
     - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
+    - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
     - `conversations/conversation-view/jsonl-viewer` ×3
     - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
-    - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `primitives/css/status-dot` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/slot-render` ×2
+    - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -52,6 +53,7 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/relative-time.ElapsedTime`
+    - `primitives/row-actions.RowActions`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
   - Exports (types):

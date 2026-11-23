@@ -19697,12 +19697,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 55 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 56 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
               - `primitives/dom/auto-scroll` ×7
               - `conversations/conversation-view/pending-turn` ×6
+              - `conversations/conversation-view/jsonl-viewer/row-actions` ×4
               - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
-              - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
               - `primitives/css/working-dots` ×2
               - `primitives/relative-time` ×2
               - `primitives/slot-render` ×2
@@ -19719,7 +19719,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/in-view.useInView`
               - `primitives/dom/scroll-reveal.revealElement`
-              - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/markdown.useMarkdownLoaded`
               - `primitives/overlay/image-viewer.ImageGallery`
@@ -19837,9 +19836,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-scale`
-              - `ui/tokens/type-scale --font-size-2xs`
-              - `ui/tokens/type-scale --line-height-2xs`
               - `ui/tokens/type-scale --measure-reading`
             - Imported by: 52 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×49
@@ -19895,13 +19891,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
                   - `conversations/conversation-view/jsonl-viewer.useStreamingRow`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.rowAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.useCopyAction`
                   - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
                   - `infra/host-account.useHomeDisplay`
                   - `primitives/css/text.Text`
-                  - `primitives/icon-button.IconButton`
                   - `primitives/select-scope.ContentScope`
                 - Exports (types): `AgentProseProps`
                 - Exports (values): `AgentProse`
@@ -20701,12 +20698,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.rowActionClass`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.rowAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowAction`
                   - `primitives/launch.LaunchAgentPopover`
                   - `primitives/slot-render.useDispatchOutcome`
-                  - `ui/icons.Icon`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
@@ -20809,7 +20804,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-size-caption`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
-            - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
+            - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and rowAction — the one renderer that draws every action (a contribution's component returns rowAction({ icon, label, onClick | popup }); the branded return type makes drawing its own button a type error). The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
               - Web:
                 - Slots: `JsonlRowActions.Item`
                 - Slot contributors:
@@ -20822,28 +20817,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `JsonlRowActions.Item` ← `conversations.conversation-view.rewind`
                 - Uses:
                   - `primitives/copy-to-clipboard.useCopyToClipboard`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.cn`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/relative-time.RelativeTime`
                   - `primitives/row-actions.RowActions`
                   - `primitives/slot-render.defineRenderSlot`
-                  - `ui/icons.Icon`
-                - Exports (types): `RowActionContribution`
+                - Exports (types):
+                  - `RowAction`
+                  - `RowActionContribution`
+                  - `RowActionElement`
                 - Exports (values):
-                  - `CopyTextAction`
                   - `EventActionProvider`
                   - `EventRowActions`
                   - `JsonlRowActions`
-                  - `RowActionButton`
-                  - `rowActionClass`
+                  - `rowAction`
+                  - `useCopyAction`
               - Cross-plugin:
                 - Uses tokens:
-                  - `ui/tokens/color-palette --accent`
-                  - `ui/tokens/color-palette --accent-foreground`
-                  - `ui/tokens/color-palette --foreground`
-                  - `ui/tokens/color-palette --muted`
-                  - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/shape --radius`
-                  - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-scale`
+                  - `ui/tokens/type-scale --font-size-2xs`
+                  - `ui/tokens/type-scale --line-height-2xs`
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer`
                   - `conversations/conversation-view/jsonl-viewer/assistant-text`
@@ -21077,14 +21069,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-                - Uses: 27 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
                   - `primitives/collapsible` ×4
+                  - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
                   - `conversations/conversation-view/jsonl-viewer` ×3
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
-                  - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
                   - `primitives/css/status-dot` ×2
                   - `primitives/css/ui-kit` ×2
                   - `primitives/slot-render` ×2
+                  - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/bouncing-dots.BouncingDots`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
@@ -21093,6 +21086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/relative-time.ElapsedTime`
+                  - `primitives/row-actions.RowActions`
                   - `primitives/select-scope.ContentScope`
                   - `ui/icons.Icon`
                 - Exports (types):
@@ -21246,12 +21240,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 39 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 40 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×6
                       - `primitives/kept-state` ×4
+                      - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `primitives/dom/web-storage` ×3
-                      - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
                       - `conversations/conversation-view/jsonl-viewer` ×2
                       - `conversations/conversation-view/pending-turn` ×2
                       - `primitives/css/selection-indicator` ×2
@@ -22108,14 +22102,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
                   - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
                   - `conversations/conversation-view/jsonl-viewer.useSectionStart`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.rowAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.useCopyAction`
                   - `conversations/conversation-view/user-message.UserMessageCard`
                   - `conversations/conversation-view/user-message.UserMessageText`
                   - `primitives/css/spacing.Inset`
                   - `primitives/expandable.Expandable`
-                  - `primitives/icon-button.IconButton`
                   - `primitives/overlay/image-viewer.AssetThumbnail`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
@@ -22737,6 +22732,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.rowAction`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.RowAction`
               - `conversations/conversation-view/prompt-input.useSetConversationPromptDraft`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useFetchEndpoint`
@@ -22745,7 +22742,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.useLiveReader`
               - `network/live/live-state.ResourceError`
               - `primitives/css/spacing.Stack`
-              - `primitives/icon-button.IconButton`
               - `primitives/launch.useLaunchConversation`
               - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
               - `shell/notifications.Toast`
@@ -51606,9 +51602,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×10
-          - `conversations` ×5
+          - `conversations` ×6
           - `primitives` ×5
           - `page` ×4
           - `debug` ×3
@@ -53307,10 +53303,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 485 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 484 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
-              - `conversations` ×56
+              - `conversations` ×55
               - `page` ×27
               - `debug` ×25
               - `ui` ×22
@@ -56129,10 +56125,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 141 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×47
-          - `conversations` ×24
           - `primitives` ×23
+          - `conversations` ×21
           - `tasks` ×9
           - `page` ×7
           - `debug` ×5
@@ -58623,10 +58619,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×27
           - `debug` ×15
-          - `conversations` ×10
+          - `conversations` ×11
           - `tasks` ×6
           - `infra` ×4
           - `build` ×3
@@ -58683,7 +58679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Core: `@plugins/primitives/plugins/report-sink/core/testing`
           - `discardHeldReports` — Drop every report held by every report sink, with no handler told.
-    - **`row-actions`** — Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
+    - **`row-actions`** — Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing and muted resting tone it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
       - Web:
         - Uses:
           - `primitives/css/pin.Pin`
@@ -58705,11 +58701,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rowActionsAnchor`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --control-height-xs`
           - `ui/tokens/density --space-2xs`
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
+          - `conversations/conversation-view/jsonl-viewer/tool-call`
           - `page/page-reference`
           - `primitives/breadcrumb`
           - `primitives/commit-list`
@@ -68553,8 +68551,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Tokens used by: 562 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×125
-              - `conversations` ×97
-              - `primitives` ×80
+              - `conversations` ×96
+              - `primitives` ×81
               - `debug` ×42
               - `page` ×34
               - `plugin-meta` ×27
@@ -69179,8 +69177,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 417 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×97
+            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×95
               - `apps` ×81
               - `primitives` ×62
               - `page` ×36
@@ -69376,9 +69374,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 237 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 238 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×62
-              - `conversations` ×40
+              - `conversations` ×41
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14

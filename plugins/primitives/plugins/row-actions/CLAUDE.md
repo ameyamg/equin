@@ -44,8 +44,12 @@ Boundary: **an action cluster on a row/card/table row is this plugin, not that.*
 
 ## This plugin owns no button — put plain `IconButton`s in the cluster
 
-The cluster applies `ControlSizeProvider size="xs"` to its children, so an action
-button is an ordinary `IconButton` and needs no wrapper. **Do not add a
+The cluster applies `ControlSizeProvider size="xs"` and a muted resting tone
+(`text-muted-foreground`; ghost's own hover brings it to foreground) to its
+children, so an action button is an ordinary `IconButton` and needs no wrapper —
+never give one a size or colour class of its own. Without the tone a ghost
+button inherits whatever text the cluster sits beside, so the same strip read
+bright beside prose and dim in a card header. **Do not add a
 `RowActionButton` alias back.** It reads as a harmless convenience, but it drags
 `icon-button` (and through it `action-presentation`) into this barrel — and
 `css/row` composes this plugin, so the alias is what pushes `Row`, a *layout*
@@ -176,7 +180,7 @@ each, moved, never drawn twice — and unfolds once the row has room again.
 
 ## Plugin reference
 
-- Description: Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
+- Description: Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing and muted resting tone it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
 - Web:
   - Uses:
     - `primitives/css/pin.Pin`
@@ -198,11 +202,13 @@ each, moved, never drawn twice — and unfolds once the row has room again.
     - `rowActionsAnchor`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --control-height-xs`
     - `ui/tokens/density --space-2xs`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
+    - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `page/page-reference`
     - `primitives/breadcrumb`
     - `primitives/commit-list`

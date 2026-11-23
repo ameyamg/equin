@@ -147,12 +147,13 @@ React.
 
 ## The row-action strip lives in `plugins/row-actions`
 
-`EventRowActions`, `EventActionProvider`, `RowActionButton`, `rowActionClass`,
-`CopyTextAction` and the action slot itself are **not** exported from
+`EventRowActions`, `EventActionProvider`, `rowAction`, `useCopyAction` and the action slot itself are **not** exported from
 `jsonl-viewer/web` — they belong to the `row-actions` sub-plugin, which sits below
 `collapsible-card` so card chrome can host the strip without an import cycle.
-Contribute an action with `JsonlRowActions.Item({ id, component })` and import the
-button helpers from
+Contribute an action with `JsonlRowActions.Item({ id, component })` whose component
+returns `rowAction({ icon, label, onClick / popup })` — an action is declared as
+data, never drawn (the return type enforces it) — and import the
+types and helpers from
 `@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web`.
 See that plugin's `CLAUDE.md`; in particular it must never import `jsonl-viewer/web`
 back.
@@ -180,12 +181,12 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×9
     - `primitives/dom/auto-scroll` ×7
     - `conversations/conversation-view/pending-turn` ×6
+    - `conversations/conversation-view/jsonl-viewer/row-actions` ×4
     - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
-    - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `primitives/css/working-dots` ×2
     - `primitives/relative-time` ×2
     - `primitives/slot-render` ×2
@@ -202,7 +203,6 @@ back.
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.useInView`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/markdown.useMarkdownLoaded`
     - `primitives/overlay/image-viewer.ImageGallery`
@@ -320,9 +320,6 @@ back.
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-scale`
-    - `ui/tokens/type-scale --font-size-2xs`
-    - `ui/tokens/type-scale --line-height-2xs`
     - `ui/tokens/type-scale --measure-reading`
   - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×49
@@ -353,7 +350,7 @@ back.
   - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the…
   - **`preprompt`** — Renders everything equin appended to the agent's system prompt — the launch special instructions (preprompt) and every contributed section (mandate, page instructions, supervisor roles, task tree…)…
   - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool…
-  - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is…
+  - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and rowAction — the one renderer that draws every action (a contribution's component returns…
   - **`steady-reveal`** — Steady reveal for text an agent is still writing: useSteadyReveal drains a growing text at an even pace over the bursts it arrives in, its newest words fading in through a soft tail painted with the…
   - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live…
   - **`summary`** — Renders summary separator events in the JSONL viewer.

@@ -14,9 +14,9 @@
     - `CopyButton`
     - `useCopyToClipboard`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
-    - `conversations` ×5
+    - `conversations` ×6
     - `primitives` ×5
     - `page` ×4
     - `debug` ×3
