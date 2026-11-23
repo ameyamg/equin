@@ -1,0 +1,16 @@
+// @hash 6ec84829688d
+// The audit reads as a timeline: what was done to this task under a grant,
+// newest first.
+{
+  "views": [
+    {
+      "id": "recent",
+      "name": "Recent",
+      "icon": "history",
+      "view": { "type": "list", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

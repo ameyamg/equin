@@ -206,6 +206,7 @@ deploy does that by itself after the push that changes it
     - `infra/launcher`
     - `infra/launcher/gateway-drift`
     - `network/live/boot-snapshot`
+    - `tasks`
 - Web:
   - Exports (types): `PagePrincipal`
   - Exports (values):

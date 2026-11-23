@@ -146,8 +146,10 @@ own server half.)
     - `infra/mcp/browser`
     - `infra/paths/data-files/memory`
     - `infra/request-origin/agent-write-ledger`
+    - `tasks`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`
+    - `tasks/task-mandate/manage-grant`
     - `ui/theme-engine/saved-themes`
 - Sub-plugins:
   - **`agent-write-ledger`** [exempt] — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a…

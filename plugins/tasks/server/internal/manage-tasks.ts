@@ -33,6 +33,16 @@
  * transaction as the rest of the edit (so new context and the hand-off are one
  * call) — ending as an `add_task` backlog filing would: a root depending on
  * nothing, never armed, the role's. The caller owns it no more.
+ *
+ * **A person's grant** (`tasks.manage-unowned`, on the caller's own task —
+ * `tasks/task-mandate/manage-grant`): a task the caller does not own is then
+ * `granted` instead of refused, for its content, its dependencies and a drop
+ * only — never armed, retracked or handed off (that would launch work or
+ * move ownership), never a drop of a task other active tasks depend on, nor
+ * a `remove_after` on an armed one (either could launch work no one asked
+ * for). Each granted id gets an audit record, written in the transaction of
+ * the edit or drop it records (`UnownedRecord`), where the grant is also
+ * checked again — a grant switched off meanwhile refuses the write.
  */
 
 import {
@@ -77,6 +87,8 @@ export interface TaskEdit {
   start?: { kind: "armed"; model: ModelChoice } | { kind: "manual" };
   /** The track to set; absent = unchanged. */
   track?: TaskTrack;
+  /** The audit records of the ids it touches under a grant (none without). */
+  unowned: UnownedRecord[];
   /** Hand the task to this role's backlog, last in the transaction; `from`
    * is the handing caller (its conversation and task). */
   handOff?: { supervisor: string; conversationId: string; fromTaskId: string };
@@ -92,14 +104,28 @@ export type ManageRefusal =
   | "empty"
   | "conflict"
   | "not-armable"
-  | "launched";
+  | "launched"
+  | "grant-limit";
 
 /** Whether the caller owns a task (`task-ownership.ts`), read through a port:
  * `owner` is its owner in words ("filed by a person"). */
 export type OwnerAnswer =
   | { kind: "not-found" }
   | { kind: "owned" }
-  | { kind: "not-owned"; owner: string };
+  | { kind: "not-owned"; owner: string }
+  /** Not the caller's, but a person's grant on the caller's task
+   * (`grantTaskId`) lets it act on it. */
+  | { kind: "granted"; owner: string; grantTaskId: string };
+
+/** One audit record of an action on a task the caller does not own, allowed
+ * by the grant on `grantTaskId`. Written with the write it records. */
+export interface UnownedRecord {
+  taskId: string;
+  action: string;
+  owner: string;
+  grantTaskId: string;
+  conversationId: string;
+}
 
 export type ManageOutcome =
   | { kind: "edited"; taskId: string; changed: string[] }
@@ -136,6 +162,10 @@ export interface ManageTasksPorts {
   launched: (taskId: string) => Promise<boolean>;
   /** The task's current track. */
   trackOf: (taskId: string) => Promise<TaskTrack>;
+  /** Whether the task is armed to launch on its own. */
+  armed: (taskId: string) => Promise<boolean>;
+  /** How many active (unsettled) tasks depend on it, transitively. */
+  activeDependents: (taskId: string) => Promise<number>;
   /** The model an armed task on `track` launches with when the caller names
    * none. */
   defaultModel: (
@@ -150,7 +180,12 @@ export interface ManageTasksPorts {
   apply: (
     edit: TaskEdit,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
-  drop: (taskId: string) => Promise<void>;
+  /** Drops the task, writing `unowned` in the same transaction; `{ ok:
+   * false }` when a grant it acts under is gone by then — nothing written. */
+  drop: (
+    taskId: string,
+    unowned: UnownedRecord[],
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
 }
 
 /** The caller's `tasks.manage` grant: granted, or denied under `mandate` (its
@@ -184,15 +219,26 @@ function refused(reason: ManageRefusal, message: string): ManageOutcome {
   return { kind: "refused", reason, message };
 }
 
-/** Every id must be a task the caller owns: each of `targets` (the task
- * written), and each of `refs` (the other end of a dependency) unless it is
- * the caller's own task. Returns the caller's task. */
+/** A task the caller acts on only under a person's grant. */
+interface GrantedId {
+  owner: string;
+  grantTaskId: string;
+}
+
+/** Every id must be a task the caller owns — or one a person's grant lets it
+ * act on (`granted`): each of `targets` (the task written), and each of
+ * `refs` (the other end of a dependency) unless it is the caller's own task.
+ * Returns the caller's task. */
 async function checkOwned(
   conversationId: string,
   targets: string[],
   refs: string[],
   ports: ManageTasksPorts,
-): Promise<{ refused: ManageOutcome } | { callerTask: string }> {
+): Promise<
+  | { refused: ManageOutcome }
+  | { callerTask: string; granted: Map<string, GrantedId> }
+> {
+  const granted = new Map<string, GrantedId>();
   const own = await ports.callerTask(conversationId);
   if (own === null)
     return { refused: refused("no-task", "Your conversation has no task.") };
@@ -216,8 +262,32 @@ async function checkOwned(
           `${id} is not yours (${of.owner}) — you may only edit or drop the tasks you filed (a supervisor: the tasks of its tree).`,
         ),
       };
+    if (of.kind === "granted")
+      granted.set(id, { owner: of.owner, grantTaskId: of.grantTaskId });
   }
-  return { callerTask: own };
+  return { callerTask: own, granted };
+}
+
+function grantLimit(message: string): ManageOutcome {
+  return refused(
+    "grant-limit",
+    `${message} The grant a person gave your task lets you change the content and dependencies of tasks you do not own, and drop them — nothing that launches work or moves who owns them.`,
+  );
+}
+
+function unownedRecord(
+  id: string,
+  of: GrantedId,
+  action: string,
+  conversationId: string,
+): UnownedRecord {
+  return {
+    taskId: id,
+    action,
+    owner: of.owner,
+    grantTaskId: of.grantTaskId,
+    conversationId,
+  };
 }
 
 export async function editTask(
@@ -280,6 +350,57 @@ export async function editTask(
   );
   if ("refused" in scope) return scope.refused;
 
+  // A person's grant reaches content, dependencies and a drop — never what
+  // launches work or moves ownership.
+  const grantedTarget = scope.granted.get(taskId);
+  const unowned: UnownedRecord[] = [];
+  if (grantedTarget !== undefined) {
+    if (input.start !== undefined || input.track !== undefined)
+      return grantLimit(
+        `${taskId} is not yours: \`start\` and \`track\` stay its owner's.`,
+      );
+    if (input.supervisor !== undefined)
+      return grantLimit(
+        `${taskId} is not yours: handing it to a supervisor would make it the role's.`,
+      );
+    if (removeAfter.length > 0 && (await ports.armed(taskId)))
+      return grantLimit(
+        `${taskId} is armed: removing what it runs after could launch it.`,
+      );
+    unowned.push(
+      unownedRecord(
+        taskId,
+        grantedTarget,
+        `Edited: ${changed.join(", ")}`,
+        conversationId,
+      ),
+    );
+  }
+  for (const id of addAfter) {
+    const of = scope.granted.get(id);
+    if (of !== undefined)
+      unowned.push(
+        unownedRecord(
+          id,
+          of,
+          `Made a dependency of ${taskId} (${taskId} now runs after it)`,
+          conversationId,
+        ),
+      );
+  }
+  for (const id of removeAfter) {
+    const of = scope.granted.get(id);
+    if (of !== undefined)
+      unowned.push(
+        unownedRecord(
+          id,
+          of,
+          `Removed as a dependency of ${taskId}`,
+          conversationId,
+        ),
+      );
+  }
+
   // Launching and retracking stay a supervisor's (`tasks.manage`): an agent
   // managing what it filed changes its content, dependencies and owner only.
   if (input.start !== undefined || input.track !== undefined) {
@@ -340,6 +461,7 @@ export async function editTask(
       : {}),
     addAfter,
     removeAfter,
+    unowned,
     ...(start ? { start } : {}),
     ...(input.track !== undefined ? { track: input.track } : {}),
     ...(input.supervisor !== undefined
@@ -364,7 +486,18 @@ export async function dropTask(
   const taskId = input.task_id.trim();
   const scope = await checkOwned(conversationId, [taskId], [], ports);
   if ("refused" in scope) return scope.refused;
-  await ports.drop(taskId);
+  const granted = scope.granted.get(taskId);
+  const unowned: UnownedRecord[] = [];
+  if (granted !== undefined) {
+    const dependents = await ports.activeDependents(taskId);
+    if (dependents > 0)
+      return grantLimit(
+        `${taskId} has ${dependents} active task${dependents === 1 ? "" : "s"} depending on it: dropping it would unblock them.`,
+      );
+    unowned.push(unownedRecord(taskId, granted, "Dropped", conversationId));
+  }
+  const out = await ports.drop(taskId, unowned);
+  if (!out.ok) return refused("grant-limit", out.message);
   return { kind: "dropped", taskId };
 }
 

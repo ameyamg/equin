@@ -17,6 +17,7 @@ import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { TaskTrackControl } from "@plugins/tasks/plugins/task-track/web";
 import { TaskMandateControl } from "@plugins/tasks/plugins/task-mandate/web";
+import { TaskManageGrantControl } from "@plugins/tasks/plugins/task-mandate/plugins/manage-grant/web";
 import { TaskSupervisorControl } from "@plugins/tasks/plugins/supervisor-roles/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -98,6 +99,12 @@ export function TaskHeader({ taskId }: { taskId: string }) {
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Mandate</SectionLabel>
         <TaskMandateControl taskId={taskId} />
+      </Stack>
+      {/* A person's grant to this task's own conversation — beside the
+          mandate it widens, never part of it. */}
+      <Stack direction="row" align="center" gap="md">
+        <SectionLabel as="span">Grant</SectionLabel>
+        <TaskManageGrantControl taskId={taskId} />
       </Stack>
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Author</SectionLabel>

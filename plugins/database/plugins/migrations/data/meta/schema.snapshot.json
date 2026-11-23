@@ -1,6 +1,6 @@
 {
-  "id": "1a4cef57-dcc0-4c98-9a52-82b78f982bc3",
-  "prevId": "f108b2c5-c416-49de-bb41-94cd069cc92f",
+  "id": "bf70ed91-5b32-423d-8671-2a5e5d2648e3",
+  "prevId": "1a4cef57-dcc0-4c98-9a52-82b78f982bc3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17195,6 +17195,143 @@
         "tasks_ext_effort_parent_id_tasks_id_fk": {
           "name": "tasks_ext_effort_parent_id_tasks_id_fk",
           "tableFrom": "tasks_ext_effort",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.task_unowned_actions": {
+      "name": "task_unowned_actions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grant_task_id": {
+          "name": "grant_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner": {
+          "name": "owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "task_unowned_actions_task_idx": {
+          "name": "task_unowned_actions_task_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tasks_ext_manage_grant": {
+      "name": "tasks_ext_manage_grant",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "granted_at": {
+          "name": "granted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tasks_ext_manage_grant_parent_id_tasks_id_fk": {
+          "name": "tasks_ext_manage_grant_parent_id_tasks_id_fk",
+          "tableFrom": "tasks_ext_manage_grant",
           "tableTo": "tasks",
           "columnsFrom": [
             "parent_id"

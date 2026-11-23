@@ -3,6 +3,7 @@ export {
   GRANT_SCOPES,
   mandatePolicy,
   scopeKey,
+  withGrants,
 } from "./internal/define";
 export type {
   Capability,

@@ -127,3 +127,24 @@ function recordOf(
   }
   return record;
 }
+
+/**
+ * `policy` with `grants` added for the whole tree — how an overlay (a grant a
+ * person gave one task's conversation, `MandateOverlay`) joins the policy its
+ * conversation resolves to. A capability the policy already grants (whole-tree
+ * or scoped), or one listed twice, throws: an overlay never silently replaces
+ * what the mandate says.
+ */
+export function withGrants(
+  policy: MandatePolicy,
+  grants: readonly Grant[],
+): MandatePolicy {
+  if (grants.length === 0) return policy;
+  const taken = new Set(Object.keys(policy));
+  for (const scope of GRANT_SCOPES) {
+    const sub = policy[scopeKey(scope)];
+    if (typeof sub === "object" && sub !== null)
+      for (const id of Object.keys(sub)) taken.add(id);
+  }
+  return MandatePolicySchema.parse({ ...policy, ...recordOf(grants, taken) });
+}

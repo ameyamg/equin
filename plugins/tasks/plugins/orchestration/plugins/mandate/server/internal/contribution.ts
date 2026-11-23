@@ -1,5 +1,8 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
-import type { Capability } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type {
+  Capability,
+  Grant,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /**
  * The server half of ONE capability: how a granted value reads to the agent.
@@ -103,4 +106,35 @@ export async function claimedOwnerOf(
     found = { id: entry.id, owner };
   }
   return found?.owner ?? null;
+}
+
+/**
+ * Grants a plugin adds to ONE task's own conversation on top of its mandate —
+ * a per-task overlay (a person's grant on that task). Read by
+ * `conversationMandate` for the conversation that runs `taskId` only: never a
+ * conversation stating its own mandate (a side chat), never a conversation on
+ * another task (a worker, a subtask) — the overlay is keyed by the exact task,
+ * not resolved up the folder tree. The mandate plugin names no overlay.
+ */
+export interface MandateOverlayEntry {
+  /** Unique (diagnostics). */
+  id: string;
+  /** The grants `taskId`'s own conversation gets now; `[]` for none. */
+  grantsFor: (taskId: string) => Promise<readonly Grant[]>;
+}
+
+const OverlayToken = defineServerContribution<MandateOverlayEntry>(
+  "mandateOverlay",
+  { docLabel: (c) => c.id },
+);
+
+/** Registers a per-task grant overlay — `MandateOverlay({ id, grantsFor })`. */
+export const MandateOverlay = OverlayToken;
+
+/** Every overlay's grants for `taskId`, in contribution order. */
+export async function overlayGrantsFor(taskId: string): Promise<Grant[]> {
+  const out: Grant[] = [];
+  for (const entry of OverlayToken.getContributions())
+    out.push(...(await entry.grantsFor(taskId)));
+  return out;
 }

@@ -108,6 +108,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "tasks-list", pluginId: "tasks.task-list" },
   { id: "tasks.automations", pluginId: "tasks.automations" },
   { id: "tasks.automations.history", pluginId: "tasks.automations" },
+  { id: "tasks.manage-grant.actions", pluginId: "tasks.task-mandate.manage-grant" },
   { id: "tasks.sidequest-autopilot.launch-list", pluginId: "tasks.sidequest-autopilot" },
   { id: "tasks.supervisor-roles", pluginId: "tasks.supervisor-roles.pane" },
   { id: "tasks.supervisor-roles.adhoc", pluginId: "tasks.supervisor-roles.pane" },

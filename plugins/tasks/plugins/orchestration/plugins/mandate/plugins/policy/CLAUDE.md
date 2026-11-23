@@ -41,6 +41,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `tasks/outcome-report/capability`
     - `tasks/sidequest-autopilot`
     - `tasks/supervisor-roles`
+    - `tasks/task-mandate/manage-grant`
     - `tasks/tasks-core`
     - `upstream`
 - Core:
@@ -61,6 +62,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `mandateKinds`
     - `mandatePolicy`
     - `scopeKey`
+    - `withGrants`
 - Test helpers:
   - Core: `@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core/testing`
     - `rawPolicy` — A policy as raw grants, unchecked by any capability — for a test of how a reader handles a value its capability's schema refuses, which `mandatePolicy` (parsing every grant) can never build.

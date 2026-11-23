@@ -84,7 +84,7 @@ automations define theirs through `defineAutomation({ mandate })`.
 
 ## Plugin reference
 
-- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf).
+- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf), and MandateOverlay (grants a plugin adds to ONE task's own conversation on top of its mandate — never a side chat, a worker or a subtask).
 - Server:
   - Contributes:
     - `resource.declare` "mandate.capabilities"
@@ -101,6 +101,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `ConversationMandate`
     - `EffectiveMandate`
     - `MandateCapabilityEntry`
+    - `MandateOverlayEntry`
     - `TaskOwnerClaimEntry`
   - Exports (values):
     - `claimedOwnerOf`
@@ -109,6 +110,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `grantOf`
     - `Mandate`
     - `mandateOf`
+    - `MandateOverlay`
     - `renderMandateInstructions`
     - `TaskOwnerClaim`
   - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
@@ -133,6 +135,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `tasks/supervisor-roles`
     - `tasks/supervisor-roles/events`
     - `tasks/supervisor-roles/sessions`
+    - `tasks/task-mandate/manage-grant`
 - Sub-plugins:
   - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at…
   - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot…

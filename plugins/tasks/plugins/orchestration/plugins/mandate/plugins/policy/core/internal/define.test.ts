@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { defineCapability, mandatePolicy } from "./define";
+import { defineCapability, mandatePolicy, withGrants } from "./define";
 
 const flag = defineCapability<true>({
   id: "test.flag",
@@ -65,5 +65,27 @@ describe("Capability.grant", () => {
   test("a value its schema refuses throws at the author", () => {
     // A value laundered past tsc (a cast, a config read) is caught here.
     expect(() => level.grant("medium" as "low")).toThrow();
+  });
+});
+
+describe("withGrants", () => {
+  test("adds the grants beside the policy's own", () => {
+    expect(
+      withGrants(mandatePolicy([flag.grant(true)]), [level.grant("low")]),
+    ).toEqual({
+      "test.flag": true,
+      "test.level": "low",
+    } as never);
+  });
+
+  test("a capability the policy already grants throws, whole-tree or scoped", () => {
+    expect(() =>
+      withGrants(mandatePolicy([level.grant("low")]), [level.grant("high")]),
+    ).toThrow(/"test\.level" granted twice/);
+    expect(() =>
+      withGrants(mandatePolicy([], { below: [level.grant("low")] }), [
+        level.grant("high"),
+      ]),
+    ).toThrow(/"test\.level" granted twice/);
   });
 });

@@ -9,6 +9,7 @@ import {
   editTask,
   type ManageTasksPorts,
   type TaskEdit,
+  type UnownedRecord,
 } from "./manage-tasks";
 
 // The `edit_task` / `drop_task` policy over an in-memory store: a caller
@@ -20,6 +21,9 @@ const AGENT = "conv-agent";
 // A side chat opened beside SUP's conversation: SUP's task, but it states
 // `interactive` in place of its task's Supervisor.
 const SIDE = "conv-side";
+// An interactive agent on task G, whose task a person granted leave to manage
+// tasks it does not own.
+const GRANTED = "conv-granted";
 // SUP's task is R, a supervisor root: it owns A and B (its tree) and Z
 // (another tree's root its role owns). N names a mandate of its own (M below
 // it, not SUP's); X is another tree's root, Y under it.
@@ -40,11 +44,14 @@ const roots: Record<string, string> = {
   T: "I",
   H: "I",
   O: "I",
+  G: "G",
+  D: "G",
 };
 const callerTasks: Record<string, string> = {
   [SUP]: "R",
   [AGENT]: "I",
   [SIDE]: "R",
+  [GRANTED]: "G",
 };
 /** Who owns each task: the conversation acting as its owner, else its owner
  * in words. */
@@ -63,6 +70,8 @@ const owners: Record<string, { by: string } | { label: string }> = {
   O: { label: "filed by the agent of task Q" },
   R: { label: "filed by a person" },
   I: { label: "filed by a person" },
+  G: { label: "filed by a person" },
+  D: { by: GRANTED },
 };
 
 const DEFAULT = ModelChoiceSchema.parse("opus");
@@ -75,9 +84,17 @@ const tracks: Record<string, "main" | "sidequest"> = {
 };
 
 function store(
-  opts: { callerTask?: string | null; handOffRefused?: string } = {},
+  opts: {
+    callerTask?: string | null;
+    handOffRefused?: string;
+    grantGone?: boolean;
+  } = {},
 ) {
-  const applied: TaskEdit[] = [];
+  const applied: Omit<TaskEdit, "unowned">[] = [];
+  const records: UnownedRecord[] = [];
+  // X is armed; H has one active task depending on it.
+  const armed = new Set(["X"]);
+  const dependents: Record<string, number> = { H: 1 };
   // B's agent already launched (an open attempt).
   const launched = new Set(["B"]);
   const unarmable: Record<string, string> = {};
@@ -91,11 +108,11 @@ function store(
     ownerOf: async (conv, id) => {
       const owner = owners[id];
       if (owner === undefined) return { kind: "not-found" };
-      if ("by" in owner)
-        return owner.by === conv
-          ? { kind: "owned" }
-          : { kind: "not-owned", owner: "filed by another agent" };
-      return { kind: "not-owned", owner: owner.label };
+      const label = "by" in owner ? "filed by another agent" : owner.label;
+      if ("by" in owner && owner.by === conv) return { kind: "owned" };
+      return conv === GRANTED
+        ? { kind: "granted", owner: label, grantTaskId: "G" }
+        : { kind: "not-owned", owner: label };
     },
     // Only the supervisor holds tasks.manage; both may hand off.
     manageGrant: async (conv) =>
@@ -117,6 +134,8 @@ function store(
     unarmable: async (id) => unarmable[id] ?? null,
     launched: async (id) => launched.has(id),
     trackOf: async (id) => tracks[id] ?? "main",
+    armed: async (id) => armed.has(id),
+    activeDependents: async (id) => dependents[id] ?? 0,
     defaultModel: async (_conv, track) =>
       track === "sidequest" ? SIDEQUEST_DEFAULT : DEFAULT,
     modelCatalog: () => BASELINE_MODELS,
@@ -125,17 +144,26 @@ function store(
         return { ok: false, message: "Cycle detected in dependencies" };
       if (edit.handOff && opts.handOffRefused)
         return { ok: false, message: opts.handOffRefused };
-      applied.push(edit);
+      if (edit.unowned.length > 0 && opts.grantGone)
+        return { ok: false, message: "grant gone" };
+      const { unowned, ...rest } = edit;
+      records.push(...unowned);
+      applied.push(rest);
       return { ok: true };
     },
-    drop: async (id) => {
+    drop: async (id, unowned) => {
+      if (unowned.length > 0 && opts.grantGone)
+        return { ok: false, message: "grant gone" };
+      records.push(...unowned);
       dropped.push(id);
+      return { ok: true };
     },
   };
   return {
     ports,
     applied,
     dropped,
+    records,
     closeCycle: () => {
       cycle = true;
     },
@@ -556,5 +584,90 @@ describe("edit_task supervisor: the hand-off", () => {
       ),
     ).toMatchObject({ reason: "not-permitted" });
     expect([...s.applied, ...refusing.applied, ...noGrant.applied]).toEqual([]);
+  });
+});
+
+describe("a person's grant on the caller's task", () => {
+  test("edits and drops tasks it does not own, each recorded on the task it changes", async () => {
+    const s = store();
+    expect(
+      await editTask({ task_id: "H", title: "x" }, GRANTED, s.ports),
+    ).toEqual({ kind: "edited", taskId: "H", changed: ["title"] });
+    expect(
+      await editTask({ task_id: "D", add_after: ["Y"] }, GRANTED, s.ports),
+    ).toEqual({ kind: "edited", taskId: "D", changed: ["add_after"] });
+    expect(await dropTask({ task_id: "O" }, GRANTED, s.ports)).toEqual({
+      kind: "dropped",
+      taskId: "O",
+    });
+    expect(s.records).toEqual([
+      {
+        taskId: "H",
+        action: "Edited: title",
+        owner: "filed by a person",
+        grantTaskId: "G",
+        conversationId: GRANTED,
+      },
+      {
+        taskId: "Y",
+        action: "Made a dependency of D (D now runs after it)",
+        owner: "filed by a person",
+        grantTaskId: "G",
+        conversationId: GRANTED,
+      },
+      {
+        taskId: "O",
+        action: "Dropped",
+        owner: "filed by the agent of task Q",
+        grantTaskId: "G",
+        conversationId: GRANTED,
+      },
+    ]);
+  });
+
+  test("a task it owns is managed as before, with no record", async () => {
+    const s = store();
+    await editTask({ task_id: "D", title: "x" }, GRANTED, s.ports);
+    expect(s.records).toEqual([]);
+  });
+
+  test("never launches work or moves ownership: start, track, hand-off, unblocking", async () => {
+    const s = store();
+    const cases = await Promise.all([
+      editTask({ task_id: "H", start: "manual" }, GRANTED, s.ports),
+      editTask({ task_id: "H", track: "sidequest" }, GRANTED, s.ports),
+      editTask({ task_id: "H", supervisor: "srole-x" }, GRANTED, s.ports),
+      editTask({ task_id: "X", remove_after: ["Y"] }, GRANTED, s.ports),
+      dropTask({ task_id: "H" }, GRANTED, s.ports),
+    ]);
+    expect(cases.map((c) => c.kind === "refused" && c.reason)).toEqual([
+      "grant-limit",
+      "grant-limit",
+      "grant-limit",
+      "grant-limit",
+      "grant-limit",
+    ]);
+    expect(s.applied).toEqual([]);
+    expect(s.dropped).toEqual([]);
+    expect(s.records).toEqual([]);
+  });
+
+  test("its own task stays refused", async () => {
+    const s = store();
+    const out = await dropTask({ task_id: "G" }, GRANTED, s.ports);
+    expect(out.kind === "refused" && out.reason).toBe("root");
+  });
+
+  test("a grant gone by the write refuses it — nothing written", async () => {
+    const s = store({ grantGone: true });
+    const out = await dropTask({ task_id: "O" }, GRANTED, s.ports);
+    expect(out.kind === "refused" && out.reason).toBe("grant-limit");
+    expect(s.dropped).toEqual([]);
+  });
+
+  test("without the grant the same calls are refused, naming the owner", async () => {
+    const s = store();
+    const out = await dropTask({ task_id: "O" }, AGENT, s.ports);
+    expect(out.kind === "refused" && out.reason).toBe("not-owner");
   });
 });

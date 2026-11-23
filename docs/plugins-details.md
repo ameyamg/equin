@@ -25038,10 +25038,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 183 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 184 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×50
       - `conversations` ×22
-      - `tasks` ×20
+      - `tasks` ×21
       - `infra` ×18
       - `page` ×14
       - `debug` ×12
@@ -30068,11 +30068,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 144 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 145 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
       - `apps` ×25
       - `conversations` ×12
-      - `tasks` ×7
+      - `tasks` ×8
       - `infra` ×6
       - `debug` ×5
       - `page` ×4
@@ -30499,11 +30499,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 69 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 70 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×18
               - `conversations` ×12
+              - `tasks` ×8
               - `infra` ×7
-              - `tasks` ×7
               - `debug` ×5
               - `page` ×5
               - `primitives` ×3
@@ -32145,10 +32145,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 118 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 119 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×33
               - `conversations` ×22
-              - `tasks` ×16
+              - `tasks` ×17
               - `infra` ×8
               - `page` ×8
               - `primitives` ×6
@@ -33368,6 +33368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher`
           - `infra/launcher/gateway-drift`
           - `network/live/boot-snapshot`
+          - `tasks`
       - Web:
         - Exports (types): `PagePrincipal`
         - Exports (values):
@@ -36091,8 +36092,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 45 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×35
+    - Slot contributors: 46 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×36
       - `IdKinds.Presenter` ×10
     - Exports (types):
       - `IdPresenter`
@@ -36147,10 +36148,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 52 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 53 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×15
       - `conversations` ×8
-      - `tasks` ×5
+      - `tasks` ×6
       - `infra` ×4
       - `primitives` ×3
       - `active-data` ×2
@@ -37829,12 +37830,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 281 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 282 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×37
           - `infra` ×23
+          - `tasks` ×22
           - `debug` ×21
-          - `tasks` ×21
           - `page` ×19
           - `primitives` ×15
           - `ui` ×8
@@ -37942,14 +37943,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 55 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 56 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×11
           - `conversations` ×9
           - `infra` ×7
           - `page` ×7
           - `debug` ×5
+          - `tasks` ×4
           - `primitives` ×3
-          - `tasks` ×3
           - `active-data`
           - `backup`
           - `build/run-ledger`
@@ -38013,9 +38014,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 49 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 50 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×19
-          - `tasks` ×14
+          - `tasks` ×15
           - `conversations` ×13
           - `page` ×3
       - Exemptions:
@@ -38128,9 +38129,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 45 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `conversations` ×13
-          - `tasks` ×11
+          - `tasks` ×12
           - `apps` ×7
           - `infra` ×5
           - `page` ×4
@@ -39808,12 +39809,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
           - `conversations` ×18
           - `infra` ×16
           - `debug` ×13
-          - `tasks` ×10
+          - `tasks` ×11
           - `database` ×4
           - `page` ×3
           - `build`
@@ -41416,8 +41417,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp/browser`
           - `infra/paths/data-files/memory`
           - `infra/request-origin/agent-write-ledger`
+          - `tasks`
           - `tasks/automations`
           - `tasks/sidequest-autopilot`
+          - `tasks/task-mandate/manage-grant`
           - `ui/theme-engine/saved-themes`
       - Plugins:
         - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a person edited since; GET /api/agent-writes and POST /api/agent-writes/revert aggregate every registered ledger for the e2e harness.
@@ -42118,9 +42121,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `apps` ×8
-          - `tasks` ×7
+          - `tasks` ×8
           - `infra` ×6
           - `conversations` ×4
           - `debug` ×4
@@ -44136,11 +44139,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 367 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 368 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×95
           - `conversations` ×74
           - `debug` ×36
-          - `tasks` ×31
+          - `tasks` ×32
           - `infra` ×25
           - `page` ×15
           - `active-data` ×14
@@ -44559,12 +44562,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 321 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 322 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×87
               - `conversations` ×50
               - `debug` ×31
               - `ui` ×26
-              - `tasks` ×24
+              - `tasks` ×25
               - `page` ×16
               - `primitives` ×16
               - `infra` ×11
@@ -51749,12 +51752,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 193 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×39
               - `conversations` ×28
               - `reports` ×20
-              - `tasks` ×11
+              - `tasks` ×12
               - `primitives` ×10
               - `plugin-meta` ×8
               - `build` ×6
@@ -52814,15 +52817,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 461 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 462 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×81
               - `primitives` ×55
               - `debug` ×39
               - `ui` ×32
               - `page` ×27
+              - `tasks` ×17
               - `plugin-meta` ×16
-              - `tasks` ×16
               - `fields` ×9
               - `infra` ×8
               - `apps-core` ×7
@@ -53022,6 +53025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/launch`
               - `shell/notifications/native`
               - `tasks/supervisor-roles/pane`
+              - `tasks/task-mandate/manage-grant`
         - **`text`** — Semantic typography primitive: <Text variant tone as> (or <Text pick> — a role the theme picks per part through three tokens, applied by one CSS if() class) picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
             - Uses:
@@ -53049,14 +53053,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 440 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×85
               - `primitives` ×48
               - `debug` ×39
               - `page` ×25
               - `ui` ×18
-              - `tasks` ×16
+              - `tasks` ×17
               - `plugin-meta` ×15
               - `fields` ×11
               - `infra` ×9
@@ -53696,8 +53700,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 114 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×104
+        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×105
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -53981,8 +53985,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 106 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×104
+        - Contributes: 107 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×105
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getAllDescriptors`
@@ -54188,13 +54192,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
           - `apps` ×29
           - `debug` ×17
           - `primitives` ×10
           - `conversations` ×9
-          - `tasks` ×6
+          - `tasks` ×7
           - `infra` ×4
           - `apps-core/app-launcher`
           - `auth`
@@ -56673,13 +56677,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 241 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 242 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×74
           - `conversations` ×26
           - `ui` ×24
           - `debug` ×20
           - `primitives` ×20
-          - `tasks` ×15
+          - `tasks` ×16
           - `page` ×11
           - `build` ×6
           - `companions` ×5
@@ -63070,10 +63074,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/density` ×6
           - `ui/tokens/shape` ×2
-        - Imported by: 74 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×18
           - `apps` ×13
-          - `tasks` ×8
+          - `tasks` ×9
           - `debug` ×5
           - `build` ×3
           - `config_v2` ×3
@@ -63824,7 +63828,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-map`
           - `apps/prototypes/gallery`
 
-- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
+- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
   - Server:
     - Contributes:
       - `mandateCapability` "tasks.file"
@@ -63842,17 +63846,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
-    - Uses: 48 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+    - Uses: 55 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×20
       - `tasks/orchestration/mandate` ×5
+      - `tasks/task-mandate/manage-grant` ×5
+      - `tasks/auto-start` ×4
       - `tasks/task-track` ×4
-      - `tasks/auto-start` ×3
+      - `database` ×2
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
       - `tasks/orchestration/mandate/definitions` ×2
       - `conversations/conversation-view/push-and-exit/exit-precondition.ExitClean`
       - `conversations/model-provider/catalog.getModelCatalog`
-      - `database.db`
       - `infra/attachments.getAttachment`
       - `infra/mcp.Mcp`
       - `tasks/launch-options.resolveLaunchOptions`
@@ -63956,8 +63961,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `updateTask`
       - `UpdateTaskBodySchema`
   - Cross-plugin:
-    - Imported by: 23 plugins — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
-      - `tasks` ×14
+    - Imported by: 24 plugins — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+      - `tasks` ×15
       - `conversations` ×6
       - `active-data/task`
       - `hints/ask`
@@ -64536,7 +64541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-triage`
     - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and watchers. Names no workflow, automation or track.
       - Plugins:
-        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf).
+        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf), and MandateOverlay (grants a plugin adds to ONE task's own conversation on top of its mandate — never a side chat, a worker or a subtask).
           - Server:
             - Contributes:
               - `resource.declare` "mandate.capabilities"
@@ -64553,6 +64558,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConversationMandate`
               - `EffectiveMandate`
               - `MandateCapabilityEntry`
+              - `MandateOverlayEntry`
               - `TaskOwnerClaimEntry`
             - Exports (values):
               - `claimedOwnerOf`
@@ -64561,6 +64567,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `grantOf`
               - `Mandate`
               - `mandateOf`
+              - `MandateOverlay`
               - `renderMandateInstructions`
               - `TaskOwnerClaim`
             - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
@@ -64585,6 +64592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles`
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/sessions`
+              - `tasks/task-mandate/manage-grant`
           - Plugins:
             - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn (a side chat opened beside the agent running the task keeps its own mandate and is only told nothing changed for it; on conversation.runHandedOver, a side chat that takes over running its task once that agent closed gets the same refresh) — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none. The delivery is sendSectionNotice, which the owner of any other state a section renders (e.g. the supervisor roles list) calls with its own lead and its own section.
               - Server:
@@ -64661,6 +64669,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/outcome-report/capability`
                   - `tasks/sidequest-autopilot`
                   - `tasks/supervisor-roles`
+                  - `tasks/task-mandate/manage-grant`
                   - `tasks/tasks-core`
                   - `upstream`
               - Core:
@@ -64681,6 +64690,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `mandateKinds`
                   - `mandatePolicy`
                   - `scopeKey`
+                  - `withGrants`
               - Test helpers:
                 - Core: `@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core/testing`
                   - `rawPolicy` — A policy as raw grants, unchecked by any capability — for a test of how a reader handles a value its capability's schema refuses, which `mandatePolicy` (parsing every grant) can never build.
@@ -65755,6 +65765,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskDetailSlots.Section` ← `tasks.task-events`
           - `TaskDetailSlots.Section` ← `tasks.task-graph`
           - `TaskDetailSlots.Section` ← `tasks.task-header`
+          - `TaskDetailSlots.Section` ← `tasks.task-mandate.manage-grant`
           - `TaskDetailSlots.Section` ← `tasks.task-triage`
           - `tasksRootPane.Actions` ← `primitives.pane`
           - `taskDetailPane.Actions` ← `primitives.pane`
@@ -65814,6 +65825,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-graph`
           - `tasks/task-header`
           - `tasks/task-mandate`
+          - `tasks/task-mandate/manage-grant`
           - `tasks/task-triage`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Wish toolbar button and the conversation new-child-task button.
       - Web:
@@ -66036,7 +66048,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, the page it was filed from, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
-        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
           - `tasks/task-detail` ×3
           - `network/live/live-state` ×2
           - `primitives/css/text` ×2
@@ -66049,6 +66061,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/editable-field.useEditableField`
           - `primitives/relative-time.RelativeTime`
           - `tasks/supervisor-roles/pane.TaskSupervisorControl`
+          - `tasks/task-mandate/manage-grant.TaskManageGrantControl`
           - `tasks/task-mandate.TaskMandateControl`
           - `tasks/task-source-url.TaskSourceUrlRow`
           - `tasks/task-status.StatusSignal`
@@ -66169,6 +66182,108 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `tasks/task-header`
+      - Plugins:
+        - **`manage-grant`** — The task header's 'May manage tasks it doesn't own' switch (TaskManageGrantControl, beside the Mandate: a person's grant to that task's own conversation, a warning chip while on, read-only on a done or dropped task and on an agent-driven page), and the task detail's 'Done under a grant' section: a DataView of the actions taken on the task under a grant, and the grant's own switches. A person's grant on one task — 'may manage tasks it doesn't own': the tasks_ext_manage_grant row (on = a row), joined to the mandate of that task's OWN conversation only through a MandateOverlay (never a side chat, a worker or a subtask) while the task is not done or dropped, with its `## Mandate` line; removed when the task settles (a job on tasks.statusChanged, plus a boot sweep); setTaskManageGrant / clearTaskManageGrant (each recorded, and announced as tasks.mandateChanged so the running agent is told), grantHeld, and the task_unowned_actions audit every action taken under a grant is recorded in (recordUnownedAction), served as tasks.unowned-actions.
+          - Web:
+            - Contributes:
+              - `IdKinds.Kind` "grantact"
+              - `TaskDetailSlots.Section` "Done under a grant" → `UnownedActionsSection`
+            - Uses:
+              - `ids.IdKinds`
+              - `infra/endpoints.useFetchEndpoint`
+              - `network/live.useLive`
+              - `network/live/live-state.foldResource`
+              - `network/live/live-state.ResourceErrorInline`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/switch.Switch`
+              - `primitives/css/text.Text`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/loading.Loading`
+              - `shell/notifications.useToast`
+              - `tasks.useTask`
+              - `tasks/task-detail.TaskDetailSlots`
+            - Exports (values): `TaskManageGrantControl`
+          - Server:
+            - Contributes:
+              - `resource.declare` "tasks.manage-grant:rows"
+              - `resource.declare` "tasks.unowned-actions"
+              - `resource.declare` "tasks.unowned-actions:groups"
+              - `resource.declare` "tasks.unowned-actions:rows"
+              - `mandateOverlay` "tasks.manage-grant"
+              - `mandateCapability` "tasks.manage-unowned"
+              - `ids.kind` "grantact"
+              - `trigger` "tasks.manage-grant-clear-on-settle"
+            - Uses:
+              - `database.db`
+              - `database.DbExecutor`
+              - `ids.IdKinds`
+              - `infra/entities.defaultNow`
+              - `infra/entities.defineEntity`
+              - `infra/entity-extensions.defineExtension`
+              - `infra/events.Trigger`
+              - `infra/jobs.defineJob`
+              - `infra/warmup.defineWarmup`
+              - `network/live.serveCollection`
+              - `tasks/orchestration/mandate.Mandate`
+              - `tasks/orchestration/mandate.MandateOverlay`
+              - `tasks/tasks-core._tasks`
+              - `tasks/tasks-core.readTaskStatuses`
+              - `tasks/tasks-core.taskMandateChanged`
+              - `tasks/tasks-core.taskStatusChanged`
+              - `tasks/tasks-core.tasksView`
+            - DB schema: `plugins/tasks/plugins/task-mandate/plugins/manage-grant/server/internal/tables.ts`
+            - Entity extension of: `tasks/tasks-core` (table `tasks_ext_manage_grant`)
+            - Exports (types): `UnownedActionRecord`
+            - Exports (values):
+              - `clearTaskManageGrant`
+              - `grantHeld`
+              - `GrantRefused`
+              - `recordUnownedAction`
+              - `setTaskManageGrant`
+            - Register:
+              - `defineJob('tasks.manage-grant-clear-on-settle')`
+              - `defineWarmup('tasks.manage-grant-sweep')`
+            - Resources:
+              - `tasks.manage-grant:rows` (keyed, point)
+              - `tasks.unowned-actions` (keyed, window)
+              - `tasks.unowned-actions:groups` (push)
+              - `tasks.unowned-actions:rows` (keyed, point)
+          - Core:
+            - Uses:
+              - `fields.FieldsRecord`
+              - `fields.nullable`
+              - `fields/date/config.dateField`
+              - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `ids.IdOf`
+              - `infra/endpoints.defineEndpoint`
+              - `infra/entities.entityRef`
+              - `infra/entity-extensions.defineExtensionShape`
+              - `network/live.liveCollection`
+              - `tasks/orchestration/mandate/policy.defineCapability`
+            - Exports (types):
+              - `TaskManageGrantRow`
+              - `UnownedAction`
+              - `UnownedActionId`
+            - Exports (values):
+              - `deleteTaskManageGrant`
+              - `putTaskManageGrant`
+              - `TaskManageGrantRowSchema`
+              - `taskManageGrants`
+              - `taskManageGrantShape`
+              - `tasksManageUnowned`
+              - `unownedActionFields`
+              - `unownedActionIdKind`
+              - `unownedActions`
+              - `unownedActionsEntityRef`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
+            - Imported by:
+              - `tasks`
+              - `tasks/task-header`
     - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is added to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, added to the agent's system prompt at launch, after Claude Code's own, as a <special_instructions> block.
       - Web:
         - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
@@ -67059,9 +67174,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 130 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×53
-          - `tasks` ×41
+          - `tasks` ×42
           - `debug` ×6
           - `active-data` ×5
           - `apps` ×3
@@ -67095,6 +67210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-category` (table `tasks_ext_category`)
           - `tasks/task-effort` (table `tasks_ext_effort`)
           - `tasks/automations` (table `tasks_ext_launch_decision`)
+          - `tasks/task-mandate/manage-grant` (table `tasks_ext_manage_grant`)
           - `tasks/orchestration/watch` (table `tasks_ext_manager`)
           - `tasks/automations` (table `tasks_ext_origin`)
           - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
@@ -69259,14 +69375,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 416 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×95
               - `apps` ×81
               - `primitives` ×62
               - `page` ×36
               - `debug` ×28
               - `ui` ×25
-              - `tasks` ×13
+              - `tasks` ×14
               - `fields` ×8
               - `plugin-meta` ×8
               - `infra` ×6

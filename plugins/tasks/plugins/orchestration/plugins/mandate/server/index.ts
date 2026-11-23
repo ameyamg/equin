@@ -8,11 +8,13 @@ export {
   Mandate,
   TaskOwnerClaim,
   claimedOwnerOf,
+  MandateOverlay,
 } from "./internal/contribution";
 export type {
   MandateCapabilityEntry,
   ClaimedOwner,
   TaskOwnerClaimEntry,
+  MandateOverlayEntry,
 } from "./internal/contribution";
 export {
   conversationMandate,
@@ -24,6 +26,6 @@ export type { ConversationMandate, EffectiveMandate } from "./internal/resolve";
 
 export default {
   description:
-    "The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf).",
+    "The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf), and MandateOverlay (grants a plugin adds to ONE task's own conversation on top of its mandate — never a side chat, a worker or a subtask).",
   contributions: [...capabilityCatalogServed.declare, mandateSection],
 } satisfies ServerPluginDefinition;

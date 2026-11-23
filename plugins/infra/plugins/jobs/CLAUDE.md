@@ -1083,12 +1083,12 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `TOTAL_JOB_SLOTS`
     - `zombieAfterMsFor`
 - Cross-plugin:
-  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
     - `conversations` ×18
     - `infra` ×16
     - `debug` ×13
-    - `tasks` ×10
+    - `tasks` ×11
     - `database` ×4
     - `page` ×3
     - `build`

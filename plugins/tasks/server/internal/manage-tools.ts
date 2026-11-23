@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { db } from "@plugins/database/server";
+import { db, type DbExecutor } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
@@ -11,8 +11,15 @@ import {
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import {
   disarmTaskAutoStart,
+  getTaskAutoStart,
   setTaskAutoStart,
 } from "@plugins/tasks/plugins/auto-start/server";
+import { tasksManageUnowned } from "@plugins/tasks/plugins/task-mandate/plugins/manage-grant/core";
+import {
+  grantHeld,
+  recordUnownedAction,
+} from "@plugins/tasks/plugins/task-mandate/plugins/manage-grant/server";
+import { isSettled } from "@plugins/tasks/plugins/tasks-core/core";
 import { handOffToBacklog } from "@plugins/tasks/plugins/supervisor-roles/server";
 import {
   getTaskTrack,
@@ -25,7 +32,9 @@ import {
   getConversation,
   getTask,
   listAttemptsForTask,
+  listDependentIds,
   nearestMandate,
+  readTaskStatuses,
   removeTaskDependency,
   taskAttachments,
   updateTask,
@@ -47,11 +56,33 @@ import {
   editTask,
   renderManageOutcome,
   type ManageTasksPorts,
+  type UnownedRecord,
 } from "./manage-tasks";
 
 /** A hand-off the backlog refused, thrown inside the edit's transaction so the
  * whole edit rolls back, and answered as a refusal. */
 class HandOffRefused extends Error {}
+
+/** A grant an edit or drop acts under, switched off (or its task settled)
+ * since the ownership check: thrown inside the write's transaction, so
+ * nothing is written, and answered as a refusal. */
+class GrantGone extends Error {}
+
+/** Checks, inside the write's transaction, that every grant `records` act
+ * under is still held (its row locked until the commit, so a switch-off waits
+ * for the write), then writes the records. */
+async function recordUnowned(
+  records: readonly UnownedRecord[],
+  tx: DbExecutor,
+): Promise<void> {
+  for (const grantTaskId of new Set(records.map((r) => r.grantTaskId)))
+    if (!(await grantHeld(grantTaskId, tx, { lock: true })))
+      throw new GrantGone(
+        `The grant on your task ${grantTaskId} to manage tasks you do not own was switched off (or your task finished) — nothing was changed.`,
+      );
+  for (const r of records)
+    await recordUnownedAction({ ...r, detail: null }, tx);
+}
 
 // The real reads and writes behind `edit_task` / `drop_task`. The scope
 // policy lives in manage-tasks.ts, which a test drives over an in-memory store.
@@ -62,8 +93,16 @@ const ports: ManageTasksPorts = {
   async ownerOf(conversationId, taskId) {
     const owner = await taskOwnership(taskId);
     if (owner === null) return { kind: "not-found" };
-    return (await actsAsOwner(conversationId, owner))
-      ? { kind: "owned" }
+    if (await actsAsOwner(conversationId, owner)) return { kind: "owned" };
+    // A person's grant on the caller's own task, read through its mandate
+    // (the overlay reaches that task's own conversation only).
+    const grant = await grantOf(tasksManageUnowned, conversationId);
+    return grant !== null
+      ? {
+          kind: "granted",
+          owner: describeOwner(owner),
+          grantTaskId: grant.taskId,
+        }
       : { kind: "not-owned", owner: describeOwner(owner) };
   },
   async manageGrant(conversationId) {
@@ -109,6 +148,14 @@ const ports: ManageTasksPorts = {
     return attempts.some((a) => a.retained);
   },
   trackOf: getTaskTrack,
+  armed: async (taskId) => (await getTaskAutoStart(taskId)) !== undefined,
+  async activeDependents(taskId) {
+    // Dropping a task unblocks its DIRECT dependents (a further one still
+    // waits on its own).
+    const ids = await listDependentIds(taskId, db);
+    const statuses = await readTaskStatuses(ids, db);
+    return [...statuses.values()].filter((s) => !isSettled(s.status)).length;
+  },
   async defaultModel(conversationId, track) {
     // The model the caller's filing grant gives the track, as add_task arms
     // with — else the default.
@@ -121,6 +168,7 @@ const ports: ManageTasksPorts = {
       // One transaction: a cycle on the last edge rolls back the whole edit.
       await withNotifyBatch(() =>
         withTaskStatusBatch(async (tx) => {
+          await recordUnowned(edit.unowned, tx);
           await updateTask(
             edit.taskId,
             {
@@ -150,7 +198,11 @@ const ports: ManageTasksPorts = {
         }),
       );
     } catch (err) {
-      if (err instanceof DependencyCycleError || err instanceof HandOffRefused)
+      if (
+        err instanceof DependencyCycleError ||
+        err instanceof HandOffRefused ||
+        err instanceof GrantGone
+      )
         return { ok: false, message: err.message };
       throw err;
     }
@@ -173,19 +225,37 @@ const ports: ManageTasksPorts = {
       await setTaskAutoStart(edit.taskId, null);
     return { ok: true };
   },
-  async drop(taskId) {
-    await updateTask(taskId, { drop: true });
+  async drop(taskId, unowned) {
+    if (unowned.length === 0) {
+      await updateTask(taskId, { drop: true });
+      return { ok: true };
+    }
+    try {
+      await withNotifyBatch(() =>
+        withTaskStatusBatch(async (tx) => {
+          await recordUnowned(unowned, tx);
+          await updateTask(taskId, { drop: true }, tx);
+        }),
+      );
+    } catch (err) {
+      if (err instanceof GrantGone) return { ok: false, message: err.message };
+      throw err;
+    }
+    return { ok: true };
   },
 };
 
-const SCOPE = `Only the tasks you OWN: the tasks you filed (\`add_task\`, from this task's conversations) — or, as a supervisor, every task of your tree, plus your role's backlog and earlier sessions. Never a task a person or another agent filed, nor your own task itself; anything else is refused, naming its owner. A task you handed to a supervisor is the supervisor's.`;
+const SCOPE = `Only the tasks you OWN: the tasks you filed (\`add_task\`, from this task's conversations) — or, as a supervisor, every task of your tree, plus your role's backlog and earlier sessions. Never a task a person or another agent filed, nor your own task itself; anything else is refused, naming its owner — unless a person granted your task leave to manage tasks you do not own (your Mandate says so when it has): then a task you do not own can be edited (content and dependencies) or dropped, each action recorded on it. A task you handed to a supervisor is the supervisor's.`;
 
 const EXIT = `**Before you exit**, every sidequest you filed that is still waiting must be resolved — \`exit_clean\` is refused until it is: drop it (\`drop_task\`) when it is not worth doing — ask yourself what it actually gains — or hand it to a supervisor (\`edit_task\` with \`supervisor\`), adding what you learned since filing it.`;
 
 /** Whoever may file tasks manages what it filed; a supervisor (`tasks.manage`)
- * its tree. */
+ * its tree; a conversation a person granted leave (`tasks.manage-unowned`)
+ * what it does not own. */
 const canFileOrManage = async (ctx: { conversationId: string }) =>
-  (await granted(tasksFile)(ctx)) || (await granted(tasksManage)(ctx));
+  (await granted(tasksFile)(ctx)) ||
+  (await granted(tasksManage)(ctx)) ||
+  (await granted(tasksManageUnowned)(ctx));
 
 export const editTaskTool = Mcp.tool({
   name: "edit_task",

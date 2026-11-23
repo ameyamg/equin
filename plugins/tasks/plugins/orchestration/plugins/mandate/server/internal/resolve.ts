@@ -13,8 +13,10 @@ import {
   type GrantScope,
   type MandateId,
   type MandatePolicy,
+  withGrants,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { mandateDefinitionEntries } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
+import { overlayGrantsFor } from "./contribution";
 
 /** A task's effective mandate, or `none` when nothing covers it. */
 export type EffectiveMandate =
@@ -65,6 +67,9 @@ export type ConversationMandate =
        * conversation running the task: `stated`). */
       taskMandateId: MandateId;
       stated: boolean;
+      /** The capability ids a per-task overlay (`MandateOverlay`) added to
+       * `policy` — only ever on the conversation that runs its task. */
+      overlaid: string[];
     }
   | { kind: "none" };
 
@@ -89,8 +94,20 @@ export function conversationMandate(
     const at: GrantScope =
       mandate.rootTaskId === conversation.taskId ? "root" : "below";
     const taskMandateId = mandate.mandateId;
-    if (conversation.mandateRef === null)
-      return { ...mandate, at, taskMandateId, stated: false };
+    if (conversation.mandateRef === null) {
+      // Only the conversation running its task gets the task's overlay: it
+      // is keyed by this exact task, so a worker (on its own task) or a side
+      // chat (a stated mandate, below) never does.
+      const overlay = await overlayGrantsFor(conversation.taskId);
+      return {
+        ...mandate,
+        policy: withGrants(mandate.policy, overlay),
+        at,
+        taskMandateId,
+        stated: false,
+        overlaid: overlay.map((g) => g.capId),
+      };
+    }
     const stated = MandateIdSchema.parse(conversation.mandateRef);
     return {
       ...mandate,
@@ -99,6 +116,7 @@ export function conversationMandate(
       at,
       taskMandateId,
       stated: true,
+      overlaid: [],
     };
   });
 }
