@@ -48,6 +48,7 @@ import {
 import { raiseSocketSendBuffer } from "@plugins/packages/plugins/socket-buffer/machine";
 import { convergePgbouncerConfig } from "@plugins/database/plugins/pgbouncer/machine";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { SchemaNotReadyError } from "@plugins/framework/plugins/server-core/core";
 import { isHostSingleton } from "@plugins/infra/plugins/paths/core";
 import {
   isTransientDbError,
@@ -813,6 +814,16 @@ function realDb(): Db {
   return d;
 }
 
+/** Postgres's `invalid_catalog_name`: the connection names a database that does not exist. */
+function isMissingDatabase(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    err.code === "3D000"
+  );
+}
+
 const PG_READY_TIMEOUT_MS = 30_000;
 let readyPromise: Promise<void> | null = null;
 
@@ -1011,7 +1022,19 @@ export const pgDriver: DatabaseDriverImpl = {
   db: realDb,
   async ready({ serving }) {
     await loadDatabaseConfig();
-    await awaitDbReady();
+    try {
+      await awaitDbReady();
+    } catch (err) {
+      // An `exec` child of a checkout whose database was never forked (a fresh
+      // worktree, never built): not a crash, the plainest case of a database
+      // not set up for this code — its first build forks it. The serving
+      // backend is only ever started by that build, after the fork.
+      if (!serving && isMissingDatabase(err))
+        throw new SchemaNotReadyError(
+          `database "${runtimeNamespace()}" does not exist: this checkout has never been built — run \`./equin build\` in it first`,
+        );
+      throw err;
+    }
     // `serving` is true exactly in a serving backend (an exec child passes false).
     // The background lane's own PgBouncer pool needs its role in Postgres and
     // its user in PgBouncer's config. Both are machine-wide, so only the host

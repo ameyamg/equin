@@ -237,16 +237,21 @@ function firstLine(err: unknown): string {
  * 1. Each updater's `prepare` (mise updates itself), then `plan` the moves.
  *    None anywhere → `current`.
  * 2. BASELINE — every gate on the current inputs, so a failure the repo already
- *    has is not blamed on the new ones (and is recorded as `blind`).
+ *    has is not blamed on the new ones (and is recorded as `blind`). Compared
+ *    per subject (`newFailures`): a test file already failing on the baseline
+ *    witnesses nothing, whichever of its cases fail.
  * 3. CANDIDATE — snapshot every updater's files, `apply` every move, the same
- *    gates. A failure only the candidate has is retried; one that fails AGAIN
- *    is a regression. An `apply` that throws is a regression too (its own
- *    tooling crashing on the new release is the plainest kind). None →
- *    `upgraded`.
+ *    gates. A failure only the candidate has is retried (`gates.retry`: only
+ *    those checks and test files); one that fails AGAIN, and not when the
+ *    baseline is run that same targeted way, is a regression — a targeted run
+ *    is another mode than the suites, so it is only ever compared with
+ *    itself. An `apply` that throws is a regression too (its own tooling
+ *    crashing on the new release is the plainest kind). None → `upgraded`.
  * 4. NARROW — the moves are split into units (a lockstep group never splits)
  *    and bisected: each probe applies a subset and re-runs only the confirmed
- *    regressions (`gates.retry`), so it costs minutes, not the suites. Units
- *    that pass are kept; one that fails alone is a culprit.
+ *    regressions, twice, against the baseline run the same way, so it costs
+ *    minutes, not the suites. Units that pass are kept; one that fails alone
+ *    is a culprit.
  * 5. PROVE — the kept units get the full gates again; a regression only the
  *    full run sees narrows again (at most {@link MAX_ROUNDS} proofs). Proven
  *    and something left out → `partial`; nothing kept → `regressed`.
@@ -439,9 +444,13 @@ async function upgrade(args: {
   const files: string[] = [];
   for (const updater of planned) files.push(...(await updater.files(root)));
   const saved = snapshot(root, [...new Set(files)]);
-  const putBack = async (): Promise<void> => {
+  /** The tree on the current releases again, its installs included. */
+  const toBaseline = async (): Promise<void> => {
     restore(root, saved);
     for (const updater of planned) await updater.sync(root, log);
+  };
+  const putBack = async (): Promise<void> => {
+    await toBaseline();
     log(`\n${[...saved.keys()].join(", ")} put back.`);
   };
   args.onSnapshot(putBack);
@@ -464,6 +473,45 @@ async function upgrade(args: {
     }
   };
 
+  /**
+   * The baseline run the way a targeted run of `targets` runs — only those
+   * checks, only those test files, alone — once per target set. A targeted run
+   * is another MODE than the full suites (a test file alone, without the files
+   * that ran before it in-suite), so what it fails is compared with the
+   * baseline in that same mode, never with the full baseline: a file that
+   * fails only alone would otherwise "reproduce" on every candidate and every
+   * probe, whatever moved. Leaves the tree on the baseline.
+   */
+  const baselineRuns = new Map<string, GateResult[]>();
+  const baselineAs = async (
+    targets: readonly GateResult[],
+  ): Promise<GateResult[]> => {
+    const key = JSON.stringify(targets);
+    const known = baselineRuns.get(key);
+    if (known !== undefined) return known;
+    log("\n── Baseline, run the way the retry runs ──");
+    await toBaseline();
+    const results = await gates.retry(smoke, targets);
+    baselineRuns.set(key, results);
+    return results;
+  };
+
+  /**
+   * `targets` re-run on the tree as it stands, twice, against the baseline run
+   * the same way (`baselineRuns`, already in hand): what fails both times and
+   * not on the baseline. Both runs take the same targets, so neither changes
+   * the mode the comparison is made in.
+   */
+  const reproduce = async (
+    targets: readonly GateResult[],
+    base: readonly GateResult[],
+  ): Promise<GateResult[]> => {
+    const once = confirmedFailures(targets, await gates.retry(smoke, targets));
+    if (once.length === 0) return [];
+    const twice = confirmedFailures(once, await gates.retry(smoke, targets));
+    return newFailures(base, twice);
+  };
+
   /** The full gates over `units`: the confirmed regressions against the baseline. */
   const full = async (units: readonly Unit[]): Promise<GateResult[]> => {
     log(`\n── Candidate: ${units.length} unit(s) ──`);
@@ -475,10 +523,19 @@ async function upgrade(args: {
       const results = await gates.all(smoke);
       if (receipt.candidate === null) receipt.candidate = results;
       const suspected = newFailures(baseline, results);
-      confirmed =
+      const retried =
         suspected.length === 0
           ? []
           : confirmedFailures(suspected, await gates.retry(smoke, suspected));
+      if (retried.length === 0) {
+        confirmed = [];
+      } else {
+        // Reproduced on a targeted run: judge it against the baseline run
+        // the same way, then put `units` back on the tree.
+        confirmed = newFailures(await baselineAs(suspected), retried);
+        const again = await applyUnits(units);
+        if (again !== null) confirmed = [again];
+      }
     }
     receipt.probes.push({
       kind: "full",
@@ -490,26 +547,23 @@ async function upgrade(args: {
     return confirmed;
   };
 
-  /** Only `targets`, over `units`: retried once before a failure counts. */
+  /**
+   * Only `targets`, over `units`: a failure counts when it fails twice and not
+   * on the baseline run the same way.
+   */
   const targeted =
     (targets: readonly GateResult[]) =>
     async (units: readonly Unit[]): Promise<ProbeOutcome> => {
       log(`\n── Probe: ${units.length} unit(s) ──`);
+      const rest = targets.filter((t) => t.gate !== "apply");
+      // Before applying: the baseline run is made on the baseline's tree.
+      const base = rest.length === 0 ? [] : await baselineAs(rest);
       const crashed = await applyUnits(units);
       let failures: GateResult[];
       if (crashed !== null) {
         failures = [crashed];
       } else {
-        const rest = targets.filter((t) => t.gate !== "apply");
-        failures =
-          rest.length === 0
-            ? []
-            : confirmedFailures(rest, await gates.retry(smoke, rest));
-        if (failures.length > 0)
-          failures = confirmedFailures(
-            failures,
-            await gates.retry(smoke, failures),
-          );
+        failures = rest.length === 0 ? [] : await reproduce(rest, base);
       }
       receipt.probes.push({
         kind: "targeted",

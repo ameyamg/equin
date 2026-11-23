@@ -54,12 +54,14 @@ const PKG_MOVE: Move[] = [PKG];
 
 /**
  * Gates answering from the lock's content: `before` while it says 1, `after`
- * once moved. `retry` answers `retried` when given, else from the lock too.
+ * once moved. `retry` — the targeted mode — answers `retried` once moved and
+ * `baselineRetried` before, when given, else the same as the suites.
  */
 function fakeGates(opts: {
   before: GateResult[];
   after: GateResult[];
   retried?: GateResult[];
+  baselineRetried?: GateResult[];
 }): Gates & { calls: string[] } {
   const calls: string[] = [];
   const moved = () =>
@@ -71,8 +73,10 @@ function fakeGates(opts: {
       return moved() ? opts.after : opts.before;
     },
     retry: async () => {
-      calls.push("retry");
-      return opts.retried ?? (moved() ? opts.after : opts.before);
+      calls.push(moved() ? "retry" : "baseline retry");
+      return moved()
+        ? (opts.retried ?? opts.after)
+        : (opts.baselineRetried ?? opts.before);
     },
   };
 }
@@ -222,7 +226,12 @@ describe("runUpgrade verdicts", () => {
     expect(receipt.regressions).toEqual([
       { gate: "checks", failures: ["type-check"] },
     ]);
-    expect(gates.calls).toEqual(["baseline", "candidate", "retry"]);
+    expect(gates.calls).toEqual([
+      "baseline",
+      "candidate",
+      "retry",
+      "baseline retry",
+    ]);
     expect(readFileSync(join(root, "fake.lock"), "utf8")).toBe("pkg = 1\n");
     expect(receipt.culprits).toEqual([
       {
@@ -231,7 +240,51 @@ describe("runUpgrade verdicts", () => {
       },
     ]);
     expect(receipt.landed).toEqual([]);
-    expect(syncs).toEqual(["fake"]);
+    // Once to run the baseline the retry's way, once to put it back.
+    expect(syncs).toEqual(["fake", "fake"]);
+  });
+
+  test("a file already failing on the baseline witnesses nothing, whichever of its cases fail in which mode", async () => {
+    // health-report.test.tsx, 2026-11-23: a different handful of its cases
+    // failed each run — in-suite and alone, on the baseline too.
+    const gates = fakeGates({
+      before: [
+        { gate: "tests", failures: ["hr.test.tsx > a", "hr.test.tsx > b"] },
+      ],
+      after: [{ gate: "tests", failures: ["hr.test.tsx > c"] }],
+      retried: [
+        { gate: "tests", failures: ["hr.test.tsx > c", "hr.test.tsx > d"] },
+      ],
+    });
+    const receipt = await run(fakeUpdater(PKG_MOVE), gates);
+    expect(receipt.verdict).toBe("upgraded");
+    expect(receipt.regressions).toEqual([]);
+    expect(gates.calls).toEqual(["baseline", "candidate"]);
+  });
+
+  test("a failure only the targeted mode has, on the baseline too, is not blamed on the move", async () => {
+    // Passes in-suite on the baseline, fails in-suite on the candidate (once,
+    // by chance), and fails ALONE whatever the releases.
+    const alone = [
+      { gate: "tests", failures: ["solo.test.ts > needs a sibling"] },
+    ];
+    const gates = fakeGates({
+      before: clean,
+      after: alone,
+      retried: alone,
+      baselineRetried: alone,
+    });
+    const receipt = await run(fakeUpdater(PKG_MOVE), gates);
+    expect(receipt.verdict).toBe("upgraded");
+    expect(receipt.regressions).toEqual([]);
+    expect(gates.calls).toEqual([
+      "baseline",
+      "candidate",
+      "retry",
+      "baseline retry",
+    ]);
+    // Judged on the baseline, then the move put back on the tree.
+    expect(readFileSync(join(root, "fake.lock"), "utf8")).toBe("pkg = 2\n");
   });
 
   test("a flaky candidate failure that passes on retry is not a regression", async () => {
@@ -535,8 +588,54 @@ describe("runUpgrade narrows a regressed batch down", () => {
     expect(lock.get("g")).toBe("1.0.0");
     expect(lock.get("a")).toBe("2.0.0");
     expect(receipt.probes.filter((p) => p.kind === "full")).toHaveLength(2);
-    // Nothing put back: the tree holds what landed.
-    expect(syncs).toEqual([]);
+  });
+
+  test("a file that fails only alone, whatever moved, never steers the narrowing", async () => {
+    // In the suites `solo` fails only on the first candidate (a flake); run
+    // alone it always fails, baseline included. Only c really regresses.
+    let candidates = 0;
+    const lock = () => readLock(root);
+    const real = (): string[] =>
+      lock().get("c") === "2.0.0" ? ["c.test.ts > works"] : [];
+    const gates: Gates = {
+      all: async () => {
+        const moved = [...lock().values()].some((v) => v === "2.0.0");
+        const flake =
+          moved && candidates++ === 0 ? ["solo.test.ts > needs a sibling"] : [];
+        return [{ gate: "tests", failures: [...real(), ...flake] }];
+      },
+      retry: async (_smoke, targets) => {
+        const asked = new Set(
+          targets.flatMap((t) => t.failures.map((f) => f.split(" > ")[0])),
+        );
+        const failures = [...real(), "solo.test.ts > needs a sibling"].filter(
+          (f) => asked.has(f.split(" > ")[0]),
+        );
+        return [{ gate: "tests", failures }];
+      },
+    };
+    const receipt = await runMany(
+      NAMES.map((n) => minor(n)),
+      gates,
+    );
+    expect(receipt.regressions).toEqual([
+      { gate: "tests", failures: ["c.test.ts > works"] },
+    ]);
+    expect(receipt.verdict).toBe("partial");
+    expect(receipt.culprits.map((c) => c.moves.map((m) => m.name))).toEqual([
+      ["c"],
+    ]);
+    expect(receipt.landed.map((m) => m.name)).toEqual([
+      "a",
+      "b",
+      "d",
+      "e",
+      "f",
+      "g",
+      "h",
+    ]);
+    expect(readLock(root).get("c")).toBe("1.0.0");
+    expect(readLock(root).get("a")).toBe("2.0.0");
   });
 
   test("a lockstep unit is never split: its members land or fail together", async () => {
@@ -587,6 +686,6 @@ describe("runUpgrade narrows a regressed batch down", () => {
     expect(receipt.landed).toEqual([]);
     expect(receipt.culprits).toHaveLength(2);
     expect(readLock(root).get("a")).toBe("1.0.0");
-    expect(syncs).toEqual(["many"]);
+    expect(syncs.at(-1)).toBe("many");
   });
 });

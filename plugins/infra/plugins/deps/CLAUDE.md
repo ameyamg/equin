@@ -258,7 +258,8 @@ module eval).
 
 - `updates` — the `Updater` contract (`core/`) and the generic runner (its
   `cli/` barrel, shared CLI machinery: baseline gates → move → candidate gates
-  → retry-to-confirm → narrow → prove → verdict `current | waiting | upgraded |
+  → retry-to-confirm (against the baseline run the same targeted way; a test
+  file already failing on the baseline witnesses nothing) → narrow → prove → verdict `current | waiting | upgraded |
   partial | regressed | aborted | holds-to-review`), lifted from `plugins/toolchain`.
   Every run also lists what each updater sees newer but does not move to
   (`plan` answers `{ moves, outdated }` for its selection — `--only` widened to

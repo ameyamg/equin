@@ -17,6 +17,15 @@ describe("newFailures", () => {
     ).toEqual([{ gate: "smoke: go vet (gateway)", failures: ["x"] }]);
   });
 
+  test("a test file already failing before witnesses nothing, whichever of its cases fail", () => {
+    expect(
+      newFailures(
+        [{ gate: "tests", failures: ["f.test.ts > a", "f.test.ts > b"] }],
+        [{ gate: "tests", failures: ["f.test.ts > c", "g.test.ts > d"] }],
+      ),
+    ).toEqual([{ gate: "tests", failures: ["g.test.ts > d"] }]);
+  });
+
   test("fixed failures and clean gates contribute nothing", () => {
     expect(
       newFailures(

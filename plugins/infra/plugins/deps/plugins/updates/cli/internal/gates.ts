@@ -11,7 +11,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readLatestTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";
-import type { GateResult } from "../../core/internal/compare";
+import { failureSubject, type GateResult } from "../../core/internal/compare";
 import type { UpdaterSmoke } from "../../core/internal/updater";
 
 /**
@@ -191,7 +191,7 @@ export async function retryGates(
         await runChecks(root, slug, ids.length === failures.length ? ids : []),
       );
     } else if (gate === "tests") {
-      const files = [...new Set(failures.map((f) => f.split(" > ")[0] ?? f))];
+      const files = [...new Set(failures.map(failureSubject))];
       results.push(
         await runTests(
           root,

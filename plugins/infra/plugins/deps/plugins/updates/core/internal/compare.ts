@@ -8,9 +8,26 @@ export interface GateResult {
 }
 
 /**
- * The failures `after` has that `before` did not, per gate — the candidate
- * toolchain's regressions, before any retry. A failure present on both sides
- * was already there and says nothing about the new versions.
+ * What a failure is a failure OF: the text before its first ` > ` — a test
+ * file for `<file> > <test>`, the whole id for a check, a smoke test or a
+ * synthetic `(… exited n)`.
+ */
+export function failureSubject(failure: string): string {
+  const at = failure.indexOf(" > ");
+  return at === -1 ? failure : failure.slice(0, at);
+}
+
+/**
+ * The failures `after` has whose SUBJECT (`failureSubject`) had no failure in
+ * `before`, per gate — the candidate's regressions, before any retry.
+ *
+ * Compared per subject, not per failure: a subject that already fails on the
+ * baseline cannot witness a regression, whichever of its cases fail. A test
+ * file whose failing cases change from run to run — with the suite around it,
+ * with the order, alone or in-suite (health-report.test.tsx, 2026-11-23: a
+ * different handful each run, on the baseline too) — would otherwise read as a
+ * new failure on every candidate, reproduce on every retry, and send the
+ * narrowing after noise. Its failures stay on the receipt as `blind`.
  */
 export function newFailures(
   before: readonly GateResult[],
@@ -18,8 +35,10 @@ export function newFailures(
 ): GateResult[] {
   const out: GateResult[] = [];
   for (const { gate, failures } of after) {
-    const had = new Set(before.find((b) => b.gate === gate)?.failures ?? []);
-    const fresh = failures.filter((f) => !had.has(f));
+    const blind = new Set(
+      (before.find((b) => b.gate === gate)?.failures ?? []).map(failureSubject),
+    );
+    const fresh = failures.filter((f) => !blind.has(failureSubject(f)));
     if (fresh.length > 0) out.push({ gate, failures: fresh });
   }
   return out;
