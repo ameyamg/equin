@@ -72,9 +72,10 @@ export function parseOpLines(values: Iterable<unknown>): {
       continue;
     }
     const key =
-      parsed.detail === null ? parsed.reason : `${parsed.reason}:${parsed.detail}`;
+      parsed.detail === null
+        ? parsed.reason
+        : `${parsed.reason}:${parsed.detail}`;
     skipped.set(key, (skipped.get(key) ?? 0) + 1);
   }
   return { lines, skipped };
 }
-

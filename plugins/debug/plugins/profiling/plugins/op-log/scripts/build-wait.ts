@@ -70,7 +70,9 @@ const records = toOpRecords(
   readSleepNow(),
 );
 for (const [reason, count] of skipped)
-  console.warn(`skipped ${count} op-log line(s) this script cannot fold (${reason})`);
+  console.warn(
+    `skipped ${count} op-log line(s) this script cannot fold (${reason})`,
+  );
 
 const waitMs = (r: OpRecord, kind: WaitKind): number =>
   r.waits
