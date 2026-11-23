@@ -87,11 +87,8 @@ describe("held and blocked rows", () => {
     expect(text).toContain("BLOCKED, do this first: publish pg-client 18.4");
   });
 
-  test("the title lists only the actionable rows", () => {
-    const title = upgradeTaskTitle(mixed, []);
-    expect(title).toContain("vite");
-    expect(title).toContain("@embedded-postgres/darwin-arm64");
-    expect(title).not.toContain("react");
+  test("the title counts only the actionable rows", () => {
+    expect(upgradeTaskTitle(mixed, [])).toBe("Upgrade 2 dependencies (npm)");
   });
 });
 
@@ -256,5 +253,70 @@ describe("decisions only a person can make", () => {
       "- [ ] postgres-binaries: pinned 18.1.0, main declares 19.0.0, behind since 2026-10-01\n  - Switch: not a plain switch\n  - Stay: `./equin deps pin-stay …`",
     );
     expect(outdatedSections(batch, [])).not.toContain("Decisions only");
+  });
+});
+
+describe("the title says what the task is, never the list it carries", () => {
+  const many = (updaterId: string, n: number): OutdatedUpdater => ({
+    updaterId,
+    holdsFile: `${updaterId}.holds`,
+    lapsed: [],
+    outdated: rows(
+      Array.from({ length: n }, (_, i) => ({
+        name: `${updaterId}-pkg-${i}`,
+        current: "1.0.0",
+        latest: "2.0.0",
+      })),
+    ),
+  });
+  const hold = (name: string) => ({
+    names: [name],
+    version: "2.0.0",
+    reason: "broken",
+    issue: "https://example.com/i/1",
+    reviewBy: "2026-11-15",
+  });
+  const decision = (subject: string): PendingDecision => ({
+    subject,
+    title: `pin ${subject} 1 → 2`,
+    situation: "behind",
+    options: [],
+  });
+
+  test("many moves across updaters: counted, the updaters named, no package", () => {
+    const title = upgradeTaskTitle(
+      [many("npm", 120), many("cargo", 20), many("uv", 10)],
+      [],
+    );
+    expect(title).toBe("Upgrade 150 dependencies (npm, cargo, uv)");
+  });
+
+  test("moves and holds to review: both counted", () => {
+    expect(
+      upgradeTaskTitle(
+        [{ ...many("npm", 3), lapsed: [hold("a"), hold("b")] }],
+        [],
+      ),
+    ).toBe("Upgrade 3 dependencies (npm); review 2 holds");
+  });
+
+  test("holds alone, more than one: counted", () => {
+    expect(
+      upgradeTaskTitle(
+        [
+          { ...many("npm", 0), lapsed: [hold("a")] },
+          { ...many("uv", 0), lapsed: [hold("b")] },
+        ],
+        [],
+      ),
+    ).toBe("Review 2 dependency holds (npm, uv)");
+  });
+
+  test("several decisions: counted, alone or beside the work", () => {
+    const two = [decision("pg"), decision("pgbouncer")];
+    expect(upgradeTaskTitle([], two)).toBe("Decide: 2 decisions");
+    expect(upgradeTaskTitle([many("npm", 2)], two)).toBe(
+      "Upgrade 2 dependencies (npm); decide: 2 decisions",
+    );
   });
 });

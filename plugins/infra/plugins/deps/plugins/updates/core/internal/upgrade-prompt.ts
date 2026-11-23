@@ -23,29 +23,59 @@ export function hasUpgradeWork(u: OutdatedUpdater): boolean {
   return u.lapsed.length > 0 || u.outdated.some(isActionable);
 }
 
+/** `1 hold`, `2 holds`: a count and its noun. */
+function count(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
 /**
- * The title of the batched upgrade task: its actionable rows, its holds to
- * review and the decisions it carries.
+ * The title of the batched upgrade task: what it is, never the list it
+ * carries — that is `{{outdated}}`, in its prompt. One move or one hold to
+ * review is named; more are counted, with the updaters they belong to:
+ * `Upgrade 150 dependencies (npm, cargo, uv); review 2 holds; decide: …`.
+ * A single decision is named by its title, more are counted.
  */
 export function upgradeTaskTitle(
   batch: readonly OutdatedUpdater[],
   decisions: readonly PendingDecision[],
 ): string {
   const work = batch.filter(hasUpgradeWork);
-  const decide = decisions.map((d) => d.title).join(", ");
+  const decide =
+    decisions.length === 1
+      ? decisions[0]!.title
+      : count(decisions.length, "decision", "decisions");
   if (work.length === 0) return `Decide: ${decide}`;
-  const upgrade = `Upgrade ${work
-    .map((u) => {
-      const moves = u.outdated
-        .filter(isActionable)
-        .map((o) => `${o.name} ${o.current ?? "(new)"} → ${o.latest}`);
-      const review = u.lapsed.map(
-        (h) => `review hold on ${h.names.join(", ")}`,
-      );
-      return `${u.updaterId}: ${[...moves, ...review].join(", ")}`;
-    })
-    .join("; ")}`;
-  return decisions.length === 0 ? upgrade : `${upgrade}; decide: ${decide}`;
+  const moves = work.flatMap((u) =>
+    u.outdated
+      .filter(isActionable)
+      .map(
+        (o) =>
+          `${u.updaterId}: ${o.name} ${o.current ?? "(new)"} → ${o.latest}`,
+      ),
+  );
+  const holds = work.flatMap((u) =>
+    u.lapsed.map((h) => `${u.updaterId}: review hold on ${h.names.join(", ")}`),
+  );
+  const updaters = `(${work.map((u) => u.updaterId).join(", ")})`;
+  const parts =
+    moves.length + holds.length === 1
+      ? [`Upgrade ${[...moves, ...holds][0]!}`]
+      : [
+          ...(moves.length === 0
+            ? []
+            : [
+                `Upgrade ${count(moves.length, "dependency", "dependencies")} ${updaters}`,
+              ]),
+          ...(holds.length === 0
+            ? []
+            : [
+                moves.length === 0
+                  ? `Review ${count(holds.length, "dependency hold", "dependency holds")} ${updaters}`
+                  : `review ${count(holds.length, "hold", "holds")}`,
+              ]),
+        ];
+  if (decisions.length > 0) parts.push(`decide: ${decide}`);
+  return parts.join("; ");
 }
 
 /** Who an awaiting row waits on, in words — the one place `AwaitingOn` becomes text. */
