@@ -1086,8 +1086,15 @@ await withBrowser(async (h) => {
   const CHIP = pageLinkToken(pageId);
 
   /**
-   * Paste `lines` at the end of the document; the ids of the blocks it created,
+   * Paste `lines` at the end of the document; the ids of the blocks holding them,
    * in document order (one per line, which is what the count check pins).
+   *
+   * The paste is a SPLICE at the caret (`planSplice`, CLAUDE.md "A paste lands AT
+   * the insertion point"): the empty host line absorbs the first pasted
+   * paragraph and keeps its id, the rest land after it as new rows. So the
+   * lines are the host plus `lines.length - 1` fresh rows — read off the
+   * document from the host's slot rather than as "every new id", which would
+   * miss the first line.
    *
    * The wait for the pasted ROWS is the same doc-init gate `enterNewBlock`
    * documents, for the same reason: a block's content `Y.Doc` cannot seed until
@@ -1109,11 +1116,19 @@ await withBrowser(async (h) => {
     await page.keyboard.press(PASTE);
     await page.waitForTimeout(1500);
     const after = await editableIds(page);
-    const fresh = after.filter((id) => !before.includes(id));
-    if (fresh.length !== lines.length) {
+    const slot = before.indexOf(host);
+    const fresh = after.slice(slot, slot + lines.length);
+    const reused = fresh.filter((id) => id !== host && before.includes(id));
+    if (
+      slot === -1 ||
+      fresh.length !== lines.length ||
+      reused.length > 0 ||
+      after.length - before.length !== lines.length - 1
+    ) {
       throw new Error(
-        `${label}: the paste produced ${fresh.length} blocks, expected ${lines.length} — ` +
-          `${JSON.stringify({ before, after })}`,
+        `${label}: the paste did not land as ${lines.length} lines from the host ` +
+          `(the host plus ${lines.length - 1} new) — ` +
+          `${JSON.stringify({ host, before, after })}`,
       );
     }
     const deadline = Date.now() + 20_000;

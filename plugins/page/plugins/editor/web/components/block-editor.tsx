@@ -71,6 +71,7 @@ import {
   normalizeSpan,
   splitRuns,
   PAGE_BLOCK_TYPE,
+  BLOCK_GRID_ATTR,
   type Block,
   type BlockNode,
   type ForestGranularity,
@@ -2590,6 +2591,7 @@ function SelectionLayer({
                   // eslint-disable-next-line layout/no-adhoc-layout -- the block list is a single-column grid so container frames can span row lines; the ramp has no primitive for line-spanning overlays
                   className={cn("relative grid grid-cols-1", contentClassName)}
                   style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
+                  {...{ [BLOCK_GRID_ATTR]: "" }}
                 >
                   {/* Frames first in DOM order so they paint BEHIND the rows they
                   span (equal stacking level → document order decides). */}

@@ -13,6 +13,7 @@ export {
   blockText,
   caretState,
   pageIdFromUrl,
+  BLOCK_GRID_SELECTOR,
 } from "./support/blank-page";
 export type {
   BlankDoc,

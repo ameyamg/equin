@@ -166,6 +166,7 @@ export type { SpanPoint, SpanLines, SpanSelection } from "./text-span";
 export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";
 
 export { blockIdKind, newBlockId } from "./block-id";
+export { BLOCK_GRID_ATTR } from "./block-grid";
 
 export {
   SerializedBlockSchema,

@@ -9,9 +9,10 @@ import { blockTextRenderableExtensions } from "../internal/block-text-extensions
  *
  * Mirrors the editor's runs→Lexical mapping (`block-text-extensions.ts`) without
  * mounting Lexical:
- *  - marks: bold→`<strong>`, italic→`<em>`, underline/strikethrough/code→the same
- *    class strings the live editor's Lexical theme applies, so the visual is
- *    pixel-identical.
+ *  - marks: bold→`<strong>`, italic→`<em>`, code→`<code>` (the element Lexical
+ *    renders a code-formatted text node as), and underline/strikethrough/code→the
+ *    same class strings the live editor's Lexical theme applies, so the visual is
+ *    pixel-identical and a dormant line's DOM reads like the live one's.
  *  - color: `colorCssValue(token)` → the shared `var(--rt-color-<token>)` CSS var.
  *  - link: a non-editable `<a>` styled like the editor's link theme.
  *  - inline TOKENS — a page link, a date mention, inline math, an agent id —
@@ -137,6 +138,13 @@ function decorateRun(run: TextRun, children: ReactNode): ReactNode {
       >
         {node}
       </a>
+    );
+  }
+  if (marks.includes("code")) {
+    return (
+      <code className={className} style={style}>
+        {node}
+      </code>
     );
   }
   if (className || style) {

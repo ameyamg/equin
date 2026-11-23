@@ -10,6 +10,7 @@
  */
 import type { Locator, Page } from "playwright";
 import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { BLOCK_GRID_ATTR } from "../../core";
 
 /**
  * Every text block's visible text root in the open document, in document
@@ -18,6 +19,13 @@ import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/
  * is on screen). A click on either lands the caret where it falls.
  */
 export const BLOCK_TEXT_SELECTOR = "[data-block-id] [data-block-text]";
+
+/**
+ * The editable surface's block grid: row cells and the container frames that
+ * span their lines are its children. Find it with `row.closest(…)`, never by
+ * counting wrappers up from a row (`core/block-grid.ts`).
+ */
+export const BLOCK_GRID_SELECTOR = `[${BLOCK_GRID_ATTR}]`;
 
 export function editableBlocks(page: Page): Locator {
   return page.locator(BLOCK_TEXT_SELECTOR);

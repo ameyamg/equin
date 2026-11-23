@@ -42,7 +42,11 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
-import { blockText, openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import {
+  BLOCK_GRID_SELECTOR,
+  blockText,
+  openBlankPage,
+} from "@plugins/page/plugins/editor/e2e";
 
 const out = arg("out", "/tmp/quote");
 
@@ -86,7 +90,7 @@ interface Geometry {
  * decision is made in the helpers below, where it stays readable.
  */
 async function geometry(page: Page): Promise<Geometry> {
-  return page.evaluate(() => {
+  return page.evaluate((gridSelector) => {
     const rows: Record<string, RowRect> = {};
     const order: string[] = [];
     for (const el of document.querySelectorAll<HTMLElement>(
@@ -106,11 +110,10 @@ async function geometry(page: Page): Promise<Geometry> {
       };
     }
 
-    // Rows sit one wrapper deep in the block grid (each row wrapper is placed on
-    // its own grid line); the frames are siblings of those wrappers, holding no
-    // rows of their own — which is exactly how they are told apart here.
-    const anyRow = document.querySelector<HTMLElement>("[data-block-id]");
-    const grid = anyRow?.parentElement?.parentElement;
+    // The frames are children of the block grid that hold no rows of their own
+    // — which is how they are told apart. The grid is found by its mark, never
+    // by counting wrappers up from a row (a row cell gains wrappers).
+    const grid = document.querySelector<HTMLElement>(gridSelector);
     const bars: FrameBox[] = [];
     for (const child of grid ? [...grid.children] : []) {
       if (!(child instanceof HTMLElement)) continue;
@@ -140,7 +143,7 @@ async function geometry(page: Page): Promise<Geometry> {
       }
     }
     return { bars, rows, order };
-  });
+  }, BLOCK_GRID_SELECTOR);
 }
 
 /**

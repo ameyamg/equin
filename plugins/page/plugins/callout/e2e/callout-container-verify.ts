@@ -53,6 +53,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import {
+  BLOCK_GRID_SELECTOR,
   blockText,
   caretState,
   openBlankPage,
@@ -93,7 +94,7 @@ async function probeFrame(
   outsiderId: string,
 ): Promise<FrameProbe> {
   return page.evaluate(
-    ({ anchorId, tailId, outsiderId }) => {
+    ({ anchorId, tailId, outsiderId, gridSelector }) => {
       const row = (id: string) =>
         document.querySelector<HTMLElement>(`[data-block-id="${id}"]`);
       const anchor = row(anchorId);
@@ -102,9 +103,10 @@ async function probeFrame(
       if (!anchor || !tail || !outsider)
         return { framed: false, leaksOutsider: false };
 
-      // Rows sit one wrapper deep in the block grid; the backdrops are siblings
-      // of those wrappers, holding no rows of their own.
-      const grid = anchor.parentElement?.parentElement;
+      // The backdrops are children of the block grid holding no rows of their
+      // own. The grid is found by its mark, never by counting wrappers up from
+      // a row (a row cell gains wrappers).
+      const grid = anchor.closest<HTMLElement>(gridSelector);
       if (!grid) return { framed: false, leaksOutsider: false };
 
       const painted = (el: HTMLElement): HTMLElement | null => {
@@ -158,7 +160,7 @@ async function probeFrame(
         outsiderTop: outsiderRect.top,
       };
     },
-    { anchorId, tailId, outsiderId },
+    { anchorId, tailId, outsiderId, gridSelector: BLOCK_GRID_SELECTOR },
   );
 }
 

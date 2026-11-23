@@ -79,14 +79,25 @@ await withBrowser(async (h) => {
   r.eq("Escape again clears the selection", await selectedCount(), 0);
   r.eq("no row stays highlighted", await highlightedLines(page), 0);
 
-  // 3. Shift+ArrowUp at a block's first line extends by exactly one block.
+  // 3. Shift+ArrowUp at a block's first line extends by exactly one line.
+  // Off a block's edge it draws a TEXT span (CLAUDE.md, "A text drag becomes an
+  // editor-owned span": `extendSpan`), not a block range — so the bar counts
+  // nothing yet. Escape widens the span to the block range of every line it
+  // touches: two, where a key handled twice would have reached a third.
   await block(2).click();
   await page.keyboard.press("Home");
   await page.waitForTimeout(200);
   await page.keyboard.press("Shift+ArrowUp");
   await page.waitForTimeout(400);
   r.eq(
-    "Shift+ArrowUp at the edge selects two blocks",
+    "Shift+ArrowUp at the edge draws a span, not blocks",
+    await selectedCount(),
+    0,
+  );
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(400);
+  r.eq(
+    "the span touches exactly two blocks (Escape selects them)",
     await selectedCount(),
     2,
   );
@@ -129,9 +140,22 @@ await withBrowser(async (h) => {
   // between the click and Escape. Every check above asserts immediately after the
   // keypress, where the state is still correct — the damage lands a beat later.
   // Measured on the unfixed build: 11/12 runs lost the selection.
+  //
+  // After the reload every line is DORMANT (static text, CLAUDE.md "A line is
+  // static until it is edited"): the click wakes it, and a key it does not
+  // buffer — Escape — goes nowhere until the woken editor holds the caret (a
+  // documented bound). So wait for exactly that, and no longer: the steal this
+  // phase pins lands AFTER the woken editor takes focus.
   await page.reload();
   await block(1).waitFor({ state: "visible", timeout: 10000 });
   await block(1).click();
+  await page.waitForFunction(
+    () =>
+      document.activeElement?.getAttribute("contenteditable") === "true" &&
+      document.activeElement.closest("[data-block-id]") !== null,
+    undefined,
+    { timeout: 10000 },
+  );
   await page.keyboard.press("Escape");
   await page.keyboard.press("Shift+ArrowDown");
   await page.waitForTimeout(1200);

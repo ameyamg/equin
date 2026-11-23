@@ -96,6 +96,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import {
+  BLOCK_GRID_SELECTOR,
   blockText,
   caretState,
   openBlankPage,
@@ -174,76 +175,84 @@ interface Geometry {
  * paragraph off which one `BLOCK_INSET` is read (see `Geometry.inset`).
  */
 async function geometry(page: Page, insetRowId: string): Promise<Geometry> {
-  return page.evaluate((insetRowId: string) => {
-    const rows: Record<string, RowRect> = {};
-    const order: string[] = [];
-    for (const el of document.querySelectorAll<HTMLElement>(
-      "[data-block-id]",
-    )) {
-      const id = el.getAttribute("data-block-id");
-      if (id === null) continue;
-      order.push(id);
-      const rect = el.getBoundingClientRect();
-      const editable = el.querySelector<HTMLElement>("[data-block-text]");
-      rows[id] = {
-        top: rect.top,
-        bottom: rect.bottom,
-        left: rect.left,
-        height: rect.height,
-        contentLeft:
-          rect.left + parseFloat(getComputedStyle(el).paddingLeft || "0"),
-        textLeft: editable ? editable.getBoundingClientRect().left : null,
-        editable: editable !== null,
-      };
-    }
-    const yardstick = rows[insetRowId];
-    const inset =
-      yardstick && yardstick.textLeft !== null
-        ? yardstick.textLeft - yardstick.contentLeft
-        : null;
-
-    // Rows sit one wrapper deep in the block grid (each row wrapper is placed on
-    // its own grid line); the frames are siblings of those wrappers, holding no
-    // rows of their own — which is exactly how they are told apart here.
-    const anyRow = document.querySelector<HTMLElement>("[data-block-id]");
-    const grid = anyRow?.parentElement?.parentElement;
-    const boxes: FrameBox[] = [];
-    for (const child of grid ? [...grid.children] : []) {
-      if (!(child instanceof HTMLElement)) continue;
-      if (child.querySelector("[data-block-id]") !== null) continue;
-      // The frame WRAPPER only positions; the contribution inside it does the
-      // painting. Take the first node in the subtree that actually paints — a
-      // background OR a border. Every container box is a soft tint and nothing
-      // else now, but the search still admits a border so that a box which grew
-      // one is FOUND (and measured, and matched to its owner) rather than going
-      // silently missing.
-      for (const node of [
-        child,
-        ...child.querySelectorAll<HTMLElement>("div"),
-      ]) {
-        const style = getComputedStyle(node);
-        const bg = style.backgroundColor;
-        const filled =
-          bg !== "" &&
-          bg !== "transparent" &&
-          !bg.startsWith("rgba(0, 0, 0, 0)");
-        const bordered =
-          style.borderTopStyle !== "none" &&
-          parseFloat(style.borderTopWidth || "0") > 0;
-        if (!filled && !bordered) continue;
-        const box = node.getBoundingClientRect();
-        boxes.push({
-          top: box.top,
-          bottom: box.bottom,
-          left: box.left,
-          right: box.right,
-          height: box.height,
-        });
-        break;
+  return page.evaluate(
+    ({
+      insetRowId,
+      gridSelector,
+    }: {
+      insetRowId: string;
+      gridSelector: string;
+    }) => {
+      const rows: Record<string, RowRect> = {};
+      const order: string[] = [];
+      for (const el of document.querySelectorAll<HTMLElement>(
+        "[data-block-id]",
+      )) {
+        const id = el.getAttribute("data-block-id");
+        if (id === null) continue;
+        order.push(id);
+        const rect = el.getBoundingClientRect();
+        const editable = el.querySelector<HTMLElement>("[data-block-text]");
+        rows[id] = {
+          top: rect.top,
+          bottom: rect.bottom,
+          left: rect.left,
+          height: rect.height,
+          contentLeft:
+            rect.left + parseFloat(getComputedStyle(el).paddingLeft || "0"),
+          textLeft: editable ? editable.getBoundingClientRect().left : null,
+          editable: editable !== null,
+        };
       }
-    }
-    return { boxes, rows, order, inset };
-  }, insetRowId);
+      const yardstick = rows[insetRowId];
+      const inset =
+        yardstick && yardstick.textLeft !== null
+          ? yardstick.textLeft - yardstick.contentLeft
+          : null;
+
+      // The frames are children of the block grid that hold no rows of their own
+      // — which is how they are told apart. The grid is found by its mark, never
+      // by counting wrappers up from a row (a row cell gains wrappers).
+      const grid = document.querySelector<HTMLElement>(gridSelector);
+      const boxes: FrameBox[] = [];
+      for (const child of grid ? [...grid.children] : []) {
+        if (!(child instanceof HTMLElement)) continue;
+        if (child.querySelector("[data-block-id]") !== null) continue;
+        // The frame WRAPPER only positions; the contribution inside it does the
+        // painting. Take the first node in the subtree that actually paints — a
+        // background OR a border. Every container box is a soft tint and nothing
+        // else now, but the search still admits a border so that a box which grew
+        // one is FOUND (and measured, and matched to its owner) rather than going
+        // silently missing.
+        for (const node of [
+          child,
+          ...child.querySelectorAll<HTMLElement>("div"),
+        ]) {
+          const style = getComputedStyle(node);
+          const bg = style.backgroundColor;
+          const filled =
+            bg !== "" &&
+            bg !== "transparent" &&
+            !bg.startsWith("rgba(0, 0, 0, 0)");
+          const bordered =
+            style.borderTopStyle !== "none" &&
+            parseFloat(style.borderTopWidth || "0") > 0;
+          if (!filled && !bordered) continue;
+          const box = node.getBoundingClientRect();
+          boxes.push({
+            top: box.top,
+            bottom: box.bottom,
+            left: box.left,
+            right: box.right,
+            height: box.height,
+          });
+          break;
+        }
+      }
+      return { boxes, rows, order, inset };
+    },
+    { insetRowId, gridSelector: BLOCK_GRID_SELECTOR },
+  );
 }
 
 /**

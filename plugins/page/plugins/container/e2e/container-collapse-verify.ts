@@ -57,6 +57,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import {
+  BLOCK_GRID_SELECTOR,
   caretState,
   openBlankPage,
   pageIdFromUrl,
@@ -133,9 +134,11 @@ async function rect(
 
 /** The painted container backdrop's height — the box the reader sees. */
 async function boxHeight(page: Page): Promise<number | null> {
-  return page.evaluate(() => {
-    const anyRow = document.querySelector<HTMLElement>("[data-block-id]");
-    const grid = anyRow?.parentElement?.parentElement;
+  return page.evaluate((gridSelector) => {
+    // The frames are children of the block grid that hold no rows of their own
+    // — which is how they are told apart. The grid is found by its mark, never
+    // by counting wrappers up from a row (a row cell gains wrappers).
+    const grid = document.querySelector<HTMLElement>(gridSelector);
     for (const child of grid ? [...grid.children] : []) {
       if (!(child instanceof HTMLElement)) continue;
       if (child.querySelector("[data-block-id]") !== null) continue;
@@ -143,7 +146,7 @@ async function boxHeight(page: Page): Promise<number | null> {
       if (h > 0) return h;
     }
     return null;
-  });
+  }, BLOCK_GRID_SELECTOR);
 }
 
 /**

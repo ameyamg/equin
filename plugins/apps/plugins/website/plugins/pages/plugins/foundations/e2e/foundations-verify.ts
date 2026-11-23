@@ -95,18 +95,22 @@ async function scrollPane(page: Page, to: "top" | "bottom"): Promise<void> {
   ).scrollIntoViewIfNeeded();
 }
 
-/** The site header's Story link colour, and the pinned bar's backdrop filter and top / bottom edges. */
+/**
+ * The site header's quiet-link colour (read off the "Learn" menu trigger, the
+ * one quiet header word every page carries as a button), and the pinned bar's
+ * backdrop filter and top / bottom edges.
+ */
 async function headerState(page: Page) {
   return page.evaluate(() => {
-    const story = [...document.querySelectorAll("button")].find(
-      (b) => b.textContent?.trim() === "Story",
+    const link = [...document.querySelectorAll("button")].find(
+      (b) => b.textContent?.trim() === "Learn",
     );
-    let bar: HTMLElement | null = story ?? null;
+    let bar: HTMLElement | null = link ?? null;
     while (bar && getComputedStyle(bar).position !== "sticky")
       bar = bar.parentElement;
     const r = bar?.getBoundingClientRect();
     return {
-      ink: story ? getComputedStyle(story).color : "",
+      ink: link ? getComputedStyle(link).color : "",
       filter: bar ? getComputedStyle(bar).backdropFilter : "",
       top: r?.top ?? -1,
       bottom: r?.bottom ?? -1,
@@ -145,12 +149,7 @@ await withBrowser(async (h) => {
     top.readout.startsWith("Sea level"),
     top.readout,
   );
-  const headerInk = await page.evaluate(() => {
-    const story = [...document.querySelectorAll("button")].find(
-      (b) => b.textContent?.trim() === "Story",
-    );
-    return story ? getComputedStyle(story).color : "";
-  });
+  const headerInk = (await headerState(page)).ink;
   r.ok(
     "at rest over the sky, the header's links are in the sky's dark ink",
     /rgb\(60, 72, 88\)|#3c4858/i.test(headerInk),

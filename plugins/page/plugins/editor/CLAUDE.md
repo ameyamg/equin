@@ -2685,6 +2685,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `applicableChanges`
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
+    - `BLOCK_GRID_ATTR`
     - `blockAuthorOf`
     - `blockContents`
     - `BlockFieldChangesSchema`

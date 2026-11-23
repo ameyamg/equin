@@ -1,7 +1,8 @@
 /**
  * The demo keeps the visitor's data in the browser (design: the wiki page
- * "Design: a browser host's data kept in browser storage"). On the homepage's live demo (`/about`), in
- * one fresh browser context (so its IndexedDB starts empty), it:
+ * "Design: a browser host's data kept in browser storage"). On the live demo
+ * (the demo page `/about/demo`, then the homepage's frame at `/about` for the
+ * Reset), in one fresh browser context (so its IndexedDB starts empty), it:
  *
  *  1. opens Pages in the embed: a seeded page wears the seed's icon; creates
  *     a page ("New page"), names it, and picks an icon for it in the emoji
@@ -11,8 +12,10 @@
  *  3. opens a SECOND tab of the demo in the same context: it shows the page
  *     too (one SharedWorker, one database) — then creates another page there,
  *     which the first tab's sidebar shows live;
- *  4. Reset demo (in the first tab): both tabs come back on the seed alone —
- *     neither created page is listed, the seeded pages are;
+ *  4. Reset demo (in the first tab, moved to the homepage: Reset demo sits
+ *     under the homepage's frame only, never on the demo page): both tabs
+ *     come back on the seed alone — neither created page is listed, the
+ *     seeded pages are;
  *  5. creates a page, then renames it and closes EVERY tab of the demo the
  *     instant the demo's worker has answered the rename — no wait — then
  *     opens a new one: the page is listed under its new name. The worker
@@ -235,6 +238,11 @@ await withBrowser(async (h) => {
   await snap(second, OUT, "3-second-tab");
 
   // ── 4. Reset demo brings the seed back, in both tabs ────────────────────
+  // Reset demo is one of the framed demo's controls (under the homepage's
+  // frame); the demo page draws none. The first tab goes to the homepage,
+  // enters the demo the second tab keeps running, and resets from there.
+  await page.goto(pathUrl("/about"));
+  await enterDemo(page, { marker: "[data-app-embed]" });
   await page.getByRole("button", { name: "Reset demo" }).first().click();
   await page
     .getByRole("dialog")
@@ -285,7 +293,11 @@ await withBrowser(async (h) => {
     );
   }
   await snap(page, OUT, "4-reset");
-  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
+  r.ok(
+    "the first tab stays on the homepage (the frame's URL never names the demo)",
+    new URL(page.url()).pathname === "/about",
+    page.url(),
+  );
 
   // ── 5. a write survives closing the demo's last tab at once ─────────────
   await createPage(page, DRAFT);

@@ -35,10 +35,20 @@ describe("RunsRenderer", () => {
       { text: "x", marks: ["underline", "strikethrough", "code"] },
     ];
     const { container } = render(<RunsRenderer value={runs} />);
-    const span = container.querySelector("span");
-    expect(span?.className).toContain("underline");
-    expect(span?.className).toContain("line-through");
-    expect(span?.className).toContain("font-mono");
+    // A code run is a `<code>`, as Lexical renders it in the live editor.
+    const code = container.querySelector("code");
+    expect(code?.className).toContain("underline");
+    expect(code?.className).toContain("line-through");
+    expect(code?.className).toContain("font-mono");
+  });
+
+  it("applies underline / strikethrough without code on a span", () => {
+    const runs: RichText = [
+      { text: "x", marks: ["underline", "strikethrough"] },
+    ];
+    const { container } = render(<RunsRenderer value={runs} />);
+    expect(container.querySelector("code")).toBeNull();
+    expect(container.querySelector("span")?.className).toContain("underline");
   });
 
   it("renders a color run via the shared --rt-color-* var", () => {
@@ -106,6 +116,6 @@ describe("RunsRenderer", () => {
     const { container } = render(<RunsRenderer value={runs} />);
     expect(container.textContent).toBe(DATE_TOKEN);
     expect(container.querySelector("button")).toBeNull();
-    expect(container.querySelector("span")?.className).toContain("font-mono");
+    expect(container.querySelector("code")?.className).toContain("font-mono");
   });
 });

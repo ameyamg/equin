@@ -141,7 +141,12 @@ await withBrowser(async (h) => {
   // descendant, so it is cloned as part of alpha's subtree, not as a root of its
   // own. Each clone lands after ITS OWN source, so the two placements interleave
   // with the untouched rows rather than piling up at one anchor.
-  await enterBlockSelection("B", 0, "Shift+ArrowDown", "Shift+ArrowDown");
+  //
+  // Selecting alpha already selects bravo (a selection is closed under its
+  // descendants, so its head is bravo), and ONE Shift+ArrowDown extends past the
+  // subtree onto charlie — the editor's "Shift+ArrowDown extends past the
+  // children" rule (CLAUDE.md, "A selected block always carries its children").
+  await enterBlockSelection("B", 0, "Shift+ArrowDown");
   await checkSelectionOwnsFocus("B (duplicate)");
   await page.keyboard.press("Meta+d");
   await page.waitForTimeout(2000);

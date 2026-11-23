@@ -47444,6 +47444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applicableChanges`
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
+          - `BLOCK_GRID_ATTR`
           - `blockAuthorOf`
           - `blockContents`
           - `BlockFieldChangesSchema`
