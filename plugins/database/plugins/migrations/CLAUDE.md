@@ -740,6 +740,7 @@ only agreement that matters.
     - `packages/semaphore.createSemaphore`
     - `packages/string-hash.hashHex`
     - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.open`
     - `packages/timed-fs.readdir`
     - `packages/timed-fs.readdirSync`
     - `packages/timed-fs.readFile`

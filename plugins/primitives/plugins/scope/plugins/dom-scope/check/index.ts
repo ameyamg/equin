@@ -1,3 +1,4 @@
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -59,7 +60,7 @@ const check: Check = {
     const bounded = new Map<string, string>(); // attribute -> declaring file
     for (const decl of declarations) {
       if (!ctx.inScope(decl.path)) continue;
-      const src = await Bun.file(`${root}/${decl.path}`).text();
+      const src = await readFile(`${root}/${decl.path}`, "utf8");
       for (const block of src.matchAll(BOUNDS_BLOCK)) {
         for (const quoted of (block[1] ?? "").matchAll(QUOTED)) {
           const attr = quoted[1];

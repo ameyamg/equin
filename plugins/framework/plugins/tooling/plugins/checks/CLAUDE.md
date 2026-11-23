@@ -765,9 +765,9 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 102 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 103 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
-    - `packages/timed-fs` ×11
+    - `packages/timed-fs` ×12
     - `packages/shared-work` ×9
     - `plugin-meta/plugin-records` ×9
     - `reports/check-thread-stall` ×8

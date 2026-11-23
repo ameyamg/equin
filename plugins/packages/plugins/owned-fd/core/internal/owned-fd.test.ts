@@ -3,7 +3,16 @@ import { fstatSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { adoptFd, FdAlreadyClosedError, openOwnedFdSync } from "./owned-fd";
+import {
+  newFsCallTally,
+  withFsCallTally,
+} from "@plugins/packages/plugins/timed-fs/core";
+import {
+  adoptFd,
+  FdAlreadyClosedError,
+  openOwnedFd,
+  openOwnedFdSync,
+} from "./owned-fd";
 
 const dir = asAppPath(mkdtempSync(join(tmpdir(), "owned-fd-")));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -47,5 +56,18 @@ describe("OwnedFd", () => {
     expect(() => owned.close()).toThrow();
     expect(owned.closed).toBe(true);
     expect(() => owned.close()).toThrow(FdAlreadyClosedError);
+  });
+});
+
+describe("an owned open is a counted file call", () => {
+  // A read through a descriptor rides on its open: uncounted, a check reading
+  // the head of ~475 migrations this way was metered at 9 file calls.
+  test("openOwnedFdSync and openOwnedFd each count one read in the enclosing tally", async () => {
+    const tally = newFsCallTally();
+    await withFsCallTally(tally, async () => {
+      openOwnedFdSync(asAppPath(join(dir, "counted-sync")), "w").close();
+      (await openOwnedFd(asAppPath(join(dir, "counted-async")), "w")).close();
+    });
+    expect(tally.counts.read).toBe(2);
   });
 });

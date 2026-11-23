@@ -34,7 +34,9 @@ export type FsWaitLayer = (typeof FS_WAIT_LAYERS)[number];
 /**
  * The node:fs calls this module times, by the module they come from — what
  * the `timed-fs/no-untimed-fs-read` lint moves onto it. Callback forms are not
- * here: they are not used in this codebase's runtime code.
+ * here: they are not used in this codebase's runtime code. The opens
+ * (`OPEN_LAYER`) are timed too but not in this table yet: ~38 files still open
+ * through node:fs directly, and moving them is its own change.
  */
 export const TIMED_FS_CALLS = {
   promises: {
@@ -346,6 +348,39 @@ export const readlink: typeof fsp.readlink = timedAsync(
 );
 
 /**
+ * An open is a file call of its own, charged as a read: a read through a
+ * descriptor (`readSync(fd)`, `handle.read`) rides on it, so the open is what
+ * counts that file once — as `readFile` counts once — and what a file-call
+ * budget sees. Uncounted, a check that read the head of ~475 migrations
+ * through descriptors was metered at 9 calls (2026-11-23).
+ */
+const OPEN_LAYER: FsWaitLayer = "fs-read";
+
+export const open: typeof fsp.open = timedAsync(OPEN_LAYER, "open", fsp.open);
+
+/**
+ * node's callback `open`, as a promise of the bare descriptor, timed and
+ * counted as the `open` it is. For `packages/owned-fd`, whose async open must
+ * not hold an `fs/promises` `FileHandle` (which closes its descriptor again
+ * when collected) — anything else calls `open` or goes through owned-fd.
+ */
+export const openFd: (
+  path: fs.PathLike,
+  flags?: fs.OpenMode,
+  mode?: fs.Mode | null,
+) => Promise<number> = timedAsync(
+  OPEN_LAYER,
+  "open",
+  (path: fs.PathLike, flags?: fs.OpenMode, mode?: fs.Mode | null) =>
+    new Promise<number>((resolve, reject) => {
+      fs.open(path, flags, mode, (err, fd) => {
+        if (err === null) resolve(fd);
+        else reject(err);
+      });
+    }),
+);
+
+/**
  * Whether `path` exists — `existsSync`'s async twin, timed as the `access` it
  * is. Only "not there" (ENOENT, ENOTDIR) is a `false`: any other failure (a
  * permission refusal, a stalled volume) throws, where `existsSync` would
@@ -396,6 +431,11 @@ export const readlinkSync: typeof fs.readlinkSync = timedSyncCall(
   S.readlinkSync,
   "readlinkSync",
   fs.readlinkSync,
+);
+export const openSync: typeof fs.openSync = timedSyncCall(
+  OPEN_LAYER,
+  "openSync",
+  fs.openSync,
 );
 export const realpathSync: typeof fs.realpathSync = Object.assign(
   timedSyncCall(S.realpathSync, "realpathSync", fs.realpathSync),

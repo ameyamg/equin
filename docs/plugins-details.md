@@ -25651,6 +25651,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/semaphore.createSemaphore`
           - `packages/string-hash.hashHex`
           - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.open`
           - `packages/timed-fs.readdir`
           - `packages/timed-fs.readdirSync`
           - `packages/timed-fs.readFile`
@@ -33986,9 +33987,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 102 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 103 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
-              - `packages/timed-fs` ×11
+              - `packages/timed-fs` ×12
               - `packages/shared-work` ×9
               - `plugin-meta/plugin-records` ×9
               - `reports/check-thread-stall` ×8
@@ -45451,7 +45452,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
-    - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
+    - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Opens through packages/timed-fs (so a read through the descriptor is counted, timed and guarded once per file, like a readFile), otherwise node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
+      - Core:
+        - Uses:
+          - `packages/timed-fs.openFd`
+          - `packages/timed-fs.openSync`
+        - Exports (types): `OwnedFd`
+        - Exports (values):
+          - `adoptFd`
+          - `FdAlreadyClosedError`
+          - `openOwnedFd`
+          - `openOwnedFdSync`
       - Cross-plugin:
         - Imported by: 34 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
           - `infra` ×15
@@ -45473,13 +45484,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/guards` (0 debt)
           - `infra/host/io-health/monitor` (0 debt)
           - `packages/owned-fd` (0 debt)
-      - Core:
-        - Exports (types): `OwnedFd`
-        - Exports (values):
-          - `adoptFd`
-          - `FdAlreadyClosedError`
-          - `openOwnedFd`
-          - `openOwnedFdSync`
     - **`partial-json`** — parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input).
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/jsonl-viewer`
@@ -46110,7 +46114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-records`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
-    - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
+    - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync), the opens a descriptor-level read rides on (open / openSync, and openFd — the bare descriptor, for owned-fd — each counted as one read), plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Core:
         - Uses: `packages/shared-work.installSharedWorkScope`
         - Exports (types):
@@ -46136,6 +46140,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `lstatSync`
           - `newFsCallTally`
           - `onSlowFsCall`
+          - `open`
+          - `openFd`
+          - `openSync`
           - `processFsCallTally`
           - `readdir`
           - `readdirSync`
@@ -46156,7 +46163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withChangedFilesWork`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 197 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 198 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
           - `framework` ×31
           - `apps` ×18
@@ -46164,7 +46171,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×13
           - `backup` ×11
           - `build` ×7
-          - `packages` ×6
+          - `packages` ×7
           - `database` ×5
           - `plugin-meta` ×5
           - `reports` ×4

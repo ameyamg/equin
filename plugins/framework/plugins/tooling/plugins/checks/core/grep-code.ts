@@ -1,3 +1,4 @@
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import {
   findImports,
@@ -428,7 +429,7 @@ async function readTreeBlobs(
 // would silently drop a candidate from the verdict.
 async function readWorkingTreeFile(abs: string): Promise<string | null> {
   try {
-    return await Bun.file(abs).text();
+    return await readFile(abs, "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return null;

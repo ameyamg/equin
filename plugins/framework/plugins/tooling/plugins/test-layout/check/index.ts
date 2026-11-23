@@ -1,4 +1,4 @@
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type {
   Check,
@@ -178,8 +178,8 @@ async function checkScopeLiterals(root: string): Promise<string | null> {
   // prose and not the setting. `maskSource` blanks JS/TS comments (strings kept
   // intact, which is where the literal lives); TOML gets the same treatment from
   // the small stripper below.
-  const bunfig = stripTomlComments(await Bun.file(bunfigPath).text());
-  const vitestConfig = maskSource(await Bun.file(vitestPath).text(), {
+  const bunfig = stripTomlComments(await readFile(bunfigPath, "utf8"));
+  const vitestConfig = maskSource(await readFile(vitestPath, "utf8"), {
     strings: false,
   });
 
@@ -212,7 +212,7 @@ async function checkClockPin(root: string): Promise<string | null> {
     return `(f) \`${DOM_TEST_SETUP_FILE}\` is missing — it is the shared vitest setup named by \`setupFiles\` in \`${VITEST_CONFIG}\`, and the one place the jsdom clock is pinned.`;
   }
 
-  const setup = maskSource(await Bun.file(setupPath).text(), {
+  const setup = maskSource(await readFile(setupPath, "utf8"), {
     strings: false,
   });
   if (setup.includes(DOM_TEST_CLOCK_PIN)) return null;
@@ -232,7 +232,7 @@ async function checkLocalePin(root: string): Promise<string | null> {
   // A missing config is already rule (d)'s report.
   if (!existsSync(vitestPath)) return null;
 
-  const vitestConfig = maskSource(await Bun.file(vitestPath).text(), {
+  const vitestConfig = maskSource(await readFile(vitestPath, "utf8"), {
     strings: false,
   });
   const missing = [

@@ -1,4 +1,5 @@
-import { closeSync, open, openSync, type Mode, type OpenMode } from "node:fs";
+import { closeSync, type Mode, type OpenMode } from "node:fs";
+import { openFd, openSync } from "@plugins/packages/plugins/timed-fs/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // ---------------------------------------------------------------------------
@@ -16,6 +17,10 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 // `owned-fd/no-raw-fd-close` (no `closeSync` / `close` from node:fs outside
 // this file) and `owned-fd/no-raw-spawn-stdio-fd` (a spawn's stdio descriptor
 // is an `OwnedFd`'s `.fd`, never a bare number).
+//
+// Every open goes through `packages/timed-fs`: a read through the descriptor
+// is counted, timed and guarded once per file, like a `readFile` — so a check
+// reading hundreds of files this way cannot pass under its file-call budget.
 // ---------------------------------------------------------------------------
 
 /** A second `close()` of the same `OwnedFd`: the bug it exists to catch. */
@@ -82,12 +87,7 @@ export function openOwnedFd(
   flags: OpenMode = "r",
   mode?: Mode | null,
 ): Promise<OwnedFd> {
-  return new Promise((resolve, reject) => {
-    open(path, flags, mode, (err, fd) => {
-      if (err === null) resolve(new Owned(fd));
-      else reject(err);
-    });
-  });
+  return openFd(path, flags, mode).then((fd) => new Owned(fd));
 }
 
 /**

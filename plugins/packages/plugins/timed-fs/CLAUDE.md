@@ -127,7 +127,7 @@ its boot journal attribute that.
 
 ## Plugin reference
 
-- Description: The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
+- Description: The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync), the opens a descriptor-level read rides on (open / openSync, and openFd — the bare descriptor, for owned-fd — each counted as one read), plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
 - Core:
   - Uses: `packages/shared-work.installSharedWorkScope`
   - Exports (types):
@@ -153,6 +153,9 @@ its boot journal attribute that.
     - `lstatSync`
     - `newFsCallTally`
     - `onSlowFsCall`
+    - `open`
+    - `openFd`
+    - `openSync`
     - `processFsCallTally`
     - `readdir`
     - `readdirSync`
@@ -173,7 +176,7 @@ its boot journal attribute that.
     - `withChangedFilesWork`
     - `withFsCallTally`
 - Cross-plugin:
-  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×59
     - `framework` ×31
     - `apps` ×18
@@ -181,7 +184,7 @@ its boot journal attribute that.
     - `conversations` ×13
     - `backup` ×11
     - `build` ×7
-    - `packages` ×6
+    - `packages` ×7
     - `database` ×5
     - `plugin-meta` ×5
     - `reports` ×4

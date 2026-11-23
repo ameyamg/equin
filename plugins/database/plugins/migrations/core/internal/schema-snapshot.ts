@@ -24,10 +24,10 @@ import {
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
+  open,
   readdirSync,
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { open } from "fs/promises";
 import { join } from "path";
 import {
   snapshotLineage,

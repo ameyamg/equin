@@ -1,3 +1,4 @@
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import {
@@ -218,7 +219,7 @@ const check: Check = {
     const exemptPaths = new Set<string>();
     for (const path of new Set(matches.map((m) => m.path))) {
       if (!TEST_FILE_RE.test(path)) continue;
-      if (usesThrowawayTestDb(path, await Bun.file(join(root, path)).text())) {
+      if (usesThrowawayTestDb(path, await readFile(join(root, path), "utf8"))) {
         exemptPaths.add(path);
       }
     }
