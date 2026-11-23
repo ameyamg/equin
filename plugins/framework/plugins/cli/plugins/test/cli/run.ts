@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from "fs";
+import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { join, relative, resolve } from "path";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { readAwakeClock } from "@plugins/packages/plugins/sleep-clock/core";
@@ -12,7 +12,11 @@ import {
   getWorktreeRoot,
   spawnCaptured,
   spawnPassthrough,
+  spawnToFile,
+  type LeftBehindProcess,
 } from "@plugins/infra/plugins/spawn/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { sealedTestEnv } from "./sealed-env";
 import {
   worktreeArtifacts,
   worktreeDataDir,
@@ -142,9 +146,11 @@ async function runRunner(
           leftBehind.map((p) => `  ${p.pid}  ${p.command}`).join("\n"),
       );
     }
+    const wedged = (await armed.watch?.end()) ?? null;
     return {
       exitCode,
-      wedged: (await armed.watch?.end()) ?? null,
+      wedged: wedged === null ? [] : [wedged],
+      wedgedFiles: [],
       leftBehind: leftBehind.map((p) => p.command),
     };
   } finally {
@@ -152,10 +158,159 @@ async function runRunner(
   }
 }
 
+/**
+ * bun:test, ONE PROCESS PER TEST FILE, at most `lanes` at once.
+ *
+ * A file is the unit a test suite owns, and a process is the only boundary that
+ * scopes everything a suite can leave behind: module state and process-wide
+ * registries (a fake registered into `Runtime` by one file crashed the next
+ * file that read it), `globalThis` / `window`, `process.env`, signal handlers —
+ * and the processes it spawned. Each file's process leads its own process
+ * group, so when the file ends whatever it started and never stopped (a helper
+ * server, an `install.sh` that ignores SIGTERM) is SIGKILLed with the group and
+ * named — not left for the end of the run, nor for a reaper that a killed CLI
+ * never runs (2026-11-23: 15 `install.sh --dry-run` children of a timed-out
+ * test had been running for 5 days).
+ *
+ * `bun test --isolate` (a fresh global per file in one process) was measured
+ * first and rejected: over the whole suite one process grew to 55 GB.
+ *
+ * Each file's output goes to its own file and is printed whole only when the
+ * file fails, so concurrent files never interleave; its JUnit report likewise,
+ * merged into `reportPath` for the run's record. Each process is watched for a
+ * stopped event loop on its own heartbeat (`watchLoop`).
+ */
+async function runBunFiles(
+  files: readonly string[],
+  o: {
+    root: string;
+    env: Record<string, string | undefined>;
+    scratch: string;
+    reportPath: string;
+    lanes: number;
+    samplePath: (index: number) => string;
+  },
+): Promise<RunnerRun> {
+  const lanes = Math.max(1, Math.min(o.lanes, files.length));
+  console.log(
+    `\n── bun:test ── ${files.length} file${files.length === 1 ? "" : "s"}, one process each, ${lanes} at a time`,
+  );
+  const dir = join(o.scratch, "bun-files");
+  mkdirSync(dir, { recursive: true });
+  const reports: string[] = [];
+  const wedged: string[] = [];
+  const wedgedFiles: string[] = [];
+  const leftBehind: string[] = [];
+  let exitCode = 0;
+  let done = 0;
+  let failing = 0;
+  const progressEvery = Math.max(1, Math.ceil(files.length / 10));
+
+  const runOne = async (file: string, index: number): Promise<void> => {
+    const report = join(dir, `${index}.xml`);
+    const output = join(dir, `${index}.log`);
+    const heartbeatPath = join(dir, `${index}.heartbeat`);
+    const armed: { watch: LoopWatch | null } = { watch: null };
+    let result: { exitCode: number; leftBehind: LeftBehindProcess[] };
+    try {
+      result = await spawnToFile(
+        [
+          process.execPath,
+          "test",
+          "--reporter=junit",
+          `--reporter-outfile=${report}`,
+          ...bunTestExactArgs([file]),
+        ],
+        {
+          processGroup: "own",
+          cwd: o.root,
+          // One unit each: `lanes` processes share the grant, so none may
+          // believe it holds all of it (a nested op would spend N² units).
+          env: {
+            ...o.env,
+            [envName("HOST_GRANT")]: "1",
+            [envName("TEST_HEARTBEAT")]: heartbeatPath,
+          },
+          outputPath: asAppPath(output),
+          onSpawn: (child) => {
+            armed.watch = watchLoop(file, child, {
+              heartbeatPath,
+              samplePath: o.samplePath(index),
+            });
+          },
+        },
+      );
+      armed.watch?.cancel();
+      const sample = (await armed.watch?.end()) ?? null;
+      if (sample !== null) {
+        wedged.push(sample);
+        wedgedFiles.push(file);
+      }
+    } finally {
+      armed.watch?.cancel();
+    }
+    if (existsSync(report)) reports.push(readFileSync(report, "utf8"));
+    done += 1;
+    if (result.exitCode !== 0) {
+      failing += 1;
+      if (exitCode === 0) exitCode = result.exitCode;
+      console.log(`\n✗ ${file} (exit ${result.exitCode})`);
+      process.stdout.write(
+        existsSync(output) ? readFileSync(output, "utf8") : "",
+      );
+    }
+    if (result.leftBehind.length > 0) {
+      console.error(
+        `\n${file} left ${result.leftBehind.length} process${result.leftBehind.length === 1 ? "" : "es"} behind in its process group — killed:\n` +
+          result.leftBehind.map((p) => `  ${p.pid}  ${p.command}`).join("\n"),
+      );
+      leftBehind.push(...result.leftBehind.map((p) => p.command));
+    }
+    if (done % progressEvery === 0 || done === files.length)
+      console.log(
+        `bun:test ${done}/${files.length} files done, ${failing} failing`,
+      );
+  };
+
+  // The first lane to throw stops every lane from taking another file; the
+  // files already running are waited out (the run's grant and scratch dir
+  // outlive none of them) and the first error is rethrown.
+  let next = 0;
+  const lanesDone = await Promise.allSettled(
+    Array.from({ length: lanes }, async () => {
+      while (next < files.length) {
+        const index = next++;
+        try {
+          await runOne(files[index]!, index);
+        } catch (err) {
+          next = files.length;
+          throw err;
+        }
+      }
+    }),
+  );
+  for (const lane of lanesDone)
+    if (lane.status === "rejected") throw lane.reason;
+  // One report for the run's record: the parser reads suites and cases by
+  // tag, so the per-file documents concatenate (their XML declarations cut).
+  writeFileSync(
+    o.reportPath,
+    `<testsuites>\n${reports.map((r) => r.replace(/<\?xml[^>]*\?>/g, "")).join("\n")}\n</testsuites>\n`,
+  );
+  if (files.length > 1 && exitCode === 0)
+    console.log(`bun:test: all ${files.length} files passed`);
+  return { exitCode, wedged, wedgedFiles, leftBehind };
+}
+
 interface RunnerRun {
   exitCode: number;
-  /** The loop-stopped sample's path when the runner was declared wedged, else null. */
-  wedged: string | null;
+  /** The loop-stopped sample of each process declared wedged (none: empty). */
+  wedged: readonly string[];
+  /**
+   * The test files whose own process wedged (bun:test's per-file processes);
+   * empty when the wedge, if any, was the whole runner's.
+   */
+  wedgedFiles: readonly string[];
   /** The command lines of the processes left in the runner's group, killed. */
   leftBehind: string[];
 }
@@ -282,9 +437,9 @@ function runnerOutcome(
 ): { outcome: TestRunnerOutcome; report: JunitSummary | null } {
   const { wedged, leftBehind } = run;
   const failures: string[] = [];
-  if (wedged !== null) {
+  for (const sample of wedged) {
     failures.push(
-      `(${runner} wedged: its event loop stopped for ${LOOP_STOPPED_AFTER_MS / 60_000} min and it was killed; stack sampled to ${wedged})`,
+      `(${runner} wedged: its event loop stopped for ${LOOP_STOPPED_AFTER_MS / 60_000} min and it was killed; stack sampled to ${sample})`,
     );
   }
   const unreported: string[] = [];
@@ -419,13 +574,9 @@ const run: CliAction<[string[]], object> = async (paths) => {
   // command's own is which runners to spawn and what their exits mean.
   //
   // The grant is the elastic share (the run's fan-out, at most `cpuBudget().B`,
-  // is a ceiling; the acquire hands back what it could get, `>= 1`), and it is
-  // spent by exactly ONE of
-  // the runners. `bun test` runs its files in one process (`--parallel` is
-  // opt-in, so there is nothing to bound); vitest's default `forks` pool is
-  // sized to the core count, so `--maxWorkers=<units>` is what makes the
-  // grant real. This asymmetry is deliberate — do not "fix" it into symmetry
-  // by capping bun, which would cap nothing.
+  // is a ceiling; the acquire hands back what it could get, `>= 1`), and each
+  // runner in turn spends all of it: bun:test as that many concurrent
+  // one-file processes (`runBunFiles`), vitest as `--maxWorkers=<units>`.
   // The tree hash, before the op: the run-level single-flight is keyed on it, and
   // a duplicate must find the in-flight run before it queues for a host slot.
   const treeHash = await computeTreeHash(root);
@@ -436,12 +587,15 @@ const run: CliAction<[string[]], object> = async (paths) => {
   const outcome = await withDirectOp(
     "test",
     {
-      // The ceiling is the run's own fan-out, never more: bun:test is one
-      // process (one unit), vitest one worker per file at most. Asking for B
+      // The ceiling is the run's own fan-out, never more: one bun:test process
+      // per file, one vitest worker per file, at most. Asking for B
       // regardless let a one-plugin run take every free slot and hold it while
       // using one core (2026-11-06: one test held all six background slots,
       // and a 1 s suite queued 4–6 min behind such holders).
-      max: Math.max(1, Math.min(cpuBudget().B, dom.length)),
+      max: Math.max(
+        1,
+        Math.min(cpuBudget().B, Math.max(bun.length, dom.length)),
+      ),
       flight: testFlight([...found], runnerArgs, treeHash),
     },
     // Every dir a test makes through `os.tmpdir()` lands in this run's own
@@ -452,8 +606,10 @@ const run: CliAction<[string[]], object> = async (paths) => {
       grant.run(
         (share) =>
           withRunTmpdir(async (scratch) => {
+            // Sealed: the declared allowlist, never the launching shell's
+            // whole environment (sealed-env.ts).
             const env = {
-              ...process.env,
+              ...sealedTestEnv(process.env),
               ...share.env(),
               ...tmpdirEnv(scratch),
             };
@@ -484,26 +640,18 @@ const run: CliAction<[string[]], object> = async (paths) => {
 
         const bunRun =
           bun.length > 0
-            ? await runRunner(
-                "bun:test",
-                [
-                  process.execPath,
-                  "test",
-                  "--reporter=junit",
-                  `--reporter-outfile=${bunReport}`,
-                  ...bunTestExactArgs(bun),
-                ],
+                ? await runBunFiles(bun, {
                 root,
                 env,
-                {
-                  // In the run's scratch root: gone with the run.
-                  heartbeatPath: join(scratch, "bun-test-loop-heartbeat"),
-                  samplePath: join(
+                    scratch,
+                    reportPath: bunReport,
+                    lanes: grant.units,
+                    samplePath: (index) =>
+                      join(
                     worktreeDataDir(slug),
-                    `test-wedged-${ctx.opId}-bun-sample.txt`,
+                        `test-wedged-${ctx.opId}-bun-${index}-sample.txt`,
                   ),
-                },
-              )
+                  })
             : null;
         const bunExit = bunRun?.exitCode ?? null;
         // `bun x vitest` resolves the repo's own vitest and honors its
@@ -569,11 +717,14 @@ const run: CliAction<[string[]], object> = async (paths) => {
             bunRun,
           );
           status.runners.push(r.outcome);
+              // A wedged file's process was killed before it could report: it is
+              // left out of the per-file attribution, every other file kept.
+              const wedgedFiles = new Set(bunRun.wedgedFiles);
           harvested.push({
             runner: "bun:test",
-            files: bun,
+                files: bun.filter((file) => !wedgedFiles.has(file)),
             exitCode: bunRun.exitCode,
-            wedged: bunRun.wedged !== null,
+                wedged: false,
             report: r.report,
           });
         }
@@ -590,7 +741,7 @@ const run: CliAction<[string[]], object> = async (paths) => {
             runner: "vitest",
             files: dom,
             exitCode: domRun.exitCode,
-            wedged: domRun.wedged !== null,
+                wedged: domRun.wedged.length > 0,
             report: r.report,
           });
         }

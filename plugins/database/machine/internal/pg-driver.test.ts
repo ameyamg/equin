@@ -1,3 +1,4 @@
+import { partialFake } from "@plugins/framework/plugins/tooling/plugins/test-layout/core/testing";
 import {
   afterAll,
   beforeAll,
@@ -540,12 +541,12 @@ describe("pool.connect transaction lease (Gap B)", () => {
     lostClient.release = () => {
       releases++;
     };
-    const fake = {
+    const fake = partialFake<Pool>("Pool", {
       query: () => {
         throw new Error("unused");
       },
       connect: () => Promise.resolve(lostClient as unknown as PoolClient),
-    } as unknown as Pool;
+    });
     // The same fake as both lanes: these exercise the background checkout.
     installQueryWrapper(fake, fake);
 
@@ -573,12 +574,12 @@ describe("pool.connect transaction lease (Gap B)", () => {
 
   it("returns the tx slot when connect() itself throws", async () => {
     const boom = new Error("connect failed");
-    const fake = {
+    const fake = partialFake<Pool>("Pool", {
       query: () => {
         throw new Error("unused");
       },
       connect: () => Promise.reject(boom),
-    } as unknown as Pool;
+    });
     // The same fake as both lanes: these exercise the background checkout.
     installQueryWrapper(fake, fake);
 

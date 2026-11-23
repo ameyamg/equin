@@ -138,7 +138,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`lint`** [test helpers] [exempt] [38 sub-plugins] — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** [1 sub-plugin] — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
-        - **`test-layout`** [exempt] — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
+        - **`test-layout`** [test helpers] [exempt] — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
         - **`web-artifacts`** [exempt] [4 sub-plugins] — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
     - **`web-core`** [exempt]
     - **`web-sdk`** [test helpers] — Web plugin runtime: slots, contributions, loader

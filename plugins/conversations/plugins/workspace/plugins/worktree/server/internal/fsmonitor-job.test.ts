@@ -1,3 +1,4 @@
+import { partialFake } from "@plugins/framework/plugins/tooling/plugins/test-layout/core/testing";
 import { expect, test } from "bun:test";
 import { withHostServices } from "@plugins/framework/plugins/server-core/core/testing";
 import { registerPluginJobs } from "@plugins/infra/plugins/jobs/server/testing";
@@ -11,12 +12,12 @@ import { fsmonitorReconcileJob, fsmonitorReleaseJob } from "./fsmonitor-job";
 
 test("passes and releases share one serial lane; a release is one pending row per attempt", async () => {
   const rows: { job: QueuedJob; jobKey: JobRowOpts["jobKey"] }[] = [];
-  const queue = {
+  const queue = partialFake<JobQueueImpl>("JobQueueImpl", {
     enqueue: async (job: QueuedJob, _payload: unknown, opts: JobRowOpts) => {
       rows.push({ job, jobKey: opts.jobKey });
       return { jobId: String(rows.length) };
     },
-  } as unknown as JobQueueImpl;
+  });
 
   await registerPluginJobs([
     "conversations/plugins/workspace/plugins/worktree",

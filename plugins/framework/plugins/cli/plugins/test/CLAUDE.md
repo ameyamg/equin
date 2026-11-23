@@ -39,16 +39,56 @@ an opportunistic run (`EQUIN_OP_OPPORTUNISTIC`, see op-runtime) — and lands an
 op-log record for the Ops Gantt. The lifecycle is `withDirectOp("test", …)` from
 `op-runtime`, shared with `check` and `run`.
 
-The grant is the elastic share (a ceiling of the run's own fan-out — one unit,
-or one per vitest file, at most `cpuBudget().B`; the acquire hands back what it
-could get) and exactly one runner spends it: `bun test` runs its
-files in one process (`--parallel` is opt-in), so it is vitest's worker pool —
-sized to the core count by default — that gets `--maxWorkers=<units>`. The
-asymmetry is deliberate.
+The grant is the elastic share (a ceiling of the run's own fan-out — one unit
+per test file, at most `cpuBudget().B`; the acquire hands back what it could
+get), and each runner in turn spends all of it: bun:test as that many
+concurrent one-file processes, vitest as `--maxWorkers=<units>`.
 
 The two classification failures (a file in neither scope, no files at all) are
 refused **before** the op, so a wrong path never queues for a host slot to be
 told it was wrong.
+
+## One bun:test process per test file
+
+bun:test runs every file in a process of its own (`runBunFiles`, `cli/run.ts`),
+`<units>` at a time. A file is the unit a suite owns, and a process is the only
+boundary that scopes everything a suite can leave behind: module state and
+process-wide registries, `globalThis` / `window`, `process.env`, signal
+handlers, and the processes it spawned. When files shared one process, each of
+those leaked into whichever file ran next — a partial `ConversationRuntime`
+fake registered by `turns-stop-typed.test.ts` crashed `spawn-dead-letter.test.ts`
+(`runtime.subscribe is not a function`), fixture entities one file defined at
+module scope appeared in another's "real derived layer", and a suite's result
+depended on which files ran before it.
+
+`bun test --isolate` (a fresh global per file, one process) was measured first
+and rejected: over the whole suite the process grew to 55 GB. A process costs
+~0.65 s to start (the preload included), spread over the grant's units.
+
+Each file's output goes to a file of its own and is printed whole only when the
+file fails (concurrent files never interleave; a progress line every tenth of
+the run); its JUnit report is merged into the run's.
+
+## A test process starts from a sealed environment
+
+The runners start from the runtime tree's declared allowlist
+(`cli/sealed-env.ts` → `pickRuntimeEnv`: host facts and the installation's
+forwarded settings, PATH with mise's shims first), this checkout's toolchain
+pin (`toolchainPin`, as every backend pins its own) and the output-format
+variables (`TERM`, `NO_COLOR`, `FORCE_COLOR`, `CI`) — never the launching
+shell's whole environment (its `MISE_*`, `BUN_*`, `NODE_OPTIONS` included) —
+plus what the run hands them itself (the grant share, one unit per bun:test
+file process, TMPDIR, the heartbeat). A run a
+backend started used to carry the gateway's `EQUIN_GATEWAY_PORT` (the install.sh
+stream test then read port 8700 where it expects the port file's absence); an
+agent's carried its conversation id and data-root declaration. HOME stays the
+user's: it locates the toolchains suites run for real; a suite that must not
+touch it names its own HOME for its child.
+
+The namespace is not sealed by the environment — the preload declares the
+checkout's. A suite whose premise is a namespace ("in a worktree") declares it
+itself (`resetRuntimeNamespaceForTest` + `declareRuntimeNamespace`), which a
+per-file process scopes to that file.
 
 ## A runner whose event loop stopped is ended, loudly
 
@@ -60,8 +100,9 @@ human killed it. So the bun:test preload stamps the **awake** clock into a
 heartbeat file every 30 s (`EQUIN_TEST_HEARTBEAT`, set by this command), and
 the runner arms a one-shot timer re-armed from each stamp: a loop that has not
 turned for 10 min of awake time is wedged — its stack is `sample`d into
-`test-wedged-<opId>-bun-sample.txt` in the worktree data dir, it is killed,
-and the run fails naming the sample (`core/internal/loop-heartbeat.ts`).
+`test-wedged-<opId>-bun-<n>-sample.txt` in the worktree data dir, it is killed,
+and the run fails naming the sample (`core/internal/loop-heartbeat.ts`). Each
+per-file process has its own heartbeat and watch.
 
 The loop, never the wall clock: a wall-clock ceiling on an op misfired under
 host duress and killed healthy builds
@@ -71,18 +112,22 @@ so a machine that slept mid-run is not a stopped loop. darwin only (the awake
 clock); elsewhere the run says it is not watched. vitest is not watched: its
 tests run in its own worker pool.
 
-## A run leaves no process behind
+## A file leaves no process behind
 
-Each runner is spawned as the leader of its own process group
-(`spawnPassthrough`'s `processGroup: "own"`, `infra/spawn`). Whatever a suite
-starts — a helper server, a fixture's daemon, at any depth — stays in that
-group, so when the runner exits whatever is still in it is killed (SIGKILL),
-and if the CLI exits first its exit reaper kills the whole group. Before this
+Each bun:test file's process (and the vitest runner) is spawned as the leader
+of its own process group (`spawnToFile` / `spawnPassthrough`'s
+`processGroup: "own"`, `infra/spawn`). Whatever a suite starts — a helper
+server, a fixture's daemon, at any depth — stays in that group, so when the
+FILE ends whatever is still in it is killed (SIGKILL: an `install.sh` child
+ignores SIGTERM), and if the CLI exits first its exit reaper kills every group.
+A test that times out leaves its children running only until its file ends —
+on 2026-11-23, 15 `install.sh --dry-run` children of a timed-out test had been
+running for 5 days. Before this
 only the runner itself was reaped: on 2026-11-08 three helper servers a
 failing `socket-client.test` never connected to sat reparented to pid 1 for
 45 h.
 
-What was killed is printed (`<runner> left N processes behind …`, pid and
+What was killed is printed (`<file> left N processes behind …`, pid and
 command line) and recorded per runner as `leftBehind` in the run's record.
 Not a failure — a helper a test is still tearing down can be caught mid-exit —
 but each names a suite that leaks a process; fix that suite. The one way out of

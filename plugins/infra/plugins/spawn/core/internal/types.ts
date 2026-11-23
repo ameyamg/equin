@@ -315,12 +315,10 @@ export interface LeftBehindProcess {
 
 /**
  * Options for `spawnToFile`: `spawnPassthrough`'s, plus the file its output goes
- * to — minus `processGroup`, whose `leftBehind` its result has no place for.
+ * to. With `processGroup: "own"` the result names what the child left behind,
+ * as `spawnPassthrough`'s does.
  */
-export interface SpawnToFileOptions extends Omit<
-  SpawnPassthroughOptions,
-  "processGroup"
-> {
+export interface SpawnToFileOptions extends SpawnPassthroughOptions {
   /** Appended to (created when missing) with the child's stdout and stderr, merged. */
   outputPath: AppPath;
 }

@@ -35239,6 +35239,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
               - `source-read-safety/no-text-source-read` — `check/index.ts`, `check/runner-split.scan.ts` (debt)
+          - Test helpers:
+            - Core: `@plugins/framework/plugins/tooling/plugins/test-layout/core/testing`
+              - `partialFake` — A fake of contract `T` that implements only the members a test reaches — the one sanctioned spelling of a partial fake (`test-layout/no-registered-partial-fake` rejects `{ … } as unknown as T` handed to a registry).
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
             - Uses: 58 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
@@ -39471,9 +39474,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 118 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 119 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×45
-              - `framework` ×21
+              - `framework` ×22
               - `apps` ×8
               - `debug` ×7
               - `packages` ×7
@@ -40459,6 +40462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/agent-launch`
               - `framework/cli/bootstrap`
+              - `framework/cli/test`
               - `infra/claude-cli/sdk`
               - `infra/deps/python`
               - `infra/deps/rust`

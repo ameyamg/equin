@@ -226,6 +226,7 @@ export type ExemptableRuleId =
   | "static-render/sync-external-store-server-snapshot"
   | "surface/no-adhoc-surface"
   | "test-layout/bun-sync-settle-matchers"
+  | "test-layout/no-registered-partial-fake"
   | "text/no-adhoc-typography"
   | "text/no-clip-without-nowrap"
   | "theme-boundary/no-adhoc-theme-scope"

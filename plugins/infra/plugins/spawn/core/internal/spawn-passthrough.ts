@@ -54,13 +54,24 @@ export function spawnPassthrough(
  * interleaving in the file. The file is created when missing.
  *
  * For a child whose output is a RECORD — a run transcript a reader follows from
- * the file while it grows (supervised-job's attached runs). The parent's handle
+ * the file while it grows (supervised-job's attached runs), or one of several
+ * concurrent children whose outputs must not interleave (`./equin test`'s
+ * per-file bun:test processes, with `processGroup: "own"`: what each left
+ * behind is named and SIGKILLed, as for `spawnPassthrough`). The parent's handle
  * on the descriptor is closed once the child holds its own.
  */
+export function spawnToFile(
+  argv: string[],
+  opts: SpawnToFileOptions & { processGroup: "own" },
+): Promise<SpawnGroupResult>;
+export function spawnToFile(
+  argv: string[],
+  opts: SpawnToFileOptions,
+): Promise<SpawnPassthroughResult>;
 export async function spawnToFile(
   argv: string[],
   opts: SpawnToFileOptions,
-): Promise<SpawnPassthroughResult> {
+): Promise<SpawnPassthroughResult | SpawnGroupResult> {
   const fd = await openOwnedFd(opts.outputPath, "a");
   let open = true;
   const close = (): void => {

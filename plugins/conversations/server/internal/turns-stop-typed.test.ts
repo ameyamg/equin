@@ -34,6 +34,7 @@ import {
   type TurnId,
 } from "@plugins/conversations/plugins/turn-ledger/core";
 import { confirmTurn } from "@plugins/conversations/plugins/turn-ledger/server";
+import { partialFake } from "@plugins/framework/plugins/tooling/plugins/test-layout/core/testing";
 import { Runtime, type ConversationRuntime } from "./runtime";
 import { stopTurn } from "./turns";
 
@@ -94,7 +95,7 @@ const agent = {
   },
 };
 
-const fakeRuntime = {
+const fakeRuntime = partialFake<ConversationRuntime>("ConversationRuntime", {
   id: "sdk",
   async inspect(ids: readonly string[]) {
     return new Map(
@@ -120,7 +121,7 @@ const fakeRuntime = {
       returnedPromptUuid: transcriptUuidOfTurn(agent.turnId),
     };
   },
-} as unknown as ConversationRuntime;
+});
 
 beforeAll(async () => {
   t = await createTestDb({ prefix: "turns_stop_typed_test" });

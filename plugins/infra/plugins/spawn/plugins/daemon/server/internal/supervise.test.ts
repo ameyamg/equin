@@ -12,6 +12,12 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { defineDaemon } from "./define";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  declareRuntimeNamespace,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
+import { resetRuntimeNamespaceForTest } from "@plugins/infra/plugins/runtime-identity/core/testing";
 import { pidFileWatcher } from "./pid-file-watch";
 import {
   daemonRecentRuns,
@@ -430,17 +436,27 @@ describe("guards", () => {
   });
 
   test("a main-only declaration refuses to start in a worktree", () => {
-    const decl = defineDaemon({
-      name: "test.main-only",
-      description: "Main only.",
-      startedBy: "boot",
-      where: "main",
-      restart: { kind: "never" },
-    });
-    decl.register();
-    expect(() => decl.spawnProcess({ argv: sleeper })).toThrow(
-      /cannot start in this backend/,
-    );
+    // The premise is "in a worktree": declared here, never read from the
+    // checkout the suite happens to run in (on main's it would be main).
+    const original = runtimeNamespace();
+    resetRuntimeNamespaceForTest();
+    declareRuntimeNamespace(asNamespace("att-daemon-test-worktree"));
+    try {
+      const decl = defineDaemon({
+        name: "test.main-only",
+        description: "Main only.",
+        startedBy: "boot",
+        where: "main",
+        restart: { kind: "never" },
+      });
+      decl.register();
+      expect(() => decl.spawnProcess({ argv: sleeper })).toThrow(
+        /cannot start in this backend/,
+      );
+    } finally {
+      resetRuntimeNamespaceForTest();
+      declareRuntimeNamespace(original);
+    }
   });
 
   test("an empty description throws at define", () => {
