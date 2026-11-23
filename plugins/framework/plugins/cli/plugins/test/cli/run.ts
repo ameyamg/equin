@@ -821,7 +821,7 @@ const run: CliAction<[string[]], object> = async (paths) => {
           });
         if (failed.length === 0) return "success";
         console.error(`\nFAILED: ${failed.join(", ")}`);
-        await printStanding(root, slug, harvested);
+            await printStanding(root, slug, harvested);
         return "failed";
       }),
         { units: grant.units },
