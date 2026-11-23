@@ -6,7 +6,7 @@ The `Updater` contract, the gated runner (`./equin deps upgrade`) and the
 The automation owns its job, `automation.deps-upgrades`, scheduled by its
 config document `depsUpgradesConfig` (`shared/config.ts`, a
 `defineAutomationConfig` stored as
-`config/tasks/automations/deps-upgrades.origin.jsonc`: weekly, Monday 06:00
+`config/tasks/automations/deps-upgrades.origin.jsonc`: off until the user turns it on (every automation ships off), then weekly, Monday 06:00
 local by default, editable live from the Automations pane; run history from
 before the move stays under the old `deps.detect-outdated` name in Background
 activity). Its `detect` asks every INCLUDED updater for what is newer and

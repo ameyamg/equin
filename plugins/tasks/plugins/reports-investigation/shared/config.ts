@@ -23,7 +23,6 @@ export const REPORT_INVESTIGATIONS_ID = "report-investigations";
 export const reportInvestigationsConfig = defineAutomationConfig(
   REPORT_INVESTIGATIONS_ID,
   {
-    enabled: false,
     push: "safe",
     trigger: "event",
     settleMinutes: 10,

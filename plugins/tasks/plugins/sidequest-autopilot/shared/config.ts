@@ -66,7 +66,6 @@ Finish by calling the \`submit_outcome_report\` MCP tool **exactly once**, then 
 export const sidequestAutopilotConfig = defineLaunchAutomationConfig(
   SIDEQUEST_AUTOPILOT_ID,
   {
-    enabled: false,
     push: "safe",
     trigger: "event",
     settleMinutes: 2,

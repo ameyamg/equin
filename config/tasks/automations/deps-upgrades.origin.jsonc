@@ -1,7 +1,7 @@
-// @hash b824461b8905
+// @hash 377dba7123b5
 {
   // Off, it files nothing.
-  "enabled": true,
+  "enabled": false,
   // What the agent may do with its finished work: never push, push only an uncontroversial change, or push once checks pass.
   // Allowed values: "never", "safe", "checks"
   "push": "checks",

@@ -54,9 +54,15 @@ export const automationModelField = dynamicEnumField({
   default: DEFAULT_MODEL_CHOICE,
 });
 
-/** What an automation's config starts as — the repo default the build writes. */
+/**
+ * What an automation's config starts as — the repo default the build writes.
+ *
+ * No `enabled`: every automation ships OFF. The repo default reaches every
+ * install (an external user's too), and an automation spends that person's
+ * model budget and acts on their checkout with nobody clicking — so only the
+ * person turns one on, in their own override (the Automations pane).
+ */
 export interface AutomationConfigDefaults {
-  enabled: boolean;
   push: PushPolicy;
   trigger: TriggerKind;
   /** The prompt template: the filed task's description, `{{variable}}` placeholders. */
@@ -77,7 +83,7 @@ function automationFields(d: AutomationConfigDefaults) {
     enabled: boolField({
       label: "Enabled",
       description: "Off, it files nothing.",
-      default: d.enabled,
+      default: false,
     }),
     push: enumField({
       label: "Push",

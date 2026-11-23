@@ -15,7 +15,6 @@ export const UPSTREAM_MERGE_ID = "upstream-merge";
  * `config/tasks/automations/upstream-merge.origin.jsonc`.
  */
 export const upstreamMergeConfig = defineAutomationConfig(UPSTREAM_MERGE_ID, {
-  enabled: false,
   push: "never",
   trigger: "schedule",
   cadence: "day",

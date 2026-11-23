@@ -21,7 +21,7 @@ the total cap: `research/2026-10-11-tasks-sidequest-autopilot-v2.md`.
 ```ts
 // shared/config.ts of the plugin that knows what to watch (both runtimes)
 export const depsUpgradesConfig = defineAutomationConfig("deps-upgrades", {
-  enabled: true, push: "checks", trigger: "schedule",
+  push: "checks", trigger: "schedule",   // every automation ships off
   cadence: "week", weekday: "mon", at: "06:00",
   prompt: DEPS_UPGRADE_PROMPT, // `{{outdated}}` … `{{pushPolicy}}`
 }, /* optional fields of its own */);
@@ -51,7 +51,7 @@ category):
 
 ```ts
 export const autopilotConfig = defineLaunchAutomationConfig("sidequest-autopilot", {
-  enabled: false, push: "safe", trigger: "event", settleMinutes: 2,
+  push: "safe", trigger: "event", settleMinutes: 2,
   concurrency: 2, prompt: AUTOPILOT_PROMPT,
 }, { runUntil: textField({ … }) });
 
