@@ -1,11 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawn, type ChildProcess } from "node:child_process";
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readlinkSync,
   readdirSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -547,8 +549,10 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
       );
       expect(Object.keys(timing.steps)).toEqual([...ran, "build"]);
       // The FIFOs and the pid are gone once the install ended; the log stays,
-      // and a dry run's resume script lives in its own run dir.
+      // a dry run's resume script lives in its own run dir, and `dry-run`
+      // marks it (only dry runs prune it).
       expect(readdirSync(dir).sort()).toEqual([
+        "dry-run",
         "events.jsonl",
         "install.log",
         "resume",
@@ -740,6 +744,38 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
       // The pause said it all: no second message after it.
       expect(err).not.toContain("dry run failed");
     });
+  });
+
+  describe("install.sh keeps its run dirs finite", () => {
+    test("a run removes the run dirs of its kind older than the newest 10, except one whose install still runs", async () => {
+      const home = tempHome();
+      const root = join(home, ".equin", "logs", "install");
+      // 12 finished dry runs (no pid alive), the oldest one still running,
+      // and a real install's run older than all: a dry run never prunes it.
+      const real = "20190101T000000Z-1";
+      mkdirSync(join(root, real), { recursive: true });
+      writeFileSync(join(root, real, "install.log"), "x\n");
+      const old = Array.from(
+        { length: 12 },
+        (_, i) => `20200101T0000${String(i).padStart(2, "0")}Z-1`,
+      );
+      for (const name of old) {
+        mkdirSync(join(root, name), { recursive: true });
+        writeFileSync(join(root, name, "install.log"), "x\n");
+        writeFileSync(join(root, name, "dry-run"), "");
+      }
+      writeFileSync(join(root, old[0]!, "pid"), `${process.pid}\n`);
+      const { child, result } = startDryRun({}, undefined, home);
+      (child.stdio[4] as Writable).end();
+      const { code } = await result;
+      expect(code).toBe(0);
+      const runs = readdirSync(root)
+        .filter((n) => /^\d{8}T\d{6}Z-\d+$/.test(n))
+        .sort();
+      const own = readlinkSync(join(root, "latest"));
+      // The real run, the running one, the newest 9 old ones, then this run.
+      expect(runs).toEqual([real, old[0]!, ...old.slice(3), own]);
+    }, 30_000);
   });
 
   describe("install.sh --dry-run, plain view, quiet and dying", () => {

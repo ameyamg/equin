@@ -1173,6 +1173,37 @@ free_fds() {
   HUB_FD=$1 CF_FD=$2 LOG_FD=$3
 }
 
+# prune_runs <root>: keeps the install's run dirs finite — of the runs of
+# this one's kind (a dry run's dir holds `dry-run`; a dry run is never left to
+# prune a real install's record), the newest INSTALL_RUNS_KEPT (this run's
+# included; `latest` names it) stay, each older one is removed unless its
+# install still runs (its pid alive). Ten runs is plenty for `--fix` /
+# `--report` (they read `latest`) and for `./equin installer estimates` (the
+# medians already taken live in installer/core's estimates.json). The
+# installer data dir declares the same count (installer/data-dirs) and claims
+# its logs on it.
+INSTALL_RUNS_KEPT=10
+prune_runs() {
+  local root=$1 d pid n=0 old
+  # same_kind <dir/>: a run of this one's kind (dry or real).
+  same_kind() {
+    [ -d "$1" ] || return 1
+    if [ -e "$1dry-run" ]; then [ "$DRY_RUN" = "1" ]; else [ "$DRY_RUN" != "1" ]; fi
+  }
+  old=$((0 - INSTALL_RUNS_KEPT))
+  for d in "$root"/[0-9]*T*Z-*/; do
+    if same_kind "$d"; then old=$((old + 1)); fi
+  done
+  for d in "$root"/[0-9]*T*Z-*/; do
+    [ "$n" -lt "$old" ] || break
+    same_kind "$d" || continue
+    n=$((n + 1))
+    pid="$(cat "${d}pid" 2>/dev/null || true)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then continue; fi
+    rm -rf "${d%/}"
+  done
+}
+
 # start_hub: this run's dir and FIFO, the hub reading it, and this script's
 # write end (HUB_FD). Needs plan_data first (the terminal view draws its rows).
 #
@@ -1193,7 +1224,9 @@ start_hub() {
   mkfifo -m 600 "$FIFO"
   mkfifo -m 600 "$CFIFO"
   printf '%s\n' "$$" >"$RUN_DIR/pid"
+  [ "$DRY_RUN" != "1" ] || : >"$RUN_DIR/dry-run"
   ln -sfn "$run_id" "$root/latest"
+  prune_runs "$root"
   free_fds
   # The hub ignores the signals that stop the install: it drains what the
   # writers wrote and ends at EOF, after the exit event.

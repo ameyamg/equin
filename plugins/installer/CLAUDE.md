@@ -148,6 +148,11 @@ own (next section): fix wording in the step engine, and every view changes.
   step that ran to done, with its `ms` — a build sub-step skipped inside a
   finished build as 0; the plan's `release` and `mode`, which tie the times to
   what ran and to their estimate set; `dryRun: true` from `--dry-run`).
+- **Run dirs stay finite**: each run, once its own dir exists, removes the
+  run dirs of its kind older than the newest 10 (`prune_runs`; one whose `pid`
+  is still alive stays). A dry run marks its dir (`dry-run`) and prunes only
+  dry runs, so previewing the window never deletes a real install's record. The installer's data dir declares the same count and claims
+  `*/events.jsonl` and `*/install.log` (`paths:logs-claimed`).
 - **One hub**: a background `tee` reads the FIFO, appends to `events.jsonl`
   and hands each line on — to the window's `--events-fd`, else to the terminal
   view. install.sh keeps one write end open for its whole life (`ev`); the
