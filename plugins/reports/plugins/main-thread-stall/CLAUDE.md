@@ -123,11 +123,24 @@ Chrome's `Profiler`, allowed by the gateway's `Document-Policy: js-profiling`
 on every app document). V8 samples on its own thread, so the profiler running
 when the thread froze samples THROUGH the freeze.
 
-- **Rolling**: one profiler at a time (20 ms interval, 15 000-sample buffer =
-  300 s), only while the tab is visible; rotated — next started, then this one
-  stopped, in one task — once 30 s old, on the watchdog's ping (the fallback's
-  heartbeat): no timer of its own, and a frozen thread rotates nothing, so the
-  covering trace is never cut. Stopped traces are kept 90 s (≤ 4).
+- **Rolling**: a new profiler (20 ms interval, 15 000-sample buffer = 300 s)
+  starts every 30 s while the tab is visible, on the watchdog's ping (the
+  fallback's heartbeat): no timer of its own, and a frozen thread starts
+  nothing, so the one sampling through a freeze is never cut.
+- **A trace is built only when evidence asks**: `Profiler.stop()` builds the
+  whole trace on the main thread before it returns — its cost grows with the
+  distinct stacks sampled (a demo boot: 9–15k stacks, 5–27 ms at 1–6× CPU;
+  364 ms inside a visitor's click, report-1795329907-j415mx). So rolling over
+  never stops one: the superseded profiler stays alive as a standby for 90 s
+  (a stall is filed ~2 s after it ends), then is let go UNSTOPPED — dropped,
+  V8 discards it at garbage collection with no trace built. `stacksIn(window)`
+  stops only the youngest live profiler begun before the window (its trace
+  alone covers it); a built trace is kept 90 s (≤ 4) for the next report about
+  the same moments. Going hidden builds the oldest live one (covering every
+  recent window, off screen) and lets the rest go. More than 6 let-go
+  profilers not yet collected (Chrome refuses a page past 100): one is stopped
+  instead. Cost: `e2e/profiler-cost.ts` (every construction and stop the page
+  makes, timed, with its trace size).
 - **Only the stalled tab, recovered, has them**: it adds `stacks` to the
   watchdog's draft (`MainThreadStallDraft` — the payload minus `stacks`) when
   it files. Otherwise `stacks` is `unavailable` with the reason (gone /

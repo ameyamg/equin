@@ -48,6 +48,11 @@ export interface KeptTrace {
   stoppedAt: EpochMs;
   /** Its buffer filled: sampling stopped at its last sample, not at its stop. */
   full: boolean;
+  /**
+   * Only the part of it from here is wanted (an earlier trace owns the
+   * instants before): its samples before are skipped.
+   */
+  from?: EpochMs;
 }
 
 export const STACKS = {
@@ -111,15 +116,17 @@ export function reduceStallStacks(opts: {
   // Rotation starts the next profiler before stopping the previous one, in
   // one task: each trace owns the instants from its start to the next one's
   // (or to its own stop).
+  const ownFrom = (k: KeptTrace): number => k.from ?? k.startedAt;
   const ordered = [...opts.traces]
-    .sort((a, b) => a.startedAt - b.startedAt)
-    .map((kept, i, all) => ({
-      kept,
-      until: Math.min(all[i + 1]?.startedAt ?? kept.stoppedAt, kept.stoppedAt),
-    }));
-  if (
-    !ordered.some((o) => o.kept.startedAt <= startedAt && startedAt < o.until)
-  )
+    .sort((a, b) => ownFrom(a) - ownFrom(b))
+    .map((kept, i, all) => {
+      const next = all[i + 1];
+      return {
+        kept,
+        until: Math.min(next ? ownFrom(next) : kept.stoppedAt, kept.stoppedAt),
+      };
+    });
+  if (!ordered.some((o) => ownFrom(o.kept) <= startedAt && startedAt < o.until))
     return {
       kind: "unavailable",
       reason:
@@ -153,6 +160,8 @@ export function reduceStallStacks(opts: {
         deltaCount++;
       }
       if (at < startedAt || at >= endedAt || at >= until) continue;
+      // A part of a trace: its earlier samples are an earlier trace's.
+      if (kept.from !== undefined && at < kept.from) continue;
       const dur = Math.min(raw > gap ? sampleIntervalMs : raw, endedAt - at);
       sampledMs += dur;
       if (s.stackId === undefined) {
