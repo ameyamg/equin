@@ -69,6 +69,8 @@ export interface InstallPaths {
   readonly lastUsed: AppPath;
   /** `holds/<holder>`: a durable reference from outside any checkout (see `holdDep`). */
   readonly holds: AppPath;
+  /** A host daemon failed to start on this install and fell back (see `startDaemonDep`). */
+  readonly daemonFailed: AppPath;
   readonly lock: AppPath;
 }
 
@@ -87,6 +89,7 @@ export function installPaths(
     log: joinAppPath(root, "install.log"),
     lastUsed: joinAppPath(root, "last-used"),
     holds: joinAppPath(root, "holds"),
+    daemonFailed: joinAppPath(root, "daemon-failed.json"),
     lock: joinAppPath(store.locksRoot, `${id}-${identity}.lock`),
   };
 }

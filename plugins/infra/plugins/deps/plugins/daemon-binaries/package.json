@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-deps-daemon-binaries",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The host daemons' binaries (the embedded Postgres, PgBouncer) following main: what their start scripts call to start on the install main declares and fall back to the last one that started (filing a daemon-binary-rollback report), and the health report's Daemon binaries row."
+}

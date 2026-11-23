@@ -15,14 +15,15 @@
 // install this host has by reference, for a bundle that runs here). `holdDep` keeps an install
 // that something outside any checkout points at (a launchd job) from the sweep
 // (`sweepUnusedDeps`, run daily by the `sweep` sub-plugin). A declaration with a
-// `pin` (a host daemon's binaries) runs from the install its pin holds
-// (`pinnedDep`), moved only on purpose (`pinDep`, `./equin deps pin`).
+// `daemon` (a host daemon's binaries) is started on the install main declares,
+// falling back to the last one that started (`startDaemonDep`).
 export { defineDep, hostTarget } from "./internal/dep";
 export type {
   BundleSpec,
   DefineDepSpec,
   Dep,
-  DepPin,
+  DepDaemon,
+  DepSmoke,
   DepProgress,
   DepSource,
   DepTarget,
@@ -51,28 +52,18 @@ export type { SealOutcome } from "./internal/seal";
 export { SEALED_MANIFEST } from "./internal/sealed";
 export { heldDep, holdDep } from "./internal/hold";
 export type { HeldDep, HoldDepOptions } from "./internal/hold";
-export { holdRunningDep, pinDep, pinnedDep, pinStatus } from "./internal/pin";
-export type {
-  DeclaredAgainstPin,
-  PinDrift,
-  PinMove,
-  PinnedDep,
-  PinnedInstall,
-  PinStatus,
-} from "./internal/pin";
 export {
-  liftPinStay,
-  PIN_LAG_MAX_DAYS,
-  pinDecisionDue,
-  reviewPin,
-  stayPin,
-} from "./internal/pin-review";
+  daemonStatus,
+  markDaemonRunningGood,
+  startDaemonDep,
+} from "./internal/daemon";
 export type {
-  PinDecision,
-  PinLag,
-  PinReview,
-  PinReviewOptions,
-} from "./internal/pin-review";
+  DaemonFailed,
+  DaemonInstall,
+  DaemonStart,
+  DaemonStartOutcome,
+  DaemonStatus,
+} from "./internal/daemon";
 export { sweepUnusedDeps } from "./internal/sweep";
 export type { SweepReport } from "./internal/sweep";
 export {

@@ -236,11 +236,11 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewExplains`
 - Cross-plugin:
-  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 94 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×34
     - `debug` ×21
     - `conversations` ×7
-    - `infra` ×6
+    - `infra` ×7
     - `apps` ×4
     - `build` ×4
     - `database` ×4

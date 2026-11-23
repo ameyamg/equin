@@ -130,6 +130,12 @@ export interface DepSource<K extends string = string> {
    */
   readonly updater?: string;
   /**
+   * The name `updater` moves this source under on `target` — a `Move.name`
+   * (`@embedded-postgres/darwin-arm64` for an npm package copy) — so the
+   * upgrade runner knows which moves touch it and runs its `smoke`.
+   */
+  readonly movedAs?: (target: DepTarget) => string;
+  /**
    * This source, installing for `target` instead of this host — what
    * `sealDep` runs to put a dependency into a release bundle built for another
    * platform (and, for this host's own target, the same thing the cache holds).
@@ -146,8 +152,7 @@ export interface DepSource<K extends string = string> {
    * The version of what this source installs, for people: as a checkout
    * declares it (`declared(root)`, e.g. its lock entry) and as an install
    * holds it (`installed(dir)`, read from the payload itself). Lets a pinned
-   * dependency say "18.1.0 → 18.6.0" rather than two identity hashes, and is
-   * what a pin's `switchBlocked` compares. Each throws when it cannot read
+   * dependency say "18.1.0 → 18.6.0" rather than two identity hashes. Each throws when it cannot read
    * the version — never a stand-in. Omitted: the identity alone names it.
    */
   readonly version?: SourceVersion;
@@ -192,26 +197,35 @@ type BundleField<S extends DepSource> = S extends {
   : { bundle?: never };
 
 /**
- * A dependency something OUTSIDE any checkout runs from (a host daemon), which
- * must never change under it by a checkout moving on: what it runs is the
- * install PINNED to it — a hold named `holder` — not the checkout's current
- * identity. Adopted once (the first start pins the checkout's install);
- * afterwards only `pinDep` (`./equin deps pin <id>`) moves it, on purpose,
- * and it takes effect at `appliesAt`. See `pinnedDep`.
+ * A dependency something OUTSIDE any checkout runs from (a host daemon: the
+ * embedded Postgres, PgBouncer). It runs what main declares — the start script
+ * runs from main's checkout — but never the checkout's own files: always an
+ * install in the cache, so a `bun install` cannot rewrite the bytes under it.
+ * A switch takes effect at `appliesAt`, and a start that fails on a new
+ * install falls back to the last one that started (`startDaemonDep`).
  */
-export interface DepPin {
-  /** The hold that names the pinned install (`^[a-z][a-z0-9-]*$`). */
-  readonly holder: string;
-  /** When a moved pin takes effect, for people: "the cluster's next full restart". */
-  readonly appliesAt: string;
+export interface DepDaemon {
   /**
-   * Why moving the pin from version `from` to version `to` is NOT a plain
-   * switch (a Postgres major: the cluster's data must be migrated first), or
-   * null when it is. `pinDep` refuses a blocked move, and the pinned-deps
-   * health row shows it as blocked rather than offering the switch. Needs the
-   * source's `version` (checked by `defineDep`).
+   * The hold naming the last install a start of the daemon succeeded on — the
+   * rollback target (`^[a-z][a-z0-9-]*$`). `<holder>-running` names the one the
+   * live daemon was started from.
    */
-  readonly switchBlocked?: (from: string, to: string) => string | null;
+  readonly holder: string;
+  /** When a new install takes effect, for people: "the cluster's next full restart". */
+  readonly appliesAt: string;
+}
+
+/**
+ * A smoke test of this dependency's install, run by the upgrade runner
+ * (`./equin deps upgrade`) before and after its updater moves it: the moved
+ * release is landed only if it passes (a host daemon's binary must start).
+ * Run from the root of the checkout being upgraded.
+ */
+export interface DepSmoke {
+  /** Stable name — the identity a failure is compared by, before and after the move. */
+  readonly name: string;
+  readonly argv: readonly string[];
+  readonly timeoutMs: number;
 }
 
 /**
@@ -279,8 +293,10 @@ export type DefineDepSpec<S extends DepSource> = {
   /** A human estimate of the install's size, e.g. `≈40 MB`. */
   sizeHint: string;
   source: S;
-  /** Run from a pinned install, switched only on purpose (see {@link DepPin}). */
-  pin?: DepPin;
+  /** Run by a host daemon from the install main declares (see {@link DepDaemon}). */
+  daemon?: DepDaemon;
+  /** What a move of this dependency must pass before it lands (see {@link DepSmoke}). */
+  smoke?: DepSmoke;
   /** What the install needs from the operating system (see {@link SystemPackages}). */
   systemPackages?: SystemPackages;
 } & UpdatesSpec<S> &
@@ -296,8 +312,10 @@ export interface Dep<S extends DepSource = DepSource> {
   readonly updates: DepUpdates;
   /** Sealed into release bundles, and whether a bundle may go without it. `null`: never bundled. */
   readonly bundle: BundleSpec | null;
-  /** Run from a pinned install (see {@link DepPin}). `null`: from the checkout's current identity. */
-  readonly pin: DepPin | null;
+  /** Run by a host daemon (see {@link DepDaemon}). `null`: by the checkout's own code. */
+  readonly daemon: DepDaemon | null;
+  /** Its smoke test (see {@link DepSmoke}). `null`: none beyond the repo's gates. */
+  readonly smoke: DepSmoke | null;
   /** What the install needs from the operating system (see {@link SystemPackages}). `null`: nothing. */
   readonly systemPackages: SystemPackages | null;
 }
@@ -334,30 +352,36 @@ export function defineDep<S extends DepSource>(spec: DefineDepSpec<S>): Dep<S> {
     source: spec.source,
     updates,
     bundle: bundleOf(spec.id, spec as { bundle?: BundleSpec }),
-    pin: pinOf(spec.id, spec.pin, spec.source),
+    daemon: daemonOf(spec.id, spec.daemon),
+    smoke: smokeOf(spec.id, spec.smoke, spec.source),
     systemPackages: spec.systemPackages ?? null,
   };
 }
 
 const HOLDER = /^[a-z][a-z0-9-]*$/;
 
-function pinOf(
+function daemonOf(id: string, daemon: DepDaemon | undefined): DepDaemon | null {
+  if (daemon === undefined) return null;
+  if (!HOLDER.test(daemon.holder) || daemon.appliesAt.trim() === "") {
+    throw new Error(
+      `defineDep(${id}): daemon.holder must match ${HOLDER} and daemon.appliesAt must say when a new install takes effect.`,
+    );
+  }
+  return daemon;
+}
+
+function smokeOf(
   id: string,
-  pin: DepPin | undefined,
+  smoke: DepSmoke | undefined,
   source: DepSource,
-): DepPin | null {
-  if (pin === undefined) return null;
-  if (!HOLDER.test(pin.holder) || pin.appliesAt.trim() === "") {
+): DepSmoke | null {
+  if (smoke === undefined) return null;
+  if (source.updater === undefined || source.movedAs === undefined) {
     throw new Error(
-      `defineDep(${id}): pin.holder must match ${HOLDER} and pin.appliesAt must say when a moved pin takes effect.`,
+      `defineDep(${id}): a smoke test runs when the source's updater moves it, but its ${source.kind} source names no updater move (DepSource.updater + movedAs).`,
     );
   }
-  if (pin.switchBlocked !== undefined && source.version === undefined) {
-    throw new Error(
-      `defineDep(${id}): pin.switchBlocked compares versions, but its ${source.kind} source reads none (DepSource.version).`,
-    );
-  }
-  return pin;
+  return smoke;
 }
 
 function bundleOf(

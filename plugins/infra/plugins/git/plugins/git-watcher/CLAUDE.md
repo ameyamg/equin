@@ -105,7 +105,7 @@ Measure: `scripts/measure-ref-delivery.ts`; in the app, the
     - `conversations/conversation-view/commits-graph`
     - `debug/tests`
     - `debug/tests/idle-runner`
-    - `infra/deps/pin-drift`
+    - `infra/deps/daemon-binaries`
     - `infra/launcher/gateway-drift`
     - `infra/launcher/login-services`
     - `release`

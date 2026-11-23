@@ -17,28 +17,6 @@ function serverPackage(target: DepTarget): string {
   return `@embedded-postgres/${tag}`;
 }
 
-/** The PostgreSQL major of an `@embedded-postgres` version (`18.1.0-beta.16` → 18). */
-function pgMajor(version: string): number {
-  const major = Number(version.split(".")[0]);
-  if (!Number.isInteger(major)) {
-    throw new Error(`pg: ${JSON.stringify(version)} names no PostgreSQL major`);
-  }
-  return major;
-}
-
-/**
- * A move across PostgreSQL majors is not a switch: a data dir opens only with
- * the major that wrote it, so the cluster's start refuses the new binaries
- * until the data is migrated (pg_upgrade) — and no upgrade procedure exists
- * yet. Within a major, pinning is the whole move.
- */
-function majorUpgrade(from: string, to: string): string | null {
-  const [a, b] = [pgMajor(from), pgMajor(to)];
-  return a === b
-    ? null
-    : `PostgreSQL ${a} → ${b} is a major upgrade: the cluster's data must be migrated (pg_upgrade) first, and no upgrade procedure exists yet — choosing one is the user's decision`;
-}
-
 /**
  * The embedded cluster's server binaries (`postgres`, `initdb`, `pg_ctl` and
  * their libraries): a copy of this platform's `@embedded-postgres` package
@@ -46,14 +24,17 @@ function majorUpgrade(from: string, to: string): string | null {
  * replaces the binary under the running postmaster, and the next start does
  * not silently run a new version.
  *
- * Pinned: the start script runs the install the pin holds; moving it is
- * `./equin deps pin postgres-binaries`, then a restart of the cluster.
+ * Run by the cluster's start script on the install main declares, from the
+ * cluster's next full restart, falling back to the last install it started on
+ * when that start fails. A move of the package lands only once its smoke test
+ * has started a throwaway cluster on it (and refused a new major: the data
+ * must be migrated first, and no procedure exists yet).
  */
 export const postgresBinaries = defineDep({
   id: "postgres-binaries",
   owner: "database/embedded/binaries",
   description:
-    "The embedded Postgres server binaries the gateway runs the cluster from, copied out of the checkout and pinned",
+    "The embedded Postgres server binaries the gateway runs the cluster from, copied out of main's checkout",
   sizeHint: "≈330 MB",
   source: npmPackageCopy({
     workspace: "plugins/database/plugins/embedded",
@@ -62,11 +43,19 @@ export const postgresBinaries = defineDep({
       none: "the cluster's start waits on it (a file copy), and that start must never queue behind the background lane it unblocks",
     },
   }),
-  pin: {
+  daemon: {
     holder: "machine-postgres",
     appliesAt:
       "the cluster's next full restart (a reattach keeps the running postmaster)",
-    switchBlocked: majorUpgrade,
+  },
+  smoke: {
+    name: "postgres-binaries starts a throwaway cluster",
+    argv: [
+      "./equin",
+      "run",
+      "plugins/database/plugins/embedded/scripts/smoke.ts",
+    ],
+    timeoutMs: 10 * 60_000,
   },
 });
 

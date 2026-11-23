@@ -133,5 +133,10 @@
     "at": "2026-11-23T13:55:18.926Z",
     "from": "apps.studio",
     "to": "apps.plugin-studio"
+  },
+  {
+    "at": "2026-11-23T17:31:06.665Z",
+    "from": "infra.deps.pin-drift",
+    "to": "infra.deps.daemon-binaries"
   }
 ]

@@ -8,7 +8,7 @@ A plugin of its own on purpose: a `deps/` barrel is a shipped runtime, so declar
 
 ## Plugin reference
 
-- Description: The postgres-binaries dependency: the embedded cluster's server binaries, an infra/deps package copy of this platform's @embedded-postgres package outside the checkout, pinned (holder machine-postgres) — the start script runs the pinned install, switched only by ./equin deps pin postgres-binaries. A child of its own so no composition's closure reaches the deps engine through the database plugins.
+- Description: The postgres-binaries dependency: the embedded cluster's server binaries, an infra/deps package copy of this platform's @embedded-postgres package outside the checkout, run by the cluster's start script on the install main declares (falling back to the last one it started on), proven by a throwaway-cluster smoke test before an upgrade lands. A child of its own so no composition's closure reaches the deps engine through the database plugins.
 - Deps:
   - Uses:
     - `infra/deps.defineDep`

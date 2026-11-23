@@ -21,7 +21,6 @@ export { cooldownEnd } from "./internal/cooldown";
 export { heldWaiting, reviewableHolds } from "./internal/hold";
 export type { GateResult } from "./internal/compare";
 export type { OutdatedUpdater } from "./internal/upgrade-prompt";
-export type { DecisionSource, PendingDecision } from "./internal/decision";
 export {
   DEPS_UPGRADE_PROMPT,
   hasUpgradeWork,

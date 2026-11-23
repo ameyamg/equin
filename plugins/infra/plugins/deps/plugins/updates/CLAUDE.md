@@ -17,13 +17,7 @@ detected row goes through `boundedRows` first (`core/internal/awaiting.ts`):
 an `awaiting` row waits on someone else's publish for at most `AWAIT_MAX_DAYS`
 (30) from its `since`, then becomes BLOCKED on choosing a hold, chasing
 upstream or replacing the dependency; a cooldown wait never escalates.
-Besides updaters, the
-automation asks every `DecisionDeclare` source (`server/`; a `DecisionSource`
-in `core/`) for the decisions due now — what only a person can decide, past
-its bound (a pinned host daemon lagging main: `pin-drift`). They file the task
-on their own and ride at the end of `{{outdated}}` (`decisionSection`, so a
-customized template carries them), telling the agent to raise one flag and
-never act. `OutdatedUpdater.outdated` only accepts that function's (branded) output, so
+`OutdatedUpdater.outdated` only accepts that function's (branded) output, so
 neither an updater nor a consumer can skip it. Updaters report a wait as facts
 (`AwaitingOn`); `formatOutdated` is the one place they become text. Upgrade tasks filed before origins were stored
 (author `deps.*`, Dependencies category) are adopted through `adoptLegacy` —
@@ -33,7 +27,7 @@ delete it once none can be open.
 
 ## Plugin reference
 
-- Description: Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater and every decision a DecisionDeclare source says is due (a pinned host daemon lagging main past its bound — its agent raises a flag for the person, never acts), whose agent runs `./equin deps upgrade` (all updaters behind one baseline, a regressed batch narrowed down to its culprits on its own) and pushes what landed on an `upgraded` or `partial` verdict as far as its Push setting allows.
+- Description: Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater whose agent runs `./equin deps upgrade` (all updaters behind one baseline, a regressed batch narrowed down to its culprits on its own) and pushes what landed on an `upgraded` or `partial` verdict as far as its Push setting allows.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "deps-upgrades"
@@ -51,7 +45,6 @@ delete it once none can be open.
     - `tasks/task-category.tasksCategory`
     - `tasks/tasks-core._tasks`
   - Exports (values):
-    - `DecisionDeclare`
     - `declaredUpdaters`
     - `DEPS_CATEGORY_ID`
     - `UpdaterDeclare`
@@ -68,13 +61,11 @@ delete it once none can be open.
   - Exports (types):
     - `AwaitingOn`
     - `Cooldown`
-    - `DecisionSource`
     - `GateResult`
     - `Move`
     - `Outdated`
     - `OutdatedUpdater`
     - `OutdatedWaiting`
-    - `PendingDecision`
     - `PlanOptions`
     - `Updater`
     - `UpdaterPlan`
@@ -96,7 +87,6 @@ delete it once none can be open.
     - `infra/deps/download/github-release-updater`
     - `infra/deps/mise`
     - `infra/deps/npm`
-    - `infra/deps/pin-drift`
     - `infra/deps/python/uv-updater`
     - `infra/deps/rust/cargo-updater`
     - `toolchain`

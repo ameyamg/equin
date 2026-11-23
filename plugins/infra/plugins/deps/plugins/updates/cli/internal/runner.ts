@@ -271,6 +271,14 @@ export async function runUpgrade(args: {
   gates: Gates;
   log: (line: string) => void;
   cooldown: Cooldown;
+  /**
+   * The smoke tests the declared dependencies these moves touch must pass
+   * (a host daemon's binary must start) — beside each updater's own.
+   * Production: {@link declaredDepSmokes}.
+   */
+  depSmokes: (
+    moves: readonly UpdaterMove[],
+  ) => Promise<readonly UpdaterSmoke[]>;
 }): Promise<UpgradeReceipt> {
   const { selection, receiptPath, log } = args;
   if (selection.length === 0) throw new Error("No updater to run.");
@@ -336,6 +344,9 @@ async function upgrade(args: {
   gates: Gates;
   log: (line: string) => void;
   cooldown: Cooldown;
+  depSmokes: (
+    moves: readonly UpdaterMove[],
+  ) => Promise<readonly UpdaterSmoke[]>;
   receipt: UpgradeReceipt;
   onSnapshot: (putBack: () => Promise<void>) => void;
 }): Promise<void> {
@@ -427,6 +438,7 @@ async function upgrade(args: {
         receipt.moves.filter((m) => m.updater === updater.id),
       )),
     );
+  smoke.push(...(await args.depSmokes(receipt.moves)));
   const dup = smoke.find(
     (s, i) => smoke.findIndex((t) => t.name === s.name) !== i,
   );

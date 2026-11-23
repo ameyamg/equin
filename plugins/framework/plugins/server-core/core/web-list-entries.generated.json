@@ -1793,7 +1793,7 @@
   {"list":"shell.health-report.row","plugin":"database.query-deadline","fact":{"id":"database","kind":"status","title":"Database","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"debug.queue-health","fact":{"actions":{"$code":true},"component":{"$code":true},"glance":{"$code":true},"id":"job-queue","kind":"status","title":"Job queue","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"debug.sentinel.health-row","fact":{"component":{"$code":true},"glance":{"$code":true},"id":"machine-watcher","kind":"status","title":"Machine watcher","useStatus":{"$code":true}}},
-  {"list":"shell.health-report.row","plugin":"infra.deps.pin-drift","fact":{"component":{"$code":true},"id":"pinned-deps","kind":"status","title":"Pinned binaries","useStatus":{"$code":true}}},
+  {"list":"shell.health-report.row","plugin":"infra.deps.daemon-binaries","fact":{"component":{"$code":true},"id":"daemon-binaries","kind":"status","title":"Daemon binaries","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"infra.health.connection-row","fact":{"id":"connection","kind":"status","title":"Connection","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"infra.host.io-health","fact":{"id":"host-io","kind":"status","title":"Disk I/O","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"infra.launcher.gateway-drift","fact":{"id":"gateway","kind":"status","remedy":{"$code":true},"title":"Gateway","useStatus":{"$code":true}}},

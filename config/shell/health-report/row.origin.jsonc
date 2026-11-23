@@ -1,4 +1,4 @@
-// @hash 2c2a135ed9e2
+// @hash cd5b74409447
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -13,7 +13,7 @@
     "database.query-deadline:database",
     "debug.queue-health:job-queue",
     "debug.sentinel.health-row:machine-watcher",
-    "infra.deps.pin-drift:pinned-deps",
+    "infra.deps.daemon-binaries:daemon-binaries",
     "infra.health.connection-row:connection",
     "infra.host.io-health:host-io",
     "infra.launcher.gateway-drift:gateway",

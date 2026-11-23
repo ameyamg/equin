@@ -49,27 +49,16 @@ is documented in the parent's CLAUDE.md.
     - `OutboxEntrySchema`
     - `repositoryOf`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×6
+    - `infra` ×5
+    - `debug` ×3
+    - `reports` ×2
     - `auth`
     - `backup`
     - `build/step-baseline`
     - `database/fork`
-    - `debug/backend-liveness`
-    - `debug/boot-events`
-    - `debug/worktree-cleanup`
-    - `framework/cli/build`
-    - `framework/cli/check`
-    - `framework/tooling/checks`
-    - `framework/tooling/checks/type-check`
-    - `framework/tooling/checks/type-check/backstop`
-    - `framework/tooling/web-artifacts/blocker-scan`
-    - `infra/git/main-slots`
-    - `infra/host/host-admission`
-    - `infra/launcher`
-    - `infra/launcher/gateway-drift`
     - `plugin-meta/plugin-records`
-    - `reports/interaction-budget`
-    - `reports/outbox`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts` (debt)
 

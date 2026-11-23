@@ -8,7 +8,7 @@ A plugin of its own on purpose: a `deps/` barrel is a shipped runtime, so declar
 
 ## Plugin reference
 
-- Description: The pgbouncer-binary dependency: an infra/deps package copy of this platform's @equin/pgbouncer package outside the checkout, pinned (holder machine-pgbouncer) — the start script runs the pinned install, switched only by ./equin deps pin pgbouncer-binary. A child of its own so no composition's closure reaches the deps engine through the database plugins.
+- Description: The pgbouncer-binary dependency: an infra/deps package copy of this platform's @equin/pgbouncer package outside the checkout, run by PgBouncer's start script on the install main declares (falling back to the last one it started on), proven by a throwaway-socket smoke test before an upgrade lands. A child of its own so no composition's closure reaches the deps engine through the database plugins.
 - Deps:
   - Uses:
     - `infra/deps.defineDep`

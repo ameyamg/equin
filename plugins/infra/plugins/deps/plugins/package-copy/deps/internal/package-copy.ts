@@ -33,6 +33,7 @@ export interface PackageCopySource extends DepSource<"package-copy"> {
   /** The package's name, for the host's target (`@embedded-postgres/darwin-arm64`). */
   readonly packageName: (target: DepTarget) => string;
   readonly updater: typeof NPM_UPDATER;
+  readonly movedAs: (target: DepTarget) => string;
 }
 
 const PackageJsonSchema = z.object({ version: z.string() });
@@ -69,6 +70,8 @@ export function npmPackageCopy(opts: {
     workspace,
     packageName,
     updater: NPM_UPDATER,
+    // The npm updater moves the package under its own name.
+    movedAs: packageName,
     ...(opts.admission === undefined ? {} : { admission: opts.admission }),
 
     async identityInputs(root) {

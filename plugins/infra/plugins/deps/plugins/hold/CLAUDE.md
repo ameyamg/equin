@@ -11,9 +11,9 @@ host, a browser host's worker included) reuses it without pulling in the
 Dependency upgrades automation. Its users:
 
 - every updater's holds (`deps/updates`: `heldWaiting`, `reviewableHolds`;
-  each updater keeps its own in the file its inputs are declared in);
-- a pinned host daemon's decision to stay behind main (`infra/deps`
-  pin-review, `./equin deps pin-stay`).
+  each updater keeps its own in the file its inputs are declared in) — a host
+  daemon's binaries kept behind a release (a Postgres major) included: they
+  follow main, so a hold on main is how they stay.
 
 A hold is never released by the calendar: it holds until deleted, and past its
 `reviewBy` it is lapsed — work for whoever reviews it.
@@ -22,10 +22,9 @@ A hold is never released by the calendar: it holds until deleted, and past its
 
 ## Plugin reference
 
-- Description: The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater and by a pinned dependency's decision to stay behind main.
+- Description: The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater.
 - Cross-plugin:
   - Imported by:
-    - `infra/deps`
     - `infra/deps/download/github-release-updater`
     - `infra/deps/mise`
     - `infra/deps/npm`

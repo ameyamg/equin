@@ -4728,6 +4728,10 @@
       "name": "@equin/plugin-infra-deps-build",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/deps/plugins/daemon-binaries": {
+      "name": "@equin/plugin-infra-deps-daemon-binaries",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/deps/plugins/download": {
       "name": "@equin/plugin-infra-deps-download",
       "version": "0.0.1",
@@ -4758,10 +4762,6 @@
     },
     "plugins/infra/plugins/deps/plugins/package-copy": {
       "name": "@equin/plugin-infra-deps-package-copy",
-      "version": "0.0.1",
-    },
-    "plugins/infra/plugins/deps/plugins/pin-drift": {
-      "name": "@equin/plugin-infra-deps-pin-drift",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/deps/plugins/playwright-browser": {
@@ -10705,6 +10705,8 @@
 
     "@equin/plugin-infra-deps-build": ["@equin/plugin-infra-deps-build@workspace:plugins/infra/plugins/deps/plugins/build"],
 
+    "@equin/plugin-infra-deps-daemon-binaries": ["@equin/plugin-infra-deps-daemon-binaries@workspace:plugins/infra/plugins/deps/plugins/daemon-binaries"],
+
     "@equin/plugin-infra-deps-download": ["@equin/plugin-infra-deps-download@workspace:plugins/infra/plugins/deps/plugins/download"],
 
     "@equin/plugin-infra-deps-download-github-release-updater": ["@equin/plugin-infra-deps-download-github-release-updater@workspace:plugins/infra/plugins/deps/plugins/download/plugins/github-release-updater"],
@@ -10720,8 +10722,6 @@
     "@equin/plugin-infra-deps-npm-lock-resolutions": ["@equin/plugin-infra-deps-npm-lock-resolutions@workspace:plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions"],
 
     "@equin/plugin-infra-deps-package-copy": ["@equin/plugin-infra-deps-package-copy@workspace:plugins/infra/plugins/deps/plugins/package-copy"],
-
-    "@equin/plugin-infra-deps-pin-drift": ["@equin/plugin-infra-deps-pin-drift@workspace:plugins/infra/plugins/deps/plugins/pin-drift"],
 
     "@equin/plugin-infra-deps-playwright-browser": ["@equin/plugin-infra-deps-playwright-browser@workspace:plugins/infra/plugins/deps/plugins/playwright-browser"],
 

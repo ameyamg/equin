@@ -149,46 +149,50 @@ held), `failed.json`, `last-used`, `holds/`. The lock is `locks/deps/<id>-<ident
   install is never swept, and `removeDep` refuses it (`held`, naming the
   holders; 409 from Debug → Dependencies' Remove).
 
-## Pinned installs (host daemons)
+## Host daemon installs
 
-A declaration with `pin: { holder, appliesAt }` is run by something outside
-any checkout that must never change under it (the embedded Postgres, PgBouncer):
+A declaration with `daemon: { holder, appliesAt }` is run by something outside
+any checkout (the embedded Postgres, PgBouncer — the gateway runs their start
+scripts from main's checkout). It runs **what main declares**, never the
+checkout's own files: always an install in the cache, so a `bun install`
+cannot rewrite the bytes under a live daemon. Main is the pin — the one
+decision is the upgrade that moves the declaration, proven before it lands
+(the dependency's `smoke`, below). Design:
+`research/2026-11-20-infra-pinned-deps-auto-switch-v2.md`.
 
-- **`pinnedDep(dep, exec)`** answers the install the pin's hold names — never
-  the checkout's current identity. With nothing pinned yet it ensures the
-  checkout's install and pins it (adopting what would have run anyway). Its
-  `drift` says whether the checkout now declares another identity, for the
-  caller to log; it never follows it.
-- **`pinDep(dep, exec)`** — `./equin deps pin <id>` — is the explicit switch:
-  ensure the checkout's install, move the hold. Nothing restarts; it takes
-  effect at the declaration's `appliesAt`.
-- **`holdRunningDep(ready)`**: a daemon's fresh start holds its install as
-  `<holder>-running`, so a pin moved while the daemon runs never hands the
-  bytes under it to the sweep.
-- `./equin deps list` prints the pinned identity.
-- **Versions and blocked moves.** A source may read its version
-  (`DepSource.version`: `declared(root)` from a checkout, `installed(dir)` from
-  a payload — package-copy reads the lock's and the copy's own `package.json`).
-  A pin may then declare `switchBlocked(from, to)`: why a move is not a plain
-  switch (Postgres: across a major, the data must be migrated). `pinDep`
-  refuses a blocked move before installing anything.
-- **`pinStatus(dep, { root })`** is the read-only view: unpinned, or the pinned
-  install, the running one when another, and what `root` declares (same /
-  differs with `blocked` / failed). The health report's Pinned binaries row
-  (`pin-drift` sub-plugin) shows it against main's checkout.
-- **A pin's lag is bounded like a hold** (`deps/internal/pin-review.ts`).
-  `reviewPin(dep, { root, now, record })` records, in the machine-local
-  `state/deps-pins/<id>.json`, when a pin was first seen lagging what main
-  declares (reset when the pinned install changes; dropped once it no longer
-  lags). Past `PIN_LAG_MAX_DAYS` (30) a person must decide: switch it
-  (`./equin deps pin`) or record a **stay** — `./equin deps pin-stay <id>
-  --reason "…" [--review-by DAY]` (`stayPin`): a `Hold` (`deps/hold`) on the
-  declared version and up, `reviewBy` at most `HOLD_MAX_DAYS` (90) out; `--lift`
-  removes it. A stay in force defers the decision; past its `reviewBy` it is
-  due again (`stay-lapsed`). The weekly Dependency upgrades automation records
-  and carries every due one (`pin-drift`'s decision source); its agent raises
-  a flag, never switches or restarts. A switch closes the lag and drops the
-  stay with the record.
+- **`startDaemonDep(dep, exec, { start })`** (a fresh start of the daemon):
+  ensures the declared install, holds it `<holder>-running` (before `start`,
+  so the sweep never takes bytes a daemon runs), runs `start`, and on success
+  holds it `<holder>` — the **last install that started**. If `start` throws
+  (or the install cannot be made) and the last that started is another, that
+  one is started instead, once (`rolled-back`), and the declared install is
+  marked `daemon-failed.json` so no later start tries it again
+  (`kept-previous`); removing it (`./equin deps remove <id>` in main's
+  checkout) is the retry. Nothing to fall back to, or the fallback failing
+  too, throws. `start` must leave nothing running when it throws.
+- **`markDaemonRunningGood(dep)`**: a reattach (the daemon already ran) makes
+  the install it runs the fallback — a machine whose daemon predates this gets
+  one at once.
+- **`daemonStatus(dep, { root })`**, read only: what the live daemon runs and
+  what `root` declares (same / differs, `failed` when a start fell back from
+  it / unreadable). The health report's Daemon binaries row
+  (`daemon-binaries` sub-plugin) shows it against main's checkout; its
+  `deps/` barrel's `startDaemonOnDeclared` is what both start scripts call
+  (logs the outcome, files the `daemon-binary-rollback` report).
+- A switch takes effect at the declaration's `appliesAt` (the daemon's next
+  fresh start): nothing restarts a shared daemon on its own.
+- **`smoke: { name, argv, timeoutMs }`** on any declaration whose source names
+  its updater move (`DepSource.movedAs` — package-copy: the package name): the
+  upgrade runner runs it before and after that updater moves it
+  (`updates/cli` `declaredDepSmokes`, beside each updater's own), so a move it
+  fails is a regression put back. The daemons' smoke tests start the new
+  binary on a throwaway cluster / socket; Postgres's also refuses a new major
+  (its data must be migrated first, and no procedure exists yet — the upgrade
+  keeps it with an npm hold below the next major, reviewed like every hold).
+- **Versions.** A source may read its version (`DepSource.version`:
+  `declared(root)` from a checkout, `installed(dir)` from a payload —
+  package-copy reads the lock's and the copy's own `package.json`), so the row
+  and the logs say "18.1.0 → 18.6.0" rather than two identity hashes.
 
 ## Sealed installs (release bundles)
 
@@ -242,7 +246,7 @@ is `failed`, never `absent`.
 
 ## CLI
 
-`./equin deps list | install <id> [--json] | remove <id> | pin <id> | pin-stay <id> --reason "…" [--review-by DAY] [--lift] | upgrade [<updater>] [--only a,b] [--skip-cooldown]`.
+`./equin deps list | install <id> [--json] | remove <id> | upgrade [<updater>] [--only a,b] [--skip-cooldown]`.
 `list`, `install` and `remove` import the `deps/` barrel directly — the
 declarations are a generated registry and the engine is host-only code, so no
 backend is booted and nothing needs to have been built (`install` passes
@@ -305,9 +309,8 @@ module eval).
   push.
 - `hold` — the one hold model (`HoldSchema`, `HOLD_MAX_DAYS`, `heldBy`,
   `holdProblems`, …), a leaf with only zod behind it: every updater's holds
-  and a pin's stay (above) share it, and the engine reaches it without
-  loading the Dependency upgrades automation (which a browser composition
-  excludes).
+  share it, without loading the Dependency upgrades automation (which a
+  browser composition excludes).
 - `npm` — every npm package a workspace `package.json` declares, as an
   updater (ranges + `bun.lock`, 3-day cooldown), plus the `dependencyPolicy`
   (lockstep groups, holds bounded to 90 days) and the `deps-npm:*` checks that
@@ -336,8 +339,9 @@ module eval).
   workspace's `node_modules` into `env/package/`. Identity = the package's
   `bun.lock` entry + the target (a self-contained package only), so only a new version or build
   of that package is a new install; install refuses a `node_modules` copy
-  whose version is not the lock's. Its updater is `npm`. Users: the pinned
-  `postgres-binaries` (`database/embedded/binaries`) and `pgbouncer-binary`
+  whose version is not the lock's. Its updater is `npm` (`movedAs` = the
+  package name). Users: the host daemons' `postgres-binaries`
+  (`database/embedded/binaries`) and `pgbouncer-binary`
   (`database/pgbouncer/binary`).
 - `build` — the `build` kind (`build`, `builtFile`, its `deps/` barrel):
   `build({ inputs: [globs], tool: { versionArgv }, output, run, then?, targets?, admission? })`.
@@ -478,8 +482,8 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×15
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×16
     - `framework` ×6
     - `apps` ×5
     - `companions` ×2
@@ -493,26 +497,22 @@ torch.
 - Deps:
   - Exports (types):
     - `BundleSpec`
-    - `DeclaredAgainstPin`
+    - `DaemonFailed`
+    - `DaemonInstall`
+    - `DaemonStart`
+    - `DaemonStartOutcome`
+    - `DaemonStatus`
     - `DefineDepSpec`
     - `Dep`
-    - `DepPin`
+    - `DepDaemon`
     - `DepProgress`
+    - `DepSmoke`
     - `DepSource`
     - `DepTarget`
     - `EnsureOptions`
     - `HeldDep`
     - `HoldDepOptions`
     - `InstallContext`
-    - `PinDecision`
-    - `PinDrift`
-    - `PinLag`
-    - `PinMove`
-    - `PinnedDep`
-    - `PinnedInstall`
-    - `PinReview`
-    - `PinReviewOptions`
-    - `PinStatus`
     - `Ready`
     - `ReadyNow`
     - `RemoveOutcome`
@@ -527,6 +527,7 @@ torch.
     - `ToolPackagesCheck`
   - Exports (values):
     - `checkSystemPackages`
+    - `daemonStatus`
     - `declaredDep`
     - `declaredDeps`
     - `defineDep`
@@ -535,22 +536,15 @@ torch.
     - `ensureDepViaCli`
     - `heldDep`
     - `holdDep`
-    - `holdRunningDep`
     - `hostTarget`
-    - `liftPinStay`
     - `linkSealedDep`
+    - `markDaemonRunningGood`
     - `MissingSystemPackagesError`
-    - `PIN_LAG_MAX_DAYS`
-    - `pinDecisionDue`
-    - `pinDep`
-    - `pinnedDep`
-    - `pinStatus`
     - `readyNow`
     - `removeDep`
-    - `reviewPin`
     - `sealDep`
     - `SEALED_MANIFEST`
-    - `stayPin`
+    - `startDaemonDep`
     - `sweepUnusedDeps`
     - `systemPackagesToPrepare`
     - `UnknownDepError`
@@ -559,12 +553,12 @@ torch.
     - `readyForTests`
 - Sub-plugins:
   - **`build`** [exempt] — The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git…
+  - **`daemon-binaries`** — The health report's Daemon binaries row: ok while each host daemon (the embedded Postgres, PgBouncer) runs what main's checkout declares — with a note for a version it takes at its next start — and…
   - **`download`** [exempt] [1 sub-plugin] — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus…
-  - **`hold`** — The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater and by a pinned dependency's decision to stay behind main.
+  - **`hold`** — The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater.
   - **`mise`** [exempt] — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./equin deps upgrade mise` (alias…
   - **`npm`** [exempt] [2 sub-plugins] — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds…
   - **`package-copy`** — The package-copy installer kind of infra/deps: npmPackageCopy({ workspace, package }) (its deps barrel) declares a copy of one npm package the checkout's bun install put in a workspace's…
-  - **`pin-drift`** — The health report's Pinned binaries row: attention while a pinned dependency (a host daemon's binaries — Postgres, PgBouncer) lags what main's checkout declares, or its live daemon still runs a pin…
   - **`playwright-browser`** [exempt] — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that…
   - **`python`** [exempt] [1 sub-plugin] — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and…
   - **`rust`** [exempt] [1 sub-plugin] — The rust installer kind of infra/deps, on top of the build kind: cargoBuild({ crate, bin }) (its deps barrel) builds a plugin's rust/ crate with cargo build --release --locked under the mise-pinned…

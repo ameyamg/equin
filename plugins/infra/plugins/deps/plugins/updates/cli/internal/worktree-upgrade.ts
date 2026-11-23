@@ -4,6 +4,7 @@ import {
   isMainCheckoutOrSlot,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
+import { declaredDepSmokes } from "./dep-smokes";
 import { realGates } from "./gates";
 import type { Cooldown } from "../../core/internal/updater";
 import {
@@ -47,6 +48,7 @@ export async function upgradeThisWorktree(
     gates: realGates(root, slug),
     log: (line) => console.log(line),
     cooldown: opts.cooldown,
+    depSmokes: declaredDepSmokes,
   });
   console.log(`\nverdict: ${receipt.verdict}`);
   if (receipt.verdict === "regressed")

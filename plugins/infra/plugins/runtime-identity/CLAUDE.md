@@ -118,8 +118,8 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
     - `runtimeNamespace`
     - `servingSocketPath`
 - Cross-plugin:
-  - Imported by: 83 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×18
+  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×17
     - `debug` ×16
     - `build` ×9
     - `conversations` ×9

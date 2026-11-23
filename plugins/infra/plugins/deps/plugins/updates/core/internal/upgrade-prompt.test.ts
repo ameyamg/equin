@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
 import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { boundedRows } from "./awaiting";
-import type { PendingDecision } from "./decision";
 import type { Outdated } from "./updater";
 import {
   DEPS_UPGRADE_PROMPT,
@@ -28,7 +27,7 @@ const batch: OutdatedUpdater[] = [
 describe("DEPS_UPGRADE_PROMPT", () => {
   test("fills from the batch and the push policy, with no hole left", () => {
     const rendered = renderPrompt(DEPS_UPGRADE_PROMPT, {
-      outdated: outdatedSections(batch, []),
+      outdated: outdatedSections(batch),
       pushPolicy: PUSH_POLICY_TEXT.checks,
     });
     expect(rendered.ok).toBe(true);
@@ -41,7 +40,7 @@ describe("DEPS_UPGRADE_PROMPT", () => {
 
   test("push never: no authorization reaches the agent", () => {
     const rendered = renderPrompt(DEPS_UPGRADE_PROMPT, {
-      outdated: outdatedSections(batch, []),
+      outdated: outdatedSections(batch),
       pushPolicy: PUSH_POLICY_TEXT.never,
     });
     expect(rendered.ok).toBe(true);
@@ -81,14 +80,14 @@ describe("held and blocked rows", () => {
   ];
 
   test("the task text names why each waits", () => {
-    const text = outdatedSections(mixed, []);
+    const text = outdatedSections(mixed);
     expect(text).toContain("- vite 6.4.2 → 7.1.0\n");
     expect(text).toContain("HELD (review by 2026-12-01): waits on x");
     expect(text).toContain("BLOCKED, do this first: publish pg-client 18.4");
   });
 
   test("the title counts only the actionable rows", () => {
-    expect(upgradeTaskTitle(mixed, [])).toBe("Upgrade 2 dependencies (npm)");
+    expect(upgradeTaskTitle(mixed)).toBe("Upgrade 2 dependencies (npm)");
   });
 });
 
@@ -144,7 +143,7 @@ describe("awaiting rows", () => {
   });
 
   test("an awaiting row rides along in the task text", () => {
-    expect(outdatedSections([awaiting], [])).toContain(
+    expect(outdatedSections([awaiting])).toContain(
       `- ${formatOutdated(awaiting.outdated[0]!)}`,
     );
   });
@@ -158,7 +157,7 @@ describe("awaiting rows", () => {
       ]),
     };
     expect(hasUpgradeWork(withMove)).toBe(true);
-    expect(upgradeTaskTitle([withMove], [])).toBe(
+    expect(upgradeTaskTitle([withMove])).toBe(
       "Upgrade npm: vite 6.4.2 → 7.1.0",
     );
   });
@@ -172,10 +171,10 @@ describe("awaiting rows", () => {
       ),
     };
     expect(hasUpgradeWork(late)).toBe(true);
-    expect(outdatedSections([late], [])).toContain(
+    expect(outdatedSections([late])).toContain(
       "— BLOCKED, do this first: waited 48 days (since 2026-10-02) for @embedded-postgres to publish PostgreSQL 18.6:",
     );
-    expect(upgradeTaskTitle([late], [])).toBe(
+    expect(upgradeTaskTitle([late])).toBe(
       "Upgrade npm: PostgreSQL (upstream of group `pg-client`) 18.3.0 → 18.6.0",
     );
   });
@@ -212,7 +211,7 @@ describe("holds to review", () => {
   ];
 
   test("each lapsed hold is its own checklist item, with its reason and issue", () => {
-    const text = outdatedSections(overdue, []);
+    const text = outdatedSections(overdue);
     expect(text).toContain(
       "HELD, REVIEW OVERDUE since 2026-11-15: no cp315 wheels",
     );
@@ -222,37 +221,9 @@ describe("holds to review", () => {
   });
 
   test("a lapsed hold alone is work: it titles the task", () => {
-    expect(upgradeTaskTitle(overdue, [])).toBe(
+    expect(upgradeTaskTitle(overdue)).toBe(
       "Upgrade uv: review hold on cpython",
     );
-  });
-});
-
-describe("decisions only a person can make", () => {
-  const pin: PendingDecision = {
-    subject: "postgres-binaries",
-    title: "pin postgres-binaries 18.1.0 → 19.0.0",
-    situation: "pinned 18.1.0, main declares 19.0.0, behind since 2026-10-01",
-    options: ["Switch: not a plain switch", "Stay: `./equin deps pin-stay …`"],
-  };
-
-  test("alone, they file the task and title it", () => {
-    expect(upgradeTaskTitle([], [pin])).toBe(
-      "Decide: pin postgres-binaries 18.1.0 → 19.0.0",
-    );
-    expect(upgradeTaskTitle(batch, [pin])).toBe(
-      "Upgrade mise: bun 1.3.12 → 1.3.13; decide: pin postgres-binaries 18.1.0 → 19.0.0",
-    );
-  });
-
-  test("ride in the outdated variable, after the updaters, never to be acted on", () => {
-    const text = outdatedSections(batch, [pin]);
-    expect(text.indexOf("`mise`")).toBeLessThan(text.indexOf("Decisions only"));
-    expect(text).toContain("do NOT act on them");
-    expect(text).toContain(
-      "- [ ] postgres-binaries: pinned 18.1.0, main declares 19.0.0, behind since 2026-10-01\n  - Switch: not a plain switch\n  - Stay: `./equin deps pin-stay …`",
-    );
-    expect(outdatedSections(batch, [])).not.toContain("Decisions only");
   });
 });
 
@@ -276,47 +247,27 @@ describe("the title says what the task is, never the list it carries", () => {
     issue: "https://example.com/i/1",
     reviewBy: "2026-11-15",
   });
-  const decision = (subject: string): PendingDecision => ({
-    subject,
-    title: `pin ${subject} 1 → 2`,
-    situation: "behind",
-    options: [],
-  });
-
   test("many moves across updaters: counted, the updaters named, no package", () => {
-    const title = upgradeTaskTitle(
-      [many("npm", 120), many("cargo", 20), many("uv", 10)],
-      [],
-    );
+    const title = upgradeTaskTitle([
+      many("npm", 120),
+      many("cargo", 20),
+      many("uv", 10),
+    ]);
     expect(title).toBe("Upgrade 150 dependencies (npm, cargo, uv)");
   });
 
   test("moves and holds to review: both counted", () => {
     expect(
-      upgradeTaskTitle(
-        [{ ...many("npm", 3), lapsed: [hold("a"), hold("b")] }],
-        [],
-      ),
+      upgradeTaskTitle([{ ...many("npm", 3), lapsed: [hold("a"), hold("b")] }]),
     ).toBe("Upgrade 3 dependencies (npm); review 2 holds");
   });
 
   test("holds alone, more than one: counted", () => {
     expect(
-      upgradeTaskTitle(
-        [
-          { ...many("npm", 0), lapsed: [hold("a")] },
-          { ...many("uv", 0), lapsed: [hold("b")] },
-        ],
-        [],
-      ),
+      upgradeTaskTitle([
+        { ...many("npm", 0), lapsed: [hold("a")] },
+        { ...many("uv", 0), lapsed: [hold("b")] },
+      ]),
     ).toBe("Review 2 dependency holds (npm, uv)");
-  });
-
-  test("several decisions: counted, alone or beside the work", () => {
-    const two = [decision("pg"), decision("pgbouncer")];
-    expect(upgradeTaskTitle([], two)).toBe("Decide: 2 decisions");
-    expect(upgradeTaskTitle([many("npm", 2)], two)).toBe(
-      "Upgrade 2 dependencies (npm); decide: 2 decisions",
-    );
   });
 });

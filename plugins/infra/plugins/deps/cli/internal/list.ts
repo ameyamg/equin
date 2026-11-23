@@ -1,6 +1,7 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import type { DepState } from "../../core";
-import { declaredDeps, depState, heldDep } from "../../deps";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { daemonStatus, declaredDeps, depState } from "../../deps";
 
 function describe(state: DepState): string {
   switch (state.kind) {
@@ -27,13 +28,23 @@ const run: CliAction<[], object> = async () => {
     console.log(
       `${dep.id}  [${dep.source.kind}: ${dep.source.label}]  ${dep.sizeHint}\n  ${describe(state)}`,
     );
-    if (dep.pin !== null) {
-      const held = await heldDep(dep, dep.pin.holder);
-      console.log(
-        held.kind === "held"
-          ? `  pinned ${held.ready.identity} — what runs; \`./equin deps pin ${dep.id}\` switches it to this checkout's`
-          : `  nothing pinned yet — the first start pins this checkout's install`,
-      );
+    if (dep.daemon !== null) {
+      const status = await daemonStatus(dep, { root: REPO_ROOT });
+      const label = (i: { identity: string; version: string | null }) =>
+        i.version ?? i.identity;
+      const running =
+        status.running === null
+          ? "not started yet"
+          : `runs ${label(status.running)}`;
+      const declared =
+        status.declared.kind === "same"
+          ? "what this checkout declares"
+          : status.declared.kind === "unreadable"
+            ? `this checkout's declaration is unreadable (${status.declared.message})`
+            : status.declared.failed !== null
+              ? `${label(status.declared.install)} failed to start on ${status.declared.failed.at} — \`./equin deps remove ${dep.id}\` retries it`
+              : `${label(status.declared.install)} from ${dep.daemon.appliesAt}`;
+      console.log(`  daemon: ${running}; ${declared}`);
     }
   }
 };

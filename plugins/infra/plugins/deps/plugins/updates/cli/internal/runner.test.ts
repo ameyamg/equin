@@ -94,6 +94,7 @@ async function run(updater: Updater, gates: Gates) {
     gates,
     log: () => {},
     cooldown: "honour",
+    depSmokes: async () => [],
   });
 }
 
@@ -131,6 +132,7 @@ describe("runUpgrade verdicts", () => {
       gates,
       log: (l) => lines.push(l),
       cooldown: "honour",
+      depSmokes: async () => [],
     });
     expect(receipt.verdict).toBe("waiting");
     expect(receipt.waiting).toEqual([{ updater: "fake", ...cooling }]);
@@ -198,6 +200,7 @@ describe("runUpgrade verdicts", () => {
       gates,
       log: () => {},
       cooldown: "skip",
+      depSmokes: async () => [],
     });
     expect(receipt.verdict).toBe("upgraded");
     expect(receipt.cooldown).toBe("skip");
@@ -440,6 +443,7 @@ describe("runUpgrade verdicts", () => {
       gates,
       log: () => {},
       cooldown: "honour",
+      depSmokes: async () => [],
     });
     expect(receipt.updaters).toEqual(["fake", "other"]);
     expect(receipt.moves.map((m) => m.updater)).toEqual(["fake", "other"]);
@@ -468,6 +472,7 @@ describe("runUpgrade verdicts", () => {
       gates,
       log: () => {},
       cooldown: "honour",
+      depSmokes: async () => [],
     });
     expect(receipt.verdict).toBe("upgraded");
     expect(receipt.moves).toEqual([{ updater: "fake", ...PKG }]);
@@ -555,6 +560,7 @@ describe("runUpgrade narrows a regressed batch down", () => {
       gates,
       log: () => {},
       cooldown: "honour",
+      depSmokes: async () => [],
     });
   }
 

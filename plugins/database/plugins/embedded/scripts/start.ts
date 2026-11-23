@@ -3,7 +3,7 @@
  * Embedded Postgres lifecycle script. Invoked by the gateway's generic
  * service supervisor via the "start" command in database.json.
  *
- * Handles: binary resolution (the pinned install, never the checkout's
+ * Handles: binary resolution (main's install in the deps cache, never the checkout's
  * node_modules), the major-version guard, dylib symlinks, reattach detection,
  * initdb, stale pidfile cleanup, pg_ctl start, the base database and the
  * cluster-wide session settings.
@@ -24,15 +24,14 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/core";
 import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { adoptLegacyLogSync } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
-import { mkdirSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import {
   existsSync,
-  lstatSync,
   readdirSync,
   readFileSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { join, dirname, basename, resolve } from "node:path";
+import { join, basename, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import type { Client } from "pg";
 import { buildConnectionString } from "@plugins/database/core";
@@ -59,6 +58,7 @@ import {
   clusterServerSettings,
   pendingServerSettings,
 } from "../shared";
+import { ensureSymlinks, serverMajor } from "./server-binaries";
 import { totalmem } from "node:os";
 
 /** This machine's postmaster-start settings (`max_connections`, `shared_buffers`). */
@@ -97,23 +97,18 @@ function assertNotRoot(): void {
 
 // ─── binary resolution ──────────────────────────────────────
 
-/** Where the binaries come from, and what to record once a postmaster runs them. */
-interface BinDir {
-  binDir: string;
-  /** After a fresh start: hold the install the new postmaster runs. */
-  markRunning(): Promise<void>;
-}
-
 /**
- * The server binaries this start runs — never the checkout's `node_modules`,
- * which a `bun install` rewrites under a running postmaster (and whose next
- * restart would then silently run a new version).
+ * Run `start` on the server binaries this start uses — never the checkout's
+ * `node_modules`, which a `bun install` rewrites under a running postmaster
+ * (and whose next restart would then silently run a new version).
  *
  * - A packaged release names its vendored tree (`PG_BIN_DIR`).
- * - Otherwise the install pinned to this machine (`postgres-binaries`, see
- *   `pinned-binaries.ts`), moved only by `./equin deps pin`.
+ * - Otherwise the install main declares (`postgres-binaries`, see
+ *   `daemon-binaries.ts`), falling back to the last one a start succeeded on.
  */
-async function resolveBinDir(): Promise<BinDir> {
+async function runOnBinaries(
+  start: (binDir: string) => Promise<void>,
+): Promise<void> {
   const override = readEnv("PG_BIN_DIR");
   if (override) {
     if (!existsSync(override)) {
@@ -121,28 +116,21 @@ async function resolveBinDir(): Promise<BinDir> {
         `pg: ${envName("PG_BIN_DIR")} set to ${override} but that directory does not exist`,
       );
     }
-    return { binDir: override, markRunning: async () => {} };
+    await start(override);
+    return;
   }
-  const { pinnedBinDir } = await import("./pinned-binaries");
-  return pinnedBinDir();
+  const { startOnDeclaredBinaries } = await import("./daemon-binaries");
+  await startOnDeclaredBinaries(start);
+}
+
+/** A reattach: the binaries the live postmaster runs become the fallback (none on a release). */
+async function markReattachedGood(): Promise<void> {
+  if (readEnv("PG_BIN_DIR")) return;
+  const { markReattachedBinariesGood } = await import("./daemon-binaries");
+  await markReattachedBinariesGood();
 }
 
 // ─── major version ──────────────────────────────────────────
-
-/** The major version of the server at `binDir`, as `postgres --version` says. */
-function serverMajor(binDir: string): number {
-  const result = spawnSync(join(binDir, "postgres"), ["--version"], {
-    encoding: "utf8",
-  });
-  if (result.error) throw result.error;
-  const m = /\(PostgreSQL\) (\d+)/.exec(result.stdout);
-  if (result.status !== 0 || m === null) {
-    throw new Error(
-      `pg: \`${join(binDir, "postgres")} --version\` did not name a version (exit ${result.status}): ${result.stdout}${result.stderr}`,
-    );
-  }
-  return Number(m[1]);
-}
 
 /**
  * Refuse a server whose major version is not the cluster's, before anything
@@ -161,7 +149,7 @@ function assertSameMajor(binDir: string): void {
     throw new Error(
       `pg: the server binaries at ${binDir} are PostgreSQL ${major}, but this cluster is PostgreSQL ${PG_MAJOR} (${PG_DATA_DIR}). ` +
         `A major-version change needs its data migrated (pg_upgrade), which nothing does on its own — not starting. ` +
-        `Pin binaries of PostgreSQL ${PG_MAJOR} (\`./equin deps pin postgres-binaries\` from a checkout that declares them), or run the upgrade.`,
+        `Declare binaries of PostgreSQL ${PG_MAJOR} on main (a hold below the next major in the package's dependencyPolicy), or run the upgrade.`,
     );
   }
   if (dataDirValid()) {
@@ -196,60 +184,6 @@ function assertNoOtherMajorCluster(): void {
       `PostgreSQL's major version moved to ${PG_MAJOR} without its data. Not creating an empty cluster — ` +
       `migrate the data first (pg_upgrade into ${PG_DATA_DIR}), or move the old dir aside if it is really to be abandoned.`,
   );
-}
-
-// ─── symlink management ─────────────────────────────────────
-
-/**
- * Hydrate the unversioned library aliases PG's loader needs (`libicuuc.dylib`,
- * `libicuuc.so.60`, …) from the manifest shipped inside the platform package.
- *
- * This is the ONLY thing that creates them. The platform package declares a
- * `postinstall` (`hydrate-symlinks.js`) that would, but bun does not run
- * lifecycle scripts for untrusted dependencies and nothing in this repo lists
- * these packages in `trustedDependencies` — so the manifest is load-bearing on
- * every install and, more sharply, on every shipped release: a cross-built
- * bundle's native tree has never been hydrated by anything on the build host, so
- * the aliases come into existence on the target box or not at all.
- *
- * Hence no early return on a missing manifest. Absent, PG fails much later with
- * a missing-shared-library error naming a file nobody ever asked for; here we can
- * still name the real cause.
- */
-function ensureSymlinks(binDir: string): void {
-  const pkgRoot = dirname(dirname(binDir)); // native/bin -> package root
-  const manifestPath = join(pkgRoot, "native", "pg-symlinks.json");
-  if (!existsSync(manifestPath)) {
-    throw new Error(
-      [
-        `pg: symlink manifest not found at ${manifestPath}`,
-        "",
-        "Every @embedded-postgres/<platform> package ships this file in its `native/`",
-        "dir, and it is what creates the unversioned library aliases PG's loader",
-        "resolves against — without it the cluster cannot start.",
-        "",
-        "A release bundle gets it from `cpSync` of the whole `native/` tree; if it is",
-        "missing here, that vendoring step dropped it. In dev, re-run `bun install`.",
-      ].join("\n"),
-    );
-  }
-
-  const entries: Array<{ source: string; target: string }> = JSON.parse(
-    readFileSync(manifestPath, "utf-8"),
-  );
-  for (const { source, target } of entries) {
-    const linkPath = join(pkgRoot, target);
-    try {
-      lstatSync(linkPath);
-      continue; // already exists
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {}
-    try {
-      symlinkSync(basename(source), linkPath);
-    } catch (err: any) {
-      if (err.code !== "EEXIST") throw err;
-    }
-  }
 }
 
 // ─── who holds postmaster.pid ───────────────────────────────
@@ -362,15 +296,17 @@ function dataDirPartial(): boolean {
  * only rebuilt by `./equin start`): the old unrotated file, said out loud —
  * refusing would leave the cluster down until someone restarts the gateway.
  */
-function postmasterLog(target: ServiceLogTarget): {
+interface PostmasterLog {
   /** What `pg_ctl -l` is given. */
   path: string;
   /** The file a person reads the log in. */
   file: string;
   stdio: Array<"ignore" | "pipe" | number>;
-  /** The relay fd, owned: closed once pg_ctl has run (the postmaster holds its own copy). */
+  /** The relay fd, owned: closed once every pg_ctl has run (the postmaster holds its own copy). */
   relay: OwnedFd | null;
-} {
+}
+
+function postmasterLog(target: ServiceLogTarget): PostmasterLog {
   if (target.kind === "relay") {
     // Fresh start, so nothing writes the pre-relay file any more: move it into
     // the new channel's rotation rather than leave it unbounded.
@@ -403,11 +339,46 @@ function postmasterLog(target: ServiceLogTarget): {
 }
 
 /**
+ * After a failed `pg_ctl start`: stop a postmaster that came up anyway (its
+ * `-t` ran out while it was still starting), with the same binaries. A start
+ * that throws leaves nothing running, so the fallback on the previous
+ * binaries (`infra/deps` startDaemonDep) never meets a postmaster of the
+ * failed ones. One that will not stop fails loudly, naming it.
+ */
+function stopLeftoverPostmaster(binDir: string): void {
+  const holder = postmasterHolder(readPidFile());
+  if (holder.kind !== "live") return;
+  console.log(
+    `pg: stopping the postmaster (pid ${holder.pid}) the failed start left running`,
+  );
+  spawnSync(
+    join(binDir, "pg_ctl"),
+    [
+      "stop",
+      "-D",
+      PG_DATA_DIR,
+      "-m",
+      "fast",
+      "-w",
+      "-t",
+      String(READY_TIMEOUT_SEC),
+    ],
+    { stdio: "pipe" },
+  );
+  const after = postmasterHolder(readPidFile());
+  if (after.kind === "live") {
+    throw new Error(
+      `pg: a failed start left a postmaster (pid ${after.pid}) that did not stop — not starting another`,
+    );
+  }
+}
+
+/**
  * Bring the postmaster up: initdb on a fresh (or half-written) data dir, then
  * `pg_ctl start`. Only reached when no postmaster holds the lock file
  * (`postmasterHolder`: absent, or a stale one already removed).
  */
-function startPostmaster(binDir: string, target: ServiceLogTarget): void {
+function startPostmaster(binDir: string, log: PostmasterLog): void {
   // Partial data dir (interrupted initdb) — nuke and redo.
   if (dataDirPartial()) {
     console.log("pg: data dir partial (no PG_VERSION); cleaning and re-initdb");
@@ -448,7 +419,6 @@ function startPostmaster(binDir: string, target: ServiceLogTarget): void {
   // 5433, another release's, or another preview's. The GUC is
   // postmaster-start-only, so it takes effect only on a full cluster (re)start.
   // PGHOST/PGPORT/PGUSER in env so pg_ctl's -w probe finds the socket.
-  const log = postmasterLog(target);
   console.log(`pg: starting (socket=${PG_SOCKET_DIR}, port=${PG_PORT})`);
   const result = spawnSync(
     join(binDir, "pg_ctl"),
@@ -478,10 +448,12 @@ function startPostmaster(binDir: string, target: ServiceLogTarget): void {
       },
     },
   );
-  log.relay?.close();
   if (result.status !== 0) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; SpawnSyncReturns fields may be null
     const out = result.stderr?.toString() || result.stdout?.toString() || "";
+    // `-t` ran out with the postmaster maybe still coming up: stop it, so a
+    // fallback start on other binaries finds no postmaster.
+    stopLeftoverPostmaster(binDir);
     throw new Error(`pg_ctl start failed: ${out} (see ${log.file})`);
   }
 }
@@ -574,17 +546,22 @@ async function ensureClusterState(): Promise<void> {
 
 /**
  * Start a postmaster where none runs. Only here are the binaries resolved: a
- * reattach runs nothing, so it needs no binaries and never depends on the
- * pinned install (or on adopting one) to keep a healthy cluster.
+ * reattach runs nothing, so it needs no binaries and never depends on what
+ * main declares to keep a healthy cluster. Main's binaries are tried first;
+ * a start that fails on them runs again on the last binaries that started.
  */
 async function freshStart(logTarget: ServiceLogTarget): Promise<void> {
-  const { binDir, markRunning } = await resolveBinDir();
-  ensureSymlinks(binDir);
-  assertSameMajor(binDir);
-  // Held before the start, so a postmaster that comes up is never running
-  // bytes the sweep may take (a failed start leaves a harmless extra hold).
-  await markRunning();
-  startPostmaster(binDir, logTarget);
+  // One log for every attempt: a fallback start writes to the same relay.
+  const log = postmasterLog(logTarget);
+  try {
+    await runOnBinaries(async (binDir) => {
+      ensureSymlinks(binDir);
+      assertSameMajor(binDir);
+      startPostmaster(binDir, log);
+    });
+  } finally {
+    log.relay?.close();
+  }
 }
 
 async function main(): Promise<void> {
@@ -605,6 +582,7 @@ async function main(): Promise<void> {
       console.log(
         `pg: embedded PG already running (pid ${holder.pid}); reattaching`,
       );
+      await markReattachedGood();
       break;
     case "absent":
       await freshStart(logTarget);

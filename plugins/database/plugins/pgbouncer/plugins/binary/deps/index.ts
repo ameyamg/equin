@@ -23,14 +23,16 @@ function pgbouncerPackage(target: DepTarget): string {
  * replaces the binary under the running daemon, and the next start does not
  * silently run a new version.
  *
- * Pinned: the start script runs the install the pin holds; moving it is
- * `./equin deps pin pgbouncer-binary`, then a restart of PgBouncer.
+ * Run by PgBouncer's start script on the install main declares, from its next
+ * start, falling back to the last install it started on when that start
+ * fails. A move of the package lands only once its smoke test has started it
+ * on a throwaway socket.
  */
 export const pgbouncerBinary = defineDep({
   id: "pgbouncer-binary",
   owner: "database/pgbouncer/binary",
   description:
-    "The PgBouncer binary the gateway runs the pooler from, copied out of the checkout and pinned",
+    "The PgBouncer binary the gateway runs the pooler from, copied out of main's checkout",
   sizeHint: "≈0.5 MB",
   source: npmPackageCopy({
     workspace: "plugins/database/plugins/pgbouncer",
@@ -39,9 +41,18 @@ export const pgbouncerBinary = defineDep({
       none: "PgBouncer's start waits on it (a one-file copy), and that start must never queue behind the background lane",
     },
   }),
-  pin: {
+  daemon: {
     holder: "machine-pgbouncer",
     appliesAt: "PgBouncer's next start (a reattach keeps the running daemon)",
+  },
+  smoke: {
+    name: "pgbouncer-binary starts on a throwaway socket",
+    argv: [
+      "./equin",
+      "run",
+      "plugins/database/plugins/pgbouncer/scripts/smoke.ts",
+    ],
+    timeoutMs: 5 * 60_000,
   },
 });
 

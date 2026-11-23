@@ -25497,7 +25497,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RETIRED_CLUSTER_SETTINGS`
           - `sharedBuffersBytes`
       - Plugins:
-        - **`binaries`** — The postgres-binaries dependency: the embedded cluster's server binaries, an infra/deps package copy of this platform's @embedded-postgres package outside the checkout, pinned (holder machine-postgres) — the start script runs the pinned install, switched only by ./equin deps pin postgres-binaries. A child of its own so no composition's closure reaches the deps engine through the database plugins.
+        - **`binaries`** — The postgres-binaries dependency: the embedded cluster's server binaries, an infra/deps package copy of this platform's @embedded-postgres package outside the checkout, run by the cluster's start script on the install main declares (falling back to the last one it started on), proven by a throwaway-cluster smoke test before an upgrade lands. A child of its own so no composition's closure reaches the deps engine through the database plugins.
           - Deps:
             - Uses:
               - `infra/deps.defineDep`
@@ -25885,7 +25885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PGBOUNCER_USERLIST_FILE`
           - `pgbouncerPidFileUnder`
       - Plugins:
-        - **`binary`** — The pgbouncer-binary dependency: an infra/deps package copy of this platform's @equin/pgbouncer package outside the checkout, pinned (holder machine-pgbouncer) — the start script runs the pinned install, switched only by ./equin deps pin pgbouncer-binary. A child of its own so no composition's closure reaches the deps engine through the database plugins.
+        - **`binary`** — The pgbouncer-binary dependency: an infra/deps package copy of this platform's @equin/pgbouncer package outside the checkout, run by PgBouncer's start script on the install main declares (falling back to the last one it started on), proven by a throwaway-socket smoke test before an upgrade lands. A child of its own so no composition's closure reaches the deps engine through the database plugins.
           - Deps:
             - Uses:
               - `infra/deps.defineDep`
@@ -37229,8 +37229,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
-          - `infra` ×15
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+          - `infra` ×16
           - `framework` ×6
           - `apps` ×5
           - `companions` ×2
@@ -37244,26 +37244,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Deps:
         - Exports (types):
           - `BundleSpec`
-          - `DeclaredAgainstPin`
+          - `DaemonFailed`
+          - `DaemonInstall`
+          - `DaemonStart`
+          - `DaemonStartOutcome`
+          - `DaemonStatus`
           - `DefineDepSpec`
           - `Dep`
-          - `DepPin`
+          - `DepDaemon`
           - `DepProgress`
+          - `DepSmoke`
           - `DepSource`
           - `DepTarget`
           - `EnsureOptions`
           - `HeldDep`
           - `HoldDepOptions`
           - `InstallContext`
-          - `PinDecision`
-          - `PinDrift`
-          - `PinLag`
-          - `PinMove`
-          - `PinnedDep`
-          - `PinnedInstall`
-          - `PinReview`
-          - `PinReviewOptions`
-          - `PinStatus`
           - `Ready`
           - `ReadyNow`
           - `RemoveOutcome`
@@ -37278,6 +37274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ToolPackagesCheck`
         - Exports (values):
           - `checkSystemPackages`
+          - `daemonStatus`
           - `declaredDep`
           - `declaredDeps`
           - `defineDep`
@@ -37286,22 +37283,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ensureDepViaCli`
           - `heldDep`
           - `holdDep`
-          - `holdRunningDep`
           - `hostTarget`
-          - `liftPinStay`
           - `linkSealedDep`
+          - `markDaemonRunningGood`
           - `MissingSystemPackagesError`
-          - `PIN_LAG_MAX_DAYS`
-          - `pinDecisionDue`
-          - `pinDep`
-          - `pinnedDep`
-          - `pinStatus`
           - `readyNow`
           - `removeDep`
-          - `reviewPin`
           - `sealDep`
           - `SEALED_MANIFEST`
-          - `stayPin`
+          - `startDaemonDep`
           - `sweepUnusedDeps`
           - `systemPackagesToPrepare`
           - `UnknownDepError`
@@ -37337,6 +37327,56 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/spawn-disclaim`
           - Exemptions:
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-listing` — `deps/internal/build.ts` (sanctioned)
+        - **`daemon-binaries`** — The health report's Daemon binaries row: ok while each host daemon (the embedded Postgres, PgBouncer) runs what main's checkout declares — with a note for a version it takes at its next start — and attention when a start on main's version failed and fell back to the previous install; expanded, the error and the `./equin deps remove <id>` command that retries it. The daemon-binary-rollback report kind — filed through the report outbox by a host daemon's start script (the embedded Postgres, PgBouncer) when its start on the install main declares failed and it fell back to the last install it started on.
+          - Web:
+            - Contributes: `HealthReport.Row` "Daemon binaries" → `DaemonBinariesDetail`
+            - Uses:
+              - `network/live.useLive`
+              - `network/live/live-state.ResourceView`
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `shell/health-report.HealthReport`
+          - Server:
+            - Contributes:
+              - `report-kind` "daemon-binary-rollback"
+              - `resource.declare` "deps.daemon-binaries"
+            - Uses: `reports.ReportKind`
+            - Resources: `deps.daemon-binaries` (push, notified, whole: one row per dependency a host daemon runs — the database daemons' binaries, a closed handful)
+          - Machine:
+            - Uses: `network/live.serveValue`
+            - Register:
+              - `defineRefReaction('deps.daemon-binaries (refs/heads/main)')`
+              - `defineFileWatcher('deps.daemon-binaries')`
+          - Core:
+            - Uses:
+              - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
+            - Exports (types):
+              - `DaemonBinaries`
+              - `DaemonDepRow`
+              - `DaemonInstallView`
+              - `DaemonRollbackPayload`
+            - Exports (values):
+              - `DAEMON_ROLLBACK_KIND`
+              - `daemonBinaries`
+              - `DaemonBinariesSchema`
+              - `DaemonDepRowSchema`
+              - `DaemonRollbackPayloadSchema`
+              - `daemonRollbackReport`
+              - `describeDaemonRollback`
+              - `installLabel`
+              - `retryCommand`
+          - Deps:
+            - Uses:
+              - `infra/deps.Dep`
+              - `infra/deps.DepSource`
+              - `infra/deps.Ready`
+              - `infra/deps.startDaemonDep`
+            - Exports (values): `startDaemonOnDeclared`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/font-family --font-mono`
         - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them.
           - Cross-plugin:
             - Imported by:
@@ -37375,10 +37415,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `GITHUB_RELEASE_HOLDS`
                   - `GITHUB_RELEASE_HOLDS_FILE`
-        - **`hold`** — The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater and by a pinned dependency's decision to stay behind main.
+        - **`hold`** — The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater.
           - Cross-plugin:
             - Imported by:
-              - `infra/deps`
               - `infra/deps/download/github-release-updater`
               - `infra/deps/mise`
               - `infra/deps/npm`
@@ -37498,44 +37537,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `database/embedded/binaries`
               - `database/pgbouncer/binary`
-        - **`pin-drift`** — The health report's Pinned binaries row: attention while a pinned dependency (a host daemon's binaries — Postgres, PgBouncer) lags what main's checkout declares, or its live daemon still runs a pin moved since; expanded, each one's pinned and declared versions and the `./equin deps pin <id>` command that switches it — or, for a move its pin refuses (a Postgres major), why it is blocked.
-          - Web:
-            - Contributes: `HealthReport.Row` "Pinned binaries" → `PinDriftDetail`
-            - Uses:
-              - `network/live.useLive`
-              - `network/live/live-state.ResourceView`
-              - `primitives/copy-to-clipboard.CopyButton`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `shell/health-report.HealthReport`
-          - Server:
-            - Contributes:
-              - `resource.declare` "deps.pin-drift"
-              - `upgrade-decision` "pinned-binaries"
-            - Resources: `deps.pin-drift` (push, notified, whole: one row per dependency declaring a pin — the host daemons' binaries, a closed handful)
-          - Machine:
-            - Uses: `network/live.serveValue`
-            - Register:
-              - `defineRefReaction('deps.pin-drift (refs/heads/main)')`
-              - `defineFileWatcher('deps.pinned')`
-          - Core:
-            - Uses:
-              - `network/live.liveValue`
-              - `packages/list-bound.wholeList`
-            - Exports (types):
-              - `PinDrift`
-              - `PinnedDepRow`
-              - `PinnedInstallView`
-              - `PinReviewView`
-            - Exports (values):
-              - `pinDrift`
-              - `PinDriftSchema`
-              - `PinnedDepRowSchema`
-              - `pinStayCommand`
-              - `pinSwitchCommand`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/font-family --font-mono`
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Core:
             - Uses:
@@ -37663,7 +37664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/log-channels.Log`
               - `tasks/tasks-core.attemptRetention`
             - Register: `defineJob('deps.sweep')`
-        - **`updates`** — Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater and every decision a DecisionDeclare source says is due (a pinned host daemon lagging main past its bound — its agent raises a flag for the person, never acts), whose agent runs `./equin deps upgrade` (all updaters behind one baseline, a regressed batch narrowed down to its culprits on its own) and pushes what landed on an `upgraded` or `partial` verdict as far as its Push setting allows.
+        - **`updates`** — Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater whose agent runs `./equin deps upgrade` (all updaters behind one baseline, a regressed batch narrowed down to its culprits on its own) and pushes what landed on an `upgraded` or `partial` verdict as far as its Push setting allows.
           - Web:
             - Contributes:
               - `ConfigV2.WebRegister` "deps-upgrades"
@@ -37681,7 +37682,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-category.tasksCategory`
               - `tasks/tasks-core._tasks`
             - Exports (values):
-              - `DecisionDeclare`
               - `declaredUpdaters`
               - `DEPS_CATEGORY_ID`
               - `UpdaterDeclare`
@@ -37698,13 +37698,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `AwaitingOn`
               - `Cooldown`
-              - `DecisionSource`
               - `GateResult`
               - `Move`
               - `Outdated`
               - `OutdatedUpdater`
               - `OutdatedWaiting`
-              - `PendingDecision`
               - `PlanOptions`
               - `Updater`
               - `UpdaterPlan`
@@ -37726,7 +37724,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/download/github-release-updater`
               - `infra/deps/mise`
               - `infra/deps/npm`
-              - `infra/deps/pin-drift`
               - `infra/deps/python/uv-updater`
               - `infra/deps/rust/cargo-updater`
               - `toolchain`
@@ -38574,7 +38571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/commits-graph`
               - `debug/tests`
               - `debug/tests/idle-runner`
-              - `infra/deps/pin-drift`
+              - `infra/deps/daemon-binaries`
               - `infra/launcher/gateway-drift`
               - `infra/launcher/login-services`
               - `release`
@@ -41512,8 +41509,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
-          - `infra` ×18
+        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+          - `infra` ×17
           - `debug` ×16
           - `build` ×9
           - `conversations` ×9
@@ -61064,11 +61061,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 93 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 94 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×34
       - `debug` ×21
       - `conversations` ×7
-      - `infra` ×6
+      - `infra` ×7
       - `apps` ×4
       - `build` ×4
       - `database` ×4
@@ -61743,27 +61740,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OutboxEntrySchema`
               - `repositoryOf`
           - Cross-plugin:
-            - Imported by:
+            - Imported by: 21 plugins — full list in [`plugins/reports/plugins/outbox/plugins/file/REFERENCE.md`](../plugins/reports/plugins/outbox/plugins/file/REFERENCE.md)
+              - `framework` ×6
+              - `infra` ×5
+              - `debug` ×3
+              - `reports` ×2
               - `auth`
               - `backup`
               - `build/step-baseline`
               - `database/fork`
-              - `debug/backend-liveness`
-              - `debug/boot-events`
-              - `debug/worktree-cleanup`
-              - `framework/cli/build`
-              - `framework/cli/check`
-              - `framework/tooling/checks`
-              - `framework/tooling/checks/type-check`
-              - `framework/tooling/checks/type-check/backstop`
-              - `framework/tooling/web-artifacts/blocker-scan`
-              - `infra/git/main-slots`
-              - `infra/host/host-admission`
-              - `infra/launcher`
-              - `infra/launcher/gateway-drift`
               - `plugin-meta/plugin-records`
-              - `reports/interaction-budget`
-              - `reports/outbox`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts` (debt)
     - **`page-doc-rank-drift`** — Page doc-rank drift report kind: files the page editor's docRankDriftSink — a boot reconcile that had to re-mint `page_blocks.doc_rank` the structural-write chokepoint should already have kept in document order (a writer bypassed the doc-order marks, or an old backend wrote during a hot-swap) — deduped on the kind alone, with an investigation task naming the bypass to find.
@@ -62810,7 +62796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `database.query-deadline`
           - `HealthReport.Row` ← `debug.queue-health`
           - `HealthReport.Row` ← `debug.sentinel.health-row`
-          - `HealthReport.Row` ← `infra.deps.pin-drift`
+          - `HealthReport.Row` ← `infra.deps.daemon-binaries`
           - `HealthReport.Row` ← `infra.health.connection-row`
           - `HealthReport.Row` ← `infra.host.io-health`
           - `HealthReport.Row` ← `infra.launcher.gateway-drift`
@@ -62879,7 +62865,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/query-deadline`
           - `debug/queue-health`
           - `debug/sentinel/health-row`
-          - `infra/deps/pin-drift`
+          - `infra/deps/daemon-binaries`
           - `infra/health/connection-row`
           - `infra/host/io-health`
           - `infra/launcher/gateway-drift`
