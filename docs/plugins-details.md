@@ -13273,6 +13273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/story`
               - `apps/website/pages/vision`
               - `apps/website/shell`
+              - `companions/browser-extension/equin-site`
           - Plugins:
             - **`snapshot-render`** (excluded) — The crawlable snapshot's render half, build-only: renderSiteSnapshot renders each declared website page once by its path through the real app (static-render over the composition's plugins and a boot snapshot), filters it to semantic HTML, titles it as the live app titles its tab, and returns the snapshot manifest (with the composition's home) and fragments — loaded by the snapshot take in Bun by path, and in no composition (base-exclusions), so no browser registry holds it.
               - Web:
@@ -13599,6 +13600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/landing/screenshot`
               - `apps/website/pages/apps`
               - `apps/website/pages/download`
+              - `companions/browser-extension/equin-site`
         - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into a release by prewarm. showcasePosterPreload() is the head tag that starts the poster downloading at t0, for the page that shows it.
           - Server:
             - Uses:
@@ -16964,12 +16966,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/relative-time.formatRelativeTime`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-        - **`equin-site`** — The equin site's page actions in the browser extension: on equin.ai, 'Open locally' (the same page on the local instance — the site's paths are the website app's, so it is an origin swap); on any local equin page, 'Open on equin.ai' (a website page at the same path, any other page at the site's home). The mapping is the website's own (apps/website/shell core); this leaf only offers it, so the website's composition never carries the extension.
+        - **`equin-site`** — The equin site's page actions in the browser extension, over one address model (core: parseEquinAddress / formatEquinAddress) that reads any equin page as an instance (a worktree, main, equin.ai) × a view (an app page, the live demo of it at /about/demo/at/<place>, a website page). Each action moves ONE axis and keeps the other, so a page offers at most three rows, each subtitled with where it goes: Open on main (a worktree's page), Open on equin.ai (a local page — an app page opens in the published demo, as equin.ai serves no app), Open locally (on equin.ai, main), Open in the demo (an app page) and Open live (a demo page — equin.ai's on main). The site mapping is the website's own (apps/website/shell, live-demo core); this leaf only offers it, so the website's composition never carries the extension.
           - Web:
             - Contributes:
-              - `BrowserExtension.PageAction` "equin (local): Open on equin.ai"
-              - `BrowserExtension.PageAction` "equin.ai: Open locally"
+              - `BrowserExtension.PageAction` "equin: Open in the demo"
+              - `BrowserExtension.PageAction` "equin: Open live"
+              - `BrowserExtension.PageAction` "equin: Open locally"
+              - `BrowserExtension.PageAction` "equin: Open on equin.ai"
+              - `BrowserExtension.PageAction` "equin: Open on main"
             - Uses: `companions/browser-extension.BrowserExtension`
+          - Core:
+            - Uses:
+              - `apps/website/crawlable.WEBSITE_BASE_PATH`
+              - `apps/website/live-demo.demoPage`
+              - `apps/website/live-demo.demoPagePath`
+              - `apps/website/shell.isLocalAppUrl`
+              - `apps/website/shell.isPublicSiteUrl`
+              - `apps/website/shell.publicSitePageUrl`
+              - `infra/launcher/gateway-port.pagePort`
+              - `infra/namespace.MAIN_WORKTREE_NAME`
+              - `infra/namespace.Namespace`
+              - `infra/namespace.namespaceFromHost`
+              - `infra/namespace.namespaceUrl`
+              - `primitives/pane.readEmbedTail`
+              - `primitives/pane/route-prefix.routePathOf`
+            - Exports (types):
+              - `EquinAddress`
+              - `EquinInstance`
+              - `EquinView`
+            - Exports (values):
+              - `flipView`
+              - `formatEquinAddress`
+              - `mainInstance`
+              - `moveInstance`
+              - `parseEquinAddress`
+              - `sameInstance`
         - **`wish`** — The browser extension's Wish section (BrowserExtension.Section 'wish'): wish's WishField under a 'Wish' title — the task composer with its own ↑, filing one task under Wishes and confirming inline — about the tab the popup was opened on (DraftPage: that tab's URL for the Page URL toggle, no element picker).
           - Web:
             - Contributes: `BrowserExtension.Section` "Wish" → `ExtensionWishSection`
@@ -40741,7 +40772,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `apps` ×16
           - `framework` ×16
           - `debug` ×12
@@ -40752,11 +40783,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×3
           - `primitives` ×3
           - `tasks` ×3
+          - `companions` ×2
           - `release` ×2
           - `reports` ×2
           - `auth`
           - `backup`
-          - `companions/browser-extension`
           - `installer/window`
           - `integrations/github-events`
           - `upstream`
@@ -58231,7 +58262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×79
           - `conversations` ×33
           - `debug` ×29
@@ -58241,9 +58272,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core` ×7
           - `plugin-meta` ×6
           - `layouts` ×4
+          - `companions` ×3
           - `infra` ×3
           - `stats` ×3
-          - `companions` ×2
           - `page` ×2
           - `reports` ×2
           - `shell` ×2
@@ -58327,6 +58358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/crawlable`
               - `apps/website/live-demo`
               - `apps/website/shell`
+              - `companions/browser-extension/equin-site`
               - `framework/web-core`
               - `primitives/dom/static-render`
               - `primitives/link-gesture`

@@ -42,6 +42,7 @@ read it.
     - `apps/website/crawlable`
     - `apps/website/live-demo`
     - `apps/website/shell`
+    - `companions/browser-extension/equin-site`
     - `framework/web-core`
     - `primitives/dom/static-render`
     - `primitives/link-gesture`

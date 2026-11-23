@@ -1,4 +1,4 @@
-// @hash 46a3ce0b8ed0
+// @hash 1462bd576d49
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -24,9 +24,13 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   // A page shows the actions of the sites it matches, in this order (⌘1, ⌘2…
-  // follow it). The two equin-site actions never share a page.
+  // follow it). equin-site's rows each move one axis of the page: where it
+  // is served (main, local, equin.ai), then app ↔ demo.
   "items": [
+    "companions.browser-extension.equin-site:open-on-main",
     "companions.browser-extension.equin-site:open-locally",
-    "companions.browser-extension.equin-site:open-on-public-site"
+    "companions.browser-extension.equin-site:open-on-public-site",
+    "companions.browser-extension.equin-site:open-in-demo",
+    "companions.browser-extension.equin-site:open-live"
   ]
 }

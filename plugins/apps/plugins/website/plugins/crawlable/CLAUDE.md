@@ -201,6 +201,7 @@ Run the take by hand (any initialized cluster file from the store):
     - `apps/website/pages/story`
     - `apps/website/pages/vision`
     - `apps/website/shell`
+    - `companions/browser-extension/equin-site`
 - Sub-plugins:
   - **`snapshot-render`** (excluded) — The crawlable snapshot's render half, build-only: renderSiteSnapshot renders each declared website page once by its path through the real app (static-render over the composition's plugins and a boot…
 
