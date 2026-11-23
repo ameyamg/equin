@@ -47,8 +47,24 @@ describe("the repo's contributions", () => {
   const count = (id: string, code: string) =>
     babelPluginsFor(loaded, { id, code }).length;
 
-  test("every one runs on a .tsx module", () => {
-    expect(count("/p/web/x.tsx", "export const X = 1;")).toBe(loaded.length);
+  // Each contribution says for itself which modules it can change: the
+  // builder runs exactly those, and never assumes they share one scope.
+  test("each runs on exactly the modules its own appliesTo accepts", () => {
+    const samples = [
+      { id: "/p/web/x.tsx", code: "export const X = 1;" },
+      { id: "/p/web/x.tsx", code: "export function X() { useThing(); }" },
+      { id: "/p/web/use-x.ts", code: "export function useThing() {}" },
+      { id: "/p/core/x.ts", code: "export const sum = 1;" },
+    ];
+    for (const source of samples) {
+      expect(babelPluginsFor(loaded, source)).toEqual(
+        loaded.filter((c) => c.appliesTo(source)).map((c) => c.plugin),
+      );
+    }
+  });
+
+  test("something runs on a .tsx module", () => {
+    expect(count("/p/web/x.tsx", "export const X = 1;")).toBeGreaterThan(0);
   });
 
   test("none runs on a .ts module that names no hook", () => {

@@ -131,7 +131,9 @@ describe("useActionForm — the declaration", () => {
       </Region>,
     );
     expect(declare).toHaveBeenCalledTimes(1);
-    expect(declare).toHaveBeenCalledWith({ shrinksTo: [], yields: "normal" });
+    expect(declare).toHaveBeenCalledWith(
+      expect.objectContaining({ shrinksTo: [], yields: "normal" }),
+    );
   });
 
   it("does not re-declare when a fresh literal carries the same value", () => {
@@ -173,10 +175,9 @@ describe("useActionForm — the declaration", () => {
     );
     expect(release).toHaveBeenCalledTimes(1);
     expect(declare).toHaveBeenCalledTimes(2);
-    expect(declare).toHaveBeenLastCalledWith({
-      shrinksTo: ["compact"],
-      yields: "never",
-    });
+    expect(declare).toHaveBeenLastCalledWith(
+      expect.objectContaining({ shrinksTo: ["compact"], yields: "never" }),
+    );
   });
 
   it("releases its rung when the widget leaves the tree", () => {

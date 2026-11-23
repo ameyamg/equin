@@ -687,9 +687,14 @@ export const compositionsConfig = defineConfig({
               // and written to the worker's config, kept in the demo's own
               // storage. Its panes contribute to the shell and nothing imports
               // them, so naming the shell alone shipped an empty app. Not
-              // Appearance nor Accounts (the user's decision, 2026-11-10).
-              "apps.settings.shell",
-              "apps.settings.config",
+              // Appearance nor Accounts (the user's decision, 2026-11-10), nor
+              // its Isle building. Spelled as the whole app less the panes it
+              // leaves out — a profile adds an app whole (composition-closure
+              // rule 6c), so a pane Settings gains later reaches the demo.
+              "apps.settings.**",
+              "!apps.settings.appearance.**",
+              "!apps.settings.accounts.**",
+              "!apps.settings.isle-building.**",
               // Places, the map of saved places: the map draws through Google
               // Maps (`map.google`, selected below) with the owner's browser key
               // the page hands the host (`google-maps/page-config`); searching,

@@ -7,6 +7,11 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
+import type { WebCatalog } from "@plugins/framework/plugins/list-catalog/core";
+import {
+  seg,
+  slotIdFor,
+} from "@plugins/framework/plugins/slot-declaration/core";
 import type { FieldDef, TableCellProps } from "../../core";
 import { DataViewSlots } from "../slots";
 import { useResolveCell } from "../cell-slot";
@@ -15,9 +20,9 @@ import { FieldCell } from "../components/field-cell";
 
 /**
  * A keyed companion the repo provides but the bundle lacks is loud, not a text
- * cell. The fixture declares DataView's slots under the primitive's REAL id, so
- * the slot ids match the committed companion manifest — whose `date` cell is
- * `fields.date.table`, deliberately not registered here.
+ * cell. The page's list catalog names who provides each key (repo-wide); the
+ * fixture's catalog says the `date` cell is `fields.date.table`, which it
+ * deliberately does not register.
  */
 
 function MarkCell(props: TableCellProps): ReactNode {
@@ -30,6 +35,29 @@ const plugin = {
   contributions: [DataViewSlots.Cell({ match: "mark", component: MarkCell })],
   slots: DataViewSlots,
 } as unknown as LoadedPlugin;
+
+/** The page catalog: no entries, and the repo's provider of the `date` cell. */
+// The fixture plugin declares `slots: DataViewSlots`, so the Cell list id is
+// derived from its id and the slot key, as the declaration pass derives it.
+function catalog(): WebCatalog {
+  return {
+    lists: [],
+    entries: [],
+    companionProviders: {
+      [slotIdFor(plugin.id, seg("Cell"))]: [
+        { plugin: "fields.date.table", key: "date" },
+      ],
+    },
+  };
+}
+
+function Provider({ children }: { children: ReactNode }) {
+  return (
+    <PluginProvider plugins={[plugin]} catalog={catalog()}>
+      {children}
+    </PluginProvider>
+  );
+}
 
 type Row = { id: string; when: string };
 const ROW: Row = { id: "1", when: "2026-10-18" };
@@ -68,9 +96,9 @@ describe("a missing keyed companion", () => {
     try {
       expect(() =>
         render(
-          <PluginProvider plugins={[plugin]}>
+          <Provider>
             <Harness field={dateField} />
-          </PluginProvider>,
+          </Provider>,
         ),
       ).toThrow(/"date" is served by fields\.date\.table/);
     } finally {
@@ -80,9 +108,9 @@ describe("a missing keyed companion", () => {
 
   it("is not judged while plugins are still loading", () => {
     const { container } = render(
-      <PluginProvider plugins={[plugin]}>
+      <Provider>
         <Harness field={dateField} />
-      </PluginProvider>,
+      </Provider>,
     );
     expect(container.textContent).toBe("2026-10-18");
   });
@@ -90,7 +118,7 @@ describe("a missing keyed companion", () => {
   it("leaves a type nothing provides to its fallback", () => {
     act(() => markDeferredLoadComplete());
     const { container } = render(
-      <PluginProvider plugins={[plugin]}>
+      <Provider>
         <Harness
           field={{
             id: "x",
@@ -99,7 +127,7 @@ describe("a missing keyed companion", () => {
             value: (r) => r.id,
           }}
         />
-      </PluginProvider>,
+      </Provider>,
     );
     expect(container.textContent).toBe("1");
   });
@@ -107,11 +135,11 @@ describe("a missing keyed companion", () => {
   it("finds a registered companion as before", () => {
     act(() => markDeferredLoadComplete());
     const { getByTestId } = render(
-      <PluginProvider plugins={[plugin]}>
+      <Provider>
         <Harness
           field={{ id: "m", label: "M", type: "mark", value: (r) => r.id }}
         />
-      </PluginProvider>,
+      </Provider>,
     );
     expect(getByTestId("mark-cell").textContent).toBe("1");
   });

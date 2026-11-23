@@ -13,6 +13,8 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { onStorageFailure } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { writeEntryUnchecked } from "@plugins/primitives/plugins/dom/plugins/web-storage/web/testing";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 // Importing the barrel registers the module-load popstate/shell:navigate
 // listener (`import "./internal/pane-restore-store"`) and exposes the reader.
@@ -127,12 +129,22 @@ describe("pane-restore save listener", () => {
 
 describe("pane-restore storage", () => {
   it("drops a corrupt entry (the store reports it) and reads as nothing to restore", () => {
-    localStorage.setItem(
-      "s:conversations.pane-restore:X",
-      JSON.stringify({ ts: Date.now(), v: [{ nope: 1 }] }),
-    );
-
-    expect(loadRouteForConversation("X")).toEqual({ kind: "none" });
-    expect(localStorage.getItem("s:conversations.pane-restore:X")).toBeNull();
+    // An entry this build's own schema wrote and now refuses — written
+    // through web-storage, which owns the storage format (key, envelope,
+    // schema stamp).
+    writeEntryUnchecked("conversations.pane-restore", "X", [{ nope: 1 }]);
+    const reasons: string[] = [];
+    const stop = onStorageFailure((f) => {
+      if (f.owner === "conversations.pane-restore") reasons.push(f.reason);
+    });
+    try {
+      expect(loadRouteForConversation("X")).toEqual({ kind: "none" });
+      expect(reasons).toEqual(["corrupt"]);
+      // Dropped, not kept: a second read finds nothing left to report.
+      expect(loadRouteForConversation("X")).toEqual({ kind: "none" });
+      expect(reasons).toEqual(["corrupt"]);
+    } finally {
+      stop();
+    }
   });
 });

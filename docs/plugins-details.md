@@ -55426,6 +55426,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.
               - `QuotaStorage` — An in-memory Storage with a byte quota, throwing the browser's `QuotaExceededError` past it — the condition the 2026-10-19 incident hit and jsdom never produces.
               - `storageScopeOf` — The storage scope a component would read with `useStorageScope()` — `null` for the page's own, a composition id for a `PluginScope` — for a test that reads or writes a scoped store outside React.
+              - `writeEntryUnchecked` — Writes `value` under a declared owner's page-scope key `id`, stamped with the owner's current schema but never parsed against it — an entry this build wrote that its own schema refuses (a corrupt one).
           - Plugins:
             - **`health`** — Makes browser storage visible: an error toast once per owner per page load when a write is refused (over the owner's cap, the area full, or storage blocked — the value then lives only in memory), and the health report's Browser storage row (critical when the browser refused a write, attention when an owner hit or nears its cap; its detail lists every owner's use against its cap plus the legacy and unowned keys).
               - Web:

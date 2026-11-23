@@ -1,8 +1,9 @@
 /**
  * `places.places.all` and `places.tags.all` hold EVERY saved place and EVERY
  * tag: the map draws every pin and the tag sidebar walks the whole tree, so a
- * place or tag past the old windows' `maxLimit` (5000) must still be in them —
- * a place the old window dropped was a missing pin, a tag a cut child. The
+ * place past the old window's `maxLimit` (5000), and a tag up to the tree's
+ * declared cap, must still be in them — a place the old window dropped was a
+ * missing pin, a tag a cut child. The
  * real declarations, compiled with the served bindings against a throwaway
  * database carrying the real schema, load each whole set FULL, in its order.
  *
@@ -25,21 +26,34 @@ import { _places, _placeTags } from "./tables";
 
 setDefaultTimeout(120_000);
 
-/** The old windows' `maxLimit`, plus one. */
-const COUNT = 5001;
+/** The old place window's `maxLimit`, plus one. */
+const PLACE_COUNT = 5001;
+/**
+ * A full tree: as many tags as the collection's declared bound admits — read
+ * from the declaration, so the fixture follows the cap wherever it moves.
+ */
+const TAG_COUNT = tagTreeBound();
 /** Every place's id, oldest first. */
-const placeIds = Array.from({ length: COUNT }, () => placeIdKind.mint());
+const placeIds = Array.from({ length: PLACE_COUNT }, () => placeIdKind.mint());
 /** Every tag's id, by ascending rank. */
-const tagIds = Array.from({ length: COUNT }, () => placeTagIdKind.mint());
+const tagIds = Array.from({ length: TAG_COUNT }, () => placeTagIdKind.mint());
 /** Every tag's rank, ascending. */
-const tagRanks = Rank.nBetween(null, null, COUNT).map(String);
+const tagRanks = Rank.nBetween(null, null, TAG_COUNT).map(String);
+
+function tagTreeBound(): number {
+  const bound: { max?: unknown } = placeTags.all.all;
+  if (typeof bound.max !== "number") {
+    throw new Error(` declares no numeric max`);
+  }
+  return bound.max;
+}
 
 let t: TestDb;
 
 beforeAll(async () => {
   t = await createTestDb({ prefix: "places_all" });
   await runMigrations(t.db);
-  const base = Date.now() - COUNT * 1000;
+  const base = Date.now() - PLACE_COUNT * 1000;
   await t.db.insert(_places).values(
     placeIds.map((id, i) => ({
       id,
@@ -54,7 +68,7 @@ beforeAll(async () => {
     tagIds.map((id, i) => ({
       id,
       name: `tag ${i + 1}`,
-      parentId: i === COUNT - 1 ? tagIds[0] : null,
+      parentId: i === TAG_COUNT - 1 ? tagIds[0] : null,
       rank: tagRanks[i]!,
     })),
   );
@@ -79,12 +93,12 @@ test("the whole place set holds the oldest place, past the old window's maxLimit
   });
   const rows = await specs.all.loader({});
   expect(rows).toHaveLength(await rowCount(_places));
-  expect(rows.length).toBeGreaterThanOrEqual(COUNT);
+  expect(rows.length).toBeGreaterThanOrEqual(PLACE_COUNT);
   // Newest first: the oldest place — the one a window would drop — is last.
   expect(rows.at(-1)?.id).toBe(placeIds[0]);
 });
 
-test("the whole tag tree holds the last-ranked tag, past the old window's maxLimit", async () => {
+test("a full tag tree, at its declared cap, holds the last-ranked tag", async () => {
   const specs = compileCollection(placeTags, {
     from: _placeTags,
     db: t.db as unknown as QueryDb,

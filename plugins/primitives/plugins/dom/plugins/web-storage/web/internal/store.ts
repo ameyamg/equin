@@ -967,3 +967,28 @@ export function clearStorageScope(id: string): void {
   for (const l of scopeClearedListeners) l(id);
   if (changed) notifyChanged();
 }
+
+/**
+ * Writes `value` under `owner`'s page-scope key `id` as this build would —
+ * stamped with the owner's schema — WITHOUT parsing it against that schema:
+ * the one way to stand up "bytes our own schema wrote that our schema now
+ * refuses" (a corrupt entry), which `write` cannot produce. Test support,
+ * published only by `web/testing` (`writeEntryUnchecked`); the owner's
+ * in-memory index is re-read from storage on its next touch.
+ */
+export function writeUncheckedEntry(
+  owner: string,
+  id: string,
+  value: unknown,
+): void {
+  const state = owners.get(owner);
+  if (!state) throw new Error(`web-storage: no owner "${owner}" is declared`);
+  const store = openArea(state.spec.area);
+  if (!store)
+    throw new Error(`web-storage: the ${state.spec.area} area is unavailable`);
+  store.setItem(
+    `${ownerPrefix(owner, null)}${id}`,
+    envelope(state, value, Date.now()),
+  );
+  if (state.entries !== "unavailable") state.entries = null;
+}
