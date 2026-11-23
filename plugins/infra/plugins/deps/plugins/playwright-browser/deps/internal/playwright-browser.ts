@@ -1,5 +1,6 @@
 import { scriptPath } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { mkdir } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { readFile, realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join } from "node:path";
 import type {
@@ -425,6 +426,14 @@ export type PersistentChromiumLaunchOptions = Omit<
    * returns the path to launch; the install stays the only source.
    */
   derive?: (executable: string) => Promise<string>;
+  /**
+   * `false`: Chromium starts with NO window — Playwright's own command line,
+   * minus the startup `about:blank` page, plus `--no-startup-window`; the
+   * context has no page until one is created. A headed browser nobody looks
+   * at needs it: the startup window is drawn on the user's screen. Default
+   * `true` (Playwright's launch, which waits for that page).
+   */
+  startupWindow?: boolean;
 };
 
 /**
@@ -445,19 +454,88 @@ export async function launchPersistentChromium(
       `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,
     );
   }
-  const { derive, signals, ...launchOpts } = opts;
+  const { derive, signals, startupWindow = true, ...launchOpts } = opts;
   const headless = launchOpts.headless ?? true;
   const installed = headless
     ? read.executables.headlessShell
     : read.executables.headed;
   const executablePath = derive ? await derive(installed) : installed;
   const { chromium } = await import("playwright");
-  return chromium.launchPersistentContext(userDataDir, {
+  const options = {
     ...launchOpts,
     ...signalHandling(signals),
     headless,
     executablePath,
+  };
+  if (startupWindow)
+    return chromium.launchPersistentContext(userDataDir, options);
+  const argv = await playwrightArgv(chromium, userDataDir, options);
+  return chromium.launchPersistentContext(userDataDir, {
+    ...options,
+    // Playwright's persistent launch waits for a first page unless it adds no
+    // argument of its own: hand it its own command line, windowless.
+    ignoreDefaultArgs: true,
+    args: windowlessArgv(argv),
   });
+}
+
+/**
+ * The exact argv Playwright launches Chromium with for these options: read by
+ * launching a stub executable that records its arguments and exits — so a
+ * windowless launch carries every default switch of the installed Playwright
+ * (profile encryption included: `--use-mock-keychain` decides whether saved
+ * logins decrypt) instead of a copy that drifts.
+ */
+export async function playwrightArgv(
+  chromium: BrowserType,
+  userDataDir: string,
+  options: NonNullable<Parameters<BrowserType["launchPersistentContext"]>[1]>,
+): Promise<string[]> {
+  const dir = await mkdtemp(join(tmpdir(), "chromium-argv-"));
+  try {
+    const stub = join(dir, "chromium");
+    const out = `${stub}.argv`;
+    await writeFile(
+      stub,
+      `#!/bin/sh\nprintf '%s\\0' "$@" > "$0.argv"\nexit 1\n`,
+      {
+        mode: 0o755,
+      },
+    );
+    const launched = await chromium
+      .launchPersistentContext(userDataDir, {
+        ...options,
+        executablePath: stub,
+        timeout: MINUTE,
+      })
+      .then(
+        async (ctx) => {
+          await ctx.close();
+          return null;
+        },
+        (err: unknown) => err,
+      );
+    if (launched === null) throw new Error("the argv stub launched a browser");
+    const text = await readFile(out, "utf8").catch((err: unknown) => {
+      throw new Error(
+        `Playwright never ran the argv stub (${String(err)}); its launch failed with: ${String(launched)}`,
+      );
+    });
+    return text.split("\0").slice(0, -1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/** Playwright's persistent-launch argv without its startup page, windowless. */
+export function windowlessArgv(argv: readonly string[]): string[] {
+  const pages = argv.filter((a) => !a.startsWith("-"));
+  if (pages.length !== 1 || pages[0] !== "about:blank") {
+    throw new Error(
+      `expected Playwright's argv to open exactly about:blank, got: ${JSON.stringify(pages)}`,
+    );
+  }
+  return [...argv.filter((a) => a !== "about:blank"), "--no-startup-window"];
 }
 
 /**

@@ -193,21 +193,22 @@ const LAUNCH_ARGS = [
  * macOS runs Chromium HEADED, as a background-only app (`background-app.ts`):
  * the GPU draws its pages and sites see the browser they expect, not the
  * headless shell bot checks flag. Nobody looks at its windows — the app's
- * canvas shows their pages — so they are kept MINIMIZED (`hideWindow`): a
- * position alone does not hide a window (macOS clamps one opened at -20000
- * back onto a display, and Mission Control lays out every window that is not
- * minimized wherever it sits). With the flags below a minimized window is
- * never throttled: measured 2026-11-23, every tab of it — the front one or
- * not — keeps painting and screencasting at full rate. Elsewhere (Linux: no
- * display) Chromium stays the headless shell.
+ * canvas shows their pages — and none is ever drawn on the user's screen:
+ * Chromium starts windowless, its ONE window is created minimized (the
+ * anchor's, `openAnchor`), and every page opens into it as a background tab
+ * (`newOwnPage`). A window shown, then minimized, plays the macOS minimize
+ * animation on the user's desktop; an off-screen position does not hide one
+ * (macOS clamps a window opened at -20000 back onto a display), and Mission
+ * Control lays out every window that is not minimized. With the flags below a
+ * minimized window is never throttled: measured 2026-11-23, every tab of it —
+ * the front one or not — keeps painting and screencasting at full rate.
+ * Elsewhere (Linux: no display) Chromium stays the headless shell.
  */
 const HEADED = process.platform === "darwin";
-/** Where a window opens before it is minimized (macOS clamps it onto a display). */
+/** Where a window is placed (macOS clamps it onto a display). */
 const OFFSCREEN = -20_000;
 const WINDOW = { width: 2560, height: 1600 };
 const HEADED_ARGS = [
-  `--window-position=${OFFSCREEN},${OFFSCREEN}`,
-  `--window-size=${WINDOW.width},${WINDOW.height}`,
   "--disable-backgrounding-occluded-windows",
   "--disable-renderer-backgrounding",
   "--disable-background-timer-throttling",
@@ -233,7 +234,7 @@ async function launch(): Promise<BrowserContext> {
     acceptDownloads: true,
     headless: !HEADED,
     args: HEADED ? [...LAUNCH_ARGS, ...HEADED_ARGS] : LAUNCH_ARGS,
-    ...(HEADED ? { derive: backgroundOnlyChromium } : {}),
+    ...(HEADED ? { derive: backgroundOnlyChromium, startupWindow: false } : {}),
     // Playwright's default: the automation infobar and `navigator.webdriver`.
     ignoreDefaultArgs: ["--enable-automation"],
   };
@@ -242,19 +243,28 @@ async function launch(): Promise<BrowserContext> {
     hooks.profileDir,
     options,
   );
-  // The headless shell announces itself as `HeadlessChrome`, which sites
-  // refuse or degrade. Relaunch as the Chrome it is (same version).
-  const probe = ctx.pages()[0] ?? (await ctx.newPage());
-  const ua = await probe.evaluate(() => navigator.userAgent);
-  if (ua.includes("HeadlessChrome")) {
-    await ctx.close();
-    ctx = await launchPersistentChromium(installed.ready, hooks.profileDir, {
-      ...options,
-      userAgent: ua.replace("HeadlessChrome", "Chrome"),
-    });
+  if (!HEADED) {
+    // The headless shell announces itself as `HeadlessChrome`, which sites
+    // refuse or degrade. Relaunch as the Chrome it is (same version).
+    const probe = ctx.pages()[0] ?? (await ctx.newPage());
+    const ua = await probe.evaluate(() => navigator.userAgent);
+    if (ua.includes("HeadlessChrome")) {
+      await ctx.close();
+      ctx = await launchPersistentChromium(installed.ready, hooks.profileDir, {
+        ...options,
+        userAgent: ua.replace("HeadlessChrome", "Chrome"),
+      });
+    }
   }
-  // The blank page a persistent launch opens is nobody's tab.
-  for (const p of ctx.pages()) await p.close();
+  const browser = ctx.browser();
+  if (!browser) throw new Error("[browser-engine] the context has no browser");
+  const session = await browser.newBrowserCDPSession();
+  browserSessions.set(ctx, session);
+  // The anchor: a blank page that is nobody's tab, holding open the window
+  // every page opens into. Headless, the launch's own blank page is it.
+  const anchor = HEADED ? await openAnchor(ctx, session) : ctx.pages()[0];
+  if (!anchor) throw new Error("[browser-engine] the launch opened no page");
+  for (const p of ctx.pages()) if (p !== anchor) await p.close();
 
   await ctx.exposeBinding(ENGINE_BINDING, ({ page }, report: PageReport) => {
     const rp = byPage.get(page);
@@ -283,8 +293,74 @@ export async function closeAll(): Promise<void> {
 
 // ── Pages ────────────────────────────────────────────────────────────────
 
+/**
+ * The anchor's window, created minimized — never drawn on screen. A window
+ * larger than the display comes out maximized instead (measured 2026-11-23);
+ * this one is clamped to the display's height and stays minimized.
+ */
+async function openAnchor(
+  ctx: BrowserContext,
+  session: CDPSession,
+): Promise<Page> {
+  const opened = session
+    .send("Target.createTarget", {
+      url: "about:blank",
+      newWindow: true,
+      windowState: "minimized",
+      left: OFFSCREEN,
+      top: OFFSCREEN,
+      ...WINDOW,
+    })
+    .then((r) => r.targetId);
+  return await pageOf(ctx, opened);
+}
+
+/** Each context's browser-level CDP session, which opens pages (`newOwnPage`). */
+const browserSessions = new WeakMap<BrowserContext, CDPSession>();
+
+async function targetIdOf(ctx: BrowserContext, page: Page): Promise<string> {
+  const cdp = await ctx.newCDPSession(page);
+  try {
+    return (await cdp.send("Target.getTargetInfo")).targetInfo.targetId;
+  } finally {
+    await cdp.detach();
+  }
+}
+
+/**
+ * Open a page as a BACKGROUND tab of the anchor's window. Playwright's
+ * `newPage` opens a foreground tab, and a foreground tab restores its
+ * minimized window onto the screen (measured 2026-11-23: the window goes
+ * minimized → normal), which `hideWindow` then minimized again — a restore
+ * and a minimize animation on the user's desktop per opened link. A
+ * background tab leaves the window minimized and still screencasts.
+ */
+async function openBackgroundPage(ctx: BrowserContext): Promise<Page> {
+  const session = browserSessions.get(ctx);
+  if (!session) throw new Error("[browser-engine] no browser session");
+  const opened = session
+    .send("Target.createTarget", { url: "about:blank", background: true })
+    .then((r) => r.targetId);
+  return await pageOf(ctx, opened);
+}
+
+/**
+ * The page of a target being created. Call in the same tick as the create:
+ * its page event can fire before createTarget answers.
+ */
+async function pageOf(
+  ctx: BrowserContext,
+  targetId: Promise<string>,
+): Promise<Page> {
+  const created = ctx.waitForEvent("page", {
+    predicate: async (p) => (await targetIdOf(ctx, p)) === (await targetId),
+  });
+  const [, page] = await Promise.all([targetId, created]);
+  return page;
+}
+
 async function newOwnPage(ctx: BrowserContext): Promise<Page> {
-  const created = ctx.newPage().then((p) => {
+  const created = openBackgroundPage(ctx).then((p) => {
     ownPages.add(p);
     return p;
   });
@@ -298,9 +374,10 @@ async function newOwnPage(ctx: BrowserContext): Promise<Page> {
 
 /**
  * Size the page's window and minimize it, so it is in no window overview
- * (Mission Control, App Exposé's main row). Chromium opens a window it creates
- * (a new window, a `window.open` popup) as a normal one; the launch flags only
- * size the first. Bounds can only be set on a normal window, hence the order.
+ * (Mission Control, App Exposé's main row). A no-op for the host's own pages
+ * (their window was born minimized); for what a page shows itself (a popup's
+ * window, a `target=_blank` foreground tab) it plays the minimize animation.
+ * Bounds can only be set on a normal window, hence the order.
  */
 async function hideWindow(cdp: CDPSession): Promise<void> {
   const { windowId, bounds } = await cdp.send("Browser.getWindowForTarget");

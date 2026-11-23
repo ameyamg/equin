@@ -26,10 +26,17 @@ pid, `launchedBy` namespace, page/socket counts, idle deadline), and
   per build) — no Dock icon, no Cmd+Tab, no menu bar. Headed means the GPU
   draws (Metal WebGL, GPU compositing) and sites see a real browser
   (`window.chrome`, plugins); the headless shell was flagged by bot checks
-  (Google's reCAPTCHA looped). Its windows are kept **minimized**
-  (`hideWindow`: every page's window on register, again on attach), so no
-  window overview (Mission Control) shows them — an off-screen position alone
-  does not (macOS clamps it back onto a display), and a background-only app
+  (Google's reCAPTCHA looped). No window is ever drawn on screen: Chromium
+  starts windowless (`launchPersistentChromium`'s `startupWindow: false`), ONE
+  window is created **minimized** for the anchor (a blank page nobody views,
+  holding the window open), and every page is a **background tab** of it
+  (`newOwnPage`: `Target.createTarget {background: true}` on the browser
+  session). Never Playwright's `newPage`: a foreground tab restores its
+  minimized window, and re-minimizing it plays the macOS minimize animation on
+  the user's desktop. `hideWindow` (on register and attach) re-minimizes what
+  a page showed itself (a popup's window). Minimized, a window is in no window
+  overview (Mission Control) — an off-screen position alone does not hide it
+  (macOS clamps it back onto a display), and a background-only app
   cannot be hidden (`NSRunningApplication.hide` refuses). With the
   no-backgrounding flags every tab of a minimized window paints and
   screencasts at full rate, front tab or not, so a page is never brought to
