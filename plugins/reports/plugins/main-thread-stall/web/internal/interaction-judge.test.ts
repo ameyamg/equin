@@ -363,7 +363,9 @@ describe("the browser's render clock", () => {
 
   test("not against a frame before it that never rendered — no clock to measure from", () => {
     // A long task with no render step, then one frame GPU work held ~1 s.
-    const task = frame(0, 120, [script(0, 120, "onMessage (MessagePort.onmessage)")]);
+    const task = frame(0, 120, [
+      script(0, 120, "onMessage (MessagePort.onmessage)"),
+    ]);
     const held = frame(125, 1100, [], 1100, { renderStart: 1095, blocking: 0 });
     expect(onRenderClock(held, [task, held])).toBe(false);
     expect(throttled([task, held])).toBe(false);
@@ -372,7 +374,10 @@ describe("the browser's render clock", () => {
   test("the clock's slack is ± 50 ms", () => {
     const before = frame(0, 100, [], 100, { renderStart: 90, blocking: 0 });
     const at = (render: number) =>
-      frame(100, render + 5, [], render + 5, { renderStart: render, blocking: 0 });
+      frame(100, render + 5, [], render + 5, {
+        renderStart: render,
+        blocking: 0,
+      });
     expect(onRenderClock(at(1140), [before, at(1140)])).toBe(true);
     expect(onRenderClock(at(1141), [before, at(1141)])).toBe(false);
     expect(onRenderClock(at(1040), [before, at(1040)])).toBe(true);
