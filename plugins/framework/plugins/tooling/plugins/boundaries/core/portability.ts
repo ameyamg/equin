@@ -79,6 +79,17 @@ export interface ServerPortability {
    * barrel — there is nothing to explain.
    */
   offenders(barrel: string): Offender[];
+  /**
+   * The ROOT causes of `barrel`'s taint: every module whose own code needs the
+   * computer (rules 1 and 2), or declares a host service no server barrel
+   * provides at all — never a module tainted only because a service it
+   * declares lost its portable provider (rule 3): that one is followed into
+   * the providers' closures to the modules tainting them. Unpruned (every
+   * root is named, unlike {@link offenders}' frontier), sorted by module, each
+   * with the import chain from the barrel — or from the provider the walk
+   * crossed into — to it. Throws for a portable barrel.
+   */
+  rootCauses(barrel: string): Offender[];
 }
 
 /** The plugin (`plugins/a/plugins/b`) a repo path sits in, or the path itself outside one. */
@@ -169,6 +180,8 @@ export async function derivePortability(
     }
   }
 
+  // Rules 1 and 2 alone: the seeds every other taint derives from.
+  const intrinsic = new Map(seeds);
   const taintFrom = reverseTaint(closure, modules);
 
   // Rule 3, to a fixpoint: taint only grows, so it terminates.
@@ -197,6 +210,21 @@ export async function derivePortability(
     }
   };
   const offendersMemo = new Map<string, Offender[]>();
+  const rootsMemo = new Map<string, Offender[]>();
+  // Each rule-3 seed's services, with their providers (all tainted).
+  const serviceSeeds = new Map<string, { need: string; providers: string[] }[]>();
+  for (const d of byName.values()) {
+    if (!tainted.has(d.module)) continue;
+    const ps = providers.get(d.name) ?? [];
+    if (ps.some((p) => !tainted.has(p))) continue;
+    serviceSeeds.set(d.module, [
+      ...(serviceSeeds.get(d.module) ?? []),
+      {
+        need: `host service "${d.id}", which no \`server/\` barrel provides`,
+        providers: ps,
+      },
+    ]);
+  }
   return {
     barrels,
     isPortable(barrel) {
@@ -216,7 +244,75 @@ export async function derivePortability(
       offendersMemo.set(barrel, found);
       return found;
     },
+    rootCauses(barrel) {
+      assertMeasured(barrel);
+      const memo = rootsMemo.get(barrel);
+      if (memo !== undefined) return memo;
+      if (!tainted.has(barrel)) {
+        throw new Error(
+          `rootCauses(${barrel}): it is portable — nothing in its closure needs the computer.`,
+        );
+      }
+      const found = rootOffenders(closure, intrinsic, serviceSeeds, tainted, barrel);
+      rootsMemo.set(barrel, found);
+      return found;
+    },
   };
+}
+
+/**
+ * {@link ServerPortability.rootCauses}: a forward BFS through tainted modules
+ * from `entry`, recording every intrinsic seed (and every service no barrel
+ * provides) it reaches, and crossing each rule-3 seed into its providers.
+ * Never empty: rule 3 only ever grows taint from the intrinsic seeds.
+ */
+function rootOffenders(
+  closure: Pick<UnionImportClosure, "children">,
+  intrinsic: ReadonlyMap<string, string[]>,
+  serviceSeeds: ReadonlyMap<string, { need: string; providers: string[] }[]>,
+  tainted: ReadonlySet<string>,
+  entry: string,
+): Offender[] {
+  // Each visited module's predecessor; a provider crossed into is its own
+  // chain's start.
+  const parent = new Map<string, string | null>([[entry, null]]);
+  const queue = [entry];
+  const found = new Map<string, Offender>();
+  const chainTo = (node: string): string[] => {
+    const chain = [node];
+    for (let p = parent.get(node); p != null; p = parent.get(p)) {
+      chain.unshift(p);
+    }
+    return chain;
+  };
+  const visit = (node: string, from: string | null): void => {
+    if (parent.has(node) || !tainted.has(node)) return;
+    parent.set(node, from);
+    queue.push(node);
+  };
+  for (const node of queue) {
+    const own = intrinsic.get(node);
+    const services = serviceSeeds.get(node) ?? [];
+    const unprovided = services
+      .filter((s) => s.providers.length === 0)
+      .map((s) => s.need);
+    if (own !== undefined || unprovided.length > 0) {
+      found.set(node, {
+        module: node,
+        needs: [...(own ?? []), ...unprovided],
+        chain: chainTo(node),
+      });
+      if (own !== undefined) continue;
+    }
+    for (const s of services) for (const p of s.providers) visit(p, null);
+    for (const child of closure.children(node)) visit(child, node);
+  }
+  if (found.size === 0) {
+    throw new Error(
+      `rootCauses(${entry}): it is tainted but no root cause was reached — the taint and the walk disagree.`,
+    );
+  }
+  return [...found.values()].sort((a, b) => a.module.localeCompare(b.module));
 }
 
 /**

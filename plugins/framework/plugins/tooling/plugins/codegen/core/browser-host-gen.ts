@@ -58,6 +58,7 @@ import {
 import { parseExternalHostsDeclarations } from "./external-hosts";
 import {
   serverPortabilityOf,
+  type Offender,
   type ServerPortability,
 } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
@@ -126,7 +127,10 @@ export interface HostGraphInputs {
    * (`serverPortabilityOf`) — an input like {@link closure}, so a test
    * injects it.
    */
-  portability: Pick<ServerPortability, "isPortable" | "offenders">;
+  portability: Pick<
+    ServerPortability,
+    "isPortable" | "offenders" | "rootCauses"
+  >;
   /**
    * The union closure of `entries` (in order), measured at once — the
    * derivation asks once for the entry, then once per fixpoint round for the
@@ -251,6 +255,69 @@ export function hostServiceDeclarationsOf(
 }
 
 /**
+ * One way the graph is invalid, with the root causes it follows from (a
+ * non-portable provider's or barrel's `rootCauses`) — none when the problem
+ * is its own cause.
+ */
+interface HostGraphProblem {
+  text: string;
+  from: readonly Offender[];
+}
+
+/**
+ * The failure, root causes first: one non-portable use can turn away every
+ * provider and loaded barrel at once, so each root cause leads on its own
+ * line — what needs the computer, why, how many problems follow from it and
+ * one import chain to it — then the problems that are their own cause, then a
+ * count of the derived ones, and last their full list.
+ */
+function renderHostGraphProblems(
+  label: string,
+  problems: readonly HostGraphProblem[],
+): string {
+  const roots = new Map<string, { root: Offender; follows: number }>();
+  for (const p of problems) {
+    for (const root of new Map(p.from.map((o) => [o.module, o])).values()) {
+      const seen = roots.get(root.module);
+      if (seen === undefined) roots.set(root.module, { root, follows: 1 });
+      else seen.follows++;
+    }
+  }
+  const own = problems.filter((p) => p.from.length === 0);
+  const derived = problems.filter((p) => p.from.length > 0);
+  const plural = (n: number, one: string, many = `${one}s`): string =>
+    `${n} ${n === 1 ? one : many}`;
+  const lines = [
+    `${label}: the inferred browser-host graph is invalid: ${[
+      roots.size > 0 ? plural(roots.size, "root cause") : null,
+      own.length > 0 ? plural(own.length, "problem") : null,
+      derived.length > 0
+        ? `${plural(derived.length, "problem")} following from ${roots.size === 1 ? "it" : "them"}`
+        : null,
+    ]
+      .filter((x) => x !== null)
+      .join(", ")}`,
+  ];
+  for (const { root, follows } of [...roots.values()].sort(
+    (a, b) =>
+      b.follows - a.follows || a.root.module.localeCompare(b.root.module),
+  )) {
+    lines.push(
+      `  - ${root.module} needs ${root.needs.join(", ")} (${plural(follows, "problem")} follow${follows === 1 ? "s" : ""} from it)`,
+      `      via ${root.chain.join(" → ")}`,
+    );
+  }
+  for (const p of own) lines.push(`  - ${p.text}`);
+  if (derived.length > 0) {
+    lines.push(
+      `  ${plural(derived.length, "problem")} following from the root cause${roots.size === 1 ? "" : "s"} above:`,
+    );
+    for (const p of derived) lines.push(`    - ${p.text.replace(/\n/g, "\n  ")}`);
+  }
+  return lines.join("\n");
+}
+
+/**
  * The graph rule over its read inputs (see the header): roots, providers to a
  * fixpoint, exactly one provider per declared service, and the closure guard.
  * Throws — naming the service and its candidates, or the import chain — rather
@@ -369,10 +436,20 @@ export async function resolveHostGraph(
   }
 
   const providers: Record<string, string> = {};
-  const problems: string[] = [];
+  const problems: HostGraphProblem[] = [];
   const memberProvides = new Map<string, string[]>();
   for (const barrel of members) {
     memberProvides.set(barrel, providedServiceNames(await source(barrel)));
+  }
+  // The providers the portability rule turned away: a service none of the
+  // members provides was lost to them, so it follows from their root causes.
+  const refused: { barrel: string; provides: string[] }[] = [];
+  for (const barrel of inputs.candidateBarrels) {
+    if (portable(barrel)) continue;
+    refused.push({
+      barrel,
+      provides: providedServiceNames(await source(barrel)),
+    });
   }
   for (const service of [...declared.values()].sort((a, b) =>
     a.id.localeCompare(b.id),
@@ -384,11 +461,21 @@ export async function resolveHostGraph(
       providers[service.id] = pluginOfBarrel(by[0]!);
       continue;
     }
-    problems.push(
-      by.length === 0
-        ? `host service "${service.id}" (${service.module}) has no provider: no portable host provider (a plugin whose \`server/index.ts\` spells ${service.name}.provide(…))`
-        : `host service "${service.id}" has ${by.length} providers: ${by.map(pluginOfBarrel).join(", ")}`,
-    );
+    if (by.length > 1) {
+      problems.push({
+        text: `host service "${service.id}" has ${by.length} providers: ${by.map(pluginOfBarrel).join(", ")}`,
+        from: [],
+      });
+      continue;
+    }
+    const lost = refused.filter((c) => c.provides.includes(service.name));
+    problems.push({
+      text:
+        lost.length === 0
+          ? `host service "${service.id}" (${service.module}) has no provider: no portable host provider (a plugin whose \`server/index.ts\` spells ${service.name}.provide(…))`
+          : `host service "${service.id}" (${service.module}) has no provider: its provider${lost.length === 1 ? "" : "s"} ${lost.map((c) => pluginOfBarrel(c.barrel)).join(", ")} ${lost.length === 1 ? "is" : "are"} not portable`,
+      from: lost.flatMap((c) => inputs.portability.rootCauses(c.barrel)),
+    });
   }
 
   // The guard: the graph's code loads no server barrel outside it.
@@ -396,21 +483,21 @@ export async function resolveHostGraph(
     a.localeCompare(b),
   )) {
     if (!SERVER_BARREL_RE.test(module) || members.has(module)) continue;
-    const why = portable(module)
+    const isPortable = portable(module);
+    const why = isPortable
       ? "portable, but neither in the composition nor a provider"
       : `not portable: ${inputs.portability
           .offenders(module)
           .slice(0, 3)
           .map((o) => `${o.module} needs ${o.needs.join(", ")}`)
           .join("; ")}`;
-    problems.push(
-      `the graph loads ${module}, which is not in it (${why})\n      via ${closure.importChain(module).join(" → ")}`,
-    );
+    problems.push({
+      text: `the graph loads ${module}, which is not in it (${why})\n      via ${closure.importChain(module).join(" → ")}`,
+      from: isPortable ? [] : inputs.portability.rootCauses(module),
+    });
   }
   if (problems.length > 0) {
-    throw new Error(
-      `${label}: the inferred browser-host graph is invalid:\n  - ${problems.join("\n  - ")}`,
-    );
+    throw new Error(renderHostGraphProblems(label, problems));
   }
   return {
     members: [...members].map(pluginOfBarrel).sort(),

@@ -24,6 +24,7 @@ import {
   type HostGraphInputs,
 } from "./browser-host-gen";
 import { discoverBrowserHosts } from "./browser-host-scope";
+import type { Offender } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { buildRegistryGenContext } from "./plugin-registry-gen";
 import { codegenPassOver } from "./codegen-pass";
 import {
@@ -169,7 +170,11 @@ function inputs(
   closures: Record<string, string[]>,
   over: Partial<HostGraphInputs> = {},
   nonPortable: Record<string, string> = {},
+  roots: Record<string, Offender[]> = {},
 ): HostGraphInputs {
+  const offenders = (b: string): Offender[] => [
+    { module: b, needs: [nonPortable[b]!], chain: [b] },
+  ];
   return {
     label: "fixture",
     entry: ENTRY,
@@ -178,7 +183,8 @@ function inputs(
     read: async (path) => files[path] ?? null,
     portability: {
       isPortable: (b) => !(b in nonPortable),
-      offenders: (b) => [{ module: b, needs: [nonPortable[b]!], chain: [b] }],
+      offenders,
+      rootCauses: (b) => roots[b] ?? offenders(b),
     },
     closure: async (entries): Promise<HostClosure> => {
       const of = (e: string): string[] => [e, ...(closures[e] ?? [])];
@@ -246,7 +252,7 @@ describe("resolveHostGraph", () => {
       ),
     );
     expect(run).rejects.toThrow(
-      `the graph loads ${barrel("disk")}, which is not in it (not portable: ${barrel("disk")} needs node:fs)\n      via ${barrel("app")} → ${barrel("disk")}`,
+      `the graph loads ${barrel("disk")}, which is not in it (not portable: ${barrel("disk")} needs node:fs)\n        via ${barrel("app")} → ${barrel("disk")}`,
     );
   });
 
@@ -261,6 +267,49 @@ describe("resolveHostGraph", () => {
     expect(run).rejects.toThrow(
       `host service "db.driver" (${SERVICE_MODULE}) has no provider`,
     );
+  });
+
+  test("one non-portable use in a core module leads the failure; what follows from it is counted after", async () => {
+    // The use every closure loads (a core module), turning away the driver's
+    // only provider and a barrel the entry loads.
+    const clock = at("clock", "core/internal/deadline.ts");
+    const root = (from: string): Offender[] => [
+      { module: clock, needs: ["unguarded .unref()"], chain: [from, clock] },
+    ];
+    const memory = barrel("db/plugins/memory");
+    const run = resolveHostGraph(
+      inputs(
+        {
+          [ENTRY]: "",
+          [barrel("db")]: portable(),
+          [SERVICE_MODULE]: SERVICE,
+          [memory]: portable("Driver.provide(memory)"),
+          [barrel("app")]: portable(),
+        },
+        { [barrel("db")]: [SERVICE_MODULE], [ENTRY]: [barrel("app")] },
+        { bundleBarrels: [barrel("db")], candidateBarrels: [memory] },
+        { [memory]: "a clock", [barrel("app")]: "a clock" },
+        { [memory]: root(memory), [barrel("app")]: root(barrel("app")) },
+      ),
+    );
+    const message = await run.then(
+      () => "",
+      (err: unknown) => (err instanceof Error ? err.message : String(err)),
+    );
+    const lines = message.split("\n");
+    expect(lines[0]).toBe(
+      "fixture: the inferred browser-host graph is invalid: 1 root cause, 2 problems following from it",
+    );
+    expect(lines[1]).toBe(
+      `  - ${clock} needs unguarded .unref() (2 problems follow from it)`,
+    );
+    expect(lines[3]).toBe(
+      "  2 problems following from the root cause above:",
+    );
+    expect(message).toContain(
+      `    - host service "db.driver" (${SERVICE_MODULE}) has no provider: its provider db/plugins/memory is not portable`,
+    );
+    expect(message).toContain(`    - the graph loads ${barrel("app")}`);
   });
 
   test("a declared service with two providers throws, naming both", async () => {

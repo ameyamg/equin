@@ -204,6 +204,23 @@ describe("serverPortability", () => {
     ]);
   });
 
+  test("rootCauses follows a service that lost its provider into the provider's own taint", () => {
+    // s is tainted only by rule 3 (p.s1's only provider q, and r.s2's only
+    // provider s itself): its root cause is q's node:os, named from q.
+    expect(portability.rootCauses(barrel("s"))).toEqual([
+      { module: barrel("q"), needs: ["node:os"], chain: [barrel("q")] },
+    ]);
+    // Unpruned: every root m reaches, never one behind a root (t).
+    expect(portability.rootCauses(barrel("m")).map((o) => o.module)).toEqual([
+      at("m", "server/internal/one.ts"),
+      at("m", "server/internal/two.ts"),
+      at("n", "core/index.ts"),
+      barrel("n"),
+      barrel("o"),
+    ]);
+    expect(() => portability.rootCauses(barrel("c"))).toThrow("it is portable");
+  });
+
   test("the frontier keeps every own-plugin seed and one per foreign plugin, never a seed behind a seed", () => {
     const found = portability.offenders(barrel("m"));
     const modules = found.map((o) => o.module);
