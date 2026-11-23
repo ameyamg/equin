@@ -671,7 +671,7 @@ Key invariants:
     - `infra/paths.worktreesDir`
     - `infra/spawn.spawnCaptured`
     - `packages/coalesce.createCoalescer`
-    - `packages/deadline.wallNow`
+    - `packages/process-alive.isOrphanedTemp`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `ArtifactBuilder`

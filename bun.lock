@@ -5474,6 +5474,10 @@
       "name": "@equin/plugin-packages-proc-rusage",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/process-alive": {
+      "name": "@equin/plugin-packages-process-alive",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/process-name": {
       "name": "@equin/plugin-packages-process-name",
       "version": "0.0.1",
@@ -5512,6 +5516,10 @@
     },
     "plugins/packages/plugins/sleep-clock": {
       "name": "@equin/plugin-packages-sleep-clock",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/sleep-clock/plugins/history": {
+      "name": "@equin/plugin-packages-sleep-clock-history",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/sleep-clock/plugins/stamp": {
@@ -11037,6 +11045,8 @@
 
     "@equin/plugin-packages-proc-rusage": ["@equin/plugin-packages-proc-rusage@workspace:plugins/packages/plugins/proc-rusage"],
 
+    "@equin/plugin-packages-process-alive": ["@equin/plugin-packages-process-alive@workspace:plugins/packages/plugins/process-alive"],
+
     "@equin/plugin-packages-process-name": ["@equin/plugin-packages-process-name@workspace:plugins/packages/plugins/process-name"],
 
     "@equin/plugin-packages-refcount-hub": ["@equin/plugin-packages-refcount-hub@workspace:plugins/packages/plugins/refcount-hub"],
@@ -11056,6 +11066,8 @@
     "@equin/plugin-packages-single-flight": ["@equin/plugin-packages-single-flight@workspace:plugins/packages/plugins/single-flight"],
 
     "@equin/plugin-packages-sleep-clock": ["@equin/plugin-packages-sleep-clock@workspace:plugins/packages/plugins/sleep-clock"],
+
+    "@equin/plugin-packages-sleep-clock-history": ["@equin/plugin-packages-sleep-clock-history@workspace:plugins/packages/plugins/sleep-clock/plugins/history"],
 
     "@equin/plugin-packages-sleep-clock-stamp": ["@equin/plugin-packages-sleep-clock-stamp@workspace:plugins/packages/plugins/sleep-clock/plugins/stamp"],
 

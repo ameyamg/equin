@@ -1,17 +1,26 @@
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
 import {
-  stampBefore,
-  unstampedInstant,
-  type ClockStamp,
-} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+  awakeSpanStart as historyAwakeSpanStart,
+  currentSleepReading as historyCurrentReading,
+  installSleepClock,
+  onSleepReadingChanged as historyOnChanged,
+  publishSleepReading as historyPublish,
+  sleptDuring as historySleptDuring,
+  stampOfWallInstant as historyStampOfWallInstant,
+  wakeBefore as historyWakeBefore,
+  type WakeBefore,
+} from "@plugins/packages/plugins/sleep-clock/plugins/history/core";
+import type { ClockStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import type { SleepNow } from "../../core";
-import { createSleepPublisher, type WakeBefore } from "./sleep-publisher";
 
-// The one publisher of this process: the server half owns the reading (other
-// plugins' server code drives it through publishSleepReading), and the machine
-// half serves it as the machine.sleep live value, subscribed for as long as a
-// tab reads it.
-const publisher = createSleepPublisher(readSleepClock);
+// This process's sleep history is `packages/sleep-clock/history`'s — one per
+// process, shared with the portable code that judges ages on every host (the
+// change feed, server-core's delivery spans). What this half adds is the clock:
+// loading it installs the native reader (bun:ffi), so every process that
+// imports it — a backend, an exec child, a CLI — judges on the real sleeps,
+// whether or not its entry ran the desktop's host probes (which install the
+// same reader; installing it twice is a no-op).
+installSleepClock(readSleepClock);
 
 /**
  * Read the machine's sleep clock and push it if it changed — in practice only
@@ -19,17 +28,17 @@ const publisher = createSleepPublisher(readSleepClock);
  * that already runs can call it on every tick; it adds no poller of its own.
  */
 export function publishSleepReading(): void {
-  publisher.publish();
+  historyPublish();
 }
 
 /** The last published reading, reading the clock first if nothing was yet. */
 export function currentSleepReading(): SleepNow {
-  return publisher.current();
+  return historyCurrentReading();
 }
 
 /** Run `fn` whenever {@link publishSleepReading} finds a changed reading. Returns the unsubscribe. */
 export function onSleepReadingChanged(fn: () => void): () => void {
-  return publisher.subscribe(fn);
+  return historyOnChanged(fn);
 }
 
 /**
@@ -39,7 +48,7 @@ export function onSleepReadingChanged(fn: () => void): () => void {
  * sleeps it lived through; `null` where the platform cannot tell.
  */
 export function sleptDuring(startMs: number, endMs: number): number | null {
-  return publisher.sleptDuring(startMs, endMs);
+  return historySleptDuring(startMs, endMs);
 }
 
 /**
@@ -54,9 +63,7 @@ export function stampOfWallInstant(
   wallMs: number,
   now: ClockStamp,
 ): ClockStamp {
-  const slept = sleptDuring(wallMs, now.wallMs);
-  if (slept === null) return unstampedInstant(wallMs);
-  return stampBefore(now, wallMs, now.wallMs - wallMs - slept);
+  return historyStampOfWallInstant(wallMs, now);
 }
 
 /**
@@ -67,7 +74,7 @@ export function stampOfWallInstant(
  * `null` where the platform cannot tell.
  */
 export function awakeSpanStart(endMs: number, awakeMs: number): number | null {
-  return publisher.awakeSpanStart(endMs, awakeMs);
+  return historyAwakeSpanStart(endMs, awakeMs);
 }
 
 /**
@@ -79,5 +86,5 @@ export function awakeSpanStart(endMs: number, awakeMs: number): number | null {
  * `{ supported: false }` where the platform cannot tell.
  */
 export function wakeBefore(atMs: number, withinMs: number): WakeBefore {
-  return publisher.wakeBefore(atMs, withinMs);
+  return historyWakeBefore(atMs, withinMs);
 }

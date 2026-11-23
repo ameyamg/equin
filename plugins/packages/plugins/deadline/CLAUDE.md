@@ -65,24 +65,20 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
 
 - Description: Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
 - Cross-plugin:
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×16
+  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×15
     - `debug` ×12
-    - `framework` ×12
+    - `framework` ×11
     - `apps` ×7
     - `conversations` ×5
     - `database` ×3
     - `network` ×2
+    - `packages` ×2
     - `tasks` ×2
     - `auth`
     - `build`
     - `installer/waits`
-    - `packages/signal-origin`
     - `shell/notifications`
-- Exemptions:
-  - Exempted by:
-    - `framework/server-core` (1 debt)
-    - `network/live/change-feed` (1 debt)
 - Core:
   - Exports (types):
     - `AwakeClock`

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-sleep-clock-history",
+  "private": true,
+  "version": "0.0.1",
+  "description": "This process's sleep history, on every host: the sleeps it saw (plus the one before its first reading), fed by the sleep clock its host installs (installSleepClock — the desktop's host probes and machine-sleep install packages/sleep-clock's bun:ffi reader; a page's worker installs none and every answer is 'cannot tell'). sleptDuring(start, end), awakeMsSince(wallMs) — the awake age of a past wall instant nothing stamped (a Postgres commit's changedAt), the wall span where the sleep cannot be told — stampOfWallInstant, awakeSpanStart, wakeBefore, and the set-if-changed reading machine-sleep publishes. Portable and import-free of the computer, so core/ code and the portable change feed judge ages on awake time without a plugin cycle."
+}

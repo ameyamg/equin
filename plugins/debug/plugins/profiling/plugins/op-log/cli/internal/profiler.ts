@@ -5,10 +5,8 @@ import type {
   Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { OpKind } from "@plugins/infra/plugins/worktree/core";
-import {
-  readSleepClock,
-  type SleepClockReading,
-} from "@plugins/packages/plugins/sleep-clock/core";
+import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
+import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/plugins/history/core";
 import {
   advanceSleeps,
   type OpEvent,

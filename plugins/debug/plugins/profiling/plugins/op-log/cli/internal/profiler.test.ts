@@ -5,7 +5,7 @@ import {
   type OpEvent,
   type OpSummary,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/core";
+import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/plugins/history/core";
 import { createOpProfiler, type OpProfiler } from "./profiler";
 
 // These tests drive `createOpProfiler` against an in-memory sink instead of the

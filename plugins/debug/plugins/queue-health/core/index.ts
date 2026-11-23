@@ -58,5 +58,6 @@ export type {
   QueueFacts,
   QueueVerdict,
   QueueVerdictConfig,
+  VerdictClock,
   QueueVerdictResult,
 } from "./verdict";

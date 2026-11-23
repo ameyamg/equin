@@ -14,7 +14,6 @@ export {
 export type { ProcessAwakeAge } from "./internal/process-age";
 export type {
   AwakeClockReading,
-  SleepClockReading,
   SleepMeter,
   SleepReading,
 } from "./internal/sleep-clock";

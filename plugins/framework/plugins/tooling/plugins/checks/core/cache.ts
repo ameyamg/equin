@@ -1,4 +1,5 @@
 import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import { isOrphanedTemp } from "@plugins/packages/plugins/process-alive/core";
 import { createHash, randomUUID } from "crypto";
 import { renameSync, rmSync, writeFileSync } from "fs";
 import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
@@ -39,10 +40,13 @@ import type { ReadSet } from "./read-set";
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_ENTRIES = 20000;
 const TRIM_TO = 16000;
-// A temp file is live only for the microseconds between its write and its
-// rename, so anything past this window was orphaned by a hard kill. See
+// A publish's temp is `.<writer pid>-<uuid>.tmp` (`publishAtomic`); a flight
+// publish's is `<file>.tmp.<writer pid>` (`packages/single-flight`). Either is
+// in flight exactly while its writer lives, so the sweeps judge the pid, never
+// the file's age (which a machine sleep mid-write would pass). See
 // `sweepOrphanTemps`.
-const TEMP_ORPHAN_MS = 60 * 60 * 1000;
+const CACHE_TMP = /^\.(\d+)-[0-9a-f-]+\.tmp$/;
+const FLIGHT_TMP = /\.tmp\.(\d+)$/;
 
 // A flight key (`check-flight.ts`) carries the tree hash, so its files are
 // dead the moment the run that made them settles — but nothing deletes them
@@ -233,18 +237,13 @@ export function openCheckCache(): CheckCache {
 // whereas a unique name would accumulate one per killed build forever. Part of
 // the hourly sweep (temps are `.tmp`, so they are neither counted as entries nor
 // swept by the `.json` pass); orphans are rare enough that hourly reclamation is
-// ample.
-function sweepOrphanTemps(all: string[], now: number): void {
+// ample. A temp whose writer still runs is in flight, however old (a writer
+// paused by a machine sleep included); one whose writer is gone is orphaned.
+function sweepOrphanTemps(all: string[]): void {
   for (const name of all) {
     if (!name.endsWith(".tmp")) continue;
-    const path = checkCacheDir.file(name);
-    try {
-      if (now - statSync(path).mtimeMs <= TEMP_ORPHAN_MS) continue; // maybe in flight
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      continue; // vanished underneath us — its owner finished the publish
-    }
-    rmSync(path, { force: true });
+    if (!isOrphanedTemp(name, CACHE_TMP)) continue; // its writer may still rename it
+    rmSync(checkCacheDir.file(name), { force: true });
   }
 }
 
@@ -268,7 +267,7 @@ export function pruneCheckCache(): CheckCachePruneReport {
   const all = readdirSync(checkCacheDir.path);
   const names = all.filter((n) => n.endsWith(".json"));
   const now = wallNow("retention");
-  sweepOrphanTemps(all, now);
+  sweepOrphanTemps(all);
   const flightFiles = sweepIdleFlights(now);
   let removed = 0;
   const live: { path: AppPath; mtimeMs: number }[] = [];
@@ -332,8 +331,7 @@ function sweepIdleFlights(now: number): number {
   const byKey = new Map<string, string[]>();
   for (const name of names) {
     if (name.includes(".tmp.")) {
-      const mtimeMs = mtimeOf(name);
-      if (mtimeMs !== null && now - mtimeMs > TEMP_ORPHAN_MS)
+      if (isOrphanedTemp(name, FLIGHT_TMP))
         rmSync(joinAppPath(dir, name), { force: true });
       continue;
     }

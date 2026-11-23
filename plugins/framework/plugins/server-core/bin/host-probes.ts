@@ -1,5 +1,4 @@
 import {
-  installAsleepClock,
   installCpuReader,
   installHeapReader,
   installMemoryProbe,
@@ -7,6 +6,7 @@ import {
   installSnapHash,
 } from "@plugins/framework/plugins/server-core/core";
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
+import { installSleepClock } from "@plugins/packages/plugins/sleep-clock/plugins/history/core";
 import { hostPeerProcUsage, hostProcMemory } from "./phys-footprint";
 
 // ── The desktop host's native probes, installed into the portable `core` ─────
@@ -29,8 +29,8 @@ installCpuReader(() => {
 // Native wyhash on the keyed-delta hot path (the runtime's portable default is
 // plain-JS `hash64`); the length fold kills every different-length collision.
 installSnapHash((json) => Bun.hash.wyhash(json) ^ BigInt(json.length));
-// The sleep clock, so `_debug.linger` can say whether a linger spanned a sleep.
-installAsleepClock(() => {
-  const r = readSleepClock();
-  return r.supported ? r.asleepMs : null;
-});
+// The sleep clock, into this process's sleep history (`sleep-clock/history`):
+// `_debug.linger` says whether a linger spanned a sleep, and every portable
+// age judge (the change feed's and the runtime's delivery `sinceChangeMs`)
+// takes the nap out of a wall span.
+installSleepClock(readSleepClock);

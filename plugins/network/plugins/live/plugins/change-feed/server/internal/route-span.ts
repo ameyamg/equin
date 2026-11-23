@@ -2,6 +2,7 @@ import {
   recordSpan,
   type SpanMeasures,
 } from "@plugins/infra/plugins/runtime-profiler/core";
+import { awakeMsSince } from "@plugins/packages/plugins/sleep-clock/plugins/history/core";
 import type { RoutedChange } from "./route-change";
 
 // Route one change and record it as a `route` span labelled by the changed
@@ -10,9 +11,10 @@ import type { RoutedChange } from "./route-change";
 // the runtime's recompute.
 //
 // The duration is the synchronous routing work only (`routeTableChange`). `sinceChangeMs` — the time from
-// the trigger firing to routing done — is a measure, not the duration: it also
-// counts how long the writing transaction stayed open after the statement,
-// which is not routing's cost.
+// the trigger firing to routing done, in AWAKE time (a nap in between is the
+// machine's, not the feed's) — is a measure, not the duration: it also counts
+// how long the writing transaction stayed open after the statement, which is
+// not routing's cost.
 //
 // A leaf span, not an entry: routing is synchronous and opens no child spans,
 // and staying synchronous keeps a throwing route a thrown exception rather than
@@ -27,6 +29,6 @@ export function routeWithSpan<C extends RoutedChange>(
   const measures: SpanMeasures = {};
   if (change.ids) measures.ids = change.ids.length;
   if (change.changedAt !== undefined)
-    measures.sinceChangeMs = Math.max(0, Date.now() - change.changedAt);
+    measures.sinceChangeMs = awakeMsSince(change.changedAt);
   recordSpan("route", change.table, routeMs, { measures });
 }

@@ -22,6 +22,8 @@ import {
 // table is retuned.
 
 const NOW = 1_800_000_000_000;
+/** The verdict's clock at NOW on an awake machine: every age is its wall span. */
+const AT = { now: NOW, awakeSince: (wallMs: number) => NOW - wallMs };
 const CFG: QueueVerdictConfig = {
   slotHogDeadlineFraction: 0.5,
   deadJobAttentionMinutes: 60,
@@ -66,7 +68,7 @@ function waitingFor(
 
 describe("the ladder", () => {
   test("idle is ok, with no pending change", () => {
-    const r = queueVerdict(facts(), CFG, NOW);
+    const r = queueVerdict(facts(), CFG, AT);
     expect(r.verdict.state).toBe("ok");
     expect(r.verdict.summary).toBe(OK_SUMMARY);
     expect(r.nextChangeAt).toBeNull();
@@ -92,7 +94,7 @@ describe("the ladder", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("ok");
     expect(r.verdict.summary).toBe(OK_SUMMARY);
@@ -103,7 +105,7 @@ describe("the ladder", () => {
       const r = queueVerdict(
         facts({ classes: waitingFor(hold, attentionWaitMs(hold) - 1) }),
         CFG,
-        NOW,
+        AT,
       );
       expect(r.verdict.state).toBe("ok");
       expect(r.verdict.summary).toBe(OK_SUMMARY);
@@ -116,7 +118,7 @@ describe("the ladder", () => {
       const r = queueVerdict(
         facts({ classes: waitingFor(hold, attentionWaitMs(hold)) }),
         CFG,
-        NOW,
+        AT,
       );
       expect(r.verdict.state).toBe("attention");
       expect(r.verdict.cause[hold]).toBe("attention");
@@ -135,7 +137,7 @@ describe("the ladder", () => {
       const r = queueVerdict(
         facts({ classes: waitingFor(hold, criticalWaitMs(hold)) }),
         CFG,
-        NOW,
+        AT,
       );
       expect(r.verdict.state).toBe("critical");
       expect(r.verdict.cause[hold]).toBe("critical");
@@ -160,7 +162,7 @@ describe("the ladder", () => {
         dead: [{ jobName: "x", count: 1, lastDiedAt: NOW - 1000 }],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("critical");
     // Worst cause first; at most two causes named.
@@ -173,7 +175,7 @@ describe("the ladder", () => {
     // `waiting` excludes lane rows by construction (queryQueuePulse); a class
     // whose only ready rows sit behind a lane arrives with waiting = 0 and a
     // null oldest, however old those rows are.
-    const r = queueVerdict(facts({ classes: classFacts() }), CFG, NOW);
+    const r = queueVerdict(facts({ classes: classFacts() }), CFG, AT);
     expect(r.verdict.state).toBe("ok");
   });
 });
@@ -194,7 +196,7 @@ describe("stuck running jobs", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("ok");
     expect(r.nextChangeAt).toBe(NOW + 5);
@@ -213,7 +215,7 @@ describe("stuck running jobs", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("attention");
     expect(r.verdict.cause[hold]).toBe("attention");
@@ -222,13 +224,39 @@ describe("stuck running jobs", () => {
     );
   });
 
+  test("a slot held across a nap is judged on its awake part", () => {
+    // Locked a full line ago on the wall clock, but the machine slept for half
+    // of it: not stuck yet, and the timer arms for the awake time still missing.
+    const nap = line / 2;
+    const napping = {
+      now: NOW,
+      awakeSince: (wallMs: number) => NOW - wallMs - nap,
+    };
+    const r = queueVerdict(
+      facts({
+        running: [
+          {
+            jobName: "backup.run",
+            hold,
+            lockedAt: NOW - line,
+            forfeited: false,
+          },
+        ],
+      }),
+      CFG,
+      napping,
+    );
+    expect(r.verdict.state).toBe("ok");
+    expect(r.nextChangeAt).toBe(NOW + nap);
+  });
+
   test("a forfeited slot is stuck however young", () => {
     const r = queueVerdict(
       facts({
         running: [{ jobName: "zombie", hold, lockedAt: NOW, forfeited: true }],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("attention");
     expect(r.verdict.summary).toBe("zombie stuck · written off");
@@ -243,7 +271,7 @@ describe("stuck running jobs", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.summary).toBe("2 jobs stuck");
   });
@@ -260,7 +288,7 @@ describe("dead jobs", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("attention");
     expect(r.verdict.summary).toBe("worktree.fork-db failed ×3");
@@ -273,7 +301,7 @@ describe("dead jobs", () => {
     const r = queueVerdict(
       facts({ dead: [{ jobName: "x", count: 1, lastDiedAt: NOW - 1 }] }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.summary).toBe("x failed");
   });
@@ -282,7 +310,7 @@ describe("dead jobs", () => {
     const r = queueVerdict(
       facts({ dead: [{ jobName: "x", count: 1, lastDiedAt: NOW - window }] }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("ok");
     expect(r.nextChangeAt).toBeNull();
@@ -292,7 +320,7 @@ describe("dead jobs", () => {
     const r = queueVerdict(
       facts({ dead: [{ jobName: "x", count: 1, lastDiedAt: NOW - 1 }] }),
       { ...CFG, deadJobAttentionMinutes: 0 },
-      NOW,
+      AT,
     );
     expect(r.verdict.state).toBe("ok");
   });
@@ -312,7 +340,7 @@ describe("the summary", () => {
         }),
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.summary).toBe(
       `Minutes class full · 2 jobs waiting, oldest ${formatThresholdMs(attentionWaitMs(hold))}+`,
@@ -324,7 +352,7 @@ describe("the summary", () => {
     const r = queueVerdict(
       facts({ classes: waitingFor(hold, attentionWaitMs(hold)) }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.summary).toBe(
       `Instant: 1 job waiting ${formatThresholdMs(attentionWaitMs(hold))}+`,
@@ -341,7 +369,7 @@ describe("the summary", () => {
         dead: [{ jobName: "d", count: 1, lastDiedAt: NOW - 1 }],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.summary).toBe(
       `Instant: 1 job waiting ${formatThresholdMs(attentionWaitMs("instant"))}+ · z stuck · written off`,
@@ -359,7 +387,7 @@ describe("the summary", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.verdict.summary).toBe(OK_SUMMARY);
   });
@@ -384,7 +412,7 @@ describe("nextChangeAt", () => {
         dead: [{ jobName: "d", count: 1, lastDiedAt: NOW }],
       }),
       CFG,
-      NOW,
+      AT,
     );
     const candidates = [
       NOW + attentionWaitMs("minutes"),
@@ -405,7 +433,7 @@ describe("nextChangeAt", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.nextChangeAt).toBe(NOW + 7);
   });
@@ -416,7 +444,7 @@ describe("nextChangeAt", () => {
     const free = queueVerdict(
       facts({ classes: classFacts({ [hold]: { nextDueAt: due } }) }),
       CFG,
-      NOW,
+      AT,
     );
     expect(free.nextChangeAt).toBeNull();
     const full = queueVerdict(
@@ -426,7 +454,7 @@ describe("nextChangeAt", () => {
         }),
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(full.nextChangeAt).toBe(due);
   });
@@ -440,7 +468,7 @@ describe("nextChangeAt", () => {
         }),
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(r.nextChangeAt).toBeNull();
   });

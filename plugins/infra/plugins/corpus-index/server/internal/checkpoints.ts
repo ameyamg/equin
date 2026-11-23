@@ -1,12 +1,8 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
-import {
-  readdir,
-  readFile,
-  stat,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
-import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import { isOrphanedTemp } from "@plugins/packages/plugins/process-alive/core";
 
 // ─── What this is ─────────────────────────────────────────────────────────────
 //
@@ -33,8 +29,8 @@ import { wallNow } from "@plugins/packages/plugins/deadline/core";
 // directory: every write re-creates its own, so the cost is checkpoints lost
 // (a fold from the start), never a failed write.
 
-/** A temp file this old was never going to be renamed: its writer died. */
-const STALE_TMP_MS = 60 * 60 * 1000;
+/** A checkpoint's temp: `<file>.<writer pid>-<n>.tmp` (`save`). */
+const CHECKPOINT_TMP = /\.(\d+)-\d+\.tmp$/;
 
 /** A file's fold state as of byte `offset` (always a line start). */
 export interface Checkpoint {
@@ -133,9 +129,10 @@ export function createCheckpointStore(
   }
 
   // Once per process, before its first write: every other digest's
-  // checkpoints are another format's, never loaded again; a temp file older
-  // than any write takes is one a killed process never renamed (a younger one
-  // may be a live writer's, across a deploy's overlap).
+  // checkpoints are another format's, never loaded again; a temp file whose
+  // writer (the pid in its name) is gone is one a killed process never
+  // renamed. A live writer's — another backend's, across a deploy's overlap,
+  // or one paused by a machine sleep mid-write — is kept, however old.
   let swept: Promise<void> | null = null;
   async function sweep(): Promise<void> {
     await mkdir(dir, { recursive: true });
@@ -145,15 +142,8 @@ export function createCheckpointStore(
     }
     for (const name of await readdir(dir)) {
       if (!name.endsWith(".tmp")) continue;
-      const tmp = join(dir, name);
-      try {
-        if (wallNow("retention") - (await stat(tmp)).mtimeMs < STALE_TMP_MS)
-          continue;
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        continue;
-      }
-      await rm(tmp, { force: true });
+      if (!isOrphanedTemp(name, CHECKPOINT_TMP)) continue;
+      await rm(join(dir, name), { force: true });
     }
   }
 

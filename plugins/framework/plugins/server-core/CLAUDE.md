@@ -623,6 +623,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `network/live/resource-runtime.createResourceRuntime`
     - `network/live/resource-runtime.ResourceGuardError`
     - `packages/error-subject.crashFieldsOf`
+    - `packages/sleep-clock/history.awakeMsSince`
+    - `packages/sleep-clock/history.readInstalledSleepClock`
     - `packages/string-hash.hash64`
     - `primitives/report-sink.declaredHandledSinkIds`
     - `primitives/report-sink.defineReportSink`
@@ -736,7 +738,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `handOffEpoch`
     - `heapMemory`
     - `hostHttpRoutes`
-    - `installAsleepClock`
     - `installBootJournal`
     - `installCpuReader`
     - `installHeapReader`
@@ -842,7 +843,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `tag-tree/engine`
 - Exemptions:
   - Exempts itself from:
-    - `deadline/no-unstated-wall-age` — `core/resources.ts` (debt)
     - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)

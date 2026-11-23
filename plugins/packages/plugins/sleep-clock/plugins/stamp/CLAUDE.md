@@ -44,9 +44,9 @@ awake timer or `sleptDuring`: the table in `packages/sleep-clock/CLAUDE.md`.
     - `infra/git/main-slots`
     - `infra/git/main-slots/boot-lease`
     - `infra/host/host-admission`
-    - `infra/host/machine-sleep`
     - `integrations/github-events`
     - `packages/sleep-clock`
+    - `packages/sleep-clock/history`
     - `packages/sleep-clock/stamp/schema`
 - Core:
   - Exports (types):

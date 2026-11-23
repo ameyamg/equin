@@ -24,6 +24,8 @@ import {
 // orphaned. Runner ids and slot counts are read from the ladder, never spelled.
 
 const NOW = 1_800_000_000_000;
+/** The verdict's clock at NOW on an awake machine: every age is its wall span. */
+const AT = { now: NOW, awakeSince: (wallMs: number) => NOW - wallMs };
 const CFG = { slotHogDeadlineFraction: 0.5, deadJobAttentionMinutes: 60 };
 
 const NO_PICKUPS: PickupStats = {
@@ -90,7 +92,7 @@ describe("per-class reach", () => {
     const { pulse } = assemblePulse(
       reads({ slots: [slot(widest.id)] }),
       CFG,
-      NOW,
+      AT,
     );
     for (const c of pulse.classes) {
       expect(c.reachable).toBe(reachableSlots(c.hold));
@@ -102,7 +104,7 @@ describe("per-class reach", () => {
     const { pulse } = assemblePulse(
       reads({ slots: [slot(narrowest.id)] }),
       CFG,
-      NOW,
+      AT,
     );
     for (const c of pulse.classes) {
       expect(c.busy).toBe(narrowest.serves.includes(c.hold) ? 1 : 0);
@@ -121,7 +123,7 @@ describe("per-class reach", () => {
     const { pulse } = assemblePulse(
       reads({ slots: [s], forfeits: [forfeit] }),
       CFG,
-      NOW,
+      AT,
     );
     for (const c of pulse.classes) {
       expect(c.busy).toBe(1);
@@ -143,7 +145,7 @@ describe("per-class reach", () => {
     const { pulse } = assemblePulse(
       reads({ slots: [slot(widest.id)], forfeits: [forfeit] }),
       CFG,
-      NOW,
+      AT,
     );
     const minutes = pulse.classes.find((c) => c.hold === "minutes")!;
     expect(minutes.busy).toBe(2);
@@ -156,7 +158,7 @@ describe("running rows", () => {
     const line = CFG.slotHogDeadlineFraction * deadlineMsFor("seconds");
     const young = slot(widest.id, { hold: "seconds", lockedAt: NOW - 1 });
     const old = slot(widest.id, { hold: "seconds", lockedAt: NOW - line });
-    const { pulse } = assemblePulse(reads({ slots: [young, old] }), CFG, NOW);
+    const { pulse } = assemblePulse(reads({ slots: [young, old] }), CFG, AT);
     expect(pulse.running.map((r) => r.jobId)).toEqual([old.jobId, young.jobId]);
     expect(pulse.running.map((r) => r.stuck)).toEqual([true, false]);
   });
@@ -173,7 +175,7 @@ describe("orphaned locks", () => {
         }),
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(pulse.orphanLocked).toBe(2);
   });
@@ -182,7 +184,7 @@ describe("orphaned locks", () => {
     const { pulse } = assemblePulse(
       reads({ slots: [slot(widest.id), slot(widest.id)] }),
       CFG,
-      NOW,
+      AT,
     );
     expect(pulse.orphanLocked).toBe(0);
   });
@@ -220,7 +222,7 @@ describe("the payload", () => {
         ],
       }),
       CFG,
-      NOW,
+      AT,
     );
     expect(QueuePulseSchema.safeParse(pulse).success).toBe(true);
     expect(pulse.dead.map((d) => d.recent)).toEqual([true, false]);
@@ -230,7 +232,7 @@ describe("the payload", () => {
 
   test("a class missing from the database read is a loud error", () => {
     expect(() =>
-      assemblePulse(reads({ classes: dbClasses().slice(1) }), CFG, NOW),
+      assemblePulse(reads({ classes: dbClasses().slice(1) }), CFG, AT),
     ).toThrow(/no row for class/);
   });
 });
@@ -267,8 +269,8 @@ describe("assembleVerdict", () => {
       }),
     ];
     for (const r of cases) {
-      expect(assembleVerdict(r, CFG, NOW).verdict).toEqual(
-        assemblePulse(r, CFG, NOW).pulse.verdict,
+      expect(assembleVerdict(r, CFG, AT).verdict).toEqual(
+        assemblePulse(r, CFG, AT).pulse.verdict,
       );
     }
   });

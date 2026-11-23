@@ -115,7 +115,6 @@ export {
   readResourcesDebug,
   visitorReadable,
   visitorReadsTuple,
-  installAsleepClock,
   installSnapHash,
   loadResourceByKey,
   loadResourceFresh,

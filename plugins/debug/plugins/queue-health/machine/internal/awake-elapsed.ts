@@ -127,3 +127,17 @@ export function stepClassStarvation(
     ? { kind: "wait" }
     : { kind: "trip", starvedForMs };
 }
+
+/**
+ * The verdict's clock at `now` (`VerdictClock`, core): a past wall instant's
+ * AWAKE age — the span to `now` less the sleep this process saw inside it.
+ */
+export function verdictClockAt(
+  now: number,
+  sleptDuring: (startMs: number, endMs: number) => number | null,
+): { now: number; awakeSince(wallMs: number): number } {
+  return {
+    now,
+    awakeSince: (wallMs) => awakeMs(now - wallMs, sleptDuring(wallMs, now)),
+  };
+}

@@ -6,7 +6,11 @@ The machine's sleep clock as a live value, so a browser can tell a nap from work
   `{ boot, asleepMs, wakeAtMs } | null`, where `null` means the platform cannot
   tell (never "did not sleep"). `SleepNow` is the one definition every consumer
   shares (op-log's fold takes it as its `sleepNow` parameter).
-- `server` — owns the reading: `publishSleepReading()` re-reads
+- `server` — the process's sleep history with the native clock installed:
+  the history itself is `packages/sleep-clock/history` (portable, one per
+  process, shared with `core/` code and the change feed); loading this half
+  installs `readSleepClock` into it, so every process importing it judges on
+  the real sleeps. Its functions are that history's: `publishSleepReading()` re-reads
   `packages/sleep-clock`'s `readSleepClock()` and tells its listeners only when the
   reading changed (a new boot, a new `wakeAtMs`, or ≥1 ms more sleep — read jitter
   never pushes). In practice it pushes once per wake. `currentSleepReading()` /
@@ -49,9 +53,6 @@ reaches the browser within one tick.
 - Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — stampOfWallInstant(wallMs, now) — the ClockStamp of a past wall instant nothing stamped (a row's created_at), from those sleeps — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
 - Server:
   - Contributes: `resource.declare` "machine.sleep"
-  - Exports (types):
-    - `SleepInterval`
-    - `WakeBefore`
   - Exports (values):
     - `awakeSpanStart`
     - `currentSleepReading`

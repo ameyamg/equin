@@ -24,6 +24,8 @@ import {
 } from "../../core";
 import { assemblePulse, assembleVerdict } from "./assemble-pulse";
 import { createVerdictFacts } from "./verdict-facts";
+import { verdictClockAt } from "./awake-elapsed";
+import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 
 // The health report's Job queue row, as two live values: the verdict every
 // tab holds (the dot), and the full pulse the open report reads.
@@ -101,6 +103,10 @@ function armChangeTimer(sub: Subscription, at: number | null): void {
   clearChangeTimer(sub);
   const notify = sub.notify;
   if (notify === undefined || at === null) return;
+  // `at` is a wall instant the verdict derived from AWAKE time still missing
+  // (`now + line - awake age`): a nap before it fires this early, and the
+  // reload it triggers re-arms for what is left — never late, never stuck on a
+  // nap's wall time.
   const delay = Math.min(Math.max(0, at - wallNow("schedule")), MAX_TIMEOUT_MS);
   sub.timer = setTimeout(() => {
     sub.timer = undefined;
@@ -135,7 +141,9 @@ async function loadQueuePulse(sub: Subscription): Promise<QueuePulse> {
   // Memory reads AFTER the queries: a job that started while they ran is then
   // in the ledger but not in the locked count, which `orphanLocked` clamps —
   // the other order would report it as orphaned.
-  const now = Date.now();
+  // The wall instant the verdict's clock ages from: each row's age is this
+  // less the row's instant, less the sleep inside (`verdictClockAt`).
+  const now = wallNow("sleep-detection");
   const { pulse, nextChangeAt } = assemblePulse(
     {
       slots: getOccupiedSlots(),
@@ -147,7 +155,7 @@ async function loadQueuePulse(sub: Subscription): Promise<QueuePulse> {
       pickupWindowMs: PICKUP_WINDOW_MS,
     },
     getConfig(queueHealthConfig),
-    now,
+    verdictClockAt(now, sleptDuring),
   );
   armChangeTimer(sub, nextChangeAt);
   return pulse;
@@ -181,7 +189,9 @@ async function loadQueueVerdict(sub: Subscription): Promise<QueueVerdict> {
     verdictFacts.dead.read(),
   ]);
   // Memory after the database, as in the pulse.
-  const now = Date.now();
+  // The wall instant the verdict's clock ages from: each row's age is this
+  // less the row's instant, less the sleep inside (`verdictClockAt`).
+  const now = wallNow("sleep-detection");
   const { verdict, nextChangeAt } = assembleVerdict(
     {
       slots: getOccupiedSlots(),
@@ -190,7 +200,7 @@ async function loadQueueVerdict(sub: Subscription): Promise<QueueVerdict> {
       dead,
     },
     getConfig(queueHealthConfig),
-    now,
+    verdictClockAt(now, sleptDuring),
   );
   armChangeTimer(sub, nextChangeAt);
   return verdict;

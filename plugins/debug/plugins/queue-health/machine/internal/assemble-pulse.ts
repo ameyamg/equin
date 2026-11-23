@@ -20,6 +20,7 @@ import {
   type QueuePulse,
   type QueueVerdictConfig,
   type QueueVerdictResult,
+  type VerdictClock,
 } from "../../core";
 
 // Pure assembly of the Job queue pulse from what the loader read: the slot
@@ -60,30 +61,30 @@ export interface AssembledPulse {
 export function assembleVerdict(
   reads: VerdictReads,
   cfg: QueueVerdictConfig,
-  now: number,
+  clock: VerdictClock,
 ): QueueVerdictResult {
   return queueVerdict(
     {
       classes: slotClasses(reads),
-      running: runningJobs(reads, cfg, now),
+      running: runningJobs(reads, cfg, clock),
       waiting: [],
       dead: reads.dead,
     },
     cfg,
-    now,
+    clock,
   );
 }
 
 export function assemblePulse(
   reads: PulseReads,
   cfg: QueueVerdictConfig,
-  now: number,
+  clock: VerdictClock,
 ): AssembledPulse {
   const classes = slotClasses(reads).map((c) => ({
     ...c,
     pickup: { ...reads.pickup[c.hold] },
   }));
-  const running = runningJobs(reads, cfg, now);
+  const running = runningJobs(reads, cfg, clock);
 
   const { verdict, nextChangeAt } = queueVerdict(
     {
@@ -93,7 +94,7 @@ export function assemblePulse(
       dead: reads.dead,
     },
     cfg,
-    now,
+    clock,
   );
 
   const lockedRows = classes.reduce((sum, c) => sum + c.lockedCount, 0);
@@ -117,14 +118,18 @@ export function assemblePulse(
         hold: w.hold,
         runAt: w.runAt,
         attempts: w.attempts,
-        tone: waitTone(w.hold, w.runAt, now),
+        tone: waitTone(w.hold, clock.awakeSince(w.runAt)),
       })),
       dead: reads.dead.map((d) => ({
         jobName: d.jobName,
         count: d.count,
         lastDiedAt: d.lastDiedAt,
         lastError: d.lastError,
-        recent: isRecentDeath(d.lastDiedAt, cfg.deadJobAttentionMinutes, now),
+        recent: isRecentDeath(
+          d.lastDiedAt,
+          cfg.deadJobAttentionMinutes,
+          clock.now,
+        ),
       })),
       // Locked in the database, held by no slot here: a worker that died with
       // the row locked. The ledger is read AFTER the queries, so a job that
@@ -185,7 +190,7 @@ function slotClasses(reads: VerdictReads) {
 function runningJobs(
   reads: VerdictReads,
   cfg: QueueVerdictConfig,
-  now: number,
+  clock: VerdictClock,
 ) {
   const forfeitedIds = new Set(reads.forfeits.map((f) => f.jobId));
   return [...reads.slots]
@@ -200,9 +205,8 @@ function runningJobs(
         lockedAt: s.lockedAt,
         forfeited,
         stuck: isStuck(
-          { hold: s.hold, lockedAt: s.lockedAt, forfeited },
+          { hold: s.hold, heldMs: clock.awakeSince(s.lockedAt), forfeited },
           cfg.slotHogDeadlineFraction,
-          now,
         ),
       };
     });

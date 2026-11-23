@@ -352,7 +352,13 @@ this plugin's too: it owns the queue thresholds. Design:
   `deadlineMsFor(c)`. Also amber: a running job past the slot-hog line
   (`slotHogDeadlineFraction × deadline`, the same line `queue-slot-hog` files
   at, so dot and bell agree; a forfeited slot is always stuck), and a death within
-  `deadJobAttentionMinutes`. Summary: worst cause first, at most two, ages
+  `deadJobAttentionMinutes`. Every wait and hold is judged on AWAKE time
+  (`VerdictClock`: the machine half hands it the sleeps this process saw,
+  `awake-elapsed.ts`'s `verdictClockAt`), like the watchdog's backlog and
+  slot-hog reports — so a row that came due during a nap, or a slot held
+  across one, is not amber the instant the Mac wakes; the change timer arms
+  for the awake time still missing (a nap fires it early, and the reload
+  re-arms). A death's window stays wall time. Summary: worst cause first, at most two, ages
   phrased by the threshold crossed ("10m+") so the text stays true between
   pushes. Green is one fixed phrase (`OK_SUMMARY`, "Keeping up"), never a
   count: the verdict changes only when its colour or a cause does, so a busy
@@ -518,6 +524,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `QueueVerdictResult`
     - `QueueWaitingJob`
     - `QueueWedgedPayload`
+    - `VerdictClock`
   - Exports (values):
     - `ATTENTION_WAIT_MULTIPLE`
     - `attentionWaitMs`

@@ -28402,6 +28402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `QueueVerdictResult`
           - `QueueWaitingJob`
           - `QueueWedgedPayload`
+          - `VerdictClock`
         - Exports (values):
           - `ATTENTION_WAIT_MULTIPLE`
           - `attentionWaitMs`
@@ -33313,6 +33314,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/resource-runtime.createResourceRuntime`
           - `network/live/resource-runtime.ResourceGuardError`
           - `packages/error-subject.crashFieldsOf`
+          - `packages/sleep-clock/history.awakeMsSince`
+          - `packages/sleep-clock/history.readInstalledSleepClock`
           - `packages/string-hash.hash64`
           - `primitives/report-sink.declaredHandledSinkIds`
           - `primitives/report-sink.defineReportSink`
@@ -33426,7 +33429,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `handOffEpoch`
           - `heapMemory`
           - `hostHttpRoutes`
-          - `installAsleepClock`
           - `installBootJournal`
           - `installCpuReader`
           - `installHeapReader`
@@ -33532,7 +33534,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tag-tree/engine`
       - Exemptions:
         - Exempts itself from:
-          - `deadline/no-unstated-wall-age` — `core/resources.ts` (debt)
           - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
@@ -33893,7 +33894,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 100 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 101 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `packages/shared-work` ×9
@@ -33916,6 +33917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/deadline.wallNow`
               - `packages/flock.flockTry`
               - `packages/owned-fd.openOwnedFdSync`
+              - `packages/process-alive.isOrphanedTemp`
               - `packages/semaphore.createSemaphore`
               - `packages/single-flight.singleFlight`
               - `packages/string-hash.sha256Hex`
@@ -35209,7 +35211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths.worktreesDir`
               - `infra/spawn.spawnCaptured`
               - `packages/coalesce.createCoalescer`
-              - `packages/deadline.wallNow`
+              - `packages/process-alive.isOrphanedTemp`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `ArtifactBuilder`
@@ -39178,9 +39180,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — stampOfWallInstant(wallMs, now) — the ClockStamp of a past wall instant nothing stamped (a row's created_at), from those sleeps — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
-            - Exports (types):
-              - `SleepInterval`
-              - `WakeBefore`
             - Exports (values):
               - `awakeSpanStart`
               - `currentSleepReading`
@@ -44233,8 +44232,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/retention`
               - `network/live/live-state-snapshot`
               - `reports/engine`
-          - Exemptions:
-            - Exempts itself from: `deadline/no-unstated-wall-age` — `server/internal/route-span.ts` (debt)
           - Test helpers:
             - Server: `@plugins/network/plugins/live/plugins/change-feed/server/testing`
               - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
@@ -45041,24 +45038,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
-          - `infra` ×16
+        - Imported by: 63 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+          - `infra` ×15
           - `debug` ×12
-          - `framework` ×12
+          - `framework` ×11
           - `apps` ×7
           - `conversations` ×5
           - `database` ×3
           - `network` ×2
+          - `packages` ×2
           - `tasks` ×2
           - `auth`
           - `build`
           - `installer/waits`
-          - `packages/signal-origin`
           - `shell/notifications`
-      - Exemptions:
-        - Exempted by:
-          - `framework/server-core` (1 debt)
-          - `network/live/change-feed` (1 debt)
       - Core:
         - Exports (types):
           - `AwakeClock`
@@ -45434,6 +45427,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/proc-linux.ts`, `core/internal/peak-footprint.ts` (debt)
         - Exempted by: `debug/heap-snapshot` (0 debt)
+    - **`process-alive`** — Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/checks`
+          - `framework/tooling/web-artifacts`
+          - `infra/corpus-index`
+      - Core:
+        - Exports (values):
+          - `isOrphanedTemp`
+          - `isProcessAlive`
+          - `writerPidOf`
     - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the build names backends from, and the checkout's `verbs` link to the machine-wide process-names data dir, where `./equin` runs each CLI verb as `equin · <verb>` — one clone per verb machine-wide, since macOS scans every fresh executable name on its first exec.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -45645,7 +45649,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AwakeClockReading`
           - `ProcessAwakeAge`
-          - `SleepClockReading`
           - `SleepMeter`
           - `SleepReading`
         - Exports (values):
@@ -45680,6 +45683,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
       - Plugins:
+        - **`history`** — This process's sleep history, on every host: the sleeps it saw (plus the one before its first reading), fed by the sleep clock its host installs (installSleepClock — the desktop's host probes and machine-sleep install packages/sleep-clock's bun:ffi reader; a page's worker installs none and every answer is 'cannot tell'). sleptDuring(start, end), awakeMsSince(wallMs) — the awake age of a past wall instant nothing stamped (a Postgres commit's changedAt), the wall span where the sleep cannot be told — stampOfWallInstant, awakeSpanStart, wakeBefore, and the set-if-changed reading machine-sleep publishes. Portable and import-free of the computer, so core/ code and the portable change feed judge ages on awake time without a plugin cycle.
+          - Core:
+            - Uses:
+              - `packages/deadline.wallNow`
+              - `packages/sleep-clock/stamp.ClockStamp`
+              - `packages/sleep-clock/stamp.stampBefore`
+              - `packages/sleep-clock/stamp.unstampedInstant`
+            - Exports (types):
+              - `SleepClockReading`
+              - `SleepInterval`
+              - `SleepNow`
+              - `WakeBefore`
+            - Exports (values):
+              - `awakeMsSince`
+              - `awakeSpanStart`
+              - `currentSleepReading`
+              - `installSleepClock`
+              - `onSleepReadingChanged`
+              - `publishSleepReading`
+              - `readInstalledSleepClock`
+              - `sleptDuring`
+              - `stampOfWallInstant`
+              - `wakeBefore`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/server-core`
+              - `infra/host/machine-sleep`
+              - `network/live/change-feed`
         - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it. ClockStamp is branded, so an object literal is not one: clockStamp(wallMs, sleep) names two halves read together (a decoded record), unstampedInstant(wallMs) an instant with no sleep reading.
           - Cross-plugin:
             - Imported by:
@@ -45694,9 +45725,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/git/main-slots`
               - `infra/git/main-slots/boot-lease`
               - `infra/host/host-admission`
-              - `infra/host/machine-sleep`
               - `integrations/github-events`
               - `packages/sleep-clock`
+              - `packages/sleep-clock/history`
               - `packages/sleep-clock/stamp/schema`
           - Core:
             - Exports (types):

@@ -9,7 +9,6 @@ export {
   stampOfWallInstant,
   wakeBefore,
 } from "./internal/publish";
-export type { SleepInterval, WakeBefore } from "./internal/sleep-publisher";
 
 export default {
   description:

@@ -1,4 +1,8 @@
 import { hash64 } from "@plugins/packages/plugins/string-hash/core";
+import {
+  awakeMsSince,
+  readInstalledSleepClock,
+} from "@plugins/packages/plugins/sleep-clock/plugins/history/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   createResourceRuntime,
@@ -526,22 +530,15 @@ export function installSnapHash(fn: (json: string) => bigint): void {
   hostSnapHash = fn;
 }
 
-// The machine's cumulative time asleep, read only by `_debug.linger` — the
-// desktop host installs `packages/sleep-clock`'s reading (bun:ffi), other hosts
-// leave it unknown.
-let hostAsleepMs: (() => number | null) | null = null;
-
-/** Install this host's sleep-clock reader. Once per process, before boot. */
-export function installAsleepClock(fn: () => number | null): void {
-  if (hostAsleepMs !== null) {
-    throw new Error("[resources] a sleep clock is already installed.");
-  }
-  hostAsleepMs = fn;
-}
-
 const runtime = createResourceRuntime({
   snapHash: (json) => (hostSnapHash ?? hash64)(json),
-  asleepMs: () => (hostAsleepMs === null ? null : hostAsleepMs()),
+  // The machine's cumulative time asleep, read only by `_debug.linger`: the
+  // clock the host installed into `sleep-clock/history` (the desktop's host
+  // probes, over bun:ffi); unknown on a host that installs none.
+  asleepMs: () => {
+    const r = readInstalledSleepClock();
+    return r.supported ? r.asleepMs : null;
+  },
   // The label stays the resource key (one slow-op row per resource, and the key
   // the loader→tables read-set index is built on); WHICH params ran rides as the
   // span's variant, and a scoped refill carries how many ids it read.
@@ -629,7 +626,11 @@ const runtime = createResourceRuntime({
           subscribers: info.subscribers,
           frameChars: info.frameChars,
           ...(info.changedAt !== undefined
-            ? { sinceChangeMs: Math.max(0, Date.now() - info.changedAt) }
+            ? {
+                // Awake time: a nap between the change and its delivery is
+                // the machine's, not the delivery's.
+                sinceChangeMs: awakeMsSince(info.changedAt),
+              }
             : {}),
         },
       },

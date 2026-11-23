@@ -1,3 +1,4 @@
+import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/plugins/history/core";
 import { dlopen, ptr } from "bun:ffi";
 import {
   clockStamp,
@@ -23,26 +24,6 @@ export interface SleepMeter {
   /** Sleep since the previous `read()` on this meter. Synchronous, ~1 µs. */
   read(): SleepReading;
 }
-
-export type SleepClockReading =
-  | {
-      supported: true;
-      /** kern.bootsessionuuid — `asleepMs` of two readings compare only within one boot. */
-      boot: string;
-      /** Cumulative time asleep since boot (MONOTONIC_RAW − UPTIME_RAW), machine-wide. */
-      asleepMs: number;
-      /** kern.waketime: the wall instant (epoch ms) of the last wake; null if never woke or unreadable. */
-      wakeAtMs: number | null;
-      /**
-       * kern.sleeptime: the wall instant (epoch ms) the machine last went to
-       * sleep; null if it never slept or unreadable. Before `wakeAtMs`, the
-       * two bound the last sleep — so a process started after a wake can
-       * still place it.
-       */
-      sleepAtMs: number | null;
-    }
-  /** This platform offers no such clocks here — NOT "it did not sleep". */
-  | { supported: false };
 
 /** How long the machine has been awake since boot: a clock that stops while it sleeps. */
 export type AwakeClockReading =

@@ -1,5 +1,39 @@
-import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/core";
-import type { SleepNow } from "../../core";
+/**
+ * One reading of the machine's sleep clock, as `packages/sleep-clock`'s
+ * `readSleepClock()` takes it (over bun:ffi) and a host installs it
+ * (`installSleepClock`). Declared in this portable leaf so code that judges
+ * ages on every host imports nothing that needs the computer.
+ */
+export type SleepClockReading =
+  | {
+      supported: true;
+      /** kern.bootsessionuuid — `asleepMs` of two readings compare only within one boot. */
+      boot: string;
+      /** Cumulative time asleep since boot (MONOTONIC_RAW − UPTIME_RAW), machine-wide. */
+      asleepMs: number;
+      /** kern.waketime: the wall instant (epoch ms) of the last wake; null if never woke or unreadable. */
+      wakeAtMs: number | null;
+      /**
+       * kern.sleeptime: the wall instant (epoch ms) the machine last went to
+       * sleep; null if it never slept or unreadable. Before `wakeAtMs`, the
+       * two bound the last sleep — so a process started after a wake can
+       * still place it.
+       */
+      sleepAtMs: number | null;
+    }
+  /** This platform offers no such clocks here — NOT "it did not sleep". */
+  | { supported: false };
+
+/**
+ * Where the machine's sleep clock stands, as a process remembers it: boot,
+ * cumulative time asleep, last wake — or `null` where the platform cannot tell
+ * (never "did not sleep"). `machine-sleep`'s live value carries the same shape.
+ */
+export type SleepNow = {
+  boot: string;
+  asleepMs: number;
+  wakeAtMs: number | null;
+} | null;
 
 /**
  * Reading the two clocks a few hundred nanoseconds apart jitters `asleepMs` by a
@@ -162,9 +196,18 @@ export interface SleepPublisher {
   subscribe(fn: () => void): () => void;
 }
 
-/** The set-if-changed core of the publisher, with the clock injected. */
+/**
+ * The set-if-changed core of the publisher, with the clock injected.
+ *
+ * `mayHaveSlept` gates the reads a QUERY makes (`sleptDuring`, `awakeSpanStart`,
+ * `wakeBefore`): false means no sleep can have happened since the last read,
+ * so the answer stands without reading the clock again (an FFI read plus two
+ * sysctls — the change feed asks on every routed change). `publish()` itself
+ * always reads. Default: always read.
+ */
 export function createSleepPublisher(
   read: () => SleepClockReading,
+  mayHaveSlept: () => boolean = () => true,
 ): SleepPublisher {
   let last: { value: SleepNow } | null = null;
   const listeners = new Set<() => void>();
@@ -180,6 +223,9 @@ export function createSleepPublisher(
     place(lastSleepOf(reading));
     last = { value: toSleepNow(reading) };
     return last.value;
+  };
+  const refresh = (): void => {
+    if (last === null || mayHaveSlept()) publish();
   };
   const publish = (): void => {
     const reading = read();
@@ -198,17 +244,17 @@ export function createSleepPublisher(
     },
     publish,
     sleptDuring(startMs, endMs) {
-      publish();
+      refresh();
       if (last?.value === null) return null;
       return overlapMs(sleeps, startMs, endMs);
     },
     awakeSpanStart(endMs, awakeMs) {
-      publish();
+      refresh();
       if (last?.value === null) return null;
       return awakeSpanStartMs(sleeps, endMs, awakeMs);
     },
     wakeBefore(atMs, withinMs) {
-      publish();
+      refresh();
       if (last?.value === null) return { supported: false };
       return { supported: true, sleep: wakeWithin(sleeps, atMs, withinMs) };
     },

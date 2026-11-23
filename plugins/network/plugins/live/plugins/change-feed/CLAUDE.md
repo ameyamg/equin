@@ -510,8 +510,6 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `infra/retention`
     - `network/live/live-state-snapshot`
     - `reports/engine`
-- Exemptions:
-  - Exempts itself from: `deadline/no-unstated-wall-age` — `server/internal/route-span.ts` (debt)
 - Test helpers:
   - Server: `@plugins/network/plugins/live/plugins/change-feed/server/testing`
     - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.

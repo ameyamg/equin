@@ -51,26 +51,35 @@ export function stuckHoldMs(hold: HoldClass, fraction: number): number {
   return fraction * deadlineMsFor(hold);
 }
 
-/** The colour one waiting job alone would give the row. */
-export function waitTone(
-  hold: HoldClass,
-  runAt: number,
-  now: number,
-): QueueTone {
-  const age = now - runAt;
-  if (age >= criticalWaitMs(hold)) return "critical";
-  if (age >= attentionWaitMs(hold)) return "attention";
+/**
+ * How the verdict ages what it judges. `now` is the wall instant it runs at;
+ * `awakeSince(wallMs)` is the AWAKE time from a past wall instant (a row's
+ * `run_at`, a slot's `locked_at`) to `now`. A sleeping Mac runs no job, so a
+ * row that came due during a nap has waited only since the wake, and a slot
+ * locked across one has been held only for its awake part — the same measure
+ * the watchdog's backlog and slot-hog reports judge, so the dot and the bell
+ * agree after a wake. The machine half supplies it from the sleeps this
+ * process saw (`awake-elapsed.ts`); a test passes the wall span.
+ */
+export interface VerdictClock {
+  now: number;
+  awakeSince(wallMs: number): number;
+}
+
+/** The colour one waiting job alone would give the row, from how long (awake) it has waited. */
+export function waitTone(hold: HoldClass, waitedMs: number): QueueTone {
+  if (waitedMs >= criticalWaitMs(hold)) return "critical";
+  if (waitedMs >= attentionWaitMs(hold)) return "attention";
   return "ok";
 }
 
-/** Whether a running job has held its slot past the stuck line. A forfeited
- * (written-off) slot is the extreme case and is always stuck. */
+/** Whether a running job has held its slot (awake) past the stuck line. A
+ * forfeited (written-off) slot is the extreme case and is always stuck. */
 export function isStuck(
-  row: { hold: HoldClass; lockedAt: number; forfeited: boolean },
+  row: { hold: HoldClass; heldMs: number; forfeited: boolean },
   fraction: number,
-  now: number,
 ): boolean {
-  return row.forfeited || now - row.lockedAt >= stuckHoldMs(row.hold, fraction);
+  return row.forfeited || row.heldMs >= stuckHoldMs(row.hold, fraction);
 }
 
 /** Whether a death still colours the row. `minutes = 0` disables the rule. */
@@ -177,8 +186,9 @@ const SUMMARY_CAUSES = 2;
 export function queueVerdict(
   facts: QueueFacts,
   cfg: QueueVerdictConfig,
-  now: number,
+  clock: VerdictClock,
 ): QueueVerdictResult {
+  const now = clock.now;
   const causes: Cause[] = [];
   const cause = Object.fromEntries(
     HOLD_CLASSES.map((hold) => [hold, "ok"]),
@@ -192,20 +202,25 @@ export function queueVerdict(
     if (at === null || at <= now) return;
     if (nextChangeAt === null || at < nextChangeAt) nextChangeAt = at;
   };
-  const nextWaitLine = (hold: HoldClass, runAt: number): number | null => {
-    for (const line of [attentionWaitMs(hold), criticalWaitMs(hold)]) {
-      if (runAt + line > now) return runAt + line;
-    }
+  // A line is crossed once enough AWAKE time has passed, so the instant it is
+  // armed for is `now` plus the awake time still missing. A nap before that
+  // fires the timer early; re-run on the same facts, it re-arms for the rest.
+  const nextLine = (ageMs: number, lines: readonly number[]): number | null => {
+    for (const line of lines) if (ageMs < line) return now + (line - ageMs);
     return null;
   };
+  const waitLines = (hold: HoldClass): number[] => [
+    attentionWaitMs(hold),
+    criticalWaitMs(hold),
+  ];
 
   // 1. Waiting for a slot. Judged on each class's OLDEST waiting row — the
   // head of the class, the one that has waited longest.
   for (const c of facts.classes) {
     if (c.waiting === 0 || c.oldestWaitingRunAt === null) continue;
-    const runAt = c.oldestWaitingRunAt;
-    changeAt(nextWaitLine(c.hold, runAt));
-    const tone = waitTone(c.hold, runAt, now);
+    const waitedMs = clock.awakeSince(c.oldestWaitingRunAt);
+    changeAt(nextLine(waitedMs, waitLines(c.hold)));
+    const tone = waitTone(c.hold, waitedMs);
     if (tone === "ok") continue;
     raise(c.hold, tone);
     const crossed =
@@ -213,17 +228,23 @@ export function queueVerdict(
     causes.push({
       tone,
       kind: "waiting",
-      severity: (now - runAt) / pickupTargetMsFor(c.hold),
+      severity: waitedMs / pickupTargetMsFor(c.hold),
       text: waitingText(c, crossed),
     });
   }
-  for (const w of facts.waiting) changeAt(nextWaitLine(w.hold, w.runAt));
+  for (const w of facts.waiting)
+    changeAt(nextLine(clock.awakeSince(w.runAt), waitLines(w.hold)));
 
   // 2. Stuck: a running job holding its slot past the slot-hog line.
   const fraction = cfg.slotHogDeadlineFraction;
-  const stuck = facts.running.filter((r) => isStuck(r, fraction, now));
-  for (const r of facts.running) {
-    if (!r.forfeited) changeAt(r.lockedAt + stuckHoldMs(r.hold, fraction));
+  const held = facts.running.map((r) => ({
+    ...r,
+    heldMs: clock.awakeSince(r.lockedAt),
+  }));
+  const stuck = held.filter((r) => isStuck(r, fraction));
+  for (const r of held) {
+    if (!r.forfeited)
+      changeAt(nextLine(r.heldMs, [stuckHoldMs(r.hold, fraction)]));
   }
   if (stuck.length > 0) {
     for (const r of stuck) raise(r.hold, "attention");

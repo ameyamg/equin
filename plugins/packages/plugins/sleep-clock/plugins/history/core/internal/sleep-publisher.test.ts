@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/core";
+import type { SleepClockReading } from "./sleep-publisher";
 import {
   awakeSpanStartMs,
   createSleepPublisher,
@@ -302,5 +302,34 @@ describe("a process started after a wake", () => {
     expect(lastSleepOf({ ...woke, sleepAtMs: null })).toBeNull();
     expect(lastSleepOf({ ...woke, wakeAtMs: null })).toBeNull();
     expect(lastSleepOf({ supported: false })).toBeNull();
+  });
+});
+
+describe("the query gate", () => {
+  test("a query reads the clock only when a sleep may have happened", () => {
+    let reads = 0;
+    let gate = false;
+    const p = createSleepPublisher(
+      () => {
+        reads++;
+        return {
+          supported: true,
+          boot: BOOT,
+          asleepMs: 0,
+          wakeAtMs: null,
+          sleepAtMs: null,
+        };
+      },
+      () => gate,
+    );
+    p.sleptDuring(0, 1); // first query: nothing read yet, reads
+    p.sleptDuring(0, 1);
+    p.awakeSpanStart(1, 1);
+    expect(reads).toBe(1);
+    gate = true;
+    p.wakeBefore(1, 1);
+    expect(reads).toBe(2);
+    p.publish(); // a publish always reads
+    expect(reads).toBe(3);
   });
 });

@@ -30,7 +30,7 @@ import {
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { randomBytes } from "node:crypto";
-import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import { isOrphanedTemp } from "@plugins/packages/plugins/process-alive/core";
 import { z } from "zod";
 import {
   asAppPath,
@@ -265,16 +265,9 @@ export interface ServedDistScan {
   linksRead: number;
 }
 
-const TMP_GRACE_MS = 10 * 60 * 1000;
-
-function isOlderThan(path: AppPath, ms: number): boolean {
-  try {
-    return wallNow("retention") - statSync(path).mtimeMs > ms;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return false; // renamed into place since the listing
-  }
-}
+// A memo's temp is `<memo>.tmp.<writer pid>.<hex>` (`writeMemo`): it is a
+// concurrent scan's write in flight exactly while that writer lives.
+const MEMO_TMP = /\.tmp\.(\d+)\.[0-9a-f]+$/;
 
 /** Fold one dist into `scan`; true when its links had to be read. */
 function addDist(
@@ -311,9 +304,10 @@ export function scanServedDists(
   for (const name of readdirOrEmpty(layout.memoDir)) {
     if (live.has(name)) continue;
     const path = joinAppPath(layout.memoDir, name);
-    // A `.tmp.` file may be a concurrent scan's write in flight: only one a
-    // crashed writer left (older than any write takes) goes.
-    if (name.includes(".tmp.") && !isOlderThan(path, TMP_GRACE_MS)) continue;
+    // A `.tmp.` file may be a concurrent scan's write in flight: only one
+    // whose writer is gone goes — judged by the writer's pid, never the
+    // file's age, which a machine sleep mid-write would pass.
+    if (name.includes(".tmp.") && !isOrphanedTemp(name, MEMO_TMP)) continue;
     rmSync(path, { force: true });
   }
   return scan;
