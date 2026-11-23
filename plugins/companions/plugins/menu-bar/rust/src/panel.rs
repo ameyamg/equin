@@ -1,7 +1,8 @@
 //! The panel: one borderless, always-on-top window (label `panel`) created
 //! hidden at start and kept alive while hidden, so the page's mounts
 //! (notifications, attention) keep running. A tray click toggles it; losing
-//! focus hides it.
+//! focus hides it — at once on macOS, after `BLUR_GRACE` elsewhere unless the
+//! panel gets focus back first (`focus_changed`).
 //!
 //! The panel is the bridge's one principal (`Pin`): the bridge's commands are
 //! granted to its exact origin only (`capability`), the window loads nothing
@@ -41,6 +42,17 @@ const MARGIN: f64 = 6.0;
 /// A tray click this soon after a blur-hide is the same click that blurred it:
 /// the user meant "close", so it must not reopen.
 const REOPEN_GUARD: Duration = Duration::from_millis(250);
+/// How long a focus loss waits before it hides the panel, when the panel can
+/// lose focus without the user leaving it. On Linux the compositor places the
+/// panel (Wayland ignores `set_position`: Hyprland floats it mid-screen, far
+/// from the tray), and under focus-follows-mouse (Hyprland's default) the
+/// pointer's way from the tray to the panel crosses other windows, each taking
+/// focus as it passes, then the panel takes it back as the pointer enters it.
+/// A hide on the first blur closed the panel before the pointer reached it
+/// (github.com/equinai/equin/issues/4). macOS's status-item panel has no such
+/// path: a blur there is the user leaving.
+const BLUR_GRACE: Option<Duration> =
+    if cfg!(target_os = "macos") { None } else { Some(Duration::from_millis(1500)) };
 
 /// macOS: the panel is a transparent window over the system menu material,
 /// clipped to this corner radius (logical px); reported to the page through
@@ -158,6 +170,9 @@ pub struct Panel {
     /// Where the last show put the panel (a rebuilt one shows there).
     anchor: Mutex<Anchor>,
     hidden_at: Mutex<Option<Instant>>,
+    /// Counts the panel's focus changes: a deferred blur-hide (`BLUR_GRACE`)
+    /// runs only when no focus change came after the blur that armed it.
+    focus_changes: Mutex<u64>,
     /// Where a link the panel opens in a new window goes (the default
     /// browser; the probe records it instead).
     hand_off: fn(&Url),
@@ -173,6 +188,7 @@ impl Panel {
             rebuilding: Mutex::new(None),
             anchor: Mutex::new(None),
             hidden_at: Mutex::new(None),
+            focus_changes: Mutex::new(0),
             hand_off,
             observer,
         }
@@ -338,7 +354,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     let handle = app.clone();
     let shaped = window.clone();
     window.on_window_event(move |event| match event {
-        WindowEvent::Focused(false) => hide(&handle),
+        WindowEvent::Focused(focused) => focus_changed(&handle, *focused),
         WindowEvent::Resized(_) => reshadow(&shaped),
         _ => {}
     });
@@ -437,6 +453,38 @@ pub fn load_remote(app: &AppHandle) {
         let visible = window.is_visible().unwrap_or(false);
         reconcile(app, &window, visible);
     }
+}
+
+/// The panel gained or lost focus. A loss hides it — at once, or after
+/// `BLUR_GRACE` when the panel has not had focus back by then (the pointer
+/// crossing other windows on its way into the panel).
+fn focus_changed(app: &AppHandle, focused: bool) {
+    let panel = app.state::<Panel>();
+    let change = {
+        let mut changes = panel.focus_changes.lock().unwrap();
+        *changes += 1;
+        *changes
+    };
+    if focused {
+        return;
+    }
+    let Some(grace) = BLUR_GRACE else {
+        hide(app);
+        return;
+    };
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(grace);
+        let target = handle.clone();
+        let queued = handle.run_on_main_thread(move || {
+            if *target.state::<Panel>().focus_changes.lock().unwrap() == change {
+                hide(&target);
+            }
+        });
+        if let Err(e) = queued {
+            eprintln!("equin-desktop: the panel's blur-hide did not run: {e}");
+        }
+    });
 }
 
 pub fn hide(app: &AppHandle) {

@@ -16,7 +16,7 @@ namespaces and URLs, never an app.
   spiral as a template image, accessory activation policy so no Dock icon);
   Linux a StatusNotifierItem through `ksni` (left click = `Activate` = the
   panel; no SNI watcher → `tray: unavailable`, exit 1). A click toggles the
-  hidden `panel` window (360 × 560, borderless, always on top, hides on blur,
+  hidden `panel` window (360 × 560, borderless, always on top, hides on blur — on Linux only once focus has stayed away 1.5 s, since under focus-follows-mouse the pointer's way into the panel crosses other windows,
   kept alive while hidden) on `http://<ns>.localhost:<port>/home/menu-bar?embed=1`,
   under the icon on macOS, top-right on Linux. When nothing answers on the port
   (probed at start and on every show) it shows the bundled `frontend/index.html`
