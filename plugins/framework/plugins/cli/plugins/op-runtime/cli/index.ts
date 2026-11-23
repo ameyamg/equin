@@ -81,14 +81,6 @@ export {
 export type { BuildProfile, BuildSpan, SpanOptions } from "./profiler";
 
 export {
-  PROGRESS_FILE,
-  finishBuildProgress,
-  openBuildProgress,
-  readBuildProgress,
-} from "./build-progress";
-export type { BuildProgressRecord, BuildRunProgress } from "./build-progress";
-
-export {
   admitThroughGate,
   checkValveGuard,
   createValveDeps,

@@ -87,11 +87,9 @@ import {
   checkValveGuard,
   createValveDeps,
   emitVerdict,
-  finishBuildProgress,
   installFatalSignalExit,
   installVerdictGuard,
   laneFor,
-  openBuildProgress,
   opPriority,
   printStepBlocks,
   publishLane,
@@ -123,6 +121,10 @@ import {
 } from "@plugins/infra/plugins/git/plugins/main-slots/core";
 import { readDrainReportAfterMs } from "@plugins/infra/plugins/git/plugins/main-slots/cli";
 import { relayIntoSlot } from "./internal/slot-relay";
+import {
+  finishBuildProgress,
+  openBuildProgress,
+} from "@plugins/framework/plugins/cli/plugins/build-progress/cli";
 import { createHandOver } from "./internal/hand-over";
 import {
   deployEachTarget,

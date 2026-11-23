@@ -36,13 +36,14 @@ its **`package.json` `description`** — set it, or the plugin lands in
 **Every command is a sub-plugin; `bin/` holds no command at all.** It is now just
 the host: `index.ts` (bootstrap), `cli.ts` (the program), `register-commands.ts`
 (the one translation into commander) and `run-cli.ts` (the process-boundary
-harness). Five sub-plugins carry what more than one command needs, and a command
+harness). Six sub-plugins carry what more than one command needs, and a command
 reaches them through their `cli/` barrels:
 
 | sub-plugin | what it carries |
 |---|---|
 | `bootstrap` | `ensureDeps`, the post-install re-exec, the orphan guard, the build lock — **the npm-free closure**, loaded before `bun install` |
-| `op-runtime` | broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output |
+| `op-runtime` | broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, admission valve, nested check, build output |
+| `build-progress` | the durable per-build progress log — its writer and `readBuildProgress` (`lastAdvanceAt`); a leaf, so an install waiting on the build slot reads it without the op machinery (which reaches the installer) |
 | `migrations` | drizzle generation and the interactive prompt driver |
 | `git-artifacts` | re-deriving generated artifacts after a merge driver, and installing the drivers |
 | `doctor` | `assertPrerequisites` — the prerequisite doctor (`doctor.sh`, also `mise run doctor`) as the first step of `start` and a deploying `build` |
@@ -494,6 +495,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - **`await`** — `./equin await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
   - **`bootstrap`** [exempt] — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
   - **`build`** [exempt] [2 sub-plugins] — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
+  - **`build-progress`** — The durable per-build progress log (build-progress.jsonl): the writer `./equin build` opens (run, span enter/leave, heartbeat, done — synchronous lines, so a wedged or killed build still names its…
   - **`check`** [exempt] — `./equin check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓`…
   - **`cli-name`** — The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy shim included), isCliName and…
   - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.

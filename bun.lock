@@ -3859,6 +3859,10 @@
         "pg": "^8.23.1",
       },
     },
+    "plugins/framework/plugins/cli/plugins/build-progress": {
+      "name": "@equin/plugin-framework-cli-build-progress",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/build/plugins/build-steps": {
       "name": "@equin/plugin-framework-cli-build-build-steps",
       "version": "0.0.1",
@@ -10290,6 +10294,8 @@
     "@equin/plugin-framework-cli-build-build-steps": ["@equin/plugin-framework-cli-build-build-steps@workspace:plugins/framework/plugins/cli/plugins/build/plugins/build-steps"],
 
     "@equin/plugin-framework-cli-build-experimental-marks": ["@equin/plugin-framework-cli-build-experimental-marks@workspace:plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks"],
+
+    "@equin/plugin-framework-cli-build-progress": ["@equin/plugin-framework-cli-build-progress@workspace:plugins/framework/plugins/cli/plugins/build-progress"],
 
     "@equin/plugin-framework-cli-check": ["@equin/plugin-framework-cli-check@workspace:plugins/framework/plugins/cli/plugins/check"],
 

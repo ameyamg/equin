@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { BuildRunProgress } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import type { BuildRunProgress } from "@plugins/framework/plugins/cli/plugins/build-progress/cli";
 import { buildHolderObservation } from "./build-holder";
 
 const files = { progress: "build-progress.jsonl", opLog: "op-log.jsonl" };

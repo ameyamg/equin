@@ -4,7 +4,8 @@ The machinery an **op command** runs on — the shared half of `build`, `check`,
 `test`, `push`, and `run`.
 
 Broadcasts, the deploy receipt, fatal-signal exits, signal-origin attribution,
-lane classification, the op profiler and its durable progress log, the duress
+lane classification, the op profiler (its spans feed the `build-progress`
+sibling's durable log), the duress
 gate (`admission-valve.ts`), the nested-check subprocess, build-output rendering, crash
 recording — and the whole lifecycle of a **direct op**.
 
@@ -120,7 +121,7 @@ import graph has to stay a DAG, and this is the node everything else hangs off.
 It does not import `bootstrap` either, and `bootstrap` does not import it.
 Keeping the two apart is what lets the bootstrap closure stay npm-free while this
 one is unconstrained. The one place they nearly met is the build lock's
-wait policy, which wants this plugin's build-progress log:
+wait policy, which wants the build-progress log (the `build-progress` sibling):
 `acquireCheckoutLock` takes an `observeHolder` hook instead, and
 `app-artifacts` — which already has the log loaded — supplies it. There is no
 edge between the two plugins in either direction.
@@ -195,6 +196,8 @@ the shared Playwright harness.
     - `debug/profiling/op-log.createOpProfiler`
     - `debug/profiling/op-log.OpProfiler`
     - `debug/profiling/op-log.readOpStates`
+    - `framework/cli/build-progress.buildProgressSpanEnd`
+    - `framework/cli/build-progress.buildProgressSpanStart`
     - `infra/jobs/supervised-job.cliExecContext`
     - `infra/jobs/supervised-job.takeRunErrorPath`
     - `infra/jobs/supervised-job.writeRunErrorSync`
@@ -202,10 +205,8 @@ the shared Playwright harness.
     - `tasks/task-track.checkoutTrack`
   - Exports (types):
     - `BuildProfile`
-    - `BuildProgressRecord`
     - `BuildReceipt`
     - `BuildReceiptStatus`
-    - `BuildRunProgress`
     - `BuildSpan`
     - `BuildStepLog`
     - `CheckSubprocessOptions`
@@ -236,20 +237,16 @@ the shared Playwright harness.
     - `createValveDeps`
     - `emitVerdict`
     - `FATAL_SIGNAL_EXITS`
-    - `finishBuildProgress`
     - `installFatalSignalExit`
     - `installVerdictGuard`
     - `laneFor`
     - `mustRequeue`
     - `OP_OOM_SCORE_ADJ`
-    - `openBuildProgress`
     - `opPriority`
     - `preferOomKill`
     - `printStepBlocks`
-    - `PROGRESS_FILE`
     - `publishLane`
     - `pushBuildSpan`
-    - `readBuildProgress`
     - `readBuildReceiptSync`
     - `readCliCrash`
     - `recordCliCrash`

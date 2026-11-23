@@ -5,6 +5,14 @@ import {
 } from "@plugins/packages/plugins/deadline/core";
 import { readOpRecords } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import {
+  readBuildProgress,
+  type BuildRunProgress,
+} from "@plugins/framework/plugins/cli/plugins/build-progress/cli";
+import {
+  readCheckProgress,
+  type CheckRunProgress,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
   awakeWithin,
   type OpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
@@ -130,36 +138,84 @@ export const STALL_WAIT_MS = 2 * 60_000;
 /** How long (awake) the holder must have shown no progress to count as stuck. */
 export const HOLDER_QUIET_MS = 10 * 60_000;
 
+/** A build run as its progress log reconstructs it — what the rule reads. */
+export type BuildRunMoves = Pick<BuildRunProgress, "pid" | "lastAdvanceAt">;
+/** A check run as its progress log reconstructs it — what the rule reads. */
+export type CheckRunMoves = Pick<
+  CheckRunProgress,
+  "runId" | "pid" | "startedAt"
+> & { completed: ReadonlyArray<{ at: string }> };
+
 /**
- * When the holder last made progress, as the op log saw it: its newest step's
- * end (steps are placed by ms after the request), else when it got the slot.
+ * When the holder last made progress (epoch ms): when it got the slot, or
+ * later, the newest move its own records show —
+ *
+ * - a wait of its own ending (a build's post-grant host-grant or duress gate):
+ *   it went back to work then, not at its last move before the wait;
+ * - its build run (build-progress, written by the same process): a span
+ *   entering or leaving (`lastAdvanceAt`; the 30 s heartbeat does not count —
+ *   it proves the process exists, not that it gets anywhere);
+ * - its check runs (check-progress): a check settling, in the op's own process
+ *   (`./equin check`), or in the check-pass child a build runs with its op id
+ *   as `--run-id` — so a long check pass inside a build is progress too.
+ *
+ * Never the op record's steps: an in-flight record carries none (they land on
+ * the terminal), which is how "stopped making progress" once meant "has held
+ * the slot for 10 minutes" and a healthy cold build was offered to be killed.
+ *
+ * Runs are matched by pid (or the run id), never by checkout: a main build in
+ * a slot names its check run after the slot, its op after main. No start-time
+ * filter either — the build opens its run just before its op record, and a
+ * dead process that once had the same pid only moved before this op was
+ * granted, which the max already discounts.
  */
-function holderLastProgress(record: OpRecord): number {
-  const base = Date.parse(record.requestedAt);
-  return Math.max(
+export function holderLastProgress(
+  record: OpRecord,
+  builds: readonly BuildRunMoves[],
+  checks: readonly CheckRunMoves[],
+): number {
+  const requested = Date.parse(record.requestedAt);
+  const moves = [
     Date.parse(record.grantedAt),
-    ...record.steps.map((s) => base + s.startMs + s.durationMs),
-  );
+    ...record.waits.flatMap((w) =>
+      w.atMs === undefined || w.wallMs === undefined
+        ? []
+        : [requested + w.atMs + w.wallMs],
+    ),
+    ...builds
+      .filter((b) => b.pid === record.pid)
+      .map((b) => Date.parse(b.lastAdvanceAt)),
+    ...checks
+      .filter((c) => c.pid === record.pid || c.runId === record.opId)
+      .flatMap((c) => [c.startedAt, ...c.completed.map((x) => x.at)])
+      .map((at) => Date.parse(at)),
+  ];
+  return Math.max(...moves.filter((ms) => !Number.isNaN(ms)));
 }
 
 /**
  * The stall rule's verdict for a wait that has lasted `waitedMs` of awake
  * time, with `record` read at the wall instant `now` (the axis its sleeps sit
- * on): stuck (symptom: waited past STALL_WAIT_MS; fact: the holder is still
+ * on) and `lastProgress` its `holderLastProgress`: stuck (symptom: waited past STALL_WAIT_MS; fact: the holder is still
  * running and showed no progress for HOLDER_QUIET_MS while the machine was
  * awake), or how much more awake time until it could become so — a deadline,
  * re-armed only when the holder moved, never a fixed-interval look.
  */
 export function judgeHolder(
-  record: OpRecord | undefined,
+  record: OpRecord,
+  lastProgress: number,
   waitedMs: number,
   now: number,
 ):
   | { stuck: true; quietSince: number }
   | { stuck: false; recheckInMs: number | null } {
-  if (record === undefined || record.outcome !== "running")
-    return { stuck: false, recheckInMs: null };
-  const quietSince = holderLastProgress(record);
+  if (record.outcome !== "running") return { stuck: false, recheckInMs: null };
+  // Parked in a wait of its own (a build's post-grant host-grant or duress
+  // gate): queued, not hung — and its turn is not what the install waits on.
+  // Looked at again a full quiet span later.
+  if (record.openWait !== null)
+    return { stuck: false, recheckInMs: HOLDER_QUIET_MS };
+  const quietSince = lastProgress;
   const quietMs = awakeWithin(record, quietSince, now);
   const left = Math.max(STALL_WAIT_MS - waitedMs, HOLDER_QUIET_MS - quietMs);
   if (left <= 0) return { stuck: true, quietSince };
@@ -178,14 +234,17 @@ function watchHolder(opId: string): StallWatch {
   const check = (): void => {
     cancel = null;
     const record = readOpRecords().find((r) => r.opId === opId);
+    // Gone from the live log: it ended (or rotated away) — nothing to watch.
+    if (record === undefined) return;
     const verdict = judgeHolder(
       record,
+      holderLastProgress(record, readBuildProgress(), readCheckProgress()),
       awakeClock() - waitStart,
       // The wall axis the record's sleeps were placed on; judgeHolder takes
       // them out, so this is an instant, not an age.
       Date.now(),
     );
-    if (verdict.stuck && record !== undefined) {
+    if (verdict.stuck) {
       reported = true;
       reportInstallStall(stallWords(record, verdict.quietSince));
       return;

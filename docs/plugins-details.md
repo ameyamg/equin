@@ -32611,9 +32611,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
             - Uses: 76 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
-              - `framework/cli/op-runtime` ×34
+              - `framework/cli/op-runtime` ×30
               - `installer` ×5
               - `framework/cli/bootstrap` ×4
+              - `framework/cli/build-progress` ×4
               - `framework/tooling/web-artifacts` ×4
               - `build/converge` ×3
               - `framework/cli/migrations` ×3
@@ -32685,6 +32686,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/task-draft-form`
               - Exemptions:
                 - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
+        - **`build-progress`** — The durable per-build progress log (build-progress.jsonl): the writer `./equin build` opens (run, span enter/leave, heartbeat, done — synchronous lines, so a wedged or killed build still names its phase) and readBuildProgress, which reconstructs each run with lastAdvanceAt, the last time it demonstrably moved. A leaf, so whoever judges a running build (its lock waiters, an install waiting on the build slot) can read it without the op machinery.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/op-runtime`
+              - `installer/waits`
+          - Cli:
+            - Exports (types):
+              - `BuildProgressRecord`
+              - `BuildRunProgress`
+              - `OutstandingSpan`
+            - Exports (values):
+              - `buildProgressSpanEnd`
+              - `buildProgressSpanStart`
+              - `finishBuildProgress`
+              - `openBuildProgress`
+              - `PROGRESS_FILE`
+              - `readBuildProgress`
         - **`check`** — `./equin check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
             - Uses:
@@ -32821,6 +32840,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/op-log.createOpProfiler`
               - `debug/profiling/op-log.OpProfiler`
               - `debug/profiling/op-log.readOpStates`
+              - `framework/cli/build-progress.buildProgressSpanEnd`
+              - `framework/cli/build-progress.buildProgressSpanStart`
               - `infra/jobs/supervised-job.cliExecContext`
               - `infra/jobs/supervised-job.takeRunErrorPath`
               - `infra/jobs/supervised-job.writeRunErrorSync`
@@ -32828,10 +32849,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-track.checkoutTrack`
             - Exports (types):
               - `BuildProfile`
-              - `BuildProgressRecord`
               - `BuildReceipt`
               - `BuildReceiptStatus`
-              - `BuildRunProgress`
               - `BuildSpan`
               - `BuildStepLog`
               - `CheckSubprocessOptions`
@@ -32862,20 +32881,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `createValveDeps`
               - `emitVerdict`
               - `FATAL_SIGNAL_EXITS`
-              - `finishBuildProgress`
               - `installFatalSignalExit`
               - `installVerdictGuard`
               - `laneFor`
               - `mustRequeue`
               - `OP_OOM_SCORE_ADJ`
-              - `openBuildProgress`
               - `opPriority`
               - `preferOomKill`
               - `printStepBlocks`
-              - `PROGRESS_FILE`
               - `publishLane`
               - `pushBuildSpan`
-              - `readBuildProgress`
               - `readBuildReceiptSync`
               - `readCliCrash`
               - `recordCliCrash`
@@ -33998,6 +34013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
               - `infra/deps/updates`
+              - `installer/waits`
           - Exemptions:
             - Exempts itself from:
               - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
@@ -38218,6 +38234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/logs`
           - `debug/profiling/fs-wait`
           - `debug/profiling/op-log`
+          - `framework/cli/build-progress`
           - `framework/cli/op-runtime`
           - `framework/cli/start`
           - `framework/tooling/checks`
@@ -42339,6 +42356,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cli:
         - Uses:
           - `debug/profiling/op-log.readOpRecords`
+          - `framework/cli/build-progress.BuildRunProgress`
+          - `framework/cli/build-progress.readBuildProgress`
           - `installer.installEventsOn`
           - `installer.reportInstallResolved`
           - `installer.reportInstallStall`
@@ -45425,7 +45444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/sentinel/machine-usage`
           - `framework/cli/bootstrap`
           - `framework/cli/build`
-          - `framework/cli/op-runtime`
+          - `framework/cli/build-progress`
           - `framework/tooling/checks/type-check/backstop`
           - `infra/spawn`
           - `packages/sleep-clock`

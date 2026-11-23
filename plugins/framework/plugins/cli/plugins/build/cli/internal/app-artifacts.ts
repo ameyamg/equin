@@ -27,13 +27,15 @@ import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins
 import {
   admitThroughGate,
   mustRequeue,
-  PROGRESS_FILE,
-  readBuildProgress,
   runCheckSubprocess,
   type BuildStepLog,
   type SpanOptions,
   type ValveDeps,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import {
+  PROGRESS_FILE,
+  readBuildProgress,
+} from "@plugins/framework/plugins/cli/plugins/build-progress/cli";
 import {
   checkStepOutcome,
   stepOutcomeOfError,

@@ -8,6 +8,8 @@
 - Cli:
   - Uses:
     - `debug/profiling/op-log.readOpRecords`
+    - `framework/cli/build-progress.BuildRunProgress`
+    - `framework/cli/build-progress.readBuildProgress`
     - `installer.installEventsOn`
     - `installer.reportInstallResolved`
     - `installer.reportInstallStall`

@@ -1,5 +1,5 @@
 import type { HolderObservation } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
-import type { BuildRunProgress } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import type { BuildRunProgress } from "@plugins/framework/plugins/cli/plugins/build-progress/cli";
 import type { OpenWait } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 
 /**

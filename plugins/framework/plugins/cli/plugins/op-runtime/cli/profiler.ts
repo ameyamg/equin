@@ -5,7 +5,10 @@ import {
   worktreeArtifacts,
   pruneWorktreeBuildArtifactsSync,
 } from "@plugins/infra/plugins/paths/server";
-import { buildProgressSpanStart, buildProgressSpanEnd } from "./build-progress";
+import {
+  buildProgressSpanEnd,
+  buildProgressSpanStart,
+} from "@plugins/framework/plugins/cli/plugins/build-progress/cli";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import type { BuildSubStepId } from "@plugins/installer/core";
 import { enterBuildSubStep } from "@plugins/installer/cli";

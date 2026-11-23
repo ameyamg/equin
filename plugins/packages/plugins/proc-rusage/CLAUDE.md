@@ -104,7 +104,7 @@ orchestrator's own peak and the build-progress log.
     - `debug/sentinel/machine-usage`
     - `framework/cli/bootstrap`
     - `framework/cli/build`
-    - `framework/cli/op-runtime`
+    - `framework/cli/build-progress`
     - `framework/tooling/checks/type-check/backstop`
     - `infra/spawn`
     - `packages/sleep-clock`

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-build-progress",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The durable per-build progress log (build-progress.jsonl): the writer `./equin build` opens (run, span enter/leave, heartbeat, done — synchronous lines, so a wedged or killed build still names its phase) and readBuildProgress, which reconstructs each run with lastAdvanceAt, the last time it demonstrably moved. A leaf, so whoever judges a running build (its lock waiters, an install waiting on the build slot) can read it without the op machinery."
+}

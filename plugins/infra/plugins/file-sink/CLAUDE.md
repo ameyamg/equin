@@ -256,6 +256,7 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `debug/logs`
     - `debug/profiling/fs-wait`
     - `debug/profiling/op-log`
+    - `framework/cli/build-progress`
     - `framework/cli/op-runtime`
     - `framework/cli/start`
     - `framework/tooling/checks`

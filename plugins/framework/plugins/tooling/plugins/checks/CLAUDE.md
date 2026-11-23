@@ -856,6 +856,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/tooling/checks/type-check`
     - `framework/tooling/checks/type-check/backstop`
     - `infra/deps/updates`
+    - `installer/waits`
 - Exemptions:
   - Exempts itself from:
     - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
