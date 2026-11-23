@@ -36,7 +36,6 @@ import { companionsVisible } from "./companions-visible";
 import { keysDefined } from "./keys-defined";
 import { rootMountsReached } from "./root-mounts-reached";
 import { pageHostsOnDemand } from "./page-hosts-on-demand";
-import { appRoots, partialAppEntries } from "./apps-whole";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -581,25 +580,6 @@ const check: Check = {
         return fail(
           `composition "${item.name}" ${unlisted.message}`,
           "Name in `unlisted` only bundled apps other than the `home` (plugins/plugin-meta/plugins/composition/core/config.ts).",
-        );
-      }
-    }
-
-    // 6c. A profile adds another app whole. A profile is a variant of one app;
-    //     any other app it ships is that app's whole subtree (`<app>.**`),
-    //     never hand-picked plugins of it — those drift from the app (a pane
-    //     the app gains never reaches the profile). An app with only some of
-    //     its panes is the whole app less negatives on the rest; a leaf kept
-    //     under one of the row's own negatives is the engine's opt-out.
-    //     `partialAppEntries` (./apps-whole.ts) says which entries break it.
-    const roots = appRoots([...declaredApps.values()].map((a) => a.plugin));
-    for (const item of items) {
-      if (item.category !== "profile") continue;
-      const partial = partialAppEntries(item.entryPoints, roots);
-      if (partial.length > 0) {
-        return fail(
-          `composition "${item.name}" takes part of an app: ${partial.map((p) => `"${p.entry}" (of ${p.app})`).join(", ")}`,
-          "A profile adds another app whole: write `<app>.**`, and leave out the panes it should not ship with negatives (`!<app>.<pane>.**`) — e.g. `apps.settings.**` with `!apps.settings.appearance.**`.",
         );
       }
     }

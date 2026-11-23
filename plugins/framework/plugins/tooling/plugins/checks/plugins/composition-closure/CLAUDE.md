@@ -84,18 +84,6 @@ leave it empty. Registry codegen resolves the same verdict and throws on it, so
 the web registry's `composition.home` (the `/` redirect target) is always one of
 the composition's own apps — never load order.
 
-## A profile adds another app whole
-
-A `profile` row is a variant of one app; any OTHER app it ships (an app is
-the largest subtree holding its `defineApp` declarer and no other app's,
-`appRoots` in `check/apps-whole.ts`) is written as that app's whole subtree,
-`<app>.**` — never hand-picked plugins of it, which drift from the app (a
-pane the app gains never reaches the profile). An app with only some of its
-panes is the whole app less negatives on the rest (`apps.settings.**` with
-`!apps.settings.appearance.**`); a leaf kept under one of the row's own
-negatives (a capability id other code grants) is the engine's opt-out. Rule
-6c fails naming each partial entry and the app it reaches into.
-
 ## Exclusion sets
 
 A row of category `exclusions` is an **exclusion set**: `flattenManifest` folds

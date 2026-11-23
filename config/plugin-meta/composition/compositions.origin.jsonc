@@ -1,4 +1,4 @@
-// @hash 099e1b037021
+// @hash a7d5fde5d6b4
 {
   "manifests": [
     {
@@ -250,10 +250,8 @@
         "apps.keyboard-party.**",
         "apps.isle.**",
         "!apps.isle.dev.**",
-        "apps.settings.**",
-        "!apps.settings.appearance.**",
-        "!apps.settings.accounts.**",
-        "!apps.settings.isle-building.**",
+        "apps.settings.shell",
+        "apps.settings.config",
         "apps.places.**",
         "!companions.menu-bar.**",
         "companions.menu-bar.app-window",

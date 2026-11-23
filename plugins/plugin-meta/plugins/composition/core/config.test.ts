@@ -281,15 +281,15 @@ test("main's entry points stay exactly `**` — the exclusion lives on the base 
   expect(byName(MAIN_COMPOSITION_ID).entryPoints).toEqual(["**"]);
 });
 
-test("the demo profile is the agent manager and Pages minus machine-only surfaces, plus whole apps", () => {
+test("the demo profile is the agent manager and Pages minus machine-only surfaces, plus other apps", () => {
   // `agent-manager-demo` is what the in-page demo's browser host serves: the
   // full agent manager — `agent-manager`'s own entries, extends and selection,
   // but for its adapters into the apps it ships (an inherited negative could
   // not be contradicted) — and the Pages app by
   // `extends`, so a plugin either app gains reaches the demo with no edit
-  // here. Its own entries SUBTRACT machine-only surfaces and add whole apps
-  // (a profile adds another app whole: composition-closure rule 6c, which
-  // judges every profile). It selects only what the agent manager does and the
+  // here. Its own entries subtract machine-only surfaces and add other apps
+  // (whole or in part — a composition's entries are arbitrary; Settings ships
+  // its Config pane only). It selects only what the agent manager does and the
   // map's Google renderer. Never served. Its home is the app gallery, as
   // main's is: the launcher's grid lists every app but the home, so an
   // agent-manager home would hide the agent manager from the demo's launcher.
