@@ -493,7 +493,7 @@ function runnerOutcome(
 
 /**
  * Under a failing run, where each failing file stands on main (main-standing):
- * already failing there — its report and owner task, so the failure is not
+ * already failing there — its report (and task, if any), so the failure is not
  * diagnosed and filed again — or not, so it is most likely this checkout's.
  * Not on main's own checkout (nothing to compare against) nor when the caller
  * judges the failures itself (`TEST_NO_STANDING`: the push gate). Main's

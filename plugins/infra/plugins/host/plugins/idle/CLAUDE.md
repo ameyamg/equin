@@ -95,8 +95,6 @@ sustained for `IDLE_SUSTAIN_MS` (10 min). Design:
 - Cross-plugin:
   - Imported by:
     - `conversations/idle-blocker`
-    - `debug/tests`
-    - `debug/tests/idle-runner`
     - `infra/host/idle/duress`
     - `infra/host/idle/ops`
 - Exemptions:

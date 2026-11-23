@@ -129,7 +129,6 @@ before it) beside the total, worded by `formatReportActivity`
     - `FanOutConfigValues`
     - `FanOutGate`
     - `FanOutGateOptions`
-    - `InvestigationRequester`
     - `InvestigationTaskRequest`
     - `ReportKindSpec`
     - `ReportKindVariant`

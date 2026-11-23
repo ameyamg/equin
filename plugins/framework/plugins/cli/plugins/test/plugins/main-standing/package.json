@@ -2,5 +2,5 @@
   "name": "@equin/plugin-framework-cli-test-main-standing",
   "private": true,
   "version": "0.0.1",
-  "description": "Where a failing test file stands on main — the one notion of \"already failing on main\" (judgeFailure over the harvested verdicts: at the merge base's digest by majority, else main's own newest), with main's test-failing report and owner task about it. Printed by `./equin test` under a failing run and used by the push test gate."
+  "description": "Where a failing test file stands on main — the one notion of \"already failing on main\" (judgeFailure over the harvested verdicts: at the merge base's digest by majority, else main's own newest), with main's test-failing report about it. Printed by `./equin test` under a failing run and used by the push test gate."
 }

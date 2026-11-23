@@ -85,10 +85,10 @@ like `defineJob`.
 - Cross-plugin:
   - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×8
-    - `tasks` ×8
+    - `tasks` ×7
     - `infra` ×6
     - `conversations` ×4
-    - `debug` ×3
+    - `debug` ×4
     - `database/lock-watch`
     - `page/links`
     - `plugin-meta/plugin-tree`

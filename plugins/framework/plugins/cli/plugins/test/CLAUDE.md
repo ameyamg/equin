@@ -150,7 +150,7 @@ is gone). A test that hardcodes `/tmp` escapes this — use `os.tmpdir()`.
 
 Under a failing run (outside main's own checkout) the command prints, per
 failing file, where it stands on main (`plugins/main-standing`): already
-failing there — main's `test-failing` report and its owner task, so it is not
+failing there — main's `test-failing` report (and its task, if someone took it up), so it is not
 diagnosed and filed again — or not, so it is most likely this checkout's
 change. The push gate, which judges failures itself, turns it off for the
 runs it spawns (`EQUIN_TEST_NO_STANDING`).

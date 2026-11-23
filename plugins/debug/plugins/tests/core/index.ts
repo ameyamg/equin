@@ -50,3 +50,4 @@ export type {
   TestFileStatusRow,
 } from "./internal/resources";
 export { TESTS_CATEGORY_ID, testFileSubject } from "./internal/category";
+export { testRunnerConfig } from "./internal/runner-config";

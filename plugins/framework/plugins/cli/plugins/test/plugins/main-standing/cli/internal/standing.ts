@@ -127,14 +127,15 @@ export async function mergeBaseDigests(
 }
 
 function reportLine(r: KnownTestReport): string {
-  const owner =
-    r.taskId === null ? "no owner task yet" : `owner task ${r.taskId}`;
-  return `main's report ${r.reportId} (${r.fixState}, ${owner})`;
+  // A report has a task only when someone took it up (Investigate, or the
+  // supervisor the Broken tests stream is routed to): none is filed for it.
+  const task = r.taskId === null ? "" : `, task ${r.taskId}`;
+  return `main's report ${r.reportId} (${r.fixState}${task})`;
 }
 
 /**
  * The lines an agent reads under a failing run: per file, whether main
- * already knows it (its report and owner task) and so it is not this
+ * already knows it (its report, and its task if someone took it up) and so it is not this
  * change's doing; and what to do about each kind — never file a known
  * failure again.
  */
@@ -151,7 +152,7 @@ export function standingLines(result: StandingResult): string[] {
       lines.push(
         s.report !== null
           ? `      ${reportLine(s.report)}`
-          : "      not reported yet: main's runner verifies it from this run's record and files the report",
+          : "      not reported yet: this run is recorded as evidence (main's test runner, when it is on, verifies it and files the report)",
       );
     }
   }
@@ -168,7 +169,8 @@ export function standingLines(result: StandingResult): string[] {
     lines.push(
       "",
       "Do NOT file a task about a failure already failing on main: each one has (or gets) exactly one",
-      "report and one owner task, and this run is already recorded as evidence. Fix it only if it is in",
+      "report on main, routed to the supervisor of the Broken tests stream, and this run is already",
+      "recorded as evidence. Fix it only if it is in",
       `your way, and land the fix with \`./${CLI_NAME} push --fixes-report <report id>\`.`,
     );
   return lines;

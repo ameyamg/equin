@@ -1,58 +1,77 @@
 # idle-runner
 
-The checkout's test runner: it runs the test files whose verdict on the
-current code the checkout still owes, one small batch after another.
-Design: `research/2026-11-23-global-broken-test-ownership.md`.
+MAIN's test runner: after each push, it runs the test files whose verdict on
+main's current code is owed, one small batch after another, and
+`failing-report` files a `test-failing` report for each file a second run
+confirms broken. (The folder keeps its old name; it no longer waits for idle.)
+Design: `research/2026-11-23-global-broken-test-ownership.md` (see its
+"Revised after user feedback" section).
 
-## Two pools (`selectIdleBatch`, pure)
+## Off unless turned on, main only
 
-- **due** — derived from the status rows alone, never a queue in memory (main
-  restarts on every push, and the old `toConfirm` set was lost each time):
-  1. to confirm — one failure of this checkout's own on the current code and
-     no pass (`ownFailed` 1): a failure is believed only once a second run
-     repeats it;
-  2. seen failing elsewhere — another checkout failed it on this very code
-     and this checkout has no verdict of its own: an agent's run of main's
-     code is evidence main verifies;
-  3. stale and last failing, 4. never run, 5. stale oldest first.
-- **sweep** — only while idle and nothing is due: verdicts on the current
-  code older than 7 days (the digest's blind spots). A failing file is not
-  re-run sooner: its code has not moved, and each re-run would re-ring its
-  report's bell. A fix moves its digest, so it runs as due.
+- The switch is `testRunnerConfig` (`debug/tests` core, Settings → Config,
+  **off by default**): the runner spends the host's CPU after every push,
+  which an install opts into. Off, main runs no test on its own, files no
+  `test-failing` report, and does not recompute its digests on every push.
+  Flipping it on brings the digests current (their settling starts the
+  first batch); off cancels the running batch.
+- MAIN only. A worktree's backend ingests every checkout's runs and its
+  status rows are a fork of main's, so what it would owe is mostly main's
+  unchanged code (every file failing on main reads "seen failing elsewhere"
+  there). An agent's own changes are tested by its `./equin test` runs and
+  the push gate.
 
-On MAIN, due batches run whenever an opportunistic op may (idle or not), so
-main's verdicts follow its head; everywhere else every batch waits for idle
-(a worktree's runner fills its page in only while nothing else wants the
-machine). A batch is ≤ 25 files or ≤ 60 s of last-known duration.
+## Only a change makes a run owed (`selectDueBatch`, pure)
+
+Derived from the status rows alone, never a queue in memory (main restarts on
+every push):
+
+1. to confirm — one failure of main's own on the current code and no pass
+   (`ownFailed` 1): ONE more run, then the judge decides (report, or flaky);
+2. seen failing elsewhere — another checkout failed it on main's very code
+   and main has no verdict of its own: verified here (a failure is then
+   confirmed by 1.);
+3. stale and last failing, 4. never run, 5. stale oldest first — the files
+   whose digest moved (a push changed their code), or that have no verdict
+   on this code at all.
+
+There is no periodic re-check: a verdict main already has on its current
+code is never re-run for its age (the 7-day sweep was removed — it re-ran
+unchanged code). A fix moves the file's digest, so it runs as due. The
+results cap keeps the results on a file's current digest apart, so agents'
+runs of other code cannot push them out and make a file read `stale`.
+
+A batch is ≤ 25 files or ≤ 60 s of last-known duration.
 
 ## Events
 
-- `tests.digestsSettled` (main: every boot and advance; elsewhere idle began
-  or the page), `tests.runsIngested` (runs with failures came in) and each
-  batch's end → `tests.idle-next`: pick and enqueue one batch, unless one runs.
-- `tests.idle-batch`: `./equin test <paths…>` in this checkout,
+- Main's boot (`tests.runner-digests-boot`, a host warm-up — a ref reaction
+  is skipped while the backend is down) and every advance of main
+  (`tests.idle-batch (refs/heads/main)`, which also cancels the running batch:
+  its tree is going away, so its harvest would be skipped) ask for the
+  digests of the new tree.
+- `tests.digestsSettled`, `tests.runsIngested` (runs with failures came in)
+  and each batch's end → `tests.idle-next`: pick and enqueue one batch,
+  unless one runs.
+- `tests.idle-batch`: `./equin test <paths…>` in main's checkout,
   `EQUIN_OP_OPPORTUNISTIC=1` (background lane, low priority, ignored by the
-  ops blocker), `EQUIN_TEST_ORIGIN=idle`, `verdictExits: [TESTS_FAILED_EXIT]`
-  (failing tests are data, never a dead-lettered job), one lock per pool. Its
-  `onEnded` ingests the record, hands the batch's files to `failing-report`'s
-  `fileTestFailingReports` (main only), then asks for the next batch — in a
-  `finally`, so a filing error is loud but never stops the chain.
-- An advance of main cancels the running batch on main (its tree is going
-  away, so its harvest would be skipped); `host.idleEnded` cancels a running
-  sweep (and, off main, any batch).
+  ops blocker), `EQUIN_TEST_ORIGIN=idle` (the origin's persisted name,
+  shown as "Test runner"), `verdictExits: [TESTS_FAILED_EXIT]` (failing tests
+  are data, never a dead-lettered job). Its `onEnded` ingests the record,
+  hands the batch's files to `failing-report`'s `fileTestFailingReports`, then
+  asks for the next batch — in a `finally`, so a filing error is loud but
+  never stops the chain.
 - A (file, digest) is taken at most twice per backend process, so a file
-  whose run yields no verdict (a wedged runner, a tree that moved) cannot
-  loop; a restart re-tries it at most twice more.
+  whose run yields no verdict at all (a wedged runner) cannot loop. Residual:
+  such a file is retried at most twice after each main restart.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: The checkout's test runner: runs the test files whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run) — on main whenever an opportunistic op may run, so main's verdicts follow its head; elsewhere, and for the 7-day re-verify sweep, only while the host is idle. Each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle; an advance of main cancels the running batch (main), host.idleEnded the running sweep.
+- Description: Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale, never run), a failure another checkout saw on main's code, and one confirming run of a file that failed once — never a re-run of unchanged code. Main's boot and every advance bring its test digests to the new tree; each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectDueBatch, opportunistic; an advance cancels the running batch.
 - Server:
   - Contributes:
-    - `trigger` "tests.idle-began"
-    - `trigger` "tests.idle-ended"
     - `trigger` "tests.idle-next"
     - `trigger` "tests.idle-next"
 - Machine:
@@ -63,8 +82,7 @@ machine). A batch is ≤ 25 files or ≤ 60 s of last-known duration.
   - Register:
     - `defineSupervisedJob('tests.idle-batch')`
     - `defineJob('tests.idle-next')`
-    - `defineJob('tests.idle-began')`
-    - `defineJob('tests.idle-ended')`
     - `defineRefReaction('tests.idle-batch (refs/heads/main)')`
+    - `defineWarmup('tests.runner-digests-boot')`
 
 <!-- AUTOGENERATED:END -->

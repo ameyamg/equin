@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { TESTS_FAILED_EXIT } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
@@ -11,48 +12,56 @@ import {
   latestSupervisedRun,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { readHostIdleRecord } from "@plugins/infra/plugins/host/plugins/idle/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _testFileStatus } from "@plugins/debug/plugins/tests/server";
+import { testRunnerConfig } from "@plugins/debug/plugins/tests/core";
 import {
   ingestRunRecordsNow,
   requestCheckoutDigests,
 } from "@plugins/debug/plugins/tests/machine";
 import { fileTestFailingReports } from "@plugins/debug/plugins/tests/plugins/failing-report/machine";
-import { selectIdleBatch, type BatchPool } from "./select-batch";
+import { selectDueBatch } from "./select-batch";
 
-// The test runner of a checkout: runs the files whose verdict on the current
-// code it still owes, one small batch after another.
+// MAIN's test runner: after each push, runs the test files whose verdict on
+// main's current code is owed, one small batch after another, and files a
+// `test-failing` report for each file a second run confirms broken.
 //
-// On MAIN its verdicts follow main's head: the due files (to confirm, seen
-// failing elsewhere, stale, never run — `duePool`) run whenever the host lets
-// an opportunistic op run, idle or not. Everywhere else, and for main's
-// 7-day re-verify sweep, only while the host is idle (infra/host/idle — no
-// agent working, no op running, no duress, for 10 min).
+// OFF unless the install turns it on (`testRunnerConfig`, Settings → Config):
+// it spends the host's CPU after every push. MAIN only: a worktree's backend
+// ingests every checkout's runs and its status rows are a fork of main's, so
+// what it would owe is mostly main's own unchanged code; an agent's own
+// changes are tested by its `./equin test` runs and the push gate.
 //
+// Every run is owed by a change, never by time (no periodic re-check):
 //   main boot / advance  → digests brought to the new tree (debug/tests)
-//   tests.digestsSettled → next batch
-//   tests.runsIngested   → next batch (a failure seen elsewhere is due)
+//   tests.digestsSettled → next batch (the files the change affected)
+//   tests.runsIngested   → next batch (a failure another checkout saw on
+//                          main's code: verified here once)
 //   a batch ended        → ingest its record, judge it, then the next batch
+//                          (one failure is confirmed by ONE more run)
 //   main advanced        → cancel the running batch (its tree moved: its
 //                          harvest would be skipped)
-//   host.idleBegan       → digests current, then the next batch
-//   host.idleEnded       → cancel a running SWEEP batch
 //
 // Each batch is an ordinary `./equin test`, OPPORTUNISTIC
 // (`EQUIN_OP_OPPORTUNISTIC`: background lane, low priority, not counted as
-// work by the ops blocker — or it would end the idle period it runs in) and
-// marked `idle` in its harvest record.
+// work by the ops blocker) and marked `idle` in its harvest record (the
+// origin's persisted name: the runner once ran only while the host was idle).
 
-const idleRunLog = defineLogSink({
+const runnerLog = defineLogSink({
   id: "tests-idle-runs",
   description:
-    "Test-status page: the `./equin test` batches this checkout's test runner ran (main: whenever a verdict is owed; elsewhere while the computer is idle).",
+    "Test-status page: the `./equin test` batches main's test runner ran after each push (when it is turned on).",
 });
 
-/** Each pool's batches hold their own lock; at most one batch runs at all. */
-const POOLS: readonly BatchPool[] = ["due", "sweep"];
+/** The one lock every batch holds: at most one batch runs at all. */
+const BATCH_LOCK = "due";
+
+/** Whether this backend runs the runner: main, with the runner turned on. */
+function runnerOn(): boolean {
+  return isMain() && getConfig(testRunnerConfig).enabled;
+}
 
 // How many batches of this process took each (file, digest). A file a run
 // cannot give a verdict (its record skipped: the tree moved mid-run; a wedged
@@ -66,12 +75,13 @@ const takeKey = (path: string, digest: string) => `${path}\0${digest}`;
 export const idleBatchJob = defineSupervisedJob({
   name: "tests.idle-batch",
   description:
-    "Runs a small batch of test files whose verdict on the current code is owed (on main whenever it is owed, elsewhere while the computer is idle), so Debug → Tests and main's test reports follow the code without costing anyone time.",
+    "Runs a small batch of main's test files whose verdict on main's current code is owed (a push changed them, or a failure awaits its one confirming run), at low priority, when main's test runner is turned on.",
   input: z.object({
     paths: z.array(z.string()).min(1),
-    pool: z.enum(["due", "sweep"]),
+    // Persisted in run inputs: the old `sweep` pool is gone, `due` stays.
+    pool: z.literal(BATCH_LOCK),
   }),
-  channel: idleRunLog,
+  channel: runnerLog,
   runAttempts: 1,
   // Failing tests are the page's data (the run's record), never a failed job.
   verdictExits: [TESTS_FAILED_EXIT],
@@ -82,14 +92,14 @@ export const idleBatchJob = defineSupervisedJob({
     envOverrides: envEntries({ OP_OPPORTUNISTIC: "1", TEST_ORIGIN: "idle" }),
   }),
   onEnded: async (_runId, _terminal, meta) => {
-    // Cancelled: the host stopped being idle, or main moved — what follows
-    // is decided by whoever cancelled it.
+    // Cancelled: main moved, or the runner was turned off — what follows is
+    // decided by whoever cancelled it.
     if (meta.cancelled) return;
     // Its verdicts must be in the statuses the next selection reads.
     await ingestRunRecordsNow();
     try {
-      // A file of main that went from passing to failing (confirmed) is
-      // filed; one that failed once is due again (derived from its status).
+      // A file of main confirmed failing is filed; one that failed once is
+      // due again (derived from its status) for its one confirming run.
       await fileTestFailingReports(meta.input.paths);
     } finally {
       // A filing error stays loud, but never stops the chain.
@@ -99,22 +109,19 @@ export const idleBatchJob = defineSupervisedJob({
 });
 
 async function batchRunning(): Promise<boolean> {
-  for (const pool of POOLS)
-    if (
-      (await latestSupervisedRun(idleBatchJob, { paths: [pool], pool }))?.open
-    )
-      return true;
-  return false;
+  return (
+    (
+      await latestSupervisedRun(idleBatchJob, {
+        paths: [BATCH_LOCK],
+        pool: BATCH_LOCK,
+      })
+    )?.open ?? false
+  );
 }
 
-/** Start the next batch — when one is owed (main) or the host is idle, and none runs. */
-export async function startNextIdleBatch(
-  now: number = Date.now(),
-): Promise<void> {
-  const idle = (await readHostIdleRecord())?.state === "idle";
-  // Only main owes verdicts whatever the host is doing; a worktree's runner
-  // fills its page in only while nothing else wants the machine.
-  if (!idle && !isMain()) return;
+/** Start the next batch — when the runner is on, one is owed and none runs. */
+export async function startNextBatch(): Promise<void> {
+  if (!runnerOn()) return;
   if (await batchRunning()) return;
   const rows = await db
     .select({
@@ -130,32 +137,31 @@ export async function startNextIdleBatch(
       ownFailed: _testFileStatus.ownFailed,
     })
     .from(_testFileStatus);
-  const batch = selectIdleBatch(
+  const paths = selectDueBatch(
     rows.filter(
       (r) => (taken.get(takeKey(r.path, r.digest)) ?? 0) < TAKES_PER_DIGEST,
     ),
-    now,
-    { idle },
   );
-  if (batch === null) return;
+  if (paths === null) return;
   const digestOf = new Map(rows.map((r) => [r.path, r.digest]));
-  for (const p of batch.paths) {
+  for (const p of paths) {
     const key = takeKey(p, digestOf.get(p)!);
     taken.set(key, (taken.get(key) ?? 0) + 1);
   }
-  await idleBatchJob.enqueue(batch);
+  await idleBatchJob.enqueue({ paths, pool: BATCH_LOCK });
 }
 
-/** Cancel the running batch of each of `pools`. */
-async function cancelBatches(pools: readonly BatchPool[]): Promise<void> {
-  for (const pool of pools)
-    await cancelSupervisedJobByLock(idleBatchJob, { paths: [pool], pool });
+async function cancelBatch(): Promise<void> {
+  await cancelSupervisedJobByLock(idleBatchJob, {
+    paths: [BATCH_LOCK],
+    pool: BATCH_LOCK,
+  });
 }
 
 export const idleNextJob = defineJob({
   name: "tests.idle-next",
   description:
-    "Picks the next test files to run — the ones whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run), and while the computer is idle the oldest verdicts — and starts them.",
+    "Picks the next test files main's test runner owes a verdict (a push changed them, or a failure awaits its one confirming run) and starts them — when the runner is turned on.",
   hold: "seconds",
   input: z.object({}),
   event: z.unknown(),
@@ -163,46 +169,54 @@ export const idleNextJob = defineJob({
   dedup: "singleton",
   serial: true,
   run: async () => {
-    await startNextIdleBatch();
-  },
-});
-
-export const idleBeganJob = defineJob({
-  name: "tests.idle-began",
-  description:
-    "When the computer becomes idle, brings the test digests up to date with the current code, so the idle test runs pick files by their real status.",
-  hold: "seconds",
-  input: z.object({}),
-  event: z.unknown(),
-  dedup: "singleton",
-  run: async () => {
-    // Its end (tests.digestsSettled) starts the first batch.
-    await requestCheckoutDigests();
-  },
-});
-
-export const idleEndedJob = defineJob({
-  name: "tests.idle-ended",
-  description:
-    "When the computer stops being idle, stops the idle-only (sweep) test run in progress so it never competes with real work; a batch of owed verdicts on main keeps running at low priority.",
-  hold: "seconds",
-  input: z.object({}),
-  event: z.unknown(),
-  dedup: "singleton",
-  run: async () => {
-    await cancelBatches(isMain() ? ["sweep"] : POOLS);
+    await startNextBatch();
   },
 });
 
 /**
  * Main moved: a batch running now tests a tree that is going away (its
- * harvest is skipped once the checkout changes under it), so it is cancelled;
- * the new digests' settling starts the next one, on the new code.
+ * harvest is skipped once the checkout changes under it), so it is
+ * cancelled, and the digests are brought to the new tree — their settling
+ * starts the next batch, on the new code. (When main's own checkout has not
+ * moved yet the digest child answers `unchanged`; the boot warm-up below
+ * catches the tree the restarted backend serves.)
  */
-export const batchOnMainAdvance = defineRefReaction({
+export const runnerOnMainAdvance = defineRefReaction({
   name: "tests.idle-batch",
   refName: "refs/heads/main",
   run: async () => {
-    if (isMain()) await cancelBatches(POOLS);
+    if (!runnerOn()) return;
+    await cancelBatch();
+    await requestCheckoutDigests();
   },
 });
+
+/**
+ * Main's boot: every push restarts main, and a ref reaction is skipped while
+ * the backend is down — so the advance that matters most is the one it would
+ * miss. The new process serves the new tree: bring the digests to it.
+ */
+export const runnerAtMainBoot = defineWarmup({
+  name: "tests.runner-digests-boot",
+  description:
+    "When main's test runner is on: brings main's test digests to the code it now serves, so the runner re-runs what the last push affected.",
+  scope: "host",
+  run: async () => {
+    if (runnerOn()) await requestCheckoutDigests();
+  },
+});
+
+/**
+ * The switch flipped: on → bring the digests current (their settling starts
+ * the first batch); off → stop the running batch.
+ */
+export function followRunnerSwitch(): void {
+  if (!isMain()) return;
+  let wasOn = runnerOn();
+  watchConfig(testRunnerConfig, () => {
+    const on = runnerOn();
+    if (on === wasOn) return;
+    wasOn = on;
+    void (on ? requestCheckoutDigests() : cancelBatch());
+  });
+}

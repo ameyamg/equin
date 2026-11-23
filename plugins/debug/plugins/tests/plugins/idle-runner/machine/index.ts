@@ -1,34 +1,22 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import {
-  hostIdleBegan,
-  hostIdleEnded,
-} from "@plugins/infra/plugins/host/plugins/idle/server";
-import {
   testDigestsSettled,
   testRunsIngested,
 } from "@plugins/debug/plugins/tests/server";
 import {
-  batchOnMainAdvance,
+  followRunnerSwitch,
   idleBatchJob,
-  idleBeganJob,
-  idleEndedJob,
   idleNextJob,
+  runnerAtMainBoot,
+  runnerOnMainAdvance,
 } from "./internal/idle-runner";
 
 export default {
   description:
-    "The checkout's test runner: runs the test files whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run) — on main whenever an opportunistic op may run, so main's verdicts follow its head; elsewhere, and for the 7-day re-verify sweep, only while the host is idle. Each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle; an advance of main cancels the running batch (main), host.idleEnded the running sweep.",
-  register: [
-    idleBatchJob,
-    idleNextJob,
-    idleBeganJob,
-    idleEndedJob,
-    batchOnMainAdvance,
-  ],
+    "Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale, never run), a failure another checkout saw on main's code, and one confirming run of a file that failed once — never a re-run of unchanged code. Main's boot and every advance bring its test digests to the new tree; each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectDueBatch, opportunistic; an advance cancels the running batch.",
+  register: [idleBatchJob, idleNextJob, runnerOnMainAdvance, runnerAtMainBoot],
   contributions: [
-    Trigger({ on: hostIdleBegan, do: idleBeganJob, with: {}, oneShot: false }),
-    Trigger({ on: hostIdleEnded, do: idleEndedJob, with: {}, oneShot: false }),
     Trigger({
       on: testDigestsSettled,
       do: idleNextJob,
@@ -42,4 +30,5 @@ export default {
       oneShot: false,
     }),
   ],
+  onAllReady: followRunnerSwitch,
 } satisfies MachinePluginDefinition;

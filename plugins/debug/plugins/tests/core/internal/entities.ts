@@ -43,7 +43,7 @@ const outcomeOptions = {
 const originOptions = {
   agent: { label: "Agent run" },
   "run-now": { label: "Run now" },
-  idle: { label: "Idle run" },
+  idle: { label: "Test runner" },
 } as const;
 
 /** One harvested `./equin test` run (its record, minus the per-file rows). */

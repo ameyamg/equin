@@ -26,20 +26,6 @@ export const IDLE_BATCH_BUDGET_MS = 60_000;
 export const IDLE_BATCH_MAX_FILES = 25;
 /** What a file with no known duration is counted as. */
 export const UNKNOWN_DURATION_MS = 2_000;
-/** A verdict on current code older than this is re-checked once nothing else is left. */
-export const REVERIFY_AFTER_MS = 7 * 24 * 60 * 60_000;
-
-/**
- * Which pool a batch was drawn from:
- *
- * - `due` — files whose verdict on the current code this checkout still
- *   owes: on MAIN they run whenever the host lets an opportunistic op run,
- *   idle or not, so main's verdicts follow its head;
- * - `sweep` — re-checking verdicts it already has (the digest's blind spots),
- *   only while the host is idle.
- */
-export type BatchPool = "due" | "sweep";
-
 const ranAt = (c: BatchCandidate): number => c.lastRanAt?.getTime() ?? 0;
 const oldestFirst = (a: BatchCandidate, b: BatchCandidate): number =>
   ranAt(a) - ranAt(b) || a.path.localeCompare(b.path);
@@ -88,50 +74,26 @@ export function duePool(
 }
 
 /**
- * Only when nothing is due: verdicts on the current code older than
- * {@link REVERIFY_AFTER_MS}, oldest first — the sweep over the digest's blind
- * spots (env, fixtures on disk, spawned processes). A failing file is NOT
- * re-run sooner: its code has not moved, and each re-run would re-ring its
- * report's bell.
+ * The next batch: the due files, most useful first, until
+ * {@link IDLE_BATCH_MAX_FILES} files or their last-known durations reach
+ * {@link IDLE_BATCH_BUDGET_MS} (a file is taken whole, so the first always
+ * is): a cancelled batch loses little. Null when nothing is owed.
+ *
+ * There is no other pool: a verdict main already has on its current code is
+ * never re-run for its age — the code has not changed (a fix moves the
+ * file's digest, so it runs as due), and a re-run of a failing file would
+ * re-ring its report's bell.
  */
-export function sweepPool(
+export function selectDueBatch(
   candidates: readonly BatchCandidate[],
-  now: number,
-): BatchCandidate[] {
-  return candidates
-    .filter(
-      (c) =>
-        c.status !== "stale" &&
-        c.status !== "never" &&
-        c.lastRanAt !== null &&
-        now - c.lastRanAt.getTime() > REVERIFY_AFTER_MS,
-    )
-    .sort(oldestFirst);
-}
-
-/**
- * The next batch: the due pool first; the sweep only when `idle` and nothing
- * is due. Stops at {@link IDLE_BATCH_MAX_FILES} files or once its last-known
- * durations reach {@link IDLE_BATCH_BUDGET_MS} (a file is taken whole, so the
- * first always is): a preempted batch loses little. Null when nothing is worth
- * running.
- */
-export function selectIdleBatch(
-  candidates: readonly BatchCandidate[],
-  now: number,
-  opts: { idle: boolean },
-): { pool: BatchPool; paths: string[] } | null {
-  const due = duePool(candidates);
-  const pool: BatchPool = due.length > 0 ? "due" : "sweep";
-  const from =
-    due.length > 0 ? due : opts.idle ? sweepPool(candidates, now) : [];
+): string[] | null {
   const paths: string[] = [];
   let budget = 0;
-  for (const c of from) {
+  for (const c of duePool(candidates)) {
     if (paths.length >= IDLE_BATCH_MAX_FILES || budget >= IDLE_BATCH_BUDGET_MS)
       break;
     paths.push(c.path);
     budget += c.durationMs ?? UNKNOWN_DURATION_MS;
   }
-  return paths.length === 0 ? null : { pool, paths };
+  return paths.length === 0 ? null : paths;
 }

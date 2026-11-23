@@ -9,7 +9,7 @@ import { TEST_FAILING_KIND, testFailingFingerprint } from "../../core";
 export interface KnownTestReport {
   path: string;
   reportId: string;
-  /** Its owner task (the investigation task), or null while it has none. */
+  /** The task someone took it up with (Investigate, or its supervisor), or null: none is filed automatically. */
   taskId: string | null;
   fixState: ReportFixState;
 }
@@ -18,7 +18,7 @@ export interface KnownTestReport {
  * Main's `test-failing` reports about `paths` (one per file at most: the
  * fingerprint is the path), read from main's database — what a CLI tells an
  * agent whose test fails: this is already known on main, here is its report
- * and the task that owns it. Throws when main's database cannot be read; the
+ * and its task when someone took it up. Throws when main's database cannot be read; the
  * caller says so.
  */
 export async function readKnownTestReports(

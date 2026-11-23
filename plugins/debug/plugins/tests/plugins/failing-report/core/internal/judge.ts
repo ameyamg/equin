@@ -80,7 +80,7 @@ const runOf = (r: JudgedResult): JudgedRun => ({
  *   file never passed here) `known` (the file's existing report) stands in,
  *   else the report says there is no pass on record (`lastPassed: null`).
  * - Flakiness: one failure is not enough. A single failure of main's on the
- *   current code answers `confirm` — the idle runner runs the file once more —
+ *   current code answers `confirm` — main's test runner runs the file once more —
  *   and only {@link CONFIRMING_FAILURES} of main's failures with no pass
  *   report. A flaky file passes the confirmation run and files nothing.
  *

@@ -93,6 +93,7 @@ and the editor.
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/preprompts`
+    - `debug/tests`
     - `hints/ask`
     - `integrations/google-maps/usage`
     - `stats/commits`

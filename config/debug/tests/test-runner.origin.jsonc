@@ -1,0 +1,5 @@
+// @hash 6e322ece5c0c
+{
+  // When on, main runs the test files each push affected (at low priority) and files a test-failing report for each file a second run confirms broken. Off by default: no test runs on its own and no test-failing report is filed.
+  "enabled": false
+}

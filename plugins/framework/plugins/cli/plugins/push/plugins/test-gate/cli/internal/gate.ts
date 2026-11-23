@@ -375,7 +375,7 @@ export async function runTestGate(root: AppPath): Promise<TestGateResult> {
 
 /**
  * Failures that are not this change's doing — said loudly anyway, with main's
- * report and owner task for each (`standingLines`, the same lines `./equin
+ * report (and task, if any) for each (`standingLines`, the same lines `./equin
  * test` prints), so a file that is red on main is never silently waved
  * through, and a case the evidence never saw fail is named.
  */

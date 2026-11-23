@@ -4,14 +4,7 @@ Bridges the `reports` plugin's investigation flow to the `tasks` domain. When a
 user clicks "investigate" on a report, `reports` emits an
 `InvestigationTaskRequest` into its `reportInvestigationSink` — this plugin
 registers the handler that turns that request into a real root task stamped with
-the **Reports** category (idempotent: a linked task that still owns the report
-is reused — `ownsReport`: any but a dropped one; a regression unlinks it).
-
-Who asked decides who the task is from and where it lands (`requestedBy`): a
-person's Investigate files their own root task; the system — a supervisor
-stream that owns its reports (`supervisor-roles/events/report-streams`' Broken
-tests) — files a system task into the backlog of the role it names
-(`fileSystemBacklogTask`), or a plain root task when it names none.
+the **Reports** category (idempotent: an already-linked live task is reused).
 
 ## Why it lives under `tasks/`
 
@@ -36,9 +29,7 @@ it.
 - Server:
   - Contributes: `taskCategory` "reports"
   - Uses:
-    - `database.db`
     - `reports.reportInvestigationSink`
-    - `tasks/supervisor-roles.fileSystemBacklogTask`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-category.TaskCategory`
     - `tasks/tasks-core.createTask`

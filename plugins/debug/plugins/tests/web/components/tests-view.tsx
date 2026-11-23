@@ -38,7 +38,7 @@ import {
   countStatuses,
   type TestTreeRow,
 } from "../internal/build-test-tree";
-import { IdlePill } from "./idle-pill";
+import { RunnerPill } from "./runner-pill";
 import {
   CountsBar,
   HistoryStrip,
@@ -165,7 +165,7 @@ function TestsBody({
                 </Text>
               </Stack>
             </Fill>
-            <IdlePill />
+            <RunnerPill />
             {runNow.kind === "available" && (
               <Inline gap="xs">
                 <Button

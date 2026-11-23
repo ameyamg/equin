@@ -17180,8 +17180,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 102 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×102
+    - Slot contributors: 103 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×103
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -17381,9 +17381,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 152 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 154 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
-      - `debug` ×15
+      - `debug` ×17
       - `conversations` ×14
       - `backup` ×12
       - `ui` ×11
@@ -17472,6 +17472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-templates`
           - `conversations/preprompts`
+          - `debug/tests`
           - `hints/ask`
           - `integrations/google-maps/usage`
           - `stats/commits`
@@ -25037,10 +25038,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 184 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 183 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×50
       - `conversations` ×22
-      - `tasks` ×21
+      - `tasks` ×20
       - `infra` ×18
       - `page` ×14
       - `debug` ×12
@@ -29257,7 +29258,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GATE_WAITERS_MAX`
           - `SPAN_STUCK_KIND`
           - `StuckSpanPayloadSchema`
-    - **`tests`** — Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), the tests.runsIngested event (an ingest pass took in runs with failures), and the Tests task category Investigate files under.
+    - **`tests`** — Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), the tests.runsIngested event (an ingest pass took in runs with failures), the Tests task category Investigate files under, and the switch of main's test runner (Settings → Config, off by default).
       - Web:
         - Slots:
           - `tests.actions`
@@ -29266,19 +29267,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tests.actions` ← `primitives.pane`
           - `test-file.actions` ← `primitives.pane`
         - Contributes:
+          - `ConfigV2.WebRegister` "test-runner"
           - `Pane.Register` "debug-test-file"
           - `Pane.Register` "debug-tests"
           - `DataViewSlots.CollectionItemAction` "tests.file-status:investigate" → `CollectionInvestigate`
           - `DataViewSlots.CollectionItemAction` "tests.file-runs:investigate" → `CollectionInvestigate`
           - `DebugApp.Sidebar` "Tests"
-        - Uses: 37 symbols — full list in [`plugins/debug/plugins/tests/REFERENCE.md`](../plugins/debug/plugins/tests/REFERENCE.md)
+        - Uses: 40 symbols — full list in [`plugins/debug/plugins/tests/REFERENCE.md`](../plugins/debug/plugins/tests/REFERENCE.md)
           - `primitives/data-view` ×6
           - `primitives/pane` ×6
+          - `config_v2` ×2
           - `network/live` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/status-dot` ×2
           - `primitives/launch/investigate` ×2
           - `apps/debug/shell.DebugApp`
+          - `config_v2/config-link.ConfigGearButton`
           - `infra/endpoints.useEndpointMutation`
           - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/badge.Badge`
@@ -29306,7 +29310,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "tests.file-status"
           - `resource.declare` "tests.file-status:rows"
           - `taskCategory` "tests"
+          - `ConfigV2.Register` "test-runner"
         - Uses:
+          - `config_v2.ConfigV2`
           - `database.db`
           - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
@@ -29354,13 +29360,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineSupervisedJob('tests.checkout-digests')`
           - `defineSupervisedJob('tests.run-now')`
           - `defineRefReaction('tests.checkout-digests (refs/heads/main)')`
-          - `defineWarmup('tests.checkout-digests-boot')`
           - `defineWarmup('tests.ingest-catch-up')`
         - Routes: `POST /api/debug/tests/run-now`
       - Core:
         - Uses:
+          - `config_v2.defineConfig`
           - `fields.FieldsRecord`
           - `fields.nullable`
+          - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/duration/config.durationField`
           - `fields/int/config.intField`
@@ -29417,6 +29424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `testFileStatusFields`
           - `testFileSubject`
           - `testRunFields`
+          - `testRunnerConfig`
           - `testRunsEntityRef`
           - `TESTS_CATEGORY_ID`
           - `worstStatus`
@@ -29435,7 +29443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
       - Plugins:
-        - **`failing-report`** — Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind: one row per test file failing on main's code (fingerprint = file path), filed by main's test runner once a second run of main's on the same code confirmed the failure. Category test, so the Broken tests supervisor stream owns it (one investigation task per report, in the backlog of the role it is routed to); a raised fan-out ceiling, so one push breaking many tests still files each; its task names the failing cases and the commit range where they started failing.
+        - **`failing-report`** — Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind: one row per test file failing on main's code (fingerprint = file path), filed by main's test runner once a second run of main's on the same code confirmed the failure. Category test, so the Broken tests supervisor stream announces it to the role it is routed to (no task is filed for it); a raised fan-out ceiling, so one push breaking many tests still files each; its task names the failing cases and the commit range where they started failing.
           - Web:
             - Contributes: `Reports.KindView` → `TestFailingSummary`
             - Uses: `reports.Reports`
@@ -29471,11 +29479,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cli:
             - Exports (types): `KnownTestReport`
             - Exports (values): `readKnownTestReports`
-        - **`idle-runner`** — The checkout's test runner: runs the test files whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run) — on main whenever an opportunistic op may run, so main's verdicts follow its head; elsewhere, and for the 7-day re-verify sweep, only while the host is idle. Each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle; an advance of main cancels the running batch (main), host.idleEnded the running sweep.
+        - **`idle-runner`** — Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale, never run), a failure another checkout saw on main's code, and one confirming run of a file that failed once — never a re-run of unchanged code. Main's boot and every advance bring its test digests to the new tree; each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectDueBatch, opportunistic; an advance cancels the running batch.
           - Server:
             - Contributes:
-              - `trigger` "tests.idle-began"
-              - `trigger` "tests.idle-ended"
               - `trigger` "tests.idle-next"
               - `trigger` "tests.idle-next"
           - Machine:
@@ -29486,9 +29492,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `defineSupervisedJob('tests.idle-batch')`
               - `defineJob('tests.idle-next')`
-              - `defineJob('tests.idle-began')`
-              - `defineJob('tests.idle-ended')`
               - `defineRefReaction('tests.idle-batch (refs/heads/main)')`
+              - `defineWarmup('tests.runner-digests-boot')`
     - **`timeline`** — Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, read live from the debug.timeline.scan value as the fan-out resolves. Cross-worktree unified timeline: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and serves it as the debug.timeline.scan live value — one scan per window, pushed as each cell resolves.
       - Web:
         - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
@@ -30236,9 +30241,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 88 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 89 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×29
-              - `debug` ×13
+              - `debug` ×14
               - `backup` ×11
               - `conversations` ×7
               - `tasks` ×5
@@ -33103,7 +33108,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/cli/push/test-gate`
                   - `framework/cli/test`
                   - `framework/cli/test/main-standing`
-            - **`main-standing`** — Where a failing test file stands on main — the one notion of "already failing on main" (judgeFailure over the harvested verdicts: at the merge base's digest by majority, else main's own newest), with main's test-failing report and owner task about it. Printed by `./equin test` under a failing run and used by the push test gate.
+            - **`main-standing`** — Where a failing test file stands on main — the one notion of "already failing on main" (judgeFailure over the harvested verdicts: at the merge base's digest by majority, else main's own newest), with main's test-failing report about it. Printed by `./equin test` under a failing run and used by the push test gate.
               - Cli:
                 - Uses:
                   - `debug/tests/failing-report.KnownTestReport`
@@ -39189,8 +39194,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `conversations/idle-blocker`
-              - `debug/tests`
-              - `debug/tests/idle-runner`
               - `infra/host/idle/duress`
               - `infra/host/idle/ops`
           - Exemptions:
@@ -40883,7 +40886,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 151 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 150 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×39
           - `framework` ×26
           - `apps` ×19
@@ -40896,12 +40899,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×3
           - `release` ×3
           - `reports` ×3
-          - `tasks` ×3
           - `code-explorer` ×2
           - `companions` ×2
           - `database` ×2
           - `integrations` ×2
           - `stats` ×2
+          - `tasks` ×2
           - `apps-core/app-preload`
           - `config_v2`
           - `installer`
@@ -42117,10 +42120,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: 36 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `apps` ×8
-          - `tasks` ×8
+          - `tasks` ×7
           - `infra` ×6
           - `conversations` ×4
-          - `debug` ×3
+          - `debug` ×4
           - `database/lock-watch`
           - `page/links`
           - `plugin-meta/plugin-tree`
@@ -60944,7 +60947,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `FanOutConfigValues`
       - `FanOutGate`
       - `FanOutGateOptions`
-      - `InvestigationRequester`
       - `InvestigationTaskRequest`
       - `ReportKindSpec`
       - `ReportKindVariant`
@@ -61301,8 +61303,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-feed-exclusion` "report_trend_days"
           - `db-trigger` "reports.trend"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-        - Uses: 37 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `reports` ×11
+        - Uses: 36 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `reports` ×10
           - `build/server-build-id` ×4
           - `shell/notifications` ×4
           - `database/db-triggers` ×2
@@ -61351,7 +61353,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×14
           - `conversations` ×5
           - `infra` ×4
@@ -61364,7 +61366,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/github-events`
           - `page/place/google`
           - `stats/scoreboard`
-          - `tasks/supervisor-roles/events/report-streams`
       - Exemptions:
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
@@ -64951,9 +64952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `taskCategory` "reports"
         - Uses:
-          - `database.db`
           - `reports.reportInvestigationSink`
-          - `tasks/supervisor-roles.fileSystemBacklogTask`
           - `tasks/task-category.setTaskCategory`
           - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.createTask`
@@ -65174,7 +65173,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `tasks`
-          - `tasks/reports-investigation`
           - `tasks/supervisor-roles/events`
           - `tasks/supervisor-roles/pane`
           - `tasks/supervisor-roles/sessions`
@@ -65315,7 +65313,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/events/report-streams`
               - `tasks/supervisor-roles/pane`
           - Plugins:
-            - **`report-streams`** — The report event streams: Error reports and Slow-op reports (the kinds whose `category` is error / slow-op), each fed every recorded report of its category — one event per occurrence, keyed by the report so its occurrences fold into one line of the supervisor's next message — and Broken tests (category test), which OWNS its reports instead: each open report gets its one investigation task (system-filed, in the backlog of the role the stream is routed to, else a plain Reports task), on its occurrence and, for reports recorded before or whose task ended, at boot.
+            - **`report-streams`** — The report event streams: Error reports, Slow-op reports and Broken tests (the kinds whose `category` is error / slow-op / test), each fed every recorded report of its category — one event per occurrence, keyed by the report so its occurrences fold into one line of the supervisor's next message. A broken test is announced like any other report: the role decides what to do, no task is filed for it.
               - Server:
                 - Contributes:
                   - `supervisor-event-stream` "broken-tests"
@@ -65324,9 +65322,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `report-recorded` "tasks.supervisor-roles.events.report-streams"
               - Machine:
                 - Uses: `tasks/supervisor-roles/events.publishSupervisorEvent`
-                - Register:
-                  - `defineJob('supervisor-events.report')`
-                  - `defineWarmup('supervisor-events.own-open-reports')`
+                - Register: `defineJob('supervisor-events.report')`
         - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role; InheritedTaskSupervisor: a nested task's role, read from its tree's root and naming it), SupervisorPill and SupervisorRoleBadge (a role by id, read live — the add_task card's backlog badge).
           - Web:
             - Slots:

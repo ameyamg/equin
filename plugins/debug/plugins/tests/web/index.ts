@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { testRunnerConfig } from "../core";
 import { testFilePane, testsPane } from "./panes";
 import {
   investigateFailedRuns,
@@ -12,6 +14,7 @@ export default {
   description:
     "Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate).",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: testRunnerConfig }),
     Pane.Register({ pane: testsPane }),
     investigateFailingFiles,
     investigateFailedRuns,

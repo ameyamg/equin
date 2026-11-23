@@ -216,3 +216,26 @@ a file whose process ran no case (fa8b0ef6ee) while this was in review. Each
 file's own exit code now tells a load crash from a file with no case, which
 fixes the zero-case `not-loaded` bug at its source, so the bisecting probe
 designed above was dropped before landing.
+
+## Revised after user feedback (same day)
+
+The user reviewed the landed change (task-1795451762-9te4zz):
+
+- **No task per broken test.** At main's boot the owning stream filed 17
+  `[test-failing]` tasks. Reports stay rows: the **Broken tests** stream now
+  ANNOUNCES like the error and slow-op streams — the role it is routed to
+  (the Test supervisor) is told and decides. Removed: the owning stream, its
+  boot warm-up, and the requester / backlog plumbing in reports'
+  investigation sink and the `reports-investigation` bridge (back to a
+  person's Investigate only). `./equin test` and the push gate print the
+  report, no longer an "owner task".
+- **The runner is opt-in.** `testRunnerConfig` (`debug/tests` core), off by
+  default; this install turns it on. Main's head-following digests (boot +
+  advance) moved into the runner and follow the same switch; Debug → Tests
+  still refreshes them while it is open.
+- **Only a change makes a run owed.** The 7-day sweep is gone, the runner
+  runs on main only (a worktree's due set was mostly main's unchanged code),
+  so the host-idle triggers are gone too. The results cap keeps the results on
+  a file's current digest apart (agents' runs of other code pushed them out,
+  making an unchanged file read `stale`). The judge is unchanged: a report
+  still needs two failures of main's own.

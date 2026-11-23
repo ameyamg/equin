@@ -6,12 +6,14 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { asc, eq } from "drizzle-orm";
+import { RESULTS_KEPT_PER_FILE } from "../../core";
 import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import type { TestRunRecord } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
+import { capResults } from "./cap-job";
 import { ingestRunRecord } from "./ingest-record";
 import { recomputeFileStatus } from "./recompute";
 import {
@@ -208,5 +210,55 @@ describe("ingest + recomputeFileStatus", () => {
       ownFailed: 1,
       ownPassed: 0,
     });
+  });
+
+  test("the cap keeps a file's verdict on its current digest when other code's runs outnumber it", async () => {
+    const path = "c/capped.test.ts";
+    await t.db
+      .delete(_testCheckoutDigests)
+      .where(eq(_testCheckoutDigests.path, path));
+    await t.db.insert(_testCheckoutDigests).values({
+      path,
+      digest: "cur",
+      runner: "bun:test" as const,
+      pluginId: "c",
+      generation: "g1",
+    });
+    // Main's one verdict on its code, then more agents' runs of their own
+    // edits of the file than the cap keeps.
+    await ingestRunRecord(
+      t.db,
+      record(
+        "op-c0",
+        "2026-11-13T00:00:00.000Z",
+        [[path, "cur", "passed"]],
+        OWN,
+      ),
+      OWN,
+    );
+    for (let i = 1; i <= RESULTS_KEPT_PER_FILE + 3; i++)
+      await ingestRunRecord(
+        t.db,
+        record(
+          `op-c${i}`,
+          new Date(
+            Date.parse("2026-11-13T00:00:00.000Z") + i * 60_000,
+          ).toISOString(),
+          [[path, `edit-${i}`, "passed"]],
+        ),
+        OWN,
+      );
+    await capResults(t.db, OWN);
+    const kept = await t.db
+      .select({ opId: _testFileResults.opId })
+      .from(_testFileResults)
+      .where(eq(_testFileResults.path, path));
+    expect(kept.length).toBe(RESULTS_KEPT_PER_FILE + 1);
+    expect(kept.map((r) => r.opId)).toContain("op-c0");
+    const [row] = await t.db
+      .select({ status: _testFileStatus.status })
+      .from(_testFileStatus)
+      .where(eq(_testFileStatus.path, path));
+    expect(row?.status).toBe("passing");
   });
 });

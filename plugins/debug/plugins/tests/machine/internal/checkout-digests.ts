@@ -4,11 +4,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import {
-  isMain,
-  runtimeNamespace,
-} from "@plugins/infra/plugins/runtime-identity/core";
-import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
@@ -53,7 +49,7 @@ function digestsFile(): string {
 export const checkoutDigestsJob = defineSupervisedJob({
   name: "tests.checkout-digests",
   description:
-    "Computes every test file's digest for this checkout when its code changed — on main at every boot and advance, elsewhere while the Debug → Tests page is open — so harvested verdicts can be matched against the current code.",
+    "Computes every test file's digest for this checkout when its code changed — while the Debug → Tests page is open, and on main at every boot and advance when main's test runner is on — so harvested verdicts can be matched against the current code.",
   input: z.object({ unlessTree: z.string().nullable() }),
   channel: digestsLog,
   runAttempts: 1,
@@ -225,29 +221,14 @@ export const digestGenerationServed = serveValue(testDigestGeneration, {
 });
 
 /**
- * Main moved: its digests may have too. On MAIN always — main's verdicts
- * follow its head, so its runner re-runs what an advance affected — and
- * elsewhere while the page is open. (When main's own checkout has not moved
- * yet, the child answers `unchanged`; the boot warm-up below catches the
- * tree the restarted backend serves.)
+ * Main moved: its digests may have too — refreshed while the page is open.
+ * (Main's test runner, when it is on, brings main's own digests to every
+ * new tree itself: `plugins/idle-runner`.)
  */
 export const digestsOnMainAdvance = defineRefReaction({
   name: "tests.checkout-digests",
   refName: "refs/heads/main",
   run: async () => {
-    if (isMain() || watchers > 0) await requestCheckoutDigests();
+    if (watchers > 0) await requestCheckoutDigests();
   },
-});
-
-/**
- * Main's boot: every push restarts main, and a ref reaction is skipped while
- * the backend is down — so the advance that matters most is the one it would
- * miss. The new process serves the new tree: bring the digests to it.
- */
-export const digestsAtMainBoot = defineWarmup({
-  name: "tests.checkout-digests-boot",
-  description:
-    "Brings main's test digests to the code it now serves, so its test runner re-runs what the last push affected.",
-  scope: "host",
-  run: () => requestCheckoutDigests(),
 });

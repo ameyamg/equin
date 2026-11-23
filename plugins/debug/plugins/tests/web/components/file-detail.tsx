@@ -52,7 +52,7 @@ const runsSource = liveDataSource(testFileRuns, {
 const ORIGIN_LABEL = {
   agent: "agent",
   "run-now": "Run now",
-  idle: "idle run",
+  idle: "test runner",
 } as const;
 
 /** One test file: its status, last run, failing cases and recent runs. */

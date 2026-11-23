@@ -22,12 +22,10 @@ A result is keyed by (path, digest). The checkout's own digests
 `tests.checkout-digests` supervised job, and the child answers `unchanged`
 when the tree hash is the stored one:
 
-- **on main, always**: at every boot (`tests.checkout-digests-boot`, a host
-  warm-up — every push restarts main, and a ref reaction is skipped while the
-  backend is down) and on every advance of main. Main's verdicts follow its
-  head: its runner (`plugins/idle-runner`) re-runs what an advance affected;
-- elsewhere only while the page is open: the `tests.digest-generation`
-  value's `whileSubscribed` asks on subscribe and on every advance of main.
+- while the page is open: the `tests.digest-generation` value's
+  `whileSubscribed` asks on subscribe and on every advance of main;
+- on main, when its test runner is turned on (`plugins/idle-runner`, off by
+  default): at every boot and advance, so main's verdicts follow its head.
 
 The status rule is `deriveStatus` (core, pure); `recomputeFileStatus`
 (server) is the ONLY writer of `test_file_status`, run after each ingested
@@ -44,7 +42,7 @@ that came or went).
   the ones this checkout's own runs recorded — `slug` = this backend's
   namespace, the one definition of "main's own run" (failing-report's judge
   uses the same). Main's runner selection reads them: one own failure is
-  confirmed by a second run, and a failure only another checkout saw on this
+  confirmed by ONE more run, and a failure only another checkout saw on this
   very code is verified here.
 - An ingest pass that took in runs with failures emits `tests.runsIngested`
   (the runner's next selection).
@@ -53,6 +51,10 @@ that came or went).
   computing state, never an empty tree.
 - `test_file_results` is capped to the newest 32 per file daily
   (`tests.results-cap`), never TTL'd: a stable file keeps its only verdict.
+  The results on the file's current digest are kept apart (up to 32 more):
+  agents' runs of their own edits would otherwise push out the verdict on
+  this checkout's code, the file would read `stale`, and main's runner would
+  re-run code that never changed.
 
 ## Run now / Investigate
 
@@ -67,7 +69,7 @@ files a task about the `test-file` subject under the Tests category.
 
 ## Plugin reference
 
-- Description: Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), the tests.runsIngested event (an ingest pass took in runs with failures), and the Tests task category Investigate files under.
+- Description: Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), the tests.runsIngested event (an ingest pass took in runs with failures), the Tests task category Investigate files under, and the switch of main's test runner (Settings → Config, off by default).
 - Web:
   - Slots:
     - `tests.actions`
@@ -76,19 +78,22 @@ files a task about the `test-file` subject under the Tests category.
     - `tests.actions` ← `primitives.pane`
     - `test-file.actions` ← `primitives.pane`
   - Contributes:
+    - `ConfigV2.WebRegister` "test-runner"
     - `Pane.Register` "debug-test-file"
     - `Pane.Register` "debug-tests"
     - `DataViewSlots.CollectionItemAction` "tests.file-status:investigate" → `CollectionInvestigate`
     - `DataViewSlots.CollectionItemAction` "tests.file-runs:investigate" → `CollectionInvestigate`
     - `DebugApp.Sidebar` "Tests"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
     - `primitives/pane` ×6
+    - `config_v2` ×2
     - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/status-dot` ×2
     - `primitives/launch/investigate` ×2
     - `apps/debug/shell.DebugApp`
+    - `config_v2/config-link.ConfigGearButton`
     - `infra/endpoints.useEndpointMutation`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
@@ -116,7 +121,9 @@ files a task about the `test-file` subject under the Tests category.
     - `resource.declare` "tests.file-status"
     - `resource.declare` "tests.file-status:rows"
     - `taskCategory` "tests"
+    - `ConfigV2.Register` "test-runner"
   - Uses:
+    - `config_v2.ConfigV2`
     - `database.db`
     - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
@@ -164,13 +171,14 @@ files a task about the `test-file` subject under the Tests category.
     - `defineSupervisedJob('tests.checkout-digests')`
     - `defineSupervisedJob('tests.run-now')`
     - `defineRefReaction('tests.checkout-digests (refs/heads/main)')`
-    - `defineWarmup('tests.checkout-digests-boot')`
     - `defineWarmup('tests.ingest-catch-up')`
   - Routes: `POST /api/debug/tests/run-now`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
     - `fields.FieldsRecord`
     - `fields.nullable`
+    - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/duration/config.durationField`
     - `fields/int/config.intField`
@@ -227,6 +235,7 @@ files a task about the `test-file` subject under the Tests category.
     - `testFileStatusFields`
     - `testFileSubject`
     - `testRunFields`
+    - `testRunnerConfig`
     - `testRunsEntityRef`
     - `TESTS_CATEGORY_ID`
     - `worstStatus`
@@ -246,6 +255,6 @@ files a task about the `test-file` subject under the Tests category.
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Sub-plugins:
   - **`failing-report`** — Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind…
-  - **`idle-runner`** — The checkout's test runner: runs the test files whose verdict on the current code is owed (to confirm, seen failing elsewhere, stale, never run) — on main whenever an opportunistic op may run, so…
+  - **`idle-runner`** — Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale…
 
 <!-- AUTOGENERATED:END -->

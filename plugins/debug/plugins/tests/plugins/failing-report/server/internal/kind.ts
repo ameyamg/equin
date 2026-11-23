@@ -13,13 +13,13 @@ const TEST_FAILING_FAN_OUT = 500;
 /**
  * The `test-failing` report kind: one row per test file of main that went
  * from passing to failing (confirmed by a second failing run), filed by main's
- * test runner. Category `test`: the Broken tests supervisor stream OWNS it —
- * each report gets its one fix task, in the backlog of the role that stream is
- * routed to — and the fix ledger closes it like every report.
+ * test runner. Category `test`: the Broken tests supervisor stream announces
+ * it to the role that stream is routed to (no task is filed for it), and the
+ * fix ledger closes it like every report.
  *
  * Its fan-out ceiling is raised: one push can break many tests at once, and
  * past the default 20 new fingerprints per window the rest would fold into a
- * storm rollup — files with no report and so no owner.
+ * storm rollup — files with no report of their own.
  */
 export const testFailingKind = ReportKind({
   kind: TEST_FAILING_KIND,

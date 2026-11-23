@@ -54,7 +54,7 @@ Agents run the tests they think of; nothing ran the tests the change reached.
    runner's last verdicts were from 11-21, two breakages had landed since,
    and the gate refused an unrelated push on them as "passing on main".
    Pre-existing failures are printed loudly, with main's `test-failing` report
-   and owner task for each (`standingLines`) and any failing case no run on
+   (and task, if any) for each (`standingLines`) and any failing case no run on
    main saw fail — a warning, not a refusal.
 6. **Each suspect runs again on its own** (its own runner process). Passing
    there = another file's state leaked into it in the shared bun process: a
