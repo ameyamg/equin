@@ -21,6 +21,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --conv and --proto ids present in a conversation transcript.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "usage: prototype-chip-verify.ts --conv <conversationId> --proto <proto-id>";

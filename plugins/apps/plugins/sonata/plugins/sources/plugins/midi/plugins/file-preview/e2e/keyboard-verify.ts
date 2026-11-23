@@ -19,6 +19,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a MIDI file in ~/Downloads.",
+  },
+} satisfies E2eScript;
 
 const FILE = arg("file", "~/Downloads/sunny-roberto-piano-notation-v2.mid");
 const OUT = arg("out", "/tmp/midi-keys");

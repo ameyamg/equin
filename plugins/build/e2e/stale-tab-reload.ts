@@ -54,6 +54,14 @@ import {
   ELEMENT_TIMEOUT_MS,
   waitFor,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const USAGE =
   "usage: ./equin run plugins/build/e2e/stale-tab-reload.ts [--color-scheme dark|light] [--out <prefix>] [--deferred <plugin path>] [--eager <plugin path>] [--headed]";

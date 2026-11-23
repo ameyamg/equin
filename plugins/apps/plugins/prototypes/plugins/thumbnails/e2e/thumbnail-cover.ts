@@ -12,6 +12,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["interactive"],
+    why: "Logs per-card cover facts for a person; asserts nothing.",
+  },
+} satisfies E2eScript;
 
 const OUT = "/tmp/prototype-thumbnails";
 

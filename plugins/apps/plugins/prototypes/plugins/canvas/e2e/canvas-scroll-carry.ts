@@ -21,6 +21,17 @@ import {
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { touchPrototype } from "@plugins/apps/plugins/prototypes/plugins/files/e2e";
 import { openCanvas, pickPrototype, screen } from "./driver";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "stateful"],
+    why: "Needs --name and rewrites the shared prototype's index.html.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/canvas-scroll-carry");
 const meta = await pickPrototype();

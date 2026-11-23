@@ -22,6 +22,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts", "stateful"],
+    why: "Needs Google Maps and a specific page with place and map blocks.",
+  },
+} satisfies E2eScript;
 
 const pageId = arg("page", "block-638c6312-ceb1-40fe-971e-fef9b3f6c7dd");
 const out = arg("out", "/tmp/places-page-overlay");

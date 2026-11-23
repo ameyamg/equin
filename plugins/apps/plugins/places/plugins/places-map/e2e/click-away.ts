@@ -17,6 +17,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { clickPin, reachablePins } from "@plugins/map/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts", "stateful"],
+    why: "Needs the Google Maps key and saved places with locations.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/places-click-away");
 

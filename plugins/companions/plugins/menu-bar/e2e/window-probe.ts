@@ -23,6 +23,17 @@
  */
 import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { runHelperProbe } from "./helper-probe";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["native-helper"],
+    why: "Runs the native equin-desktop helper's probe-window mode.",
+  },
+} satisfies E2eScript;
 
 await runHelperProbe({
   title: "menu-bar: app window scope probe",

@@ -47,6 +47,17 @@ import {
   UgTabSchema,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import { beatToSeconds } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "timing"],
+    why: "Needs --song; asserts playhead/video drift.",
+  },
+} satisfies E2eScript;
 
 const songId = requireArg(
   "song",

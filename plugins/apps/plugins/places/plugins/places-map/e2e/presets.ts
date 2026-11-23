@@ -30,6 +30,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { liftedPin } from "@plugins/map/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["accounts", "stateful"],
+    why: "Needs Google Maps and saved places with tags.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/places-presets");
 const presetName = arg("name", "E2E preset");

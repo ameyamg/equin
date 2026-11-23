@@ -37,6 +37,17 @@ import {
   applyValuePatch,
   type ValuePatchWireOp,
 } from "@plugins/packages/plugins/value-patch/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "accounts"],
+    why: "Spawns a real Claude agent in --attempt's worktree to measure streaming cost.",
+  },
+} satisfies E2eScript;
 
 const MODEL = "sonnet-5-5";
 const TURN_BUDGET_MS = 420_000;

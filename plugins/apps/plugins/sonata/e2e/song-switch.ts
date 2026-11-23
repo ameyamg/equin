@@ -51,6 +51,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Needs two songs with notes; sets per-song settings.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "usage: song-switch.ts --song-a <songId> --song-b <songId> [--url …] [--headed]";

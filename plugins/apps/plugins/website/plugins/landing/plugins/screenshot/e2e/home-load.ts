@@ -86,6 +86,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { PROFILES, startShaper } from "./internal/shaper";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Lighthouse-style phone load benchmark (FCP/LCP/TBT) over a shaped link.",
+  },
+} satisfies E2eScript;
 
 const PROFILE = arg("profile") ?? "fast4g";
 const CPU = numArg("cpu", 4);

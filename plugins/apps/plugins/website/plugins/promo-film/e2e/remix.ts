@@ -23,6 +23,17 @@ import {
   musicStartFor,
   resolveFilmMusic,
 } from "./internal/music";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --film <mp4> and --music <slug>; writes a remixed film beside it.",
+  },
+} satisfies E2eScript;
 
 const film = arg("film")?.replace(/^~(?=\/|$)/, HOME_DIR);
 const slug = arg("music");

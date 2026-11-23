@@ -27,6 +27,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { CDPSession, Page } from "playwright";
 import { z } from "zod";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "heavy"],
+    why: "Chrome-trace split of an in-app open; requires --conv and --from.",
+  },
+} satisfies E2eScript;
 
 const convId = arg("conv", "");
 const fromId = arg("from", "");

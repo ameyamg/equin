@@ -14,6 +14,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: { composition: "promo-film" },
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Captures for a promo-film composition build; writes its config.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/hours");
 const STORE = "apps/places/places-map/place-cards.jsonc";

@@ -55,6 +55,17 @@ import {
 import { openFloatingActionBar } from "@plugins/shell/plugins/global-action-bar/e2e";
 import { readDarwinBackground } from "@plugins/packages/plugins/spawn-priority/core";
 import { BIG_RECALC, styleRecalcs } from "./support/styled-elements";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Traces and CPU-profiles several fullscreen round trips for a person to read.",
+  },
+} satisfies E2eScript;
 
 const path = arg("path", "/desktop/sonata");
 const rounds = numArg("rounds", 3);

@@ -31,6 +31,17 @@ import {
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { SITE_REPORT_LIMITS } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: { composition: "website" },
+  writes: true,
+  run: {
+    manual: ["external-effects", "timing"],
+    why: "Fakes a real visitor on a throttled load and files a site report.",
+  },
+} satisfies E2eScript;
 
 const SEND_TIMEOUT_MS = 90_000;
 

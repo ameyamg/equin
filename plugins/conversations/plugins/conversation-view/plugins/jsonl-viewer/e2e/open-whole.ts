@@ -18,6 +18,17 @@ import {
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --conv <a finished conversation id>.",
+  },
+} satisfies E2eScript;
 
 const SETTLE_MS = 4000;
 /** Below this share of the settled text, the first frame drew a partial transcript. */

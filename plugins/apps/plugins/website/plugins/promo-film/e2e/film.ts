@@ -42,6 +42,17 @@ import {
   FILM_MUSIC_TRACKS,
   filmMusicBySlug,
 } from "./internal/music";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["heavy", "arguments"],
+    why: "Renders the promo film from record.ts's recordings (--rec-dir) to ~/Downloads, frame by frame.",
+  },
+} satisfies E2eScript;
 
 // The recordings to render: never a fresh empty dir (recDir's default).
 if (arg("rec-dir") === undefined)

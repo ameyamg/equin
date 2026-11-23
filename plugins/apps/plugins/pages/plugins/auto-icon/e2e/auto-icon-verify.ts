@@ -22,6 +22,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["accounts", "heavy"],
+    why: "Waits on live Haiku calls behind 10 s debounces, several minutes.",
+  },
+} satisfies E2eScript;
 
 // Debounce (10 s) + one Haiku call, with room for a loaded machine.
 const settleMs = numArg("settle", 60_000);

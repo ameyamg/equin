@@ -21,6 +21,17 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Default paths name specific conversations, pages and files that must exist.",
+  },
+} satisfies E2eScript;
 
 const DEFAULT_PATHS = [
   "/agents/c/conv-1793274029-fjjq2u/page/block-361815ed-5750-413a-b5ab-31c5dc855144",

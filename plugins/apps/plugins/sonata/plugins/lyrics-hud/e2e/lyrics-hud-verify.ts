@@ -16,6 +16,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a specific lyrics song id that must exist.",
+  },
+} satisfies E2eScript;
 
 /** Là-Bas — a songsheet whose lines start before their first chord. */
 const SONG = arg("song", "song-1791710976-b16ii1");

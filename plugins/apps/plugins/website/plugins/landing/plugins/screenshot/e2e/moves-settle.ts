@@ -29,6 +29,17 @@ import {
   type ProfilerReport,
 } from "@plugins/debug/plugins/render-profiler/core";
 import { bootDemo, demoPath } from "./internal/demo-pages";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["timing"],
+    why: "Plays clicks at fixed gaps under CPU throttling and judges settling within a time window.",
+  },
+} satisfies E2eScript;
 
 const AT = arg("at") ?? "/agents";
 const STEPS = (arg("steps") ?? "All conversations|Agents").split("|");

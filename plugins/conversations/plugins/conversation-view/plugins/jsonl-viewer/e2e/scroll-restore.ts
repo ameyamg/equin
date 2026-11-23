@@ -25,6 +25,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { ElementHandle, Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --conv <id> of a real conversation.",
+  },
+} satisfies E2eScript;
 
 const SETTLE_MS = 3000;
 const JUMP = '[aria-label="Jump to bottom"]';

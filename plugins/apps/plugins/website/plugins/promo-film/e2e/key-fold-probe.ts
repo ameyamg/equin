@@ -24,6 +24,17 @@ import {
 } from "@plugins/apps/plugins/website/plugins/promo-film/plugins/seed/core";
 import { installRecorderClock, record } from "@plugins/media/plugins/film/e2e";
 import { DPR, H, open, freshDir, visible, W } from "./internal/session-kit";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: { composition: "promo-film" },
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Needs the promo-film composition seeded with the song open in Sonata; probes animation frames for a person.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? freshDir("key-fold-probe");
 mkdirSync(out, { recursive: true });

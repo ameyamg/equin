@@ -36,6 +36,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { bootDemo, demoPath, embedRoot } from "./internal/demo-pages";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "heavy"],
+    why: "CPU profile of one click; requires --at and --click.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "open-profile.ts --at <location> --click <text> [--until <text>] [--throttle 4] [--settle 4000] [--runs 1] [--top 25] [--no-profile] [--force] [--gpu] [--out <dir>]";

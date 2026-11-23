@@ -33,6 +33,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { writeFileSync } from "node:fs";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["timing"],
+    why: "Keystroke latency and CPU profile measurement.",
+  },
+} satisfies E2eScript;
 
 const url = pageUrl(arg("path", "/about/demo/at/places"));
 const query = arg("query", "paris");

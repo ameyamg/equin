@@ -58,6 +58,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { eventsList } from "@plugins/apps/plugins/events/plugins/event-list/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["external-effects"],
+    why: "Refresh all enqueues real runs that fetch live pages and may call a model.",
+  },
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/events-source-actions";
 

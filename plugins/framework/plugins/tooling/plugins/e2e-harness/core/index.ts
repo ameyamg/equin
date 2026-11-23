@@ -4,3 +4,5 @@
 // harness itself (browser, target, report) stays in `e2e/`, which only e2e
 // scripts import.
 export { isE2eScriptPath } from "./internal/e2e-path";
+export { MANUAL_REASONS, e2eScriptSchema } from "./internal/declaration";
+export type { E2eScript, ManualReason } from "./internal/declaration";

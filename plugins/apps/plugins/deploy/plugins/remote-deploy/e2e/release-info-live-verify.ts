@@ -49,6 +49,17 @@ import {
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { ReleaseManifestSchema } from "@plugins/release/plugins/bundles/core";
 import { releasesDir } from "@plugins/release/plugins/bundles/data-dirs";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Writes a fake release bundle into the host's releases dir.",
+  },
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/release-info-live";
 const PLATFORM = "linux-x64";

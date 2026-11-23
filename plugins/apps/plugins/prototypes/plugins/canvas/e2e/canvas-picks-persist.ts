@@ -31,6 +31,17 @@ import {
   pickValue,
   spreadableOption,
 } from "./driver";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Writes the shared prototype picks record (main and worktrees share it).",
+  },
+} satisfies E2eScript;
 
 /**
  * The prototype's shared picks record as the server reads it now (`{}` when

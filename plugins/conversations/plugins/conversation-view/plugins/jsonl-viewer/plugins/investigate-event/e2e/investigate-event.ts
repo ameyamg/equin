@@ -22,6 +22,17 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a hardcoded conversation that must exist in the deploy's DB.",
+  },
+} satisfies E2eScript;
 
 const INVESTIGATE = '[aria-label="Launch agent to add a renderer"]';
 

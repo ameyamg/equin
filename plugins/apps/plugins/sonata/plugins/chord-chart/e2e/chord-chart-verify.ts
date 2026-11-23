@@ -17,6 +17,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a song named Blues and a specific lyrics song id.",
+  },
+} satisfies E2eScript;
 
 const SONG = arg("song", "Blues");
 const SCHEME = arg("color-scheme", "dark") === "light" ? "light" : "dark";

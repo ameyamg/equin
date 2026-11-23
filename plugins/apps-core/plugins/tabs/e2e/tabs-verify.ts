@@ -10,6 +10,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["interactive"],
+    why: "Logs a tab-strip transcript for a person to read; asserts nothing.",
+  },
+} satisfies E2eScript;
 
 const OUT = "/tmp/tabs";
 

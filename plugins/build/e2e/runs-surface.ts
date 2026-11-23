@@ -45,6 +45,14 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { attemptIdKind } from "@plugins/tasks/plugins/task-ids/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 // `--headed` is read by `withBrowser` itself, so it needs no plumbing here.
 const r = report("runs surface");

@@ -41,6 +41,17 @@ import {
   report,
   requireArg,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "stateful"],
+    why: "Requires --conv and --others; creates and removes a scratch file in another conversation's worktree.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "edited-files-cost.ts --conv <id> --others <id,id,…> [--writes-gap-ms 1500] [--settle-ms 4000] [--race]";

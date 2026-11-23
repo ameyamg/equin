@@ -38,6 +38,17 @@ import {
   pathUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Frame-by-frame capture of the Vision zoom on a fake clock to find flashes; writes many frames.",
+  },
+} satisfies E2eScript;
 
 const chapter = numArg("chapter", 2);
 const seconds = numArg("seconds", 23);

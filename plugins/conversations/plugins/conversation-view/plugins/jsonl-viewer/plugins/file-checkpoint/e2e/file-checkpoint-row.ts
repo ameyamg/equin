@@ -12,6 +12,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a hardcoded conversation holding file checkpoints.",
+  },
+} satisfies E2eScript;
 
 const convId = arg("conv") ?? "conv-1791993897-db4unm";
 const out = arg("out") ?? "/tmp/file-checkpoint";

@@ -22,6 +22,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["timing"],
+    why: "Frame-interval measurement for before/after comparison.",
+  },
+} satisfies E2eScript;
 
 const apps = arg("apps");
 const bake = arg("bake", "workers");

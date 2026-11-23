@@ -33,6 +33,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "accounts", "timing"],
+    why: "Spawns real Claude agents and times send → first visible token.",
+  },
+} satisfies E2eScript;
 
 const MODEL = "haiku-4-5";
 const TURN_BUDGET_MS = 180_000;

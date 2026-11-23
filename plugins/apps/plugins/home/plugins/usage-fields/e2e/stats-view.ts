@@ -9,6 +9,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["interactive"],
+    why: "Snapshots the usage Stats view for a person; no verdict.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/usage-stats");
 

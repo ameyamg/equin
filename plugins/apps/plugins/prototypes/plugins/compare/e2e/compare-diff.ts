@@ -130,6 +130,17 @@ import {
   parseTolerance,
   type MetricsScope,
 } from "./part-metrics";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --name of the prototype to diff against its app counterpart.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "--name <proto-id> is required — the prototype folder's minted id (`./equin prototype list` prints them)";

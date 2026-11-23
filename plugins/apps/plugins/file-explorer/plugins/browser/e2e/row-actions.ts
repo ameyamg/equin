@@ -12,6 +12,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --dir and --name of an archive on disk.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "row-actions.ts --dir <folder> --name <archive in it> [--out <prefix>]";

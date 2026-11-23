@@ -16,6 +16,17 @@ import {
   pathUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Screenshot of one config's detail pane (--config) for a person to look at.",
+  },
+} satisfies E2eScript;
 
 const config = arg("config", "notation");
 const out = arg("out", "/tmp/config-detail");

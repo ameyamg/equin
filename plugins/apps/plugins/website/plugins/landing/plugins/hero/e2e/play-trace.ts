@@ -25,6 +25,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { writeFileSync } from "node:fs";
 import { z } from "zod";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Chrome trace of pressing Play on the hero film, printed for a person; no verdict.",
+  },
+} satisfies E2eScript;
 
 const url = pageUrl("/about");
 const [vw, vh] = arg("viewport", "390x844").split("x").map(Number);

@@ -52,6 +52,17 @@ import {
   editableBlocks,
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["timing", "stateful"],
+    why: "Races a 4 s snapshot debounce and leaves its test page behind.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/crdt-restore");
 

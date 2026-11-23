@@ -27,6 +27,17 @@ import {
   pathUrl,
   report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --others conversation ids; writes viewed markers.",
+  },
+} satisfies E2eScript;
 
 const CONV = arg("conv", "conv-1792063907-16fcx4");
 const SHELL = arg("shell", "bzzjq3n3a");

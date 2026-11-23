@@ -16,6 +16,17 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "heavy"],
+    why: "Measures conversation open cost; requires --conv.",
+  },
+} satisfies E2eScript;
 
 const convId = arg("conv", "");
 const settleMs = numArg("settle-ms", 4000);

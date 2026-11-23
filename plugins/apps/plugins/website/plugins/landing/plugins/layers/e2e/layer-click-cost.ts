@@ -28,6 +28,17 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy", "timing"],
+    why: "Throttled-phone cost measurement of a layer-card click over several runs.",
+  },
+} satisfies E2eScript;
 
 const CLICK = arg("click", "The technical foundations");
 const CPU = numArg("cpu", 4);

@@ -15,6 +15,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { previewMontage } from "./internal/segments";
 import { freshDir } from "./internal/session-kit";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: { composition: "promo-film" },
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Un-hides Circle on the seeded promo-film composition; stills for judging a layout.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? freshDir("montage-preview");
 mkdirSync(out, { recursive: true });

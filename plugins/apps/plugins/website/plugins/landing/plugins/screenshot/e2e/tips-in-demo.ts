@@ -45,6 +45,14 @@ import {
   demoPath,
   embedRoot,
 } from "./internal/demo-pages";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/demo-tips";
 /** Long enough for a tip's waiting window (1.2 s orientation + 0.4 s pause) and a seen read, with room. */

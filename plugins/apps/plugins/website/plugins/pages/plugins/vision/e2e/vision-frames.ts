@@ -28,6 +28,17 @@ import {
   pathUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy", "timing"],
+    why: "Measures frame rate and per-frame CPU of the Vision zoom for before/after numbers.",
+  },
+} satisfies E2eScript;
 
 const seconds = numArg("seconds", 3);
 const width = numArg("width", 1400);

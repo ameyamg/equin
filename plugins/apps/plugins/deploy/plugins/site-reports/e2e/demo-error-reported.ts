@@ -29,6 +29,17 @@ import {
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 import { SITE_REPORT_LIMITS } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: { composition: "website" },
+  writes: true,
+  run: {
+    manual: ["external-effects"],
+    why: "Fakes a real visitor and files a site report.",
+  },
+} satisfies E2eScript;
 
 const BOOT_TIMEOUT_MS = 60_000;
 

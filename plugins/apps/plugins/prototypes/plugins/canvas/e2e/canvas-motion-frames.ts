@@ -32,6 +32,17 @@ import {
 } from "@plugins/media/plugins/film/e2e";
 import type { Page } from "playwright";
 import { openCanvas, pickPrototype } from "./driver";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --conv and --out; records frames for a person.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "usage: canvas-motion-frames.ts --conv <conversationId> --out <dir>";

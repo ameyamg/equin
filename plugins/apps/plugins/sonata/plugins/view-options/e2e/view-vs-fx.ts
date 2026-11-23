@@ -32,6 +32,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Drives a hardcoded song id that must already exist in the deploy's library; waits up to 60 s for the player.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? "/tmp/hud-panels";
 /** Rachmaninoff — the same song the look check drives. */

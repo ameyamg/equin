@@ -74,6 +74,17 @@ import {
   chordTokenFromParts,
   type ChordToken,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy"],
+    why: "Waits for the song index to build (up to 15 min) and drives many trainer rounds.",
+  },
+} satisfies E2eScript;
 
 const r = report("chord curriculum");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;

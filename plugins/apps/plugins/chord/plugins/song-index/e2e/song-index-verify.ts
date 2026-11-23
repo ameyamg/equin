@@ -32,6 +32,17 @@ import {
   minor,
   postJson,
 } from "./flows";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy"],
+    why: "First run downloads the dump and builds the song index (minutes).",
+  },
+} satisfies E2eScript;
 
 const r = report("chord song index");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;

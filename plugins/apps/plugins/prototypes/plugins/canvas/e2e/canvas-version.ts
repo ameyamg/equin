@@ -27,6 +27,17 @@ import {
   pickPrototype,
   addFrame,
 } from "./driver";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Depends on a suitable prototype existing in the shared prototypes dir.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/canvas-version");
 const meta = await pickPrototype();

@@ -31,6 +31,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openThreadFixture } from "./fixture";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["accounts"],
+    why: "Needs a connected mail account to seed threads for.",
+  },
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/threads-live";
 const BOOT_TIMEOUT_MS = 120_000;

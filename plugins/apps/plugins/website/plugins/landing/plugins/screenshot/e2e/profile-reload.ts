@@ -34,6 +34,17 @@ import {
   bootDemo,
   enterDemo,
 } from "./internal/demo-pages";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "V8 CPU profiles of a warm demo reload for a person to read.",
+  },
+} satisfies E2eScript;
 
 const OUT = arg("out");
 const TOP = numArg("top", 25);

@@ -24,6 +24,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "stateful"],
+    why: "Needs a 4/4 MIDI file on the host (default in ~/Downloads) and imports it into Sonata's library.",
+  },
+} satisfies E2eScript;
 
 const FILE = arg("file", "~/Downloads/sunny-roberto-piano-notation-v2.mid");
 const PLAY_MS = numArg("play-ms", 3500);

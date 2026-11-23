@@ -28,6 +28,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Edits files in the checkout's own source tree and relies on branch-vs-main diffs.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? join(tmpdir(), "git-verify");
 

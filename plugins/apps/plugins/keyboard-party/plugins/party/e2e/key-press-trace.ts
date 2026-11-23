@@ -27,6 +27,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { writeFileSync } from "node:fs";
 import { z } from "zod";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["timing"],
+    why: "Per-key trace measurement for a person to read.",
+  },
+} satisfies E2eScript;
 
 const url = pageUrl("/demo/at/keyboard-party");
 const [vw, vh] = arg("viewport", "1440x900").split("x").map(Number);

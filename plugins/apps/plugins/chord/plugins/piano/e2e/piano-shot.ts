@@ -28,6 +28,17 @@ import {
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import { ensureReady } from "@plugins/apps/plugins/chord/plugins/song-index/e2e";
 import { z } from "zod";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy"],
+    why: "Waits for the song index (up to 10 min) and records a round to photograph a lit chord.",
+  },
+} satisfies E2eScript;
 
 const r = report("chord piano — a lit chord");
 const out = arg("out") ?? "/tmp/chord-piano";

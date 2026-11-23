@@ -25,6 +25,17 @@ import {
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "accounts", "heavy"],
+    why: "Screencasts every frame from a --page map block into Places.",
+  },
+} satisfies E2eScript;
 
 const pageId = requireArg(
   "page",

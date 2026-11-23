@@ -31,6 +31,17 @@ import {
   zoomProbeLines,
 } from "@plugins/map/e2e";
 import { writeFileSync } from "node:fs";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts", "timing"],
+    why: "Wheel-zoom smoothness measurement on the Google map.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/places-zoom");
 const top = numArg("top", 15);

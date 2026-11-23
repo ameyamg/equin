@@ -17,6 +17,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a hardcoded compacted conversation that must exist in the deploy's DB.",
+  },
+} satisfies E2eScript;
 
 const convId = arg("conv") ?? "conv-1791818418-k72458";
 const out = arg("out") ?? "/tmp/compaction";

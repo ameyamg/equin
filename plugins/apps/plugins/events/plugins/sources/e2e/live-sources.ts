@@ -30,6 +30,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Needs existing event sources in the deploy (fails with none).",
+  },
+} satisfies E2eScript;
 
 const OUT = "/tmp/claude-501/live-sources";
 const r = report("Events · live sources collection");

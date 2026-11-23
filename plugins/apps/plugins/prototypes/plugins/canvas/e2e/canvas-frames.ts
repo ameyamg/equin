@@ -34,6 +34,17 @@ import {
   spreadableOption,
   addFrame,
 } from "./driver";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Writes the shared prototype picks record (main and worktrees share it).",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/canvas-frames");
 const meta = await pickPrototype();

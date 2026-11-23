@@ -20,6 +20,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { clickPin, pinsOnScreen } from "@plugins/map/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["accounts"],
+    why: "Saves places through Google search; needs the Places key.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/places");
 const queries = arg(

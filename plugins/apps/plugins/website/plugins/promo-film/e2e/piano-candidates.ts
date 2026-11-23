@@ -22,6 +22,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { open, visible } from "./internal/session-kit";
 import { recordSonataAudio } from "./internal/sonata-audio";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: { composition: "promo-film" },
+  writes: true,
+  run: {
+    manual: ["arguments", "stateful"],
+    why: "Requires --candidates MIDI files and --out; imports them into the seeded promo-film workspace.",
+  },
+} satisfies E2eScript;
 
 const expandHome = (p: string): string => p.replace(/^~(?=\/|$)/, HOME_DIR);
 const USAGE =

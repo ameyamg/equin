@@ -39,6 +39,17 @@ import {
   TOAST,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Writes globe shots to a required --out (optionally diffed against an earlier run).",
+  },
+} satisfies E2eScript;
 
 const out = requireArg(
   "out",

@@ -42,6 +42,17 @@ import {
   bootDemo,
   enterDemo,
 } from "./internal/demo-pages";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Prints per-stage demo load timings; asserts only that the demo comes up.",
+  },
+} satisfies E2eScript;
 
 const RELOADS = numArg("reloads", 3);
 

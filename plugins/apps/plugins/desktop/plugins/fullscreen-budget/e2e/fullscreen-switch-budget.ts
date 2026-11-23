@@ -59,6 +59,14 @@ import {
 } from "@plugins/apps/plugins/desktop/plugins/windows/e2e";
 import { settleBudget } from "@plugins/reports/plugins/interaction-budget/e2e";
 import type { BudgetCase } from "@plugins/reports/plugins/interaction-budget/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 const SCRIPT =
   "plugins/apps/plugins/desktop/plugins/fullscreen-budget/e2e/fullscreen-switch-budget.ts";

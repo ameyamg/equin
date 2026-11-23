@@ -25,6 +25,17 @@ import {
   type RenderProfilerWindow,
 } from "@plugins/debug/plugins/render-profiler/core";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts", "timing"],
+    why: "Asserts an idle re-render rate on the Google map.",
+  },
+} satisfies E2eScript;
 
 const PROFILER: typeof RENDER_PROFILER_GLOBAL = RENDER_PROFILER_GLOBAL;
 const seconds = numArg("seconds", 6);

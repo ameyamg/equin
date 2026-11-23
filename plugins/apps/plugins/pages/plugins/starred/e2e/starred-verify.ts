@@ -22,6 +22,17 @@ import {
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --page naming a page to star and unstar.",
+  },
+} satisfies E2eScript;
 
 const pageId = requireArg("page", "usage: --page <pageId> [--settle <ms>]");
 const settleMs = numArg("settle", 60_000);

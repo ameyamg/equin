@@ -21,6 +21,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a specific page id that must exist.",
+  },
+} satisfies E2eScript;
 
 // The rail's published DOM contract (see the rail's own CLAUDE.md). Pinned to
 // the label this plugin passes, so a conversation rail on screen is never read.

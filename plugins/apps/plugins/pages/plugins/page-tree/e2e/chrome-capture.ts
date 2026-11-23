@@ -36,6 +36,17 @@ import {
   withBrowser,
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Diffs against a specific prototype and page that must exist.",
+  },
+} satisfies E2eScript;
 
 const proto = arg("proto", "proto-1790691924-p8nh");
 const pageId = arg("page", "block-acef974d-f091-429d-941b-89c6a32a70f3");

@@ -36,6 +36,17 @@ import {
   DEMO_PRACTICE_TIMER_BEFORE_AFTER,
   DEMO_RECIPES_BEFORE_AFTER,
 } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Writes the demo's committed before/after PNGs into the checkout's source tree (needs pngquant).",
+  },
+} satisfies E2eScript;
 
 const DATA = join(import.meta.dir, "..", "data");
 const OUT = join(DATA, "before-after");

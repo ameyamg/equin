@@ -61,6 +61,17 @@ import {
 } from "@plugins/integrations/plugins/hooktheory/core";
 import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import { z } from "zod";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy"],
+    why: "Waits on the song index (up to 15 min) and plays YouTube videos.",
+  },
+} satisfies E2eScript;
 
 const r = report("chord trainer");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;

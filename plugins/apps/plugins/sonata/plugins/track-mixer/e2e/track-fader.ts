@@ -27,6 +27,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --song <songId> of an existing Sonata song.",
+  },
+} satisfies E2eScript;
 
 const songId = requireArg(
   "song",

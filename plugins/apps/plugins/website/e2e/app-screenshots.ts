@@ -48,6 +48,17 @@ import { browserApp } from "@plugins/apps/plugins/browser/plugins/shell/core";
 import { chordApp } from "@plugins/apps/plugins/chord/plugins/shell/core";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Photographs every gallery app into a required --out dir for a person to review before publishing.",
+  },
+} satisfies E2eScript;
 
 /**
  * The gallery's apps the demo does not carry, by gallery id: shot on the

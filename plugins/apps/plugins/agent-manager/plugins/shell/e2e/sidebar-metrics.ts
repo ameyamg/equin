@@ -12,6 +12,17 @@ import {
   withBrowser,
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["interactive"],
+    why: "Computed-style dump compared by a person against a mockup.",
+  },
+} satisfies E2eScript;
 
 const url = pageUrl("/agents");
 const colorScheme = (arg("color-scheme") ?? "dark") as ColorScheme;

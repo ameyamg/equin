@@ -51,6 +51,14 @@ import {
   closeLauncherGrid,
 } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { ENTER_DEMO, RENDER_TIMEOUT_MS, demoPath } from "./internal/demo-pages";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/demo-site-parity";
 /** Drive the standalone website's live demo (the `website` composition) instead of main's `/about`. */

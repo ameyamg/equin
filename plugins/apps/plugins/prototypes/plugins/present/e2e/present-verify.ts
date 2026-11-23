@@ -28,6 +28,17 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { canvasFrameSelector } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import { addFrame } from "@plugins/apps/plugins/prototypes/plugins/canvas/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful"],
+    why: "Depends on prototypes in the shared dir; may touch shared picks.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/present-verify");
 

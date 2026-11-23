@@ -19,6 +19,14 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 const LEGACY_TASK_LINK = "/tasks/t/task-1785587694879-3nr2k0";
 const DEEP_LINK = "/agents/tasks/t/does-not-exist-xyz";

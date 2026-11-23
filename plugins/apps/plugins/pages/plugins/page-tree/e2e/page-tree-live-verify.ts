@@ -49,6 +49,14 @@ import {
   waitFor,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/page-tree-live";
 const TREE_KEY = pagesTree.key;

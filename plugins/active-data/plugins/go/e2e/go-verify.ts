@@ -22,6 +22,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --conv naming a conversation with inline and checklist <go>s.",
+  },
+} satisfies E2eScript;
 
 const CONV = requireArg("conv", "usage: go-verify.ts --conv <conversationId>");
 const OUT = arg("out", "/tmp/go");

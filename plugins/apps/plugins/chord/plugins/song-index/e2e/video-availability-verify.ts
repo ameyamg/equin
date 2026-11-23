@@ -29,6 +29,17 @@ import type {
 import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import { z } from "zod";
 import { ensureReady, findLoops, major, postJson } from "./flows";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy", "external-effects"],
+    why: "Waits on the song index and makes live YouTube oEmbed checks.",
+  },
+} satisfies E2eScript;
 
 const r = report("chord video availability");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;

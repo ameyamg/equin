@@ -65,6 +65,17 @@ import {
 import { waitForNotBusy } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { ENTER_DEMO } from "./internal/demo-pages";
 import { PROFILES, startShaper } from "./internal/shaper";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Shaped-network byte/time profile of Enter equin for a person to read.",
+  },
+} satisfies E2eScript;
 
 const PROFILE = arg("profile") ?? "fast4g";
 const RUNS = numArg("runs", 1);

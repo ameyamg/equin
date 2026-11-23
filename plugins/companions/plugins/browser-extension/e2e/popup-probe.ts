@@ -37,6 +37,17 @@ import {
   SHELL_DIGEST_FILE,
   SHELL_FOLDER,
 } from "@plugins/companions/plugins/browser-extension/data-dirs";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["native-helper"],
+    why: "Loads this checkout's built browser extension unpacked into Chromium.",
+  },
+} satisfies E2eScript;
 
 const PUBLIC_PAGE = "https://equin.ai/about/guide";
 /**

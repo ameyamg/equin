@@ -21,6 +21,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { SEGMENTS } from "./internal/segments";
 import { recDir } from "./internal/session-kit";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: { composition: "promo-film" },
+  writes: true,
+  run: {
+    manual: ["heavy", "stateful"],
+    why: "Records the film session segment by segment on a seeded promo-film composition.",
+  },
+} satisfies E2eScript;
 
 const ALL = Object.keys(SEGMENTS);
 const only = arg("only")?.split(",") ?? ALL;
