@@ -53,6 +53,14 @@ import {
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import { notificationIdKind } from "@plugins/shell/plugins/notifications/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const r = report(
   "network/live · a reconnect after a subscription gap replays a fresh value",

@@ -26,6 +26,17 @@ import {
   contentUrl,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts"],
+    why: "Pixel diff of the Claude account foot against its prototype; the foot shows the signed-in account.",
+  },
+} satisfies E2eScript;
 
 const PROTO = "proto-1793450656-8cpct1";
 /**

@@ -20,6 +20,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Defaults to a hardcoded conversation with enough outline entries.",
+  },
+} satisfies E2eScript;
 
 // The rail's published DOM contract (documented in the rail's own CLAUDE.md):
 // the `<nav>` root expands on hover/focus, each panel row and each dash carries

@@ -33,6 +33,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy", "timing"],
+    why: "Holds the socket past a 35 s linger and measures replay bytes for a person.",
+  },
+} satisfies E2eScript;
 
 const WS = "/ws/notifications";
 const TABS = numArg("tabs", 3);

@@ -39,6 +39,17 @@ import {
 import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
 import { readBrowserExecutablesSync } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy", "arguments"],
+    why: "Native-memory soak (default 30 min) of required --urls.",
+  },
+} satisfies E2eScript;
 
 const urls = requireArg("urls", "--urls <url,url…>").split(",");
 const minutes = numArg("minutes", 30);

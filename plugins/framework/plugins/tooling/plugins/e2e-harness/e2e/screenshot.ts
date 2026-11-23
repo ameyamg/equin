@@ -53,6 +53,17 @@ import {
   hexColor,
   waitForScreenReady,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import type { E2eScript } from "../core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Generic capture whose route/click/out the caller chooses.",
+  },
+} satisfies E2eScript;
 
 const url = pageUrl();
 const click = arg("click");

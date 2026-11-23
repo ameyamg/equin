@@ -31,6 +31,17 @@ import {
 import type { Page } from "playwright";
 import { blockIdOf, editableBlocks, openBlankPage } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["timing"],
+    why: "Asserts per-frame animation displacement and cascade steps, which flake under load.",
+  },
+} satisfies E2eScript;
 
 const r = report();
 

@@ -26,6 +26,17 @@ import { withBrowser } from "./browser";
 import { readDarwinBackground } from "@plugins/packages/plugins/spawn-priority/core";
 import { writeFileSync } from "node:fs";
 import { z } from "zod";
+import type { E2eScript } from "../core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy", "timing"],
+    why: "Records a 30 s Chrome trace for a person to read; wall times depend on host load.",
+  },
+} satisfies E2eScript;
 
 const seconds = numArg("seconds", 30);
 const taskCount = numArg("tasks", 8);

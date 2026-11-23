@@ -13,6 +13,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["interactive"],
+    why: "Asserts nothing: prints final counts beside the expected ones and screenshots for a person to compare.",
+  },
+} satisfies E2eScript;
 
 const URL = pathUrl("/debug/events-test");
 const OUT = "/tmp/events-test-flow";

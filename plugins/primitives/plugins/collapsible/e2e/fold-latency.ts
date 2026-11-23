@@ -28,6 +28,17 @@ import {
   report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "timing"],
+    why: "Latency probe needing --path and --trigger; fails on a 100 ms click-to-motion budget.",
+  },
+} satisfies E2eScript;
 
 const USAGE = "--path /agents/c/<conv> --trigger Expand";
 const url = requirePage(USAGE);

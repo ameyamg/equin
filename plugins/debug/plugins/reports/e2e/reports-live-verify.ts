@@ -46,6 +46,17 @@ import {
   reportsList,
   reportsRootRoute,
 } from "@plugins/reports/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["timing"],
+    why: "Asserts each report reaches the list within the 2 s coalesce window; its report rows are left behind.",
+  },
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/reports-live";
 const BOOT_TIMEOUT_MS = 120_000;

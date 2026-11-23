@@ -35,6 +35,14 @@ import {
 import { blockIdOf, editableBlocks, openBlankPage } from "./support/blank-page";
 import { highlightedLines } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const r = report();
 

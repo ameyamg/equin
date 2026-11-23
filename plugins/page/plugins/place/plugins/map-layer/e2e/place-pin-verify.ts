@@ -16,6 +16,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { hoverPin, pinsOnScreen } from "@plugins/map/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts", "arguments"],
+    why: "Needs a Google Maps key and --path to a page already holding located /place blocks and a /map block.",
+  },
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/place-pin";
 

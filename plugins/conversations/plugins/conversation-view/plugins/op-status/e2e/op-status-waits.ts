@@ -47,6 +47,17 @@ import {
   waitBanner,
   type Synthetic,
 } from "./synthetic";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "stateful"],
+    why: "Requires --conv in this checkout; runs synthetic ops (one SIGKILLed) against the op log.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "op-status-waits.ts --conv <conversationId> [--out <prefix>] [--main-reconciles]";

@@ -49,6 +49,17 @@ import {
   BOOT_TIMING_PREFIX,
   ROUTE_CONTENT_COMMIT_ID,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "V8 precise coverage of a cold load, for a person to read.",
+  },
+} satisfies E2eScript;
 
 const AT = arg("at") ?? "content";
 if (AT !== "content" && AT !== "fcp")

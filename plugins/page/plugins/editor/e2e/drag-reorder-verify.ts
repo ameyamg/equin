@@ -44,6 +44,14 @@ import {
 } from "./support/blank-page";
 import { blockSelectionDriver } from "./support/block-selection";
 import { awaitDocument } from "./support/optimistic";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const r = report();
 

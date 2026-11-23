@@ -9,6 +9,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Needs --path to a page that already holds a prototype block; persists the resize.",
+  },
+} satisfies E2eScript;
 
 const PAGE = requirePage(
   "prototype-resize.ts --path /pages/page/<id> (a page holding a prototype block)",

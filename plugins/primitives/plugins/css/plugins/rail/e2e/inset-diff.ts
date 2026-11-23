@@ -16,6 +16,17 @@ import {
   diffImages,
   heatmapText,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Diffs the PNG pairs an earlier inset-review run wrote to --dir.",
+  },
+} satisfies E2eScript;
 
 const dir = arg("dir", "/tmp/inset-review");
 

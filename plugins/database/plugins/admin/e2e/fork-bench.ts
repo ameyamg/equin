@@ -38,6 +38,17 @@ import {
   numArg,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["heavy", "stateful"],
+    why: "Benchmarks ./equin db fork into scratch databases on the shared Postgres cluster.",
+  },
+} satisfies E2eScript;
 
 const RUNS = numArg("runs", 3);
 const SOURCE = arg("source", MAIN_WORKTREE_NAME);

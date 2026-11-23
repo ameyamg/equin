@@ -6,6 +6,12 @@ import type { Composition } from "../composition";
 import type { SfxCue } from "../cues";
 import { installRenderer } from "./renderer";
 import { renderSfx } from "./sfx";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "helper",
+  why: "Bundled by ../serve.ts (bundlePageScript) as the film page's renderer entry.",
+} satisfies E2eScript;
 
 export interface FilmWindowApi {
   /** Resolves once every image is decoded and every font loaded; throws on any failure. */

@@ -31,6 +31,17 @@ import {
   editableBlocks,
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["timing"],
+    why: "Asserts zero loader/notify deltas from shared debug counters that other deploy activity can move.",
+  },
+} satisfies E2eScript;
 
 const CHARS = numArg("chars", 30);
 const GAP_MS = numArg("gap", 250);

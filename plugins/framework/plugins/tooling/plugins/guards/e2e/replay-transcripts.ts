@@ -47,6 +47,17 @@ import { rgReplaceGuard } from "../core/guards/rg-replace";
 import { sharedTmpGuard } from "../core/guards/shared-tmp";
 import { dataRootWritesGuard } from "../core/guards/data-root-writes";
 import type { Guard } from "../core/types";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["stateful"],
+    why: "Replays guards over the host's recorded Claude Code transcripts; results depend on that local history.",
+  },
+} satisfies E2eScript;
 
 /**
  * Floors for `--assert`. Measured 2026-08-08 over a 30-day window: 104 sessions

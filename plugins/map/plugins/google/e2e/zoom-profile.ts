@@ -26,6 +26,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { listedPins } from "@plugins/map/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts", "timing"],
+    why: "CPU/frame profile of Google Maps zooming over saved places; numbers vary with host load.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/map-zoom-profile");
 const steps = numArg("steps", 6);

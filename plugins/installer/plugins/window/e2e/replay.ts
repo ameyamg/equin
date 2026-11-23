@@ -32,6 +32,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { bundlePage } from "../deps";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Draws the installer page over a caller-supplied --events stream and --out prefix.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "replay.ts --url http://equin.localhost:<port> --events <events.jsonl> --out <prefix> [--now <iso>] [--scale 1] [--mockup <url>] [--threshold 0.1] [--mockup-own-font]";

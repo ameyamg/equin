@@ -25,6 +25,17 @@ import {
   waitFor,
   ELEMENT_TIMEOUT_MS,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "timing"],
+    why: "Per-frame fold trace needing --path and --header; verdict depends on frames painted under load.",
+  },
+} satisfies E2eScript;
 
 const USAGE = "--path /agents --header Queue";
 const url = requirePage(USAGE);

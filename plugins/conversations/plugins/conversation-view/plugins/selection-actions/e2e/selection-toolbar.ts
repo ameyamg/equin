@@ -19,6 +19,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --conv <id>.",
+  },
+} satisfies E2eScript;
 
 const EDITOR = '[data-lexical-editor="true"]';
 const AGENT_ROW = '[data-event-key^="assistant-text:"]';

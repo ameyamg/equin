@@ -12,6 +12,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, editableBlocks, openBlankPage } from "./support/blank-page";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy", "timing"],
+    why: "Scratch race hunter sweeping Enter-to-type delays over 40 rounds; not a gate.",
+  },
+} satisfies E2eScript;
 
 const r = report();
 const ROUNDS = numArg("rounds", 40);

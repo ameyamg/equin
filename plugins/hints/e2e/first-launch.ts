@@ -37,6 +37,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { tryItHint } from "@plugins/conversations/plugins/conversation-view/plugins/open-app/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful", "external-effects"],
+    why: "Launches a real agent conversation (attempt/worktree, model call) for the filed task before stopping it.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? "/tmp/first-launch";
 const db = openDeployDb();

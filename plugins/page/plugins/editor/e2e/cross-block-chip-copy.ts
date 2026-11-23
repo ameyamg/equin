@@ -32,6 +32,14 @@ import {
 import type { Locator, Page } from "playwright";
 import { blockIdOf, editableBlocks, openBlankPage } from "./support/blank-page";
 import { makeRunsReader, type NormRun } from "./support/runs";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/cross-block-chip");
 /** This worktree's own attempt id — a real row, so the chip resolves. */

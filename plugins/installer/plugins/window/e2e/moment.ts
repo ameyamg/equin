@@ -31,6 +31,17 @@ import {
   arg,
   requireArg,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Fixture generator writing an event stream to a required --out path for replay.ts.",
+  },
+} satisfies E2eScript;
 
 const out = requireArg(
   "out",

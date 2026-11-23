@@ -128,6 +128,14 @@ import {
   type Block,
 } from "@plugins/page/plugins/editor/core";
 import { splitPageMeta } from "@plugins/page/plugins/markdown-apply/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/agent-access");
 

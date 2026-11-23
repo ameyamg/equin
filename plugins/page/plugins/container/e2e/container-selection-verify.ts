@@ -53,6 +53,14 @@ import {
   openBlankPage,
   pageIdFromUrl,
 } from "@plugins/page/plugins/editor/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/container-selection");
 const r = report();

@@ -24,6 +24,17 @@ import {
   type ProfilerReport,
   type RenderProfilerWindow,
 } from "@plugins/debug/plugins/render-profiler/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Render-profiler dump for a caller-chosen suspect screen (--url).",
+  },
+} satisfies E2eScript;
 
 // An annotated alias: the imported const has a *widening* literal type, so
 // passing it straight to `page.evaluate` would infer the arg as plain `string`

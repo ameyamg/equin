@@ -44,6 +44,17 @@ import {
   turnIdKind,
   type TurnState,
 } from "@plugins/conversations/plugins/turn-ledger/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "accounts"],
+    why: "Spawns a real Haiku session in --attempt's worktree.",
+  },
+} satisfies E2eScript;
 
 const MODEL = "haiku-4-5";
 const TURN_BUDGET_MS = 120_000;

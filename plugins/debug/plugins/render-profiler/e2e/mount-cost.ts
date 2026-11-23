@@ -30,6 +30,17 @@ import {
   type ProfilerReport,
   type RenderProfilerWindow,
 } from "@plugins/debug/plugins/render-profiler/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Mount-cost measurement of a caller-chosen --route or --click.",
+  },
+} satisfies E2eScript;
 
 // An annotated alias: the imported const has a *widening* literal type.
 const PROFILER: typeof RENDER_PROFILER_GLOBAL = RENDER_PROFILER_GLOBAL;

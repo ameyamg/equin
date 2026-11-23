@@ -100,6 +100,17 @@ import {
   pathUrl,
   report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "heavy"],
+    why: "Measurement needing many real page/attempt/conversation ids; repeated write phases with long settles.",
+  },
+} satisfies E2eScript;
 
 const PAGE_KEY = arg("page-key", pageBlocks.key);
 const PAGE = arg("page", "");

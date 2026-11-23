@@ -23,6 +23,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "./index";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["stateful", "heavy"],
+    why: "Measures job runs per edit via openDeployDb; needs an otherwise idle deploy and long settles.",
+  },
+} satisfies E2eScript;
 
 const edits = numArg("edits", 20);
 const gapMs = numArg("gap", 1500);

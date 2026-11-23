@@ -30,6 +30,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["timing"],
+    why: "Reports reconnect replay costs for a person; counts vary with the deploy's live activity.",
+  },
+} satisfies E2eScript;
 
 const WS = "/ws/notifications";
 const PATHS = arg("paths", "/").split(",");

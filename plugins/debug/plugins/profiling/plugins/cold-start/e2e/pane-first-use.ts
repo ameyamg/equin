@@ -99,6 +99,17 @@ import {
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { readDarwinBackground } from "@plugins/packages/plugins/spawn-priority/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "First-use pane load benchmark over several iterations.",
+  },
+} satisfies E2eScript;
 
 // ── Panes ───────────────────────────────────────────────────────────────────
 

@@ -27,6 +27,14 @@ import {
   ALWAYS_SUGGESTIONS,
   CORNER_MARGIN,
 } from "@plugins/hints/plugins/ask/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out") ?? "/tmp/ask";
 const r = report("hints/ask: the Ask equin card");

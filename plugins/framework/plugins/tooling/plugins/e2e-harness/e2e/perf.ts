@@ -20,6 +20,17 @@
 import { arg, numArg } from "./args";
 import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
+import type { E2eScript } from "../core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["timing"],
+    why: "Collects web vitals and a resource waterfall for a person; numbers vary with load.",
+  },
+} satisfies E2eScript;
 
 interface LongTask {
   name: string;

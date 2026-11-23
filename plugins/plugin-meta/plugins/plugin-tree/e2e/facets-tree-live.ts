@@ -15,6 +15,17 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { agentFetch } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["stateful", "timing"],
+    why: "Writes and removes a throwaway plugin in this checkout's source tree, timed against a 30 s deadline.",
+  },
+} satisfies E2eScript;
 
 const HOST = join(PLUGINS_DIR, "plugin-meta", "plugins", "plugin-tree");
 const PROBE_FILE = join(HOST, "scripts", "e2e-facets-probe.md");

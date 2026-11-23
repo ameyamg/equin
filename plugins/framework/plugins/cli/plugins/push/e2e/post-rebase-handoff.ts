@@ -48,6 +48,17 @@ import {
   spawnCaptured,
   type SpawnResult,
 } from "@plugins/infra/plugins/spawn/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["heavy", "stateful"],
+    why: "Builds temp git clones of this checkout and runs a real push in them; slow (dependency install).",
+  },
+} satisfies E2eScript;
 
 const GIT_TIMEOUT_MS = 120_000;
 /** The first call installs the worktree's dependencies. */

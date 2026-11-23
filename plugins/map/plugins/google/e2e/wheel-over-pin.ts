@@ -17,6 +17,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { hoverPin, pinsOnScreen, reachablePins } from "@plugins/map/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["accounts", "stateful"],
+    why: "Needs the Google Maps live map and at least two saved located places on the deploy.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/map-wheel-over-pin");
 

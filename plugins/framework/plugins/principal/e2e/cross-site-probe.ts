@@ -33,6 +33,14 @@ import {
   isCrossSiteRefusal,
 } from "@plugins/framework/plugins/principal/core";
 import type { HostRoute } from "@plugins/framework/plugins/principal/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: false,
+  run: "auto",
+} satisfies E2eScript;
 
 const SENTINEL = "__probe__";
 const EVIL = "https://evil.example";

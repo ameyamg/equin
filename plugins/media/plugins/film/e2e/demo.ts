@@ -32,6 +32,17 @@ import {
   type Rect,
   type SfxCue,
 } from "./index";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Renders a 1080p60 demo film frame by frame.",
+  },
+} satisfies E2eScript;
 
 const DIR = join(tmpdir(), "film", "demo", "assets");
 const DPR = 2;

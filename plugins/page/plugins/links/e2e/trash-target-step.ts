@@ -16,6 +16,17 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "interactive"],
+    why: "One manual step (--trash/--restore with ids) of a check a person reads between steps.",
+  },
+} satisfies E2eScript;
 
 const r = report("page links: trash / restore a target");
 const trash = arg("trash");

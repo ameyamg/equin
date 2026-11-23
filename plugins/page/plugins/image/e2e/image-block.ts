@@ -9,6 +9,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Uploads --image (default /tmp/test-image.png, which must already exist) and reports the persisted width without a verdict.",
+  },
+} satisfies E2eScript;
 
 const IMG = arg("image", "/tmp/test-image.png");
 const OUT = "/tmp/imgblock";

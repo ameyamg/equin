@@ -49,6 +49,14 @@ import {
 // the old flat `e2e/` folder happened to sit beside `plugins/`.)
 import * as Y from "yjs";
 import { blockText, openBlankPage } from "./support/blank-page";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/crdt-reopen");
 

@@ -29,6 +29,14 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { openBlankPage } from "./support/blank-page";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/media-caret");
 const image = arg("image", "/tmp/test-image.png");

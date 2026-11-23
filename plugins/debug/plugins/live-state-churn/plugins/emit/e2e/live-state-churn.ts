@@ -33,6 +33,17 @@ import {
   type EmitStatus,
   type LiveStateEmitWindow,
 } from "@plugins/debug/plugins/live-state-churn/plugins/emit/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --key <resourceKey>; prints churn measurements.",
+  },
+} satisfies E2eScript;
 
 /**
  * The window this driver reads: both Debug plugins' imperative APIs (each

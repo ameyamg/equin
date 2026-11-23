@@ -23,6 +23,17 @@ import {
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --conv <id>; records template usage.",
+  },
+} satisfies E2eScript;
 
 // This repo's host runs many concurrent agent builds; load average routinely
 // sits above 20, and the SPA's first paint has been observed past 60s. Every

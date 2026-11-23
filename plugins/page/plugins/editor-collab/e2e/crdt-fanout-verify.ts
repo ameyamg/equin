@@ -55,6 +55,14 @@ import {
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDoc } from "./support/ydoc";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/crdt-fanout");
 

@@ -24,6 +24,17 @@ import {
 } from "@plugins/page/plugins/editor/e2e";
 import { clickPin, listedPins } from "@plugins/map/e2e";
 import type { Locator, Page } from "playwright";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["accounts"],
+    why: "Outcome depends on whether a Google Maps browser key is configured.",
+  },
+} satisfies E2eScript;
 
 const OUT = "/tmp/map-block";
 const r = report("map block");

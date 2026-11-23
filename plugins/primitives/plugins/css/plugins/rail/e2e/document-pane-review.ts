@@ -35,6 +35,17 @@ import {
   openThreadFixture,
   type ThreadFixture,
 } from "@plugins/apps/plugins/mail/plugins/threads/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments"],
+    why: "Before/after capture set keyed by --out/--suffix (some surfaces need --conv/--tool-use); seeds a mail fixture.",
+  },
+} satisfies E2eScript;
 
 interface Surface {
   name: string;

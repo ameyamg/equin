@@ -52,6 +52,17 @@ import {
   type LeakReport,
   type LeakStep,
 } from "./leak";
+import type { E2eScript } from "../core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy", "arguments"],
+    why: "Heap-snapshot leak run that needs a caller-chosen --clicks/--idle flow and writes snapshots of hundreds of MB.",
+  },
+} satisfies E2eScript;
 
 const from = arg("from");
 const clicksRaw = arg("clicks");

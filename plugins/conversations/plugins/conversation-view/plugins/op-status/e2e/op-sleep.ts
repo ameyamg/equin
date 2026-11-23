@@ -42,6 +42,17 @@ import {
   waitBanner,
   type Synthetic,
 } from "./synthetic";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["arguments", "stateful"],
+    why: "Requires --conv in this checkout; writes a synthetic op into the op log.",
+  },
+} satisfies E2eScript;
 
 const USAGE = "op-sleep.ts --conv <conversationId> [--out <prefix>]";
 // A contended host: first paint has been seen past 60 s.

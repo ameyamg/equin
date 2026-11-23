@@ -21,6 +21,14 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, editableBlocks, openBlankPage } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const OUT = arg("out") ?? "/tmp/page-reload-drill";
 const LINES = ["reload drill first line", "and a second one, still typing"];

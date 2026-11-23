@@ -23,6 +23,14 @@ import {
 import type { Page } from "playwright";
 import { blockText, openBlankPage } from "./support/blank-page";
 import { caretLinear, pressUntilOffset } from "./support/caret";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: "auto",
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/undo-caret");
 const r = report();

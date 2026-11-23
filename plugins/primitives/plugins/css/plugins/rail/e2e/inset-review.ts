@@ -36,6 +36,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy", "arguments"],
+    why: "Captures every rail surface for a before/after review keyed by --out/--suffix.",
+  },
+} satisfies E2eScript;
 
 type Step =
   /** Hover the floating global action bar open. */

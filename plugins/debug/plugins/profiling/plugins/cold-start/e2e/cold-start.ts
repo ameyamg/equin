@@ -70,6 +70,17 @@ import { browserTrack } from "./browser-track";
 import { CPU_TRACE_CATEGORIES, summariseCpuTrace } from "./cpu-profile";
 import type { CpuWindow } from "./cpu-profile";
 import type { BrowserTrack, BrowserTrackInput } from "./browser-track";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Cold-start benchmark that stops and restarts the server over several iterations.",
+  },
+} satisfies E2eScript;
 
 // The page-side accumulators the init script fills: long tasks from the very
 // start of the load, and when each React commit happened. A cast where they

@@ -17,6 +17,17 @@ import {
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --conv and --tools; screenshots tool rows for eyeballing.",
+  },
+} satisfies E2eScript;
 
 const convId = requireArg(
   "conv",

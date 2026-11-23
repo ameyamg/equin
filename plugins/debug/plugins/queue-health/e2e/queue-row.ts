@@ -25,6 +25,17 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Screenshot of the health report's Job queue row to an --out prefix.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out") ?? "/tmp/queue-row";
 const saturate = flag("saturate");

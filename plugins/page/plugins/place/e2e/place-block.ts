@@ -24,6 +24,17 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 import { PLACE_TYPE } from "@plugins/page/plugins/place/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["accounts"],
+    why: "A transcript tool whose end state depends on Google Maps lookup setup.",
+  },
+} satisfies E2eScript;
 
 const OUT = "/tmp/place-block";
 

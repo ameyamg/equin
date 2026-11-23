@@ -11,6 +11,17 @@ import {
   pathUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Listener-growth soak (default 5 min) for a person to read.",
+  },
+} satisfies E2eScript;
 
 const path = arg("path", "/agents");
 const minutes = numArg("minutes", 5);

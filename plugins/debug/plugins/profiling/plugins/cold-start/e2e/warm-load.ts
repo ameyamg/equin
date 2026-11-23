@@ -60,6 +60,17 @@ import {
   DEFERRED_LOAD_COMPLETE_ID,
   ROUTE_CONTENT_COMMIT_ID,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["heavy"],
+    why: "Warm-load benchmark over several iterations.",
+  },
+} satisfies E2eScript;
 
 const iterations = numArg("iterations", 5);
 const coverage = flag("coverage");

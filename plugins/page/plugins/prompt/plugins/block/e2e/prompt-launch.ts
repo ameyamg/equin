@@ -14,6 +14,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["external-effects", "stateful"],
+    why: "Launches a real agent conversation (model spend, a new attempt) that it never cleans up.",
+  },
+} satisfies E2eScript;
 
 const out = arg("out", "/tmp/prompt-launch");
 

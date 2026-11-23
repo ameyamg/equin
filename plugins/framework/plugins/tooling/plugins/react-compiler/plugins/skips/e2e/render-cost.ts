@@ -33,6 +33,17 @@ import {
   pageUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Profiles render cost of a caller-chosen --path/--steps interaction.",
+  },
+} satisfies E2eScript;
 
 const url = pageUrl(arg("path", "/"));
 const steps = arg("steps", "")

@@ -12,6 +12,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { bundlePage } from "../deps";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "test",
+  target: "none",
+  writes: false,
+  run: {
+    manual: ["arguments"],
+    why: "Requires --out (and --url) though it only drives the bundled installer page.",
+  },
+} satisfies E2eScript;
 
 const out = requireArg(
   "out",

@@ -19,6 +19,17 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { writeFileSync } from "node:fs";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: false,
+  run: {
+    manual: ["arguments", "timing"],
+    why: "CPU profile needing --conv, --block and --out; timings vary with load.",
+  },
+} satisfies E2eScript;
 
 const USAGE =
   "open-in-conversation-profile.ts --conv <conv-id> --block <page-block-id> --out <path>";

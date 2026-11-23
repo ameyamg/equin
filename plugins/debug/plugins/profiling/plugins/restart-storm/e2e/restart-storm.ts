@@ -51,6 +51,17 @@ import type { Page } from "playwright";
 import { writeFileSync } from "node:fs";
 import { loadavg } from "node:os";
 import type { z } from "zod";
+import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+
+export const e2e = {
+  kind: "tool",
+  target: "build",
+  writes: true,
+  run: {
+    manual: ["heavy"],
+    why: "Restart-storm benchmark: hot-restarts the backend several times (toggles handoff config, reverted).",
+  },
+} satisfies E2eScript;
 
 type RuntimeProfile = z.infer<typeof runtimeProfileSchema>;
 type FlightWindow = z.infer<typeof flightWindowResponseSchema>;
