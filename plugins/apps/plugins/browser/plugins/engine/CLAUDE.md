@@ -69,9 +69,23 @@ pid, `launchedBy` namespace, page/socket counts, idle deadline), and
   popup is never in a frame), selection read for `copy`.
 - **The UA** says `Chrome`, not `HeadlessChrome` (sites refuse that): the
   context is relaunched once with the corrected UA.
-- **Popups** (`context.on("page")` for a page the host did not open) get a new
-  key, announced as `popup` on the opener's socket — or, for `noopener`
-  (`target=_blank`'s default), on the page that last got input.
+- **New tabs a page opens** never reach Chromium when they need no opener: a
+  link opening a new tab (`target=_blank` without `rel=opener`, a Cmd / Shift /
+  middle click) or `window.open(url, "_blank", "noopener")` is cancelled in the
+  page (`bin/page-script.ts`'s `open` report — the page still sees its own
+  `preventDefault`, and an untrusted click / `window.open` needs a user
+  activation, as Chromium's popup blocker does) and the host opens the URL as a
+  background tab (`openForPage`), announced as `popup` on the page's socket. A
+  tab or window Chromium creates for a page always shows its window — a
+  background tab of the minimized one included (measured 2026-11-24, Chrome
+  158: `AddWebContents` shows the window whatever the disposition); no flag or
+  CDP call stops it, and hidden targets need a TCP debugging port.
+- **Popups** that keep an opener (`window.open` without `noopener` — sign-in
+  windows talk to their opener — `rel=opener`, and any open from a frame) stay
+  Chromium's: `context.on("page")` for a page the host did not open gives it a
+  new key, announced as `popup` on the opener's socket — or, for `noopener`, on
+  the page that last got input — and `hideWindow` minimizes its window again
+  (it does show: a tab restores the window, a popup is a new normal one).
 - **Downloads** go to `~/Downloads` (a free name), announced as `download`.
 - **Uploads**: a `filechooser` listener makes Playwright intercept the native
   chooser (it would open off-screen); the host sends `fileChooser {multiple,

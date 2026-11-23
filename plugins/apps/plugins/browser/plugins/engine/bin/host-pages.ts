@@ -517,6 +517,27 @@ async function adoptPopup(page: Page): Promise<void> {
   send(opener?.client ?? null, { t: "popup", key: rp.key, url: page.url() });
 }
 
+/**
+ * A new tab a page asked for (`page-script.ts`'s `open`: a `target=_blank`
+ * link, a `noopener` `window.open`), opened by the host as a background tab
+ * of the minimized window — never by Chromium, whose page-opened tabs and
+ * windows always show their window. Announced as a popup of the page.
+ */
+async function openForPage(
+  opener: RemotePage,
+  open: Extract<PageReport, { kind: "open" }>,
+): Promise<void> {
+  const ctx = await getContext();
+  const rp = await register(crypto.randomUUID(), await newOwnPage(ctx));
+  await loadMainFrameId(rp);
+  armOrphan(rp);
+  navigate(rp, open.url, {
+    referrer: open.referrer,
+    referrerPolicy: open.referrerPolicy,
+  });
+  send(opener.client, { t: "popup", key: rp.key, url: open.url });
+}
+
 // ── State ────────────────────────────────────────────────────────────────
 
 function onReport(rp: RemotePage, report: PageReport): void {
@@ -528,6 +549,14 @@ function onReport(rp: RemotePage, report: PageReport): void {
       rp.title = report.title;
       rp.favicon = report.favicon;
       refresh(rp);
+      return;
+    case "open":
+      void openForPage(rp, report).catch((err: unknown) => {
+        send(rp.client, {
+          t: "error",
+          message: `Opening ${report.url} failed: ${errorOf(err)}`,
+        });
+      });
       return;
     case "select":
       send(rp.client, {
@@ -900,8 +929,33 @@ function attached(ws: ClientSocket): RemotePage {
   return rp;
 }
 
+/** A referrer policy as the DOM spells it, as CDP does. */
+const REFERRER_POLICIES = {
+  "no-referrer": "noReferrer",
+  "no-referrer-when-downgrade": "noReferrerWhenDowngrade",
+  origin: "origin",
+  "origin-when-cross-origin": "originWhenCrossOrigin",
+  "same-origin": "sameOrigin",
+  "strict-origin": "strictOrigin",
+  "strict-origin-when-cross-origin": "strictOriginWhenCrossOrigin",
+  "unsafe-url": "unsafeUrl",
+} as const;
+
+/** "" is the document's own policy, which a page cannot read: the default. */
+function cdpReferrerPolicy(
+  dom: string,
+): (typeof REFERRER_POLICIES)[keyof typeof REFERRER_POLICIES] {
+  return Object.hasOwn(REFERRER_POLICIES, dom)
+    ? REFERRER_POLICIES[dom as keyof typeof REFERRER_POLICIES]
+    : "strictOriginWhenCrossOrigin";
+}
+
 /** Start a navigation; its failure arrives as an `error` event, not a wait. */
-function navigate(rp: RemotePage, url: string): void {
+function navigate(
+  rp: RemotePage,
+  url: string,
+  from?: { referrer: string; referrerPolicy: string },
+): void {
   rp.pending = url;
   refresh(rp);
   // A navigation that ends without committing (failed, or a download) stops
@@ -912,7 +966,15 @@ function navigate(rp: RemotePage, url: string): void {
     refresh(rp);
   };
   rp.cdp
-    .send("Page.navigate", { url })
+    .send("Page.navigate", {
+      url,
+      ...(from?.referrer
+        ? {
+            referrer: from.referrer,
+            referrerPolicy: cdpReferrerPolicy(from.referrerPolicy),
+          }
+        : {}),
+    })
     .then(({ errorText }) => {
       if (!errorText) return;
       settle();
