@@ -32755,7 +32755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
           - Cli:
             - Uses: `framework/server-core.installDeclaredListEntries`
-        - **`deploy`** — `./equin deploy converge|ship|restart` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall), ship release bundles to it behind a health gate, and restart its installed service behind the same gate.
+        - **`deploy`** — `./equin deploy converge|ship|restart|check-edge` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall), ship release bundles to it behind a health gate, restart its installed service behind the same gate, and check a live site's caches against the code.
         - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
           - Cross-plugin:
             - Imported by:

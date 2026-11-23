@@ -161,8 +161,8 @@ func TestArtifactsHitServesFile(t *testing.T) {
 func TestArtifactsMissIsNotImmutable(t *testing.T) {
 	p := newStaticProxy(t).proxy
 	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/missing.js")
-	if got := rec.Header().Get("Cache-Control"); strings.Contains(got, "immutable") {
-		t.Fatalf("404 Cache-Control = %q, must not be immutable", got)
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("404 Cache-Control = %q, want no-store (no cache may pin a missing address)", got)
 	}
 }
 

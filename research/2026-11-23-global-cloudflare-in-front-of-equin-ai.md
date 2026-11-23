@@ -92,6 +92,15 @@ are single-line `KEY=value` stdin lines (`DEPLOY_SECRET_VALUE_PATTERN`), so a
 PEM cannot travel that way, and admitting port 80 from Cloudflare keeps Caddy's
 own ACME working with no secret to rotate. TLS is therefore unchanged.
 
+**Change after review (cache policy in code):** the dashboard Cache Rules are
+dropped. Cloudflare follows the origin's `Cache-Control` by default, which
+already says the right thing everywhere but one place, now fixed in code: a
+missing `/artifacts/*` (the gateway's 404 is `no-store`). The film is cached
+like any immutable asset — a user decision: it loads only on play, and
+equin.ai's bytes are not mostly video, so the CDN-terms risk is negligible
+(R2 / Stream is the route if that changes). `./equin
+deploy check-edge` verifies the live answers, so drift on either side shows.
+
 ## Rollout order (each step reversible)
 
 1. **Code lands with `edge: "direct"`** for equin.ai. This is a no-op converge: Caddyfile, firewall and TLS are byte-identical, which a test asserts.

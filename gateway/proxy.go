@@ -431,6 +431,10 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	// store symlink — would hand the module loader an HTML document and surface
 	// as a cryptic parse error. An honest 404 instead.
 	if strings.HasPrefix(upath, "/artifacts/") {
+		// no-store: an address can be missing only for a moment (a build
+		// still publishing, a retained graph being restored), so no cache — a
+		// CDN in front included — may keep the 404 for that URL.
+		w.Header().Set("Cache-Control", "no-store")
 		http.NotFound(w, r)
 		return
 	}

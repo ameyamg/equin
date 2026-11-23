@@ -142,7 +142,8 @@ describe("caddySite behind Cloudflare", () => {
 
   test("differs from the direct block by that line only", () => {
     expect(
-      site.replace("\t\theader_up X-Forwarded-For {client_ip}\n", ""),
+      site
+        .replace("\t\theader_up X-Forwarded-For {client_ip}\n", "")
     ).toBe(
       caddySite(
         ["equin.ai"],

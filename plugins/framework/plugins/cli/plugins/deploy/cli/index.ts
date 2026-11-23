@@ -1,5 +1,5 @@
 /**
- * `./equin deploy converge|ship|restart` — the verbs over a deployment.
+ * `./equin deploy converge|ship|restart|check-edge` — the verbs over a deployment.
  *
  * **converge** makes a host serve a composition: run user, dir layout, the
  * `env` EnvironmentFile, Caddy, the systemd unit, the firewall.
@@ -117,6 +117,25 @@ export default defineCliCommand({
         },
       ],
       run: () => import("./restart"),
+    }),
+    defineCliCommand<[string], { uncached?: string[] }>({
+      name: "check-edge",
+      description:
+        "Check a live site's caches against the code: the shell and API never stored at the edge, a content-addressed module stored, a missing module not pinned, and every --uncached path never stored. Public requests only.",
+      arguments: [
+        {
+          name: "<hostname>",
+          description: "The site's public hostname (e.g. equin.ai)",
+        },
+      ],
+      options: [
+        {
+          flags: "--uncached <path...>",
+          description:
+            "Paths that must never be stored at the edge (e.g. the site's film)",
+        },
+      ],
+      run: () => import("./check-edge"),
     }),
   ],
 });
