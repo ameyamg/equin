@@ -3923,6 +3923,10 @@
       "name": "@equin/plugin-framework-cli-push",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/push/plugins/test-gate": {
+      "name": "@equin/plugin-framework-cli-push-test-gate",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/regen-generated": {
       "name": "@equin/plugin-framework-cli-regen-generated",
       "version": "0.0.1",
@@ -10318,6 +10322,8 @@
     "@equin/plugin-framework-cli-op-runtime": ["@equin/plugin-framework-cli-op-runtime@workspace:plugins/framework/plugins/cli/plugins/op-runtime"],
 
     "@equin/plugin-framework-cli-push": ["@equin/plugin-framework-cli-push@workspace:plugins/framework/plugins/cli/plugins/push"],
+
+    "@equin/plugin-framework-cli-push-test-gate": ["@equin/plugin-framework-cli-push-test-gate@workspace:plugins/framework/plugins/cli/plugins/push/plugins/test-gate"],
 
     "@equin/plugin-framework-cli-regen-generated": ["@equin/plugin-framework-cli-regen-generated@workspace:plugins/framework/plugins/cli/plugins/regen-generated"],
 

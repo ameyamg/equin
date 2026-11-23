@@ -7,6 +7,8 @@
 - Description: Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`
     - `packages/semaphore.createSemaphore`
     - `packages/timed-fs.lstat`
@@ -26,6 +28,7 @@
     - `assertRepoPath`
     - `CHECK_SCOPES`
     - `CHECKOUT_SCOPES`
+    - `commitSnapshot`
     - `globPaths`
     - `InconclusiveCheckError`
     - `installedRepoView`
@@ -44,26 +47,10 @@
     - `repoSnapshotOver`
     - `WHOLE_TREE_FILE_CALLS`
 - Cross-plugin:
-  - Imported by:
-    - `framework/cli/build`
-    - `framework/cli/check`
-    - `framework/cli/deploy`
-    - `framework/cli/git-artifacts`
-    - `framework/cli/migrations`
-    - `framework/cli/push`
-    - `framework/cli/regen-generated`
-    - `framework/cli/release`
-    - `framework/cli/test`
-    - `framework/cli/test/digest`
-    - `framework/tooling/checks`
-    - `framework/tooling/codegen`
-    - `framework/tooling/exempt`
-    - `framework/tooling/format`
-    - `framework/tooling/web-artifacts`
-    - `infra/deps/npm`
-    - `infra/worktree/reclaim`
-    - `plugin-meta/plugin-tree/faceted`
-    - `plugin-meta/relocate`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×16
+    - `infra` ×2
+    - `plugin-meta` ×2
     - `review/plugin-changes`
 - Exemptions:
   - Exempts itself from:

@@ -1,5 +1,11 @@
-import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import { isDomTestPath } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
+import type {
+  RepoFiles,
+  RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
+import {
+  isDomTestPath,
+  isTestFilePath,
+} from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
 import {
   buildModuleGraph,
   NO_OUTSIDE_FILES,
@@ -29,6 +35,17 @@ export type TestRunnerName = "bun:test" | "vitest";
 /** Which runner runs a test file — the repo's one split (`test-layout`). */
 export function runnerOfTestPath(path: string): TestRunnerName {
   return isDomTestPath(path) ? "vitest" : "bun:test";
+}
+
+/**
+ * Every test file of a checkout's file set — the files a digest set covers
+ * (`./equin test-digest`, the push's test gate): test code under `plugins/`,
+ * never inside an installed package.
+ */
+export function testFilesOf(files: RepoFiles): string[] {
+  return files
+    .under("plugins")
+    .filter((p) => isTestFilePath(p) && !p.split("/").includes("node_modules"));
 }
 
 export interface TestDigest {

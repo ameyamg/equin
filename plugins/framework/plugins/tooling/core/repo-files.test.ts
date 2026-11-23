@@ -14,6 +14,7 @@ import {
 import { pathsUnder } from "./pathspec";
 import {
   assertRepoPath,
+  commitSnapshot,
   listAllRepoMembers,
   listRepoMembers,
   loadRepoFiles,
@@ -268,6 +269,28 @@ describe("loadRepoSnapshot", () => {
     expect(() => snap.blobOf("ignored/i.ts")).toThrow("not a file");
     expect(() => snap.blobOf("a")).toThrow("not a file");
     expect(() => snap.blobOf("./a.ts")).toThrow("repo-relative");
+  });
+});
+
+describe("commitSnapshot", () => {
+  test("is the COMMITTED tree: its members and bytes, never the working tree's", async () => {
+    const snap = await commitSnapshot(root, "HEAD");
+    // Deleted from disk, still committed; untracked, not committed.
+    expect(snap.has("gone.ts")).toBe(true);
+    expect(snap.has("became-dir")).toBe(true);
+    expect(snap.has("new.ts")).toBe(false);
+    expect(snap.has("became-dir/in.ts")).toBe(false);
+    expect(await snap.read("gone.ts")).toBe("// gone.ts\n");
+    expect(await snap.read("became-dir")).toBe("// became-dir\n");
+    expect(await snap.read("new.ts")).toBeNull();
+    expect(snap.blobOf("a.ts")).toBe(await blobOnDisk("a.ts"));
+    // Not the checkout: a reader asking "is this my own checkout?" says no.
+    expect(snap.root).not.toBe(root);
+    expect(join(root, "a.ts").startsWith(`${snap.root}/`)).toBe(false);
+  });
+
+  test("a rev that names no tree throws", () => {
+    expect(commitSnapshot(root, "no-such-rev")).rejects.toThrow(/rev-parse/);
   });
 });
 

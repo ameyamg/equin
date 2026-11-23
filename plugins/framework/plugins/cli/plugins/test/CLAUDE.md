@@ -169,6 +169,7 @@ queueing for a grant, writes its own record (the leader's runners,
   - Imported by:
     - `debug/tests`
     - `framework/cli/await`
+    - `framework/cli/push/test-gate`
     - `infra/deps/updates`
 - Exemptions:
   - Exempts itself from:

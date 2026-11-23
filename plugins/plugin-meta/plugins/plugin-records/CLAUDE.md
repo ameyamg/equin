@@ -485,8 +485,8 @@ its docblock records — and then lowered as readily as raised.
     - `verificationPassed`
     - `verifyRecordsAgainst`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×12
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×13
     - `plugin-meta` ×7
     - `database/migrations/schema-question`
     - `infra/deps/npm`

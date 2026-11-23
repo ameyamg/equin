@@ -4,6 +4,7 @@ export {
   runnerOfTestPath,
   TEST_DIGEST_VERSION,
   testDigests,
+  testFilesOf,
   VITEST_RUNNER_ENTRIES,
 } from "./internal/digest";
 export type { TestDigest, TestRunnerName } from "./internal/digest";

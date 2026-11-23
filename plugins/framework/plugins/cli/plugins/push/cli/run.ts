@@ -63,6 +63,7 @@ import { fixClaimCarrier } from "./fix-claim";
 import { runLandPhase, takeLandPayload } from "./handoff";
 import { resolveFixedReports } from "@plugins/reports/plugins/engine/cli";
 import { landPush } from "./land";
+import { runTestGate } from "@plugins/framework/plugins/cli/plugins/push/plugins/test-gate/cli";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { removeDeadCompositionOutputs } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 
@@ -690,6 +691,16 @@ const pushAction: CliAction<
     profiler.write();
     return;
   }
+
+  // 1c. The test gate (`plugins/test-gate`): every test the change affects —
+  //     its digest moved since the merge base with main — must not newly
+  //     fail. BEFORE the mutex: it is the slowest step (minutes for a wide
+  //     change), and every queued push would wait on it. It tests the
+  //     committed HEAD, not the rebased tree that lands — a conflict with what
+  //     main gained since the merge base is main's idle runner's to catch.
+  //     Not run for `--from-main` (handled above): a user-driven emergency path.
+  const gate = await runTestGate(root0);
+  if (!gate.ok) process.exit(1);
 
   // Steps 2–7 touch the shared main worktree and must be serialized
   // across all concurrent agents. The flock is held for the entire

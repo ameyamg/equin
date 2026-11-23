@@ -3,7 +3,6 @@ import { dirname, resolve } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { repoSnapshotNow } from "@plugins/framework/plugins/tooling/core";
-import { isTestFilePath } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
 import { pluginIdOfRepoPath } from "@plugins/framework/plugins/plugin-id/core";
 import type { CheckoutDigests } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
 import {
@@ -15,7 +14,7 @@ import {
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
-import { TEST_DIGEST_VERSION, testDigests } from "../core";
+import { TEST_DIGEST_VERSION, testDigests, testFilesOf } from "../core";
 
 // A wedge-breaker for one metadata read, not a latency budget.
 const GIT_TIMEOUT_MS = 30_000;
@@ -57,9 +56,7 @@ const run: CliAction<[], { out: string; unlessTree?: string }> = async (
   installRecordStore(openRecordStore());
   const store = currentRecordStore();
   const snapshot = await repoSnapshotNow(root);
-  const files = snapshot
-    .under("plugins")
-    .filter((p) => isTestFilePath(p) && !p.split("/").includes("node_modules"));
+  const files = testFilesOf(snapshot);
   const digests = await testDigests(snapshot, store, files);
   await store.flush();
   const elapsedMs = Math.round(performance.now() - started);

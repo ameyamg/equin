@@ -139,8 +139,8 @@ Notable built-ins: `migrations-in-sync` (schema changes without a committed migr
 
 `./equin push -m "message"`:
 
-1. Run checks
-2. Fail if dirty
+1. Run the tests the change affects (before the push mutex; refuses a change that newly breaks one — `push/plugins/test-gate`)
+2. Run checks, fail if dirty
 3. Push the branch
 4. Pull main (`--ff-only`)
 5. Merge the branch into main (from the main worktree)

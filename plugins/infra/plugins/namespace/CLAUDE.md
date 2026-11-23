@@ -135,9 +135,9 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `namespaceUrl`
     - `resolveNamespaceAlias`
 - Cross-plugin:
-  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
-    - `framework` ×15
+    - `framework` ×16
     - `infra` ×12
     - `debug` ×11
     - `conversations` ×7

@@ -11,7 +11,9 @@ the host-global `test-runs` dir. Every backend ingests that dir (`machine/`
 `ingest.ts`: a watch, plus a catch-up pass after boot as the
 `tests.ingest-catch-up` warm-up — after the tabs' restart replay; a pass skips opIds its database
 already holds; a malformed record is reported once, an unknown `v` is left for
-a newer reader). Nothing runs on push.
+a newer reader). `./equin push` runs the tests its change affects through
+the same command (`framework/cli/push/plugins/test-gate`), so its runs are
+harvested like any other.
 
 ## Status = the results on the file's CURRENT digest
 

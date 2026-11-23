@@ -32726,8 +32726,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
-              - `framework` ×10
+            - Imported by: 34 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+              - `framework` ×11
               - `infra` ×8
               - `debug` ×4
               - `apps` ×2
@@ -32936,7 +32936,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/op-runtime.reportInterruptedPredecessorSync`
               - `framework/cli/op-runtime.runCheckSubprocess`
               - `framework/cli/op-runtime.signalOriginTap`
+              - `framework/cli/push/test-gate.runTestGate`
               - `reports/engine.resolveFixedReports`
+          - Plugins:
+            - **`test-gate`** — The push's test gate: before the push mutex, run every test file whose test digest moved since the merge base (a pass already recorded at the same digest counts), and refuse the push when one newly fails — telling a test that already fails on main (its verdict at the merge base, else main's own latest) from one this change broke, and a batch-only failure (passes when run again alone) from a real one.
+              - Cli:
+                - Uses: `plugin-meta/plugin-records.openRecordStore`
+                - Exports (types): `TestGateResult`
+                - Exports (values): `runTestGate`
+              - Cross-plugin:
+                - Imported by: `framework/cli/push`
+              - Core:
+                - Exports (types):
+                  - `FailureJudgement`
+                  - `RecordedVerdict`
+                  - `VerdictIndex`
+                - Exports (values):
+                  - `affectedTests`
+                  - `buildVerdictIndex`
+                  - `describeJudgement`
+                  - `isProvingPass`
+                  - `judgeFailure`
         - **`regen-generated`** — `./equin regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
           - Cli:
             - Uses: `plugin-meta/plugin-records.openRecordStore`
@@ -33020,6 +33040,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `debug/tests`
               - `framework/cli/await`
+              - `framework/cli/push/test-gate`
               - `infra/deps/updates`
           - Exemptions:
             - Exempts itself from:
@@ -33030,6 +33051,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses:
                   - `framework/tooling/test-layout.isDomTestPath`
+                  - `framework/tooling/test-layout.isTestFilePath`
                   - `plugin-meta/plugin-records.buildModuleGraph`
                   - `plugin-meta/plugin-records.ModuleGraph`
                   - `plugin-meta/plugin-records.NO_OUTSIDE_FILES`
@@ -33045,16 +33067,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `runnerOfTestPath`
                   - `TEST_DIGEST_VERSION`
                   - `testDigests`
+                  - `testFilesOf`
                   - `VITEST_RUNNER_ENTRIES`
               - Cli:
                 - Uses: `plugin-meta/plugin-records.openRecordStore`
               - Cross-plugin:
-                - Imported by: `framework/cli/test`
+                - Imported by:
+                  - `framework/cli/push/test-gate`
+                  - `framework/cli/test`
             - **`record`** — The test harvest's file formats, as zod schemas: TestRunRecord (one `./equin test` run's per-file verdicts under their digests, written to the host-global test-runs dir) and CheckoutDigests (`./equin test-digest`'s output) — a leaf every writer and reader shares.
               - Cross-plugin:
                 - Imported by:
                   - `debug/tests`
                   - `debug/tests/idle-runner`
+                  - `framework/cli/push/test-gate`
                   - `framework/cli/test`
               - Core:
                 - Exports (types):
@@ -33640,6 +33666,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
         - Uses:
+          - `infra/host-fs/user-path.AppPath`
+          - `infra/host-fs/user-path.joinAppPath`
           - `infra/spawn.spawnCaptured`
           - `packages/semaphore.createSemaphore`
           - `packages/timed-fs.lstat`
@@ -33659,6 +33687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assertRepoPath`
           - `CHECK_SCOPES`
           - `CHECKOUT_SCOPES`
+          - `commitSnapshot`
           - `globPaths`
           - `InconclusiveCheckError`
           - `installedRepoView`
@@ -33677,26 +33706,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `repoSnapshotOver`
           - `WHOLE_TREE_FILE_CALLS`
       - Cross-plugin:
-        - Imported by:
-          - `framework/cli/build`
-          - `framework/cli/check`
-          - `framework/cli/deploy`
-          - `framework/cli/git-artifacts`
-          - `framework/cli/migrations`
-          - `framework/cli/push`
-          - `framework/cli/regen-generated`
-          - `framework/cli/release`
-          - `framework/cli/test`
-          - `framework/cli/test/digest`
-          - `framework/tooling/checks`
-          - `framework/tooling/codegen`
-          - `framework/tooling/exempt`
-          - `framework/tooling/format`
-          - `framework/tooling/web-artifacts`
-          - `infra/deps/npm`
-          - `infra/worktree/reclaim`
-          - `plugin-meta/plugin-tree/faceted`
-          - `plugin-meta/relocate`
+        - Imported by: 21 plugins — full list in [`plugins/framework/plugins/tooling/REFERENCE.md`](../plugins/framework/plugins/tooling/REFERENCE.md)
+          - `framework` ×16
+          - `infra` ×2
+          - `plugin-meta` ×2
           - `review/plugin-changes`
       - Exemptions:
         - Exempts itself from:
@@ -39438,9 +39451,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 117 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 118 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×45
-              - `framework` ×20
+              - `framework` ×21
               - `apps` ×8
               - `debug` ×7
               - `packages` ×7
@@ -40140,8 +40153,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
-              - `framework` ×18
+            - Imported by: 58 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+              - `framework` ×19
               - `infra` ×16
               - `packages` ×6
               - `debug` ×5
@@ -40646,9 +40659,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 89 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 90 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `apps` ×16
-          - `framework` ×15
+          - `framework` ×16
           - `infra` ×12
           - `debug` ×11
           - `conversations` ×7
@@ -41748,9 +41761,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnToFile`
           - `watchChildKills`
       - Cross-plugin:
-        - Imported by: 111 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 112 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+          - `framework` ×33
           - `infra` ×33
-          - `framework` ×32
           - `apps` ×10
           - `database` ×5
           - `debug` ×5
@@ -46068,9 +46081,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withChangedFilesWork`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 195 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 196 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
-          - `framework` ×29
+          - `framework` ×30
           - `apps` ×18
           - `debug` ×17
           - `conversations` ×13
@@ -50385,8 +50398,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `verificationPassed`
           - `verifyRecordsAgainst`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/plugin-meta/plugins/plugin-records/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-records/REFERENCE.md)
-          - `framework` ×12
+        - Imported by: 22 plugins — full list in [`plugins/plugin-meta/plugins/plugin-records/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-records/REFERENCE.md)
+          - `framework` ×13
           - `plugin-meta` ×7
           - `database/migrations/schema-question`
           - `infra/deps/npm`

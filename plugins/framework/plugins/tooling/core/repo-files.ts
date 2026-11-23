@@ -23,7 +23,10 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { globPaths, pathsUnder } from "./pathspec";
 import type { RepoFiles, RepoSnapshot } from "./types";
-import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Wedge-breaker for a metadata-only git read, not a latency budget: what these
 // suffer under a saturated check run is starvation, not slowness. Same bound
@@ -537,4 +540,64 @@ export async function membersWithBlobs(
   }
   members.forEach((p, i) => out.set(p, ids[i]!));
   return out;
+}
+
+// How many `git cat-file` reads a commit snapshot runs at once. Each is a
+// process: a past tree is read only where the record store has no facts for a
+// blob, so this bounds a burst, not a steady stream.
+const COMMIT_READ_CONCURRENCY = 8;
+
+/**
+ * A `RepoSnapshot` of the tree COMMITTED at `rev` (a commit or tree-ish), not
+ * of the working tree: membership and blob ids from one `git ls-tree -r`,
+ * content read from the object store (`git cat-file blob`) — never from disk,
+ * which holds another tree's bytes. For a reader that keys work on a past tree
+ * (the push's test gate digests the merge base's tests). Gitlinks and
+ * non-blob entries are not members.
+ *
+ * Throws on any git failure, and on a rev that names no tree.
+ */
+export async function commitSnapshot(
+  root: AppPath,
+  rev: string,
+): Promise<RepoSnapshot> {
+  const tree = (
+    await git(root, [
+      "rev-parse",
+      "--verify",
+      "--end-of-options",
+      `${rev}^{tree}`,
+    ])
+  ).trim();
+  const out = await git(root, ["ls-tree", "-r", "-z", "--full-tree", tree]);
+  const blobs = new Map<string, string>();
+  for (const record of out.split("\0")) {
+    if (record.length === 0) continue;
+    const tab = record.indexOf("\t");
+    if (tab < 0)
+      throw new Error(`git ls-tree ${rev}: malformed record ${record}`);
+    const [, type, sha] = record.slice(0, tab).split(" ");
+    if (type === "blob" && sha !== undefined)
+      blobs.set(record.slice(tab + 1), sha);
+  }
+  const paths = [...blobs.keys()].sort();
+  const base = repoSnapshotOver(root, paths, (p) => blobs.get(p) ?? null);
+  const gate = createSemaphore(COMMIT_READ_CONCURRENCY);
+  return {
+    ...base,
+    // NOT the checkout's root: the snapshot is another tree. A reader that
+    // keys work by "is this set the checkout my code runs from?" — the record
+    // store's producers (`plugin-records` codeCheckoutOf) — judges by this
+    // spelling, and must read its code from the running checkout, never key
+    // it by this past tree's version of it. A name under the checkout no file
+    // has (`@` starts no repo path), so no module's path is under it, and
+    // nothing reads through it: content comes from `read` below.
+    root: joinAppPath(root, `@commit-${tree}`),
+    read: async (path) => {
+      assertRepoPath("read", path, false);
+      const blob = blobs.get(path);
+      if (blob === undefined) return null;
+      return gate.run(() => git(root, ["cat-file", "blob", blob]));
+    },
+  };
 }

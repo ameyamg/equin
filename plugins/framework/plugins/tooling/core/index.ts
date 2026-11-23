@@ -20,6 +20,7 @@ export {
   repoFileReader,
   repoFilesOver,
   repoSnapshotOver,
+  commitSnapshot,
 } from "./repo-files";
 export { globPaths, pathspecToRegex, pathsUnder } from "./pathspec";
 export {
