@@ -4,17 +4,19 @@
 
 ## Plugin reference
 
-- Description: Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — the feel playing and an on/off switch in the header (shown collapsed too), a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. usePerformedScore: the score the falling-note views draw — swung like the audio unless the user turns off "Swing the falling notes" (a per-user config, toggled in the Feel section); notation stays straight. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection. Server registration of the swing display config (swing the falling notes).
+- Description: Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — the feel playing and an on/off switch in the header (shown collapsed too), a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. Library.SongLink `swing`: the override in a song's share link (`8x2`, `straight.8x2`), previewed and applied on Add to library; a previewed link's feel is edited in memory. usePerformedScore: the score the falling-note views draw — swung like the audio unless the user turns off "Swing the falling notes" (a per-user config, toggled in the Feel section); notation stays straight. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection. Server registration of the swing display config (swing the falling notes).
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `SonataDocument.SongSetting` "swing-sync" → `SwingObserver`
     - `Sonata.Section` "Feel" → `FeelSection`
     - `Sonata.Hud` "swing-chip" → `SwingChip`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/document` ×8
+    - `Library.SongLink` "swing"
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/document` ×10
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×3
+    - `apps/sonata/library` ×2
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.useFetchEndpoint`

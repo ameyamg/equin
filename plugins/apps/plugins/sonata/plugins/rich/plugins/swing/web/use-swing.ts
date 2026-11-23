@@ -2,9 +2,9 @@ import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   swingSetting,
   type SongSettingFailure,
-  useLibrarySong,
+  useEditSongSetting,
+  useSongDocument,
   useSongSetting,
-  useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   swingOverrideFor,
@@ -38,21 +38,21 @@ export type SwingState =
     };
 
 /**
- * The open library song's swing: the persisted override, the feel it plays
- * (the pipeline's `meta.swing`), the feel its content marks, and the writes.
- * `none` for a file document — it has nowhere to persist one.
+ * The loaded song's swing: the override, the feel it plays (the pipeline's
+ * `meta.swing`), the feel its content marks, and the writes — persisted for a
+ * library song, kept in memory for a file document (a shared link previewed,
+ * which "Add to library" then keeps). `none` before a song is loaded.
  */
 export function useSwing(): SwingState {
-  const song = useLibrarySong();
+  const { identity } = useSongDocument();
   const setting = useSongSetting(swingSetting);
-  const write = useWriteSongSetting(swingSetting);
+  const write = useEditSongSetting(swingSetting);
   const { score } = useSession();
   const fetchEndpoint = useFetchEndpoint();
-  if (song.kind === "none") return { kind: "none" };
+  if (identity === null) return { kind: "none" };
   if (setting.kind === "pending") return { kind: "pending" };
   if (setting.kind === "failed")
     return { kind: "failed", error: setting.error, refetch: setting.refetch };
-  const songId = song.songId;
   const override = setting.value;
   const authored =
     override.kind === "score" ? score.meta.swing : score.meta.authoredSwing;
@@ -63,8 +63,10 @@ export function useSwing(): SwingState {
     authored ??
     DEFAULT_SWING;
   const apply = (next: SwingOverride) => {
-    write(songId, next); // optimistic: playback follows at once
-    saveSwing(fetchEndpoint, songId, next);
+    write(identity, next); // optimistic: playback follows at once
+    if (identity.kind === "library") {
+      saveSwing(fetchEndpoint, identity.songId, next);
+    }
   };
   return {
     kind: "ready",

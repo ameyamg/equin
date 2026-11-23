@@ -30,15 +30,15 @@ a library song:
   (`defineSongSetting(name, absent)` requires one), at once. Nothing of it is
   persisted; a control may edit a setting IN MEMORY with
   `useEditSongSetting(key)(identity, value)` (dropped unless `identity` is the
-  loaded document) — the groove of a previewed link, which "Add to library"
-  then keeps.
+  loaded document) — the groove, swing or transpose of a previewed link,
+  which "Add to library" then keeps.
 
 `useLibrarySong()` answers `{ kind: "library", songId } | { kind: "none" }` for
-the LOADED document. A setting writer that persists (transpose stepper, track
-mixer, chord mode, key auto-detect, swing) takes its song id from it — the song
-whose settings it reads — and renders nothing for `none`. The rhythm groove
-edits through `useEditSongSetting` with the document's identity, and persists
-only for a library song.
+the LOADED document. A setting writer that only persists (track mixer, chord
+mode, key auto-detect) takes its song id from it — the song whose settings it
+reads — and renders nothing for `none`. The controls a shared link carries
+(rhythm groove, swing, transpose stepper) edit through `useEditSongSetting`
+with the document's identity, and persist only for a library song.
 
 What pairs the song with its content or its load reads them as ONE value, never
 the song id beside a separate read:

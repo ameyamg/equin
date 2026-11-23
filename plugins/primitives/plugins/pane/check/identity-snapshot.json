@@ -722,7 +722,7 @@
     },
     {
       "paneId": "sonata-player",
-      "segment": "song/:songId;bar;lens;title;grid;ug;groove",
+      "segment": "song/:songId;bar;lens;title;grid;ug;groove;swing;transpose",
       "appIndex": false,
       "parent": null
     },

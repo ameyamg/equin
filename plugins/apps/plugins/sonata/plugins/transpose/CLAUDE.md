@@ -62,16 +62,17 @@ semitones (±12), surfaced as a toolbar popover and remembered per song.
 
 ## Plugin reference
 
-- Description: Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar transpose popover (stepper, key line, Play-in grid). Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
+- Description: Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar transpose popover (stepper, key line, Play-in grid). Library.SongLink `transpose`: the offset in a song's share link, previewed and applied on Add to library; a previewed link's offset is edited in memory. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
 - Web:
   - Contributes:
     - `SonataDocument.SongSetting` "transpose-sync" → `TransposeObserver`
     - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/document` ×7
+    - `Library.SongLink` "transpose"
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/document` ×10
+    - `apps/sonata/library` ×3
     - `primitives/css/control-panel` ×2
     - `primitives/css/ui-kit` ×2
-    - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/session.useSession`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live/live-state.ResourceErrorInline`

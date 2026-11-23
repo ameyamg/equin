@@ -9686,11 +9686,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sonataLibraryPane.Actions`
               - `sonataPlayerPane.Actions`
               - `songPeekPane.Actions`
-            - Slot contributors: 27 contributors — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Slot contributors: 29 contributors — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `sonataPlayerPane.Actions` ×7
               - `Library.Cover` ×5
+              - `Library.SongLink` ×5
               - `Library.Source` ×5
-              - `Library.SongLink` ×3
               - `songPeekPane.Actions` ×3
               - `sonataLibraryPane.Actions` ×2
               - `Library.Notice` ← `apps.sonata.sources.midi.folders`
@@ -11165,17 +11165,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/shape --spacing`
                 - Imported by: `apps/sonata/rich/accompaniment`
-            - **`swing`** — Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — the feel playing and an on/off switch in the header (shown collapsed too), a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. usePerformedScore: the score the falling-note views draw — swung like the audio unless the user turns off "Swing the falling notes" (a per-user config, toggled in the Feel section); notation stays straight. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection. Server registration of the swing display config (swing the falling notes).
+            - **`swing`** — Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — the feel playing and an on/off switch in the header (shown collapsed too), a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. Library.SongLink `swing`: the override in a song's share link (`8x2`, `straight.8x2`), previewed and applied on Add to library; a previewed link's feel is edited in memory. usePerformedScore: the score the falling-note views draw — swung like the audio unless the user turns off "Swing the falling notes" (a per-user config, toggled in the Feel section); notation stays straight. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection. Server registration of the swing display config (swing the falling notes).
               - Web:
                 - Contributes:
                   - `ConfigV2.WebRegister` "config"
                   - `SonataDocument.SongSetting` "swing-sync" → `SwingObserver`
                   - `Sonata.Section` "Feel" → `FeelSection`
                   - `Sonata.Hud` "swing-chip" → `SwingChip`
-                - Uses: 26 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md)
-                  - `apps/sonata/document` ×8
+                  - `Library.SongLink` "swing"
+                - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md)
+                  - `apps/sonata/document` ×10
                   - `config_v2` ×3
                   - `primitives/css/ui-kit` ×3
+                  - `apps/sonata/library` ×2
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `infra/endpoints.useFetchEndpoint`
@@ -12347,16 +12349,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/shape --spacing`
-        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar transpose popover (stepper, key line, Play-in grid). Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
+        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar transpose popover (stepper, key line, Play-in grid). Library.SongLink `transpose`: the offset in a song's share link, previewed and applied on Add to library; a previewed link's offset is edited in memory. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
           - Web:
             - Contributes:
               - `SonataDocument.SongSetting` "transpose-sync" → `TransposeObserver`
               - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/transpose/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/transpose/REFERENCE.md)
-              - `apps/sonata/document` ×7
+              - `Library.SongLink` "transpose"
+            - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/transpose/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/transpose/REFERENCE.md)
+              - `apps/sonata/document` ×10
+              - `apps/sonata/library` ×3
               - `primitives/css/control-panel` ×2
               - `primitives/css/ui-kit` ×2
-              - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/session.useSession`
               - `infra/endpoints.useFetchEndpoint`
               - `network/live/live-state.ResourceErrorInline`

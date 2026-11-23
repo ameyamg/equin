@@ -12,7 +12,7 @@ them without a `shell → library` import that would cycle with the existing
   standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
 - `sonataPlayerPane` — player pane at
-  `/sonata/song/:songId;bar;lens;title;grid;ug;groove` (the last four: the
+  `/sonata/song/:songId;bar;lens;title;grid;ug;groove;swing;transpose` (all but `bar` and `lens`: the
   song's share link, below). `bar` and `lens`
   are keyed (named) views of the song, absent by default: `;bar=12` opens it
   with the playhead at that bar (`sonataSongLink(id, bar)`), and `;lens` is the
@@ -33,7 +33,7 @@ The address of an open song is always its plain one
 (`/sonata/song/<id>`, plus `;bar` / `;lens`) — it never follows the song's
 edits. Sharing is explicit: the **Share** button in the section panel's "Song"
 header copies a link that carries the song's content and confirms it with a
-toast: `/sonata/song/<id>;title=…;grid=…;ug=…;groove=…` (keys:
+toast: `/sonata/song/<id>;title=…;grid=…;ug=…;groove=…;swing=…;transpose=…` (keys:
 `SONG_LINK_KEYS`, core). Free text (the title, the grid) is written in
 the readable link spelling (`toLinkText` / `fromLinkText`, core) — a space `_`,
 a newline `~`, a `;` `!`, `*` escaping a literal one — so the address reads
@@ -46,7 +46,10 @@ a newline `~`, a `;` `!`, `*` escaping a literal one — so the address reads
   tab id; its `create` fetches the tab from UG through `ctx.readLive`);
   rhythm-controls owns `groove` (the accompaniment in readable words, e.g.
   `stride~R.block.basic-2~L.stride.basic-4`; omitted while it is the default or
-  not playing) and `apply`s it. The library names none of them.
+  not playing) and `apply`s it; swing owns `swing` (the override: `8x2`,
+  `straight.8x2`; omitted for the song's own feel) and transpose owns
+  `transpose` (the signed semitone offset; omitted at 0). The library names
+  none of them.
 - **Share button** (`ShareSongButton`): reads every part; shown only once every
   part knows its value AND a `create` part has one — a song another library
   can be given (a chord grid, a UG tab; never a MIDI file).
@@ -61,8 +64,10 @@ a newline `~`, a `;` `!`, `*` escaping a literal one — so the address reads
   the song loads as a FILE document (`song-link:<id>`, named by the link's
   title — nothing persisted) into the same immersive player. The preview is
   a scratch copy: the grid can be edited and the groove changed in the
-  Accompaniment section (in memory — `useEditSongSetting`). The header shows
-  the link's title and **Add to library** (`AddToLibraryButton`): it reads
+  Accompaniment and Feel sections and the transpose control (in memory —
+  `useEditSongSetting`). The header shows the link's title, a **Not saved**
+  chip (its tooltip: changes are lost on leaving unless added) and **Add to
+  library** (`AddToLibraryButton`): it reads
   every part's value from the loaded document, as Share does, so it keeps the
   preview AS IT IS NOW — creates the song under the link's id from the
   creating part's current value, then hands every other part its current
@@ -331,11 +336,11 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonataLibraryPane.Actions`
     - `sonataPlayerPane.Actions`
     - `songPeekPane.Actions`
-  - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `sonataPlayerPane.Actions` ×7
     - `Library.Cover` ×5
+    - `Library.SongLink` ×5
     - `Library.Source` ×5
-    - `Library.SongLink` ×3
     - `songPeekPane.Actions` ×3
     - `sonataLibraryPane.Actions` ×2
     - `Library.Notice` ← `apps.sonata.sources.midi.folders`

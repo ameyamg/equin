@@ -18,10 +18,11 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
+  type SongIdentity,
   transposeSetting,
-  useLibrarySong,
+  useEditSongSetting,
+  useSongDocument,
   useSongSetting,
-  useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   collectKeyEntries,
@@ -76,9 +77,10 @@ function keyName(key: KeySignature): string {
  * (`sonataPlayerPane.Actions`): a `swap-vert` icon button, badged `+N` / `−N`
  * while the song is shifted, that opens the transpose panel. Like the other
  * header controls it owns no score state — it reads the loaded song's
- * `transposeSetting` + the loaded library song from `useLibrarySong`, writes
- * the setting optimistically for instant re-render, and persists via
- * `saveTranspose`. It is disabled when there is no song (no score span).
+ * `transposeSetting`, writes it optimistically for instant re-render
+ * (`useEditSongSetting`, bound to the loaded document), and persists via
+ * `saveTranspose` for a library song — a file document (a shared link
+ * previewed) keeps it in memory, and "Add to library" then keeps it. It is disabled when there is no song (no score span).
  *
  * Until the open song's offset is known the trigger is disabled with a loading
  * badge: a step needs a known base, and a bare (un-badged) button meanwhile
@@ -89,12 +91,12 @@ function keyName(key: KeySignature): string {
  * shows, as a number — so a script can read it without opening the panel.
  */
 export function TransposeControl() {
-  const song = useLibrarySong();
+  const { identity } = useSongDocument();
   const transpose = useSongSetting(transposeSetting);
   const { score } = useSession();
   const hasScore = scoreEndBeat(score) > 0;
-  // A file document's transpose is its read-only default: no control.
-  if (song.kind === "none") return null;
+  // No song loaded: nothing to transpose.
+  if (identity === null) return null;
 
   if (transpose.kind === "failed") {
     return (
@@ -120,7 +122,7 @@ export function TransposeControl() {
 
   return (
     <TransposePopover
-      songId={song.songId}
+      identity={identity}
       semitones={transpose.value}
       disabled={!hasScore}
     />
@@ -132,15 +134,15 @@ const BADGE_OFFSET = { top: "-0.125rem", right: "-0.25rem" } as const;
 
 /** Trigger + panel over a KNOWN offset. */
 function TransposePopover({
-  songId,
+  identity,
   semitones,
   disabled,
 }: {
-  songId: string;
+  identity: SongIdentity;
   semitones: number;
   disabled: boolean;
 }) {
-  const setStore = useWriteSongSetting(transposeSetting);
+  const setStore = useEditSongSetting(transposeSetting);
   const fetchEndpoint = useFetchEndpoint();
   const { score } = useSession();
 
@@ -157,11 +159,14 @@ function TransposePopover({
         : transposeKey(currentKey, -semitones);
 
   // Write the loaded song's setting optimistically (instant re-render of every
-  // lens + audio), then persist for this song. Clamp to the octave range.
+  // lens + audio), then persist for a library song (a file document's stays
+  // in memory). Clamp to the octave range.
   const setTranspose = (next: number) => {
     const clamped = Math.max(MIN_SEMITONES, Math.min(MAX_SEMITONES, next));
-    setStore(songId, clamped);
-    saveTranspose(fetchEndpoint, songId, clamped);
+    setStore(identity, clamped);
+    if (identity.kind === "library") {
+      saveTranspose(fetchEndpoint, identity.songId, clamped);
+    }
   };
 
   const label =

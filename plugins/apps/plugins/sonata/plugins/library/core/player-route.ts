@@ -8,13 +8,19 @@ import { defineRoute } from "@plugins/primitives/plugins/pane/core";
  * closed list, because the route's grammar is static; which plugin fills a
  * key is the contribution's business, never the library's.
  */
-export const SONG_LINK_KEYS = ["grid", "ug", "groove"] as const;
+export const SONG_LINK_KEYS = [
+  "grid",
+  "ug",
+  "groove",
+  "swing",
+  "transpose",
+] as const;
 
 /** One of {@link SONG_LINK_KEYS}. */
 export type SongLinkKey = (typeof SONG_LINK_KEYS)[number];
 
 /**
- * The player pane's route, `/sonata/song/:songId;bar;lens;title;grid;ug;groove`
+ * The player pane's route, `/sonata/song/:songId;bar;lens;title;grid;ug;groove;swing;transpose`
  * (the pane itself is `sonataPlayerPane`, web). In `core/` so a caller outside
  * the app can build a link to a song — `sonataPlayerRoute.link(sonataApp, {
  * songId })` — without importing the library's web barrel, which would pull
@@ -29,5 +35,5 @@ export type SongLinkKey = (typeof SONG_LINK_KEYS)[number];
  */
 export const sonataPlayerRoute = defineRoute({
   id: "sonata-player",
-  segment: "song/:songId;bar;lens;title;grid;ug;groove",
+  segment: "song/:songId;bar;lens;title;grid;ug;groove;swing;transpose",
 });

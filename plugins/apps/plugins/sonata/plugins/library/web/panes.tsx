@@ -70,6 +70,7 @@ import { SongHydrator } from "./song-hydrator";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { SectionDock } from "./components/section-pane";
@@ -508,9 +509,10 @@ function SonataPlayerSurface(): ReactElement {
 /**
  * A share link to a song this library does not have, previewed: the song the
  * link carries (its creating part's source, the other parts' settings — the
- * groove) loaded as a file document — nothing of it is persisted and no
- * setting is writable — in the same immersive player, with the link's title
- * and "Add to library" in the header. Adding it makes it a library song, and
+ * groove, the swing, the transpose) loaded as a file document — nothing of
+ * it is persisted; its edits live in memory — in the same immersive player,
+ * with the link's title, a "Not saved" chip and "Add to library" in the
+ * header. Adding it makes it a library song, and
  * the surface then opens it as any other (the address goes back to plain).
  *
  * Waits for the deferred tier, which holds the link parts, as a library
@@ -570,6 +572,13 @@ function LinkPreviewSurface({
             <Text variant="subheading" className="font-bold">
               {identity.name}
             </Text>
+            <Badge
+              variant="warning"
+              shape="pill"
+              tooltip="This shared song is not in your library: what you change here is lost when you leave. Add it to keep it."
+            >
+              Not saved
+            </Badge>
             <AddToLibraryButton songId={id} params={params} />
           </Line>
         }

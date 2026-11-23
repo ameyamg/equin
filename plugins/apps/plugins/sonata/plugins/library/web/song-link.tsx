@@ -35,6 +35,8 @@ export interface PlayerParams {
   grid?: string;
   ug?: string;
   groove?: string;
+  swing?: string;
+  transpose?: string;
 }
 
 type SongLinkPart = ReturnType<
