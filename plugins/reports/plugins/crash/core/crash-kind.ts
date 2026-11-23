@@ -52,7 +52,7 @@ export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 //  2. No parsable frames, but a caller-declared `errorType` — several callers
 //     pass exactly that ON PURPOSE, so a family of varying messages collapses
 //     onto one row (`PaneRestoreCorrupt`, `JobDeadline`,
-//     `LiveStateWedge:<discriminator>`, `PluginLoadError <path>`,
+//     `LiveStateWedge:<discriminator>`, `PluginLoadError <path> (<kind>)`,
 //     `EndpointError <status> <route>`). That is a declared identity: honour it.
 //  3. Neither — a browser `window.onerror` with no `Error` object, or a server
 //     call site passing `stack: null` and no type. The message is then the ONLY

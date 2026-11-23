@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { ModuleLoadFailure } from "./module-load-failure";
 
 // Deferred-load signal — a tiny module-level external store that broadcasts how
 // far the post-paint deferred plugin tier has progressed, and which plugins
@@ -29,6 +30,12 @@ import { useSyncExternalStore } from "react";
 export interface PluginLoadReport {
   pluginPath: string;
   message: string;
+  /**
+   * What kind of failure it was — a fetch, a link, or anything else
+   * (`module-load-failure.ts`). Part of the report's identity: one plugin
+   * failing to download and the same plugin failing to link are two bugs.
+   */
+  failure: ModuleLoadFailure;
 }
 
 // Soft-reporter slot mapping a plugin-load failure to a filed report. The reports

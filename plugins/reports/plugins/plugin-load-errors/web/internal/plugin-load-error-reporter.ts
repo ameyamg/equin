@@ -9,7 +9,7 @@ import {
 } from "./load-probe";
 
 function buildReport(info: PluginLoadReport, probe: LoadProbe | Error) {
-  const { pluginPath, message } = info;
+  const { pluginPath, message, failure } = info;
   const finding =
     probe instanceof Error
       ? `the load probe failed: ${probe.message}`
@@ -20,10 +20,17 @@ function buildReport(info: PluginLoadReport, probe: LoadProbe | Error) {
     message: `${message} — ${finding}`,
     url: window.location.href,
     userAgent: navigator.userAgent,
-    // No throw-site stack for a chunk-load failure; the plugin path is the
-    // distinguishing info, so encode it into errorType — one crash task per
-    // failing plugin (the server fingerprints by errorType + stack).
-    data: { errorType: `PluginLoadError ${pluginPath}`, stack: null },
+    // No throw-site stack for a chunk-load failure; the plugin path and the
+    // KIND of failure are the distinguishing info, so both go into errorType —
+    // one crash task per failing plugin and kind (the server fingerprints by
+    // errorType + stack). The kind matters: keyed by the plugin alone, a link
+    // error landed on the row of an earlier fetch failure and read "regressed"
+    // against a fix for the fetch (equin.ai, 2026-11-22: active-data's missing
+    // export on report-1794951421-c3g90t, fixed for "Failed to fetch").
+    data: {
+      errorType: `PluginLoadError ${pluginPath} (${failure})`,
+      stack: null,
+    },
     // The tab's half of the proof that its build was retired; the server
     // re-checks it (reports/core's version-skew). Only a 404 is a proof.
     ...(!(probe instanceof Error) && probe.kind === "missing"

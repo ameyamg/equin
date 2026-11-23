@@ -11,7 +11,7 @@ afterAll(() => {
 });
 
 function failure(i: number): PluginLoadReport {
-  return { pluginPath: `p${i}`, message: `m${i}` };
+  return { pluginPath: `p${i}`, message: `m${i}`, failure: "fetch" };
 }
 
 // The sink is a module singleton: register(null) both detaches the handler and

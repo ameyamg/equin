@@ -89,13 +89,43 @@ describe("loadPlugins across a loss of reach", () => {
     const loader = vi.fn(() => {
       calls++;
       if (calls === 1) setVisibility("hidden");
-      return Promise.reject(new SyntaxError("Unexpected token"));
+      return Promise.reject(lost());
     });
     const result = loadPlugins([{ pluginPath: "a", id: "a", loader }]);
     await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(1));
     setVisibility("visible");
     const { errors } = await result;
     expect(errors).toHaveLength(1);
+    expect(errors[0]!.failure).toBe("fetch");
     expect(loader).toHaveBeenCalledTimes(2);
   });
+
+  // The network explains only a fetch failure. A graph that arrived and does
+  // not link (or a module that threw) is asked again for nothing — in Firefox
+  // the retry of a link failure inside an import cycle answers "Module
+  // function declarations have already been instantiated" (equin.ai,
+  // 2026-11-22), hiding the real missing export.
+  test.each([
+    [
+      "link",
+      new SyntaxError(
+        "The requested module 'https://x/a.js' doesn't provide an export named: 'init_a'",
+      ),
+    ],
+    ["other", new TypeError("x is not a function")],
+  ] as const)(
+    "a %s failure after the tab was hidden fails at once, never asked again",
+    async (failure, error) => {
+      const loader = vi.fn(() => {
+        setVisibility("hidden");
+        return Promise.reject(error);
+      });
+      const { errors } = await loadPlugins([
+        { pluginPath: "a", id: "a", loader },
+      ]);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]!.failure).toBe(failure);
+      expect(loader).toHaveBeenCalledTimes(1);
+    },
+  );
 });

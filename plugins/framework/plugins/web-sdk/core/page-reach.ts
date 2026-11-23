@@ -2,6 +2,7 @@ import {
   clockOffset,
   type ClockOffset,
 } from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
+import { moduleLoadFailureOf } from "./module-load-failure";
 
 // Whether this page could reach the network while a load ran — and waiting for
 // it to again.
@@ -23,6 +24,14 @@ import {
 // its reach throws at once — a missing file, an evaluation error, a server
 // failing to serve stay as loud as before, and so does a reload that fails
 // again after the page came back.
+//
+// Only a FETCH failure is asked again (`module-load-failure.ts`): it is the one
+// answer the network can explain. A graph that arrived and does not link, or a
+// module whose code threw, is the browser's answer about the bytes it has —
+// asked again it answers the same, and in Firefox worse: a link that failed
+// inside an import cycle leaves the cycle unable to link again, so the retry
+// came back "Module function declarations have already been instantiated"
+// instead of the real missing export (equin.ai, 2026-11-22).
 //
 // A sleep fires none of those events: a laptop closed with the tab in front
 // stays "visible" and "online" throughout. Its requests in flight die with
@@ -156,10 +165,11 @@ export function whenPageCanFetch(): Promise<void> {
 }
 
 /**
- * `load()`, asked again each time it failed after the page lost its reach —
- * once the page is visible and online again. A failure while the page kept its
- * reach is thrown. Each new attempt needs a new loss of reach to be retried, so
- * this never loops on its own.
+ * `load()`, asked again each time it failed to FETCH after the page lost its
+ * reach — once the page is visible and online again. A failure while the page
+ * kept its reach, or one that is not a fetch failure (a link or evaluation
+ * error), is thrown. Each new attempt needs a new loss of reach to be retried,
+ * so this never loops on its own.
  */
 export async function loadAcrossReachLoss<T>(
   load: () => Promise<T>,
@@ -169,6 +179,7 @@ export async function loadAcrossReachLoss<T>(
     try {
       return await load();
     } catch (err) {
+      if (moduleLoadFailureOf(err) !== "fetch") throw err;
       if (!pageReachLostSince(mark)) throw err;
       console.warn(
         "[plugin] a load failed while the page was hidden, offline, asleep or leaving — loading it again once the page is back",

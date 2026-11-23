@@ -1,6 +1,10 @@
 import type { LoadedPlugin, PluginDefinition } from "./types";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { loadAcrossReachLoss } from "./page-reach";
+import {
+  moduleLoadFailureOf,
+  type ModuleLoadFailure,
+} from "./module-load-failure";
 
 export interface PluginEntry {
   pluginPath: string;
@@ -11,6 +15,8 @@ export interface PluginEntry {
 export interface PluginLoadError {
   pluginPath: string;
   error: unknown;
+  /** What kind of failure the rejection is (`module-load-failure.ts`). */
+  failure: ModuleLoadFailure;
 }
 
 export async function loadPlugins(
@@ -71,7 +77,11 @@ export async function loadPlugins(
         `[plugin.${entry.pluginPath}] failed to load`,
         result.reason,
       );
-      errors.push({ pluginPath: entry.pluginPath, error: result.reason });
+      errors.push({
+        pluginPath: entry.pluginPath,
+        error: result.reason,
+        failure: moduleLoadFailureOf(result.reason),
+      });
     }
   }
   return { plugins, errors };

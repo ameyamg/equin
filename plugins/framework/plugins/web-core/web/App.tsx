@@ -333,7 +333,11 @@ function recordErrors(errors: PluginLoadError[]): void {
   for (const e of errors) {
     const message =
       e.error instanceof Error ? e.error.message : String(e.error);
-    pluginLoadReportSink.emit({ pluginPath: e.pluginPath, message });
+    pluginLoadReportSink.emit({
+      pluginPath: e.pluginPath,
+      message,
+      failure: e.failure,
+    });
   }
 }
 

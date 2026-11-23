@@ -349,7 +349,7 @@ async function reportFor(
       WHERE source = 'plugin-load' AND data->>'errorType' = $1
         AND last_seen_at >= $2
       ORDER BY last_seen_at DESC LIMIT 1`,
-    [`PluginLoadError ${pluginPath}`, new Date(sinceMs)],
+    [`PluginLoadError ${pluginPath} (fetch)`, new Date(sinceMs)],
   );
   return rows[0];
 }
@@ -375,7 +375,7 @@ async function assertReported(pluginPath: string, sinceMs: number) {
     );
   }
   r.note(
-    `DB check: SELECT id, count, last_seen_at, message FROM reports WHERE source = 'plugin-load' AND data->>'errorType' = 'PluginLoadError ${pluginPath}' ORDER BY last_seen_at DESC;`,
+    `DB check: SELECT id, count, last_seen_at, message FROM reports WHERE source = 'plugin-load' AND data->>'errorType' = 'PluginLoadError ${pluginPath} (fetch)' ORDER BY last_seen_at DESC;`,
   );
 }
 
