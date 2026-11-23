@@ -56,6 +56,61 @@ const ctx = {
 } as const;
 
 describe("buildLoadSplit", () => {
+  test("reads a browser entry, whose fields are getters on its prototype", () => {
+    // PerformanceResourceTiming's shape: no own properties, so a spread of
+    // it is `{}` (equin.ai, 2026-11-23: "reading 'startsWith'" in filePath).
+    class Entry {
+      readonly #f: ResourceFields;
+      constructor(f: ResourceFields) {
+        this.#f = f;
+      }
+      get name() {
+        return this.#f.name;
+      }
+      get initiatorType() {
+        return this.#f.initiatorType;
+      }
+      get startTime() {
+        return this.#f.startTime;
+      }
+      get requestStart() {
+        return this.#f.requestStart;
+      }
+      get responseStart() {
+        return this.#f.responseStart;
+      }
+      get responseEnd() {
+        return this.#f.responseEnd;
+      }
+      get transferSize() {
+        return this.#f.transferSize;
+      }
+      get nextHopProtocol() {
+        return this.#f.nextHopProtocol;
+      }
+    }
+    const split = buildLoadSplit(
+      records({
+        resources: [new Entry(file(`${origin}/artifacts/a.js`, 100, 900))],
+      }),
+      2_000,
+    );
+    expect(split.slowest).toEqual([
+      {
+        path: "/artifacts/a.js",
+        by: "other",
+        startMs: 100,
+        queueMs: 10,
+        waitMs: 40,
+        downloadMs: 750,
+        totalMs: 800,
+        bytes: 10_000,
+        protocol: "h3",
+      },
+    ]);
+    expect(LoadSplitSchema.parse(split)).toEqual(split);
+  });
+
   test("a stalled file stands out: which, when and in which part", () => {
     const split = buildLoadSplit(
       records({

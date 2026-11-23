@@ -153,11 +153,18 @@ const DEFAULT_RESOURCE_BUFFER = 250;
  * A file's times cut at `untilMs`: what it had done when the visitor stopped
  * waiting — a page hidden before it booted is judged after, when the files
  * the hide held up have ended.
+ *
+ * Each field copied by name, never spread: a real `PerformanceResourceTiming`
+ * holds them as getters on its prototype, which a spread does not copy.
  */
 function cut(r: ResourceFields, untilMs: number): ResourceFields {
   const at = (ms: number) => (ms > 0 ? Math.min(ms, untilMs) : ms);
   return {
-    ...r,
+    name: r.name,
+    initiatorType: r.initiatorType,
+    startTime: r.startTime,
+    transferSize: r.transferSize,
+    nextHopProtocol: r.nextHopProtocol,
     requestStart: at(r.requestStart),
     responseStart: at(r.responseStart),
     responseEnd: at(r.responseEnd),
