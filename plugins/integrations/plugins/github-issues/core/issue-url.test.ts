@@ -12,13 +12,13 @@ import {
 
 const REPO = "https://github.com/owner/repo";
 
-/** The website Wish's notes and label — a real host's, so the expected bodies read as filed. */
+/** The website Wish's notes and template — a real host's, so the expected bodies read as filed. */
 const website = (autoDeploy: boolean) => ({
   notes: [
     `Auto-deploy: ${autoDeploy ? "yes" : "no (review first)"}`,
     "Filed from the Wish button on equin.ai",
   ],
-  labels: ["idea"],
+  template: "wish" as const,
 });
 const PAGE = "https://equin.ai/about/harness";
 
@@ -49,6 +49,7 @@ function parse(url: string) {
     title: parsed.searchParams.get("title"),
     body: parsed.searchParams.get("body") ?? "",
     labels: parsed.searchParams.get("labels"),
+    template: parsed.searchParams.get("template"),
   };
 }
 
@@ -120,10 +121,12 @@ describe("buildIssueUrl", () => {
       pageUrl: PAGE,
       ...website(false),
     });
-    const { path, title, body, labels } = parse(url);
+    const { path, title, body, labels, template } = parse(url);
     expect(path).toBe(`${REPO}/issues/new`);
     expect(title).toBe("Show a 20-second demo");
-    expect(labels).toBe("idea");
+    // The template carries the label for anyone; labels= for a triager.
+    expect(template).toBe("wish.md");
+    expect(labels).toBe("Wish");
     expect(body).toBe(
       [
         "Show a 20-second demo\nunder the headline",
@@ -173,6 +176,7 @@ describe("buildIssueUrl", () => {
     expect([...new URL(url).searchParams.keys()]).toEqual([
       "title",
       "body",
+      "template",
       "labels",
     ]);
     const { title, body } = parse(url);
@@ -404,15 +408,16 @@ describe("buildIssueUrl", () => {
 });
 
 describe("buildIssueUrl's host-given parts", () => {
-  test("no page, no labels: the body ends on the notes", () => {
+  test("no page, no template: the body ends on the notes", () => {
     const url = buildIssueUrl({
       repoUrl: REPO,
       text: "the cancel button is useless\nplease remove it",
       notes: ["Filed from the app"],
     });
-    const { title, body, labels } = parse(url);
+    const { title, body, labels, template } = parse(url);
     expect(title).toBe("the cancel button is useless");
     expect(labels).toBeNull();
+    expect(template).toBeNull();
     expect(body).toBe(
       "the cancel button is useless\nplease remove it\n\n---\nFiled from the app",
     );

@@ -11,9 +11,6 @@ import { useEnvironmentNotes } from "../internal/use-environment-notes";
 
 const githubIcon = brand("github");
 
-/** The repository label every wish filed from the app carries (applied for a filer with triage rights). */
-const WISH_LABEL = "Wish";
-
 /**
  * Sends the drafted wish to GitHub instead of an agent here: a real
  * `<a target="_blank">` to the repository's new-issue form, prefilled with the
@@ -57,7 +54,7 @@ export function FileOnGithubButton({
       ...environment.notes,
       "Filed from the Wish button in the equin app",
     ],
-    labels: [WISH_LABEL],
+    template: "wish",
   });
   return (
     <Button

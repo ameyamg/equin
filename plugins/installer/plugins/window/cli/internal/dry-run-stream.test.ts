@@ -240,6 +240,9 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
       expect(url.origin + url.pathname).toBe(
         "https://github.com/equinai/equin/issues/new",
       );
+      // The issue template that labels it for anyone (github-issues'
+      // ISSUE_TEMPLATES.install, whose file templates-in-sync holds).
+      expect(url.searchParams.get("template")).toBe("install.md");
       expect(url.searchParams.get("labels")).toBe("install");
       expect(url.searchParams.get("title")).toBe(
         "Install: Downloading equin didn't finish",

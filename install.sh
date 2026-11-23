@@ -2367,7 +2367,10 @@ report_url() {
   foot=$'\n'"⬇ **Your install log is on your clipboard: paste it here (⌘V / Ctrl+V).** If it is not, attach the file \`$RD\`. ⬇"$'\n'
   redact "$body"; body=$RD
   urlencode "Install: $P_TITLE"; t=$UE
-  base="$CANONICAL_REPO_URL/issues/new?labels=install&title=$t&body="
+  # template=: GitHub applies the install label for anyone who files through
+  # the template, a bare labels= only for a filer with triage rights
+  # (github-issues' ISSUE_TEMPLATES.install; the stream test spells it too).
+  base="$CANONICAL_REPO_URL/issues/new?template=install.md&labels=install&title=$t&body="
   urlencode "$body$foot"
   room=$((REPORT_URL_MAX - ${#base} - ${#UE} - 200))
   # The install's last lines before what the evidence already shows: an

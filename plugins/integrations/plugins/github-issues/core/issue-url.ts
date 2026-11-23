@@ -1,4 +1,5 @@
 import { splitUiContext } from "@plugins/primitives/plugins/ui-context/core";
+import { ISSUE_TEMPLATES, type IssueTemplateId } from "./issue-templates";
 
 /**
  * GitHub rejects a new-issue link much past 8,000 characters, and the text is
@@ -26,10 +27,12 @@ export interface IssueDraft {
    */
   notes: readonly string[];
   /**
-   * Labels to apply. GitHub applies them only for a filer with triage rights
-   * on the repository; everyone else files unlabelled.
+   * The issue template filed through (`ISSUE_TEMPLATES`), which carries the
+   * issue's label. Never a bare `labels=`: GitHub applies that only for a
+   * filer with triage rights, so everyone else's issue came unlabelled; a
+   * template's label applies for anyone.
    */
-  labels?: readonly string[];
+  template?: IssueTemplateId;
 }
 
 /** One part of the page the visitor pointed at, as its tag sits in their text. */
@@ -212,8 +215,12 @@ function urlFor(
     title,
     body: issueBody(picks, shape, draft),
   });
-  if (draft.labels && draft.labels.length > 0)
-    query.set("labels", draft.labels.join(","));
+  if (draft.template !== undefined) {
+    const template = ISSUE_TEMPLATES[draft.template];
+    query.set("template", template.file);
+    // Also as a parameter: a filer with triage rights gets it either way.
+    query.set("labels", template.label);
+  }
   return `${draft.repoUrl.replace(/\/+$/, "")}/issues/new?${query.toString()}`;
 }
 

@@ -303,7 +303,7 @@ function ReplayView({
       `Auto-deploy: ${replay.autoDeploy ? "yes" : "no (review first)"}`,
       "Filed from the Wish button on equin.ai",
     ],
-    labels: ["idea"],
+    template: "wish",
   });
 
   return (

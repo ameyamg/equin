@@ -121,6 +121,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/paths/plugins/data-files", id: "infra.paths.data-files", loader: () => import("@plugins/infra/plugins/paths/plugins/data-files/check"), dependsOn: [] },
   { pluginPath: "installer", id: "installer", loader: () => import("@plugins/installer/check"), dependsOn: [] },
   { pluginPath: "installer/plugins/release-assets", id: "installer.release-assets", loader: () => import("@plugins/installer/plugins/release-assets/check"), dependsOn: [] },
+  { pluginPath: "integrations/plugins/github-issues", id: "integrations.github-issues", loader: () => import("@plugins/integrations/plugins/github-issues/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live/plugins/change-feed", id: "network.live.change-feed", loader: () => import("@plugins/network/plugins/live/plugins/change-feed/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live/plugins/query-resource", id: "network.live.query-resource", loader: () => import("@plugins/network/plugins/live/plugins/query-resource/check"), dependsOn: [] },

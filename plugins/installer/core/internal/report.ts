@@ -50,6 +50,6 @@ export function installIssueUrl(report: InstallReport): string {
       `Release: ${report.release ?? "main's newest version"} · system: ${report.platform}`,
       "The full log is install.log, in the newest folder of equin's install logs (the installer names it): drag it here to attach it.",
     ],
-    labels: ["install"],
+    template: "install",
   });
 }

@@ -26,6 +26,7 @@ describe("installer report link", () => {
     );
     expect(url.pathname).toBe("/equinai/equin/issues/new");
     expect(url.searchParams.get("labels")).toBe("install");
+    expect(url.searchParams.get("template")).toBe("install.md");
     expect(url.searchParams.get("title")).toBe(
       "Install: Blocked by the app you started it from",
     );
