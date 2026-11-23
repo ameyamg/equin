@@ -23,6 +23,10 @@ import {
 } from "./draw";
 import {
   annexOf,
+  CHIMNEY_D,
+  isRound,
+  SIDE_D,
+  sideWindows,
   doorHeight,
   storehouseOpening,
   doorWidth,
@@ -34,25 +38,92 @@ import {
   windowSlots,
 } from "./layout";
 import { doorArch, lantern, windowRect } from "./parts";
+import { oblique } from "./oblique";
 import type { Plan } from "./plan";
 import { flowerBox, paintProps } from "./props";
 import { paintRoof, roofCover, smallRoof, wallFill } from "./walls";
 
-/** A chimney whose base is on the roof at (x, y). */
+/** A chimney whose base is on the roof at (x, y): a stone stack with its right side receding, under a capping seen from above. */
 function chimneyAt(g: Ctx2D, x: number, y: number, r: Rnd): void {
   const w = 14;
   const h = 34;
-  stones(g, x - w / 2, y - h, x + w / 2, y + 4, r, {
-    rowH: 6,
-    blockW: 8,
-    base: "#a59d8b",
+  oblique.solid(
+    g,
+    { x0: x - w / 2, x1: x + w / 2, yb: y + 4, yt: y - h, d: CHIMNEY_D },
+    {
+      side: (d, yt, yb) =>
+        stones(g, 0, yt, d, yb, r, {
+          rowH: 6,
+          blockW: 6,
+          base: "#8f8777",
+          outline: false,
+        }),
+      front: () =>
+        stones(g, x - w / 2, y - h, x + w / 2, y + 4, r, {
+          rowH: 6,
+          blockW: 8,
+          base: "#a59d8b",
+        }),
+      ink: 1,
+    },
+  );
+  oblique.solid(
+    g,
+    {
+      x0: x - w / 2 - 2,
+      x1: x + w / 2 + 2,
+      yb: y - h + 1,
+      yt: y - h - 4,
+      d: CHIMNEY_D + 2,
+    },
+    {
+      side: (d, yt, yb) => {
+        g.fillStyle = "#57534b";
+        g.fillRect(0, yt, d, yb - yt);
+      },
+      top: (x0, x1, d) => {
+        g.fillStyle = "#807a6e";
+        g.fillRect(x0, 0, x1 - x0, d);
+        g.fillStyle = "#2a2622";
+        g.fillRect(x0 + 5, 2.5, x1 - x0 - 10, d - 5);
+      },
+      front: () => {
+        g.fillStyle = "#6f6a60";
+        g.fillRect(x - w / 2 - 2, y - h - 4, w + 4, 5);
+      },
+      shade: 0,
+      ink: 1,
+    },
+  );
+}
+
+/**
+ * The right side wall of a rectangular body, receding: painted flat in
+ * side-face space — its material, the plinth, the string course, a narrow
+ * window where nothing stands against it — then put in shade.
+ */
+function sideWall(g: Ctx2D, p: Plan, r: Rnd, night: boolean, WT: number): void {
+  const x1 = p.W2;
+  oblique.onSide(g, x1, () => {
+    wallFill(g, 0, WT, SIDE_D, 0, r, p.wall);
+    if (!(p.wall === "rubble" || p.wall === "ashlar"))
+      stones(g, 0, -12, SIDE_D, 0, r, {
+        rowH: 6,
+        blockW: 9,
+        base: "#a59d8b",
+      });
+    if (p.storeys === 2) {
+      g.fillStyle = "#8f8878";
+      g.fillRect(0, WT / 2 - 3, SIDE_D, 5);
+      ink(g, 0.9, 0.6);
+      g.strokeRect(0, WT / 2 - 3, SIDE_D, 5);
+    }
+    for (const y of sideWindows(p))
+      windowRect(g, 5, y, 8, 20, r, { lit: night, arch: p.winArch });
   });
-  g.fillStyle = "#6f6a60";
-  g.fillRect(x - w / 2 - 2, y - h - 4, w + 4, 5);
-  ink(g, 1);
-  g.strokeRect(x - w / 2 - 2, y - h - 4, w + 4, 5);
-  g.fillStyle = "#2a2622";
-  g.fillRect(x - 4, y - h - 4, 8, 2);
+  const side = oblique.sideFace(x1, 0, WT, SIDE_D);
+  oblique.shadeFace(g, side, 0.34);
+  oblique.inkFace(g, side, 1.3);
 }
 
 function doorAt(
@@ -215,7 +286,9 @@ export function paintBuilding(g: Ctx2D, s: PaintState, p: Plan): void {
   // cast shadow first
   castShadow(g, shadowPts(p), 0.26);
   let chim: { chimX: number; chimY: number } | null = null;
-  // annex (lean-to) first so the main body overlaps its inner edge
+  // the body's right side wall, behind everything else of it
+  if (!isRound(p)) sideWall(g, p, r, night, WT);
+  // annex (lean-to) next so the main body overlaps its inner edge
   const annex = annexOf(p);
   if (annex) {
     const { x0: ax0, x1: ax1, h: aH } = annex;
@@ -248,7 +321,24 @@ export function paintBuilding(g: Ctx2D, s: PaintState, p: Plan): void {
       ink(g, 1.3);
       g.strokeRect(bx0, -aH + 10, bx1 - bx0, aH - 10);
     } else wallFill(g, ax0, -aH, ax1, 0, r, annex.wall);
-    roofCover(g, p.roof, annex.roof, r);
+    // the wall under the verge, its free end receding (a lean-to on the right), then the roof going back
+    const gb = bbox(annex.gable);
+    // (the verge lies in the front plane: its pitch is no receding edge)
+    oblique.diagonal(g, () =>
+      wallFill(g, gb[0], gb[1], gb[2], gb[3], r, annex.wall, () =>
+        poly(g, annex.gable),
+      ),
+    );
+    const endX = annex.endX;
+    if (endX !== null) {
+      oblique.onSide(g, endX, () =>
+        wallFill(g, 0, -aH, SIDE_D, 0, r, annex.wall),
+      );
+      const end = oblique.sideFace(endX, 0, -aH, SIDE_D);
+      oblique.shadeFace(g, end, 0.34);
+      oblique.inkFace(g, end, 1.2);
+    }
+    oblique.fill(g, annex.roof, (pts) => roofCover(g, p.roof, pts, r));
   }
   if (p.arch === "tower") {
     const path = () => {
@@ -360,10 +450,13 @@ export function paintBuilding(g: Ctx2D, s: PaintState, p: Plan): void {
       const a = (i / 12) * Math.PI;
       dome.push([Math.cos(a) * R2, WT + 10 + Math.sin(a) * 10]);
     }
-    thatch(g, dome, r, null);
+    // (a round dome: the samples of its curve are no receding edges)
+    oblique.diagonal(g, () => thatch(g, dome, r, null));
     g.save();
-    poly(g, dome);
-    g.clip();
+    oblique.diagonal(g, () => {
+      poly(g, dome);
+      g.clip();
+    });
     g.fillStyle = "rgba(20,18,15,.2)";
     g.beginPath();
     g.ellipse(R2 * 0.5, WT - dh * 0.2, R2 * 0.7, dh, 0, 0, 7);

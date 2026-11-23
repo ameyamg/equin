@@ -363,6 +363,10 @@
       "name": "@equin/plugin-apps-debug",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/debug/plugins/isle-building": {
+      "name": "@equin/plugin-apps-debug-isle-building",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/debug/plugins/shell": {
       "name": "@equin/plugin-apps-debug-shell",
       "version": "0.0.1",
@@ -543,6 +547,10 @@
       "name": "@equin/plugin-apps-desktop-fullscreen-budget",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/desktop/plugins/isle-building": {
+      "name": "@equin/plugin-apps-desktop-isle-building",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/desktop/plugins/launcher": {
       "name": "@equin/plugin-apps-desktop-launcher",
       "version": "0.0.1",
@@ -720,6 +728,10 @@
     },
     "plugins/apps/plugins/home/plugins/app-cards": {
       "name": "@equin/plugin-apps-home-app-cards",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/home/plugins/isle-building": {
+      "name": "@equin/plugin-apps-home-isle-building",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/home/plugins/new-app": {
@@ -1602,6 +1614,10 @@
     },
     "plugins/apps/plugins/website/plugins/improve": {
       "name": "@equin/plugin-apps-website-improve",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/isle-building": {
+      "name": "@equin/plugin-apps-website-isle-building",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/landing": {
@@ -8605,6 +8621,8 @@
 
     "@equin/plugin-apps-debug": ["@equin/plugin-apps-debug@workspace:plugins/apps/plugins/debug"],
 
+    "@equin/plugin-apps-debug-isle-building": ["@equin/plugin-apps-debug-isle-building@workspace:plugins/apps/plugins/debug/plugins/isle-building"],
+
     "@equin/plugin-apps-debug-shell": ["@equin/plugin-apps-debug-shell@workspace:plugins/apps/plugins/debug/plugins/shell"],
 
     "@equin/plugin-apps-deploy": ["@equin/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
@@ -8693,6 +8711,8 @@
 
     "@equin/plugin-apps-desktop-fullscreen-budget": ["@equin/plugin-apps-desktop-fullscreen-budget@workspace:plugins/apps/plugins/desktop/plugins/fullscreen-budget"],
 
+    "@equin/plugin-apps-desktop-isle-building": ["@equin/plugin-apps-desktop-isle-building@workspace:plugins/apps/plugins/desktop/plugins/isle-building"],
+
     "@equin/plugin-apps-desktop-launcher": ["@equin/plugin-apps-desktop-launcher@workspace:plugins/apps/plugins/desktop/plugins/launcher"],
 
     "@equin/plugin-apps-desktop-shelf": ["@equin/plugin-apps-desktop-shelf@workspace:plugins/apps/plugins/desktop/plugins/shelf"],
@@ -8780,6 +8800,8 @@
     "@equin/plugin-apps-home": ["@equin/plugin-apps-home@workspace:plugins/apps/plugins/home"],
 
     "@equin/plugin-apps-home-app-cards": ["@equin/plugin-apps-home-app-cards@workspace:plugins/apps/plugins/home/plugins/app-cards"],
+
+    "@equin/plugin-apps-home-isle-building": ["@equin/plugin-apps-home-isle-building@workspace:plugins/apps/plugins/home/plugins/isle-building"],
 
     "@equin/plugin-apps-home-new-app": ["@equin/plugin-apps-home-new-app@workspace:plugins/apps/plugins/home/plugins/new-app"],
 
@@ -9200,6 +9222,8 @@
     "@equin/plugin-apps-website-demos-workspace-story": ["@equin/plugin-apps-website-demos-workspace-story@workspace:plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story"],
 
     "@equin/plugin-apps-website-improve": ["@equin/plugin-apps-website-improve@workspace:plugins/apps/plugins/website/plugins/improve"],
+
+    "@equin/plugin-apps-website-isle-building": ["@equin/plugin-apps-website-isle-building@workspace:plugins/apps/plugins/website/plugins/isle-building"],
 
     "@equin/plugin-apps-website-landing": ["@equin/plugin-apps-website-landing@workspace:plugins/apps/plugins/website/plugins/landing"],
 

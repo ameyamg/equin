@@ -48,6 +48,7 @@ App shell for the Home launcher. Registers the `/home` app entry and defines the
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/home/app-cards`
+    - `apps/home/isle-building`
     - `apps/home/new-app`
     - `apps/home/tour`
 

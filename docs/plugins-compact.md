@@ -11,12 +11,12 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`agent-manager`** [6 sub-plugins] — Agent manager app shell and layout.
     - **`browser`** [exempt] [11 sub-plugins] — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
     - **`chord`** [test helpers] [exempt] [9 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
-    - **`debug`** [1 sub-plugin] — Debug app.
+    - **`debug`** [2 sub-plugins] — Debug app.
     - **`deploy`** [test helpers] [exempt] [40 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
-    - **`desktop`** [exempt] [11 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
+    - **`desktop`** [exempt] [12 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [23 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [7 sub-plugins] — File explorer app.
-    - **`home`** [5 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+    - **`home`** [6 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`isle`** [test helpers] [exempt] [8 sub-plugins] — Isle — the island launcher: every installed app is a building on an illustrated archipelago you walk around; new apps get a generated building and are placed append-only, districts fill, then new…
     - **`keyboard-party`** [exempt] [3 sub-plugins] — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
     - **`mail`** [exempt] [13 sub-plugins] — Mail — a Gmail-class client.
@@ -26,7 +26,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`prototypes`** [test helpers] [18 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
     - **`settings`** [5 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [86 sub-plugins] — Sonata — extensible piano and music app.
-    - **`website`** [test helpers] [33 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
+    - **`website`** [test helpers] [34 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the…
   - Plugins:

@@ -1,33 +1,27 @@
-// The scenery sprites: faceted boulders, clumped broadleaf trees and pines,
-// bushes, props (barrels, crates, a well, lamps…), clouds, the dock, the boat
-// and the ferry — each drawn once and placed many times. Made in the
-// prototype's order from one seeded stream, so the island looks the same.
+// The scenery sprites: faceted boulders, props (barrels, crates, lamps, the
+// fire ring…), clouds, the dock, the boat and the ferry — each drawn once and
+// placed many times — and the trees and bushes (`foliage.ts`) and the well
+// (`well.ts`). The boulders, sacks, haystack, clouds and dock draw from one
+// seeded stream in a fixed order; the rest own theirs.
 
 import {
   INK,
   blob,
-  blobPath,
+  grain,
   inkLine,
+  lazySprite,
+  pen,
+  penLine,
+  ring,
   seeded,
   sprite,
-  strHash,
   type Ctx,
   type Rnd,
   type Sprite,
 } from "./kit";
 import { ROCK_COUNT, rockSize } from "./kit";
+import { makeBushes, makeTrees } from "./foliage";
 import { wellSprite } from "./well";
-
-type Palette = readonly [string, string, string, string, string];
-
-export const TREE_PAL: Readonly<
-  Record<"green" | "olive" | "deep" | "autumn", Palette>
-> = {
-  green: ["#2f3b22", "#45542f", "#5c6b3b", "#7a8850", "#9da46c"],
-  olive: ["#39411f", "#515b2c", "#6b7338", "#8a9050", "#aaa86c"],
-  deep: ["#28341f", "#3b4a2c", "#52613a", "#6c7a4c", "#8a9668"],
-  autumn: ["#4f3d20", "#6e5428", "#8e6d36", "#ab8a4b", "#c4a76c"],
-};
 
 const poly = (g: Ctx, pts: readonly (readonly [number, number])[]) => {
   g.beginPath();
@@ -142,248 +136,6 @@ function boulderSprite(rnd: Rnd, s: number, mossy: boolean): Sprite {
   });
 }
 
-interface Clump {
-  x: number;
-  y: number;
-  r: number;
-  rn?: Rnd;
-  p?: Path2D;
-}
-
-function broadleaf(rnd: Rnd, pal: Palette, size: number): Sprite {
-  const R = size;
-  return sprite(R * 3.2, R * 3.6, R * 1.6, R * 3.35, (g) => {
-    g.fillStyle = "rgba(40,48,25,.30)";
-    g.beginPath();
-    g.ellipse(R * 0.35, -R * 0.05, R * 1.25, R * 0.42, 0, 0, 7);
-    g.fill();
-    // the crown's own seed (br) keeps the shared stream — and every sprite made after a tree — unchanged
-    const br = seeded(strHash(pal[0]) ^ Math.round(size * 7919));
-    const top = -R * 1.5;
-    const bark = "#4e3f2c";
-    const dark = "#33291e";
-    g.fillStyle = bark;
-    g.beginPath();
-    g.moveTo(-R * 0.17, 0);
-    g.quadraticCurveTo(-R * 0.1, -R * 0.4, -R * 0.08, top);
-    g.lineTo(R * 0.08, top);
-    g.quadraticCurveTo(R * 0.1, -R * 0.4, R * 0.19, 0);
-    g.closePath();
-    g.fill();
-    g.fillStyle = dark;
-    g.beginPath();
-    g.moveTo(R * 0.04, 0);
-    g.lineTo(R * 0.02, top);
-    g.lineTo(R * 0.08, top);
-    g.quadraticCurveTo(R * 0.1, -R * 0.4, R * 0.19, 0);
-    g.closePath();
-    g.fill();
-    const lean = (br() - 0.5) * 0.2;
-    for (const [side, y0, w] of [
-      [-1, -0.82, 0.1],
-      [1, -0.95, 0.085],
-    ] as const) {
-      const ex = side * R * (0.38 + br() * 0.12) + lean * R;
-      const ey = -R * (1.45 + br() * 0.15);
-      g.strokeStyle = bark;
-      g.lineCap = "round";
-      g.lineWidth = w * R;
-      g.beginPath();
-      g.moveTo(side * R * 0.02, R * y0);
-      g.quadraticCurveTo(side * R * 0.08, R * (y0 - 0.35), ex, ey);
-      g.stroke();
-      g.strokeStyle = "rgba(28,24,18,.75)";
-      g.lineWidth = 1;
-      g.beginPath();
-      g.moveTo(side * R * 0.02 + side * w * R * 0.5, R * y0);
-      g.quadraticCurveTo(
-        side * R * 0.08 + side * w * R * 0.5,
-        R * (y0 - 0.35),
-        ex + side * 1.5,
-        ey,
-      );
-      g.stroke();
-    }
-    inkLine(
-      g,
-      [
-        [-R * 0.17, 0],
-        [-R * 0.1, -R * 0.4],
-        [-R * 0.08, top],
-      ],
-      1,
-    );
-    inkLine(
-      g,
-      [
-        [R * 0.19, 0],
-        [R * 0.1, -R * 0.4],
-        [R * 0.08, top],
-      ],
-      1,
-    );
-    const sh = g.createLinearGradient(0, -R * 0.62, 0, -R * 0.95);
-    sh.addColorStop(0, "rgba(22,26,14,0)");
-    sh.addColorStop(1, "rgba(22,26,14,.6)");
-    g.globalCompositeOperation = "source-atop";
-    g.fillStyle = sh;
-    g.fillRect(-R * 0.3, -R * 0.95, R * 0.6, R * 0.33);
-    g.globalCompositeOperation = "source-over";
-    const clumps: Clump[] = [];
-    const n = 9 + ((rnd() * 5) | 0);
-    for (let i = 0; i < n; i++) {
-      const a = rnd() * Math.PI * 2;
-      const d = rnd() * R * 0.75;
-      clumps.push({
-        x: Math.cos(a) * d,
-        y: -R * 1.6 + Math.sin(a) * d * 0.7,
-        r: R * (0.4 + rnd() * 0.24),
-      });
-    }
-    for (const [x, y, r] of [
-      [-0.42, -1.3, 0.4],
-      [0.4, -1.32, 0.4],
-      [0.02, -1.2, 0.4],
-    ] as const)
-      clumps.push({
-        x: R * (x + (br() - 0.5) * 0.1),
-        y: R * (y + (br() - 0.5) * 0.06),
-        r: R * (r + br() * 0.05),
-        rn: br,
-      });
-    clumps.sort((a, b) => a.y - b.y);
-    for (const c of clumps) {
-      c.rn = c.rn ?? rnd;
-      c.p = blobPath(c.x, c.y, c.r, c.rn, 11, 0.26);
-    }
-    g.strokeStyle = "rgba(28,34,20,.92)";
-    g.lineWidth = 2.4;
-    g.lineJoin = "round";
-    for (const c of clumps) g.stroke(c.p!);
-    g.fillStyle = pal[0];
-    for (const c of clumps) g.fill(c.p!);
-    for (const c of clumps) {
-      const r2 = c.rn!;
-      g.fillStyle = pal[1];
-      blob(g, c.x - c.r * 0.12, c.y - c.r * 0.12, c.r * 0.82, r2, 9, 0.35);
-      g.fill();
-      g.fillStyle = pal[2];
-      blob(g, c.x - c.r * 0.25, c.y - c.r * 0.28, c.r * 0.55, r2, 8, 0.4);
-      g.fill();
-      for (let k = 0; k < 11; k++) {
-        const a = r2() * Math.PI * 2;
-        const d = r2() * c.r * 0.7;
-        const x = c.x + Math.cos(a) * d - c.r * 0.25;
-        const y = c.y + Math.sin(a) * d * 0.8 - c.r * 0.25;
-        g.fillStyle = r2() < 0.75 ? pal[3] : pal[4];
-        g.beginPath();
-        g.ellipse(x, y, 1.6 + r2() * 1.6, 1.1 + r2(), r2() * 3, 0, 7);
-        g.fill();
-      }
-      g.strokeStyle = "rgba(25,30,18,.45)";
-      g.lineWidth = 1;
-      g.beginPath();
-      g.arc(c.x + c.r * 0.1, c.y + c.r * 0.1, c.r * 0.82, 0.2, 2.2);
-      g.stroke();
-    }
-    for (let k = 0; k < 10; k++) {
-      g.fillStyle = "rgba(25,32,18,.5)";
-      g.beginPath();
-      g.arc(
-        (rnd() - 0.5) * R * 1.3,
-        -R * 1.85 + (rnd() - 0.3) * R,
-        1 + rnd() * 2,
-        0,
-        7,
-      );
-      g.fill();
-    }
-  });
-}
-
-function pine(rnd: Rnd, pal: Palette, size: number): Sprite {
-  const R = size;
-  return sprite(R * 2.4, R * 4.2, R * 1.2, R * 4.0, (g) => {
-    g.fillStyle = "rgba(40,48,25,.30)";
-    g.beginPath();
-    g.ellipse(R * 0.3, -R * 0.05, R * 0.9, R * 0.32, 0, 0, 7);
-    g.fill();
-    g.fillStyle = "#4e3e2c";
-    g.fillRect(-R * 0.08, -R * 0.8, R * 0.16, R * 0.8);
-    for (let i = 0; i < 5; i++) {
-      const y = -R * 0.55 - i * R * 0.62;
-      const w = R * (1.0 - i * 0.17);
-      const top = y - R * 0.95;
-      const pts: [number, number][] = [[-w, y]];
-      const teeth = 7;
-      for (let k = 1; k < teeth; k++) {
-        const x = -w + (2 * w * k) / teeth;
-        pts.push([x, y + (k % 2 ? R * 0.12 : -R * 0.02) + rnd() * 3]);
-      }
-      pts.push([w, y], [0, top]);
-      poly(g, pts);
-      g.fillStyle = pal[0];
-      g.fill();
-      g.strokeStyle = "rgba(25,32,20,.9)";
-      g.lineWidth = 1.4;
-      g.stroke();
-      g.fillStyle = pal[1];
-      g.beginPath();
-      g.moveTo(-w * 0.85, y - 2);
-      g.lineTo(0, top + 4);
-      g.lineTo(w * 0.1, y - 4);
-      g.closePath();
-      g.fill();
-      for (let k = 0; k < 12; k++) {
-        const x = (rnd() - 0.7) * w;
-        const yy = y - rnd() * R * 0.7;
-        g.strokeStyle = rnd() < 0.5 ? pal[3] : pal[2];
-        g.lineWidth = 1;
-        g.beginPath();
-        g.moveTo(x, yy);
-        g.lineTo(x + 3, yy + 2);
-        g.stroke();
-      }
-    }
-  });
-}
-
-function bushSprite(rnd: Rnd, pal: Palette): Sprite {
-  return sprite(70, 50, 35, 42, (g) => {
-    g.fillStyle = "rgba(40,48,25,.28)";
-    g.beginPath();
-    g.ellipse(6, 0, 24, 8, 0, 0, 7);
-    g.fill();
-    const cl = [
-      [-10, -10, 11],
-      [8, -11, 12],
-      [0, -19, 11],
-      [-2, -6, 10],
-    ] as const;
-    const ps = cl.map(([x, y, r]) => blobPath(x, y, r, rnd, 9, 0.28));
-    g.strokeStyle = "rgba(28,34,20,.88)";
-    g.lineWidth = 1.8;
-    g.lineJoin = "round";
-    ps.forEach((P) => g.stroke(P));
-    g.fillStyle = pal[0];
-    ps.forEach((P) => g.fill(P));
-    for (const [x, y, r] of cl) {
-      g.fillStyle = pal[1];
-      blob(g, x - 2, y - 2, r * 0.75, rnd, 8, 0.35);
-      g.fill();
-      g.fillStyle = pal[2];
-      blob(g, x - 4, y - 4, r * 0.4, rnd, 7, 0.4);
-      g.fill();
-    }
-    for (let k = 0; k < 18; k++) {
-      g.fillStyle = rnd() < 0.5 ? pal[3] : pal[4];
-      g.beginPath();
-      g.ellipse(-14 + rnd() * 26, -26 + rnd() * 20, 1.4, 1, rnd() * 3, 0, 7);
-      g.fill();
-    }
-  });
-}
-
 const shadowEllipse = (g: Ctx, x: number, rx: number, ry: number) => {
   g.fillStyle = "rgba(30,34,20,.3)";
   g.beginPath();
@@ -391,30 +143,277 @@ const shadowEllipse = (g: Ctx, x: number, rx: number, ry: number) => {
   g.fill();
 };
 
+/** A lamp post: cast iron on a stepped foot, a four-paned lantern under a little roof (lit at night). */
 function lampSprite(night: boolean): Sprite {
-  return sprite(24, 70, 12, 66, (g) => {
-    shadowEllipse(g, 4, 7, 2.5);
-    g.fillStyle = "#3b3a37";
-    g.fillRect(-1.6, -46, 3.2, 46);
-    g.fillRect(-5, -3, 10, 3);
-    g.fillStyle = night ? "#ffd987" : "#d9d2bd";
-    poly(g, [
-      [-5.5, -46],
-      [5.5, -46],
-      [4, -57],
-      [-4, -57],
-    ]);
-    g.fill();
-    g.strokeStyle = "#252421";
-    g.lineWidth = 1.4;
-    g.stroke();
-    g.fillStyle = "#2a2926";
-    poly(g, [
-      [-6.5, -57],
-      [0, -62],
-      [6.5, -57],
-    ]);
-    g.fill();
+  return lazySprite(
+    46,
+    74,
+    12,
+    67,
+    (g) => {
+      const rnd = seeded(60013);
+      g.fillStyle = "rgba(34,38,24,.27)";
+      poly(g, [
+        [-2, 0.5],
+        [21, 5],
+        [27, 4.4],
+        [28, 7.4],
+        [21, 8],
+        [2, 3],
+      ]);
+      g.fill();
+      g.beginPath();
+      g.ellipse(3, 1.4, 7, 2.4, 0, 0, 7);
+      g.fill();
+      g.fillStyle = "#3c403b";
+      poly(g, [
+        [-2, -4],
+        [-1.3, -45],
+        [1.3, -45],
+        [2, -4],
+      ]);
+      g.fill();
+      g.fillRect(-4.6, -2.2, 9.2, 2.2);
+      g.fillRect(-3.2, -5, 6.4, 3);
+      g.fillRect(-2.6, -27, 5.2, 1.8);
+      g.fillRect(-4.4, -46.4, 8.8, 1.6);
+      g.fillStyle = "rgba(206,212,196,.4)";
+      g.fillRect(-1.5, -44, 0.9, 39);
+      g.fillRect(-4.4, -2.2, 3, 0.8);
+      g.fillStyle = "rgba(16,16,14,.35)";
+      g.fillRect(0.5, -44, 1.3, 39);
+      penLine(
+        g,
+        [
+          [-2, -4],
+          [-1.3, -45],
+        ],
+        rnd,
+        0.9,
+        0.8,
+        0.3,
+      );
+      penLine(
+        g,
+        [
+          [2, -4],
+          [1.3, -45],
+        ],
+        rnd,
+        1,
+        0.85,
+        0.3,
+      );
+      g.strokeStyle = pen(0.85);
+      g.lineWidth = 0.9;
+      g.strokeRect(-4.6, -2.2, 9.2, 2.2);
+      const glass: readonly (readonly [number, number])[] = [
+        [-5.2, -46.4],
+        [5.2, -46.4],
+        [3.9, -57],
+        [-3.9, -57],
+      ];
+      g.fillStyle = night ? "#ffd987" : "#d6d0bb";
+      poly(g, glass);
+      g.fill();
+      if (!night) {
+        g.fillStyle = "rgba(120,140,150,.35)";
+        poly(g, [
+          [0.4, -46.4],
+          [5.2, -46.4],
+          [3.9, -57],
+          [0.3, -57],
+        ]);
+        g.fill();
+        g.fillStyle = "rgba(255,252,240,.5)";
+        g.fillRect(-3.4, -55.5, 1.2, 6);
+      }
+      g.strokeStyle = "#23221f";
+      g.lineWidth = 1.1;
+      g.lineJoin = "round";
+      poly(g, glass);
+      g.stroke();
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.moveTo(0, -46.4);
+      g.lineTo(0, -57);
+      g.stroke();
+      g.fillStyle = "#2b2a27";
+      poly(g, [
+        [-6.4, -57],
+        [-1, -61.6],
+        [1, -61.6],
+        [6.4, -57],
+      ]);
+      g.fill();
+      g.fillRect(-0.7, -64, 1.4, 2.6);
+      g.fillStyle = "rgba(210,214,200,.3)";
+      poly(g, [
+        [-5.6, -57.2],
+        [-1, -61.2],
+        [-0.2, -61.2],
+        [-3.4, -57.2],
+      ]);
+      g.fill();
+    },
+    // (where a lamp may stand is still decided by the plain post's box it replaced)
+    { fit: { w: 24, h: 70, ax: 12, ay: 66 } },
+  );
+}
+
+/**
+ * The fire ring: trodden, scorched earth, an ash bed, a ring of sooty
+ * fieldstones and charred logs. `front`: only what lies nearest the viewer —
+ * the near stones and two low logs — which the engine lays back over the
+ * flame's foot each frame, so the fire rises from among them. Every part
+ * draws from its own stream, so the two paintings agree to the pixel.
+ */
+function campSprite(front: boolean): Sprite {
+  return lazySprite(104, 66, 50, 36, (g) => {
+    const blot = (rnd: Rnd, n: number, rx: number, ry: number, dy: number) =>
+      ring(
+        Array.from({ length: n }, (_, i) => {
+          const a = (i / n) * 6.283;
+          const k = 0.86 + rnd() * 0.28;
+          return [Math.cos(a) * rx * k, dy + Math.sin(a) * ry * k] as const;
+        }),
+      );
+    if (!front) {
+      const rnd = seeded(51407);
+      g.fillStyle = "rgba(90,74,50,.2)";
+      g.fill(blot(rnd, 12, 42, 24, 2));
+      g.fillStyle = "rgba(50,42,32,.3)";
+      g.fill(blot(rnd, 11, 30, 17, 1));
+      g.fillStyle = "#4e4842";
+      g.beginPath();
+      g.ellipse(0, 0, 16, 9.5, 0, 0, 7);
+      g.fill();
+      for (let i = 0; i < 46; i++) {
+        const a = rnd() * 7;
+        const d = Math.sqrt(rnd());
+        g.fillStyle = [
+          "rgba(196,190,178,.6)",
+          "rgba(30,26,24,.6)",
+          "rgba(120,112,104,.6)",
+        ][i % 3]!;
+        g.fillRect(Math.cos(a) * d * 15, Math.sin(a) * d * 8.5, 1.1, 1.1);
+      }
+    }
+    const stoneAt = (i: number) => {
+      const rnd = seeded(51500 + i);
+      const a = (i / 11) * 6.283 + 0.25;
+      const x = Math.cos(a) * 21;
+      const y = Math.sin(a) * 12.5;
+      const rx = 5.2 + rnd() * 2.2;
+      const ry = 3.6 + rnd() * 1.4;
+      const v = 0.82 + rnd() * 0.3;
+      const rot = (rnd() - 0.5) * 0.7;
+      const P = ring(
+        Array.from({ length: 7 }, (_, q) => {
+          const b = (q / 7) * 6.283 + rot;
+          const k = 0.86 + rnd() * 0.3;
+          return [
+            x + Math.cos(b) * rx * k,
+            y - 1.5 + Math.sin(b) * ry * k,
+          ] as const;
+        }),
+      );
+      g.fillStyle = "rgba(30,28,22,.3)";
+      g.beginPath();
+      g.ellipse(x + 2, y + 1.2, rx, ry * 0.7, 0, 0, 7);
+      g.fill();
+      g.save();
+      g.fillStyle = `rgb(${(150 * v) | 0},${(146 * v) | 0},${(136 * v) | 0})`;
+      g.fill(P);
+      g.clip(P);
+      g.fillStyle = "rgba(244,240,226,.3)";
+      g.beginPath();
+      g.ellipse(
+        x - rx * 0.35,
+        y - 1.5 - ry * 0.45,
+        rx * 0.6,
+        ry * 0.5,
+        0,
+        0,
+        7,
+      );
+      g.fill();
+      g.fillStyle = "rgba(36,32,28,.34)";
+      g.beginPath();
+      g.ellipse(x + rx * 0.45, y - 1.5 + ry * 0.6, rx * 0.8, ry * 0.6, 0, 0, 7);
+      g.fill();
+      // soot on the fire's side
+      g.fillStyle = "rgba(22,20,18,.4)";
+      g.beginPath();
+      g.ellipse(
+        x - Math.cos(a) * rx * 0.9,
+        y - 1.5 - Math.sin(a) * ry * 0.9,
+        rx * 0.6,
+        ry * 0.6,
+        0,
+        0,
+        7,
+      );
+      g.fill();
+      g.restore();
+      g.strokeStyle = pen(0.8);
+      g.lineWidth = 0.95;
+      g.stroke(P);
+    };
+    const near = (i: number) => Math.sin((i / 11) * 6.283 + 0.25) >= 0;
+    if (!front) for (let i = 0; i < 11; i++) if (!near(i)) stoneAt(i);
+    // charred logs: two leaning together at the back, two lying low across the flame's foot
+    (
+      [
+        [-13, 5, 5, -6],
+        [13, 4, -4, -7],
+        [-12, 5.5, 5, 2.5],
+        [12, 6.5, -4, 4],
+      ] as const
+    ).forEach(([x0, y0, x1, y1], li) => {
+      if (front && li < 2) return;
+      const line = (
+        ax: number,
+        ay: number,
+        bx: number,
+        by: number,
+        col: string,
+        lw: number,
+      ) => {
+        g.strokeStyle = col;
+        g.lineWidth = lw;
+        g.beginPath();
+        g.moveTo(ax, ay);
+        g.lineTo(bx, by);
+        g.stroke();
+      };
+      g.lineCap = "round";
+      line(x0, y0, x1, y1, pen(0.85), 5.8);
+      line(x0, y0, x1, y1, "#4f3d2c", 4.6);
+      const cf = li < 2 ? 0.5 : 0.74;
+      const cx = x0 + (x1 - x0) * cf;
+      const cy = y0 + (y1 - y0) * cf;
+      line(cx, cy, x1, y1, "#2a221c", 4.6);
+      // the embers' light along the charred end
+      line(cx, cy - 1.6, x1, y1 - 1.6, "rgba(255,150,60,.55)", 0.9);
+      line(
+        x0,
+        y0 - 1.4,
+        (x0 + x1) / 2,
+        (y0 + y1) / 2 - 1.4,
+        "rgba(150,120,84,.5)",
+        1,
+      );
+      g.fillStyle = "#b39a70";
+      g.beginPath();
+      g.ellipse(x0, y0, 2.1, 2.5, 0, 0, 7);
+      g.fill();
+      g.strokeStyle = pen(0.7);
+      g.lineWidth = 0.7;
+      g.stroke();
+    });
+    for (let i = 0; i < 11; i++) if (near(i)) stoneAt(i);
+    grain(g, -50, -36, 104, 66, seeded(51499), 0.7);
   });
 }
 
@@ -586,14 +585,8 @@ function makeProps(rnd: Rnd): Props {
     g.ellipse(0, -11, 4.5, 1.7, 0, 0, 7);
     g.stroke();
   });
-  // (the lamp draws no random numbers, so both of its looks leave the stream as it was)
   const lamp = { day: lampSprite(false), night: lampSprite(true) };
-  const bushes = [
-    TREE_PAL.green,
-    TREE_PAL.olive,
-    TREE_PAL.deep,
-    TREE_PAL.green,
-  ].map((p) => bushSprite(rnd, p));
+  const bushes = makeBushes();
   return { barrel, crates, sacks, well, haystack, stump, lamp, bushes };
 }
 
@@ -637,7 +630,7 @@ export interface Rock {
 /** Every sprite the scene stamps, and the stream they leave behind for the scene's own draws. */
 export interface SpriteSet {
   readonly rocks: readonly Rock[];
-  /** Broadleaf and pines: 0..7 broadleaf, 8..10 pines. */
+  /** 0..7 broadleaves (sapling to old oak), 8..10 conifers. */
   readonly trees: readonly Sprite[];
   readonly autumn: readonly Sprite[];
   readonly props: Props;
@@ -646,6 +639,8 @@ export interface SpriteSet {
   readonly boat: Sprite;
   readonly ferry: Sprite;
   readonly campStones: Sprite;
+  /** The fire ring's near stones and logs alone, laid over the flame's foot each frame. */
+  readonly campFront: Sprite;
   /** The scene's stream, past the sprites (ripples, clouds, gulls, villagers draw from it). */
   readonly rnd: Rnd;
 }
@@ -656,17 +651,8 @@ export function makeSprites(): SpriteSet {
     const s = rockSize(i);
     return { s, sp: boulderSprite(rnd, s, i % 3 === 0) };
   });
-  const trees: Sprite[] = [];
-  for (let i = 0; i < 4; i++)
-    trees.push(
-      broadleaf(rnd, TREE_PAL.green, 31 + i * 4),
-      broadleaf(rnd, TREE_PAL.olive, 29 + i * 4),
-    );
-  for (let i = 0; i < 3; i++) trees.push(pine(rnd, TREE_PAL.deep, 26 + i * 4));
-  const autumn = [
-    broadleaf(rnd, TREE_PAL.autumn, 32),
-    broadleaf(rnd, TREE_PAL.autumn, 36),
-  ];
+  // (the trees, bushes, lamps and fire ring each paint from a stream of their own, when first shown)
+  const { trees, autumn } = makeTrees();
   const props = makeProps(rnd);
   const clouds = [cloudSprite(rnd), cloudSprite(rnd), cloudSprite(rnd)];
   const dock = sprite(DOCK_LEN + 20, 70, 10, 35, (dg) => {
@@ -787,26 +773,8 @@ export function makeSprites(): SpriteSet {
     fg.fillStyle = "#3e3a36";
     fg.fillRect(4, -50, 5, 12);
   });
-  const campStones = sprite(70, 40, 35, 22, (cg) => {
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * 6.28;
-      cg.fillStyle = i % 2 ? "#8b8780" : "#a29e95";
-      cg.beginPath();
-      cg.ellipse(Math.cos(a) * 20, Math.sin(a) * 12, 5.5, 4, 0, 0, 7);
-      cg.fill();
-      cg.strokeStyle = INK;
-      cg.lineWidth = 0.8;
-      cg.stroke();
-    }
-    cg.strokeStyle = "#4a3b2a";
-    cg.lineWidth = 4.5;
-    cg.beginPath();
-    cg.moveTo(-12, 5);
-    cg.lineTo(12, -3);
-    cg.moveTo(12, 5);
-    cg.lineTo(-12, -3);
-    cg.stroke();
-  });
+  const campStones = campSprite(false);
+  const campFront = campSprite(true);
   return {
     rocks,
     trees,
@@ -817,6 +785,7 @@ export function makeSprites(): SpriteSet {
     boat,
     ferry,
     campStones,
+    campFront,
     rnd,
   };
 }

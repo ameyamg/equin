@@ -661,32 +661,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.IconMotion`
             - Exports (types): `AgentGlyph`
             - Exports (values): `agentIcons`
-        - **`isle-building`** — The Agent Manager's building on Isle: the workshop forge, a brass automaton hammering at its bench.
+        - **`isle-building`** — The Agent Manager's building on Isle: the automaton works — a factory of riveted copper and brass plate under a sawtooth roof of north lights, a round furnace port in each gable, two iron stacks and a brass signal mast, its bay open on the forge — where brass automata work: a smith at the anvil, one assembled piece by piece that wakes (the whistle blows) and walks out to the charging rack, a clerk ticking off the task slate, a carrier with crates, and a rail carrying half-built automata out of the bay.
           - Web:
             - Contributes: `Isle.Building` "agent-manager"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.accent`
-              - `apps/isle/buildings.barrel`
-              - `apps/isle/buildings.Box`
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.castShadow`
-              - `apps/isle/buildings.crate`
-              - `apps/isle/buildings.Ctx2D`
-              - `apps/isle/buildings.dark`
-              - `apps/isle/buildings.grain`
-              - `apps/isle/buildings.hline`
-              - `apps/isle/buildings.ink`
-              - `apps/isle/buildings.moss`
-              - `apps/isle/buildings.planks`
-              - `apps/isle/buildings.Rnd`
-              - `apps/isle/buildings.shingles`
-              - `apps/isle/buildings.shrub`
-              - `apps/isle/buildings.stones`
-              - `apps/isle/buildings.tufts`
-              - `apps/isle/buildings.wash`
-              - `apps/isle/buildings.windowRect`
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×23
             - Exports (values): `forge`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
@@ -926,7 +907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/browser/start-page`
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/record-visits.tsx` (debt)
-        - **`isle-building`** — The Browser's building on Isle: the observatory, its dome slot and telescope slowly turning.
+        - **`isle-building`** — The Browser's building on Isle: the world globe on its stone drum — lights running between its cities like requests, a ship crossing the Atlantic, a semaphore signalling, a relay moon on its rail.
           - Web:
             - Contributes: `Isle.Building` "browser"
             - Uses: `apps/isle/buildings.Isle`
@@ -935,21 +916,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/isle/buildings.accent`
               - `apps/isle/buildings.Box`
               - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.castShadow`
               - `apps/isle/buildings.Ctx2D`
+              - `apps/isle/buildings.dark`
               - `apps/isle/buildings.doorArch`
+              - `apps/isle/buildings.fittings`
               - `apps/isle/buildings.grain`
-              - `apps/isle/buildings.hline`
               - `apps/isle/buildings.ink`
+              - `apps/isle/buildings.ivy`
               - `apps/isle/buildings.jit`
+              - `apps/isle/buildings.light`
+              - `apps/isle/buildings.mix`
               - `apps/isle/buildings.moss`
+              - `apps/isle/buildings.Pt`
               - `apps/isle/buildings.shrub`
               - `apps/isle/buildings.steps`
-              - `apps/isle/buildings.stones`
               - `apps/isle/buildings.tufts`
-              - `apps/isle/buildings.wash`
               - `apps/isle/buildings.windowRect`
-            - Exports (values): `observatory`
+            - Exports (values): `globeHouse`
         - **`navigation`** — Browser navigation controls: back / forward / reload (stop while the page loads) buttons in the chrome bar.
           - Web:
             - Contributes: `Browser.NavControls` "Navigation controls" → `NavControls`
@@ -1402,31 +1385,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `no-db-backed-notify` — `server/internal/loops-resource.ts` (sanctioned)
               - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-        - **`isle-building`** — Chord's building on Isle: the bandstand, a guitar on its stand under an octagonal roof.
+        - **`isle-building`** — Chord's building on Isle: the bandstand, a Belle-Époque park music kiosk — cast-iron columns, a swooping green copper roof with a gilt lyre vane, a stage set with piano, bass, guitar, accordion and brass; each chord rings its strings, swings three or four chimes in the frieze and lights one of four coloured lanterns, beside a campfire with log seats.
           - Web:
             - Contributes: `Isle.Building` "chord"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.accent`
-              - `apps/isle/buildings.bbox`
-              - `apps/isle/buildings.Box`
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.castShadow`
-              - `apps/isle/buildings.dark`
-              - `apps/isle/buildings.grain`
-              - `apps/isle/buildings.hline`
-              - `apps/isle/buildings.ink`
-              - `apps/isle/buildings.jit`
-              - `apps/isle/buildings.lantern`
-              - `apps/isle/buildings.planks`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.Pt`
-              - `apps/isle/buildings.shingles`
-              - `apps/isle/buildings.shrub`
-              - `apps/isle/buildings.stones`
-              - `apps/isle/buildings.tufts`
-              - `apps/isle/buildings.wash`
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/chord/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×25
             - Exports (values): `bandstand`
         - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
           - Web:
@@ -1993,6 +1958,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/trainer`
     - **`debug`** — Debug app.
       - Plugins:
+        - **`isle-building`** — Debug's building on Isle: the beetle station — a stone drum under a riveted copper dome of wing-cases with glass spots, an iron cowl for a head, six iron stays for legs — a chart recorder draws its trace, a brass lens follows a live beetle across the specimen board, the trap lantern draws moths at night, the feelers stir, a file of ants runs from its hill up the wall into a crack, and two beetles roam the paving and the wall.
+          - Web:
+            - Contributes: `Isle.Building` "debug"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/debug/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×24
+            - Exports (values): `beetleStation`
         - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
           - Web:
             - Slots:
@@ -2013,10 +1986,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `debugApp`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+            - Imported by: 43 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
               - `debug` ×31
               - `infra` ×2
               - `shell` ×2
+              - `apps/debug/isle-building`
               - `backup`
               - `build`
               - `conversations/recover`
@@ -3491,17 +3465,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/fixtures`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
-        - **`isle-building`** — Deploy's building on Isle: the timber launch tower and its rocket.
+        - **`isle-building`** — Deploy's building on Isle: the rocket itself on its pad, beside a timber gantry — a countdown semaphore drops notch by notch to an engine test, a crate is hoisted aboard, the tank vents steam.
           - Web:
             - Contributes: `Isle.Building` "deploy"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
-              - `apps/isle/buildings.Pt`
-            - Exports (values): `launchTower`
+            - Uses: 27 symbols — full list in [`plugins/apps/plugins/deploy/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×27
+            - Exports (values): `rocketPad`
         - **`local-serve`** — Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
@@ -4361,6 +4332,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `defineSupervisedJob('desktop.fullscreen-budget')`
               - `defineWarmup('fullscreen-budget.latest-deploy')`
+        - **`isle-building`** — Desktop's building on Isle: the window gallery — a hall under a glasshouse roof beside a spired tower, glazed screens boxed out on iron tracks over a painted backdrop, a shelf of things kept to hand along its foot — the front screen rolls from over its neighbour to over the tower's corner and back, the backdrop winds on to another scene, a blind is let down and drawn up, the shelf's lamp burns from dusk.
+          - Web:
+            - Contributes: `Isle.Building` "desktop"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/desktop/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×29
+            - Exports (values): `windowGallery`
         - **`launcher`** — The desktop's ⌘K launcher: a centred dialog over the windows listing every app as a grid (an empty query) or the matching apps and window commands (a query), with arrow-key selection, Shift+Enter for a new window and a right-click menu to keep an app in the dock. Exposes open / close / toggle for the shelf's launcher button.
           - Web:
             - Contributes:
@@ -4493,6 +4472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-xl`
             - Imported by:
               - `apps/desktop`
+              - `apps/desktop/isle-building`
               - `apps/desktop/launcher`
               - `apps/desktop/shelf`
               - `apps/desktop/switcher`
@@ -5121,17 +5101,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
             - Exempted by: `apps/events/events-core` (0 debt)
-        - **`isle-building`** — Events' building on Isle: the clock tower, its clock showing the real time.
+        - **`isle-building`** — Events' building on Isle: the calendar tower — a clock showing the real time over a great tear-off calendar whose leaf flutters down each day, signal balls run up its mast one per event.
           - Web:
             - Contributes: `Isle.Building` "events"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
-              - `apps/isle/buildings.Pt`
-            - Exports (values): `clockTower`
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/events/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/events/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×29
+            - Exports (values): `calendarTower`
         - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
           - Server:
             - Uses:
@@ -5852,17 +5829,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `machine/internal/ignored.ts` (sanctioned)
-        - **`isle-building`** — The File Explorer's building on Isle: the archive barn, its doors open on shelves of boxes and scrolls.
+        - **`isle-building`** — The File Explorer's building on Isle: the filing chest — an oak chest of nine brass-labelled drawers under a manila-folder roof, a drawer rolling out, a folder hoisted from it and put back.
           - Web:
             - Contributes: `Isle.Building` "file-explorer"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
-              - `apps/isle/buildings.Pt`
-            - Exports (values): `archiveBarn`
+            - Uses: 31 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×31
+            - Exports (values): `filingChest`
         - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home — of every file system this host serves —, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash; each a folder of a file system) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Files dragged onto Favorites (FILE_LOCATIONS_MIME, any file system) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
           - Web:
             - Slots: `row-actions`
@@ -6008,6 +5982,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `apps/home/tour`
+        - **`isle-building`** — Home's building on Isle: the gatehouse inn at the crossroads — a steep gabled house with a carriage arch through its wing and a bell-cote on its ridge, its gable carrying a signboard of nine enamelled tiles — one tile at a time turns over (the bell swings for each), the fingerpost's top arm swings round to point a new way, the welcome lantern sways, burns from dusk and draws moths.
+          - Web:
+            - Contributes: `Isle.Building` "home"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/home/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/home/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×29
+            - Exports (values): `gatehouse`
         - **`new-app`** — Home's New app screen (/home/new): one prompt — the standard composer field, its Create button opening the launched conversation — above the Prototype → App steps every new app goes through, with a random hand of starting ideas (and a shuffle) while the field is empty. Creating files a task under the Apps category with a minimal prompt: build a new app, prototype first, then the description.
           - Web:
             - Slots: `newAppPane.Actions`
@@ -6097,6 +6079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/home/app-cards`
+              - `apps/home/isle-building`
               - `apps/home/new-app`
               - `apps/home/tour`
         - **`tour`** — Home's onboarding tour (Hints.Tour, primary, auto-started once): the welcome card, then the app gallery, the toolbar (hover to unfold while it floats; Next while docked), Improve — 'Try it' opens it with a first request filled in, sending moves on — the Agent Manager tile, and inside the Agent Manager the row of the conversation that request started ('Here's your request' / 'Your request is ready' → Open it). Until that conversation exists the handoff card waits centered, with Finish tour. Two Core.Root trackers feed the tour page-only data: the request's conversation (from the filed task, while the tour is near it) and whether the toolbar floats or is docked.
@@ -6141,9 +6124,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Isle.Building` ← `apps.agent-manager.isle-building`
               - `Isle.Building` ← `apps.browser.isle-building`
               - `Isle.Building` ← `apps.chord.isle-building`
+              - `Isle.Building` ← `apps.debug.isle-building`
               - `Isle.Building` ← `apps.deploy.isle-building`
+              - `Isle.Building` ← `apps.desktop.isle-building`
               - `Isle.Building` ← `apps.events.isle-building`
               - `Isle.Building` ← `apps.file-explorer.isle-building`
+              - `Isle.Building` ← `apps.home.isle-building`
               - `Isle.Building` ← `apps.keyboard-party.isle-building`
               - `Isle.Building` ← `apps.mail.isle-building`
               - `Isle.Building` ← `apps.pages.isle-building`
@@ -6152,6 +6138,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Isle.Building` ← `apps.prototypes.isle-building`
               - `Isle.Building` ← `apps.settings.isle-building`
               - `Isle.Building` ← `apps.sonata.isle-building`
+              - `Isle.Building` ← `apps.website.isle-building`
             - Exports (types): `IsleBuildingContribution`
             - Exports (values):
               - `Isle`
@@ -6164,20 +6151,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.AppCategory`
             - Exports (types):
               - `Box`
+              - `BoxFaces`
+              - `BoxGeom`
               - `BuildingSpec`
               - `Chimney`
               - `Ctx2D`
               - `Door`
               - `DoorArchOptions`
+              - `Face`
               - `Footprint`
               - `Light`
+              - `P3`
               - `PaintState`
               - `PlanksOptions`
               - `Pt`
               - `Rgb`
+              - `Rim`
               - `Rnd`
+              - `RoofGeom`
               - `Setting`
               - `ShinglesOptions`
+              - `SolidPaint`
               - `StonesOptions`
               - `WashOptions`
               - `WindowOptions`
@@ -6197,6 +6191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `doorArch`
               - `draftingTable`
               - `easel`
+              - `fittings`
               - `flowerBox`
               - `gear`
               - `grain`
@@ -6213,6 +6208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailbox`
               - `mix`
               - `moss`
+              - `oblique`
               - `openDoor`
               - `planks`
               - `poly`
@@ -6222,9 +6218,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sack`
               - `SETTINGS`
               - `shade`
+              - `SHADOW_ALPHA_MAX`
               - `shingles`
               - `shrub`
               - `sketch`
+              - `SOLID_ALPHA`
               - `spill`
               - `steps`
               - `stones`
@@ -6236,25 +6234,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `waterButt`
               - `windowRect`
           - Cross-plugin:
-            - Imported by:
-              - `apps/agent-manager/isle-building`
-              - `apps/browser/isle-building`
-              - `apps/chord/isle-building`
-              - `apps/deploy/isle-building`
-              - `apps/events/isle-building`
-              - `apps/file-explorer/isle-building`
-              - `apps/isle/plots`
-              - `apps/isle/renderer`
-              - `apps/isle/world`
-              - `apps/isle/world-view`
-              - `apps/keyboard-party/isle-building`
-              - `apps/mail/isle-building`
-              - `apps/pages/isle-building`
-              - `apps/places/isle-building`
-              - `apps/plugin-studio/isle-building`
-              - `apps/prototypes/isle-building`
-              - `apps/settings/isle-building`
-              - `apps/sonata/isle-building`
+            - Imported by: 22 plugins — full list in [`plugins/apps/plugins/isle/plugins/buildings/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/buildings/REFERENCE.md)
+              - `apps` ×22
           - Test helpers:
             - Core: `@plugins/apps/plugins/isle/plugins/buildings/core/testing`
               - `boxWithin` — Whether `inner` lies inside `outer`, give or take `tolerance` px on each side.
@@ -6262,6 +6243,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `footprintProblems` — Every way a building's declared footprint disagrees with its ink (none: it holds).
               - `measureBuilding` — All the ink a building paints and animates, in every light, split at the ground band.
               - `paintedExtent` — Runs `draw` against a measuring context (no canvas needed) and returns where it put ink, in the coordinates `draw` starts in, split at `splitY`.
+              - `perspectiveProblems` — Every receding edge a building spells by hand (none: its perspective holds).
               - `testBuildingFootprint` — Registers the footprint suite of one app's building: `testBuildingFootprint("places", lighthouse)`.
               - Types: `PaintedExtent`
         - **`characters`** — Isle's people: the hero and five villagers, inked and cel-shaded, with a skeletal walk cycle — characterFrame decides the pose (view, walk/idle frame, blink, turn cross-fade) from a character's state, paintCharacterPose paints one on any 2D context.
@@ -6549,18 +6531,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PHASE_MOOD`
     - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
       - Plugins:
-        - **`isle-building`** — Keyboard Party's building on Isle: the schoolhouse, chalk writing Aa, Bb… on its slate.
+        - **`isle-building`** — Keyboard Party's building on Isle: the party tent, a striped canvas big top with balloons at its sides and three giant keycaps (A, S, D) by the entrance — each goes down in turn with a puff of paper bits and a ring of the bell.
           - Web:
             - Contributes: `Isle.Building` "keyboard-party"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
             - Uses:
+              - `apps/isle/buildings.accent`
+              - `apps/isle/buildings.Box`
               - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.castShadow`
               - `apps/isle/buildings.Ctx2D`
+              - `apps/isle/buildings.dark`
+              - `apps/isle/buildings.fittings`
+              - `apps/isle/buildings.grain`
+              - `apps/isle/buildings.hline`
+              - `apps/isle/buildings.ink`
+              - `apps/isle/buildings.jit`
+              - `apps/isle/buildings.light`
+              - `apps/isle/buildings.mix`
+              - `apps/isle/buildings.moss`
+              - `apps/isle/buildings.oblique`
               - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
               - `apps/isle/buildings.Pt`
-            - Exports (values): `schoolhouse`
+              - `apps/isle/buildings.shrub`
+              - `apps/isle/buildings.tufts`
+              - `apps/isle/buildings.wash`
+            - Exports (values): `partyTent`
         - **`party`** — Keyboard Party's stage: every key plays its own animation and sound (letters bring a picture, a word and speech; digits count; space, Enter, arrows, Backspace and modifiers each have their own effect), with a bead trail of recent keys, a full-screen keyboard lock and the party settings. Server registration of the Keyboard Party config.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -6694,14 +6691,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `GmailApiError`
               - `GmailHistoryExpiredError`
-        - **`isle-building`** — Mail's building on Isle: the post office, with a dovecote whose pigeon hops and flaps.
+        - **`isle-building`** — Mail's building on Isle: a post office built as a giant cast-iron pillar box in faded post-office red (the app's colour only on its signal flag) — letters fly into its slot, the signal arm rises when one lands, a carrier pigeon comes and goes.
           - Web:
             - Contributes: `Isle.Building` "mail"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×21
-            - Exports (values): `postOffice`
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×22
+            - Exports (values): `pillarBox`
         - **`mail-core`** — Registers the mail app's own id kinds (mailacct, mailatt, maildraft, mailout) with the web id registry — the server barrel registers the same kinds. Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
           - Web:
             - Contributes:
@@ -7390,13 +7387,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-caption`
-        - **`isle-building`** — Pages' building on Isle: the library, a pedimented stone hall with a carved open book.
+        - **`isle-building`** — Pages' building on Isle: the library of stacked books under an open-book roof — a note written line by line on its slate, a leaf turning on the lectern, loose leaves drifting down, a ribbon marker stirring.
           - Web:
             - Contributes: `Isle.Building` "pages"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×21
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×28
             - Exports (values): `library`
         - **`page-author`** — Page-kind control in the page-detail header: its icon names what the open page is to agents — an ordinary page, an agent page (agents may write all of it) or an instructions page (the human's standing instructions to agents working under the parent page) — and its panel changes the kind, with a Global switch on an instructions page.
           - Web:
@@ -7900,13 +7897,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlacesFixture`
               - `PlaceTagFixture`
               - `PlaceTagPath`
-        - **`isle-building`** — Places' building on Isle: the cartographer's lighthouse on its rocks, beams sweeping the sea at dusk and night.
+        - **`isle-building`** — Places' building on Isle: the map-pin lighthouse, a copper pin planted in the rocks on a flagstone compass rose — pins dropping onto the map, routes dotted in, the north arrow settling, beams sweeping the sea at dusk and night.
           - Web:
             - Contributes: `Isle.Building` "places"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×21
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×23
             - Exports (values): `lighthouse`
         - **`mapstr-import`** — `./equin places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
@@ -9012,17 +9009,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-medium`
             - Imported by: `apps/plugin-studio/explorer/membership`
-        - **`isle-building`** — Studio's building on Isle: the conservatory laboratory, a glasshouse of plants and jars.
+        - **`isle-building`** — Studio's building on Isle: the block workshop — jigsaw blocks tenoned into one another around a brass hub, a crane lifting one out and slotting it back, a lens sweeping the stonework.
           - Web:
             - Contributes: `Isle.Building` "studio"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
-              - `apps/isle/buildings.Pt`
-            - Exports (values): `conservatory`
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/plugin-studio/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/plugin-studio/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×29
+            - Exports (values): `blockWorkshop`
         - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
           - Cross-plugin:
             - Uses tokens:
@@ -9696,18 +9690,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `prototypesIcons`
           - Cross-plugin:
             - Imported by: `apps/prototypes/canvas`
-        - **`isle-building`** — Prototypes' building on Isle: the inventor's sketch cabin, blueprints and a half-built contraption.
+        - **`isle-building`** — Prototypes' building on Isle: a half-timbered house being built beside a big wooden treadwheel crane — the crane lifting timber over the frame, shingles laid course by course, lines added to the blueprint pinned over the doorway, a builder hammering on the scaffold.
           - Web:
             - Contributes: `Isle.Building` "prototypes"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.Ctx2D`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
-              - `apps/isle/buildings.Pt`
-            - Exports (values): `inventorsCabin`
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×22
+            - Exports (values): `buildingSite`
         - **`present`** — Open in a new tab on every gallery card (its live present page) and two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag (the canvas frame header's own box: options chip | version stepper) and 'i of n', Exit and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
           - Web:
             - Slots: `prototypes-present.actions`
@@ -9999,18 +9989,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/shape --spacing`
-        - **`isle-building`** — Settings' building on Isle: the tower windmill, its sails and gears turning.
+        - **`isle-building`** — Settings' building on Isle: the gear mill — a stone tower mill whose sails are one great cog wheel, meshing with two pinions that drive the regulator in the lean-to; a lever is thrown now and then, and the regulator dial and the flyball governor follow.
           - Web:
             - Contributes: `Isle.Building` "settings"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.Ctx2D`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.polyKit`
-              - `apps/isle/buildings.Pt`
-            - Exports (values): `windmill`
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/settings/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/settings/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×23
+            - Exports (values): `gearMill`
         - **`shell`** — App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.
           - Web:
             - Slots:
@@ -10385,33 +10371,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MidiSongFixture`
               - `MusicXmlSongFixture`
               - `SongFixture`
-        - **`isle-building`** — Sonata's building on Isle: the music hall, a grand piano in its great arched window.
+        - **`isle-building`** — Sonata's building on Isle: the piano hall, a concert hall built as a grand piano — the keyboard an awning over the door, the lid propped open over the strings; keys dip, hammers and strings answer, a metronome ticks.
           - Web:
             - Contributes: `Isle.Building` "sonata"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses:
-              - `apps/isle/buildings.accent`
-              - `apps/isle/buildings.bbox`
-              - `apps/isle/buildings.Box`
-              - `apps/isle/buildings.BuildingSpec`
-              - `apps/isle/buildings.castShadow`
-              - `apps/isle/buildings.doorArch`
-              - `apps/isle/buildings.grain`
-              - `apps/isle/buildings.hline`
-              - `apps/isle/buildings.ink`
-              - `apps/isle/buildings.lantern`
-              - `apps/isle/buildings.moss`
-              - `apps/isle/buildings.poly`
-              - `apps/isle/buildings.Pt`
-              - `apps/isle/buildings.shingles`
-              - `apps/isle/buildings.shrub`
-              - `apps/isle/buildings.steps`
-              - `apps/isle/buildings.stones`
-              - `apps/isle/buildings.tufts`
-              - `apps/isle/buildings.wash`
-              - `apps/isle/buildings.windowRect`
-            - Exports (values): `musicHall`
+            - Uses: 27 symbols — full list in [`plugins/apps/plugins/sonata/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×27
+            - Exports (values): `pianoHall`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -13385,6 +13352,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
+        - **`isle-building`** — The website's building on Isle: the shopfront — the island's public face: a painted shop with two awninged display windows under a great false-front sign board carrying the app's device in a roundel, a banner on its pole, and a poster hoarding in the yard — a carousel of framed pictures turns in the window, a new poster comes down over the old one on the hoarding, the hanging sign and the banner stir, the sign's lamps come on at dusk.
+          - Web:
+            - Contributes: `Isle.Building` "website"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/website/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×26
+            - Exports (values): `shopfront`
         - **`landing`** — Landing-page bands of the public website: the hero, the live demo, the three layers of equin, the story link, and the contact block.
           - Plugins:
             - **`contact`** — Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message form the site's server stores and emails on (sent, rate-limited and failed states said inline); for bug reports, feature requests and questions, GitHub issues.
@@ -14247,8 +14222,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --font-weight-semibold`
-            - Imported by: 21 plugins — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 22 plugins — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+              - `apps` ×20
               - `companions/browser-extension/equin-site`
               - `hints/help-menu`
 

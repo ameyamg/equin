@@ -1,26 +1,30 @@
 // The ground: water / sand / grass coloured per pixel from the island heights
 // (`ground-pixels.ts`, in a bake worker when there are some), baked per 512 px
-// world tile with its texture (surf, grass strokes, pebbles,
-// wildflowers, hill hachures, the river's streaks), plus the tile's water mask
+// world tile with its texture (surf, tufts and tussocks, wildflower drifts,
+// stones, pebbles, hill hachures, the river's streaks), plus the tile's water mask
 // (where animated water may paint) and the reeds that stand at the water's edge.
 // Bakes are generators: they yield between slices so a frame stays within its
 // budget. Each tile is self-contained, so tiles bake in any order and join
 // seamlessly.
 
 import {
+  fbm,
+  hash,
   LAKE,
   RIVER,
   riverWidth,
+  vnoise,
   type Island,
   type WorldModel,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
-import { blob, canvas, ctx2d, seeded, type Ctx, type Rnd } from "./kit";
+import { canvas, ctx2d, seeded, stone, type Ctx, type Rnd } from "./kit";
 import type { FurnitureStore } from "./furniture";
 import {
   GT,
   elevationOver,
   groundKernel,
   heightOver,
+  meadowBare,
   oceanKernel,
   PREVIEW_Q,
   previewKernel,
@@ -31,6 +35,13 @@ import {
 import type { Pixels } from "./bake-protocol";
 
 export { GT, heightOver };
+
+const FLOWERS = [
+  "rgba(240,236,220,.92)",
+  "rgba(228,200,104,.92)",
+  "rgba(190,172,210,.9)",
+  "rgba(204,104,78,.9)",
+] as const;
 
 /** What a bake step yields while a worker colours its pixels: nothing to do on the page meanwhile. */
 export const WAIT = Symbol("isle bake: waiting on a worker");
@@ -214,7 +225,7 @@ export function* bakeGroundTile(
       }
     });
   yield;
-  // grass strokes, darker clumps, pebbles, wildflowers: each 512 px cell places its own, neighbours' reach in
+  // the meadow's texture — tufts, tussocks, wildflower drifts, stones, pebbles: each 512 px cell places its own, neighbours' reach in
   const area = GT * GT * DEN;
   for (let dj = -1; dj <= 1; dj++)
     for (let di = -1; di <= 1; di++) {
@@ -223,57 +234,135 @@ export function* bakeGroundTile(
       const bx = cx * GT;
       const by = cy * GT;
       const base = ((cx * 73856093) ^ (cy * 19349663)) >>> 0;
-      let r = seeded(base + 1);
-      const grass = [new Path2D(), new Path2D(), new Path2D()] as const;
-      for (let k = 0, nn = Math.round(60000 * area); k < nn; k++) {
+      // tufts of grass, clumped, thin where the turf is worn
+      let r = seeded(base + 11);
+      const blades = [new Path2D(), new Path2D(), new Path2D()] as const;
+      for (let k = 0, nn = Math.round(30000 * area); k < nn; k++) {
         const x = bx + r() * GT;
         const y = by + r() * GT;
         const a = r();
         const b = r();
         const e = r();
-        if (!inT(x, y, 6)) continue;
-        if (H(x, y) < 0.09) continue;
-        const P = grass[a < 0.55 ? 0 : a < 0.85 ? 1 : 2];
-        P.moveTo(x, y);
-        P.lineTo(x + (b - 0.5) * 3, y - 2.5 - e * 4);
+        const c = r();
+        if (!inT(x, y, 8)) continue;
+        const dens =
+          vnoise(x / 54 + 3, y / 54 + 9) * 0.7 + vnoise(x / 17, y / 17) * 0.3;
+        if (c > dens * 1.5 - 0.12) continue;
+        if (H(x, y) < 0.085 || (b > 0.1 && meadowBare(x, y) > 0.68)) continue;
+        const P = blades[a < 0.5 ? 0 : a < 0.86 ? 1 : 2];
+        const n = 2 + ((e * 3) | 0);
+        const hgt = 3 + b * 4;
+        for (let q = 0; q < n; q++) {
+          const f = (q - (n - 1) / 2) * 1.5 + (hash(k, q) - 0.5) * 1.2;
+          P.moveTo(x + f * 0.5, y);
+          P.quadraticCurveTo(
+            x + f * 0.8,
+            y - hgt * 0.6,
+            x + f * 1.5,
+            y - hgt * (0.75 + hash(q, k) * 0.4),
+          );
+        }
       }
-      g.lineWidth = 1;
+      g.lineWidth = 0.9;
       [
-        "rgba(58,68,32,.45)",
-        "rgba(150,158,92,.45)",
-        "rgba(196,190,130,.5)",
+        "rgba(58,72,36,.5)",
+        "rgba(160,168,100,.5)",
+        "rgba(200,192,130,.5)",
       ].forEach((col, i) => {
         g.strokeStyle = col;
-        g.stroke(grass[i as 0 | 1 | 2]);
+        g.stroke(blades[i as 0 | 1 | 2]);
       });
-      r = seeded(base + 2);
-      for (let k = 0, nn = Math.round(2600 * area); k < nn; k++) {
+      // tussocks: a fan of blades over a little shadow
+      r = seeded(base + 12);
+      for (let k = 0, nn = Math.round(1500 * area); k < nn; k++) {
         const x = bx + r() * GT;
         const y = by + r() * GT;
-        const rr = r();
+        const sz = r();
         const ks = r();
-        if (!inT(x, y, 12) || H(x, y) < 0.1) continue;
+        if (!inT(x, y, 16) || H(x, y) < 0.1 || meadowBare(x, y) > 0.66)
+          continue;
         const ri = seeded((ks * 4294967296) >>> 0);
-        g.fillStyle = "rgba(70,82,40,.55)";
-        blob(g, x, y, 3 + rr * 5, ri, 7, 0.5);
-        g.fill();
-        g.strokeStyle = "rgba(40,44,24,.35)";
-        g.lineWidth = 0.8;
+        const w = 4 + sz * 5;
+        g.fillStyle = "rgba(48,60,32,.26)";
         g.beginPath();
-        g.arc(x, y + 1, 4, 0.2, 2.9);
-        g.stroke();
+        g.ellipse(x + 1.5, y + 0.6, w * 1.1, w * 0.4, 0, 0, 7);
+        g.fill();
+        g.lineWidth = 1;
+        for (let q = 0; q < 8; q++) {
+          const f = (q / 7 - 0.5) * 2;
+          g.strokeStyle =
+            f < -0.1 ? "rgba(152,162,94,.8)" : "rgba(56,70,36,.8)";
+          g.beginPath();
+          g.moveTo(x + f * w * 0.6, y);
+          g.quadraticCurveTo(
+            x + f * w * 0.8,
+            y - 4,
+            x + f * w * 1.25 + (ri() - 0.5) * 2,
+            y - 5 - ri() * 5,
+          );
+          g.stroke();
+        }
       }
-      r = seeded(base + 3);
-      for (let k = 0, nn = Math.round(5200 * area); k < nn; k++) {
+      // wildflowers, in drifts: mostly one kind to a drift
+      r = seeded(base + 13);
+      for (let k = 0, nn = Math.round(44000 * area); k < nn; k++) {
+        const x = bx + r() * GT;
+        const y = by + r() * GT;
+        const keep = r();
+        const o1 = r();
+        const o2 = r();
+        if (!inT(x, y, 6)) continue;
+        const drift = fbm(x / 190 + 77, y / 190 + 13, 2);
+        const p =
+          drift > 0.6
+            ? (drift - 0.6) * 4.5 * (0.25 + vnoise(x / 30 + 5, y / 30))
+            : 0.004;
+        if (keep > p || H(x, y) < 0.11 || meadowBare(x, y) > 0.66) continue;
+        const hk = hash(Math.floor(x / 300 + drift * 2), Math.floor(y / 300));
+        const kind =
+          o1 < 0.1
+            ? (o2 * 4) | 0
+            : hk < 0.38
+              ? 0
+              : hk < 0.7
+                ? 1
+                : hk < 0.93
+                  ? 2
+                  : 3;
+        g.fillStyle = FLOWERS[kind]!;
+        g.beginPath();
+        g.arc(x, y, 1.15 + o2 * 0.5, 0, 7);
+        g.fill();
+        if (kind === 0) {
+          g.fillStyle = "rgba(214,176,70,.95)";
+          g.fillRect(x - 0.45, y - 0.45, 0.9, 0.9);
+        }
+      }
+      // small stones: scattered on the bare earth, rare in the grass
+      r = seeded(base + 14);
+      for (let k = 0, nn = Math.round(3400 * area); k < nn; k++) {
         const x = bx + r() * GT;
         const y = by + r() * GT;
         const keep = r();
         const rr = r();
         const t = r();
         const rot = r();
+        if (!inT(x, y, 8) || H(x, y) < 0.085) continue;
+        if (keep > (meadowBare(x, y) > 0.7 ? 0.6 : 0.04)) continue;
+        stone(g, x, y, 1.4 + rr * rr * 3, t * 0.55, rot * 3);
+      }
+      // pebbles on the beach
+      r = seeded(base + 3);
+      for (let k = 0, nn = Math.round(5200 * area); k < nn; k++) {
+        const x = bx + r() * GT;
+        const y = by + r() * GT;
+        r(); // (the draw that once kept a few pebbles in the grass: the stream stays as it was)
+        const rr = r();
+        const t = r();
+        const rot = r();
         if (!inT(x, y, 6)) continue;
         const hv = H(x, y);
-        if (hv < 0.025 || (hv > 0.075 && keep > 0.15)) continue;
+        if (hv < 0.025 || hv > 0.075) continue;
         const rad = 1.2 + rr * 2.4;
         g.fillStyle = `rgb(${(150 + t * 50) | 0},${(148 + t * 46) | 0},${(140 + t * 40) | 0})`;
         g.beginPath();
@@ -282,30 +371,6 @@ export function* bakeGroundTile(
         g.strokeStyle = "rgba(52,48,44,.55)";
         g.lineWidth = 0.7;
         g.stroke();
-      }
-      r = seeded(base + 4);
-      for (let k = 0, nn = Math.round(1600 * area); k < nn; k++) {
-        const x = bx + r() * GT;
-        const y = by + r() * GT;
-        const col = r();
-        const o = [r(), r(), r(), r(), r(), r()] as const;
-        if (!inT(x, y, 6) || H(x, y) < 0.12) continue;
-        g.fillStyle = [
-          "rgba(236,232,214,.85)",
-          "rgba(196,184,214,.8)",
-          "rgba(222,196,120,.8)",
-        ][(col * 3) | 0]!;
-        for (let q = 0; q < 3; q++) {
-          g.beginPath();
-          g.arc(
-            x + (o[q * 2]! - 0.5) * 6,
-            y + (o[q * 2 + 1]! - 0.5) * 4,
-            1.1,
-            0,
-            7,
-          );
-          g.fill();
-        }
       }
       // hachures down the hills' slopes, the old map-maker's way
       if (E) {

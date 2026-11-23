@@ -3,7 +3,10 @@
 // bake worker (`bake.worker.ts`) reads it off the page's thread, bit-identical
 // to the page's own reading.
 
-import type { Box } from "@plugins/apps/plugins/isle/plugins/buildings/core";
+import {
+  SOLID_ALPHA,
+  type Box,
+} from "@plugins/apps/plugins/isle/plugins/buildings/core";
 
 export interface Mask {
   readonly gw: number;
@@ -13,7 +16,8 @@ export interface Mask {
 }
 
 export const MASK_C = 2;
-const MASK_A = 90;
+/** The alpha a paint's pixel needs to count as the building (its cast shadow and washes stay under it). */
+export const MASK_A = Math.round(SOLID_ALPHA * 255);
 
 export const MASK_DIL = 2;
 

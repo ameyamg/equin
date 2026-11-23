@@ -16,7 +16,12 @@ import {
   type BuildingSpec,
   type PaintState,
 } from "../spec";
-import { paintedExtent, type PaintedExtent } from "./painted-extent";
+import { oblique } from "../internal/oblique";
+import {
+  handDrawnEdges,
+  paintedExtent,
+  type PaintedExtent,
+} from "./painted-extent";
 
 /** How far a declared side may lie beyond the measured ink, px. */
 export const FOOTPRINT_SLACK = 16;
@@ -69,9 +74,13 @@ export function measureBuilding(
   };
   for (const light of LIGHTS) {
     take((g) => spec.paint(g, stateFor(appId, light)));
-    if (spec.animate)
+    if (spec.animate ?? spec.ambient)
       for (const t of TIMES)
-        take((g) => spec.animate?.(g, stateFor(appId, { ...light, t })));
+        take((g) => {
+          const s = stateFor(appId, { ...light, t });
+          spec.animate?.(g, s);
+          spec.ambient?.(g, s);
+        });
   }
   // the door, as the renderer opens it
   take((g) => openDoor(g, spec.door));
@@ -123,11 +132,63 @@ export function footprintProblems(spec: BuildingSpec, appId: string): string[] {
   return out;
 }
 
+/** How close to the receding direction (degrees) a hand-drawn edge counts as a receding edge, and from what length (px). */
+const RECEDING_BAND = 6;
+const RECEDING_MIN = 10;
+
+/**
+ * Every receding edge a building spells by hand (none: its perspective holds).
+ * The island is seen in one 3/4 view, so everything that goes back into the
+ * picture recedes along ONE vector, which only the kit's projection
+ * (`oblique`) spells: a polygon `paint` fills or clips to whose edge rises to
+ * the right within a few degrees of that vector, and that was not produced by
+ * the projection, is a hand-drawn side face — parallel to the vector or not,
+ * it is one more place to get the view wrong. Declare the volume
+ * (`oblique.sideFace` / `box` / `extrude` / a roof, painted with
+ * `oblique.fill`) or paint in face space (`oblique.onSide` / `onTop`); a
+ * diagonal that is no receding edge at all (a brace, a roof pitch) goes in
+ * `oblique.diagonal`.
+ */
+export function perspectiveProblems(
+  spec: BuildingSpec,
+  appId: string,
+): string[] {
+  const want = (Math.atan(oblique.SLANT) * 180) / Math.PI;
+  const seen = new Set<string>();
+  for (const [x0, y0, x1, y1] of handDrawnEdges((g) =>
+    spec.paint(g, stateFor(appId, {})),
+  )) {
+    const [ax, ay, bx, by] = x0 <= x1 ? [x0, y0, x1, y1] : [x1, y1, x0, y0];
+    if (by >= ay || Math.hypot(bx - ax, by - ay) < RECEDING_MIN) continue;
+    const angle = (Math.atan2(ay - by, bx - ax) * 180) / Math.PI;
+    if (Math.abs(angle - want) > RECEDING_BAND) continue;
+    seen.add(
+      `a hand-drawn receding edge (${ax.toFixed(0)}, ${ay.toFixed(0)}) → (${bx.toFixed(0)}, ${by.toFixed(0)}) at ${angle.toFixed(1)}° (the view recedes at ${want.toFixed(1)}°)`,
+    );
+  }
+  return [...seen].sort();
+}
+
+/**
+ * The footprint test's budget. It paints a building 3 times and animates it
+ * 480 times on the measuring context: a building whose `animate` draws a lot
+ * (three toothed wheels) takes seconds on a host that runs tests at background
+ * priority, past bun's 5 s default.
+ */
+const FOOTPRINT_TEST_MS = 30_000;
+
 /** Registers the footprint suite of one app's building: `testBuildingFootprint("places", lighthouse)`. */
 export function testBuildingFootprint(appId: string, spec: BuildingSpec): void {
   describe(`${appId}'s building`, () => {
-    test("its declared footprint holds all its ink (day, dusk, night, animated, door open and shut), tightly", () => {
-      expect(footprintProblems(spec, appId)).toEqual([]);
+    test(
+      "its declared footprint holds all its ink (day, dusk, night, animated, door open and shut), tightly",
+      () => {
+        expect(footprintProblems(spec, appId)).toEqual([]);
+      },
+      FOOTPRINT_TEST_MS,
+    );
+    test("spells no receding edge by hand: its side faces come from the kit's projection (oblique)", () => {
+      expect(perspectiveProblems(spec, appId)).toEqual([]);
     });
     test("paints the same picture from the same app", () => {
       const once = paintedExtent(

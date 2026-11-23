@@ -8,6 +8,8 @@
 
 import {
   INK,
+  footGrass,
+  grain,
   inkLine,
   seeded,
   sprite,
@@ -387,5 +389,8 @@ export function wellSprite(): Sprite {
     g.fillStyle = "#5e4a34";
     g.fillRect(-30, ridge - 3, 60, 4);
     g.strokeRect(-30, ridge - 3, 60, 4);
+    // planted in the meadow, and granulated like the rest of the scenery
+    footGrass(g, rnd, 24);
+    grain(g, -52, -104, 104, 120, rnd);
   });
 }

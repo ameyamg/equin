@@ -1,7 +1,7 @@
-// What is painted onto a tile from the layout: roads (packed earth, ruts,
-// grass at the verges, pebbles), bridges (planks over the water), district
-// squares (flagstones), empty lots (a fenced patch with a blank stake), and the
-// signposts drawn over everything.
+// What is painted onto a tile from the layout: roads (plain worn earth, soft
+// verges, grit, grass creeping in, stones), bridges (planks over the water),
+// district squares (rings of old flagstones), empty lots (a fenced patch with
+// a blank stake), and the signposts drawn over everything.
 
 import type { Box } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import {
@@ -12,7 +12,7 @@ import {
   type Road,
   type Square,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
-import { INK, blob, seeded, strHash, type Ctx } from "./kit";
+import { INK, blob, ring, seeded, ss, stone, strHash, type Ctx } from "./kit";
 
 const inBox =
   (bx0: number, by0: number, bx1: number, by1: number) =>
@@ -36,6 +36,28 @@ const visibleRoads = (
       ),
   );
 
+const ROAD_EARTH = "#c7b58b";
+const TUFT_DARK = "rgba(60,74,38,.62)";
+const TUFT_LITE = "rgba(150,158,92,.62)";
+
+/** Three blades of grass at (x, y), added to a path. */
+function tuft(P: Path2D, x: number, y: number, a: number, b: number): void {
+  for (let q = -1; q <= 1; q++) {
+    P.moveTo(x + q, y);
+    P.lineTo(
+      x + q * 2.2 + (hash(a + q, b) - 0.5) * 2,
+      y - 3.5 - hash(q + 2, a) * 3,
+    );
+  }
+}
+
+/**
+ * Roads: plain worn earth — one even wash with a soft verge and a faint pooled
+ * edge, round blots of lighter and darker earth, grit, grass biting into the
+ * edges, tufts along the verges and down a cart road's crown, small stones;
+ * a little-used path half grown over; on a cart road the odd puddle. Nothing
+ * runs along the road (no centre line, no ruts).
+ */
 export function paintRoads(
   g: Ctx,
   roads: readonly Road[],
@@ -45,72 +67,186 @@ export function paintRoads(
   by1: number,
 ): void {
   const inB = inBox(bx0, by0, bx1, by1);
-  const vis = visibleRoads(roads, bx0, by0, bx1, by1);
-  g.fillStyle = "rgba(96,84,52,.22)";
-  for (const r of vis) {
-    g.beginPath();
-    for (const s of r.samples) {
-      if (s.bridge || !inB(s, 40)) continue;
-      g.moveTo(s.x + s.r + 3, s.y);
-      g.ellipse(s.x, s.y, s.r + 3, (s.r + 3) * 0.85, 0, 0, 7);
-    }
-    g.fill();
-  }
-  for (const r of vis)
-    for (const s of r.samples) {
-      if (s.bridge || !inB(s, 40)) continue;
-      const n = vnoise(s.x / 12, s.y / 12);
-      g.fillStyle = `rgb(${(200 + n * 22) | 0},${(184 + n * 20) | 0},${(140 + n * 16) | 0})`;
-      g.beginPath();
-      g.ellipse(s.x, s.y, s.r, s.r * 0.85, 0, 0, 7);
-      g.fill();
-    }
-  for (const r of vis) {
-    if (r.kind === "spur") continue;
-    const h = roadHash(r.key);
-    g.fillStyle = "rgba(150,130,90,.35)";
-    r.samples.forEach((s, i) => {
-      if (s.bridge || !inB(s, 10) || hash(i, h) < 0.45) return;
-      for (const o of [-7, 7]) g.fillRect(s.x - s.uy * o, s.y + s.ux * o, 2, 2);
-    });
-  }
-  g.strokeStyle = "rgba(70,82,40,.6)";
-  g.lineWidth = 1;
-  for (const r of vis) {
-    const h = roadHash(r.key);
-    g.beginPath();
-    for (let i = 0; i < r.samples.length; i += 2) {
-      const s = r.samples[i]!;
-      if (s.bridge || !inB(s, 30)) continue;
-      for (let k = 0; k < 2; k++) {
-        const hv = hash(i * 2 + k, h + 7);
-        const o = (hv < 0.5 ? -1 : 1) * (r.R * 0.55 + hash(i, k + h) * 10);
-        const gx = s.x - s.uy * o;
-        const gy = s.y + s.ux * o;
-        g.moveTo(gx, gy);
-        g.lineTo(gx + (hash(k, i) - 0.5) * 3, gy - 4);
+  const vis = visibleRoads(roads, bx0, by0, bx1, by1).map((r) => ({
+    r,
+    h: roadHash(r.key),
+  }));
+  if (!vis.length) return;
+  // every road's samples as one shape (a single fill: an even wash, no banding where samples overlap or roads meet)
+  const body = (grow: number, wob: number) => {
+    const P = new Path2D();
+    for (const { r, h } of vis)
+      r.samples.forEach((s, i) => {
+        if (s.bridge || !inB(s, 52)) return;
+        const rr = s.r + grow + (wob ? (hash(i, h + 31) - 0.5) * wob : 0);
+        P.moveTo(s.x + rr, s.y);
+        P.ellipse(s.x, s.y, rr, rr * 0.85, 0, 0, 6.2832);
+      });
+    return P;
+  };
+  g.fillStyle = "rgba(156,146,92,.2)";
+  g.fill(body(9, 7));
+  g.fillStyle = "rgba(150,134,88,.3)";
+  g.fill(body(4, 4));
+  g.fillStyle = "rgba(110,94,62,.2)";
+  g.fill(body(1.6, 0));
+  const B = body(0, 0);
+  g.fillStyle = ROAD_EARTH;
+  g.fill(B);
+  g.save();
+  g.clip(B);
+  // a little-used path is half grown over: the turf's green washed back into it
+  for (const [lo, hi, a] of [
+    [0, 0.62, 0.3],
+    [0.62, 0.8, 0.15],
+  ] as const) {
+    const P = new Path2D();
+    let any = false;
+    for (const { r } of vis) {
+      if (r.wear < lo || r.wear >= hi) continue;
+      for (let i = 0; i < r.samples.length; i += 2) {
+        const s = r.samples[i]!;
+        if (s.bridge || !inB(s, 40)) continue;
+        P.moveTo(s.x + s.r + 3, s.y);
+        P.arc(s.x, s.y, s.r + 3, 0, 6.2832);
+        any = true;
       }
     }
-    g.stroke();
+    if (any) {
+      g.fillStyle = `rgba(126,136,78,${a})`;
+      g.fill(P);
+    }
   }
-  for (const r of vis) {
-    const h = roadHash(r.key);
-    for (let i = 0; i < r.samples.length; i += 3) {
-      const s = r.samples[i]!;
-      if (s.bridge || !inB(s, 10)) continue;
-      if (hash(i, h + 3) > 0.35) continue;
-      const o = (hash(i, h + 4) - 0.5) * s.r * 1.4;
-      const x = s.x - s.uy * o;
-      const y = s.y + s.ux * o;
-      const rr = 1.2 + hash(i, h + 5) * 3;
-      const t = hash(i, h + 6);
-      g.fillStyle = `rgb(${(150 + t * 50) | 0},${(148 + t * 46) | 0},${(140 + t * 40) | 0})`;
+  g.lineCap = "round";
+  for (const { r, h } of vis) {
+    const L = r.samples;
+    if (r.kind === "trunk" || r.kind === "street") {
+      // the odd puddle where the road dips
+      for (let i = 0; i < L.length; i += 9) {
+        const s = L[i]!;
+        if (s.bridge || s.r < 15 || !inB(s, 14) || hash(i, h + 95) > 0.045)
+          continue;
+        const o = (hash(i, h + 96) - 0.5) * s.r * 0.9;
+        const x = s.x - s.uy * o;
+        const y = s.y + s.ux * o * 0.85;
+        const rx = 4 + hash(i, h + 97) * 5.5;
+        const rot = Math.atan2(s.uy, s.ux) + (hash(i, h + 98) - 0.5);
+        g.fillStyle = "rgba(92,108,116,.6)";
+        g.beginPath();
+        g.ellipse(x, y, rx, rx * 0.55, rot, 0, 7);
+        g.fill();
+        g.strokeStyle = "rgba(74,60,40,.4)";
+        g.lineWidth = 0.8;
+        g.stroke();
+        g.strokeStyle = "rgba(232,240,238,.55)";
+        g.beginPath();
+        g.ellipse(x, y, rx * 0.62, rx * 0.3, rot, 3.4, 4.9);
+        g.stroke();
+      }
+    }
+    // washes of lighter and darker earth (round blots: nothing runs along the road)
+    for (let i = 0; i < L.length; i += 3) {
+      const s = L[i]!;
+      if (s.bridge || !inB(s, 30)) continue;
+      const h1 = hash(i, h + 41);
+      const o = (hash(i, h + 42) - 0.5) * s.r * 1.6;
+      g.fillStyle = h1 < 0.5 ? "rgba(232,218,176,.17)" : "rgba(118,98,64,.1)";
       g.beginPath();
-      g.ellipse(x, y, rr, rr * 0.75, t * 3, 0, 7);
+      g.ellipse(
+        s.x - s.uy * o,
+        s.y + s.ux * o,
+        5 + h1 * 7,
+        4 + hash(i, h + 43) * 5,
+        hash(i, h + 44) * 3.1,
+        0,
+        7,
+      );
       g.fill();
-      g.strokeStyle = "rgba(52,48,44,.55)";
-      g.lineWidth = 0.7;
-      g.stroke();
+    }
+    // grass biting into the edges
+    for (let i = 0; i < L.length; i += 2) {
+      const s = L[i]!;
+      if (s.bridge || !inB(s, 16)) continue;
+      const h1 = hash(i, h + 61);
+      if (h1 > 0.42) continue;
+      const side = hash(i, h + 62) < 0.5 ? -1 : 1;
+      const o = side * (s.r * (0.93 + hash(i, h + 63) * 0.2));
+      g.fillStyle = h1 < 0.2 ? "rgba(122,134,74,.8)" : "rgba(140,148,84,.7)";
+      g.beginPath();
+      g.ellipse(
+        s.x - s.uy * o,
+        s.y + s.ux * o * 0.85,
+        3 + hash(i, h + 64) * 6,
+        2 + hash(i, h + 65) * 3.5,
+        Math.atan2(s.uy, s.ux),
+        0,
+        7,
+      );
+      g.fill();
+    }
+    // grit
+    L.forEach((s, i) => {
+      if (s.bridge || !inB(s, 6)) return;
+      for (let q = 0; q < 2; q++) {
+        const o = (hash(i, h + 71 + q) - 0.5) * s.r * 1.8;
+        const a = (hash(i, h + 73 + q) - 0.5) * 4;
+        g.fillStyle =
+          hash(i, h + 75 + q) < 0.55
+            ? "rgba(70,56,36,.3)"
+            : "rgba(246,238,208,.34)";
+        g.fillRect(s.x - s.uy * o + s.ux * a, s.y + s.ux * o + s.uy * a, 1, 1);
+      }
+    });
+  }
+  g.restore();
+  g.lineCap = "round";
+  for (const { r, h } of vis) {
+    const L = r.samples;
+    const cart = r.kind !== "spur" && r.kind !== "lane";
+    // tufts along the verges and, on a cart road, down its crown
+    const dark = new Path2D();
+    const lite = new Path2D();
+    L.forEach((s, i) => {
+      if (s.bridge || !inB(s, 12)) return;
+      for (let k = 0; k < 2; k++) {
+        if (hash(i * 2 + k, h + 7) > 0.5) continue;
+        const o = (k ? -1 : 1) * (s.r * 0.9 + hash(i, k + h) * 7 - 2);
+        tuft(
+          hash(i, h + 81 + k) < 0.55 ? dark : lite,
+          s.x - s.uy * o,
+          s.y + s.ux * o * 0.85,
+          i,
+          k + h,
+        );
+      }
+      if (cart && hash(i, h + 85) < 0.1)
+        tuft(
+          hash(i, h + 88) < 0.5 ? dark : lite,
+          s.x + (hash(i, h + 86) - 0.5) * 4,
+          s.y + (hash(i, h + 87) - 0.5) * 3,
+          i,
+          h,
+        );
+    });
+    g.lineWidth = 0.95;
+    g.strokeStyle = TUFT_DARK;
+    g.stroke(dark);
+    g.strokeStyle = TUFT_LITE;
+    g.stroke(lite);
+    for (let i = 0; i < L.length; i += 3) {
+      const s = L[i]!;
+      if (s.bridge || !inB(s, 10) || hash(i, h + 3) > 0.3) continue;
+      const o = (hash(i, h + 4) - 0.5) * s.r * 1.9;
+      const t = hash(i, h + 6);
+      const h5 = hash(i, h + 5);
+      stone(
+        g,
+        s.x - s.uy * o,
+        s.y + s.ux * o * 0.85,
+        1.3 + h5 * h5 * 3.6,
+        t,
+        t * 3,
+      );
     }
   }
 }
@@ -169,33 +305,235 @@ export function paintBridges(
   return any;
 }
 
-/** A district square: packed earth and a few worn flagstones. */
+/** A square's outline, a wobbly ring → that ring grown by some px. */
+function squareRing(q: Square): (grow: number) => Path2D {
+  const rnd = seeded(strHash(`sqr:${q.key}`));
+  const n = 18;
+  const f = Array.from({ length: n }, () => 0.94 + rnd() * 0.12);
+  return (grow) =>
+    ring(
+      f.map((k, i) => {
+        const a = (i / n) * 6.2832;
+        return [
+          q.x + Math.cos(a) * (q.r * k + grow),
+          q.y + Math.sin(a) * (q.r * k + grow) * 0.92,
+        ] as const;
+      }),
+    );
+}
+
+/** A square's worn verge: painted under the roads, so a road runs into the square without an edge across it. */
+export function paintSquareVerge(g: Ctx, q: Square): void {
+  const at = squareRing(q);
+  g.fillStyle = "rgba(156,146,92,.2)";
+  g.fill(at(15));
+  g.fillStyle = "rgba(150,134,88,.3)";
+  g.fill(at(7));
+  g.fillStyle = "rgba(110,94,62,.2)";
+  g.fill(at(1.6));
+}
+
+/**
+ * A district square: packed earth, and rings of old flagstones laid round its
+ * middle (round the fire, where it burns), breaking up toward the edge —
+ * moss, cracks, tufts between them, a few loose stones.
+ */
 export function paintSquare(g: Ctx, q: Square): void {
   const rnd = seeded(strHash(`sq:${q.key}`));
-  g.fillStyle = "rgba(96,84,52,.25)";
-  blob(g, q.x, q.y, q.r + 10, rnd, 16, 0.12);
-  g.fill();
-  g.fillStyle = "#c9b68e";
-  blob(g, q.x, q.y, q.r, rnd, 16, 0.1);
-  g.fill();
-  const n = Math.round(140 * (q.r / 140) ** 2);
-  for (let i = 0; i < n; i++) {
+  const body = squareRing(q)(0);
+  const SQ = 0.74;
+  g.fillStyle = ROAD_EARTH;
+  g.fill(body);
+  g.save();
+  g.clip(body);
+  for (let i = 0; i < 60 * (q.r / 140) ** 2; i++) {
     const a = rnd() * 7;
-    const r = q.r * 0.2 + Math.sqrt(rnd()) * q.r * 0.72;
-    const x = q.x + Math.cos(a) * r;
-    const y = q.y + Math.sin(a) * r * 0.7;
-    const t = rnd();
-    g.fillStyle = `rgb(${(168 + t * 30) | 0},${(160 + t * 26) | 0},${(140 + t * 22) | 0})`;
+    const d = Math.sqrt(rnd()) * q.r;
+    g.fillStyle = rnd() < 0.5 ? "rgba(232,218,176,.2)" : "rgba(118,98,64,.13)";
     g.beginPath();
-    g.moveTo(x - 7, y - 4);
-    g.lineTo(x + 6 + rnd() * 3, y - 5);
-    g.lineTo(x + 7, y + 4);
-    g.lineTo(x - 6, y + 4 + rnd() * 2);
-    g.closePath();
+    g.ellipse(
+      q.x + Math.cos(a) * d,
+      q.y + Math.sin(a) * d * 0.92,
+      8 + rnd() * 16,
+      4 + rnd() * 9,
+      rnd() * 3,
+      0,
+      7,
+    );
     g.fill();
-    g.strokeStyle = "rgba(70,60,45,.45)";
-    g.lineWidth = 0.8;
-    g.stroke();
+  }
+  for (let i = 0; i < 26; i++) {
+    const a = rnd() * 7;
+    const k = 0.95 + rnd() * 0.1;
+    g.fillStyle = rnd() < 0.5 ? "rgba(122,134,74,.8)" : "rgba(140,148,84,.7)";
+    g.beginPath();
+    g.ellipse(
+      q.x + Math.cos(a) * q.r * k,
+      q.y + Math.sin(a) * q.r * k * 0.92,
+      4 + rnd() * 8,
+      2.5 + rnd() * 4,
+      a + 1.57,
+      0,
+      7,
+    );
+    g.fill();
+  }
+  // the bedding the stones lie in
+  g.fillStyle = "rgba(104,88,60,.2)";
+  g.beginPath();
+  g.ellipse(q.x, q.y, q.r * 0.7, q.r * 0.7 * SQ, 0, 0, 7);
+  g.fill();
+  if (q.camp) {
+    const gr = g.createRadialGradient(q.x, q.y, 6, q.x, q.y, 46);
+    gr.addColorStop(0, "rgba(58,48,36,.42)");
+    gr.addColorStop(1, "rgba(58,48,36,0)");
+    g.fillStyle = gr;
+    g.fillRect(q.x - 50, q.y - 50, 100, 100);
+  }
+  const step = 15.5;
+  const tufts: [number, number][] = [];
+  for (let rr = q.camp ? 38 : 12; rr < q.r * 0.93; rr += step) {
+    let a = rnd() * 6.2832;
+    const end = a + 6.2832;
+    while (a < end - 0.02) {
+      const wdt = 15 + rnd() * 15;
+      const da = Math.min(end - a, wdt / rr);
+      const am = a + da / 2;
+      const f = rr / q.r;
+      const x = q.x + Math.cos(am) * (rr + step / 2);
+      const y = q.y + Math.sin(am) * (rr + step / 2) * SQ;
+      const keep =
+        (1 - ss(0.42, 0.92, f + (vnoise(x / 34 + 7, y / 34) - 0.5) * 0.5)) *
+        (vnoise(x / 50 + 91, y / 50 + 3) > 0.3 ? 1 : 0.2);
+      const u = rnd();
+      const v0 = rnd();
+      const c1 = rnd();
+      const c2 = rnd();
+      const c3 = rnd();
+      const c4 = rnd();
+      const mo = rnd();
+      const cr = rnd();
+      if (u < keep) {
+        const gp = 1.1 / rr;
+        const at = (ang: number, rad: number, j: number) =>
+          [
+            q.x + Math.cos(ang) * rad + (j - 0.5) * 2.2,
+            q.y + Math.sin(ang) * rad * SQ + (j - 0.5) * 1.6,
+          ] as const;
+        const jr = (c3 - 0.5) * 3.4;
+        const i0 = rr + 1 + c1 * 1.8 + jr;
+        const o0 = rr + step - 1 - c2 * 1.8 + jr;
+        const p1 = at(am, i0 - 0.4, c3);
+        const p4 = at(am, o0 + 0.6, c4);
+        const p5 = at(a + gp, o0, c4);
+        const pts = [
+          at(a + gp, i0, c1),
+          p1,
+          at(a + da - gp, i0, c2),
+          at(a + da - gp, o0, c3),
+          p4,
+          p5,
+        ];
+        const path = new Path2D();
+        pts.forEach(([px, py], i) =>
+          i ? path.lineTo(px, py) : path.moveTo(px, py),
+        );
+        path.closePath();
+        g.fillStyle = "rgba(48,40,28,.3)";
+        g.save();
+        g.translate(1, 1.3);
+        g.fill(path);
+        g.restore();
+        const v = 0.84 + v0 * 0.22;
+        const warm = c4 < 0.35 ? 12 : 0;
+        g.fillStyle = `rgb(${((178 + warm) * v) | 0},${((168 + warm * 0.4) * v) | 0},${(146 * v) | 0})`;
+        g.lineJoin = "round";
+        g.fill(path);
+        g.save();
+        g.clip(path);
+        g.fillStyle = "rgba(255,250,232,.2)";
+        g.beginPath();
+        g.ellipse(x - wdt * 0.25, y - 4, wdt * 0.45, 4, 0, 0, 7);
+        g.fill();
+        g.fillStyle = "rgba(60,50,36,.16)";
+        g.beginPath();
+        g.ellipse(x + wdt * 0.3, y + 4, wdt * 0.5, 4, 0, 0, 7);
+        g.fill();
+        const sd = (v0 * 1e4) | 0;
+        for (let k = 0; k < 5; k++) {
+          g.fillStyle = k % 2 ? "rgba(50,42,30,.25)" : "rgba(255,250,235,.3)";
+          g.fillRect(
+            x + (hash(k, sd) - 0.5) * wdt * 0.8,
+            y + (hash(k + 9, sd) - 0.5) * step * 0.6,
+            1,
+            1,
+          );
+        }
+        g.restore();
+        g.strokeStyle = "rgba(52,42,30,.62)";
+        g.lineWidth = 0.85;
+        g.stroke(path);
+        if (cr < 0.14) {
+          g.strokeStyle = "rgba(52,42,30,.5)";
+          g.lineWidth = 0.7;
+          g.beginPath();
+          g.moveTo(p1[0], p1[1]);
+          g.lineTo(x + (c1 - 0.5) * 4, y + (c2 - 0.5) * 2);
+          g.lineTo(p4[0] + (c3 - 0.5) * 6, p4[1]);
+          g.stroke();
+        }
+        if (mo < 0.22) {
+          g.fillStyle = "rgba(98,112,60,.75)";
+          for (let k = 0; k < 4; k++) {
+            g.beginPath();
+            g.arc(
+              p5[0] + hash(k, 3) * 5,
+              p5[1] - hash(k, 4) * 3,
+              0.9 + hash(k, 5) * 1.2,
+              0,
+              7,
+            );
+            g.fill();
+          }
+        }
+      } else if (u < keep + 0.3 && f > 0.45) tufts.push([x, y]);
+      a += da;
+    }
+  }
+  g.restore();
+  const dark = new Path2D();
+  const lite = new Path2D();
+  tufts.forEach(([x, y], i) => tuft(i % 2 ? dark : lite, x, y, i, 5));
+  for (let i = 0; i < 40; i++) {
+    const a = rnd() * 7;
+    const k = 0.9 + rnd() * 0.16;
+    tuft(
+      i % 2 ? dark : lite,
+      q.x + Math.cos(a) * q.r * k,
+      q.y + Math.sin(a) * q.r * k * 0.92,
+      i,
+      11,
+    );
+  }
+  g.lineWidth = 0.95;
+  g.lineCap = "round";
+  g.strokeStyle = TUFT_DARK;
+  g.stroke(dark);
+  g.strokeStyle = TUFT_LITE;
+  g.stroke(lite);
+  for (let i = 0; i < 14; i++) {
+    const a = rnd() * 7;
+    const d = (0.3 + rnd() * 0.65) * q.r;
+    const t = rnd();
+    const sz = rnd();
+    stone(
+      g,
+      q.x + Math.cos(a) * d,
+      q.y + Math.sin(a) * d * 0.9,
+      1.4 + sz * sz * 3,
+      t,
+      t * 3,
+    );
   }
 }
 

@@ -7,6 +7,7 @@
 // ink: it is not measured — the renderer's hit masks ignore it the same way,
 // and a lighthouse's beam must not claim the plot it sweeps.
 
+import { insideProjection } from "../internal/projection-scope";
 import type { Box, Ctx2D } from "../spec";
 
 /** A 2D affine transform `[a, b, c, d, e, f]` (canvas order). */
@@ -26,6 +27,8 @@ function multiply(m: Matrix, n: Matrix): Matrix {
 }
 
 type MutBox = [number, number, number, number];
+/** A straight edge `[x0, y0, x1, y1]`. */
+export type Edge = readonly [number, number, number, number];
 
 const emptyBox = (): MutBox => [Infinity, Infinity, -Infinity, -Infinity];
 const isEmpty = (b: MutBox) => b[0] > b[2] || b[1] > b[3];
@@ -85,6 +88,11 @@ class MeasuringContext {
   private stack: DrawState[] = [];
   private path: MutBox = emptyBox();
   private readonly marks: MutBox[] = [];
+  /** The straight edges of the current path (device space), and where its open subpath started and stands. */
+  private segs: Edge[] = [];
+  private start: [number, number] | null = null;
+  private pen: [number, number] | null = null;
+  private readonly freeEdges: Edge[] = [];
 
   fillStyle: unknown = "#000";
   strokeStyle: unknown = "#000";
@@ -99,6 +107,35 @@ class MeasuringContext {
   /** Every painted box, in the caller's (untransformed) coordinates. */
   get painted(): readonly Box[] {
     return this.marks;
+  }
+
+  /**
+   * The straight edges of every polygon filled or clipped to OUTSIDE the
+   * projection (`oblique`), in the caller's coordinates: what the painter
+   * spelled by hand.
+   */
+  get handEdges(): readonly Edge[] {
+    return this.freeEdges;
+  }
+
+  /** Whether path edges are recorded (only the perspective test reads them: the footprint passes skip the work). */
+  recordEdges = false;
+
+  private to(x: number, y: number, draw: boolean): void {
+    if (!this.recordEdges) return;
+    const p = this.dev(x, y);
+    if (draw && this.pen)
+      this.segs.push([this.pen[0], this.pen[1], p[0], p[1]]);
+    if (!draw) this.start = p;
+    this.pen = p;
+  }
+
+  /** Records the current path's edges as hand-drawn, unless the projection is drawing. */
+  private takeEdges(): void {
+    if (!this.recordEdges) return;
+    if (insideProjection(this) || this.state.globalAlpha <= 0) return;
+    if (this.state.composite !== "source-over") return;
+    this.freeEdges.push(...this.segs);
   }
 
   // ---- state ----
@@ -212,17 +249,26 @@ class MeasuringContext {
   // ---- paths ----
   beginPath(): void {
     this.path = emptyBox();
+    this.segs = [];
+    this.start = this.pen = null;
   }
-  closePath(): void {}
+  closePath(): void {
+    if (this.pen && this.start)
+      this.segs.push([this.pen[0], this.pen[1], this.start[0], this.start[1]]);
+    this.pen = this.start;
+  }
   moveTo(x: number, y: number): void {
     this.add(x, y);
+    this.to(x, y, false);
   }
   lineTo(x: number, y: number): void {
     this.add(x, y);
+    this.to(x, y, true);
   }
   quadraticCurveTo(cx: number, cy: number, x: number, y: number): void {
     this.add(cx, cy);
     this.add(x, y);
+    if (this.recordEdges) this.pen = this.dev(x, y); // a curve is no straight edge
   }
   bezierCurveTo(
     c1x: number,
@@ -235,12 +281,18 @@ class MeasuringContext {
     this.add(c1x, c1y);
     this.add(c2x, c2y);
     this.add(x, y);
+    if (this.recordEdges) this.pen = this.dev(x, y);
   }
   rect(x: number, y: number, w: number, h: number): void {
     this.add(x, y);
     this.add(x + w, y);
     this.add(x, y + h);
     this.add(x + w, y + h);
+    this.to(x, y, false);
+    this.to(x + w, y, true);
+    this.to(x + w, y + h, true);
+    this.to(x, y + h, true);
+    this.to(x, y, true);
   }
   roundRect(x: number, y: number, w: number, h: number): void {
     this.rect(x, y, w, h);
@@ -288,6 +340,7 @@ class MeasuringContext {
       ] as const) {
         this.add(px + ox, py + oy);
       }
+      if (i === n && this.recordEdges) this.pen = this.dev(px, py);
     }
   }
 
@@ -307,6 +360,7 @@ class MeasuringContext {
   }
   fill(): void {
     this.mark([...this.path]);
+    this.takeEdges();
   }
   stroke(): void {
     const p = this.strokePad();
@@ -314,6 +368,7 @@ class MeasuringContext {
     this.mark([b[0] - p, b[1] - p, b[2] + p, b[3] + p]);
   }
   clip(): void {
+    this.takeEdges();
     const b: MutBox = [...this.path];
     this.state.clip = this.state.clip ? intersect(this.state.clip, b) : b;
   }
@@ -397,6 +452,35 @@ class MeasuringContext {
   }
 }
 
+/** The measuring context `draw` painted on. */
+function measure(
+  draw: (g: Ctx2D) => void,
+  recordEdges = false,
+): MeasuringContext {
+  const ctx = new MeasuringContext();
+  ctx.recordEdges = recordEdges;
+  // The measuring context implements the subset of the 2D API painters use;
+  // anything else throws, which names the method to add here.
+  const g = new Proxy(ctx, {
+    get(target, prop, receiver) {
+      if (prop in target) return Reflect.get(target, prop, receiver);
+      throw new Error(
+        `paintedExtent: the measuring context has no "${String(prop)}"`,
+      );
+    },
+  }) as unknown as Ctx2D;
+  draw(g);
+  return ctx;
+}
+
+/**
+ * The straight edges of every polygon `draw` fills or clips to by hand — not
+ * through the projection (`oblique`) — in the coordinates `draw` starts in.
+ */
+export function handDrawnEdges(draw: (g: Ctx2D) => void): readonly Edge[] {
+  return measure(draw, true).handEdges;
+}
+
 /** Where a painter put ink, split at a horizontal line. */
 export interface PaintedExtent {
   /** The ink at y ≥ splitY (the ground band), or null when none. */
@@ -415,18 +499,7 @@ export function paintedExtent(
   draw: (g: Ctx2D) => void,
   splitY: number,
 ): PaintedExtent {
-  const ctx = new MeasuringContext();
-  // The measuring context implements the subset of the 2D API painters use;
-  // anything else throws, which names the method to add here.
-  const g = new Proxy(ctx, {
-    get(target, prop, receiver) {
-      if (prop in target) return Reflect.get(target, prop, receiver);
-      throw new Error(
-        `paintedExtent: the measuring context has no "${String(prop)}"`,
-      );
-    },
-  }) as unknown as Ctx2D;
-  draw(g);
+  const ctx = measure(draw);
   const below = emptyBox();
   const above = emptyBox();
   for (const b of ctx.painted) {

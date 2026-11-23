@@ -3,8 +3,9 @@
 // `Ctx2D` and draws its randomness from the `rnd` it is handed, in a fixed
 // order, so the same stream always paints the same picture.
 
-import type { Box, Ctx2D } from "../spec";
+import { SHADOW_ALPHA_MAX, type Box, type Ctx2D } from "../spec";
 import { at, dark, jit, type Rnd } from "./colour";
+import { withinProjection } from "./projection-scope";
 
 export type Pt = readonly [number, number];
 
@@ -565,23 +566,38 @@ export function shingles(
   sketch(g, pts, rnd, 1.5);
 }
 
-/** A soft cast shadow of the polygon `pts` on the ground (a few widening strokes and a fill). */
+/** A cast shadow's passes: its widening edge strokes `[width, strength]` and its fill's strength. */
+const SHADOW_EDGE = [
+  [14, 0.12],
+  [8, 0.2],
+  [3, 0.3],
+] as const;
+const SHADOW_FILL = 0.85;
+/** The most opaque a cast shadow gets, where its fill and every edge stroke overlap, at strength `a`. */
+const shadowPeak = (a: number): number =>
+  1 - SHADOW_EDGE.reduce((t, [, k]) => t * (1 - a * k), 1 - a * SHADOW_FILL);
+/**
+ * A soft cast shadow of the polygon `pts` on the ground (a few widening
+ * strokes and a fill), `a` its strength — held under `SHADOW_ALPHA_MAX`:
+ * a shadow is never part of the building's shape (its edge was outlined on
+ * hover when it was), nor are two that overlap.
+ */
 export function castShadow(g: Ctx2D, pts: readonly Pt[], a = 0.26): void {
+  while (shadowPeak(a) > SHADOW_ALPHA_MAX) a *= 0.97;
   g.save();
   g.lineJoin = "round";
-  for (const [lw, k] of [
-    [14, 0.12],
-    [8, 0.2],
-    [3, 0.3],
-  ] as const) {
+  for (const [lw, k] of SHADOW_EDGE) {
     g.strokeStyle = `rgba(34,40,22,${a * k})`;
     g.lineWidth = lw;
     poly(g, pts);
     g.stroke();
   }
-  g.fillStyle = `rgba(34,40,22,${a * 0.85})`;
-  poly(g, pts);
-  g.fill();
+  g.fillStyle = `rgba(34,40,22,${a * SHADOW_FILL})`;
+  // a shadow lies on the ground: its outline is no receding edge of a volume
+  withinProjection(g, () => {
+    poly(g, pts);
+    g.fill();
+  });
   g.restore();
 }
 

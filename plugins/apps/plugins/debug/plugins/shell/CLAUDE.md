@@ -24,10 +24,11 @@
     - `ui/icons.symbol`
   - Exports (values): `debugApp`
 - Cross-plugin:
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×31
     - `infra` ×2
     - `shell` ×2
+    - `apps/debug/isle-building`
     - `backup`
     - `build`
     - `conversations/recover`

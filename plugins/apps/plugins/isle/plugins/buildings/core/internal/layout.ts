@@ -3,8 +3,12 @@
 // roof's key lines, where the props and the sign stand.
 
 import type { Box, Door } from "../spec";
-import type { Pt } from "./draw";
+import { bbox, type Pt } from "./draw";
+import { oblique, type Face } from "./oblique";
 import type { Plan, RoofForm, Wall } from "./plan";
+
+/** How deep a generated building is: how far its right side wall, its roof and its lean-to go back. */
+export const SIDE_D = 18;
 
 export const isRound = (p: Plan): boolean =>
   p.arch === "tower" || p.arch === "hut";
@@ -68,8 +72,12 @@ export interface Annex {
   readonly h: number;
   /** The wall material (a workshop's bay is open; logs become planks there). */
   readonly wall: Wall;
-  /** The lean-to roof polygon. */
-  readonly roof: Pt[];
+  /** The lean-to roof: the plane its sloping front edge (the verge) sweeps going back. */
+  readonly roof: Face;
+  /** The wall under the verge, above the wall's square top. */
+  readonly gable: readonly Pt[];
+  /** The x of its free right end (a lean-to on the right shows that end receding), or null. */
+  readonly endX: number | null;
 }
 
 /** The lean-to beside the body, or null. */
@@ -80,25 +88,17 @@ export function annexOf(p: Plan): Annex | null {
   const x0 = a < 0 ? -p.W2 - p.annexW : p.W2 - 4;
   const x1 = a < 0 ? -p.W2 + 4 : p.W2 + p.annexW;
   const h = Math.round(wallH * 0.62);
-  const lo = a < 0 ? x0 - 8 : x1 + 8;
-  const hi = a < 0 ? x1 : x0;
-  const roof: Pt[] =
-    a < 0
-      ? [
-          [lo, -h + 4],
-          [hi, -h + 4],
-          [hi, -h - 22],
-          [lo + 6, -h - 12],
-        ]
-      : [
-          [hi, -h + 4],
-          [lo, -h + 4],
-          [lo - 6, -h - 12],
-          [hi, -h - 22],
-        ];
+  // the verge runs from high on the body's wall down to the outer eave
+  const lo: Pt = [a < 0 ? x0 - 8 : x1 + 8, -h + 4];
+  const hi: Pt = [a < 0 ? x1 : x0, -h - 22];
+  const roof =
+    a < 0 ? oblique.extrude(lo, hi, SIDE_D) : oblique.extrude(hi, lo, SIDE_D);
+  const xw = a < 0 ? x0 : x1;
+  const yv = hi[1] + ((xw - hi[0]) / (lo[0] - hi[0])) * (lo[1] - hi[1]);
+  const gable: Pt[] = [[hi[0], -h], hi, [xw, yv], [xw, -h]];
   const wall: Wall =
     p.arch === "workshop" && p.wall === "logs" ? "planks" : p.wall;
-  return { x0, x1, h, wall, roof };
+  return { x0, x1, h, wall, roof, gable, endX: a > 0 ? x1 : null };
 }
 
 export interface WindowSlot {
@@ -129,6 +129,14 @@ export function windowSlots(p: Plan): WindowSlot[] {
   };
   row(-20, 26);
   if (p.storeys === 2) row(WT / 2 - 10, 24);
+  return out;
+}
+
+/** The side wall's narrow windows: the bottom y of each (none where a lean-to stands against the wall). */
+export function sideWindows(p: Plan): number[] {
+  const out: number[] = [];
+  if (p.annex <= 0) out.push(-20);
+  if (p.storeys === 2) out.push(-wallHeight(p) / 2 - 10);
   return out;
 }
 
@@ -164,8 +172,26 @@ export interface RoofShape {
   readonly chimY: number;
   /** The highest ink the roof reaches. */
   readonly topY: number;
+  /** The planes that show from the front, lowest first (the first one carries the eave). */
+  readonly planes: readonly Face[];
+  /** The right end, receding: a gable wall (`endIsWall`) or a roof plane; null when the right slope is the end. */
+  readonly end: Face | null;
+  readonly endIsWall: boolean;
+  /** Which of `planes` face away from the light (the right slope of a gable-front roof). */
+  readonly shaded: readonly Face[];
+  /** The ridge line. */
+  readonly ridge: readonly [Pt, Pt];
+  /** The box round every plane. */
+  readonly box: Box;
   readonly dormers: readonly { readonly dx: number; readonly dy: number }[];
 }
+
+/**
+ * A roof plane from the points the projection placed (`oblique.back` /
+ * `extrude` above): the roof's planes are faces of the projected volume.
+ */
+const faceOf = (pts: readonly Pt[]): Face =>
+  oblique.project(pts.map(([x, y]) => [x, 0, -y]));
 
 export function roofShape(
   p: Plan,
@@ -196,6 +222,50 @@ export function roofShape(
     });
   }
   const front = p.roofForm === "gablefront";
+  // every plane is placed by the projection: the ridge of a roof along the front stands half the depth back
+  const half = SIDE_D / 2;
+  let planes: Face[];
+  let end: Face | null = null;
+  let endIsWall = false;
+  let shaded: Face[] = [];
+  let ridge: readonly [Pt, Pt];
+  let chimX = cx + p.chimney * W * 0.3;
+  let chimY = eaveY - rh * 0.55;
+  if (front) {
+    const fe = eaveY + 6;
+    const apex: Pt = [cx, ay - 6];
+    const left = oblique.extrude([x0 - ov, fe], apex, SIDE_D);
+    const right = oblique.extrude(apex, [x1 + ov, fe], SIDE_D);
+    planes = [left, right];
+    shaded = [right];
+    ridge = [apex, oblique.back(apex, SIDE_D)];
+    // the chimney stands on a slope, half way back
+    const x = cx + p.chimney * W * 0.28;
+    const onEdge = fe + (apex[1] - fe) * (1 - Math.abs(x - cx) / (W / 2 + ov));
+    [chimX, chimY] = oblique.back([x, onEdge], half);
+  } else {
+    const eY = eaveY + 4;
+    const a: Pt = [x1 + ov, eY];
+    const b = oblique.back(a, SIDE_D);
+    const out = gambrel || p.roofForm === "gable" ? -ov : inset;
+    const rl: Pt = [x0 + out + half, top];
+    const rr: Pt = [x1 - out + half, top];
+    ridge = [rl, rr];
+    if (gambrel) {
+      const q = SIDE_D / 4;
+      const kneeY = eaveY - rh * 0.45;
+      const kl: Pt = [x0 - ov + q, kneeY];
+      const kr: Pt = [x1 + ov + q, kneeY];
+      planes = [faceOf([[x0 - ov, eY], a, kr, kl]), faceOf([kl, kr, rr, rl])];
+      end = faceOf([a, b, oblique.back(kr, half), rr, kr]);
+      endIsWall = true;
+    } else {
+      planes = [faceOf([[x0 - ov, eY], a, rr, rl])];
+      end = faceOf([a, b, rr]);
+      endIsWall = p.roofForm === "gable";
+    }
+  }
+  const box = bbox([...planes.flat(), ...(end ?? [])]);
   return {
     form: p.roofForm,
     x0,
@@ -213,25 +283,39 @@ export function roofShape(
     ay,
     kneeY: eaveY - rh * 0.45,
     k: W * 0.1,
-    ra: gambrel ? x0 + W * 0.1 + 6 : x0 + inset,
-    rb: gambrel ? x1 - W * 0.1 - 6 : x1 - inset,
-    chimX: front ? cx + p.chimney * W * 0.28 : cx + p.chimney * W * 0.3,
-    chimY: front ? eaveY - gh * 0.4 - D * 0.6 : eaveY - rh * 0.55,
-    topY: front ? ay - 6 - D : top - 5,
+    ra: ridge[0][0],
+    rb: ridge[1][0],
+    chimX,
+    chimY,
+    topY: box[1] - 1,
     dormers,
+    planes,
+    end,
+    endIsWall,
+    shaded,
+    ridge,
+    box,
   };
 }
+
+/** How deep the chimney stack is. */
+export const CHIMNEY_D = 8;
 
 /** The chimney's smoke anchor (the chimney's mouth), or null when the building has none. */
 export function smokeAnchor(p: Plan): Pt | null {
   if (isRound(p) || !p.chimney) return null;
   const R = roofShape(p, -p.W2, p.W2, -wallHeight(p));
-  return [R.chimX, R.chimY - 34 - 6];
+  const [x, y] = oblique.back([R.chimX, R.chimY - 34 - 6], CHIMNEY_D / 2);
+  return [x, y];
 }
 
 /** The side anchor props stand at (outside the wall, past a lean-to on that side). */
 export const propsAnchor = (p: Plan): number =>
-  p.side * (p.W2 + (p.annex === p.side ? p.annexW : 0) + 14);
+  p.side *
+  (p.W2 +
+    (p.annex === p.side ? p.annexW : 0) +
+    14 +
+    (p.side > 0 && !isRound(p) ? SIDE_D : 0));
 
 /** The `bounds` box of the grain pass: everything the building paints, with slack. */
 export function grainBox(p: Plan): Box {

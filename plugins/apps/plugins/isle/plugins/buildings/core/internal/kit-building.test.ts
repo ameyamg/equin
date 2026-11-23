@@ -12,7 +12,7 @@ import {
   type BuildingSpec,
   type PaintState,
 } from "../spec";
-import { boxWithin, paintedExtent } from "../testing";
+import { boxWithin, paintedExtent, perspectiveProblems } from "../testing";
 import { categoryOfSeed, kitBuilding } from "./kit-building";
 import { chimneySmoke, openDoor } from "./parts";
 
@@ -149,6 +149,15 @@ function measuringSink() {
   if (!sink) throw new Error("no sink");
   return sink;
 }
+
+describe("kitBuilding perspective", () => {
+  test("no generated building spells a receding edge by hand: side faces come from the projection (oblique)", () => {
+    const problems = specs.flatMap(({ id, spec }) =>
+      perspectiveProblems(spec, id).map((line) => `${id}: ${line}`),
+    );
+    expect(problems.slice(0, 12)).toEqual([]);
+  });
+});
 
 describe("kitBuilding footprint", () => {
   test("declares everything the building paints and animates", () => {

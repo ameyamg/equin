@@ -11,6 +11,8 @@ import { GROUND_BAND, type Box } from "../spec";
 import { bbox, type Pt } from "./draw";
 import {
   annexOf,
+  CHIMNEY_D,
+  SIDE_D,
   doorHeight,
   doorWidth,
   propsAnchor,
@@ -21,7 +23,9 @@ import {
   windowSlots,
   type RoofShape,
 } from "./layout";
+import { oblique } from "./oblique";
 import type { Plan, Wall } from "./plan";
+import { DORMER_D } from "./walls";
 
 /** What a hand-inked sketch outline adds around its rectangle (wobble, second pass, pen). */
 const SKETCH_PAD = 3;
@@ -85,6 +89,21 @@ function wallBox(
   return [x0 - SKETCH_PAD, y0 - SKETCH_PAD, x1 + SKETCH_PAD, y1 + SKETCH_PAD];
 }
 
+/**
+ * A side wall of `wall` material `SIDE_D` deep, from the front's right edge at
+ * `x`, `top` high: the box of its flat painting (`wallBox`) once sheared onto
+ * the receding side.
+ */
+function sideWallBox(wall: Wall, x: number, top: number): Box {
+  const b = wallBox(wall, 0, top, SIDE_D, 0);
+  return [
+    x + b[0],
+    b[1] - oblique.rise(Math.max(0, b[2])),
+    x + b[2],
+    b[3] - oblique.rise(Math.min(0, b[0])),
+  ];
+}
+
 /** A window's box, sill and shutters included. */
 function windowBox(
   x: number,
@@ -123,16 +142,24 @@ function rotated(b: Box, a: number): Box {
 /** The roof of a rectangular body, its dormers included. */
 function addRoof(e: Extent, p: Plan, R: RoofShape): void {
   const thatch = p.roof === "thatch";
+  // every plane the projection placed (the front slopes, the receding end), plus what its covering adds
+  const b = R.box;
   if (R.form === "gablefront") {
     // barge boards are stroked 4 wide
-    e.addBox([R.x0 - R.ov, R.topY, R.x1 + R.ov, R.eaveY + 6], 4);
+    e.addBox(b, 4);
   } else if (thatch) {
-    e.add(R.x0 - R.ov - 2, R.top - 6.5, R.x1 + R.ov + 2, R.eaveY + 4 + 7.5); // ragged eave
+    e.add(b[0] - 2, Math.min(b[1], R.top - 6.5), b[2] + 2, b[3] + 7.5); // ragged eave
   } else {
-    e.add(R.x0 - R.ov - 4, R.top - 5.5, R.x1 + R.ov + 4, R.eaveY + 4 + 4);
+    e.add(b[0] - 4, Math.min(b[1], R.top - 5.5), b[2] + 4, b[3] + 4);
   }
   for (const { dx, dy } of R.dormers) {
     e.addBox([dx - 14, dy - 30, dx + 14, dy + 4], SKETCH_PAD + 1);
+    e.add(
+      dx + 10,
+      dy - 18 - oblique.rise(DORMER_D) - 1,
+      dx + 10 + DORMER_D + 1,
+      dy + 1,
+    ); // its cheek
   }
 }
 
@@ -327,6 +354,9 @@ export function footprintBoxes(p: Plan): { ground: Box; upper: Box | null } {
   if (annex) {
     e.addBox(wallBox(annex.wall, annex.x0, -annex.h, annex.x1, 0));
     e.addBox(bbox(annex.roof), p.roof === "thatch" ? 1 : SKETCH_PAD + 1);
+    e.addBox(bbox(annex.gable), SKETCH_PAD);
+    if (annex.endX !== null)
+      e.addBox(sideWallBox(annex.wall, annex.endX, -annex.h));
   }
 
   if (p.arch === "tower") {
@@ -351,6 +381,7 @@ export function footprintBoxes(p: Plan): { ground: Box; upper: Box | null } {
     const R = roofShape(p, -W2, W2, WT);
     addRoof(e, p, R);
     e.addBox(wallBox(p.wall, -W2, WT, W2, 0));
+    e.addBox(sideWallBox(p.wall, W2, WT)); // the receding right side
     if (!(p.wall === "rubble" || p.wall === "ashlar")) {
       e.addBox([
         -W2 - SKETCH_PAD,
@@ -368,7 +399,12 @@ export function footprintBoxes(p: Plan): { ground: Box; upper: Box | null } {
     if (p.chimney) {
       const x = R.chimX;
       const y = R.chimY;
-      e.add(x - 11, y - 39, x + 11, y + 8); // the chimney
+      e.add(
+        x - 11,
+        y - 39 - oblique.rise(CHIMNEY_D + 2),
+        x + 11 + CHIMNEY_D + 2,
+        y + 8,
+      ); // the chimney: its stack, its side and its capping
     }
   }
 

@@ -58,6 +58,22 @@ export interface Footprint {
   readonly upper: Box | null;
 }
 
+/**
+ * How opaque a pixel of a building's paint must be to count as the building
+ * (0..1): the pointer hits it and the hover light outlines it. Fainter paint —
+ * a cast shadow, a wash on the grass — lies under the building, not in it.
+ */
+export const SOLID_ALPHA = 143 / 255;
+
+/**
+ * The darkest one shadow on the ground may get, so that TWO lying over one
+ * another (a prop's in the building's) still stay under {@link SOLID_ALPHA},
+ * with room for the antialiased ramp the hover silhouette is cut with. The
+ * kit's shadows (`castShadow`, `fittings.ellShadow`) hold themselves to it; a
+ * shadow drawn by hand must too.
+ */
+export const SHADOW_ALPHA_MAX = 1 - Math.sqrt(1 - (SOLID_ALPHA - 0.05));
+
 /** A night glow: `[x, y, radius]`, door-relative. */
 export type Light = readonly [number, number, number];
 
@@ -129,6 +145,21 @@ export interface BuildingSpec {
   readonly chimney?: Chimney;
   /** The static picture: painted once per time of day and cached by the engine. */
   paint(g: Ctx2D, s: PaintState): void;
-  /** What moves (a turning sail, a beam, a swing — never chimney smoke: that is `chimney`), drawn every frame over the cached paint. */
+  /**
+   * The building's own MOVING PARTS (a turning sail, a crane's load, a swing,
+   * a flag, a beam — never chimney smoke: that is `chimney`), drawn every
+   * frame over the cached paint. They are part of the building's shape: the
+   * pointer hits them, and the hover outline and wash follow them as they
+   * move. What merely lives around the building goes in `ambient`.
+   */
   animate?(g: Ctx2D, s: PaintState): void;
+  /**
+   * What lives AROUND the building, drawn every frame over everything else of
+   * it: creatures that roam (ants, birds, a cat), and what drifts loose of it
+   * (sparks, notes, confetti, bubbles, steam, falling leaves). Never part of
+   * its shape — the pointer does not hit it, and hovering the building
+   * neither outlines nor washes it (a halo round every ant flickers as it
+   * walks). Inside the declared footprint, like everything else.
+   */
+  ambient?(g: Ctx2D, s: PaintState): void;
 }

@@ -5,6 +5,6 @@ import { lighthouse } from "../core";
 
 export default {
   description:
-    "Places' building on Isle: the cartographer's lighthouse on its rocks, beams sweeping the sea at dusk and night.",
+    "Places' building on Isle: the map-pin lighthouse, a copper pin planted in the rocks on a flagstone compass rose — pins dropping onto the map, routes dotted in, the north arrow settling, beams sweeping the sea at dusk and night.",
   contributions: [Isle.Building({ app: placesApp, building: lighthouse })],
 } satisfies PluginDefinition;

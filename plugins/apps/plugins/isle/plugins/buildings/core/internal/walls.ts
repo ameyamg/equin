@@ -4,6 +4,7 @@
 import type { Ctx2D } from "../spec";
 import { at, jit, type Rnd } from "./colour";
 import {
+  bbox,
   hline,
   ink,
   planks,
@@ -17,6 +18,7 @@ import {
   type Pt,
 } from "./draw";
 import type { RoofShape } from "./layout";
+import { oblique, type Face } from "./oblique";
 import type { Plan, RoofKind, Wall } from "./plan";
 import { windowRect } from "./parts";
 
@@ -175,7 +177,7 @@ export function roofCover(
 export const smallRoof = (kind: RoofKind): RoofKind =>
   kind === "thatch" ? "shingle" : kind;
 
-/** Paints the roof of a rectangular body described by `R`. */
+/** Paints the roof of a rectangular body described by `R`: its planes and its receding right end come from the projection. */
 export function paintRoof(
   g: Ctx2D,
   R: RoofShape,
@@ -184,45 +186,44 @@ export function paintRoof(
   night: boolean,
 ): void {
   const { x0, x1, eaveY, ov, top } = R;
-  const cover = (pts: readonly Pt[], eave?: readonly [Pt, Pt]) =>
-    roofCover(g, p.roof, pts, r, eave);
+  const cover = (f: Face, eave?: readonly [Pt, Pt]) =>
+    oblique.fill(g, f, (pts) => roofCover(g, p.roof, pts, r, eave));
   const eave: readonly [Pt, Pt] = [
     [x0 - ov, eaveY + 4],
     [x1 + ov, eaveY + 4],
   ];
+  // the right end first (the front planes overlap its edge): a gable wall in shade, or a hip plane
+  const end = R.end;
+  if (end) {
+    if (R.endIsWall) {
+      const b = bbox(end);
+      oblique.fill(g, end, (pts) =>
+        wallFill(g, b[0], b[1], b[2], b[3], r, p.wall, () => poly(g, pts)),
+      );
+    } else cover(end);
+    oblique.shadeFace(g, end, R.endIsWall ? 0.36 : 0.26);
+    oblique.inkFace(g, end, 1.2);
+  }
+  R.planes.forEach((f, i) =>
+    cover(f, i === 0 && R.form !== "gablefront" ? eave : undefined),
+  );
+  for (const f of R.shaded) oblique.shadeFace(g, f, 0.22);
   if (R.form === "gablefront") {
-    // ridge runs away from us: two slopes seen from above, the gable wall in front
-    const { gh, D, ax, ay } = R;
-    cover([
-      [x0 - ov, eaveY + 6],
-      [ax, ay - 6],
-      [ax, ay - 6 - D],
-      [x0 - ov, eaveY + 6 - D],
-    ]);
-    cover([
-      [ax, ay - 6],
-      [x1 + ov, eaveY + 6],
-      [x1 + ov, eaveY + 6 - D],
-      [ax, ay - 6 - D],
-    ]);
-    g.fillStyle = "rgba(20,18,15,.22)";
-    poly(g, [
-      [ax, ay - 6],
-      [x1 + ov, eaveY + 6],
-      [x1 + ov, eaveY + 6 - D],
-      [ax, ay - 6 - D],
-    ]);
-    g.fill();
+    // ridge runs away from us: two slopes going back, the gable wall in front
+    const { gh, ax, ay } = R;
     const tri = () =>
       poly(g, [
         [x0, eaveY],
         [ax, ay],
         [x1, eaveY],
       ]);
-    wallFill(g, x0, ay, x1, eaveY, r, p.wall, tri);
-    tri();
-    ink(g, 1.4);
-    g.stroke();
+    // (the gable lies in the front plane: its pitch is no receding edge)
+    oblique.diagonal(g, () => {
+      wallFill(g, x0, ay, x1, eaveY, r, p.wall, tri);
+      tri();
+      ink(g, 1.4);
+      g.stroke();
+    });
     // barge boards
     g.strokeStyle = "#5a4632";
     g.lineWidth = 4;
@@ -233,6 +234,14 @@ export function paintRoof(
     g.stroke();
     ink(g, 1);
     g.stroke();
+    // the ridge, going back
+    g.strokeStyle = p.roof === "tile" ? "#7d5444" : "#55585e";
+    g.lineWidth = 3.4;
+    g.lineCap = "round";
+    g.beginPath();
+    g.moveTo(R.ridge[0][0], R.ridge[0][1]);
+    g.lineTo(R.ridge[1][0], R.ridge[1][1]);
+    g.stroke();
     // a little gable window or vent
     if (r() < 0.6)
       windowRect(g, ax - 7, eaveY - gh * 0.25, 14, 14, r, {
@@ -241,64 +250,19 @@ export function paintRoof(
       });
     return;
   }
-  const { inset } = R;
   if (R.form === "gambrel") {
-    // two pitches
-    const { kneeY, k } = R;
-    cover(
-      [
-        [x0 - ov, eaveY + 4],
-        [x1 + ov, eaveY + 4],
-        [x1 - k, kneeY],
-        [x0 + k, kneeY],
-      ],
-      eave,
-    );
-    cover([
-      [x0 + k, kneeY],
-      [x1 - k, kneeY],
-      [x1 - k - 6, top],
-      [x0 + k + 6, top],
-    ]);
-    g.fillStyle = "rgba(255,248,230,.08)";
-    poly(g, [
-      [x0 + k, kneeY],
-      [x1 - k, kneeY],
-      [x1 - k - 6, top],
-      [x0 + k + 6, top],
-    ]);
-    g.fill();
-    ink(g, 1.3);
-    hline(g, x0 + k, kneeY, x1 - k, kneeY, r);
-  } else {
-    cover(
-      [
-        [x0 - ov, eaveY + 4],
-        [x1 + ov, eaveY + 4],
-        [x1 - inset, top],
-        [x0 + inset, top],
-      ],
-      eave,
-    );
-    if (R.form !== "gable") {
-      // hip lines and the side planes' shading
-      g.fillStyle = "rgba(255,248,230,.10)";
-      poly(g, [
-        [x0 - ov, eaveY + 4],
-        [x0 + inset, top],
-        [x0 + inset + 10, eaveY + 4],
-      ]);
-      g.fill();
-      g.fillStyle = "rgba(20,18,15,.22)";
-      poly(g, [
-        [x1 + ov, eaveY + 4],
-        [x1 - inset, top],
-        [x1 - inset - 10, eaveY + 4],
-      ]);
-      g.fill();
-      ink(g, 1);
-      hline(g, x0 - ov + 4, eaveY + 2, x0 + inset, top, r);
-      hline(g, x1 + ov - 4, eaveY + 2, x1 - inset, top, r);
+    const knee = R.planes[1];
+    if (knee) {
+      g.fillStyle = "rgba(255,248,230,.08)";
+      oblique.fill(g, knee, (pts) => {
+        poly(g, pts);
+        g.fill();
+      });
+      const [kl, kr] = knee;
+      if (kl && kr) {
+        ink(g, 1.3);
+        hline(g, kl[0], kl[1], kr[0], kr[1], r);
+      }
     }
   }
   // ridge cap
@@ -319,9 +283,17 @@ export function paintRoof(
     ink(g, 1);
     g.strokeRect(ra, top - 4, rb - ra, 5);
   }
-  // dormers on the front slope
+  // dormers on the front slope: a plastered front, a cheek receding on its right
   const dw = 20;
   for (const { dx, dy } of R.dormers) {
+    const cheek = oblique.sideFace(dx + dw / 2, dy, dy - 18, DORMER_D);
+    oblique.fill(g, cheek, (pts) => {
+      g.fillStyle = "#b9ad92";
+      poly(g, pts);
+      g.fill();
+    });
+    oblique.shadeFace(g, cheek, 0.3);
+    oblique.inkFace(g, cheek, 1);
     wallFill(g, dx - dw / 2, dy - 18, dx + dw / 2, dy, r, "plaster");
     windowRect(g, dx - 6, dy - 2, 12, 12, r, { lit: night });
     roofCover(
@@ -336,3 +308,6 @@ export function paintRoof(
     );
   }
 }
+
+/** How deep a dormer's cheek shows. */
+export const DORMER_D = 5;

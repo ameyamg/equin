@@ -5,6 +5,7 @@
 import type { Chimney, Ctx2D, Door } from "../spec";
 import { at, jit, type Rnd } from "./colour";
 import { castShadow, hline, ink, planks, wash } from "./draw";
+import { oblique } from "./oblique";
 
 export interface WindowOptions {
   /** Warm light behind the glass (night). */
@@ -167,7 +168,16 @@ export function doorArch(
   g.fill();
 }
 
-/** `n` stone steps up to a door centred on `x`. */
+/** A step's riser height and its tread's depth, px. */
+const STEP_RISE = 2.2;
+const STEP_TREAD = 3.8;
+
+/**
+ * `n` stone steps up to a door centred on `x`, the top tread meeting the wall
+ * at `y`. They come out of the wall toward the viewer — down and to the left,
+ * along the receding vector backwards — each a slab showing its riser, its
+ * tread from above and its right end; each lower one 8 px wider.
+ */
 export function steps(
   g: Ctx2D,
   x: number,
@@ -176,19 +186,53 @@ export function steps(
   n: number,
   rnd: Rnd,
 ): void {
-  for (let i = 0; i < n; i++) {
-    const ww = w + (n - i) * 8;
-    const yy = y + (n - i) * 4;
-    g.fillStyle = jit("#a49d8c", rnd, 14);
-    g.fillRect(x - ww / 2, yy - 4, ww, 4);
-    g.fillStyle = "rgba(30,26,20,.25)";
-    g.fillRect(x - ww / 2, yy - 1, ww, 1.5);
-    ink(g, 0.9, 0.6);
-    g.strokeRect(x - ww / 2, yy - 4, ww, 4);
+  const cols = Array.from({ length: n }, () => jit("#a49d8c", rnd, 14));
+  // from the wall outward: each slab stands in front of the one above it
+  for (let i = n - 1; i >= 0; i--) {
+    const k = n - i;
+    const ww = w + k * 8;
+    const col = cols[i] ?? "#a49d8c";
+    const [x0, yt] = oblique.back(
+      [x - ww / 2, y + (k - 1) * STEP_RISE],
+      -k * STEP_TREAD,
+    );
+    oblique.solid(
+      g,
+      { x0, x1: x0 + ww, yb: yt + STEP_RISE, yt, d: STEP_TREAD },
+      {
+        side: (d, t, b) => {
+          g.fillStyle = col;
+          g.fillRect(0, t, d, b - t);
+        },
+        top: (a, b, d) => {
+          g.fillStyle = col;
+          g.fillRect(a, 0, b - a, d);
+          g.fillStyle = "rgba(255,250,236,.22)";
+          g.fillRect(a, 0, b - a, d);
+        },
+        front: ([a, t, b, f]) => {
+          g.fillStyle = col;
+          g.fillRect(a, t, b - a, f - t);
+          g.fillStyle = "rgba(30,26,20,.2)";
+          g.fillRect(a, t, b - a, f - t);
+        },
+        shade: 0.34,
+        ink: 0,
+      },
+    );
+    const f = oblique.box({
+      x0,
+      x1: x0 + ww,
+      yb: yt + STEP_RISE,
+      yt,
+      d: STEP_TREAD,
+    });
+    for (const face of [f.top, f.side, f.front])
+      oblique.inkFace(g, face, 0.9, 0.6);
   }
 }
 
-/** A crate of side `s` standing at (x, y). */
+/** A crate of side `s` standing at (x, y): its front, its top and its right side receding. */
 export function crate(
   g: Ctx2D,
   x: number,
@@ -216,16 +260,24 @@ export function crate(
   g.moveTo(x + 2, y - 2);
   g.lineTo(x + s - 2, y - s + 2);
   g.stroke();
-  g.fillStyle = jit("#b49a72", rnd, 10);
-  g.beginPath();
-  g.moveTo(x, y - s);
-  g.lineTo(x + 4, y - s - 3);
-  g.lineTo(x + s + 4, y - s - 3);
-  g.lineTo(x + s, y - s);
-  g.closePath();
-  g.fill();
-  ink(g, 0.9);
-  g.stroke();
+  const top = jit("#b49a72", rnd, 10);
+  oblique.solid(
+    g,
+    { x0: x, x1: x + s, yb: y, yt: y - s, d: 5 },
+    {
+      side: (d, yt, yb) => {
+        g.fillStyle = "#8a7050";
+        g.fillRect(0, yt, d, yb - yt);
+      },
+      top: (x0, x1, d) => {
+        g.fillStyle = top;
+        g.fillRect(x0, 0, x1 - x0, d);
+      },
+      front: () => {},
+      shade: 0.12,
+      ink: 0.9,
+    },
+  );
 }
 
 /** A barrel of radius `r` standing at (x, y); 2.3 r tall. */
@@ -336,6 +388,13 @@ export function bench(
   );
   g.fillStyle = "#5c4a36";
   for (const lx of [x + 3, x + w - 6]) g.fillRect(lx, y - 9, 3, 9);
+  // the seat, seen from above, behind its front edge
+  oblique.onTop(g, y - 13, () => {
+    g.fillStyle = "#9c8463";
+    g.fillRect(x, 0, w, 6);
+    ink(g, 0.8, 0.6);
+    g.strokeRect(x, 0, w, 6);
+  });
   planks(g, x, y - 13, x + w, y - 9, rnd, {
     base: "#8a7253",
     vertical: false,

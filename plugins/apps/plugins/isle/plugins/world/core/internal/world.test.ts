@@ -373,3 +373,133 @@ describe("moving a building", () => {
     expect(back.occupant[gone.id]).not.toBe(lot.id);
   });
 });
+
+describe("isle roads, worn into footpaths", () => {
+  for (const [seed, n] of [
+    [7, 40],
+    [1, 142],
+  ] as const) {
+    test(`no road crosses a plot's band, and every lane reaches a road: ${n} apps`, () => {
+      const M = new WorldModel(seed);
+      const rs = residents(n);
+      const P = placeResidents(M, EMPTY_PLACEMENT, rs);
+      const t0 = performance.now();
+      const L = layoutWorld(M, P, rs);
+      expect(performance.now() - t0).toBeLessThan(4000);
+      expect(layoutWorld(M, P, rs).roads).toEqual(L.roads);
+      const plots = Object.values(P.plots)
+        .flat()
+        .filter((p) => !p.retired && !p.wild);
+      const inBand = (x: number, y: number, skip: string | null) =>
+        plots.find(
+          (p) =>
+            p.id !== skip &&
+            x > p.x + p.g[0] &&
+            x < p.x + p.g[2] &&
+            y > p.y + p.g[1] &&
+            y < p.y + p.g[3],
+        );
+      for (const r of L.roads) {
+        const own = r.key.startsWith("ln:")
+          ? (plots.find((p) => r.key.endsWith(`:${p.id}`))?.id ?? null)
+          : null;
+        for (const [x, y] of r.pts) {
+          const hit = inBand(x, y, own);
+          if (hit) throw new Error(`road ${r.key} crosses plot ${hit.id}`);
+        }
+        if (!own) continue;
+        const [ex, ey] = r.pts[r.pts.length - 1]!;
+        const joins =
+          L.squares.some((q) => Math.hypot(q.x - ex, q.y - ey) < q.r) ||
+          L.roads.some(
+            (o) =>
+              o !== r &&
+              o.pts.some(([x, y]) => Math.hypot(x - ex, y - ey) < o.R + 6),
+          );
+        if (!joins) throw new Error(`lane ${r.key} reaches no road`);
+      }
+    });
+
+    test(`the lanes are a minimal network — short, shared, never side by side: ${n} apps`, () => {
+      const M = new WorldModel(seed);
+      const rs = residents(n);
+      const P = placeResidents(M, EMPTY_PLACEMENT, rs);
+      const L = layoutWorld(M, P, rs);
+      const plots = Object.values(P.plots).flat();
+      const len = (pts: readonly (readonly [number, number])[]) => {
+        let s = 0;
+        for (let i = 1; i < pts.length; i++)
+          s += Math.hypot(
+            pts[i]![0] - pts[i - 1]![0],
+            pts[i]![1] - pts[i - 1]![1],
+          );
+        return s;
+      };
+      const lanes = L.roads.filter((r) => r.key.startsWith("ln:"));
+      expect(lanes.length).toBe(n);
+      // a road's run, less where a lane comes in to join another (its last 60 px)
+      const body = new Map(
+        L.roads.map((o) => {
+          if (!o.key.startsWith("ln:")) return [o, o.pts] as const;
+          const l = len(o.pts);
+          let arc = 0;
+          return [
+            o,
+            o.pts.filter((q, i) => {
+              if (i)
+                arc += Math.hypot(
+                  q[0] - o.pts[i - 1]![0],
+                  q[1] - o.pts[i - 1]![1],
+                );
+              return l - arc > 60;
+            }),
+          ] as const;
+        }),
+      );
+      let total = 0;
+      for (const r of lanes) {
+        const p = plots.find((q) => r.key.endsWith(`:${q.id}`))!;
+        const l = len(r.pts);
+        total += l;
+        // no longer than a fairly straight way to where it joins, plus (for a
+        // door facing away from its road) the way round its own plot's band
+        const [ax, ay] = r.pts[0]!;
+        const [bx, by] = r.pts[r.pts.length - 1]!;
+        const round = by < p.y ? p.g[2] - p.g[0] + (p.g[3] - p.g[1]) : 0;
+        const most = 1.45 * Math.hypot(bx - ax, by - ay) + round + 40;
+        if (l > most)
+          throw new Error(
+            `lane ${r.key} is ${l.toFixed(0)} px long, over ${most.toFixed(0)}`,
+          );
+        // nowhere beside another road for long: a path that comes near one joins it
+        let arc = 0;
+        let run = 0;
+        for (let i = 1; i < r.pts.length; i++) {
+          const [x, y] = r.pts[i]!;
+          const step = Math.hypot(x - r.pts[i - 1]![0], y - r.pts[i - 1]![1]);
+          arc += step;
+          const beside =
+            arc > 50 &&
+            l - arc > 50 &&
+            L.roads.some(
+              (o) =>
+                o !== r &&
+                o.bbox[0] < x &&
+                o.bbox[2] > x &&
+                o.bbox[1] < y &&
+                o.bbox[3] > y &&
+                body
+                  .get(o)!
+                  .some(([ox, oy]) => Math.hypot(ox - x, oy - y) < 20),
+            );
+          run = beside ? run + step : 0;
+          if (run > 70)
+            throw new Error(`lane ${r.key} runs beside another road`);
+        }
+      }
+      // and together far shorter than each door's own routed lane was
+      const routed = plots.reduce((s, p) => s + len(p.lane), 0);
+      expect(total).toBeLessThan(routed * 0.75);
+    });
+  }
+});

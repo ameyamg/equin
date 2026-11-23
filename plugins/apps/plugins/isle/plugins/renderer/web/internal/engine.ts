@@ -85,6 +85,7 @@ import {
   paintLotSprouts,
   paintRoads,
   paintSquare,
+  paintSquareVerge,
   SIGN_FONT,
 } from "./paint";
 import { LABELS_HIDDEN, stepLabels, type LabelState } from "./labels";
@@ -141,7 +142,9 @@ import {
   teleportPose,
   type Teleport,
 } from "./teleport";
+import { paintSea } from "./sea";
 import { DOCK_LEN, makeSprites, type SpriteSet } from "./sprites";
+import { WaterLife } from "./water";
 
 export type TimeOfDay = "day" | "dusk" | "night";
 
@@ -502,7 +505,10 @@ export class IsleEngine {
   };
   private readonly villagers: Villager[];
   private flies: { x: number; y: number; ph: number }[] = [];
+  /** Spots of open water (where something may surface). */
   private glints: { x: number; y: number; ph: number }[] = [];
+  /** The sea's life over the revealed islands: waves on the beaches, swell, rings round rocks. */
+  private waterLife: WaterLife | null = null;
   private readonly riverS: {
     x: number;
     y: number;
@@ -1088,7 +1094,8 @@ export class IsleEngine {
     }
     this.groundKeys = keys;
     this.groundKeySet = new Set(keys);
-    // glints on the open water
+    this.waterLife = new WaterLife(M, layout, this.furniture!);
+    // spots of open water
     const [x0, y0, x1, y1] = layout.rect;
     const n = Math.round((140 * ((x1 - x0) * (y1 - y0))) / (3624 * 2740));
     this.glints = [];
@@ -1500,10 +1507,31 @@ export class IsleEngine {
     Y0: number,
     X1: number,
     Y1: number,
+    /** The zoom of the tile being built; null for a frame's stand-in (the sea's flat colour, nothing computed). */
+    lod: number | null,
   ): boolean {
-    tg.fillStyle = this.oceanPat ?? OCEAN_FLAT;
-    tg.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
     const k = tileKey(Math.floor(X0 / GT), Math.floor(Y0 / GT));
+    const layout = this.layout;
+    if (lod !== null && this.M && layout) {
+      // the open sea, from the world position: nothing of it repeats (`sea.ts`)
+      const coastal = this.groundKeySet.has(k);
+      paintSea(
+        tg,
+        this.oceanPat,
+        X0,
+        Y0,
+        lod,
+        layout.islands,
+        coastal ? heightOver(this.M, layout.islands) : null,
+      );
+    } else {
+      tg.fillStyle = OCEAN_FLAT;
+      tg.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+      if (this.oceanPat) {
+        tg.fillStyle = this.oceanPat;
+        tg.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+      }
+    }
     const G = this.ground.get(k);
     if (G?.c) {
       G.used = this.frameNo;
@@ -1553,20 +1581,21 @@ export class IsleEngine {
     const Y0 = ty * TILE;
     const X1 = X0 + TILE;
     const Y1 = Y0 + TILE;
-    const final = this.paintGround(tg, X0, Y0, X1, Y1);
+    const final = this.paintGround(tg, X0, Y0, X1, Y1, lod);
+    const squares = layout.squares.filter(
+      (q) =>
+        q.x + q.r + 20 > X0 &&
+        q.x - q.r - 20 < X1 &&
+        q.y + q.r + 20 > Y0 &&
+        q.y - q.r - 20 < Y1,
+    );
+    for (const q of squares) paintSquareVerge(tg, q); // under the roads: a road runs into its square
     paintRoads(tg, layout.roads, X0, Y0, X1, Y1);
     const G = this.ground.get(tileKey(tx, ty));
     const objs = scene.tileObjs.get(tileKey(tx, ty)) ?? [];
     let filled = !!(G && drawReeds(og, G.reeds, X0, Y0, X1, Y1)); // reeds first: a bridge crosses over them
     if (paintBridges(og, layout.roads, X0, Y0, X1, Y1)) filled = true;
-    for (const q of layout.squares)
-      if (
-        q.x + q.r + 20 > X0 &&
-        q.x - q.r - 20 < X1 &&
-        q.y + q.r + 20 > Y0 &&
-        q.y - q.r - 20 < Y1
-      )
-        paintSquare(tg, q);
+    for (const q of squares) paintSquare(tg, q);
     for (const p of layout.lots)
       if (
         Math.abs(p.x - (X0 + X1) / 2) < TILE / 2 + 160 &&
@@ -2769,6 +2798,7 @@ export class IsleEngine {
           v.ty * TILE,
           (v.tx + 1) * TILE,
           (v.ty + 1) * TILE,
+          null,
         );
         g.restore();
       }
@@ -2919,6 +2949,21 @@ export class IsleEngine {
         (o) => o.y > b.y && o.building !== b,
       );
     };
+    // a building's moving parts first, its hover light over them (the light follows them: `BuildingArt.drawHover`)
+    for (const b of this.buildings) {
+      const animate = b.spec.animate;
+      if (!vis(b.x, b.y, 300) || !animate) continue;
+      dyn.push({
+        y: b.y,
+        d: () => {
+          b.state.t = t;
+          g.save();
+          g.translate(b.x, b.y);
+          animate(g, b.state);
+          g.restore();
+        },
+      });
+    }
     for (const [, f] of this.hoverFx) {
       f.L = null;
       const b = this.buildings.find((x) => x.key === f.b.key);
@@ -2948,16 +2993,17 @@ export class IsleEngine {
         },
       });
     }
+    // what lives around a building (ants, sparks, notes): over its hover light, never lit by it
     for (const b of this.buildings) {
-      const animate = b.spec.animate;
-      if (!vis(b.x, b.y, 300) || !animate) continue;
+      const ambient = b.spec.ambient;
+      if (!vis(b.x, b.y, 300) || !ambient) continue;
       dyn.push({
         y: b.y,
         d: () => {
           b.state.t = t;
           g.save();
           g.translate(b.x, b.y);
-          animate(g, b.state);
+          ambient(g, b.state);
           g.restore();
         },
       });
@@ -2992,7 +3038,7 @@ export class IsleEngine {
       dyn.push({
         y: fy + 4,
         d: () => {
-          drawFlames(g, fx, fy, t, strength);
+          drawFlames(g, fx, fy, t, strength, this.sprites.campFront);
           this.sparks.draw(g, t);
         },
       });
@@ -3005,46 +3051,46 @@ export class IsleEngine {
     ) => {
       figures.push({ y: p.y, paint });
       return {
-      y: p.y,
-      d: () => {
-        const front = tileObjsIn(
-          p.x + box[0],
-          p.y + box[1],
-          p.x + box[2],
-          p.y + box[3],
-          (o) => o.y > p.y,
-        );
-        if (!front.length) {
-          paint(g);
-          return;
-        }
-        // drawn into its own layer, cut out there by the solid part of whatever stands in front, then laid on the
-        // scene — the tiles' pixels are never drawn a second time; the layer's pixels are the screen's
-        const k = z * dpr;
-        const ox = dpr * (vw / 2 - cam.x * z);
-        const oy = dpr * (vh / 2 - cam.y * z);
-        const sx = Math.floor((p.x + box[0]) * k + ox);
-        const sy = Math.floor((p.y + box[1]) * k + oy);
-        const W = Math.ceil((box[2] - box[0]) * k) + 2;
-        const H = Math.ceil((box[3] - box[1]) * k) + 2;
-        const pc = this.personC;
-        if (pc.width < W || pc.height < H) {
-          pc.width = Math.max(pc.width, W);
-          pc.height = Math.max(pc.height, H);
-        }
-        const lg = ctx2d(pc);
-        lg.setTransform(1, 0, 0, 1, 0, 0);
-        lg.globalCompositeOperation = "source-over";
-        lg.clearRect(0, 0, W, H);
-        lg.setTransform(k, 0, 0, k, ox - sx, oy - sy);
-        paint(lg);
-        lg.globalCompositeOperation = "destination-out";
+        y: p.y,
+        d: () => {
+          const front = tileObjsIn(
+            p.x + box[0],
+            p.y + box[1],
+            p.x + box[2],
+            p.y + box[3],
+            (o) => o.y > p.y,
+          );
+          if (!front.length) {
+            paint(g);
+            return;
+          }
+          // drawn into its own layer, cut out there by the solid part of whatever stands in front, then laid on the
+          // scene — the tiles' pixels are never drawn a second time; the layer's pixels are the screen's
+          const k = z * dpr;
+          const ox = dpr * (vw / 2 - cam.x * z);
+          const oy = dpr * (vh / 2 - cam.y * z);
+          const sx = Math.floor((p.x + box[0]) * k + ox);
+          const sy = Math.floor((p.y + box[1]) * k + oy);
+          const W = Math.ceil((box[2] - box[0]) * k) + 2;
+          const H = Math.ceil((box[3] - box[1]) * k) + 2;
+          const pc = this.personC;
+          if (pc.width < W || pc.height < H) {
+            pc.width = Math.max(pc.width, W);
+            pc.height = Math.max(pc.height, H);
+          }
+          const lg = ctx2d(pc);
+          lg.setTransform(1, 0, 0, 1, 0, 0);
+          lg.globalCompositeOperation = "source-over";
+          lg.clearRect(0, 0, W, H);
+          lg.setTransform(k, 0, 0, k, ox - sx, oy - sy);
+          paint(lg);
+          lg.globalCompositeOperation = "destination-out";
           for (const o of front) o.draw(lg, this.solids.of);
-        lg.globalCompositeOperation = "source-over";
-        g.setTransform(1, 0, 0, 1, 0, 0);
-        g.drawImage(pc, 0, 0, W, H, sx, sy, W, H);
-        world2screen();
-      },
+          lg.globalCompositeOperation = "source-over";
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.drawImage(pc, 0, 0, W, H, sx, sy, W, H);
+          world2screen();
+        },
       };
     };
     const person = (p: Walker) =>
@@ -4037,44 +4083,8 @@ export class IsleEngine {
       dpr * (vh / 2 - cam.y * z),
     );
     fg.lineCap = "round";
-    const every = z < 0.3 ? 4 : z < 0.45 ? 3 : z < 0.7 ? 2 : 1;
-    const buckets: {
-      f: { x: number; y: number; nx: number; ny: number; ph: number };
-      w: number;
-    }[][] = [[], [], [], []];
-    for (const I of layout.islands) {
-      const [bx0, by0, bx1, by1] = I.bounds;
-      if (bx1 < x0 || bx0 > x1 || by1 < y0 || by0 > y1) continue;
-      const co = this.furniture!.of(I).coast;
-      for (let i = 0; i < co.length; i += every) {
-        const f = co[i]!;
-        if (f.x < x0 - 40 || f.x > x1 + 40 || f.y < y0 - 40 || f.y > y1 + 40)
-          continue;
-        const w = Math.sin(t * 0.9 + f.ph) * 0.5 + 0.5;
-        buckets[Math.min(3, (w * 4) | 0)]!.push({ f, w });
-      }
-    }
-    buckets.forEach((bk, bi) => {
-      if (!bk.length) return;
-      const wm = (bi + 0.5) / 4;
-      fg.strokeStyle = `rgba(250,252,250,${0.25 + 0.45 * (1 - wm)})`;
-      fg.lineWidth = 1.6 + (1 - wm) * 1.6;
-      fg.beginPath();
-      for (const { f, w } of bk) {
-        const off = 3 + w * 12;
-        const px = f.x + f.nx * off;
-        const py = f.y + f.ny * off;
-        const len = 5 + (f.ph % 1) * 5;
-        fg.moveTo(px - f.ny * len, py + f.nx * len);
-        fg.quadraticCurveTo(
-          px + f.nx * 2,
-          py + f.ny * 2,
-          px + f.ny * len,
-          py - f.nx * len,
-        );
-      }
-      fg.stroke();
-    });
+    // waves coming in to the beaches, swell far out, rings round the rocks
+    this.waterLife?.drawAfloat(fg, t, z, x0, y0, x1, y1, this.frameNo);
     if (z > 0.35 && layout.islands.some((I) => I.home)) {
       const H = heightOver(M, layout.islands);
       fg.strokeStyle = "rgba(236,246,246,.4)";
@@ -4101,22 +4111,6 @@ export class IsleEngine {
       }
       fg.stroke();
     }
-    fg.strokeStyle = "rgba(235,245,250,.3)";
-    fg.lineWidth = 1.4;
-    fg.beginPath();
-    for (const s of this.glints) {
-      if (
-        s.x < x0 ||
-        s.x > x1 ||
-        s.y < y0 ||
-        s.y > y1 ||
-        Math.sin(t * 0.7 + s.ph) < 0.3
-      )
-        continue;
-      fg.moveTo(s.x - 7, s.y);
-      fg.lineTo(s.x + 7, s.y);
-    }
-    fg.stroke();
     fg.setTransform(1, 0, 0, 1, 0, 0);
     fg.globalCompositeOperation = "destination-in";
     for (const v of inView) {
@@ -4132,6 +4126,17 @@ export class IsleEngine {
       fg.restore();
     }
     fg.globalCompositeOperation = "source-over";
+    // the swash runs up the sand: drawn after the cut to the water
+    fg.setTransform(
+      dpr * z,
+      0,
+      0,
+      dpr * z,
+      dpr * (vw / 2 - cam.x * z),
+      dpr * (vh / 2 - cam.y * z),
+    );
+    this.waterLife?.drawShore(fg, t, z, x0, y0, x1, y1, this.frameNo);
+    fg.setTransform(1, 0, 0, 1, 0, 0);
   }
 
   /**
@@ -4165,7 +4170,7 @@ export class IsleEngine {
     lg.globalCompositeOperation = "source-over";
     lg.clearRect(0, 0, W, H);
     lg.setTransform(k, 0, 0, k, -X0 * k, -Y0 * k);
-    this.art.drawHover(lg, b, 1, glowOnly, t);
+    this.art.drawHover(lg, b, 1, glowOnly, t, k);
     if (front.length || people.length) {
       lg.globalCompositeOperation = "destination-out";
       for (const o of front) o.draw(lg);

@@ -12,6 +12,8 @@
 import type { Ctx2D } from "../spec";
 import type { Rnd } from "./colour";
 import { bbox, poly, type Pt } from "./draw";
+import { oblique } from "./oblique";
+import { withinProjection } from "./projection-scope";
 
 type Pts = readonly Pt[];
 
@@ -122,9 +124,12 @@ function hatch(g: Ctx2D, pts: Pts, r: Rnd, gap = 4, a = 0.22, ang = 0.9): void {
 
 /** A flat cast shadow (bottom-right). */
 function castShadow(g: Ctx2D, pts: Pts): void {
-  poly(g, pts);
-  g.fillStyle = "rgba(44,46,24,.26)";
-  g.fill();
+  // a shadow lies on the ground: its outline is no receding edge of a volume
+  withinProjection(g, () => {
+    poly(g, pts);
+    g.fillStyle = "rgba(44,46,24,.26)";
+    g.fill();
+  });
 }
 
 /** Contact darkness along the foot of a wall, from x0 to x1 at y. */
@@ -511,25 +516,26 @@ function plankDoor(
 
 /** A crate of side `s`, its front-bottom-left at (x, y). */
 function crate(g: Ctx2D, x: number, y: number, s: number): void {
-  const top: Pts = [
-    [x, y - s],
-    [x + s, y - s],
-    [x + s + 6, y - s - 5],
-    [x + 6, y - s - 5],
-  ];
-  g.fillStyle = "#93785a";
-  g.fillRect(x, y - s, s, s);
-  g.fillStyle = "#7a6249";
-  g.beginPath();
-  g.moveTo(x + s, y);
-  g.lineTo(x + s + 6, y - 5);
-  g.lineTo(x + s + 6, y - s - 5);
-  g.lineTo(x + s, y - s);
-  g.fill();
-  poly(g, top);
-  g.fillStyle = "#a88c68";
-  g.fill();
-  ink(g, 0.8, 0.6);
+  oblique.solid(
+    g,
+    { x0: x, x1: x + s, yb: y, yt: y - s, d: 6 },
+    {
+      side: (d, yt, yb) => {
+        g.fillStyle = "#7a6249";
+        g.fillRect(0, yt, d, yb - yt);
+      },
+      top: (x0, x1, d) => {
+        g.fillStyle = "#a88c68";
+        g.fillRect(x0, 0, x1 - x0, d);
+      },
+      front: () => {
+        g.fillStyle = "#93785a";
+        g.fillRect(x, y - s, s, s);
+      },
+      shade: 0,
+      ink: 0.9,
+    },
+  );
   g.strokeStyle = "rgba(40,30,20,.55)";
   g.lineWidth = 0.8;
   for (let k = 1; k < 3; k++) {
@@ -543,9 +549,6 @@ function crate(g: Ctx2D, x: number, y: number, s: number): void {
   g.moveTo(x + 1, y - 1);
   g.lineTo(x + s - 1, y - s + 1);
   g.stroke();
-  g.beginPath();
-  g.rect(x, y - s, s, s);
-  ink(g, 1, 0.8);
 }
 
 /** A barrel standing at (x, y). */
@@ -712,12 +715,7 @@ function box(
     [R, -h],
     [L, -h],
   ];
-  const side: Pts = [
-    [R, 0],
-    [R + sd, -sd * 0.7],
-    [R + sd, -h - sd * 0.7],
-    [R, -h],
-  ];
+  const side = oblique.sideFace(R, 0, -h, sd);
   castShadow(g, [
     [L + 10, 2],
     [R + sd + 40, 6],
@@ -726,15 +724,16 @@ function box(
     [R, -2],
   ]);
   wall(g, front);
-  (sideWall ?? wall)(g, side);
-  g.fillStyle = "rgba(30,26,20,.32)";
-  poly(g, side);
-  g.fill();
-  hatch(g, side, r, 3.5, 0.18);
+  oblique.fill(g, side, (pts) => {
+    (sideWall ?? wall)(g, pts);
+    g.fillStyle = "rgba(30,26,20,.32)";
+    poly(g, pts);
+    g.fill();
+    hatch(g, pts, r, 3.5, 0.18);
+  });
   poly(g, front);
   ink(g, 1.3);
-  poly(g, side);
-  ink(g, 1.2);
+  oblique.inkFace(g, side, 1.2);
   // roof: front slope from eave up to the ridge, plus the right gable sliver
   const eY = -h + 5;
   const rY = -h - rd;
@@ -750,17 +749,20 @@ function box(
   ];
   const gable: Pts = [
     [R + ov, eY],
-    [R + ov + sd, eY - sd * 0.7],
+    oblique.back([R + ov, eY], sd),
     [R + ov + sd * 0.6, rY],
   ];
   // the eave's shadow on the wall
   g.fillStyle = "rgba(30,24,16,.3)";
   g.fillRect(L, -h, W, 9);
-  roof(g, slope, eave);
-  poly(g, gable);
-  g.fillStyle = "rgba(40,32,22,.55)";
-  g.fill();
-  ink(g, 1, 0.7);
+  // the roof's planes are the box's own: the kit draws them in its projection
+  withinProjection(g, () => {
+    roof(g, slope, eave);
+    poly(g, gable);
+    g.fillStyle = "rgba(40,32,22,.55)";
+    g.fill();
+    ink(g, 1, 0.7);
+  });
   g.strokeStyle = "rgba(40,32,22,.8)";
   g.lineWidth = 2.2;
   g.beginPath();

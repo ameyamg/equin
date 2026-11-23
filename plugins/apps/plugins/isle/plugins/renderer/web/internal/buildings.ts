@@ -11,7 +11,7 @@ import type {
 import type { Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
 import { canvas, ctx2d, type Ctx } from "./kit";
 import type { Cutter } from "./solid-mask";
-import { MASK_C, MASK_DIL, maskFromAlpha, type Mask } from "./hit-mask";
+import { MASK_A, MASK_C, MASK_DIL, maskFromAlpha, type Mask } from "./hit-mask";
 
 const MASK_A_ANIM = 140;
 export const HALO_P = 16;
@@ -102,6 +102,44 @@ interface HoverArt {
   readonly sil: HTMLCanvasElement;
   readonly W: number;
   readonly H: number;
+}
+
+/** How many hover arts are kept (each up to a building's size at 2×, thrice). */
+const HOVER_KEEP = 8;
+
+/**
+ * A canvas filter that keeps what of a painting is at least as opaque as the
+ * hit mask's threshold — a steep alpha ramp round it, so the edge stays
+ * antialiased. An SVG filter the 2D context references by id; made once.
+ */
+let silFilter: string | null = null;
+function silhouetteFilter(): string {
+  if (silFilter) return silFilter;
+  const NS = "http://www.w3.org/2000/svg";
+  const SLOPE = 14;
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("width", "0");
+  svg.setAttribute("height", "0");
+  svg.setAttribute("aria-hidden", "true");
+  svg.style.position = "absolute";
+  const filter = document.createElementNS(NS, "filter");
+  filter.id = "isle-building-silhouette";
+  filter.setAttribute("x", "0");
+  filter.setAttribute("y", "0");
+  filter.setAttribute("width", "100%");
+  filter.setAttribute("height", "100%");
+  filter.setAttribute("color-interpolation-filters", "sRGB");
+  const transfer = document.createElementNS(NS, "feComponentTransfer");
+  const alpha = document.createElementNS(NS, "feFuncA");
+  alpha.setAttribute("type", "linear");
+  alpha.setAttribute("slope", String(SLOPE));
+  alpha.setAttribute("intercept", (0.5 - (SLOPE * MASK_A) / 255).toFixed(3));
+  transfer.appendChild(alpha);
+  filter.appendChild(transfer);
+  svg.appendChild(filter);
+  document.body.appendChild(svg);
+  silFilter = `url(#${filter.id})`;
+  return silFilter;
 }
 
 const BAKE_BUDGET = 70e6;
@@ -288,75 +326,158 @@ export class BuildingArt {
     return this.animHit(b, lx, ly, t);
   }
 
-  private hoverArtOf(b: SceneBuilding): HoverArt {
-    const hit = this.hover.get(b.key);
+  /**
+   * The hover art, at `K` art px per world px. Its silhouette is cut from the
+   * building's own 2× paint, so its edge is the paint's antialiased edge —
+   * smooth at every zoom (the hit mask's 2 px cells scaled up were stairs
+   * along every diagonal): an alpha threshold at the hit mask's level drops
+   * the cast shadow, and the hit mask — only as a loose stencil, its edge a
+   * few px outside the building's — drops loose props, as it does for the
+   * pointer. All on the canvas: nothing is read back.
+   */
+  private hoverArtOf(b: SceneBuilding, K: 1 | 2): HoverArt {
+    const hk = `${b.key}@${K}`;
+    const hit = this.hover.get(hk);
     if (hit) return hit;
     const m = this.maskOf(b);
     const c = this.bake(b);
     const [x0, y0, x1, y1] = b.bounds;
     const W = Math.ceil(x1 - x0);
     const H = Math.ceil(y1 - y0);
-    // the silhouette, from the un-dilated mask, smoothed up to 1×
+    const P = HALO_P;
     const small = canvas(m.gw, m.gh);
     const sg = ctx2d(small);
     const id = sg.createImageData(m.gw, m.gh);
-    for (let i = 0; i < m.raw.length; i++)
-      if (m.raw[i]) id.data[i * 4 + 3] = 255;
+    for (let i = 0; i < m.bits.length; i++)
+      if (m.bits[i]) id.data[i * 4 + 3] = 255;
     sg.putImageData(id, 0, 0);
-    const sil = canvas(W, H);
+    const sil = canvas(W * K, H * K);
     const lg = ctx2d(sil);
+    lg.filter = silhouetteFilter();
+    lg.drawImage(c, 0, 0, W * K, H * K);
+    lg.filter = "none";
+    lg.globalCompositeOperation = "destination-in";
     lg.imageSmoothingEnabled = true;
-    lg.drawImage(small, 0, 0, m.gw * MASK_C, m.gh * MASK_C);
-    const tint = (src: HTMLCanvasElement, col: string) => {
-      const t = canvas(src.width, src.height);
+    lg.drawImage(small, 0, 0, m.gw * MASK_C * K, m.gh * MASK_C * K);
+    lg.globalCompositeOperation = "source-over";
+    const tint = (
+      src: HTMLCanvasElement,
+      col: string,
+      w = src.width,
+      h = src.height,
+    ) => {
+      const t = canvas(w, h);
       const tg = ctx2d(t);
-      tg.drawImage(src, 0, 0);
+      tg.drawImage(src, 0, 0, w, h);
       tg.globalCompositeOperation = "source-in";
       tg.fillStyle = col;
-      tg.fillRect(0, 0, t.width, t.height);
+      tg.fillRect(0, 0, w, h);
       return t;
     };
-    const glowS = tint(sil, "#ffcf73");
+    // the soft glow is low-frequency: blurred at 1× and scaled up; the rim is drawn at the art's scale
+    const glowS = tint(sil, "#ffcf73", W, H);
     const rimS = tint(sil, "#fff4d2");
-    const halo = canvas(W + HALO_P * 2, H + HALO_P * 2);
-    const hg = ctx2d(halo);
-    hg.filter = "blur(5px)";
+    const glow = canvas(W + P * 2, H + P * 2);
+    const gg = ctx2d(glow);
+    gg.filter = "blur(5px)";
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;
-      hg.drawImage(glowS, HALO_P + Math.cos(a) * 4, HALO_P + Math.sin(a) * 4);
+      gg.drawImage(glowS, P + Math.cos(a) * 4, P + Math.sin(a) * 4);
     }
-    hg.filter = "none";
-    for (let k = 0; k < 12; k++) {
-      const a = (k / 12) * Math.PI * 2;
+    const halo = canvas((W + P * 2) * K, (H + P * 2) * K);
+    const hg = ctx2d(halo);
+    hg.drawImage(glow, 0, 0, halo.width, halo.height);
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2;
       hg.drawImage(
         rimS,
-        HALO_P + Math.cos(a) * 2.2,
-        HALO_P + Math.sin(a) * 2.2,
+        (P + Math.cos(a) * 2.2) * K,
+        (P + Math.sin(a) * 2.2) * K,
       );
     }
     hg.globalCompositeOperation = "destination-out";
-    hg.drawImage(sil, HALO_P, HALO_P);
-    // the light on the building: its exact paint, minus the shadow, as a flat warm wash
-    const lit = canvas(W, H);
-    const tg = ctx2d(lit);
-    tg.drawImage(c, 0, 0, W, H);
-    tg.globalCompositeOperation = "destination-in";
-    tg.drawImage(sil, 0, 0);
-    tg.globalCompositeOperation = "source-in";
-    tg.fillStyle = "#fff6dc";
-    tg.fillRect(0, 0, W, H);
+    hg.drawImage(sil, P * K, P * K);
+    // the light on the building: its silhouette as a flat warm wash
+    const lit = tint(sil, "#fff6dc");
     const art = { halo, lit, sil, W, H };
-    this.hover.set(b.key, art);
+    this.hover.set(hk, art);
+    // (a few buildings' art at most: the oldest goes first, never the one just made)
+    for (const k of this.hover.keys()) {
+      if (this.hover.size <= HOVER_KEEP) break;
+      if (k !== hk) this.hover.delete(k);
+    }
     return art;
   }
 
-  /** Moving parts get their rim live (the hovered building only): animate() at ½ scale, ringed, inside cut out. */
-  private animHalo(b: SceneBuilding, h: HoverArt, t: number) {
+  /**
+   * The hovered building's moving parts (`animate`, never `ambient`) as they
+   * stand now (`b.state.t`): their shape, and the rim of light round it — cut out inside
+   * the parts and inside the static silhouette, so only the outline of the
+   * whole (building and parts) is lit. Drawn at `k` canvas px per world px.
+   */
+  private animParts(b: SceneBuilding, h: HoverArt, k: number) {
     const animate = b.spec.animate!;
+    const {
+      c: pc,
+      x,
+      y,
+      w,
+      h: hh,
+      M,
+    } = this.stencil(h, b, k, (g) => animate(g, b.state));
+    const pg = this.animPartG;
+    const W = pc.width;
+    const H = pc.height;
+    const tint = (col: string) => {
+      pg.globalCompositeOperation = "source-in";
+      pg.fillStyle = col;
+      pg.fillRect(0, 0, W, H);
+      pg.globalCompositeOperation = "source-over";
+    };
+    const ring = (n: number, r: number) => {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        hg.drawImage(pc, Math.cos(a) * r * k, Math.sin(a) * r * k);
+      }
+    };
+    const hg = this.animHaloG;
+    hg.setTransform(1, 0, 0, 1, 0, 0);
+    hg.globalCompositeOperation = "source-over";
+    hg.globalAlpha = 1;
+    hg.clearRect(0, 0, W, H);
+    // the same light as the static halo's: a blurred glow, then the crisp rim
+    tint("#ffcf73");
+    hg.filter = `blur(${5 * k}px)`;
+    ring(8, 4);
+    hg.filter = "none";
+    tint("#fff4d2");
+    ring(16, 2.2);
+    hg.globalAlpha = 1;
+    hg.globalCompositeOperation = "destination-out";
+    hg.drawImage(pc, 0, 0);
+    hg.drawImage(h.sil, M, M, h.W * k, h.H * k);
+    hg.globalCompositeOperation = "source-over";
+    // the parts themselves, as the wash of light on them (where the static silhouette is not already washed)
+    tint("#fff6dc");
+    return { ring: this.animHaloC, parts: pc, x, y, w, h: hh, m: M / k };
+  }
+
+  /**
+   * What `draw` paints of the building (glows left out), on the scratch
+   * canvas at `k` canvas px per world px with a halo's margin round its
+   * bounds: where it lies, building-local. The scratch is reused — good until
+   * the next call.
+   */
+  private stencil(
+    h: HoverArt,
+    b: SceneBuilding,
+    k: number,
+    draw: (g: Ctx) => void,
+  ) {
     const [x0, y0] = b.bounds;
-    const k = 0.5;
-    const W = Math.ceil(h.W * k) + 8;
-    const H = Math.ceil(h.H * k) + 8;
+    const M = Math.ceil(HALO_P * k);
+    const W = Math.ceil(h.W * k) + M * 2;
+    const H = Math.ceil(h.H * k) + M * 2;
     const pc = this.animPartC;
     const pg = this.animPartG;
     if (pc.width !== W || pc.height !== H) {
@@ -364,77 +485,92 @@ export class BuildingArt {
       pc.height = this.animHaloC.height = H;
     }
     pg.setTransform(1, 0, 0, 1, 0, 0);
+    pg.globalCompositeOperation = "source-over";
     pg.clearRect(0, 0, W, H);
-    pg.setTransform(k, 0, 0, k, 4 - x0 * k, 4 - y0 * k);
-    b.state.t = t;
+    pg.setTransform(k, 0, 0, k, M - x0 * k, M - y0 * k);
     pg.save();
-    animate(pg, b.state);
+    draw(pg);
     pg.restore();
     pg.setTransform(1, 0, 0, 1, 0, 0);
-    const hg = this.animHaloG;
-    hg.setTransform(1, 0, 0, 1, 0, 0);
-    hg.globalCompositeOperation = "source-over";
-    hg.clearRect(0, 0, W, H);
-    pg.globalCompositeOperation = "source-in";
-    pg.fillStyle = "#ffcf73";
-    pg.fillRect(0, 0, W, H);
-    pg.globalCompositeOperation = "source-over";
-    hg.globalAlpha = 0.3;
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      hg.drawImage(pc, Math.cos(a) * 3.5, Math.sin(a) * 3.5);
-    }
-    hg.globalAlpha = 0.55;
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      hg.drawImage(pc, Math.cos(a) * 2, Math.sin(a) * 2);
-    }
-    pg.globalCompositeOperation = "source-in";
-    pg.fillStyle = "#fff0c4";
-    pg.fillRect(0, 0, W, H);
-    pg.globalCompositeOperation = "source-over";
-    hg.globalAlpha = 1;
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      hg.drawImage(pc, Math.cos(a) * 1.1, Math.sin(a) * 1.1);
-    }
-    hg.globalCompositeOperation = "destination-out";
-    hg.drawImage(pc, 0, 0);
-    hg.drawImage(h.sil, 4, 4, h.W * k, h.H * k);
-    hg.globalCompositeOperation = "source-over";
-    return {
-      c: this.animHaloC,
-      x: x0 - 4 / k,
-      y: y0 - 4 / k,
-      w: W / k,
-      h: H / k,
-    };
+    return { c: pc, x: x0 - M / k, y: y0 - M / k, w: W / k, h: H / k, M };
   }
 
-  /** The hover art at alpha a (glowOnly: the faint wash, at dusk and night). */
+  /**
+   * The hover art at alpha a (glowOnly: the faint wash, at dusk and night),
+   * for the building as it stands at `t`. ONE rule for what is lit: the
+   * building's shape — its static paint and its moving parts (`animate`)
+   * where they are right now; never what lives around it (`ambient`). The rim
+   * runs round the outline of the two together (no rim where a moving part
+   * covers the static edge, none round the part where it lies on the
+   * building), and the wash covers both evenly. So the engine draws it OVER
+   * `animate` and UNDER `ambient`.
+   *
+   * `g` must be a layer of its own, already clear: the static rim is cut out
+   * of it where a moving part stands. `scale`: device px per world px it is
+   * drawn at — the art is made at 1× up to one, at 2× beyond (zoomed in, or a
+   * dense screen).
+   */
   drawHover(
     g: Ctx,
     b: SceneBuilding,
     a: number,
     glowOnly: boolean,
     t: number,
+    scale: number,
   ): void {
-    const h = this.hoverArtOf(b);
+    const K = scale > 1.02 ? 2 : 1;
+    const h = this.hoverArtOf(b, K);
     const [x0, y0] = b.bounds;
+    const wash = a * (glowOnly ? 0.06 : 0.13);
+    b.state.t = t;
     g.globalAlpha = a;
-    g.drawImage(h.halo, b.x + x0 - HALO_P, b.y + y0 - HALO_P);
-    if (b.spec.animate) {
-      const q = this.animHalo(b, h, t);
-      g.drawImage(q.c, b.x + q.x, b.y + q.y, q.w, q.h);
+    g.drawImage(
+      h.halo,
+      b.x + x0 - HALO_P,
+      b.y + y0 - HALO_P,
+      h.W + HALO_P * 2,
+      h.H + HALO_P * 2,
+    );
+    const q = b.spec.animate ? this.animParts(b, h, K / 2) : null;
+    if (q) {
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = "destination-out";
+      g.drawImage(q.parts, b.x + q.x, b.y + q.y, q.w, q.h);
+      g.globalCompositeOperation = "source-over";
+      g.globalAlpha = a;
+      g.drawImage(q.ring, b.x + q.x, b.y + q.y, q.w, q.h);
     }
-    g.globalAlpha = a * (glowOnly ? 0.06 : 0.13);
-    g.drawImage(h.lit, b.x + x0, b.y + y0);
+    g.globalAlpha = wash;
+    g.drawImage(h.lit, b.x + x0, b.y + y0, h.W, h.H);
+    if (q) {
+      // the parts' wash, where the building's own does not already lie
+      const pg = this.animPartG;
+      pg.globalCompositeOperation = "destination-out";
+      pg.drawImage(
+        h.sil,
+        q.m * (K / 2),
+        q.m * (K / 2),
+        (h.W * K) / 2,
+        (h.H * K) / 2,
+      );
+      pg.globalCompositeOperation = "source-over";
+      g.drawImage(q.parts, b.x + q.x, b.y + q.y, q.w, q.h);
+    }
     g.globalAlpha = 1;
+    // what lives around the building stands in front of its light (the engine lays this layer over the scene's
+    // lights a second time): cut out of it, as the people in front are
+    const ambient = b.spec.ambient;
+    if (ambient) {
+      const c = this.stencil(h, b, K / 2, (pg) => ambient(pg, b.state));
+      g.globalCompositeOperation = "destination-out";
+      g.drawImage(c.c, b.x + c.x, b.y + c.y, c.w, c.h);
+      g.globalCompositeOperation = "source-over";
+    }
   }
 
-  /** The hover art's size (for its layer). */
+  /** The hover art's size, world px (for its layer). */
   hoverSize(b: SceneBuilding): { W: number; H: number } {
-    const h = this.hoverArtOf(b);
-    return { W: h.W, H: h.H };
+    const [x0, y0, x1, y1] = b.bounds;
+    return { W: Math.ceil(x1 - x0), H: Math.ceil(y1 - y0) };
   }
 }

@@ -14,7 +14,7 @@ future home of the plugin marketplace.
   - **`contributions`** [exempt] [6 sub-plugins] — Central view of all plugin contributions aggregated by type.
   - **`explorer`** [5 sub-plugins] — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
   - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
-  - **`isle-building`** — Studio's building on Isle: the conservatory laboratory, a glasshouse of plants and jars.
+  - **`isle-building`** — Studio's building on Isle: the block workshop — jigsaw blocks tenoned into one another around a brass hub, a crane lifting one out and slotting it back, a lens sweeping the stonework.
   - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
   - **`shell`** — App shell for Studio. Registers the /plugins app entry and defines Studio.Sidebar/Toolbar slots.
 

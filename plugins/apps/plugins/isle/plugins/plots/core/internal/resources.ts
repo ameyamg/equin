@@ -36,5 +36,14 @@ export const islePlots = liveCollection("isle.plots", {
   },
 });
 
-/** The `world` scope of a seed: one set of plots per seed. */
-export const worldOfSeed = (seed: number): string => String(seed);
+/**
+ * The generation of the buildings' footprints. A plot is cut for the building
+ * that first stood on it and kept forever, so when the bespoke buildings are
+ * redrawn at other sizes the stored plots no longer fit them: a new generation
+ * lays every town out afresh (the old plots stay under their old scope).
+ */
+const LAYOUT_GENERATION = 5;
+
+/** The `world` scope of a seed: one set of plots per seed and layout generation. */
+export const worldOfSeed = (seed: number): string =>
+  `${seed}/${LAYOUT_GENERATION}`;

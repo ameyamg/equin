@@ -1,4 +1,4 @@
-export { GROUND_BAND, SETTINGS } from "./spec";
+export { GROUND_BAND, SETTINGS, SHADOW_ALPHA_MAX, SOLID_ALPHA } from "./spec";
 export type {
   BuildingSpec,
   Box,
@@ -74,5 +74,21 @@ export {
 // The polygon kit: the second hand (faces as polygons, palette colour), namespaced.
 export { polyKit } from "./internal/poly-kit";
 
+// The fittings kit: metalwork, a round drum, weather, and the small moving parts
+// (a cloth, a lamp-lit pane, a line being written) of the folly buildings, namespaced.
+export { fittings } from "./internal/fittings";
+
+// The projection: the one receding vector of the island's 3/4 view, the faces of
+// volumes (box, extruded edge, roofs) and the face spaces a side or a top is painted in, namespaced.
+export type {
+  BoxFaces,
+  BoxGeom,
+  Face,
+  P3,
+  Rim,
+  RoofGeom,
+  SolidPaint,
+} from "./internal/oblique";
+export { oblique } from "./internal/oblique";
 // The generator.
 export { categoryOfSeed, kitBuilding } from "./internal/kit-building";

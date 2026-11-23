@@ -7,7 +7,7 @@
 // walks them.
 
 import type { Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
-import type { Ctx, Rnd } from "./kit";
+import { put, type Ctx, type Rnd, type Sprite } from "./kit";
 
 // ---------------------------------------------------------------- the clock
 
@@ -41,53 +41,140 @@ export const flaring = (strength: number): boolean => strength > 1.2;
 
 // ---------------------------------------------------------------- the flames
 
-/** The fire's flames and smoke at (fx, fy), as high as `strength` says. */
+/**
+ * The fire's flames and smoke at (fx, fy) — the fire ring's anchor —, as high
+ * as `strength` says: embers glowing in the ash (brightest when the fire is
+ * low), three tongues of flame rising from among the logs and a pale core,
+ * each a closed teardrop washed from a bright foot to a fading tip, a few
+ * sparks of its own, thin smoke. `front` — the ring's near stones and logs
+ * alone (`SpriteSet.campFront`) — is laid back over the flames' feet, so the
+ * fire rises from behind them and never shows a flat base. About fifteen
+ * small fills and one sprite a frame.
+ */
 export function drawFlames(
   g: Ctx,
   fx: number,
   fy: number,
   t: number,
   strength: number,
+  front: Sprite,
 ): void {
-  // embers, glowing under the flames, brightest when the fire is low
-  const ember = 0.5 + 0.5 * Math.sin(t * 2.3);
-  g.fillStyle = `rgba(255,${(90 + 40 * ember) | 0},40,${0.45 + 0.35 * (1 - Math.min(1, strength))})`;
-  g.beginPath();
-  g.ellipse(fx, fy - 1, 11, 4.5, 0, 0, 7);
-  g.fill();
-  const h = 30 * strength;
-  for (let i = 0; i < 3; i++) {
-    const fl = Math.sin(t * 9 + i * 2) * 2.5 * Math.min(1.3, strength);
-    g.fillStyle = [
-      "rgba(220,110,40,.9)",
-      "rgba(240,170,60,.9)",
-      "rgba(255,230,150,.9)",
-    ][i]!;
-    const w = 10 * Math.min(1.25, 0.6 + 0.4 * strength);
+  const high = Math.min(1, strength);
+  const sway = Math.min(1.3, strength);
+  const wide = Math.min(1.25, 0.6 + 0.4 * strength);
+  const base = fy + 1;
+  const foot = base + 3;
+  const tongue = (
+    dx: number,
+    w0: number,
+    h0: number,
+    ph: number,
+    [low, mid, tip]: readonly [string, string, string],
+    line?: string,
+  ) => {
+    const s =
+      (Math.sin(t * 7.3 + ph) * 2.4 + Math.sin(t * 13.1 + ph * 2.3) * 1.2) *
+      sway;
+    const hh = h0 * strength * (0.9 + 0.12 * Math.sin(t * 9.7 + ph * 1.7));
+    const w = w0 * wide;
+    const x = fx + dx * wide;
+    const gr = g.createLinearGradient(0, foot, 0, base - hh);
+    gr.addColorStop(0, low);
+    gr.addColorStop(0.55, mid);
+    gr.addColorStop(1, tip);
+    g.fillStyle = gr;
     g.beginPath();
-    g.moveTo(fx - w + i * 3.5, fy);
+    g.moveTo(x, foot);
+    g.bezierCurveTo(
+      x - w * 0.9,
+      foot,
+      x - w * 1.25,
+      base - hh * 0.3,
+      x - w * 0.5 + s * 0.3,
+      base - hh * 0.6,
+    );
     g.quadraticCurveTo(
-      fx + fl,
-      fy - h + i * 8 * strength,
-      fx + w - i * 3.5,
-      fy,
+      x - w * 0.1 + s * 0.7,
+      base - hh * 0.82,
+      x + s,
+      base - hh,
+    );
+    g.quadraticCurveTo(
+      x + w * 0.35 + s * 0.5,
+      base - hh * 0.75,
+      x + w * 0.7 + s * 0.2,
+      base - hh * 0.5,
+    );
+    g.bezierCurveTo(x + w * 1.3, base - hh * 0.25, x + w * 0.9, foot, x, foot);
+    g.fill();
+    if (line) {
+      g.strokeStyle = line;
+      g.lineWidth = 0.9;
+      g.stroke();
+    }
+  };
+  // smoke, from above the flames
+  const top = base - 28 * strength;
+  for (let i = 0; i < 4; i++) {
+    const k = (t * 0.28 + i / 4) % 1;
+    g.fillStyle = `rgba(196,194,186,${0.2 * (1 - k) * high})`;
+    g.beginPath();
+    g.arc(
+      fx + Math.sin(k * 5 + i) * 7 + k * 10,
+      top - 8 - k * 64,
+      4 + k * 11,
+      0,
+      7,
     );
     g.fill();
   }
-  for (let i = 0; i < 4; i++) {
-    const k2 = (t * 0.3 + i / 4) % 1;
-    g.fillStyle = `rgba(200,200,195,${0.25 * (1 - k2) * Math.min(1, strength)})`;
+  // embers, glowing under the flames, brightest when the fire is low
+  const ember = 0.5 + 0.5 * Math.sin(t * 2.3);
+  const fl = 0.85 + 0.15 * Math.sin(t * 11.3);
+  g.fillStyle = `rgba(255,150,50,${0.2 * fl})`;
+  g.beginPath();
+  g.ellipse(fx, base - 1, 19, 10.5, 0, 0, 7);
+  g.fill();
+  g.fillStyle = `rgba(255,${(110 + 80 * ember * high) | 0},${(40 + 56 * high) | 0},${0.3 * fl + 0.45 * (1 - high)})`;
+  g.beginPath();
+  g.ellipse(fx, base - 2, 11, 6, 0, 0, 7);
+  g.fill();
+  tongue(-3.5, 8, 28, 0, FLAME.outer, "rgba(120,48,24,.45)");
+  tongue(4.5, 7, 22, 2.1, FLAME.side, "rgba(120,48,24,.4)");
+  tongue(0.5, 6, 21, 4.2, FLAME.inner);
+  tongue(0, 3.6, 13, 1.3, FLAME.core);
+  put(g, front, fx, fy);
+  // the fire's own few sparks (a click's, and the dawn flare's, are `Sparks`)
+  for (let i = 0; i < 3; i++) {
+    const k = (t * 0.7 + i / 3) % 1;
+    g.fillStyle = `rgba(255,190,90,${0.9 * (1 - k) * high})`;
     g.beginPath();
     g.arc(
-      fx + Math.sin(k2 * 5 + i) * 6,
-      fy - h - 4 - k2 * 60,
-      4 + k2 * 10,
+      fx + Math.sin(k * 6 + i * 2.1) * 9,
+      base - (18 + k * 42) * strength,
+      0.8,
       0,
       7,
     );
     g.fill();
   }
 }
+
+/** Each tongue's wash: its foot, its body, its fading tip. */
+const FLAME = {
+  outer: ["rgba(226,120,44,.92)", "rgba(190,74,34,.9)", "rgba(190,74,34,.55)"],
+  side: ["rgba(232,128,46,.9)", "rgba(200,86,36,.88)", "rgba(200,86,36,.55)"],
+  inner: [
+    "rgba(250,196,90,.95)",
+    "rgba(234,142,50,.92)",
+    "rgba(234,142,50,.55)",
+  ],
+  core: [
+    "rgba(255,244,196,.96)",
+    "rgba(252,216,128,.95)",
+    "rgba(252,216,128,.55)",
+  ],
+} as const;
 
 // ---------------------------------------------------------------- sparks
 

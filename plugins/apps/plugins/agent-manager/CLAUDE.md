@@ -7,7 +7,7 @@
 - Description: Agent manager app shell and layout.
 - Sub-plugins:
   - **`icons`** — Contributes the agent icon family (agentIcons) to Icons.Family, so a scope whose iconFamily is agent — the Mist theme's — draws its glyphs.
-  - **`isle-building`** — The Agent Manager's building on Isle: the workshop forge, a brass automaton hammering at its bench.
+  - **`isle-building`** — The Agent Manager's building on Isle: the automaton works — a factory of riveted copper and brass plate under a sawtooth roof of north lights, a round furnace port in each gable, two iron stacks and…
   - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
   - **`prototypes-nav`** — Prototypes entry point in the agent manager: a conversation-toolbar button that toggles the Prototypes gallery as a column beside the conversation (⌘/middle-click for a new browser tab).
   - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.

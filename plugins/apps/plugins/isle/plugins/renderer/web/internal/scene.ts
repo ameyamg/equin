@@ -98,6 +98,16 @@ export function realizeScene(
     x - sp.ax * k + sp.w * k,
     y - sp.ay * k + sp.h * k,
   ];
+  // whether a thing may stand is decided on the box of the sprite it replaced (`Sprite.fit`), so a repaint moves nothing
+  const fitBox = (x: number, y: number, sp: Sprite, k = 1): Box => {
+    const f = sp.fit ?? sp;
+    return [
+      x - f.ax * k,
+      y - f.ay * k,
+      x - f.ax * k + f.w * k,
+      y - f.ay * k + f.h * k,
+    ];
+  };
   const statics: Static[] = [];
   const solids: Solid[] = [];
   const stat = (
@@ -134,13 +144,33 @@ export function realizeScene(
       if (rk.land) solids.push([rk.x, rk.y, rk.s * 0.6]);
     });
     S.trees.forEach((t, i) => {
-      const o = box(t.x, t.y, t.s, t.k);
-      if (occ.near(t.x, t.y, 36) || !boxClear(o) || inSq(t.x, t.y, 50)) return;
+      if (
+        occ.near(t.x, t.y, 36) ||
+        !boxClear(fitBox(t.x, t.y, t.s, t.k)) ||
+        inSq(t.x, t.y, 50)
+      )
+        return;
+      // a tree whose fuller crown would reach over a plot or hang over a road grows there as a younger one, within the old box
+      let k = t.k;
+      const V = t.s.vis;
+      const F = t.s.fit;
+      if (V && F) {
+        const over =
+          !boxClear([
+            t.x + V[0] * k,
+            t.y + V[1] * k,
+            t.x + V[2] * k,
+            t.y + V[3] * k,
+          ]) || occ.near(t.x, t.y + V[1] * k * 0.62, V[2] * k * 0.9);
+        if (over)
+          k *= Math.min(1, F.ay / -V[1], F.ax / -V[0], (F.w - F.ax) / V[2]);
+      }
+      const size = k;
       stat(
         `t:${M.seed}:${I.id}:${i}`,
         t.y,
-        o,
-        (g, cut) => put(g, t.s, t.x, t.y, t.k, cut),
+        box(t.x, t.y, t.s, size),
+        (g, cut) => put(g, t.s, t.x, t.y, size, cut),
         { tree: true },
       );
       solids.push([t.x, t.y - 2, 6 * t.k]);
@@ -175,10 +205,14 @@ export function realizeScene(
       const side = n % 2 ? 1 : -1;
       const x = s.x - s.uy * 32 * side;
       const y = s.y + s.ux * 32 * side;
-      const b = box(x, y, lampDay);
-      if (H(x, y) < 0.1 || !boxClear(b) || inSq(x, y, 0) || occ.near(x, y, 16))
+      if (
+        H(x, y) < 0.1 ||
+        !boxClear(fitBox(x, y, lampDay)) ||
+        inSq(x, y, 0) ||
+        occ.near(x, y, 16)
+      )
         continue;
-      stat(`l:${rd.key}:${n}`, y, b, (g, cut) =>
+      stat(`l:${rd.key}:${n}`, y, box(x, y, lampDay), (g, cut) =>
         put(g, env.lamp(), x, y, 1, cut),
       );
       solids.push([x, y, 5]);

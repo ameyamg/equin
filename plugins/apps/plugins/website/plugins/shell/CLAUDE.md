@@ -222,8 +222,8 @@ hover.
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×19
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×20
     - `companions/browser-extension/equin-site`
     - `hints/help-menu`
 

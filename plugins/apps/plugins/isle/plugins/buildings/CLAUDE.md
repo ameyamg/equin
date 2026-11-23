@@ -40,6 +40,82 @@ with, and the generator that gives every app without bespoke art a building.
   (`lighter` draws: a lighthouse's beams) are light, not ink — not measured.
   A bespoke footprint is hard-coded from `measureBuilding`'s answer.
 
+## What a building's shape is: `paint` + `animate`, never `ambient`
+
+One rule decides what the pointer hits and what the hover light outlines and
+washes (`renderer`'s `BuildingArt.drawHover`): **the building's shape is its
+static paint plus its moving parts where they stand right now.**
+
+- `paint` — the static mass. A pixel counts once it is `SOLID_ALPHA` opaque;
+  fainter paint (a shadow, a wash on the grass) lies under the building. The
+  kit's shadows (`castShadow`, `fittings.ellShadow`) hold themselves under
+  `SHADOW_ALPHA_MAX`, so that even two overlapping stay out of the shape; a
+  shadow drawn by hand must too (a shadow that reaches `SOLID_ALPHA` gets a
+  rim of light round it on hover).
+- `animate` — the building's own moving parts (a crane's load, a sail, a
+  flag, a drawer). The rim runs round the outline of paint and parts
+  together, recomputed every frame for the hovered building: no rim where a
+  part covers a static edge, no part cut by the wash. A part that moves must
+  be drawn ONLY here — never also in `paint` at a rest position.
+- `ambient` — what lives around it: creatures that roam (ants, moths, a
+  pigeon, automata walking the yard) and what drifts loose (sparks, steam,
+  confetti, falling paper). Drawn over the hover light and cut out of it;
+  never hit, never outlined. A halo round every ant flickers as it walks —
+  that is what this slot exists to make impossible.
+
+The footprint test measures all three.
+
+## One projection: `oblique`
+
+The island is seen in a high 3/4 view: a building shows its front flat-on, a
+sliver of its RIGHT side and its top, and everything that goes back into the
+picture recedes along ONE vector — `d` px of depth are `d` px right and
+`oblique.SLANT · d` px up. `core/internal/oblique.ts` is the only place that
+spells it. A building never draws a side face by hand:
+
+- **Declare the volume, get its faces**: `oblique.box({ x0, x1, yb, yt, d })`
+  (front, side, top), `sideFace` / `topFace`, `extrude(a, b, d)` (the face any
+  front edge sweeps going back: a battered wall, a roof plane), `gableRoof`,
+  `gableFront`, `hipRoof`, and `project` / `at` for a shape given as 3D points
+  (a curved plan, a propped lid). A `Face` is painted with
+  `oblique.fill(g, face, (pts) => …)`, `shadeFace`, `inkFace`.
+- **Paint in face space**: inside `oblique.onSide(g, x, draw)` x is the depth
+  behind the front's right edge, so a wall painted flat (courses, boards, a
+  window, a door) comes out sheared onto the side; `onTop(g, y, draw)` does the
+  same for a top (a deck, a lid), `onSlope` for a roof plane.
+- **A shape that is no box has thickness too**: `oblique.rim(outline, d)`
+  gives the receding band an arbitrary front outline shows (a jigsaw knob, a
+  cog, a plate) — the faces that look right or up, each with how much it
+  faces the sky, and the ink of its far edge; for a notch cut INTO a body
+  (outline run the other way) the same rule gives the inner wall and floor.
+  `oblique.paintRim(g, rim, (up) => colour)` paints it; the front goes over
+  it. A disc stuck flat on a body that has depth is a defect.
+- **`oblique.solid(g, box, { front, side, top })`** paints a whole box (side
+  sheared and shaded, top, front, outlines) — crates, piers, stacks, steps'
+  cheeks.
+- Round things (a drum, a tent, a dome) have no side wall; their boxes do
+  (bases, annexes, props). `oblique.ry(rx)` is the kit's flattening of a
+  horizontal circle.
+
+**Enforced** by `perspectiveProblems` (`core/testing`), which
+`testBuildingFootprint` runs for every building: the measuring context records
+the straight edges of every polygon `paint` fills or clips to, and whether the
+projection was drawing (`projection-scope.ts`). A hand-drawn edge within 6° of
+the receding direction (10 px or longer) fails — parallel to the vector or not,
+a side face spelled by hand is one more place to get the view wrong. A diagonal
+that is no receding edge (a roof pitch, a brace) goes in `oblique.diagonal`.
+What the test cannot see: a side wall drawn as a flat rectangle, or not drawn —
+that is still a review matter. No building is exempt, the generated ones
+included (`kit-building.test.ts` runs it over its whole sample).
+
+A generated building's rectangular body is `SIDE_D` (18 px) deep
+(`layout.ts`): `paint.ts` paints its right side wall in side-face space (its
+material, plinth, string course, narrow windows), `roofShape` places every roof
+plane and the receding right end (a gable wall, a hip plane, a gambrel end)
+with the projection, a lean-to on the right shows its end, the chimney and the
+dormers' cheeks are boxes — and `footprint.ts` declares all of it from the
+same shapes. Towers and huts are round: no side wall.
+
 ## Why the footprint is declared
 
 Placement must be a pure function of the specs, so a building *declares* what
@@ -64,9 +140,12 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `Isle.Building` ← `apps.agent-manager.isle-building`
     - `Isle.Building` ← `apps.browser.isle-building`
     - `Isle.Building` ← `apps.chord.isle-building`
+    - `Isle.Building` ← `apps.debug.isle-building`
     - `Isle.Building` ← `apps.deploy.isle-building`
+    - `Isle.Building` ← `apps.desktop.isle-building`
     - `Isle.Building` ← `apps.events.isle-building`
     - `Isle.Building` ← `apps.file-explorer.isle-building`
+    - `Isle.Building` ← `apps.home.isle-building`
     - `Isle.Building` ← `apps.keyboard-party.isle-building`
     - `Isle.Building` ← `apps.mail.isle-building`
     - `Isle.Building` ← `apps.pages.isle-building`
@@ -75,6 +154,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `Isle.Building` ← `apps.prototypes.isle-building`
     - `Isle.Building` ← `apps.settings.isle-building`
     - `Isle.Building` ← `apps.sonata.isle-building`
+    - `Isle.Building` ← `apps.website.isle-building`
   - Exports (types): `IsleBuildingContribution`
   - Exports (values):
     - `Isle`
@@ -87,20 +167,27 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `primitives/pane.AppCategory`
   - Exports (types):
     - `Box`
+    - `BoxFaces`
+    - `BoxGeom`
     - `BuildingSpec`
     - `Chimney`
     - `Ctx2D`
     - `Door`
     - `DoorArchOptions`
+    - `Face`
     - `Footprint`
     - `Light`
+    - `P3`
     - `PaintState`
     - `PlanksOptions`
     - `Pt`
     - `Rgb`
+    - `Rim`
     - `Rnd`
+    - `RoofGeom`
     - `Setting`
     - `ShinglesOptions`
+    - `SolidPaint`
     - `StonesOptions`
     - `WashOptions`
     - `WindowOptions`
@@ -120,6 +207,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `doorArch`
     - `draftingTable`
     - `easel`
+    - `fittings`
     - `flowerBox`
     - `gear`
     - `grain`
@@ -136,6 +224,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `mailbox`
     - `mix`
     - `moss`
+    - `oblique`
     - `openDoor`
     - `planks`
     - `poly`
@@ -145,9 +234,11 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `sack`
     - `SETTINGS`
     - `shade`
+    - `SHADOW_ALPHA_MAX`
     - `shingles`
     - `shrub`
     - `sketch`
+    - `SOLID_ALPHA`
     - `spill`
     - `steps`
     - `stones`
@@ -159,25 +250,8 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `waterButt`
     - `windowRect`
 - Cross-plugin:
-  - Imported by:
-    - `apps/agent-manager/isle-building`
-    - `apps/browser/isle-building`
-    - `apps/chord/isle-building`
-    - `apps/deploy/isle-building`
-    - `apps/events/isle-building`
-    - `apps/file-explorer/isle-building`
-    - `apps/isle/plots`
-    - `apps/isle/renderer`
-    - `apps/isle/world`
-    - `apps/isle/world-view`
-    - `apps/keyboard-party/isle-building`
-    - `apps/mail/isle-building`
-    - `apps/pages/isle-building`
-    - `apps/places/isle-building`
-    - `apps/plugin-studio/isle-building`
-    - `apps/prototypes/isle-building`
-    - `apps/settings/isle-building`
-    - `apps/sonata/isle-building`
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×22
 - Test helpers:
   - Core: `@plugins/apps/plugins/isle/plugins/buildings/core/testing`
     - `boxWithin` — Whether `inner` lies inside `outer`, give or take `tolerance` px on each side.
@@ -185,6 +259,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `footprintProblems` — Every way a building's declared footprint disagrees with its ink (none: it holds).
     - `measureBuilding` — All the ink a building paints and animates, in every light, split at the ground band.
     - `paintedExtent` — Runs `draw` against a measuring context (no canvas needed) and returns where it put ink, in the coordinates `draw` starts in, split at `splitY`.
+    - `perspectiveProblems` — Every receding edge a building spells by hand (none: its perspective holds).
     - `testBuildingFootprint` — Registers the footprint suite of one app's building: `testBuildingFootprint("places", lighthouse)`.
     - Types: `PaintedExtent`
 

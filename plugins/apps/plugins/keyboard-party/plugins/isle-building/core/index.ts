@@ -1,1 +1,1 @@
-export { schoolhouse } from "./schoolhouse";
+export { partyTent } from "./party-tent";

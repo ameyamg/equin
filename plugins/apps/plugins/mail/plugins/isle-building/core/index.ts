@@ -1,1 +1,1 @@
-export { postOffice } from "./post-office";
+export { pillarBox } from "./pillar-box";

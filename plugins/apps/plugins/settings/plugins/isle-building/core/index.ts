@@ -1,1 +1,1 @@
-export { windmill } from "./windmill";
+export { gearMill } from "./gear-mill";

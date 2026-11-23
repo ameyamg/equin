@@ -23,6 +23,19 @@ No DOM, no canvas. A port of the prototype `proto-1794374690-9xmb84`'s `islands.
   its place, but no land at all (never drawn, never taken, in no one's way).
 - `layoutWorld(world, placement, residents)` — what is revealed: islands, roads (with samples and
   bridge flags), squares, buildings, empty lots, ferries, piers, the world rect.
+  Roads are **laid as footpaths at layout time** (`footpath.ts`, `wornRoads` in `layout.ts`); the routed
+  lines (`roads.ts` trunks, a plot's stored `lane`) are what placement checks clearances against and are
+  never changed, so stored plots stay valid. `Road.pts` / `samples` — what is painted, stamped on the walk
+  grid and walked by villagers — are:
+  - trunks and streets: the routed line, chained through square-less nodes, drawn into a road it runs
+    beside, corners rounded and a wander added, each point only as far as the nearest plot's band allows;
+  - **door lanes: a minimal network, not the stored lane.** Each door takes the cheapest way over free
+    ground (off every plot's band, off water; `cheapestWay`: Dijkstra on an 8 px grid, pulled taut) to the
+    network as it stands — a trunk, a street, a square or a lane already laid — nearest doors first, so
+    neighbours share a lane and none runs beside another. The stored `lane` is only the fallback when no
+    way is within reach. A new building is another obstacle and another spur: lanes it does not block or
+    shorten stay as they were. A door facing away from its road still has to go round its own band.
+  A road's key carries a hash of its shape (tiles repaint when it moves).
 - `walkGrid(world, layout, solids?)` + `findPath` — the 16 px walk grid and A*.
 - `districtLabels` / `pickLabelSpot` / `islandLabels` — map labels; the renderer picks a spot at the
   label's on-screen size.

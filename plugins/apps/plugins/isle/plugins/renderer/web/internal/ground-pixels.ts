@@ -34,25 +34,33 @@ export const mixTo = (o: Rgb, a: Rgb, b: Rgb, t: number): Rgb => {
 
 export const DEEP_C = hex("#2d6c9b");
 export const ABYSS_C = hex("#25608f");
-const G_DARK = hex("#66713d");
-const G_LIGHT = hex("#a2a663");
-const G_DEEP = hex("#55612f");
 const DRY = hex("#bab27a");
-const DIRT = hex("#b9a77b");
-const EDGE = hex("#5d6836");
+// the meadow's washes
+const M_LO = hex("#6c7a44");
+const M_HI = hex("#97a35d");
+const M_WARM = hex("#aba566");
+const M_DAMP = hex("#52653b");
+const M_EARTH = hex("#b29e74");
+const M_EARTH_D = hex("#877452");
+const M_WORN = hex("#a39c63");
 const SAND1 = hex("#dccca0");
 const SAND2 = hex("#cbb688");
 const WET = hex("#b5a47e");
 const SHAL = hex("#93c6cf");
 const MID = hex("#4f90b8");
 const FOAM: Rgb = [236, 242, 238];
-const LIGHT_T: Rgb = [178, 176, 116];
-const DARK_T: Rgb = [86, 98, 50];
-const TUFT_EDGE: Rgb = [70, 74, 40];
-const DIRT_EDGE: Rgb = [92, 82, 54];
 const BANK: Rgb = [52, 50, 30];
 const HILL_LIT: Rgb = [214, 206, 150];
 const HILL_SHADE: Rgb = [58, 64, 34];
+
+/**
+ * Where the meadow's turf is worn through to bare earth (above ~0.69): read by
+ * the pixel colour here and by the texture drawn over it (`ground.ts`), which
+ * thins the grass and scatters stones there.
+ */
+export const meadowBare = (X: number, Y: number): number =>
+  fbm(X / 64 + 31, Y / 64 + 17, 3) * 0.78 +
+  fbm(X / 420 + 5, Y / 420 + 50, 2) * 0.3;
 
 export type HeightFn = (x: number, y: number) => number;
 type PixelFn = (
@@ -90,23 +98,27 @@ function groundPixel(H: HeightFn, E: HeightFn | null): PixelFn {
       if (hv < 0.032) mixTo(col, WET, col, ss(0.02, 0.032, hv));
       for (let k = 0; k < 3; k++) col[k] = col[k]! + grain * 12;
     } else {
-      const m = fbm(X / 230 + 9, Y / 230, 3);
-      const p = fbm(X / 85 + 3, Y / 85 + 7, 3);
-      const dry = fbm(X / 160 + 20, Y / 160, 3);
+      // a meadow: broad soft washes, drier and damper ground, turf worn to earth in places, darker by the water
+      const v = fbm(X / 250 + 9, Y / 250, 3);
+      const w = fbm(X / 80 + 3, Y / 80 + 7, 3);
       const q = vnoise(X / 18, Y / 18);
-      mixTo(col, G_DARK, G_LIGHT, ss(0.3, 0.75, m * 0.8 + q * 0.2));
-      if (p < 0.34) mixTo(col, col, G_DEEP, ss(0.34, 0.24, p) * 0.8);
-      if (dry > 0.57) mixTo(col, col, DRY, ss(0.57, 0.68, dry) * 0.75);
-      if (p > 0.66) mixTo(col, col, DIRT, ss(0.66, 0.7, p) * 0.9);
-      const f2 = fbm(X / 34 + 11, Y / 34 + 5, 2);
-      if (f2 > 0.62) mixTo(col, col, LIGHT_T, ss(0.62, 0.66, f2) * 0.55);
-      else if (f2 < 0.3) mixTo(col, col, DARK_T, ss(0.3, 0.26, f2) * 0.5);
-      if (Math.abs(f2 - 0.62) < 0.007 || Math.abs(f2 - 0.3) < 0.006)
-        mixTo(col, col, TUFT_EDGE, 0.35);
-      if (Math.abs(p - 0.66) < 0.006) mixTo(col, col, DIRT_EDGE, 0.55);
-      if (hv < 0.095)
-        mixTo(col, col, EDGE, ss(0.095, 0.078, hv + (q - 0.5) * 0.02) * 0.85);
-      if (hv < 0.084) mixTo(col, col, BANK, ss(0.084, 0.077, hv) * 0.7);
+      const dry = fbm(X / 170 + 20, Y / 170, 2);
+      mixTo(col, M_LO, M_HI, ss(0.28, 0.72, v * 0.62 + w * 0.38));
+      if (dry > 0.5) mixTo(col, col, M_WARM, ss(0.5, 0.74, dry) * 0.5);
+      const bloom = Math.abs(w - 0.5); // where a wash pooled as it dried
+      if (bloom < 0.02) mixTo(col, col, M_LO, (1 - bloom / 0.02) * 0.16);
+      const bare = meadowBare(X, Y);
+      if (bare > 0.63) {
+        mixTo(col, col, M_WORN, ss(0.63, 0.7, bare) * 0.55);
+        if (bare > 0.69) {
+          mixTo(col, col, M_EARTH, ss(0.69, 0.722, bare) * 0.9);
+          if (bare < 0.74)
+            mixTo(col, col, M_EARTH_D, ss(0.74, 0.69, bare) * 0.3);
+        }
+      }
+      if (hv < 0.17)
+        mixTo(col, col, M_DAMP, ss(0.17, 0.085, hv + (q - 0.5) * 0.025) * 0.62);
+      if (hv < 0.084) mixTo(col, col, BANK, ss(0.084, 0.077, hv) * 0.6);
       if (E) {
         const e = E(X, Y);
         if (e > 0.04) {
@@ -119,7 +131,12 @@ function groundPixel(H: HeightFn, E: HeightFn | null): PixelFn {
           mixTo(col, col, DRY, ss(0.5, 0.95, e) * 0.28);
         }
       }
-      for (let k = 0; k < 3; k++) col[k] = col[k]! + grain * 16;
+      // granulation, and the brush's long strokes
+      const tex =
+        grain * 13 +
+        (vnoise(X / 7.3, Y / 7.3) - 0.5) * 6 +
+        (vnoise(X / 52 + w * 3, Y / 7) - 0.5) * 7;
+      for (let k = 0; k < 3; k++) col[k] = col[k]! + tex;
     }
     d[i] = col[0];
     d[i + 1] = col[1];
@@ -258,7 +275,7 @@ export const OCEAN_FLAT = ((c: Rgb) =>
   mixTo([0, 0, 0], DEEP_C, ABYSS_C, 0.55),
 );
 
-/** The open sea's texture side: one seamless tile, repeated under everything. */
+/** The open sea's grain side: one seamless tile of fine tooth, laid over the sea's colour. */
 export const OCEAN_N = 512;
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
@@ -278,15 +295,18 @@ function periodicNoise(x: number, y: number, P: number): number {
 }
 
 /**
- * The open sea, {@link OCEAN_N}² px: long streaks, a slow wobble between the
- * deep and abyss blues, and a fine grain. The same for every world — but
- * 786k pixels of three noises each, so it bakes like a tile (a worker, else a
- * slice of rows per frame), never in the task that opens the island.
+ * The open sea's grain, {@link OCEAN_N}² px: fine paper tooth only — white or
+ * black at a few levels of alpha, laid over the colour `sea.ts` washes in from
+ * the world position. Nothing a few px wide can be seen to repeat, and it is
+ * the ONLY part of the sea that does: the streaks and the slow drift between
+ * the blues, once baked into this tile (and so repeating every 128 px down the
+ * page as rows of the same dashes), are placed in world space instead. The
+ * same for every world — 262k pixels, so it bakes like a tile (a worker, else
+ * a slice of rows per frame), never in the task that opens the island.
  */
 export function oceanKernel(): PixelKernel {
   const N = OCEAN_N;
   const img = new Uint8ClampedArray(N * N * 4);
-  const col: Rgb = [0, 0, 0];
   return {
     w: N,
     h: N,
@@ -294,15 +314,13 @@ export function oceanKernel(): PixelKernel {
     rows(y0, y1) {
       for (let y = y0; y < y1; y++)
         for (let x = 0; x < N; x++) {
-          const streak = periodicNoise(x / 64, y / 16, 8) - 0.5;
-          const wob = periodicNoise(x / 128, y / 128, 4) - 0.5;
           const grain = periodicNoise(x / 3.2, y / 3.2, 160) - 0.5;
-          mixTo(col, DEEP_C, ABYSS_C, 0.55 + wob * 0.5);
           const i = (y * N + x) * 4;
-          img[i] = col[0] + streak * 14 + grain * 6;
-          img[i + 1] = col[1] + streak * 14 + grain * 6;
-          img[i + 2] = col[2] + streak * 14 + grain * 6;
-          img[i + 3] = 255;
+          const v = grain > 0 ? 255 : 0;
+          img[i] = v;
+          img[i + 1] = v;
+          img[i + 2] = v;
+          img[i + 3] = Math.round(Math.abs(grain) * (grain > 0 ? 20 : 30));
         }
     },
   };

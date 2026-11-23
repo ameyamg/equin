@@ -1,1 +1,1 @@
-export { musicHall } from "./music-hall";
+export { pianoHall } from "./piano-hall";

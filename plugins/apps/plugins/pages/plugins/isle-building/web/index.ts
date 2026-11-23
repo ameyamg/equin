@@ -5,6 +5,6 @@ import { library } from "../core";
 
 export default {
   description:
-    "Pages' building on Isle: the library, a pedimented stone hall with a carved open book.",
+    "Pages' building on Isle: the library of stacked books under an open-book roof — a note written line by line on its slate, a leaf turning on the lectern, loose leaves drifting down, a ribbon marker stirring.",
   contributions: [Isle.Building({ app: pagesApp, building: library })],
 } satisfies PluginDefinition;

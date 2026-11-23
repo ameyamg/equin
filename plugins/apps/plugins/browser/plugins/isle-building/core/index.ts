@@ -1,1 +1,1 @@
-export { observatory } from "./observatory";
+export { globeHouse } from "./globe-house";

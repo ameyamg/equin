@@ -1,1 +1,1 @@
-export { conservatory } from "./conservatory";
+export { blockWorkshop } from "./block-workshop";
