@@ -250,6 +250,10 @@ async function runBunFiles(
       armed.watch?.cancel();
     }
     if (existsSync(report)) reports.push(readFileSync(report, "utf8"));
+    // bun writes no report for a process that ran no case (a compile-only
+    // guard file): said here, so the file reads as loaded with no cases, as
+    // it did when it shared a process with files that had some.
+    else if (result.exitCode === 0) reports.push(emptySuite(file));
     done += 1;
     if (result.exitCode !== 0) {
       failing += 1;
@@ -300,6 +304,15 @@ async function runBunFiles(
   if (files.length > 1 && exitCode === 0)
     console.log(`bun:test: all ${files.length} files passed`);
   return { exitCode, wedged, wedgedFiles, leftBehind };
+}
+
+/** A JUnit suite for `file` with no cases, spelled as bun names its suites. */
+function emptySuite(file: string): string {
+  const path = file
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+  return `<testsuite name="${path}" file="${path}" tests="0" failures="0" time="0" />`;
 }
 
 interface RunnerRun {
