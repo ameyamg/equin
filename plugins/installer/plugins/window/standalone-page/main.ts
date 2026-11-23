@@ -37,6 +37,7 @@ type Plain =
   | "fix-app"
   | "fix-cli"
   | "show-claude"
+  | "report"
   | "add-services"
   | "password-cancel";
 type Command =
@@ -81,6 +82,8 @@ let drawnState = "";
 let decisionSent = false;
 let confirming = false;
 let fixMenu = false;
+/** Report issue was clicked on a pause: the sheet saying what happens, before the browser takes the person away. */
+let reportSheet = false;
 /** The notice's banner was skipped (Skip): the install goes on, the done screen keeps it. */
 let noticeSkipped = false;
 
@@ -263,7 +266,7 @@ function updateProgress(block: HTMLElement): void {
  */
 function actions(opts: {
   primary: HTMLElement | null;
-  report: string;
+  onReport: () => void;
   skip: { tip: string; onSkip: () => void } | null;
   fix: boolean;
 }): HTMLElement {
@@ -320,11 +323,11 @@ function actions(opts: {
       ? [githubMark()]
       : [githubMark(), document.createTextNode("Report issue")],
     `pill ghost tip${opts.skip !== null ? " icon" : ""}`,
-    () => send({ cmd: "open-url", url: opts.report }),
+    opts.onReport,
   );
   report.setAttribute("aria-label", "Report issue");
   report.dataset.tip =
-    "Opens a new issue on GitHub, labelled install, with what happened and the log filled in. Nothing is sent until you submit it there.";
+    "Opens a new issue on GitHub, labelled install, with what happened filled in, and copies the install log for you to paste into it. Nothing is sent until you submit it there.";
   row.append(report);
   return row;
 }
@@ -344,15 +347,11 @@ function errorBox(
   return box;
 }
 
-function reportUrl(
-  title: string,
-  text: string,
-  evidence: readonly string[],
-): string {
+function reportUrl(title: string, text: string): string {
   return installIssueUrl({
     title,
     text,
-    evidence,
+    evidence: [],
     release: view.release,
     platform: view.platform,
   });
@@ -370,6 +369,7 @@ function renderPaused(body: HTMLElement, pause: Pause): void {
   const decide = (d: "retry" | "skip"): void => {
     if (decisionSent) return;
     decisionSent = true;
+    reportSheet = false;
     post(d);
     renderBody();
   };
@@ -394,7 +394,10 @@ function renderPaused(body: HTMLElement, pause: Pause): void {
       actions({
         primary,
         fix: true,
-        report: reportUrl(pause.title, pause.text, pause.evidence),
+        onReport: () => {
+          reportSheet = !reportSheet;
+          renderBody();
+        },
         skip:
           pause.optional && pause.blocking
             ? {
@@ -404,11 +407,44 @@ function renderPaused(body: HTMLElement, pause: Pause): void {
             : null,
       }),
     );
+    if (reportSheet) body.append(reportCard());
   }
   // A stall's step still runs: its bar is not drawn paused.
   body.append(barBelow(!stall));
   if (!showLog)
     body.append(errorBox(pause.title, pause.text, pause.evidence, stall));
+}
+
+/**
+ * Report issue's sheet, read BEFORE the browser opens: the log goes onto the
+ * clipboard and the issue asks for it to be pasted (install.sh's forwarder
+ * does both on `report`, from the link and log the pause left in its run dir).
+ */
+function reportCard(): HTMLElement {
+  const card = el("div", "iw-handoff fadein");
+  const tx = el("div", "tx");
+  tx.append(
+    el("b", undefined, "Report this problem on GitHub"),
+    el(
+      "span",
+      undefined,
+      "Your install log is copied to your clipboard (your home folder shown as ~, your account and computer names removed): paste it at the end of the issue, where it asks for it. Nothing is sent until you submit it.",
+    ),
+  );
+  const row = el("div", "row");
+  row.append(
+    button("Open GitHub", "pill white small", () => {
+      reportSheet = false;
+      post("report");
+      renderBody();
+    }),
+    button("Cancel", "pill ghost small", () => {
+      reportSheet = false;
+      renderBody();
+    }),
+  );
+  card.append(tx, row);
+  return card;
 }
 
 /** After Fix with Claude: Claude works in its own window; this one waits and picks the install up again. */
@@ -457,7 +493,9 @@ function noticeBanner(body: HTMLElement, notice: Notice): void {
     actions({
       primary: open,
       fix: false,
-      report: reportUrl(notice.title, notice.text, []),
+      // A part left out is no failure: no log to paste, the link alone.
+      onReport: () =>
+        send({ cmd: "open-url", url: reportUrl(notice.title, notice.text) }),
       skip: {
         tip: `Finish installing without ${notice.without}. equin works fully in your browser; you can add them once it's done.`,
         onSkip: () => {

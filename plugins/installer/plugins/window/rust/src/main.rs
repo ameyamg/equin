@@ -79,6 +79,9 @@ enum PageCommand {
     FixCli,
     /// Bring Claude back to the front.
     ShowClaude,
+    /// Report issue: the install's forwarder copies the log to the clipboard
+    /// and opens the issue link it built (install.sh `report_url`).
+    Report,
     /// Done screen: add what the install went on without (Add it now).
     AddServices,
     /// The user confirmed stopping the install.
@@ -383,6 +386,7 @@ fn main() {
                 Ok(PageCommand::FixApp) => state.decide("fix-app"),
                 Ok(PageCommand::FixCli) => state.decide("fix-cli"),
                 Ok(PageCommand::ShowClaude) => state.decide("show-claude"),
+                Ok(PageCommand::Report) => state.decide("report"),
                 Ok(PageCommand::AddServices) => state.decide("add-services"),
                 Ok(PageCommand::OpenUrl { url }) => {
                     if openable(&url) {

@@ -27,9 +27,11 @@ export interface InstallReport {
 }
 
 /**
- * The GitHub new-issue link for a pause, labelled `install`: what happened in
- * words, the evidence (paths redacted), the release and the system, and where
- * the full log is to attach by hand. Built by the page; nothing is sent until
+ * The GitHub new-issue link for a notice (a part the install went on
+ * without), labelled `install`: what happened in words, the evidence (paths
+ * redacted), the release and the system. A pause's link is install.sh's own
+ * (`report_url`: the folder's facts, and the log on the clipboard). Built by
+ * the page; nothing is sent until
  * the person submits the issue on GitHub. Held under GitHub's link limit by
  * `buildIssueUrl`, which cuts the text (evidence included) before the notes.
  */

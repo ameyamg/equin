@@ -244,11 +244,18 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
       expect(url.searchParams.get("title")).toBe(
         "Install: Downloading equin didn't finish",
       );
-      expect(url.searchParams.get("body")).not.toContain(home);
-      // Every byte encoded right, those above 127 too (the system line's ·).
-      expect(url.searchParams.get("body")).toMatch(
-        /^System: .+ · release main$/m,
+      const body = url.searchParams.get("body") ?? "";
+      expect(body).not.toContain(home);
+      // The facts about the machine and the folder, as table rows.
+      expect(body).toMatch(/^\| Release \| .+ \|$/m);
+      expect(body).toMatch(/^\| System \| .+ \|$/m);
+      expect(body).toMatch(/^\| Stopped at \| clone \(attempt 1\) · unknown \|$/m);
+      // Every byte encoded right, those above 127 too (the paste line's ⬇ and ⌘).
+      expect(body).toContain(
+        "⬇ **Your install log is on your clipboard: paste it here (⌘V / Ctrl+V).**",
       );
+      // Under GitHub's link limit (install.sh REPORT_URL_MAX).
+      expect(url.href.length).toBeLessThanOrEqual(7500);
     });
 
     test("skip is taken only on an optional step: it is recorded as skipped, never silently", async () => {

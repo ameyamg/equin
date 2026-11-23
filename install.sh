@@ -1261,6 +1261,11 @@ start_hub() {
           fix-app) fix_app ;;
           fix-cli) fix_cli ;;
           show-claude) show_claude ;;
+          # Report issue: the page already said the log is copied; the
+          # link's last line asks for it on GitHub.
+          report)
+            report_copy "$RUN_DIR" 2>/dev/null || true
+            open_thing "$(cat "$RUN_DIR/report-url")" 2>/dev/null || true ;;
           *) printf '%s\n' "$line" >&"$CF_FD" ;;
         esac
       done
@@ -1962,9 +1967,7 @@ after_pause() {
     exit 1
   fi
   if [ "$1" = report ]; then
-    url="$(cat "$run/report-url")"
-    printf '\n  Report this issue: this link opens a new GitHub issue with what happened filled in\n  (your home folder shown as ~, your account and computer names removed).\n  Nothing is sent until you submit it there.\n\n  %s\n\n' "$url"
-    if [ "$OS" = "Darwin" ] || [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then open_thing "$url" 2>/dev/null || true; fi
+    report_issue "$run"
     exit 0
   fi
   if [ -t 0 ] && [ -t 1 ]; then exec bash "$run/fix.command"; fi
@@ -2306,10 +2309,9 @@ tty_say() {
   for l in "$@"; do printf '  %s\n' "$l" >/dev/tty; done
 }
 
-# term_report: the issue link, printed (and opened when there is a screen).
+# term_report: Report in the interactive terminal (report_issue).
 term_report() {
-  tty_say "Report this issue: this link opens a new GitHub issue with what happened filled in (your home folder shown as ~, your account and computer names removed). Nothing is sent until you submit it there." "" "$(cat "$RUN_DIR/report-url")"
-  if [ "$OS" = "Darwin" ] || [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then open_thing "$(cat "$RUN_DIR/report-url")" 2>/dev/null || true; fi
+  report_issue "$RUN_DIR"
 }
 
 term_log() {
@@ -2346,18 +2348,192 @@ stop_keys() {
 }
 
 # report_url: RU = the GitHub new-issue link for the pause (P_*), built here
-# for the terminal and `--report` (the window builds its own from the same
-# event, with installer/core's installIssueUrl). Labelled install; the body
-# is cut to stay well under GitHub's link limit.
+# for every view (the terminal's [r], `--report` and the window's Report
+# issue, carried out by its forwarder). Labelled install. A link carries text
+# only, never a file, and GitHub refuses one past ~8 KB, so the body is, in
+# order of what matters: the pause's words and evidence, the facts about this
+# machine and folder (report_meta), the last lines of the install that still
+# fit (REPORT_URL_MAX), and a last line asking to paste the whole log — which
+# Report puts on the clipboard (report_copy) as it opens the link.
+REPORT_URL_MAX=7500
 report_url() {
-  local body e
-  body="$P_TEXT"$'\n\n```\n'
-  for e in ${P_EV[@]+"${P_EV[@]}"}; do body="$body$e"$'\n'; done
-  body="$body"$'```\n\n'"System: ${SYS_DESC:-$OS} · release ${RELEASE:-main}"$'\n'"The full log is at ~/.equin/logs/install/latest/install.log: drag it here to attach it."
-  redact "$body"; body=${RD:0:2500}
-  urlencode "Install: $P_TITLE"; local t=$UE
-  urlencode "$body"
-  RU="$CANONICAL_REPO_URL/issues/new?labels=install&title=$t&body=$UE"
+  local body e ev="" foot lines line src t base room=0 tail="" n=0
+  for e in ${P_EV[@]+"${P_EV[@]}"}; do ev="$ev$e"$'\n'; done
+  # The evidence is the most a pause can carry: cut first, never the meta.
+  [ "${#ev}" -le 2000 ] || ev="${ev:0:2000}"$'\n[… cut]\n'
+  report_meta
+  body="$P_TEXT"$'\n\n```\n'"$ev"$'```\n\n'"$RM"
+  redact "$RUN_DIR/install.log"
+  foot=$'\n'"⬇ **Your install log is on your clipboard: paste it here (⌘V / Ctrl+V).** If it is not, attach the file \`$RD\`. ⬇"$'\n'
+  redact "$body"; body=$RD
+  urlencode "Install: $P_TITLE"; t=$UE
+  base="$CANONICAL_REPO_URL/issues/new?labels=install&title=$t&body="
+  urlencode "$body$foot"
+  room=$((REPORT_URL_MAX - ${#base} - ${#UE} - 200))
+  # The install's last lines before what the evidence already shows: an
+  # unknown failure's evidence is its step's own tail, so the lines before
+  # that step; any other pause's evidence is a few picked lines, so the tail.
+  src="$RUN_DIR/install.log"
+  if [ -f "$src" ] && [ "$room" -gt 0 ]; then
+    if [ "$P_KIND" = unknown ] && [ -n "$P_STEP" ] && [ "${STEP_LOG0:-0}" -gt 0 ]; then
+      lines="$(head -n "$STEP_LOG0" "$src" | tail -n 120 | sed $'s/\033\\[[0-9;?]*[a-zA-Z]//g' | redact_stream)"
+    else
+      lines="$(tail -n 120 "$src" | sed $'s/\033\\[[0-9;?]*[a-zA-Z]//g' | redact_stream)"
+    fi
+    # From the last line back, while the encoded link still fits.
+    while [ -n "$lines" ]; do
+      line=${lines##*$'\n'}
+      [ "$line" != "$lines" ] && lines=${lines%$'\n'*} || lines=""
+      line=${line:0:300}
+      urlencode "$line"$'\n'
+      [ "${#UE}" -le "$room" ] || break
+      room=$((room - ${#UE})); tail="$line"$'\n'"$tail"; n=$((n + 1))
+    done
+  fi
+  [ "$n" = 0 ] || body="$body"$'\n'"**The install's last $n lines before that:**"$'\n\n```\n'"$tail"$'```\n'
+  urlencode "$body$foot"
+  RU="$base$UE"
+}
+
+# report_meta: RM = a Markdown table of what a report needs about this machine
+# and this folder, beyond the pause's words: which code ran (release, commit,
+# whether it is the release's), whether this run downloaded the folder or
+# reused one, the folder's state against its commit (what is modified,
+# missing or added — a half-written checkout shows here), the view, the
+# attempt, what was left out, the system and its tools, earlier installs and
+# free space. Every command may fail: its row then says unknown.
+report_meta() {
+  local dir=${INSTALL_DIR:-} head tag st counts paths more l v root runs
+  RM=$'| | |\n|---|---|\n'
+  # (No apostrophe inside a ${…:-…}: bash 3.2 reads it as an open quote.)
+  v="main, its newest version"
+  [ -z "${RELEASE:-}" ] || v=$RELEASE
+  [ -z "${CHECKOUT:-}" ] || v="$v (checked out: $CHECKOUT)"
+  rm_row "Release" "$v"
+  if [ -n "$dir" ] && git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
+    head=$(git -C "$dir" rev-parse --short HEAD 2>/dev/null || echo unknown)
+    l=$head
+    if [ -n "${RELEASE:-}" ]; then
+      tag=$(git -C "$dir" rev-parse --short "refs/tags/$RELEASE^{commit}" 2>/dev/null || true)
+      if [ -z "$tag" ]; then l="$l (the release's tag is not in this folder)"
+      elif [ "$tag" = "$head" ]; then l="$l (the release's commit)"
+      else l="$l (NOT the release's commit $tag)"; fi
+    fi
+    rm_row "Commit" "$l"
+    if st=$(git -C "$dir" status --porcelain 2>/dev/null); then
+      if [ -z "$st" ]; then
+        rm_row "Folder" "clean (every file as the commit has it)"
+      else
+        counts=$(printf '%s\n' "$st" | awk '{c=substr($0,1,2); if (c=="??") a++; else if (c ~ /D/) d++; else m++} END {printf "%d modified, %d missing, %d added", m, d, a}')
+        paths=$(printf '%s\n' "$st" | head -n 5 | cut -c4- | awk 'BEGIN{ORS=""} {if (NR>1) print ", "; print}')
+        more=$(printf '%s\n' "$st" | wc -l | tr -d ' ')
+        [ "$more" -le 5 ] && more="" || more=" and $((more - 5)) more"
+        rm_row "Folder" "$counts: $paths$more"
+      fi
+    else
+      rm_row "Folder" "unknown (git status failed)"
+    fi
+  else
+    rm_row "Folder" "${dir:-unknown}: no git checkout there"
+  fi
+  if grep -q '"type":"step","id":"clone","state":"done"' "$RUN_DIR/events.jsonl" 2>/dev/null; then v="downloaded by this install"
+  elif grep -q '"type":"step","id":"clone","state":"skipped"' "$RUN_DIR/events.jsonl" 2>/dev/null; then v="not downloaded by this install: an existing folder was used"
+  else v="unknown (stopped before the download)"; fi
+  rm_row "Download" "$v"
+  rm_row "Stopped at" "${P_STEP:-before the first step} (attempt ${STEP_ATTEMPT:-0}) · ${P_KIND}"
+  rm_row "View" "${MODE:-unknown}"
+  [ -z "${LEFT_OUT:-}" ] || rm_row "Left out" "$LEFT_OUT"
+  v="${SYS_DESC:-$OS}"
+  if [ -r /etc/os-release ]; then v="$v · $(. /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-}")"; fi
+  rm_row "System" "$v"
+  l=$({ "${MISE:-mise}" --version 2>/dev/null || true; } | awk '{print $1; exit}')
+  v=$({ cd "${dir:-.}" 2>/dev/null && bun --version 2>/dev/null || true; } | head -n 1)
+  rm_row "Tools" "bash ${BASH_VERSION:-?} · mise ${l:-not installed} · Bun ${v:-not installed}"
+  root="$(data_root)/logs/install"
+  runs=$(ls -1 "$root" 2>/dev/null | grep -cv -e '^latest$' -e '^resume$' || true)
+  [ "${runs:-0}" -gt 1 ] && v="$((runs - 1)) earlier install run(s) on this computer" || v="the first install on this computer"
+  rm_row "Earlier installs" "$v"
+  v=$(df -Pk "${dir:-$HOME}" 2>/dev/null | awk 'NR==2 {printf "%.1f GB", $4/1048576}' || true)
+  rm_row "Free space" "${v:-unknown}"
+}
+
+# rm_row <name> <value>: one row of report_meta's table (no | or newline in it).
+rm_row() {
+  local v=${2//|//}
+  v=${v//$'\n'/ }
+  RM="$RM| $1 | $v |"$'\n'
+}
+
+# report_copy <run dir>: the run's whole log, redacted (as the link is) and
+# wrapped as a folded Markdown block, onto the clipboard — what the link's
+# last line asks to paste. A log past what an issue holds (65,536 characters,
+# the link's body included) keeps its start and its end, the cut said in the
+# middle. Also left as report-log.md beside the log. Fails with no clipboard.
+report_copy() {
+  local run=$1 tmp="$1/report-log.tmp" n text
+  [ -f "$run/install.log" ] || return 1
+  # Redacted as a stream (redact_stream): bash 3.2's ${x//…} over a log of
+  # tens of KB takes minutes.
+  sed $'s/\033\\[[0-9;?]*[a-zA-Z]//g' "$run/install.log" | redact_stream >"$tmp"
+  n=$(wc -l <"$tmp" | tr -d ' ')
+  if [ "$(wc -c <"$tmp" | tr -d ' ')" -gt 55000 ]; then
+    text="$(head -c 15000 "$tmp" | sed '$d')"$'\n\n[… the middle of the log is cut here: the whole log is install.log …]\n\n'"$(tail -c 38000 "$tmp" | sed '1d')"
+  else
+    text=$(cat "$tmp")
+  fi
+  rm -f "$tmp"
+  printf '<details><summary>install.log (%s lines)</summary>\n\n````\n%s\n````\n</details>\n' "$n" "$text" >"$run/report-log.md"
+  clipboard_put <"$run/report-log.md"
+}
+
+# redact_stream: redact's rules over stdin, line by line, as literal text
+# (awk's index, never a regex: a home folder may hold regex characters).
+redact_stream() {
+  local user host
+  user="$(id -un 2>/dev/null || true)"
+  host="$(hostname -s 2>/dev/null || true)"
+  [ "${#user}" -ge 3 ] || user=""
+  [ "${#host}" -ge 3 ] || host=""
+  awk -v h="$HOME" -v u="$user" -v m="$host" '
+    function rep(s, a, b,   out, i) {
+      if (a == "") return s
+      out = ""
+      while ((i = index(s, a)) > 0) { out = out substr(s, 1, i - 1) b; s = substr(s, i + length(a)) }
+      return out s
+    }
+    { print rep(rep(rep($0, h, "~"), u, "<user>"), m, "<host>") }'
+}
+
+# report_issue <run dir>: Report, in a terminal (the pause's [r], or
+# `--report`): the log onto the clipboard first, then say so and wait for
+# Enter BEFORE the browser takes the person away, so the message is read;
+# the link's own last line repeats it on GitHub. Without a screen to open a
+# browser on, the link is printed.
+report_issue() {
+  local run=$1 url k copied=1 out=/dev/tty redacted
+  url=$(cat "$run/report-url")
+  { : >/dev/tty; } 2>/dev/null || out=/dev/stdout
+  report_copy "$run" 2>/dev/null || copied=0
+  redact "$run/install.log"; redacted=$RD
+  {
+    printf '\n  Report this problem on GitHub\n'
+    if [ "$copied" = 1 ]; then
+      printf '  Your install log is copied to your clipboard (your home folder shown as ~, your account and\n  computer names removed): paste it at the end of the issue, where it asks for it.\n'
+    else
+      printf '  There is no clipboard tool here: attach the log to the issue by hand, it is %s\n' "$redacted"
+    fi
+    printf '  Nothing is sent until you submit the issue there.\n\n'
+  } >"$out"
+  if [ "$OS" != "Darwin" ] && [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || [ "$out" != /dev/tty ]; then
+    printf '  Open this link in a browser:\n\n  %s\n\n' "$url" >"$out"
+    return 0
+  fi
+  printf '  [Enter] open the issue in your browser   [any other key] back\n' >"$out"
+  k=x
+  IFS= read -r -s -n 1 k </dev/tty || k=x
+  if [ -z "$k" ]; then
+    open_thing "$url" 2>/dev/null || printf '  The browser did not open: the link is in %s\n' "$run/report-url" >"$out"
+  fi
 }
 
 # urlencode <text>: UE = the text percent-encoded, byte by byte.

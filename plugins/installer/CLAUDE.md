@@ -413,10 +413,27 @@ what skipping costs — raw lines only in `evidence` and the log.
   `open fix.command` (no Automation permission), a terminal emulator on
   Linux. `--fix` / `--report` act on the last stopped install (`--fix --yes`
   without a terminal: Claude Code acting without asking).
-- **Report issue**: the window builds it with `installIssueUrl` (core:
-  `buildIssueUrl` + `redactPaths`), the terminal with `report_url` (bash, the
-  same fields); evidence is written with `$HOME` as `~` and the account and
-  machine names removed. Nothing is sent until the person submits it.
+- **Report issue**: one link, built by install.sh's `report_url` at the
+  pause (`report-url` in the run dir) for every view. A GitHub new-issue link
+  carries text only, never a file, and is refused past ~8 KB
+  (`REPORT_URL_MAX`), so the body holds, in that order: the pause's words and
+  evidence, a table of facts (`report_meta`: release, commit and whether it
+  is the release's, whether this run downloaded the folder or reused one, the
+  folder's state from `git status` — modified / missing / added, first paths —
+  stopped step and attempt, view, parts left out, system, bash / mise / Bun,
+  earlier installs, free space), the install's last lines that still fit, and
+  a last line asking to paste the whole log. **The log rides the clipboard**:
+  Report runs `report_copy` (the redacted log as a folded `<details>` block,
+  start and end kept past 55 KB so the issue stays under GitHub's 65,536
+  characters; also left as `report-log.md`). The person is told BEFORE the
+  browser takes them away: the terminal (`[r]`, `--report`: `report_issue`)
+  copies, says so and opens on Enter; the window's Report issue opens a sheet
+  whose Open GitHub sends `report`, carried out by the forwarder (copy, then
+  open). No clipboard tool: the terminal and the link's last line name the
+  log file to attach. Everything is written with `$HOME` as `~` and the
+  account and machine names removed; nothing is sent until the person
+  submits it. A notice's Report (a part left out, not a failure) is the
+  window's own `installIssueUrl` link, with no log.
 - **A part left out** (`notice`): `./equin start` reports the login services
   macOS refused (App Management). The install goes on: a banner while it
   runs (Open App Management, Skip), "Installed without … Add it now" on the
