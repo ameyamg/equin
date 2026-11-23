@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
@@ -13,6 +13,7 @@ import {
 } from "../../core";
 import { _githubReleases, _githubRuns, workflowFileOf } from "../../server";
 import { withFailedJob, type RunFacts } from "./events";
+import { newerAndDifferent } from "./upsert-guard";
 
 // The one write path of both tables: a delivery and a catch-up listing go
 // through the same upserts, so the two can never store a run differently.
@@ -34,7 +35,7 @@ export async function upsertRun(facts: RunFacts): Promise<GitHubRun> {
     .onConflictDoUpdate({
       target: _githubRuns.id,
       set,
-      setWhere: sql`excluded.github_updated_at >= ${_githubRuns.githubUpdatedAt}`,
+      setWhere: newerAndDifferent(_githubRuns, set),
     });
   return readRun(facts.id);
 }
@@ -97,7 +98,7 @@ export async function upsertRelease(release: GitHubRelease): Promise<void> {
     .onConflictDoUpdate({
       target: _githubReleases.id,
       set,
-      setWhere: sql`excluded.github_updated_at >= ${_githubReleases.githubUpdatedAt}`,
+      setWhere: newerAndDifferent(_githubReleases, set),
     });
 }
 
