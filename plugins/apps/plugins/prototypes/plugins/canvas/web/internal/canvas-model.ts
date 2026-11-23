@@ -123,6 +123,17 @@ export type CanvasAction =
       version?: PrototypeVersion | null;
     }
   | { type: "addSource"; source: string }
+  /**
+   * Turn prototype frame `id` into a frame of `source`, in its place — "this
+   * frame shows the real app now" (no-op while the source is already on the
+   * canvas: one frame per source).
+   */
+  | { type: "showSource"; id: FrameId; source: string }
+  /**
+   * Turn source frame `id` back into a prototype frame showing `version`, in
+   * its place — its picks a copy of the last prototype frame's, as `+` would.
+   */
+  | { type: "showPrototype"; id: FrameId; version: PrototypeVersion | null }
   | { type: "remove"; id: FrameId }
   /** Close every frame but `id` (the provider keeps the state before, for Undo). */
   | { type: "keepOnly"; id: FrameId }
@@ -369,6 +380,63 @@ function transition(
         layout: "swipe",
         size: { kind: "responsive" },
       });
+    }
+
+    case "showSource": {
+      const at = state.frames.findIndex((f) => f.id === action.id);
+      if (
+        at === -1 ||
+        state.frames[at]!.kind !== "prototype" ||
+        state.frames.some(
+          (f) => f.kind === "source" && f.source === action.source,
+        )
+      ) {
+        return unchanged(state);
+      }
+      const frames = state.frames.map((f): CanvasFrame =>
+        f.id === action.id
+          ? { id: f.id, kind: "source", source: action.source }
+          : f,
+      );
+      // Frame A becoming the source hands A (and the shared record) to the
+      // next prototype frame, exactly as closing it would.
+      return promoteA(
+        {
+          ...state,
+          frames,
+          selected: action.id,
+          spread: prototypeFrames(frames).length < 2 ? null : state.spread,
+        },
+        shared,
+      );
+    }
+
+    case "showPrototype": {
+      const at = state.frames.findIndex((f) => f.id === action.id);
+      if (at === -1 || state.frames[at]!.kind !== "source") {
+        return unchanged(state);
+      }
+      const copied = prototypeFrames(state.frames).at(-1);
+      const frame: PrototypeFrame = {
+        id: action.id,
+        kind: "prototype",
+        version: action.version,
+        // With no prototype frame left, this one IS frame A.
+        picks: copied
+          ? { ...picksOf(copied, shared) }
+          : state.linkVariant
+            ? { ...shared }
+            : "shared",
+      };
+      return promoteA(
+        {
+          ...state,
+          frames: state.frames.map((f) => (f.id === action.id ? frame : f)),
+          selected: action.id,
+          spread: null,
+        },
+        shared,
+      );
     }
 
     case "remove": {

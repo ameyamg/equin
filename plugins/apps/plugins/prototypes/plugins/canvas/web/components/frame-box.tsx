@@ -5,14 +5,11 @@ import {
 } from "@plugins/primitives/plugins/action-presentation/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
   PrototypeMeta,
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { prototypesIcons } from "@plugins/apps/plugins/prototypes/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   prototypeFrames,
   type CanvasFrame,
@@ -28,8 +25,7 @@ import {
 } from "../context";
 import { OptionsChip } from "./options-pill";
 import { VersionStepper } from "./version-stepper";
-
-const appIcon = prototypesIcons.icon("app");
+import { SourceChoices, SourceShows } from "./frame-shows-picker";
 
 /**
  * What a frame shows, as ONE box — the same component wherever a frame is
@@ -73,13 +69,7 @@ export function FrameShowsBox({
     frame.kind === "prototype" ? (
       <PrototypeShows frame={frame} meta={meta} name={name} compare={compare} />
     ) : (
-      <Line
-        title={detail ?? undefined}
-        className="gap-xs text-muted-foreground"
-      >
-        <Icon icon={appIcon} className="size-3.25" />
-        <Text variant="group">{name}</Text>
-      </Line>
+      <SourceShows frame={frame} meta={meta} name={name} detail={detail} />
     );
 
   if (floating === undefined) {
@@ -89,7 +79,7 @@ export function FrameShowsBox({
         <Line className="gap-2xs px-2xs">{shows}</Line>
       </Line>
     ) : (
-      <Line className="h-7 rounded-lg border border-dashed border-border px-sm">
+      <Line className="h-7 rounded-lg border border-dashed border-border px-2xs">
         {shows}
       </Line>
     );
@@ -167,6 +157,9 @@ function PrototypeShows({
             dispatch({ type: "setVersion", id: frame.id, version })
           }
           compare={compare}
+          more={(close) => (
+            <SourceChoices frameId={frame.id} meta={meta} close={close} />
+          )}
         />
       </Line>
     </ActionFormShield>

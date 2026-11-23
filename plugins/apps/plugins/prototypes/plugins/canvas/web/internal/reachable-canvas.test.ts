@@ -52,6 +52,8 @@ function randomAction(s: CanvasState): CanvasAction {
     { type: "addPrototype", from: id },
     { type: "addPrototype", from: id, version: v3 },
     { type: "addSource", source: "real-app" },
+    { type: "showSource", id, source: "real-app" },
+    { type: "showPrototype", id, version: rnd(2) ? v3 : null },
     { type: "remove", id },
     { type: "keepOnly", id },
     { type: "select", id },

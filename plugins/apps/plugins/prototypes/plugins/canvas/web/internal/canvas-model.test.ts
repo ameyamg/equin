@@ -170,6 +170,74 @@ describe("addSource", () => {
   });
 });
 
+describe("showSource / showPrototype", () => {
+  it("turns a frame into the source in its place, and back", () => {
+    let s = run(initialCanvasState(), { type: "addPrototype" }).state;
+    s = run(s, { type: "showSource", id: 2, source: "real-app" }).state;
+    expect(s.frames.map((f) => [f.id, f.kind])).toEqual([
+      [1, "prototype"],
+      [2, "source"],
+    ]);
+    expect(s.selected).toBe(2);
+    s = run(s, { type: "showPrototype", id: 2, version: v3 }).state;
+    expect(s.frames.map((f) => [f.id, f.kind])).toEqual([
+      [1, "prototype"],
+      [2, "prototype"],
+    ]);
+    expect(proto(s, 1).version).toBe(v3);
+  });
+
+  it("keeps one frame per source", () => {
+    let s = run(initialCanvasState(), {
+      type: "addSource",
+      source: "real-app",
+    }).state;
+    s = run(s, { type: "showSource", id: 1, source: "real-app" }).state;
+    expect(s.frames.map((f) => f.kind)).toEqual(["prototype", "source"]);
+  });
+
+  it("hands frame A to the next prototype frame", () => {
+    let s = run(
+      initialCanvasState(),
+      { type: "addPrototype" },
+      {
+        design: "slate",
+      },
+    ).state;
+    s = run(
+      s,
+      { type: "setPick", id: 2, option: "design", value: "paper" },
+      {
+        design: "slate",
+      },
+    ).state;
+    const t = run(
+      s,
+      { type: "showSource", id: 1, source: "real-app" },
+      {
+        design: "slate",
+      },
+    );
+    expect(proto(t.state, 0).picks).toBe("shared");
+    expect(t.effects).toEqual([
+      { kind: "replaceShared", picks: { design: "paper" } },
+    ]);
+  });
+
+  it("makes the only prototype frame frame A again, on the shared record", () => {
+    let s = run(initialCanvasState(), {
+      type: "showSource",
+      id: 1,
+      source: "real-app",
+    }).state;
+    expect(prototypeFrames(s.frames)).toHaveLength(0);
+    const t = run(s, { type: "showPrototype", id: 1, version: null });
+    s = t.state;
+    expect(proto(s, 0).picks).toBe("shared");
+    expect(t.effects).toEqual([]);
+  });
+});
+
 describe("canvasWith", () => {
   it("adds a frame beside a frame A holding the shared record", () => {
     const s = canvasWith(

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement, type ReactNode } from "react";
 import {
   Button,
   ControlSizeProvider,
@@ -59,6 +59,11 @@ export interface VersionStepperProps {
   picks?: OptionPicks;
   /** The narrow form (a frame under 440px): no age beside the number. */
   narrow?: boolean;
+  /**
+   * More things the frame can show, as rows under the version list (the
+   * frame sources — "Real app"); handed the popover's close.
+   */
+  more?: (close: () => void) => ReactNode;
 }
 
 /**
@@ -155,6 +160,7 @@ function ReadyStepper({
   compare,
   picks,
   narrow,
+  more,
 }: VersionStepperProps & {
   history: PrototypeHistory;
   narrow: boolean;
@@ -227,6 +233,7 @@ function ReadyStepper({
                 }}
               />
             </VersionListFrameContext>
+            {more?.(() => setOpen(false))}
             {restorable !== null ? (
               <Button
                 variant="ghost"

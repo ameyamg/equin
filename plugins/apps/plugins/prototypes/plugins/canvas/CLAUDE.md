@@ -207,6 +207,18 @@ showing that version; the stepper hands the frame to its row actions through
 it ends with **Make vN the latest** (confirm, restore, back to live; the store
 saves the current state first, so nothing is lost).
 
+**The real app is a choice of the same popover.** Under the version list sits
+one row per frame source that resolves for this prototype ("Real app ·
+<what it resolved to>"; `frame-shows-picker.tsx`'s `SourceChoices`) — picking
+it turns THIS frame into that source, in its place (`showSource`; disabled
+while the source is shown in another frame — one frame per source). A source
+frame's name is the same picker the other way: the prototype's versions (and
+the other sources) — picking a version turns it back into a prototype frame
+in place (`showPrototype`), its picks a copy of the last prototype frame's, or
+the shared record when it is the only one. Both go through `promoteA`, so
+frame A turning into the real app hands A to the next prototype frame exactly
+as closing it would.
+
 **This variant** (on by default) keeps the versions that can show what the
 frame shows: every picked option a version's own page declares has the picked
 value among its values (`canShowVariant`, `version-steps.ts` — each version
