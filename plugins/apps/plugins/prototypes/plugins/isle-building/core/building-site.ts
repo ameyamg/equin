@@ -178,17 +178,27 @@ const PLAN: readonly (readonly Pt[])[] = [
 const PLAN_LEN = PLAN.map(lengthOf);
 const PLAN_TOTAL = PLAN_LEN.reduce((a, b) => a + b, 0);
 
+/** The door to come, drawn on the blueprint: its half width, its foot, where its arch springs. */
+const DRAWN = { r: 13, foot: -6, spring: -45 } as const;
+
 /** The dashed arch of the door to come, on the blueprint. */
 function doorOutline(g: Ctx2D): void {
   g.beginPath();
-  g.moveTo(-13, -6);
-  g.lineTo(-13, -45);
-  g.arc(0, -45, 13, Math.PI, 0);
-  g.lineTo(13, -6);
+  g.moveTo(-DRAWN.r, DRAWN.foot);
+  g.lineTo(-DRAWN.r, DRAWN.spring);
+  g.arc(0, DRAWN.spring, DRAWN.r, Math.PI, 0);
+  g.lineTo(DRAWN.r, DRAWN.foot);
 }
 
 export const buildingSite: BuildingSpec = {
-  door: { kind: "opening", w: SHEET[2] - SHEET[0], h: -SHEET[1], head: 0 },
+  // the door drawn on the blueprint is the door: it opens on a lit room
+  door: {
+    kind: "leaf",
+    w: 2 * DRAWN.r,
+    h: DRAWN.foot - DRAWN.spring + DRAWN.r,
+    head: DRAWN.r,
+    y: DRAWN.foot,
+  },
   footprint: {
     w: 230,
     depth: 80,
