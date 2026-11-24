@@ -127,6 +127,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `conversations/conversation-view/push-and-exit`
     - `conversations/self-compact`
     - `tasks`
+    - `tasks/decisions`
     - `tasks/orchestration/mandate/change-notice`
     - `tasks/orchestration/message`
     - `tasks/orchestration/tree-digest`

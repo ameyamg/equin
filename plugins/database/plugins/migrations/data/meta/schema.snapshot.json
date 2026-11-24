@@ -1,6 +1,6 @@
 {
-  "id": "5546ba5a-181d-4fb6-ba98-aee172c42a22",
-  "prevId": "bf70ed91-5b32-423d-8671-2a5e5d2648e3",
+  "id": "7c1ae086-83db-45dd-9be6-1c951ddf7cf9",
+  "prevId": "5546ba5a-181d-4fb6-ba98-aee172c42a22",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -16317,6 +16317,334 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.decision_exchanges": {
+      "name": "decision_exchanges",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "decision_id": {
+          "name": "decision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pick": {
+          "name": "pick",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_text": {
+          "name": "user_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "agent_text": {
+          "name": "agent_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "agent_at": {
+          "name": "agent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "turn_id": {
+          "name": "turn_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "decision_exchanges_decision_idx": {
+          "name": "decision_exchanges_decision_idx",
+          "columns": [
+            {
+              "expression": "decision_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "decision_exchanges_decision_id_decisions_id_fk": {
+          "name": "decision_exchanges_decision_id_decisions_id_fk",
+          "tableFrom": "decision_exchanges",
+          "tableTo": "decisions",
+          "columnsFrom": [
+            "decision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "decision_exchanges_pick_kind": {
+          "name": "decision_exchanges_pick_kind",
+          "value": "CASE \"decision_exchanges\".\"kind\" WHEN 'answer' THEN \"decision_exchanges\".\"pick\" IS NOT NULL WHEN 'recorded' THEN true ELSE \"decision_exchanges\".\"pick\" IS NULL END"
+        },
+        "decision_exchanges_agent_text_at": {
+          "name": "decision_exchanges_agent_text_at",
+          "value": "(\"decision_exchanges\".\"agent_text\" IS NULL) = (\"decision_exchanges\".\"agent_at\" IS NULL)"
+        },
+        "decision_exchanges_update_has_text": {
+          "name": "decision_exchanges_update_has_text",
+          "value": "\"decision_exchanges\".\"kind\" <> 'update' OR \"decision_exchanges\".\"agent_text\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.decisions": {
+      "name": "decisions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opened_by_conversation_id": {
+          "name": "opened_by_conversation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_label": {
+          "name": "state_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "question": {
+          "name": "question",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "options": {
+          "name": "options",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "from_decision_id": {
+          "name": "from_decision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "seen_at": {
+          "name": "seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "decisions_task_label_idx": {
+          "name": "decisions_task_label_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "label",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "decisions_opened_at_idx": {
+          "name": "decisions_opened_at_idx",
+          "columns": [
+            {
+              "expression": "opened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "decisions_from_idx": {
+          "name": "decisions_from_idx",
+          "columns": [
+            {
+              "expression": "from_decision_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "decisions_task_id_tasks_id_fk": {
+          "name": "decisions_task_id_tasks_id_fk",
+          "tableFrom": "decisions",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "decisions_from_decision_id_decisions_id_fk": {
+          "name": "decisions_from_decision_id_decisions_id_fk",
+          "tableFrom": "decisions",
+          "tableTo": "decisions",
+          "columnsFrom": [
+            "from_decision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "decisions_state_label_iff_other": {
+          "name": "decisions_state_label_iff_other",
+          "value": "(\"decisions\".\"state\" = 'other') = (\"decisions\".\"state_label\" IS NOT NULL)"
+        },
+        "decisions_outcome_iff_closed": {
+          "name": "decisions_outcome_iff_closed",
+          "value": "(\"decisions\".\"state\" = 'closed') = (\"decisions\".\"outcome\" IS NOT NULL)"
+        },
+        "decisions_closed_at_iff_closed": {
+          "name": "decisions_closed_at_iff_closed",
+          "value": "(\"decisions\".\"state\" = 'closed') = (\"decisions\".\"closed_at\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.digest_cursors": {

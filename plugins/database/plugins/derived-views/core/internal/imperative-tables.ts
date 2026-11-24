@@ -277,6 +277,17 @@ export const PAGE_LIVE_TABLE = "page_live";
 export const PAGE_TREE_RANK_TABLE = "page_tree_rank";
 
 /**
+ * Per decision, the facts of its thread (query-resource's `materializeJoin`
+ * of `decision_exchanges` by `decision_id`, in
+ * `plugins/tasks/plugins/decisions/server/internal/facts.ts`): the user's
+ * questions the agent has not replied to, the answers it has not acted on,
+ * and its latest reply or note — what the `decisions.list` window derives
+ * each decision's inbox tab and "new" mark from. A rollup on the change feed,
+ * created and reconciled by `rebuildDerivedTables` like the ones above.
+ */
+export const DECISION_EXCHANGE_FACTS_TABLE = "decision_exchange_facts";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle),
  * keyed BY THE NAME OF THE CONSTANT that holds each table name.
  *
@@ -325,6 +336,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   PAGE_LINK_TARGETS_TABLE,
   PAGE_LIVE_TABLE,
   PAGE_TREE_RANK_TABLE,
+  DECISION_EXCHANGE_FACTS_TABLE,
 } as const satisfies Record<string, string>;
 
 /**

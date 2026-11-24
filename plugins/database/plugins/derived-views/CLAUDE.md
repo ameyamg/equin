@@ -164,6 +164,7 @@ and re-export it from `core/index.ts`. See
     - `ATTEMPT_CONV_AGG_TABLE`
     - `ATTEMPT_PUSH_AGG_TABLE`
     - `compileCreateView`
+    - `DECISION_EXCHANGE_FACTS_TABLE`
     - `DERIVED_TABLE_OBJECT_STATE_TABLE`
     - `DERIVED_TABLE_STATE_TABLE`
     - `DERIVED_VIEW_STATE_TABLE_NAME`
@@ -208,6 +209,7 @@ and re-export it from `core/index.ts`. See
     - `page/editor`
     - `page/links`
     - `stats/tasks`
+    - `tasks/decisions`
     - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/rebuild.ts` (debt)

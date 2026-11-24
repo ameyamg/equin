@@ -77,7 +77,10 @@ both. Nothing else holds a copy: the page block (§7) reads the table, and every
 edit is recorded as a version through `history/engine`'s
 `defineHistorySource("decision")`, so a decision has the version dialog
 (`history/dialog`'s `VersionHistoryDialog`) a page has. The thread is
-append-only on top of that.
+append-only on top of that. A version holds what the decision says (label, state, state label,
+question, body, options, outcome, closed time), recorded after every edit; the
+engine coalesces versions within 10 minutes, so before a reopen the tool pins
+the closed version ("Before reopening") and the old outcome survives.
 
 ## 2. Where it lives
 
@@ -89,13 +92,15 @@ attempt), and its answer goes to the task's latest conversation, the way
 
 ```
 plugins/tasks/plugins/decisions/
-  core/    schemas (Decision, Exchange, Option, DecisionState), decisionIdKind ("dec"),
-           liveCollection decls, the answers endpoint, the tab derivation
-  server/  tables, decisions_v, serveCollection, history source, MCP tools,
-           POST /api/decisions/answers, delivery, stop gate, capability "decisions.open"
+  core/    field records (Decision, Exchange, Option, DecisionState), decisionIdKind ("dec"),
+           decisionExchangeIdKind ("dex"), liveCollection decls, the tab values,
+           the answers endpoint
+  server/  tables, the thread facts (a materializeJoin) + the tab SQL, serveCollection,
+           history source, MCP tools, POST /api/decisions/answers, delivery, stop gate
   web/     DecisionCard, TaskDecisionsPanel, the drafts kept-state def, SubmitBar,
            the dec id-kind presenter
   plugins/
+    capability/   the decisions.open capability (a core leaf, so mandate-presets grants it without a cycle)
     inbox/        Shell.Sidebar "Decisions" entry + panes (agent manager)
     tray/         Conversation.AbovePromptInput band (TaskDecisionsPanel)
     item-count/   Item.Chips count on sidebar conversation rows
@@ -108,7 +113,8 @@ Defined with `Mcp.tool` (`plugins/infra/plugins/mcp/server`), registered from
 `decisions/server`. The caller is `McpToolCallContext.conversationId` →
 `getConversation` (`tasks-core/server`) → `taskId`. Visibility: `when:
 granted(decisionsOpen)`, the `decisions.open` capability, granted by the
-interactive and supervisor presets only (`tasks/mandate-presets`). A decision
+interactive preset and the supervisor preset's whole tree (root and workers)
+only (`tasks/mandate-presets`). A decision
 is addressed by id **or** by its label within the caller's task (`"D22"`).
 
 ```ts
@@ -119,24 +125,26 @@ const OptionInput = z.object({
 });
 
 open_decision: {
-  label?: string,                         // unique within the task; default next "D<n>"
+  label?: string,                         // unique within the task; default next "D<n>" (one past the highest)
   state: z.enum(["decision", "action", "fyi", "other"]),
-  stateLabel?: string,                    // required iff state === "other" ("Watching")
+  stateLabel?: string,                    // required iff state === "other" ("Watching"); max 40
   question: z.string().min(1).max(300),
-  body?: string,                          // arbitrary markdown, no fixed sections
+  body?: string,                          // arbitrary markdown, no fixed sections; max 20 000
   options?: z.array(OptionInput).max(8),  // keys unique
   from?: string,                          // lineage: the decision this one comes from (any task)
 }
-→ { ok: true, decision: "dec-…", label }
+→ text: "Opened D22 (dec-…)."
 
 update_decision: {
   decision: string,                       // id or label
   question?, body?, options?, state?, stateLabel?, label?,   // a patch: absent = unchanged
-  outcome?: string,                       // required when state becomes "closed"
+  outcome?: string,                       // required when state becomes "closed"; refused otherwise; max 500
   reply?: string,                         // answers the oldest unanswered user question
-  update?: string,                        // a note in the thread ("Update · …")
+  update?: string,                        // a note in the thread ("Update · …"); max 4 000
 }
-→ { ok: true, decision, label, state, consumed: "answer" | "question" | null }
+→ text: "Updated D22 (dec-…, closed): closed, acted on the user's answer."
+  (repo: { ok: true, id, label, state, transition: "closed" | "reopened" | null,
+           consumed: { answers: number, question: boolean } } — one call may consume both)
 
 list_decisions: { all?: boolean }         // the caller's task; open ones unless all
 → text: one line per decision — label, state, question, what the user last sent
@@ -157,9 +165,18 @@ Rules:
   `outcome: "Split into D17a, D17b"`. "Split into" is derived (decisions
   whose `from` points at it), never stored. Moving a decision to a new
   supervisor session is the same: `open_decision({ from })`, close the old one.
-- Refusals are discriminated (`{ ok: false, reason }`), never a silent no-op:
-  unknown decision, not yours, `reply` with no pending question, `closed`
-  without `outcome`, a second `recommended`, an edit to a closed decision.
+- Refusals are discriminated (`{ ok: false, reason, message }`), never a silent
+  no-op: `unknown-decision`, `not-yours`, `unknown-from`, `too-many-decisions`,
+  `too-many-exchanges`, `label-invalid`, `label-taken`, `state-label`,
+  `options-invalid` (duplicate key, a newline, a second `recommended`),
+  `close-needs-outcome`, `outcome-without-close`, `closed-edit`,
+  `no-pending-question`, `nothing-to-update`.
+- **Labels**: 1–32 letters, digits, `.`, `_`, `-`, starting with a letter or
+  digit, and never in the shape of a decision id (so a ref is never
+  ambiguous). A label resolves within the caller's task only; an id resolves
+  anywhere.
+- An `other` decision keeps its `stateLabel` until its state moves off
+  `other` (then it is cleared).
 - The agent never writes a decision through the page tools.
 
 ## 4. Data model
@@ -188,16 +205,23 @@ It outlives closing: notes after the outcome are ordinary rows.
 
 | column | |
 |---|---|
-| `id`, `decision_id` (FK cascade), `created_at` | (bounded per decision: 200, the tools refuse more) |
+| `id` | `dex-…` (`decisionExchangeIdKind`) |
+| `decision_id` (FK cascade), `created_at` | (bounded per decision: 200, the tools refuse more) |
 | `kind` | `answer` (a pick, + optional note) · `question` (a note, no pick) · `update` (agent note, open or closed) · `recorded` (an answer kept but not delivered, §5) |
 | `pick` | option key (`answer`, `recorded`) |
 | `user_text` | the note / question |
 | `agent_text`, `agent_at` | the reply (`question`), the note (`update`) |
-| `turn_id` | the event turn that delivered it |
+| `turn_id` | the event turn that delivered it (`turnIdKind`) |
 | `consumed_at` | `answer`: when the agent next updated the decision — ends "Sent" |
 
-**The tab is derived once**, in the view `decisions_v` (`derived-views`), read
-by every surface:
+**The tab is derived once**, read by every surface. Not a view: a live
+collection is served from a table, never a view (network/live), so the
+thread's facts are stored per decision — `decision_exchange_facts`, a
+query-resource `materializeJoin` of the exchanges by `decision_id`
+(pending questions, unconsumed answers, the agent's latest text) — and the
+tab is one SQL definition (`decisionTabSql`, `server/internal/facts.ts`)
+rendered by the live window (an `expr` field, filterable and sortable like a
+column) and by `list_decisions`:
 
 - `closed` → **Closed**
 - an `answer` with `consumed_at IS NULL`, or `state = other` → **Sent**
@@ -274,13 +298,17 @@ keeps refused drafts and shows each reason on its row.
 
 Reads, all `network/live`:
 
-- **`decisionsList`** — `liveCollection("decisions.list")` over `decisions_v`
-  (decision + tab + task title + latest conversation id + its status + a new
-  flag), filterable on `tab` / `taskId`, `limit` 100 / `maxLimit` 500.
+- **`decisionsList`** — `liveCollection("decisions.list")` over the
+  `decisions` table, its thread facts and its task (decision + `tab` +
+  `taskTitle` + `pendingQuestions` + `unconsumedAnswers` + `latestAgentAt` +
+  `isNew`), filterable on `tab` / `taskId` / `fromDecisionId` / `state`,
+  `limit` 100 / `maxLimit` 500, `count: true`. The task's latest conversation
+  and its status (the finished-agent path) are **not** on the row yet: phase 3
+  adds them, joining conversations/agents' `task_latest_conversation` rollup.
   - Sidebar count: a `useLive` grouping of `tab` (one subscription, every tab's count).
   - Per-agent counts: a grouping of `taskId` where `tab = needs`.
-- **`decisionExchanges`** — filtered on `decisionId`, oldest first (the card
-  shows the latest, earlier folded).
+- **`decisionExchanges`** — a scoped set by `decisionId` (`all: { by,
+  max: 200 }`), oldest first (the card shows the latest, earlier folded).
 
 | plugin | contributes | slot |
 |---|---|---|
@@ -365,7 +393,7 @@ its prose copies.
 
 ## 9. Phases (each pushable)
 
-1. **Record + tools.** `decisions` plugin: tables, `decisions_v`, `dec` id
+1. **Record + tools.** `decisions` plugin: tables, the thread facts rollup, `dec` / `dex` id
    kind, capability + presets, the three tools (closed-decision rules
    included), history source, `decisionsList` / `decisionExchanges`.
 2. **Inbox, read-only.** Sidebar entry + count, panes, DataView + switcher,
@@ -381,8 +409,8 @@ its prose copies.
 
 ## 10. Tests
 
-- `server/internal/*.test.ts` (db-test-fixture): tab derivation in
-  `decisions_v` (each state × exchange kind), label uniqueness and
+- `server/internal/*.test.ts` (db-test-fixture): tab derivation from the
+  stored thread facts (each state × exchange kind), label uniqueness and
   auto-numbering, the caps, the CHECKs.
 - Tool handlers as pure functions over ports (the `message` pattern):
   ownership, `reply` without a pending question, close without outcome,

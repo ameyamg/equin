@@ -282,6 +282,7 @@ is recomputed in `onReady`.
     - `page/editor`
     - `page/links`
     - `stats/tasks`
+    - `tasks/decisions`
     - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:

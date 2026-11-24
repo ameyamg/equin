@@ -6,6 +6,7 @@ import {
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { exitClean } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { tasksFile, tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
+import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
 import { interactivePolicy, supervisorPolicy } from "./policies";
 
 describe("exit.clean in the presets", () => {
@@ -82,5 +83,15 @@ describe("supervisorPolicy(extra)", () => {
     expect(() => supervisorPolicy({ root: [tasksManage.grant(true)] })).toThrow(
       /granted twice/,
     );
+  });
+});
+
+describe("decisions.open in the presets", () => {
+  test("an interactive agent and every conversation of a supervisor tree may ask the user for decisions", () => {
+    expect(interactivePolicy()[decisionsOpen.id]).toBe(true);
+    // Whole tree: a worker's decision goes straight to the user.
+    expect(
+      (supervisorPolicy() as Record<string, unknown>)[decisionsOpen.id],
+    ).toBe(true);
   });
 });

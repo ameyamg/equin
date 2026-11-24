@@ -7748,6 +7748,14 @@
       "name": "@equin/plugin-tasks-automations",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/decisions": {
+      "name": "@equin/plugin-tasks-decisions",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/decisions/plugins/capability": {
+      "name": "@equin/plugin-tasks-decisions-capability",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/launch-options": {
       "name": "@equin/plugin-tasks-launch-options",
       "version": "0.0.1",
@@ -12153,6 +12161,10 @@
     "@equin/plugin-tasks-auto-start-launch-option": ["@equin/plugin-tasks-auto-start-launch-option@workspace:plugins/tasks/plugins/auto-start/plugins/launch-option"],
 
     "@equin/plugin-tasks-automations": ["@equin/plugin-tasks-automations@workspace:plugins/tasks/plugins/automations"],
+
+    "@equin/plugin-tasks-decisions": ["@equin/plugin-tasks-decisions@workspace:plugins/tasks/plugins/decisions"],
+
+    "@equin/plugin-tasks-decisions-capability": ["@equin/plugin-tasks-decisions-capability@workspace:plugins/tasks/plugins/decisions/plugins/capability"],
 
     "@equin/plugin-tasks-launch-options": ["@equin/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 

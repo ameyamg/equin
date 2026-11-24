@@ -234,6 +234,7 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `network/live/query-resource`
     - `page/links`
     - `release/runs-arm`
+    - `tasks/decisions`
     - `tasks/tasks-core`
     - `upstream`
 - Exemptions:

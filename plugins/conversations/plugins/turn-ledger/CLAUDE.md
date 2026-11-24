@@ -354,6 +354,7 @@ withdrawn).
     - `conversations/self-compact`
     - `conversations/stop-gate`
     - `conversations/transcript-source`
+    - `tasks/decisions`
     - `tasks/orchestration/watch`
     - `tasks/task-title`
 - Exemptions:

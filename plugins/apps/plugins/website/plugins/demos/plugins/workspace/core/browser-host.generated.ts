@@ -853,6 +853,7 @@ export const browserHost = {
     "tasks.attempt-view",
     "tasks.auto-start",
     "tasks.auto-start.launch-option",
+    "tasks.decisions",
     "tasks.launch-options",
     "tasks.orchestration.mandate.definitions",
     "tasks.orchestration.watch",

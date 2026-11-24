@@ -20,6 +20,7 @@ import {
 } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
 import { contextCompact } from "@plugins/conversations/plugins/self-compact/plugins/capability/core";
 import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/message/plugins/capability/core";
+import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
 
 // What each preset grants — the bodies of their MandateDefinitions (server),
 // computed at every resolution. The refs (and what each mandate is for) are
@@ -36,6 +37,7 @@ export function interactivePolicy(): MandatePolicy {
     pushPolicy.grant("on-request"),
     exitClean.grant("on-request"),
     flagRaise.grant(true),
+    decisionsOpen.grant(true),
   ]);
 }
 
@@ -67,6 +69,8 @@ export function supervisorPolicy(
       messageTree.grant(true),
       flagRaise.grant(true),
       contextCompact.grant(true),
+      // A worker's decision goes straight to the user, not to its supervisor.
+      decisionsOpen.grant(true),
       ...(extra.whole ?? []),
     ],
     {

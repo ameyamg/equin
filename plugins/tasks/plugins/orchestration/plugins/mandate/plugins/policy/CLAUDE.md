@@ -33,6 +33,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `conversations/self-compact/capability`
     - `infra/deps/updates`
     - `tasks/automations`
+    - `tasks/decisions/capability`
     - `tasks/mandate-presets`
     - `tasks/orchestration/mandate`
     - `tasks/orchestration/mandate/definitions`

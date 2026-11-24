@@ -24961,6 +24961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/self-compact`
           - `conversations/stop-gate`
           - `conversations/transcript-source`
+          - `tasks/decisions`
           - `tasks/orchestration/watch`
           - `tasks/task-title`
       - Exemptions:
@@ -25313,10 +25314,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 186 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 187 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×50
       - `conversations` ×22
-      - `tasks` ×21
+      - `tasks` ×22
       - `infra` ×18
       - `page` ×14
       - `debug` ×12
@@ -25624,6 +25625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor`
           - `page/links`
           - `stats/tasks`
+          - `tasks/decisions`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
@@ -25677,6 +25679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ATTEMPT_CONV_AGG_TABLE`
           - `ATTEMPT_PUSH_AGG_TABLE`
           - `compileCreateView`
+          - `DECISION_EXCHANGE_FACTS_TABLE`
           - `DERIVED_TABLE_OBJECT_STATE_TABLE`
           - `DERIVED_TABLE_STATE_TABLE`
           - `DERIVED_VIEW_STATE_TABLE_NAME`
@@ -25721,6 +25724,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor`
           - `page/links`
           - `stats/tasks`
+          - `tasks/decisions`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/rebuild.ts` (debt)
@@ -26312,6 +26316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/query-resource`
           - `page/links`
           - `release/runs-arm`
+          - `tasks/decisions`
           - `tasks/tasks-core`
           - `upstream`
       - Exemptions:
@@ -26334,11 +26339,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 60 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+        - Imported by: 61 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
           - `database` ×16
           - `apps` ×9
           - `debug` ×7
-          - `tasks` ×6
+          - `tasks` ×7
           - `infra` ×5
           - `conversations` ×3
           - `network` ×3
@@ -30347,11 +30352,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 146 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 147 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
       - `apps` ×25
       - `conversations` ×12
-      - `tasks` ×8
+      - `tasks` ×9
       - `infra` ×6
       - `debug` ×5
       - `page` ×4
@@ -30520,12 +30525,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 89 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 90 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `debug` ×14
               - `backup` ×11
               - `conversations` ×7
-              - `tasks` ×5
+              - `tasks` ×6
               - `infra` ×3
               - `shell` ×3
               - `integrations` ×2
@@ -30778,10 +30783,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 71 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 72 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×18
               - `conversations` ×12
-              - `tasks` ×8
+              - `tasks` ×9
               - `infra` ×7
               - `debug` ×5
               - `page` ×5
@@ -31459,12 +31464,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 66 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 67 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `apps` ×19
               - `debug` ×14
               - `conversations` ×9
               - `infra` ×6
-              - `tasks` ×5
+              - `tasks` ×6
               - `backup` ×4
               - `integrations` ×2
               - `active-data`
@@ -31533,12 +31538,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 46 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 47 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×10
               - `conversations` ×8
+              - `tasks` ×6
               - `debug` ×5
               - `infra` ×5
-              - `tasks` ×5
               - `page` ×4
               - `backup` ×2
               - `active-data`
@@ -32428,10 +32433,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 120 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 121 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×33
               - `conversations` ×22
-              - `tasks` ×17
+              - `tasks` ×18
               - `infra` ×8
               - `page` ×8
               - `primitives` ×6
@@ -36380,14 +36385,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/history`
           - `debug/read-set`
           - `history/dialog`
+          - `tasks/decisions`
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, usePane); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
   - Web:
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 47 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×37
+    - Slot contributors: 48 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×38
       - `IdKinds.Presenter` ×10
     - Exports (types):
       - `IdPresenter`
@@ -36442,10 +36448,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 54 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 55 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×15
       - `conversations` ×8
-      - `tasks` ×6
+      - `tasks` ×7
       - `infra` ×4
       - `primitives` ×3
       - `active-data` ×2
@@ -38237,13 +38243,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 57 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 58 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×11
           - `conversations` ×9
           - `infra` ×7
           - `page` ×7
           - `debug` ×5
-          - `tasks` ×4
+          - `tasks` ×5
           - `primitives` ×3
           - `active-data`
           - `apps-core/app-category`
@@ -40873,8 +40879,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
-          - `tasks` ×7
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+          - `tasks` ×8
           - `debug` ×6
           - `conversations` ×5
           - `apps` ×4
@@ -44431,11 +44437,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 370 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 371 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×95
           - `conversations` ×74
           - `debug` ×36
-          - `tasks` ×32
+          - `tasks` ×33
           - `infra` ×25
           - `page` ×15
           - `active-data` ×14
@@ -45131,7 +45137,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveSetOverBudgetSink`
               - `SQL_TYPE_RE`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
               - `apps` ×7
               - `page` ×4
               - `conversations` ×3
@@ -45139,6 +45145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×2
               - `network` ×2
               - `primitives` ×2
+              - `tasks` ×2
               - `active-data`
               - `backup/runs-arm`
               - `build/runs-arm`
@@ -45146,7 +45153,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release/runs-arm`
               - `reports/live-set-budget`
               - `runs`
-              - `tasks/tasks-core`
           - Exemptions:
             - Exempts itself from:
               - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
@@ -45702,12 +45708,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 142 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 143 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×32
           - `debug` ×21
           - `conversations` ×17
           - `infra` ×17
-          - `tasks` ×9
+          - `tasks` ×10
           - `build` ×5
           - `stats` ×5
           - `integrations` ×4
@@ -64883,6 +64889,114 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/supervisor-roles/spend`
           - `tasks/task-triage`
           - `upstream`
+    - **`decisions`** — Agent decisions, web half: registers the dec and dex id kinds. The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins, in later phases. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open (a closed decision accepts only notes and replies unless the call reopens it).
+      - Web:
+        - Contributes:
+          - `IdKinds.Kind` "dec"
+          - `IdKinds.Kind` "dex"
+        - Uses: `ids.IdKinds`
+      - Server:
+        - Contributes:
+          - `ids.kind` "dec"
+          - `ids.kind` "dex"
+          - `resource.declare` "decisions.exchanges"
+          - `resource.declare` "decisions.exchanges:rows"
+          - `resource.declare` "decisions.list"
+          - `resource.declare` "decisions.list:count"
+          - `resource.declare` "decisions.list:groups"
+          - `resource.declare` "decisions.list:rows"
+          - `derived-table` "decision_exchange_facts"
+          - `mandateCapability` "decisions.open"
+        - Uses:
+          - `database.db`
+          - `database/derived-tables.DerivedTable`
+          - `database/sql-projection.parsed`
+          - `history/engine.defineHistorySource`
+          - `history/engine.recordVersion`
+          - `ids.IdKinds`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
+          - `infra/mcp.Mcp`
+          - `network/live.serveCollection`
+          - `network/live.ServeCollectionOptions`
+          - `network/live/query-resource.materializeJoin`
+          - `tasks/orchestration/mandate.granted`
+          - `tasks/orchestration/mandate.Mandate`
+          - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.getConversation`
+        - DB schema:
+          - `plugins/tasks/plugins/decisions/server/internal/rollup-table.ts`
+          - `plugins/tasks/plugins/decisions/server/internal/tables.ts`
+        - Exports (values):
+          - `_decisionExchanges`
+          - `_decisions`
+        - Register:
+          - `defineHistorySource('decision')`
+          - `mcpTool('open_decision')`
+          - `mcpTool('update_decision')`
+          - `mcpTool('list_decisions')`
+        - Resources:
+          - `decisions.exchanges` (keyed)
+          - `decisions.exchanges:rows` (keyed, point)
+          - `decisions.list` (keyed, window)
+          - `decisions.list:count` (push)
+          - `decisions.list:groups` (push)
+          - `decisions.list:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `conversations/turn-ledger.turnIdKind`
+          - `fields.FieldsRecord`
+          - `fields.nullable`
+          - `fields/bool/config.boolField`
+          - `fields/date/config.dateField`
+          - `fields/int/config.intField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `ids.defineIdKind`
+          - `ids.idKindField`
+          - `ids.IdOf`
+          - `infra/entities.entityRef`
+          - `network/live.liveCollection`
+          - `packages/list-bound.cappedList`
+          - `tasks/task-ids.conversationIdKind`
+          - `tasks/task-ids.taskIdKind`
+        - Exports (types):
+          - `DecisionExchangeId`
+          - `DecisionExchangeRow`
+          - `DecisionId`
+          - `DecisionOption`
+          - `DecisionRow`
+          - `DecisionState`
+          - `DecisionTab`
+          - `OpenDecisionState`
+        - Exports (values):
+          - `DECISION_OPTIONS_MAX`
+          - `DECISION_STATES`
+          - `DECISION_TAB_OPTIONS`
+          - `DECISION_TABS`
+          - `decisionExchangeFields`
+          - `decisionExchangeIdKind`
+          - `decisionExchanges`
+          - `decisionExchangesEntityRef`
+          - `decisionFields`
+          - `decisionIdKind`
+          - `DecisionOptionSchema`
+          - `DECISIONS_PER_TASK_MAX`
+          - `decisionsEntityRef`
+          - `decisionsList`
+          - `EXCHANGE_KINDS`
+          - `EXCHANGES_PER_DECISION_MAX`
+          - `OPEN_DECISION_STATES`
+      - Plugins:
+        - **`capability`** — The decisions.open mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through decisions, which imports tasks-core and conversations.
+          - Core:
+            - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+            - Exports (values): `decisionsOpen`
+          - Cross-plugin:
+            - Imported by:
+              - `tasks/decisions`
+              - `tasks/mandate-presets`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option`
@@ -65020,6 +65134,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/push-and-exit`
               - `conversations/self-compact`
               - `tasks`
+              - `tasks/decisions`
               - `tasks/orchestration/mandate/change-notice`
               - `tasks/orchestration/message`
               - `tasks/orchestration/tree-digest`
@@ -65097,6 +65212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/self-compact/capability`
                   - `infra/deps/updates`
                   - `tasks/automations`
+                  - `tasks/decisions/capability`
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/mandate`
                   - `tasks/orchestration/mandate/definitions`
@@ -66535,6 +66651,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/read-set`
           - `hints/ask`
           - `infra/worktree`
+          - `tasks/decisions`
           - `tasks/tasks-core`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, child-count, launch-agent).
       - Web:
@@ -67610,9 +67727,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 131 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 132 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×53
-          - `tasks` ×42
+          - `tasks` ×43
           - `debug` ×6
           - `active-data` ×5
           - `apps` ×3
