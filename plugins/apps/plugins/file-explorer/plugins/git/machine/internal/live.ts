@@ -13,11 +13,11 @@ import {
   readIgnoredEntries,
   withinTwoLevels,
 } from "./ignored";
-import { gitStatusMemo } from "./status";
+import { computeGitStatus } from "./status";
 
 async function loadGitStatus({ root }: { root: string }): Promise<GitStatus> {
   await assertCheckoutRoot(root);
-  return gitStatusMemo.get(root);
+  return computeGitStatus(root);
 }
 
 /**
@@ -25,16 +25,13 @@ async function loadGitStatus({ root }: { root: string }): Promise<GitStatus> {
  * dir, written by any process (an editor, an agent, `git commit`), so the push
  * comes from the checkout watch (working tree + git dir, shared with every
  * other reader of the checkout) for as long as anyone is subscribed — never a
- * poll. External, and bounded by what changed in the checkout.
+ * poll. External, and bounded by what changed in the checkout. Each push reads
+ * the status once; an answer equal to the last one sends nothing.
  */
 export const gitStatusServed = serveValue(fileExplorerGitStatus, {
   source: "external",
   changes: "notified",
   loader: loadGitStatus,
-  revalidate: async ({ root }) => {
-    await assertCheckoutRoot(root);
-    return gitStatusMemo.signature(root);
-  },
   whileSubscribed: async ({ root }, notify) => {
     await assertCheckoutRoot(root);
     // `--branch` reads ahead/behind: the own branch and its upstream. The
@@ -45,10 +42,7 @@ export const gitStatusServed = serveValue(fileExplorerGitStatus, {
       refs: { also: [], upstream: true },
       onChange: () => notify(),
     });
-    return () => {
-      gitStatusMemo.evict(root);
-      release();
-    };
+    return release;
   },
 });
 

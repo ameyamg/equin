@@ -45,11 +45,14 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
   those two levels, and the checkout watch's `.gitignore` / git-dir changes.
   Capped at `GIT_IGNORED_MAX_PATHS`, subfolder entries cut first (`truncated`).
   Refused: `invalid-path`, `missing`.
-- **Freshness.** A `createSignedMemo` keyed by root, whose signature is the
-  porcelain read, `main`'s sha and an `lstat` of each path changed vs HEAD.
-  While subscribed, the shared checkout watch (`infra/git/checkout-watch`:
-  working tree + git dir; changes to paths git ignores are dropped there)
-  notifies. No polling.
+- **Freshness.** While subscribed, the shared checkout watch
+  (`infra/git/checkout-watch`: working tree + git dir; changes to paths git
+  ignores are dropped there) notifies. No polling. Each push reads the status
+  ONCE — no memo signature, no `revalidate` ETag: either would be the same
+  `git status` the read starts with (a memo made one push run it 3 times, the
+  ETag a 4th — ~1 s of each push on main, report-1795481297-fu8via), and a
+  recompute equal to what the tabs hold already sends no frame (resource-runtime
+  D8).
 - **Desktop only.** Both reads are served by `machine/` and declared `needsMachine`: on a host without the computer (the demo) `useGitView` answers `unavailable` and the fields carry no value.
 - **Web.** `useGitView(dir)` → loading / none / unavailable / failed / ready. The lens hides
   ignored entries and hands a changed file its `FileViewerGit` (status vs main,

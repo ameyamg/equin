@@ -227,7 +227,6 @@ primitive and Stage 2.1).
 - Description: Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
 - Cross-plugin:
   - Imported by:
-    - `apps/file-explorer/git`
     - `build/deployment`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
