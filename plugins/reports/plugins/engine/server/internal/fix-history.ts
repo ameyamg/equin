@@ -54,7 +54,10 @@ export async function readFixHistory(
     ],
     repoRoot,
   );
-  const logged = new Map<string, { subject: string; conversation: string | null }>();
+  const logged = new Map<
+    string,
+    { subject: string; conversation: string | null }
+  >();
   for (const record of raw.split("\0\n")) {
     const [sha, subject, conv] = record.replace(/^\n/, "").split("\0");
     if (!sha || subject === undefined) continue;
@@ -79,7 +82,8 @@ export async function readFixHistory(
   });
 }
 
-const when = (d: Date) => `${d.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+const when = (d: Date) =>
+  `${d.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 const short = (sha: string) => `\`${sha.slice(0, 12)}\``;
 
 function fixLine(f: FixHistoryEntry): string {
