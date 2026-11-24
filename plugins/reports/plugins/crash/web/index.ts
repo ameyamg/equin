@@ -18,6 +18,8 @@ import {
   collectWedgeCrash,
 } from "./internal/crash-sinks";
 
+export { pageCodeOrigin } from "./internal/code-origin";
+
 export default {
   description:
     "Crash report kind: browser crash collector and the Debug → Reports summary view.",

@@ -207,6 +207,11 @@ the machine half) — so a toast the user had no time to read is in the bell
   has been quiet for `resurfaceAfterMs` files a new row — the server's
   `dedupeKey` / `resurfaceAfterMs`. Use it for an event every open tab sees
   (the reconnect toast), or each tab files its own row.
+- **`replaces`** (a key) — the toast's own dedup: raised again, a toast with
+  the same key replaces the one on screen (dismissed; the new one animates in,
+  so each raise still visibly answers) instead of stacking one more
+  (`shell/toast`'s `CustomToastArgs.replaces`). `reports/failed-action` uses it
+  so repeated failed clicks show one toast.
 - **A toast another tab raised is not an arrival here unless it is a
   failure** (`announcedElsewhere` in `use-notification-arrivals.ts`): a tab's
   confirmations and observations stay that tab's toast; its errors and
@@ -418,17 +423,17 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
     - `ui/tokens/type-scale` ×8
     - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×2
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×18
     - `apps` ×13
     - `tasks` ×9
     - `debug` ×5
     - `config_v2` ×4
+    - `reports` ×4
     - `build` ×3
     - `infra` ×3
     - `page` ×3
     - `primitives` ×3
-    - `reports` ×3
     - `hints` ×2
     - `screenshot` ×2
     - `shell` ×2

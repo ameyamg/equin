@@ -81,6 +81,12 @@ interface ToastFields {
    */
   dedupe?: { key: string; resurfaceAfterMs: number };
   /**
+   * Raised again, the same event replaces its toast still on screen instead
+   * of stacking one more (the new one animates in, so each raise visibly
+   * responds) — the toast's own dedup, as `dedupe` is the bell row's.
+   */
+  replaces?: string;
+  /**
    * Who it is for: a `developer` toast is shown, and kept in the bell, only in
    * Developer mode. Default `user` — everyone.
    */
@@ -148,6 +154,7 @@ export function useToast(): Toast {
             : { liveAction: args.liveAction }),
         },
         args.kind ?? "reply",
+        { replaces: args.replaces },
       );
       if (id === null) return;
 

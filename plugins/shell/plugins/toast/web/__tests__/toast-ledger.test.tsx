@@ -429,3 +429,44 @@ describe("an announcement is never sticky", () => {
     }
   });
 });
+
+describe("a toast with a replace key takes the place of its predecessor", () => {
+  // A dismissal hops through a (faked) animation frame, then the exit window.
+  async function settleDismissals(): Promise<void> {
+    await flushToasts(50);
+    await flushToasts(TIME_BEFORE_UNMOUNT + 50);
+  }
+
+  const failed = (
+    text: string,
+    replaces = "failed-action",
+  ): CustomToastArgs => ({
+    kind: "reply",
+    duration: Infinity,
+    replaces,
+    render: () => <p>{text}</p>,
+  });
+
+  it("raised again, the same key leaves one toast — the newest", async () => {
+    render(<Harness toaster />);
+    await raise(failed("first"));
+    await raise(failed("second"));
+    await settleDismissals();
+    expect(mountedToasts().map((li) => li.textContent)).toEqual(["second"]);
+  });
+
+  it("drops a predecessor replaced before it was ever published", async () => {
+    render(<Harness toaster />);
+    // Both raised in one stack (a double click): the first is not published yet.
+    await raise(failed("one"), failed("two"), failed("three"));
+    await settleDismissals();
+    expect(mountedToasts().map((li) => li.textContent)).toEqual(["three"]);
+  });
+
+  it("different keys stack as usual", async () => {
+    render(<Harness toaster />);
+    await raise(failed("a", "k1"), failed("b", "k2"));
+    await settleDismissals();
+    expect(mountedToasts()).toHaveLength(2);
+  });
+});

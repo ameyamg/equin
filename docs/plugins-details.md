@@ -35766,8 +35766,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 47 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×45
+        - Slot contributors: 48 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×46
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -35855,11 +35855,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `whenPageCanFetch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 121 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×28
           - `apps` ×20
           - `ui` ×10
-          - `reports` ×8
+          - `reports` ×9
           - `apps-core` ×6
           - `debug` ×6
           - `config_v2` ×4
@@ -56687,7 +56687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×35
           - `apps` ×26
           - `page` ×5
@@ -56696,6 +56696,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `map` ×2
           - `media` ×2
           - `network` ×2
+          - `reports` ×2
           - `shell` ×2
           - `build/serve-composition`
           - `companions/browser-extension`
@@ -56705,7 +56706,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube`
           - `music/background`
           - `reorder`
-          - `reports/main-thread-stall`
           - `screenshot`
           - `tasks/supervisor-roles/spend`
           - `ui/icons/sprites`
@@ -61539,6 +61539,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.report`
           - `reports.Reports`
           - `reports/collectors.ReportSinks`
+        - Exports (values): `pageCodeOrigin`
       - Server:
         - Contributes: `report-kind` "crash"
         - Uses: `reports.ReportKind`
@@ -61565,6 +61566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/site-reports/import`
           - `infra/jobs/attempt-audit`
+          - `reports/failed-action`
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
       - Web:
         - Contributes: `ReportSinks.Collector` "infra.endpoints"
@@ -61662,6 +61664,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `fixesReportTrailer`
           - `resolveFixedReports`
+    - **`failed-action`** — The tab's own answer when a user's action crashes: an error thrown while the browser is still dispatching a trusted click, key or submit (so, by that input's own handler) raises a "That didn't work" toast in that tab at once, on every occurrence — a repeat replaces the toast on screen instead of stacking. The crash is still filed by the crash collector; its de-duplicated report and bell row are untouched.
+      - Web:
+        - Contributes: `Core.Root` → `FailedActionToast`
+        - Uses:
+          - `primitives/latest-ref.useEventCallback`
+          - `reports/crash.pageCodeOrigin`
+          - `shell/notifications.useToast`
     - **`fleet-memory-unmeasured`** — fleet-memory-unmeasured report kind: validates the payload a cpu grant acquire files (through the report outbox) when no fresh fleet memory reading exists — main's owner sampler stopped or main is down — and renders a task naming the cause, the reading's age and the acquiring process. One row per cause.
       - Server:
         - Contributes: `report-kind` "fleet-memory-unmeasured"
@@ -63344,17 +63353,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/density` ×6
           - `ui/tokens/shape` ×2
-        - Imported by: 76 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×18
           - `apps` ×13
           - `tasks` ×9
           - `debug` ×5
           - `config_v2` ×4
+          - `reports` ×4
           - `build` ×3
           - `infra` ×3
           - `page` ×3
           - `primitives` ×3
-          - `reports` ×3
           - `hints` ×2
           - `screenshot` ×2
           - `shell` ×2

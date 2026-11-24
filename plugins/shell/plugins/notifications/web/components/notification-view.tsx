@@ -783,15 +783,21 @@ export type NotificationToastKind = "announcement" | "reply";
 export function useToastNotification(): (
   n: NotificationContent,
   kind: NotificationToastKind,
+  options?: { replaces?: string },
 ) => void {
   const showCustomToast = useShowCustomToast();
   return useCallback(
-    (n: NotificationContent, kind: NotificationToastKind) => {
+    (
+      n: NotificationContent,
+      kind: NotificationToastKind,
+      options?: { replaces?: string },
+    ) => {
       const render = ({ dismiss }: { dismiss: () => void }) => (
         <NotificationToastCard n={n} dismiss={dismiss} />
       );
+      const replaces = options?.replaces;
       if (kind === "announcement") {
-        showCustomToast({ kind, render, audience: n.audience });
+        showCustomToast({ kind, render, audience: n.audience, replaces });
         return;
       }
       showCustomToast({
@@ -799,6 +805,7 @@ export function useToastNotification(): (
         render,
         duration: staysUntilHandled(n) ? Infinity : REPLY_DURATION_MS,
         audience: n.audience,
+        replaces,
       });
     },
     [showCustomToast],

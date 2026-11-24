@@ -159,7 +159,21 @@ export type CustomToastArgs = {
   render: (toast: { dismiss: () => void }) => ReactNode;
   /** Who it is for — a `developer` toast is shown only in Developer mode. */
   audience?: Audience;
+  /**
+   * The same event raised again replaces its toast instead of stacking one
+   * more: a toast with this key takes the place of the one still on screen
+   * with it (dismissed, the new one animating in, so every raise visibly
+   * responds). Without it every toast is its own.
+   */
+  replaces?: string;
 } & ({ kind: "announcement" } | { kind: "reply"; duration: number });
+
+/**
+ * The newest toast per `replaces` key — see `CustomToastArgs.replaces` — and
+ * whether sonner holds it yet. Page-wide: one key names one toast whatever
+ * render origin raised it.
+ */
+const byReplaceKey = new Map<string, { id: string; published: boolean }>();
 
 function nextToastId(): string {
   return `shell-toast-${SESSION}-${++seq}`;
@@ -180,7 +194,15 @@ export function useShowCustomToast(): (args: CustomToastArgs) => void {
       if (!toastReachesReader(args.audience)) return;
       // An announcement is for a user looking at the page (`isPageOnScreen`).
       if (args.kind === "announcement" && !isPageOnScreen()) return;
-      showCustomToast(origin, nextToastId(), args);
+      const id = nextToastId();
+      if (args.replaces !== undefined) {
+        const previous = byReplaceKey.get(args.replaces);
+        // One not published yet drops itself before publishing (showCustomToast);
+        // dismissing an id sonner never held would only grow its dismissed set.
+        if (previous?.published === true) sonnerToast.dismiss(previous.id);
+        byReplaceKey.set(args.replaces, { id, published: false });
+      }
+      showCustomToast(origin, id, args);
     },
     [origin],
   );
@@ -205,7 +227,12 @@ function showCustomToast(
   // one function share one scope, so a local here would be kept by every
   // closure the JSX holds. Before, each dismissed custom toast kept ~58 KB,
   // 7 DOM nodes and ~143 listeners alive until 100 later toasts pushed it out.
+  // The key alone, never `args`: a closure here holding `args` would keep its
+  // render (and what it closes over) in sonner's history too.
+  const replaceKey = args.replaces;
   const gone = () => {
+    if (replaceKey !== undefined && byReplaceKey.get(replaceKey)?.id === id)
+      byReplaceKey.delete(replaceKey);
     const held = live;
     live = null;
     held?.remove();
@@ -230,7 +257,19 @@ function showCustomToast(
   // synchronous call, so a microtask-deferred publish always lands after the
   // Toaster is back.
   void mounted.then(() =>
-    queueMicrotask(() => sonnerToast.custom(() => body, { id, duration })),
+    queueMicrotask(() => {
+      // Replaced before it was ever published (a double click): dismissing an
+      // id sonner does not hold yet is a no-op, so it is dropped here instead.
+      if (replaceKey !== undefined) {
+        const newest = byReplaceKey.get(replaceKey);
+        if (newest?.id !== id) {
+          gone();
+          return;
+        }
+        newest.published = true;
+      }
+      sonnerToast.custom(() => body, { id, duration });
+    }),
   );
 }
 

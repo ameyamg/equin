@@ -1126,6 +1126,7 @@
   {"list":"framework.web-sdk.root","plugin":"primitives.text-editor.paste-images","fact":{"component":{"$code":true},"scope":"each"}},
   {"list":"framework.web-sdk.root","plugin":"reports.collectors","fact":{"component":{"$code":true},"scope":"each"}},
   {"list":"framework.web-sdk.root","plugin":"reports.crash","fact":{"component":{"$code":true},"scope":"page"}},
+  {"list":"framework.web-sdk.root","plugin":"reports.failed-action","fact":{"component":{"$code":true},"scope":"page"}},
   {"list":"framework.web-sdk.root","plugin":"reports.main-thread-stall","fact":{"component":{"$code":true},"scope":"page"}},
   {"list":"framework.web-sdk.root","plugin":"reports.mutation-errors","fact":{"component":{"$code":true},"scope":"page"}},
   {"list":"framework.web-sdk.root","plugin":"reports.optimistic-rejection","fact":{"component":{"$code":true},"scope":"page"}},
