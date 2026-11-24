@@ -258,7 +258,7 @@ type Step =
  * One bounded chunk of a replica's sync: at most `budget.pages` fetches, each
  * page applied with the cursor and the phase it moves in ONE transaction (so
  * a killed pull resumes where it stopped), each committing with a NOTIFY on
- * `table_mirror`. A replica in phase `empty` copies (the only full copy); a
+ * `table_mirror` when it changed what a reader reads. A replica in phase `empty` copies (the only full copy); a
  * live one reads the change stream; one whose deltas cannot be trusted —
  * `reconcile-required`, another source identity or epoch, a fingerprint
  * change on the source, a table created or rebuilt here — reconciles by key
@@ -282,11 +282,21 @@ export async function pullReplica(
   let pages = 0;
   let caughtUp = false;
 
-  const commit = (
-    from: ReplicaRow,
-    patch: ReplicaPatch,
-    work?: (tx: ReplicaTx) => Promise<void>,
-  ) => commitStep(db, set.id, from, patch, work);
+  const commit = (from: ReplicaRow, patch: ReplicaPatch, work?: StepWork) =>
+    commitStep(db, set.id, from, patch, work);
+
+  /** The sink applying `batch`: the copy changed when the batch holds a row or a delete. */
+  const apply =
+    (
+      batch: readonly MirrorSinkBatch[],
+      applyOpts: { reconciling: boolean; firstCopy: boolean },
+    ): StepWork =>
+    async (tx) => {
+      await sink.apply(tx, batch, applyOpts);
+      return {
+        copyChanged: batch.some((b) => b.upserts.length + b.deletes.length > 0),
+      };
+    };
 
   const startTables = (
     from: ReplicaRow,
@@ -369,11 +379,10 @@ export async function pullReplica(
         progress: advance(p, page.done, page.lastPk, page.rows.length, 0),
         sourceNow: page.now,
       },
-      (tx) =>
-        sink.apply(tx, [{ table: p.table, upserts: page.rows, deletes: [] }], {
-          reconciling: false,
-          firstCopy: true,
-        }),
+      apply([{ table: p.table, upserts: page.rows, deletes: [] }], {
+        reconciling: false,
+        firstCopy: true,
+      }),
     );
     return { kind: "continue", row: next };
   }
@@ -475,11 +484,10 @@ export async function pullReplica(
         ),
         sourceNow: page.now,
       },
-      (tx) =>
-        sink.apply(tx, [{ table: t.name, upserts, deletes }], {
-          reconciling: true,
-          firstCopy: false,
-        }),
+      apply([{ table: t.name, upserts, deletes }], {
+        reconciling: true,
+        firstCopy: false,
+      }),
     );
     return { kind: "continue", row: next };
   }
@@ -543,8 +551,10 @@ export async function pullReplica(
           copiedAt: from.copiedAt ?? new Date(),
         }
       : { after: page.next.after, passXmin, sourceNow: page.now };
-    const next = await commit(from, patch, (tx) =>
-      sink.apply(tx, batch, {
+    const next = await commit(
+      from,
+      patch,
+      apply(batch, {
         reconciling: from.phase === "reconciling",
         firstCopy: from.phase === "copying",
       }),
@@ -559,7 +569,9 @@ export async function pullReplica(
   let outcome: ReplicaOutcome = { kind: "stopped" };
   try {
     // The local side first: a table created or rebuilt here holds rows the
-    // stream cannot vouch for, so it is reconciled.
+    // stream cannot vouch for, so it is reconciled. A pull whose local side
+    // already matches the set (nearly every one) commits this step without a
+    // NOTIFY: readers would recompute an answer nothing changed.
     let changed: string[] = [];
     row = await commit(row, {}, async (tx) => {
       const prepared = await sink.prepare(tx);
@@ -571,6 +583,7 @@ export async function pullReplica(
           .set({ copiedAt: null })
           .where(eq(tableMirrorReplicas.id, replicaId));
       }
+      return { copyChanged: prepared.changed.length > 0 || prepared.emptied };
     });
     const known = new Set(row.localTables ?? []);
     const added = tables.filter((t) => !known.has(t));
@@ -668,15 +681,26 @@ async function inUtc<T>(
 }
 
 /**
+ * What a step's work did to the copy readers read: `copyChanged` when it
+ * wrote a row, deleted one, or (re)built a table — what decides, with the
+ * step's patch, whether the step NOTIFYs.
+ */
+type StepWork = (tx: ReplicaTx) => Promise<{ copyChanged: boolean }>;
+
+/**
  * One step's transaction: the replica row moved on (`seq` guards against a
- * second pull), the sink's work, and the NOTIFY — all or nothing.
+ * second pull), the sink's work, and the NOTIFY — all or nothing. It NOTIFYs
+ * only when the step changed something a reader reads: a non-empty patch (the
+ * replica's phase, progress, source clock, readiness…) or a change to the copy
+ * (`StepWork`). A step that moved only `seq` is no change to anyone reading
+ * the copy, and each NOTIFY recomputes every served answer over it.
  */
 async function commitStep(
   db: NodePgDatabase,
   setId: string,
   from: ReplicaRow,
   patch: ReplicaPatch,
-  work?: (tx: ReplicaTx) => Promise<void>,
+  work?: StepWork,
 ): Promise<ReplicaRow> {
   return db.transaction(async (tx) => {
     await tx.execute(sql.raw(`SET LOCAL TimeZone = 'UTC'`));
@@ -691,7 +715,10 @@ async function commitStep(
       )
       .returning();
     if (next === undefined) throw new ConcurrentPullError(from.id);
-    if (work !== undefined) await work(tx);
+    const done = work === undefined ? null : await work(tx);
+    if (Object.keys(patch).length === 0 && done?.copyChanged !== true) {
+      return next;
+    }
     const notice: ReplicaNotice = { replicaId: from.id, setId };
     await tx.execute(
       sql`SELECT pg_notify(${REPLICA_CHANNEL}, ${JSON.stringify(notice)})`,

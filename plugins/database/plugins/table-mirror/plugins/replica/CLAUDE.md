@@ -29,7 +29,11 @@ const stop = await onReplicaApplied("analytics", (replicaId) => served.notify())
 - **Every step is one transaction**: the replica row moves (`seq` guarded —
   a second pull of the same replica throws `ConcurrentPullError` instead of
   interleaving), the sink applies the page, `pg_notify('table_mirror',
-  {replicaId, setId})`. A killed pull resumes where it stopped.
+  {replicaId, setId})` — only when the step changed what a reader reads (a
+  patch to the replica row, or a row / table of the copy): the per-pull
+  local-side check that finds nothing to do commits silently, since every
+  NOTIFY recomputes each served answer over the copy. A killed pull resumes
+  where it stopped.
 - **The schema sink** (default): schema `tm_<set>_<hash of id>` (≤ 60 chars),
   one table per mirrored table, `CREATE TABLE … (LIKE public.<t> INCLUDING
   DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)` minus omitted columns.

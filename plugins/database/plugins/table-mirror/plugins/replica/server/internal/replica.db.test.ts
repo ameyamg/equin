@@ -499,6 +499,25 @@ describe("a schema replica", () => {
     }
   });
 
+  test("a pull with nothing new NOTIFYs once, for its source clock — the step that only checks the local side stays silent", async () => {
+    await sync(id, mainSet, fetch);
+    const listener = new Client({ connectionString: t.connectionString });
+    await listener.connect();
+    try {
+      let heard = 0;
+      listener.on("notification", (n) => {
+        if (n.channel === REPLICA_CHANNEL) heard += 1;
+      });
+      await listener.query(`LISTEN ${REPLICA_CHANNEL}`);
+      const r = await sync(id, mainSet, fetch);
+      expect(r.outcome.kind).toBe("synced");
+      await listener.query(`SELECT 1`); // drains pending notifications
+      expect(heard).toBe(1);
+    } finally {
+      await listener.end();
+    }
+  });
+
   test("two pulls of one replica never interleave", async () => {
     const a = pullReplica({
       db,
