@@ -113,7 +113,44 @@ The binary is pinned per machine (`pgbouncer-binary`): main keeps running
 the app-side raise apply at main's next deploy on their own; the read side
 needs the switch.
 
-## Upstream proposal (prepared, NOT posted — the user decides)
+## Upstream: pgbouncer/pgbouncer#1719 (opened 2026-11-24, user-approved)
+
+Posted as a NEW setting, `unix_socket_buffer` (default 0 = the OS default),
+not as "apply `tcp_socket_buffer` to Unix sockets": upstream's own test config
+sets `tcp_socket_buffer = 4096` to provoke EAGAIN, so widening that key would
+silently shrink every Unix socket of an install that tuned TCP. Verified on a
+1.26.1 build with the PR's diff: `unix_socket_buffer = 1 MiB` → 2 reads for a
+768 KB reply; `tcp_socket_buffer` alone → 100 (unchanged behaviour: the 8 KB default, 97–100 reads across runs). If it is
+merged, our patch moves to the upstream key (`renderPgbouncerConfig` renders
+`unix_socket_buffer`) and `patches/0001` is dropped.
+
+## Switching a running PgBouncer (2026-11-24)
+
+Daemon binaries follow main from the daemon's next FRESH start (3b5c88e862,
+by design); a live PgBouncer is reattached, so a machine whose PgBouncer has
+been up for weeks keeps the old binary until something restarts it.
+
+A blip-free handover is not available on a Unix socket:
+- PgBouncer's documented rolling restart (`so_reuseport` + `SHUTDOWN
+  WAIT_FOR_CLIENTS`) is TCP-only; on Unix sockets each instance needs its own
+  `unix_socket_dir`.
+- Renaming a new instance's socket over the live path works for new
+  connections, but the old process unlinks `<unix_socket_dir>/.s.PGSQL.<port>`
+  (and its pidfile) in its exit handler — removing the NEW socket — unless it
+  is SIGKILLed, which drops its clients anyway. A client connection cannot
+  move between processes (the old `-R` fd handover is gone upstream).
+- `SHUTDOWN WAIT_FOR_CLIENTS` never completes while app pools keep their
+  connections warm; `WAIT_FOR_SERVERS` (SIGINT) refuses new connects while
+  it drains.
+
+Measured restart cost (scratch PgBouncer, 4 workers at ~100 queries/s, pool
+of 8): SIGQUIT + immediate start — socket absent 14 ms, every pooled
+connection dropped once ("Connection terminated unexpectedly"), 4 queries
+failed (connect ENOENT); SIGINT — 113 ms drain, 40 failed queries. On a
+machine the restart is a kill and the gateway watchdog's re-run of the start
+script (probe every 2 s), so the gap is up to ~2 s plus the script's run.
+
+## Upstream proposal (the original write-up; superseded by #1719 above)
 
 A short write-up for github.com/pgbouncer/pgbouncer:
 
