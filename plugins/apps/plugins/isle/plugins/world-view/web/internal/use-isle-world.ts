@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useListedApps, type ActiveApp } from "@plugins/apps-core/web";
 import { appTileFill } from "@plugins/apps-core/plugins/app-icon/core";
-import { appCategoryTree } from "@plugins/apps-core/plugins/app-category/core";
 import { useAppCategories } from "@plugins/apps-core/plugins/app-category/web";
-import { useTagTree } from "@plugins/tag-tree/plugins/engine/web";
 import { useConfigResult } from "@plugins/config_v2/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -20,7 +18,6 @@ import { useIsleBuildings } from "@plugins/apps/plugins/isle/plugins/buildings/w
 import {
   claimPlots,
   islePlots,
-  resetPlots,
   placementOfRows,
   placementWrites,
   worldOfSeed,
@@ -29,7 +26,6 @@ import { isleApp } from "@plugins/apps/plugins/isle/plugins/shell/core";
 import {
   NO_GROUP,
   WorldModel,
-  misplacedResidents,
   residentOf,
   type Placement,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
@@ -61,17 +57,7 @@ export type IsleWorld =
       readonly time: TimeOfDay | "auto";
       readonly music: boolean;
       readonly station: IsleStation;
-      /** The name a district of a group is signed with: its category tag's. */
-      readonly groupName: (group: string) => string;
-      /** The apps standing in a district of another category than their own: what Tidy up would move. */
-      readonly misplaced: readonly string[];
-      /** Tidy up: drop every plot of this world and place every app afresh, by category. */
-      readonly tidy: () => void;
-      readonly tidying: boolean;
     };
-
-/** The sign of a district whose group is no category (or one deleted since). */
-const NO_GROUP_NAME = "Elsewhere";
 
 const kits = new Map<string, BuildingSpec>();
 /**
@@ -108,13 +94,12 @@ export const timeOf = (v: string): TimeOfDay | "auto" => {
  * app's glyph and the canvas fonts. Apps without a plot are placed by the
  * pure world and claimed; the world shows as loading until the claim's push
  * comes back — the stored placement is what is drawn, never a prediction of
- * it. A failed claim or tidy is the world's `error`.
+ * it. A failed claim is the world's `error`.
  */
 export function useIsleWorld(): IsleWorld {
   const config = useConfigResult(isleConfig);
   const listed = useListedApps();
   const categories = useAppCategories();
-  const tags = useTagTree(appCategoryTree);
   const seed = foldResource(config, {
     ready: (c) => c.seed,
     loading: () => null,
@@ -173,17 +158,6 @@ export function useIsleWorld(): IsleWorld {
       };
     });
   }, [entries, glyphs, buildings, filed]);
-  const names = foldResource(tags, {
-    ready: (rows) => rows,
-    loading: () => null,
-    error: () => null,
-  });
-  const groupName = useMemo(() => {
-    const byId = new Map<string, string>(
-      (names ?? []).map((t) => [t.id, t.name]),
-    );
-    return (group: string) => byId.get(group) ?? NO_GROUP_NAME;
-  }, [names]);
   const stored = foldResource(plots, {
     ready: (p) => p,
     loading: () => null,
@@ -225,30 +199,13 @@ export function useIsleWorld(): IsleWorld {
     // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- idempotent by construction: a compare-and-set batch every tab computes alike; the first lands, the rest answer `stale` and write nothing
     claim.mutate({ body: { world, writes: pending } });
   }, [pending, world, claim]);
-  // Tidy up: the world's plots dropped; the empty placement's push then takes
-  // the first-visit path (place everyone, claim) — so the claim guard forgets
-  // what it claimed, or an unchanged world would never be claimed again
-  const reset = useEndpointMutation(resetPlots, {
-    meta: { suppressError: true },
-  });
-  const resetMutate = reset.mutate;
-  const tidy = useCallback(() => {
-    if (world === null) return;
-    claimed.current = null;
-    resetMutate({ body: { world } });
-  }, [world, resetMutate]);
-  const misplaced = useMemo(
-    () => (stored && placing ? misplacedResidents(stored, placing) : []),
-    [stored, placing],
-  );
 
-  const base = combineResources({ config, listed, plots, categories, tags });
+  const base = combineResources({ config, listed, plots, categories });
   return foldResource(base, {
     loading: (): IsleWorld => ({ kind: "loading", what: "Reading the map" }),
     error: (error): IsleWorld => ({ kind: "error", error }),
     ready: (d): IsleWorld => {
       if (claim.error) return { kind: "error", error: claim.error };
-      if (reset.error) return { kind: "error", error: reset.error };
       if (glyphs.kind === "error")
         return { kind: "error", error: glyphs.error };
       if (typeof fonts === "object")
@@ -270,10 +227,6 @@ export function useIsleWorld(): IsleWorld {
         time: timeOf(d.config.time),
         music: d.config.music,
         station: isleStationOf(d.config.mood),
-        groupName,
-        misplaced,
-        tidy,
-        tidying: reset.isPending,
       };
     },
   });

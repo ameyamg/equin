@@ -5,7 +5,6 @@ import type {
 } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import {
   EMPTY_PLACEMENT,
-  misplacedResidents,
   placeResidents,
   plotById,
   signHalfWidth,
@@ -14,15 +13,11 @@ import {
 import { plotsClash } from "./sites";
 import { WorldModel } from "./world-model";
 
-/**
- * A building as its app declares it: the same footprint, setting and sign as
- * placement reads. `path` is its category, `<root>/<leaf>` (group the whole
- * path, region its root).
- */
+/** A building as its app declares it: the same footprint, setting and sign as placement reads. */
 function building(
   id: string,
   name: string,
-  path: string,
+  category: string,
   setting: readonly Setting[],
   w: number,
   depth: number,
@@ -32,8 +27,8 @@ function building(
 ): Resident {
   return {
     id,
-    group: path,
-    region: path.split("/")[0]!,
+    group: category,
+    region: category,
     footprint: { w, depth, ground, upper },
     setting,
     signX,
@@ -41,231 +36,234 @@ function building(
   };
 }
 
-// The 18 installed apps' bespoke buildings (Isle itself has none on the map), in
-// the rail's order, under their default categories (`Leisure/Music`: group the
-// whole path, region its root) — copied from their declarations (each app's
-// isle-building core), since world/core names no app. Refresh it when they change.
+// The 19 installed apps' buildings (bespoke ones by name, generated ones `kit-…`),
+// in the rail's order, copied from their declarations — world/core names no app.
 const TOWN: readonly Resident[] = [
   building(
-    "home",
+    "kit-home",
     "Home",
-    "System/Launcher",
-    ["square", "lane"],
-    184,
-    72,
-    [-197, -112, 187, 37],
-    [-112, -301, 141, -112],
-    -206,
-  ),
-  building(
-    "agent-manager",
-    "Agent Manager",
-    "Harness",
-    ["lane"],
-    276,
-    96,
-    [-193, -112, 250, 57],
-    [-122, -438, 153, -112],
-    -204,
-  ),
-  building(
-    "pages",
-    "Pages",
-    "Office/Documents",
-    ["square", "lane"],
-    256,
-    96,
-    [-177, -112, 211, 45],
-    [-150, -306, 153, -112],
-    -166,
-  ),
-  building(
-    "sonata",
-    "Sonata",
-    "Leisure/Music",
+    "life",
     ["square"],
-    232,
-    70,
-    [-160, -112, 220, 44],
-    [-122, -333, 146, -112],
-    -176,
-  ),
-  building(
-    "places",
-    "Places",
-    "Office/Everyday",
-    ["coast", "cape"],
-    190,
-    96,
-    [-153, -112, 206, 51],
-    [-75, -418, 75, -112],
-    -150,
-  ),
-  building(
-    "prototypes",
-    "Prototypes",
-    "Harness",
-    ["forest"],
-    230,
-    80,
-    [-211, -112, 295, 63],
-    [-197, -351, 241, -112],
-    -150,
-  ),
-  building(
-    "file-explorer",
-    "Files",
-    "Office/Documents",
-    ["harbour", "shore"],
-    240,
-    80,
-    [-200, -112, 231, 56],
-    [-130, -294, 179, -112],
-    -175,
-  ),
-  building(
-    "keyboard-party",
-    "Keyboard Party",
-    "Leisure/Games",
-    ["lane", "square"],
-    192,
-    44,
-    [-176, -112, 192, 52],
-    [-118, -262, 110, -112],
-    -172,
-  ),
-  building(
-    "desktop",
-    "Desktop",
-    "System/Launcher",
-    ["square", "lane"],
-    236,
-    74,
-    [-153, -112, 191, 28],
-    [-164, -302, 153, -112],
-    -150,
-  ),
-  building(
-    "settings",
-    "Settings",
-    "System",
-    ["hill"],
-    270,
-    86,
-    [-183, -112, 239, 55],
-    [-109, -355, 141, -112],
-    206,
-  ),
-  building(
-    "mail",
-    "Mail",
-    "Office/Documents",
-    ["square"],
-    176,
-    66,
-    [-163, -112, 233, 51],
-    [-128, -373, 132, -112],
-    -176,
-  ),
-  building(
-    "events",
-    "Events",
-    "Office/Everyday",
-    ["square"],
-    108,
+    118,
     60,
-    [-140, -112, 240, 50],
-    [-60, -416, 80, -112],
-    -115,
+    [-75, -112, 119, 43],
+    [-75, -148, 75, -112],
+    -79,
   ),
   building(
-    "chord",
-    "Chord",
-    "Leisure/Music",
+    "forge",
+    "Agent Manager",
+    "work",
+    ["lane"],
+    214,
+    84,
+    [-148, -112, 175, 39],
+    [-119, -297, 120, -112],
+    -138,
+  ),
+  building(
+    "library",
+    "Pages",
+    "work",
+    ["square", "lane"],
+    232,
+    96,
+    [-155, -112, 188, 40],
+    [-126, -232, 127, -112],
+    -150,
+  ),
+  building(
+    "music-hall",
+    "Sonata",
+    "music",
     ["square"],
-    208,
-    74,
-    [-183, -112, 184, 51],
-    [-116, -292, 116, -112],
-    158,
+    236,
+    100,
+    [-147, -112, 194, 39],
+    [-128, -245, 129, -112],
+    -152,
   ),
   building(
-    "browser",
+    "lighthouse",
+    "Places",
+    "life",
+    ["coast", "cape"],
+    150,
+    84,
+    [-129, -112, 158, 46],
+    [-48, -315, 48, -112],
+    -112,
+  ),
+  building(
+    "inventors-cabin",
+    "Prototypes",
+    "create",
+    ["forest"],
+    196,
+    72,
+    [-152, -112, 174, 50],
+    [-74, -249, 92, -112],
+    -140,
+  ),
+  building(
+    "archive-barn",
+    "Files",
+    "work",
+    ["harbour", "shore"],
+    210,
+    80,
+    [-152, -112, 178, 45],
+    [-106, -189, 128, -112],
+    -150,
+  ),
+  building(
+    "schoolhouse",
+    "Tap Tap Party",
+    "play",
+    ["lane", "square"],
+    176,
+    74,
+    [-115, -112, 151, 44],
+    [-77, -172, 93, -112],
+    -130,
+  ),
+  building(
+    "kit-desktop",
+    "Desktop",
+    "system",
+    ["hill"],
+    98,
+    50,
+    [-65, -112, 95, 44],
+    [-63, -250, 63, -112],
+    -75,
+  ),
+  building(
+    "windmill",
+    "Settings",
+    "system",
+    ["hill"],
+    120,
+    62,
+    [-139, -112, 181, 46],
+    [-158, -354, 158, -112],
+    -112,
+  ),
+  building(
+    "post-office",
+    "Mail",
+    "work",
+    ["square"],
+    206,
+    84,
+    [-144, -112, 169, 39],
+    [-117, -214, 118, -112],
+    140,
+  ),
+  building(
+    "clock-tower",
+    "Events",
+    "life",
+    ["square"],
+    120,
+    56,
+    [-117, -112, 205, 34],
+    [-46, -364, 82, -112],
+    -105,
+  ),
+  building(
+    "bandstand",
+    "Chord",
+    "music",
+    ["square"],
+    196,
+    100,
+    [-111, -112, 150, 39],
+    [-93, -206, 93, -112],
+    134,
+  ),
+  building(
+    "observatory",
     "Browser",
-    "Office/Everyday",
+    "data",
     ["hill"],
     184,
     104,
-    [-146, -112, 180, 39],
-    [-136, -357, 136, -112],
+    [-112, -112, 152, 45],
+    [-77, -238, 85, -112],
     128,
   ),
   building(
-    "studio",
-    "Plugins",
-    "Publishing",
+    "conservatory",
+    "Studio",
+    "create",
     ["forest"],
-    236,
-    80,
-    [-205, -112, 215, 59],
-    [-140, -246, 136, -112],
-    -175,
+    230,
+    78,
+    [-141, -112, 176, 45],
+    [-122, -173, 134, -112],
+    -150,
   ),
   building(
-    "website",
-    "Website",
-    "Publishing",
-    ["square", "lane", "harbour"],
-    200,
-    72,
-    [-151, -112, 221, 39],
-    [-141, -309, 157, -112],
-    -156,
+    "kit-website",
+    "equin",
+    "life",
+    ["square"],
+    176,
+    60,
+    [-117, -112, 148, 43],
+    [-102, -225, 102, -112],
+    -114,
   ),
   building(
-    "deploy",
+    "kit-demo",
+    "Demo",
+    "music",
+    ["square"],
+    166,
+    60,
+    [-135, -112, 127, 41],
+    [-99, -217, 99, -112],
+    109,
+  ),
+  building(
+    "launch-tower",
     "Deploy",
-    "Publishing",
+    "system",
     ["cape", "coast"],
-    264,
-    84,
-    [-200, -112, 256, 61],
-    [-160, -423, 210, -112],
-    -236,
+    200,
+    88,
+    [-132, -112, 191, 51],
+    [-83, -375, 148, -112],
+    -150,
   ),
   building(
-    "debug",
+    "kit-debug",
     "Debug",
-    "System",
-    ["forest", "hill", "lane"],
-    150,
-    70,
-    [-125, -112, 186, 40],
-    [-109, -187, 109, -112],
-    -128,
+    "system",
+    ["hill"],
+    116,
+    50,
+    [-87, -112, 104, 44],
+    [-72, -264, 72, -112],
+    -84,
   ),
 ];
 
 describe("isle landmarks", () => {
   for (const seed of [1, 2, 3, 4, 5]) {
-    test(`seed ${seed}: the landmarks take their setting within their own group's district`, () => {
+    test(`seed ${seed}: the lighthouse stands on the coast, the windmill and the observatory on hills`, () => {
       const P = placeResidents(new WorldModel(seed), EMPTY_PLACEMENT, TOWN);
       const tags = (id: string) => {
         const p = plotById(P, P.occupant[id]);
         if (!p) throw new Error(`${id} has no plot`);
         return p.tags;
       };
-      // every building stands in a district of its own group…
-      expect(misplacedResidents(P, TOWN)).toEqual([]);
-      // …the mill (Settings: System, opening its district on a hill) on a hill…
-      expect(tags("settings")).toContain("hill");
-      // …and of the lighthouse (Places) and the observatory (Browser), both
-      // Office › Everyday, the one that opens the district gets its setting
-      // (the other only if that district has it too)
       expect(
-        tags("places").some((t) => t === "coast" || t === "cape") ||
-          tags("browser").includes("hill"),
+        tags("lighthouse").some((t) => t === "coast" || t === "cape"),
       ).toBe(true);
+      expect(tags("windmill")).toContain("hill");
+      expect(tags("observatory")).toContain("hill");
       const plots = TOWN.map((r) => plotById(P, P.occupant[r.id])!);
       for (let i = 0; i < plots.length; i++)
         for (let j = i + 1; j < plots.length; j++)
@@ -274,72 +272,5 @@ describe("isle landmarks", () => {
               `plots ${plots[i]!.id} and ${plots[j]!.id} overlap`,
             );
     }, 60_000);
-
-    // the 2026-11-24 regression on seed 1: Harness and Music each split over
-    // two districts of one building, a district "full" with one building in it
-    test(`seed ${seed}: one district per category, its kin side by side`, () => {
-      const M = new WorldModel(seed);
-      const P = placeResidents(M, EMPTY_PLACEMENT, TOWN);
-      const districts = new Map<string, Set<string>>();
-      for (const r of TOWN) {
-        const slot = P.occupant[r.id]!.split(":")[0]!;
-        districts.set(r.group, (districts.get(r.group) ?? new Set()).add(slot));
-      }
-      for (const [group, slots] of districts)
-        expect([group, [...slots]]).toEqual([group, [[...slots][0]!]]);
-      // Leisure's two groups (Music, Games) open on one island
-      const islandOf = (group: string) =>
-        M.slotById.get([...districts.get(group)!][0]!)!.island.id;
-      expect(islandOf("Leisure/Games")).toBe(islandOf("Leisure/Music"));
-    }, 60_000);
   }
-});
-
-describe("a group's apps placed together", () => {
-  // landmarks of one group (each wanting a different rare setting) placed in
-  // one batch with plain kin: the first opens the district, the rest join it
-  const kin = (id: string, setting: readonly Setting[]): Resident =>
-    building(
-      id,
-      id,
-      "Kin",
-      setting,
-      200,
-      80,
-      [-150, -112, 190, 50],
-      [-110, -330, 130, -112],
-      -160,
-    );
-  const other = (id: string): Resident =>
-    building(
-      id,
-      id,
-      "Other",
-      ["square"],
-      120,
-      60,
-      [-90, -112, 110, 40],
-      [-80, -220, 80, -112],
-      -96,
-    );
-  const batch = [
-    other("o1"),
-    kin("k-coast", ["coast"]),
-    kin("k-forest", ["forest"]),
-    kin("k-hill", ["hill"]),
-    other("o2"),
-    kin("k-lane", ["lane"]),
-    kin("k-square", ["square"]),
-  ];
-  for (const seed of [1, 2, 3])
-    test(`seed ${seed}: all of them in one district`, () => {
-      const P = placeResidents(new WorldModel(seed), EMPTY_PLACEMENT, batch);
-      const slots = new Set(
-        batch
-          .filter((r) => r.group === "Kin")
-          .map((r) => P.occupant[r.id]!.split(":")[0]),
-      );
-      expect(slots.size).toBe(1);
-      expect(misplacedResidents(P, batch)).toEqual([]);
-    }, 60_000);
 });

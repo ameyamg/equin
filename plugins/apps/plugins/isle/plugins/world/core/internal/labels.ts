@@ -1,22 +1,81 @@
-// Map labels: island names, and one name per district that has buildings: the
-// name of its group's category tag (Office, Music…), a Roman numeral on the
-// second and later districts of one group, in the order they opened. A
-// district label goes on whichever of a few spots round its square covers the
-// least of its buildings, signs, well and campfire — scored at the label's
-// size, which depends on the zoom, so the renderer picks.
+// Map labels: island names, and one name per district that has buildings,
+// named for its kind — the look of its region's buildings (`buildingStyleOf`) —
+// in the order the districts opened (Workshop Quarter, Forge Row, …). A district label goes on whichever of a few spots round its
+// square covers the least of its buildings, signs, well and campfire — scored
+// at the label's size, which depends on the zoom, so the renderer picks.
 
-import type { Box } from "@plugins/apps/plugins/isle/plugins/buildings/core";
+import {
+  buildingStyleOf,
+  type Box,
+  type BuildingStyle,
+} from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import type { Pt } from "./geometry";
 import type { Layout } from "./layout";
-import { districtGroup, type Placement } from "./placement";
+import { districtRegion, type Placement } from "./placement";
 import type { WorldModel } from "./world-model";
 
-const NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+const CAT_NAMES: Record<BuildingStyle, readonly string[]> = {
+  work: [
+    "Workshop Quarter",
+    "Forge Row",
+    "Tinkers' End",
+    "Anvil Yard",
+    "Gearwright Lane",
+  ],
+  create: [
+    "Atelier Row",
+    "Painters' Walk",
+    "Inkwell Lane",
+    "Easel Hill",
+    "Sketch Court",
+  ],
+  music: [
+    "Music Row",
+    "Fiddlers' Green",
+    "Bell Lane",
+    "Choir Close",
+    "Drum Yard",
+  ],
+  life: [
+    "Market Green",
+    "Baker's Row",
+    "Orchard Lane",
+    "Hearth Street",
+    "Meadow Close",
+  ],
+  data: [
+    "The Archive",
+    "Ledger Lane",
+    "Scriveners' Row",
+    "Vault Court",
+    "Tally Street",
+  ],
+  play: [
+    "Fairground",
+    "Kite Hill",
+    "Puzzle Lane",
+    "Juggler's Green",
+    "Marble Court",
+  ],
+  system: [
+    "Mill Lane",
+    "Clockwork Yard",
+    "Lantern Row",
+    "Sluice Gate",
+    "Waterwheel End",
+  ],
+};
 
-/** The name of the ord-th district (0-based) of a group named `name`: `Music`, `Music II`, … */
-export function districtName(name: string, ord: number): string {
-  return ord === 0 ? name : `${name} ${NUMERALS[ord] ?? String(ord + 1)}`;
+/** The name of the ord-th district (0-based) of a kind. */
+export function districtName(cat: BuildingStyle, ord: number): string {
+  const L = CAT_NAMES[cat];
+  if (ord < L.length) return L[ord]!;
+  return `${L[ord % L.length]!} ${["II", "III", "IV", "V"][Math.floor(ord / L.length) - 1] ?? String(ord)}`;
 }
+
+/** A district's kind: the look of its region's buildings, so its name and its buildings agree. */
+const kindOf = (region: string | null): BuildingStyle | null =>
+  region === null ? null : buildingStyleOf(region);
 
 export interface IslandLabel {
   readonly id: number;
@@ -49,30 +108,28 @@ export interface DistrictLabel {
 
 /**
  * The districts' labels: names in the order the districts opened, obstacles and candidate spots. `signHalfOf(appId)` is
- * half each building's signpost board width; `nameOf(group)` the name a group's sign reads (its category tag's name).
+ * half each building's signpost board width.
  */
 export function districtLabels(
   M: WorldModel,
   placement: Placement,
   layout: Layout,
   signHalfOf: (appId: string) => number,
-  nameOf: (group: string) => string,
 ): DistrictLabel[] {
-  const ord = new Map<string, number>();
+  const ord: Partial<Record<BuildingStyle, number>> = {};
   const names = new Map<string, string>();
   // in the order the districts opened: by their first plot
   const opened = M.slots
     .map((s) => ({
       s,
       first: placement.plots[s.id]?.[0],
-      c: districtGroup(placement, s.id),
+      c: kindOf(districtRegion(placement, s.id)),
     }))
     .filter((o) => o.first && o.c)
     .sort((a, b) => a.first!.seq - b.first!.seq);
   for (const { s, c } of opened) {
-    const n = ord.get(c!) ?? 0;
-    ord.set(c!, n + 1);
-    names.set(s.id, districtName(nameOf(c!), n));
+    ord[c!] = (ord[c!] ?? -1) + 1;
+    names.set(s.id, districtName(c!, ord[c!]!));
   }
   const marks: Box[] = [];
   for (const q of layout.squares) {

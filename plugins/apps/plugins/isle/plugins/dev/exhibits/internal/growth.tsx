@@ -69,12 +69,6 @@ function isleAppOf(a: FakeApp): IsleApp {
   }
   return x;
 }
-/** A fake group's sign: its name in the fake tree. */
-const groupName = (id: string): string => {
-  const g = FAKE_GROUPS.find((x) => x.id === id);
-  if (!g) throw new Error(`isle growth: no fake group ${id}`);
-  return g.name;
-};
 const residentsOf = (apps: readonly FakeApp[]): Resident[] =>
   apps.map((a) => residentOf(a, isleAppOf(a).spec));
 
@@ -340,7 +334,6 @@ function GrowthCanvas(props: {
       model,
       world.placement,
       world.apps.map(isleAppOf),
-      groupName,
     );
   }, [model, world]);
 

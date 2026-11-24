@@ -1,17 +1,11 @@
 # world-view
 
-## Categories and Tidy up
+## Categories
 
 `useIsleWorld` reads each app's category (`app-category`'s `useAppCategories`: the leaf tag is the app's
-group, its root the region; an unfiled app is `NO_GROUP`) and the category tree (`useTagTree`, for the
-district signs' names). Until both are read the island is loading — it never places an app on an unknown
-category. A generated building's style is keyed on its region (`buildingStyleOf`).
-
-Re-filing an app never moves its building (placement is append-only). The title card's **Tidy up** posts
-`plots`' reset (every plot of the world dropped, hand-moved buildings too) and forgets the last claim, so
-the empty placement's push takes the first-visit path: every app placed afresh, category first, and
-claimed. The button is lit with a count while some app stands in a district of another category
-(`misplacedResidents`).
+group, its root the region; an unfiled app is `NO_GROUP`). Until it is read the island is loading — it
+never places an app on an unknown category. A generated building's style is keyed on its region
+(`buildingStyleOf`). Re-filing an app never moves its building (placement is append-only).
 
 ## Failures reach Reports
 
@@ -48,7 +42,7 @@ channels — nothing here files one itself:
     - `Pane.Register` "isle"
     - `ConfigV2.WebRegister` "isle"
     - `BackgroundMusic.Source` "isle"
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/isle/renderer` ×8
     - `config_v2` ×4
     - `apps-core/tabs` ×3
@@ -68,7 +62,6 @@ channels — nothing here files one itself:
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/latest-ref.useEventCallback`
-    - `tag-tree/engine.useTagTree`
 - Server:
   - Contributes: `ConfigV2.Register` "isle"
   - Uses: `config_v2.ConfigV2`

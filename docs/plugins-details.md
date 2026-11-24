@@ -6274,7 +6274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`dev`** — Isle's dev tools, never part of the app: the growth exhibit (isle/growth) — the world drawn with N made-up apps (14…142; ±1, add to a group of a fixed fake category tree, remove one at random, another seed), placed in memory, never the real plots, with its stats (islands, districts, buildings, empty lots, rebuild time), a switch between baking in workers and on the page, and a fingerprint of what was baked to compare the two.
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `exhibits/internal/growth.tsx` (debt)
-        - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints (one compare-and-set transaction per batch, answered stale when what the writer read no longer holds), plus reset (Tidy up: every plot of a world dropped in one statement).
+        - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
           - Server:
             - Contributes:
               - `resource.declare` "isle.plots"
@@ -6294,7 +6294,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/isle/plots/claim`
               - `POST /api/isle/plots/move`
               - `POST /api/isle/plots/restore`
-              - `POST /api/isle/plots/reset`
           - Core:
             - Uses:
               - `apps/isle/buildings.SETTINGS`
@@ -6330,7 +6329,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlotSchema`
               - `PlotWriteSchema`
               - `PlotWritesResultSchema`
-              - `resetPlots`
               - `restorePlot`
               - `worldOfSeed`
           - Cross-plugin:
@@ -6379,6 +6377,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `apps/isle/buildings.Box`
+              - `apps/isle/buildings.BuildingStyle`
+              - `apps/isle/buildings.buildingStyleOf`
               - `apps/isle/buildings.Footprint`
               - `apps/isle/buildings.GROUND_BAND`
               - `apps/isle/buildings.Setting`
@@ -6417,7 +6417,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `applyMove`
               - `arcsOf`
               - `cutAt`
-              - `districtGroup`
               - `districtLabels`
               - `districtName`
               - `districtRegion`
@@ -6441,7 +6440,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `labelSpotScore`
               - `LAKE`
               - `layoutWorld`
-              - `misplacedResidents`
               - `moveTargets`
               - `newPlotAt`
               - `NO_GROUP`
@@ -6481,7 +6479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "isle"
               - `ConfigV2.WebRegister` "isle"
               - `BackgroundMusic.Source` "isle"
-            - Uses: 39 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
               - `apps/isle/renderer` ×8
               - `config_v2` ×4
               - `apps-core/tabs` ×3
@@ -6501,7 +6499,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/latest-ref.useEventCallback`
-              - `tag-tree/engine.useTagTree`
           - Server:
             - Contributes: `ConfigV2.Register` "isle"
             - Uses: `config_v2.ConfigV2`
@@ -63918,7 +63915,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-category`
-          - `apps/isle/world-view`
           - `apps/places/fixtures`
           - `apps/places/places-core`
           - `apps/places/places-map`

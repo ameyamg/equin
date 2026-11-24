@@ -4,11 +4,8 @@ import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
 import { layoutWorld } from "./layout";
 import { applyMove, moveTargets, newPlotAt, restoreLot } from "./move";
 import {
-  districtGroup,
-  districtRegion,
   EMPTY_PLACEMENT,
   islandsInPlay,
-  misplacedResidents,
   placeResidents,
   plotById,
   signHalfWidth,
@@ -19,40 +16,44 @@ import { plotsClash } from "./sites";
 import { findPath, walkable, walkGrid } from "./walk";
 import { WorldModel } from "./world-model";
 
-/**
- * A fixed fake category tree: each group is a path `<region>/<leaf>` (or a
- * root alone), with the setting its buildings like — 8 groups in 4 regions.
- */
-const GROUPS: readonly (readonly [string, readonly Setting[]])[] = [
-  ["work/forge", ["lane"]],
-  ["art/music", ["square"]],
-  ["data", ["shore", "harbour"]],
-  ["sys", ["hill"]],
-  ["work/office", ["square"]],
-  ["art/paint", ["forest"]],
-  ["art/games", ["lane", "square"]],
-  ["sys/launch", ["square"]],
-];
-const regionOf = (group: string) => group.split("/")[0]!;
+const CATEGORIES = [
+  "work",
+  "create",
+  "music",
+  "life",
+  "data",
+  "play",
+  "system",
+] as const;
+
+const CAT_SETTING: Record<(typeof CATEGORIES)[number], readonly Setting[]> = {
+  data: ["shore", "harbour"],
+  system: ["hill"],
+  life: ["square"],
+  music: ["square"],
+  work: ["lane"],
+  create: ["forest"],
+  play: ["lane", "square"],
+};
 
 /** A made-up app with a building of a size seeded from its id (no painting needed). */
 function fakeResident(i: number): Resident {
   const id = `x-app-${i}`;
   const h = fnv1a32(id);
-  const [group, setting] = GROUPS[i % GROUPS.length]!;
+  const category = CATEGORIES[i % CATEGORIES.length]!;
   const half = [60, 75, 100, 85, 110][h % 5]!;
   const top = -(150 + (h % 140));
   return {
     id,
-    group,
-    region: regionOf(group),
+    group: category,
+    region: category,
     footprint: {
       w: half * 1.6,
       depth: 60,
       ground: [-half - 30, -112, half + 40, 46],
       upper: [-half, top, half, -112],
     },
-    setting,
+    setting: CAT_SETTING[category],
     signHalf: signHalfWidth(`App ${i}`),
   };
 }
@@ -194,75 +195,6 @@ describe("isle world", () => {
     }
     expect(walked).toBeGreaterThan(3);
   }, 120_000);
-});
-
-describe("category-first placement", () => {
-  const M = new WorldModel(1);
-  const P142 = placeResidents(M, EMPTY_PLACEMENT, residents(142));
-  const one = (() => {
-    let P = placeResidents(M, EMPTY_PLACEMENT, residents(14));
-    for (let n = 15; n <= 60; n++) P = placeResidents(M, P, residents(n));
-    return P;
-  })();
-  const cases = [
-    ["142 at once", P142, residents(142)],
-    ["14 → 60 one by one", one, residents(60)],
-  ] as const;
-
-  for (const [name, P, rs] of cases) {
-    test(`every open district holds exactly one group: ${name}`, () => {
-      for (const [slot, list] of Object.entries(P.plots)) {
-        const groups = new Set(
-          list.filter((p) => !p.retired).map((p) => p.group),
-        );
-        expect([slot, groups.size]).toEqual([slot, 1]);
-      }
-      // and every app stands in a district of its own group
-      expect(misplacedResidents(P, rs)).toEqual([]);
-    });
-
-    test(`a region's districts stay on one island while it has room: ${name}`, () => {
-      const free = (I: number) =>
-        M.island(I).slots.some((s) => districtGroup(P, s.id) === null);
-      const regions = new Map<string, Map<number, number>>();
-      for (const s of M.slots) {
-        const r = districtRegion(P, s.id);
-        if (r === null) continue;
-        const first = P.plots[s.id]![0]!.seq;
-        const m = regions.get(r) ?? new Map<number, number>();
-        regions.set(r, m);
-        m.set(s.island.id, Math.min(m.get(s.island.id) ?? first, first));
-      }
-      for (const [r, islands] of regions) {
-        // in the order the region reached them, every island but the last is full
-        const order = [...islands].sort((a, b) => a[1] - b[1]).map((e) => e[0]);
-        for (const I of order.slice(0, -1))
-          expect([r, I, free(I)]).toEqual([r, I, false]);
-      }
-    });
-  }
-
-  test("142 apps spill onto more than one island", () => {
-    const islands = new Set(
-      Object.keys(P142.plots).map((slot) => slot.split(".")[0]),
-    );
-    expect(islands.size).toBeGreaterThan(1);
-  });
-
-  test("an app filed under another group is misplaced until placed afresh", () => {
-    const rs = residents(24);
-    const P = placeResidents(M, EMPTY_PLACEMENT, rs);
-    const moved = rs.map((r, i) =>
-      i === 0 ? { ...r, group: "data", region: "data" } : r,
-    );
-    expect(misplacedResidents(P, moved)).toEqual([rs[0]!.id]);
-    // append-only: placing again keeps it where it stands…
-    expect(placeResidents(M, P, moved)).toEqual(P);
-    // …tidying (a fresh placement) files it with its new group
-    expect(
-      misplacedResidents(placeResidents(M, EMPTY_PLACEMENT, moved), moved),
-    ).toEqual([]);
-  });
 });
 
 describe("islands in play", () => {

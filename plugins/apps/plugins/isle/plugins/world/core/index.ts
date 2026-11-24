@@ -52,11 +52,9 @@ export { fbm, hash, smoothstep, vnoise } from "./internal/noise";
 export { applyMove, moveTargets, newPlotAt, restoreLot } from "./internal/move";
 export type { MoveTarget } from "./internal/move";
 export {
-  districtGroup,
   districtRegion,
   EMPTY_PLACEMENT,
   islandsInPlay,
-  misplacedResidents,
   NO_GROUP,
   placeResidents,
   plotBoxes,

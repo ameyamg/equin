@@ -13,30 +13,12 @@ No DOM, no canvas. A port of the prototype `proto-1794374690-9xmb84`'s `islands.
   for an uncategorised app — and its building's DECLARED footprint (`buildings/core`) — placement never
   paints or measures, nor reads the category tree: the caller passes group and region. Build one with
   `residentOf(app, spec)`.
-- **Category first.** A district holds ONE group: its group is its first (non-retired) plot's
-  (`districtGroup` / `districtRegion`). Each new app:
-  1. goes into an open district of its own group with room — a lot it fits or a new spot; the setting picks
-     the spot (`bestSpot` / `tagScore`), the first-opened district breaking near-ties. A landmark that wants
-     the coast takes its district's coast if it has one; it never leaves its district for it.
-  2. only when none has room (or none exists) opens a district — mandatory, never shared with another
-     group. "No room" means NO spot of the district fits: `bestSpot` tries the liked and first spots, then
-     every other candidate of the district (settings only rank). The district opens in the first tier
-     with a slot that fits it: free slots on the islands already holding its **region** (nearest its own
-     group's districts, then its region's, leaving the free slots other regions there still need for their
-     unopened groups); then — a region with no district yet — the home island, if it has a free slot for
-     each of the region's unopened groups beyond what the regions already there still need (home fills
-     first, a region kept whole); then a fresh island (a child of a revealed one) nearest its region's
-     districts (a new region: one with a slot per unopened group first) — a region claims an island; last,
-     any free slot of a revealed island. Inside a tier the slot that would hold the most of its group's
-     apps still to come in this call wins (each tried in turn on a copy of the island's plots, up to
-     `KIN_TRIAL`), the setting breaking ties — so a batch (a first visit, a Tidy up) gives each group one
-     district big enough for it, instead of a landmark opening a cramped one its kin then cannot join.
-  So related groups (Leisure › Music and › Games) open side by side. There is no kin bonus and no
-  apps-per-district target: the number of districts follows the number of groups and their sizes.
-- **Re-filing never moves a building** (append-only): a plot keeps the `group` / `region` it was made for.
-  `misplacedResidents(placement, residents)` lists the apps standing in a district of another group or
-  region than their current one (re-filed, their tag moved under another root, or moved there by hand) —
-  what a Tidy up (world-view: drop the world's plots, place everyone afresh) would fix.
+- **Kin, not one group per district.** A new app goes where it suits best: its setting first, then the
+  district of its kin — its **region** (`districtRegion`: a district's kind is its first plot's region) —
+  then the fuller districts, on a lot it fits or a new plot. About one district per five apps: below that a
+  district opens readily, above it only when nothing else fits; a new island only when the revealed sites
+  are all taken. So a district is a dense neighbourhood of mostly one region, never one per category.
+  A plot keeps the `group` / `region` it was made for (append-only: re-filing never moves a building).
 - `moveTargets` / `newPlotAt` / `applyMove` — moving a building by hand. `moveTargets` lists the
   existing plots it may go to; the first is always `stay` (its own plot: a drop over its old spot reuses
   it, nothing written), then lots it fits and swaps. `newPlotAt(x, y)` is a drop anywhere else: the
@@ -64,14 +46,11 @@ No DOM, no canvas. A port of the prototype `proto-1794374690-9xmb84`'s `islands.
   A road's key carries a hash of its shape (tiles repaint when it moves).
 - `walkGrid(world, layout, solids?)` + `findPath` — the 16 px walk grid and A*.
 - `districtLabels` / `pickLabelSpot` / `islandLabels` — map labels; the renderer picks a spot at the
-  label's on-screen size. A district's sign is its group's name (`nameOf(group)`, passed in — the
-  category tag's name, so a rename shows at once), with a Roman numeral from its group's second district
-  on (`Music`, `Music II`).
+  label's on-screen size. A district's name comes from its kind — the look of its region's buildings
+  (`buildingStyleOf`) — in the order the districts opened (Workshop Quarter, Forge Row, Music Row…).
 
 The tests (`core/internal/world.test.ts`) pin the invariants: same seed → deep-equal world; adding an app
-never moves a plot (40 → 41, 14 → 142 one by one); no plot clashes at 14 / 40 / 142; A* stays walkable;
-every open district holds one group and every app stands in its own group's; a region's districts stay on
-one island while it has a free slot; 142 apps spill onto more than one island.
+never moves a plot (40 → 41, 14 → 142 one by one); no plot clashes at 14 / 40 / 142; A* stays walkable.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
@@ -81,6 +60,8 @@ one island while it has a free slot; 142 apps spill onto more than one island.
 - Core:
   - Uses:
     - `apps/isle/buildings.Box`
+    - `apps/isle/buildings.BuildingStyle`
+    - `apps/isle/buildings.buildingStyleOf`
     - `apps/isle/buildings.Footprint`
     - `apps/isle/buildings.GROUND_BAND`
     - `apps/isle/buildings.Setting`
@@ -119,7 +100,6 @@ one island while it has a free slot; 142 apps spill onto more than one island.
     - `applyMove`
     - `arcsOf`
     - `cutAt`
-    - `districtGroup`
     - `districtLabels`
     - `districtName`
     - `districtRegion`
@@ -143,7 +123,6 @@ one island while it has a free slot; 142 apps spill onto more than one island.
     - `labelSpotScore`
     - `LAKE`
     - `layoutWorld`
-    - `misplacedResidents`
     - `moveTargets`
     - `newPlotAt`
     - `NO_GROUP`

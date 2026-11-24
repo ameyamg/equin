@@ -12,7 +12,6 @@ export {
   PlotWritesResultSchema,
   claimPlots,
   movePlot,
-  resetPlots,
   restorePlot,
 } from "./internal/endpoints";
 export type { PlotWrite, PlotWritesResult } from "./internal/endpoints";

@@ -5,7 +5,6 @@ import {
   claimPlots,
   geometryOf,
   movePlot,
-  resetPlots,
   restorePlot,
   type PlotWrite,
   type PlotWritesResult,
@@ -140,12 +139,3 @@ export const handleRestorePlot = implement(restorePlot, ({ body }) =>
 export const handleMovePlot = implement(movePlot, ({ body }) =>
   applyWrites(body.world, body.writes, true),
 );
-
-/** Drops every plot of a world, in one statement (one transaction). */
-export const handleResetPlots = implement(resetPlots, async ({ body }) => {
-  const gone = await db
-    .delete(_islePlots)
-    .where(eq(_islePlots.world, body.world))
-    .returning({ plotId: _islePlots.plotId });
-  return { dropped: gone.length };
-});

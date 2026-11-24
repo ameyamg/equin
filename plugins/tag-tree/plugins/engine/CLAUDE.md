@@ -120,7 +120,6 @@
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-category`
-    - `apps/isle/world-view`
     - `apps/places/fixtures`
     - `apps/places/places-core`
     - `apps/places/places-map`

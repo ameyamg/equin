@@ -20,7 +20,7 @@ import {
 import { arcsOf, cutAt, roadCurve, type Pt } from "./geometry";
 import { vnoise } from "./noise";
 import {
-  districtGroup,
+  districtRegion,
   type Placement,
   type Plot,
   type Resident,
@@ -527,7 +527,7 @@ export function layoutWorld(
       (p) => !p.retired && (!p.wild || occupantOf.has(p.id)),
     );
   const active = M.slots.filter(
-    (s) => districtGroup(placement, s.id) !== null && shownOf(s).length,
+    (s) => districtRegion(placement, s.id) !== null && shownOf(s).length,
   );
   const activeSet = new Set(active);
   const isl = new Set([0]);
