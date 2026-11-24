@@ -43,10 +43,10 @@ export const islePlots = liveCollection("isle.plots", {
  * redrawn at other sizes the stored plots no longer fit them: a new generation
  * lays every town out afresh (the old plots stay under their old scope).
  * 6: districts became one category group each (the `group` / `region` columns).
- * 7: back to kin-leaning placement (one district per five apps, an app leaning
- *    to its region's district) — the one-group districts spread too thin.
+ * 7: back to kin-leaning placement — the one-group districts spread too thin.
+ * 9: one dense district per region (top-level category), home island first.
  */
-const LAYOUT_GENERATION = 7;
+const LAYOUT_GENERATION = 9;
 
 /** The `world` scope of a seed: one set of plots per seed and layout generation. */
 export const worldOfSeed = (seed: number): string =>

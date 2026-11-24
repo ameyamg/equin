@@ -1,12 +1,13 @@
 // Placement: where each app's building stands. Append-only — an app keeps its
 // plot, and a plot outlives its app as an empty lot, which a later app may take
-// if its building fits there. A new app goes where it suits best: its setting
-// first, then the district of its kin (its region: the root of its category),
-// then the fuller districts — on a lot
-// that fits it or a new plot made for it. There is about one district per five
-// apps: below that a district opens readily, above it only when nothing else
-// fits; a new island only when the revealed sites are all taken. Apps placed
-// together take turns: the landmarks (a building that wants the coast, a
+// if its building fits there. Grouped by category: a district holds the apps of
+// ONE region (the root of their category tag; its kind is its first plot's), so
+// a new app goes into a district of its own region — the spot its setting likes
+// best, then the emptier district — on a lot that fits it or a new plot made
+// for it. A region opens a district when it has none, and another only when no
+// spot of its own fits; a new island only when the revealed sites are all
+// taken (the home island holds five districts). Apps placed together go one
+// region at a time, the biggest first; inside one, they take turns: the landmarks (a building that wants the coast, a
 // hill…) first, the one with the fewest spots that suit it first, and each
 // leaves alone the settings rarer than its own that a later one wants.
 //
@@ -34,8 +35,18 @@ import {
   type BestSpot,
   type PlotBoxes,
   type PlotCtx,
+  type PlotSpot,
 } from "./sites";
 import type { Island, Slot, WorldModel } from "./world-model";
+
+/** How many of a region's apps still to come a new district is tried with (a district holds about this many at most). */
+const KIN_TRIAL = 12;
+
+/** What one app still to come in this call is worth when choosing where its region's district opens: more than any setting. */
+const KIN_HELD = 12;
+
+/** A plot as a trial placement lays it: its spot and boxes. */
+type TrialPlot = PlotSpot & PlotBoxes;
 
 /** The top of a plot's keep (door and sign), door-relative. */
 const KEEP_TOP = -100;
@@ -48,7 +59,7 @@ export interface Resident {
   readonly id: string;
   /** Its category: the leaf tag id it is filed under ({@link NO_GROUP}: none). */
   readonly group: string;
-  /** Its category's root tag id ({@link NO_GROUP}: none): its kin, the district it leans to. */
+  /** Its category's root tag id ({@link NO_GROUP}: none): a district holds one region's apps. */
   readonly region: string;
   readonly footprint: Footprint;
   /** The spots its building likes, first choice first. */
@@ -212,7 +223,6 @@ export function placeResidents(
     plots[k] = list.map((p) => ({ ...p }));
   const occupant: Record<string, string> = { ...placement.occupant };
   const state = (): Placement => ({ plots, occupant });
-  const byId = new Map(residents.map((a) => [a.id, a]));
   // a retired plot is no land: neither a lot to take nor in anyone's way
   const plotsOf = (s: Slot): MutPlot[] =>
     (plots[s.id] ?? []).filter((p) => !p.retired);
@@ -279,14 +289,27 @@ export function placeResidents(
   const pending = residents.filter((a) => !occupant[a.id]);
   // (alone, a landmark has no one to choose before: its spots need no counting)
   const ranked = pending.filter((a) => landmark(a).length).length > 1;
+  // one region at a time, the biggest first — so each opens its district
+  // against the land as it will stay, and a big region gets a big district;
+  // inside a region, the landmarks first
+  const regionSize = new Map<string, number>();
+  const regionAt = new Map<string, number>();
+  for (const a of pending) {
+    regionSize.set(a.region, (regionSize.get(a.region) ?? 0) + 1);
+    if (!regionAt.has(a.region)) regionAt.set(a.region, regionAt.size);
+  }
   const todo = pending
     .map((a, i) => ({
       a,
       i,
+      size: regionSize.get(a.region)!,
+      at: regionAt.get(a.region)!,
       n: !landmark(a).length ? Infinity : ranked ? spots(a) : 0,
     }))
     .sort(
       (p, q) =>
+        q.size - p.size ||
+        p.at - q.at ||
         (p.n === q.n ? 0 : p.n < q.n ? -1 : 1) ||
         (p.n === Infinity ? 0 : area(q.a) - area(p.a)) ||
         p.i - q.i,
@@ -313,15 +336,52 @@ export function placeResidents(
   // per call: the biggest building a district had no room for
   const full = new Map<string, { gw: number; uw: number; uh: number }>();
 
+  /**
+   * How many of `kin` (one region's apps, by their index in `todo`) a new
+   * district at `s` would hold: each placed in turn on a trial copy of its
+   * island's plots, as the real ones will be.
+   */
+  const kinHeld = (s: Slot, kin: readonly number[]): number => {
+    const Sx = sitesOf(M, s.island);
+    const site = Sx.sites.get(s.id)!;
+    const trial = plotCtx<TrialPlot>([...ctxOf(s.island).plots]);
+    let n = 0;
+    for (const j of kin) {
+      const b = todo[j]!;
+      const sp = bestSpot(
+        M,
+        Sx,
+        site,
+        trial,
+        (side) => boxesFor(b, side),
+        b.setting,
+        spareAfter[j],
+      );
+      if (!sp) continue;
+      n++;
+      trial.plots.push({ ...sp.spot, ...boxesFor(b, sp.side) });
+      trial.laneIdx.addLine(
+        sp.spot.ring ? sp.spot.lane.slice(0, -1) : sp.spot.lane,
+        6,
+      );
+    }
+    return n;
+  };
+
   for (const [k, a] of todo.entries()) {
     const spare = spareAfter[k]!;
-    const kin = new Set<string>();
+    // its region's apps still to come (itself first): a district it opens
+    // goes where the most of them fit
+    const kin = todo
+      .flatMap((b, j) => (j >= k && b.region === a.region ? [j] : []))
+      .slice(0, KIN_TRIAL);
     const count = new Map<string, number>();
-    for (const [pid, id] of taken) {
+    for (const [pid] of taken) {
       const q = plotById(state(), pid)!;
       count.set(q.slot, (count.get(q.slot) ?? 0) + 1);
-      if (byId.get(id)?.region === a.region) kin.add(q.slot);
     }
+    // its category's districts: the only open ones it may join
+    const own = (s: Slot) => districtRegion(state(), s.id) === a.region;
     const revealed = new Set([0]);
     for (const s of M.slots) if (opened(s)) revealed.add(s.island.id);
     const next = M.islands.find(
@@ -329,38 +389,10 @@ export function placeResidents(
         I.slots.some((s) => !opened(s)) &&
         (revealed.has(I.id) || (I.parent !== null && revealed.has(I.parent))),
     );
-    const openCount = M.slots.filter(opened).length;
-    const target = Math.ceil(residents.length / 5);
-    const openCost = openCount < target ? 1 : 30;
+    // a category with no district opens one; one with a district opens
+    // another only when no spot of its own fits
+    const openCost = M.slots.some((s) => opened(s) && own(s)) ? 30 : 0;
     const pref = a.setting;
-    const opts: { s: Slot; base: number }[] = [];
-    M.slots.forEach((s, si) => {
-      const open = opened(s);
-      if (!open && !revealed.has(s.island.id) && s.island !== next) return;
-      const newIsl = !revealed.has(s.island.id) ? 8 : 0;
-      if (
-        !open &&
-        newIsl === 0 &&
-        M.slots.some(
-          (t) =>
-            t.island.id < s.island.id &&
-            revealed.has(t.island.id) &&
-            !opened(t),
-        )
-      )
-        return;
-      const n = count.get(s.id) ?? 0;
-      opts.push({
-        s,
-        base:
-          (kin.has(s.id) ? 2 : 0) +
-          (open ? (n < 5 ? (5 - n) * 0.4 : -(n - 5) * 1.3) : 0) -
-          (open ? 0 : openCost) -
-          newIsl -
-          (open ? 0 : (si - M.slots.indexOf(s.island.slots[0]!)) * 0.4),
-      });
-    });
-    opts.sort((p, q) => q.base - p.base);
     let best:
       | { sc: number; p: MutPlot; B: PlotBoxes }
       | { sc: number; s: Slot; sp: BestSpot }
@@ -369,35 +401,83 @@ export function placeResidents(
     const gw = B0.g[2] - B0.g[0];
     const uw = B0.u[2] - B0.u[0];
     const uh = B0.u[3] - B0.u[1];
-    for (const { s, base } of opts) {
-      if (best && base + 11 <= best.sc) break;
-      for (const p of plotsOf(s)) {
-        if (taken.has(p.id)) continue;
-        // a lot is preferred to a new plot — but not one given back to nature
-        const sc = base + tagScore(pref, p.tags, spare) + (p.wild ? 0 : 1);
-        if (best && sc <= best.sc) continue;
-        const B = canTake(p, a);
-        if (B) best = { sc, p, B };
+    // first the revealed islands' districts (home fills first); when nothing
+    // of them takes it — its region's last free slot there too cramped for
+    // it — a fresh island
+    for (const spill of [false, true]) {
+      const opts: { s: Slot; base: number }[] = [];
+      M.slots.forEach((s, si) => {
+        const open = opened(s);
+        if (open && !own(s)) return;
+        if (
+          !open &&
+          !revealed.has(s.island.id) &&
+          (spill
+            ? s.island.parent === null || !revealed.has(s.island.parent)
+            : s.island !== next)
+        )
+          return;
+        const newIsl = !revealed.has(s.island.id) ? 8 : 0;
+        if (
+          !spill &&
+          !open &&
+          newIsl === 0 &&
+          M.slots.some(
+            (t) =>
+              t.island.id < s.island.id &&
+              revealed.has(t.island.id) &&
+              !opened(t),
+          )
+        )
+          return;
+        const n = count.get(s.id) ?? 0;
+        opts.push({
+          s,
+          base:
+            (open ? (n < 5 ? (5 - n) * 0.4 : -(n - 5) * 1.3) : 0) -
+            (open ? 0 : openCost) -
+            newIsl -
+            (open ? 0 : (si - M.slots.indexOf(s.island.slots[0]!)) * 0.4) +
+            // its region's first district: where the most of it fits (an
+            // overflow district only opens when nothing of its own fits, so its
+            // setting decides)
+            (!open && openCost === 0 && kin.length > 1
+              ? kinHeld(s, kin) * KIN_HELD
+              : 0),
+        });
+      });
+      opts.sort((p, q) => q.base - p.base);
+      for (const { s, base } of opts) {
+        if (best && base + 11 <= best.sc) break;
+        for (const p of plotsOf(s)) {
+          if (taken.has(p.id)) continue;
+          // a lot is preferred to a new plot — but not one given back to nature
+          const sc = base + tagScore(pref, p.tags, spare) + (p.wild ? 0 : 1);
+          if (best && sc <= best.sc) continue;
+          const B = canTake(p, a);
+          if (B) best = { sc, p, B };
+        }
+        const Sx = sitesOf(M, s.island);
+        const site = Sx.sites.get(s.id)!;
+        const ctx = ctxOf(s.island);
+        const F = full.get(s.id);
+        if (F && gw >= F.gw && uw >= F.uw && uh >= F.uh) continue;
+        if (best && base + 10 <= best.sc) continue;
+        const sp = bestSpot(
+          M,
+          Sx,
+          site,
+          ctx,
+          (side) => boxesFor(a, side),
+          pref,
+          spare,
+        );
+        if (!sp && (!F || (gw <= F.gw && uw <= F.uw && uh <= F.uh)))
+          full.set(s.id, { gw, uw, uh });
+        if (sp && (!best || base + sp.score > best.sc))
+          best = { sc: base + sp.score, s, sp };
       }
-      const Sx = sitesOf(M, s.island);
-      const site = Sx.sites.get(s.id)!;
-      const ctx = ctxOf(s.island);
-      const F = full.get(s.id);
-      if (F && gw >= F.gw && uw >= F.uw && uh >= F.uh) continue;
-      if (best && base + 10 <= best.sc) continue;
-      const sp = bestSpot(
-        M,
-        Sx,
-        site,
-        ctx,
-        (side) => boxesFor(a, side),
-        pref,
-        spare,
-      );
-      if (!sp && (!F || (gw <= F.gw && uw <= F.uw && uh <= F.uh)))
-        full.set(s.id, { gw, uw, uh });
-      if (sp && (!best || base + sp.score > best.sc))
-        best = { sc: base + sp.score, s, sp };
+      if (best) break;
     }
     if (!best) continue; // the archipelago is full
     let p: MutPlot;

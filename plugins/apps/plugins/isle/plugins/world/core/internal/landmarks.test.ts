@@ -274,3 +274,54 @@ describe("isle landmarks", () => {
     }, 60_000);
   }
 });
+
+/** The default category tree's regions (root tags) of the town's apps. */
+const REGION: Readonly<Record<string, string>> = {
+  forge: "harness",
+  "inventors-cabin": "harness",
+  conservatory: "publishing",
+  "kit-website": "publishing",
+  "launch-tower": "publishing",
+  library: "office",
+  lighthouse: "office",
+  "archive-barn": "office",
+  "post-office": "office",
+  "clock-tower": "office",
+  observatory: "office",
+  "music-hall": "leisure",
+  bandstand: "leisure",
+  schoolhouse: "leisure",
+  "kit-demo": "leisure",
+  "kit-home": "system",
+  "kit-desktop": "system",
+  windmill: "system",
+  "kit-debug": "system",
+};
+
+describe("isle districts by category", () => {
+  const town = TOWN.map((r) => {
+    const region = REGION[r.id];
+    if (!region) throw new Error(`no region for ${r.id}`);
+    return { ...r, group: region, region };
+  });
+  for (const seed of [1, 2, 3, 4, 5]) {
+    test(`seed ${seed}: a district holds one category, a category one district, all on the home island`, () => {
+      const P = placeResidents(new WorldModel(seed), EMPTY_PLACEMENT, town);
+      const slotOf = (id: string) => {
+        const p = plotById(P, P.occupant[id]);
+        if (!p) throw new Error(`${id} has no plot`);
+        return p.slot;
+      };
+      const regionsOf = new Map<string, Set<string>>();
+      for (const r of town) {
+        const s = slotOf(r.id);
+        regionsOf.set(s, (regionsOf.get(s) ?? new Set()).add(r.region));
+      }
+      for (const [s, rs] of regionsOf) expect([s, rs.size]).toEqual([s, 1]);
+      expect(slotOf("bandstand")).toBe(slotOf("music-hall"));
+      // the town's five categories: one district each, all on the home island
+      expect(regionsOf.size).toBe(5);
+      for (const s of regionsOf.keys()) expect(s.split(".")[0]).toBe("0");
+    }, 60_000);
+  }
+});

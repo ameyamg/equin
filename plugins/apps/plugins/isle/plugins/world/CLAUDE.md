@@ -13,12 +13,15 @@ No DOM, no canvas. A port of the prototype `proto-1794374690-9xmb84`'s `islands.
   for an uncategorised app — and its building's DECLARED footprint (`buildings/core`) — placement never
   paints or measures, nor reads the category tree: the caller passes group and region. Build one with
   `residentOf(app, spec)`.
-- **Kin, not one group per district.** A new app goes where it suits best: its setting first, then the
-  district of its kin — its **region** (`districtRegion`: a district's kind is its first plot's region) —
-  then the fuller districts, on a lot it fits or a new plot. About one district per five apps: below that a
-  district opens readily, above it only when nothing else fits; a new island only when the revealed sites
-  are all taken. So a district is a dense neighbourhood of mostly one region, never one per category.
-  A plot keeps the `group` / `region` it was made for (append-only: re-filing never moves a building).
+- **Grouped by category, densely.** A district holds the apps of ONE **region** (the root of their
+  category tag; `districtRegion`: a district's kind is its first plot's region). A new app joins a district
+  of its own region — the spot its setting likes best (`bestSpot` tries every candidate before calling a
+  district full), the emptier district breaking ties — on a lot it fits or a new plot. A region with no
+  district opens one on the slot that holds the most of its apps still to come in this call (each tried in
+  turn on a copy of the island's plots, up to `KIN_TRIAL`), so a big category gets a big district; it opens
+  another only when no spot of its own fits. A new island only when the revealed sites are all taken (home
+  holds five districts — the default tree's five roots). A plot keeps the `group` / `region` it was made
+  for (append-only: re-filing never moves a building).
 - `moveTargets` / `newPlotAt` / `applyMove` — moving a building by hand. `moveTargets` lists the
   existing plots it may go to; the first is always `stay` (its own plot: a drop over its old spot reuses
   it, nothing written), then lots it fits and swaps. `newPlotAt(x, y)` is a drop anywhere else: the
