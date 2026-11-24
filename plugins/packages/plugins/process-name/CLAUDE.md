@@ -51,7 +51,12 @@ its first exec, so a current clone is never re-made.
   (a clone of the checkout's Bun, made with `cp -c`), trusting it only while the
   stamp is newer than `mise.lock` (else it runs plain `bun`, and that run
   refreshes it). Each refresh also removes the per-checkout verb names an older
-  script made (`equin · <verb> · <checkout>`).
+  script made (`equin · <verb> · <checkout>`). A live `verbs` naming the same
+  Bun version's clones in another data root is kept: the link is the
+  checkout's, and a process under a throwaway root (a test's temp HOME) that
+  re-pointed it took it away when that root was deleted — under a `./equin`
+  already exec'd through it. Re-pointed only when missing, dangling, or on
+  another Bun version.
 
 **Why CLI verbs carry no checkout id.** macOS scans a fresh executable on its
 first exec (syspolicyd: ~1 s, and two full reads of the 88 MB Bun). One name per

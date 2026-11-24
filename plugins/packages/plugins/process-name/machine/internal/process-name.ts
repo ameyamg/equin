@@ -1,6 +1,7 @@
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { waitForFlock } from "@plugins/packages/plugins/flock/core";
 import { constants, type Stats } from "node:fs";
+import { basename } from "node:path";
 import {
   copyFile,
   mkdir,
@@ -189,7 +190,8 @@ export const CHECKOUT_BUN_DIR = "node_modules/.cache/equin-bun";
 /**
  * Record `bin` (the Bun this CLI runs on) as the checkout's Bun, for `./equin`
  * to name the next CLI process from, and point the checkout's `verbs` at
- * `verbsDir` — the machine-wide clones of that Bun, one per verb. A shell
+ * `verbsDir` — the machine-wide clones of that Bun, one per verb (a live link
+ * to the same version's clones in another data root is kept: `linksVerbsOf`). A shell
  * cannot find the real Bun behind mise's shim without spawning mise, nor the
  * data root, so the CLI — which knows both — leaves them there. Trusted by the
  * script only while `stamp` is newer than `mise.lock`, so a toolchain change is
@@ -213,13 +215,45 @@ export async function refreshCheckoutBun(
   if (named.kind !== "cloned") return named;
   if (!trusted) await writeFile(joinAppPath(dir, "stamp"), "");
   await mkdir(verbsDir, { recursive: true });
-  await pointSymlink(dir, "verbs", verbsDir);
+  if (!(await linksVerbsOf(dir, verbsDir)))
+    await pointSymlink(dir, "verbs", verbsDir);
   // An older script's per-checkout names. A `<name>.<pid>` is a script's clone
   // in flight to its name: not touched.
   for (const entry of await readdir(dir))
     if (entry.startsWith(`${PRODUCT_NAME} · `) && !/\.\d+$/.test(entry))
       await rm(joinAppPath(dir, entry), { force: true });
   return named;
+}
+
+/**
+ * `dir/verbs` already links a live directory of the same Bun version's clones
+ * as `verbsDir` (`bun-<version>`), in whichever data root: kept. The link is
+ * the checkout's, shared by every process run in it, and a process under
+ * another data root re-pointing it hands it to that root: a test running
+ * `install.sh --dry-run` against the repo under a temp HOME pointed main's
+ * slot at its throwaway root, which its cleanup then deleted under the next
+ * `./equin build` already exec'd through it (ENOENT in `cloneNamedBinary`'s
+ * realpath, 2026-11-23 and -24). Re-pointed only when the link is missing,
+ * dangling, or names another Bun version.
+ */
+async function linksVerbsOf(dir: AppPath, verbsDir: AppPath): Promise<boolean> {
+  const link = joinAppPath(dir, "verbs");
+  let target: string;
+  try {
+    target = await readlink(link);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "EINVAL") return false;
+    throw err;
+  }
+  if (target === verbsDir) return true;
+  if (basename(target) !== basename(verbsDir)) return false;
+  try {
+    return (await stat(link)).isDirectory();
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
 }
 
 /** `dir/name` points at `target`, swapped in with one rename when it does not. */

@@ -13,12 +13,13 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  rmSync,
   statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   CHECKOUT_BUN_DIR,
   checkoutBun,
@@ -113,11 +114,14 @@ describe("cloneNamedBinary", () => {
   });
 });
 
-/** The machine-wide verbs dir, in its own temp root. */
-function verbsDir(): AppPath {
-  return asAppPath(
-    join(mkdtempSync(join(tmpdir(), "process-name-verbs-")), "bun-1.0.0"),
+/** The machine-wide verbs dir of Bun `version`, in its own temp root. */
+function verbsDir(version = "1.0.0"): AppPath {
+  const dir = join(
+    mkdtempSync(join(tmpdir(), "process-name-verbs-")),
+    `bun-${version}`,
   );
+  mkdirSync(dir);
+  return asAppPath(dir);
 }
 
 describe("checkout bun", () => {
@@ -162,10 +166,19 @@ describe("checkout bun", () => {
     const before = lstatSync(link).ino;
     await refreshCheckoutBun(root, bun, first);
     expect(lstatSync(link).ino).toBe(before);
+    // The same version in another data root (a test's temp HOME): kept, so a
+    // throwaway root never takes the checkout's link with it when deleted.
+    await refreshCheckoutBun(root, bun, verbsDir());
+    expect(readlinkSync(link)).toBe(first);
     // Another Bun version: repointed.
-    const second = verbsDir();
+    const second = verbsDir("2.0.0");
     await refreshCheckoutBun(root, bun, second);
     expect(readlinkSync(link)).toBe(second);
+    // Dangling (its root deleted): repointed.
+    rmSync(dirname(second), { recursive: true });
+    const third = verbsDir("2.0.0");
+    await refreshCheckoutBun(root, bun, third);
+    expect(readlinkSync(link)).toBe(third);
   });
 
   test("an older build's hardlinked bun becomes a clone; per-checkout verb names go", async () => {
