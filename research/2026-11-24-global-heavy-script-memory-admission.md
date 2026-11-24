@@ -235,6 +235,33 @@ episodes (5,079 s, 23 % of all pressure seconds). Options:
 Recommendation: A now; revisit B only if first runs still show in pressure
 episodes after two weeks of the ledger.
 
+**Resolved 2026-11-24 (Performance supervisor): act, but booking only — never
+pause or stop. Checked, and nothing is left to build: that booking already
+exists.**
+
+- Every op's measured tree is charged against the window, admitted or not
+  (`opsBytes − Σ holders`): in full since 2026-11-13 18:12 (85a76a5410);
+  from 11-12 19:52 (086913a7b7) only beyond `held slots × 3.6 GB`; before
+  that, not at all. So an
+  unadmitted script past one unit already takes the matching room, and new
+  work queues behind it. Seen on 11-18 21:33–22:26 (the 18.5 GB `worker.ts`
+  run): the op log's wait reason reads "memory window 4 of 9 slots … ops
+  charged 17.5 GB (3 slots held, 12.3 GB measured; holders: 1 check 0.1 GB)"
+  — the 12 GB is the script, charged, and the window was down from 9 to 4.
+- The 23 % figure above is mostly older than that charge. Of the 25
+  first-run episodes, 22 (4,124 s) fall before 11-13 18:00, when unadmitted
+  bytes were charged partly (the last 22 h) or not at all; 3 (955 s, in 11
+  days) fall after it, with the script already booked.
+- Its limit: the charge lands after the script has grown, up to 30 s later
+  (one sampler reading), and evicts nothing. A first run has no recorded peak,
+  so nothing can be booked ahead of its growth.
+- What booking cannot do is stop a script from growing onto a host that is
+  already full: in those 3 episodes the rest of the machine held 40 GB. Only
+  option B or C would, and both were ruled out.
+
+Parked with these numbers. Re-measure from the script-peak ledger if first
+runs still show in pressure episodes.
+
 ## Open decision 2 — test VMs
 
 A VM is started by hand (`tart run`, 12 GB macOS or 8 GB Linux guests); no
