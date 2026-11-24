@@ -13,7 +13,7 @@ export {
 } from "./internal/stories";
 export type { Story as DemoStory, DemoAgent } from "./internal/stories";
 export {
-  DEMO_PAGES,
+  demoPages,
   DEMO_PAGE_IDS,
   PRACTICE_TIMER_PAGE_WORK,
 } from "./internal/pages";

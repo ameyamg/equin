@@ -1,11 +1,18 @@
 import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
-import { blockIdKind } from "@plugins/page/plugins/editor/core";
+import { blockIdKind, formatTagLine } from "@plugins/page/plugins/editor/core";
 import { pageLinkToken } from "@plugins/page/plugins/inline-page-link/core";
 import { dateToken } from "@plugins/page/plugins/inline-date/core";
 import type {
   PageFixtureNode,
   PageTreeFixture,
 } from "@plugins/apps/plugins/pages/plugins/fixtures/core";
+import {
+  PLACE_TYPE,
+  type PlaceFamily,
+  type PlaceKind,
+} from "@plugins/page/plugins/place/core";
+import { GOOGLE_PLACE_PROVIDER_ID } from "@plugins/page/plugins/place/plugins/google/core";
+import { DEMO_PLACES } from "./places";
 import { DEMO_FEATURED_PROTOTYPE } from "./prototypes";
 import { promptOf, storyByKey } from "./stories";
 
@@ -49,8 +56,66 @@ const md = (...lines: string[]): PageFixtureNode => ({
 
 const link = (pageId: string) => `<page id="${pageId}"/>`;
 
-/** The root pages, in sidebar order. */
-export const DEMO_PAGES: PageTreeFixture = [
+/**
+ * How Google files a place the Block tour shows: what the Google provider
+ * would map its types onto (`page/place/google`'s Table A and kind table), and
+ * the category it names. The demo never asks Google, so the card is written
+ * whole, as a resolved one is stored.
+ */
+interface PlaceLook {
+  category: string;
+  kind: PlaceKind;
+  family: PlaceFamily;
+}
+
+/**
+ * A `/place` block for one of Demo's saved Lisbon places, read from Demo's
+ * Places map (`./places`) by its Google id — so the card is the place Places
+ * holds, and Places' page overlay recognises it as saved. Stamped `fetched` at
+ * `fetchedAt` (the seed's clock): a fresh snapshot is drawn as is, never
+ * re-resolved — the demo's worker has no place provider to ask. The stamp is
+ * block data, which the snapshot's clock shift does not move, so a snapshot
+ * older than the place TTL (30 days) draws its cards with a "Couldn't refresh"
+ * mark; any change to the seed's inputs takes a new one.
+ */
+function savedPlaceTag(
+  googlePlaceId: string,
+  look: PlaceLook,
+  fetchedAt: Date,
+): string {
+  const saved = DEMO_PLACES.places.find(
+    (p) => p.place.kind === "google" && p.place.googlePlaceId === googlePlaceId,
+  );
+  if (saved === undefined || saved.place.kind !== "google") {
+    throw new Error(
+      `Block tour: no saved Google place ${googlePlaceId} in Demo's Places map`,
+    );
+  }
+  const { name, address, lat, lng } = saved.place;
+  return formatTagLine(
+    PLACE_TYPE,
+    {
+      name,
+      address,
+      category: look.category,
+      kind: look.kind,
+      family: look.family,
+      maps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${googlePlaceId}`,
+      lat: String(lat),
+      lng: String(lng),
+      provider: GOOGLE_PLACE_PROVIDER_ID,
+      "place-id": googlePlaceId,
+      fetched: fetchedAt.toISOString(),
+    },
+    true,
+  );
+}
+
+/**
+ * The root pages, in sidebar order. `now` is the seed's clock: the Block
+ * tour's place cards are stamped fetched then (`savedPlaceTag`).
+ */
+export const demoPages = (now: Date): PageTreeFixture => [
   {
     id: DEMO_PAGE_IDS.welcome,
     type: "page",
@@ -172,6 +237,27 @@ export const DEMO_PAGES: PageTreeFixture = [
         "| Equation | `$$` |",
         "$$e^{i\\pi} + 1 = 0",
         "---",
+        "Places, from Demo's Lisbon trip, and a map of every place on this page:",
+        savedPlaceTag(
+          "ChIJNTZ10A0zGQ0ROwhyCh2mkwg",
+          { category: "Museum", kind: "museum", family: "culture" },
+          now,
+        ),
+        savedPlaceTag(
+          "ChIJW3H9LkXLHg0RZZZttMb27_8",
+          { category: "Bakery", kind: "bakery", family: "food" },
+          now,
+        ),
+        savedPlaceTag(
+          "ChIJm8MOtHc0GQ0R1zPkmUFwwLQ",
+          {
+            category: "Historical landmark",
+            kind: "attraction",
+            family: "entertainment",
+          },
+          now,
+        ),
+        "<map/>",
         "A prototype from the Prototypes app, live inside the page:",
         `<prototype id="${DEMO_FEATURED_PROTOTYPE}"/>`,
         "Another page, shown inside this one:",

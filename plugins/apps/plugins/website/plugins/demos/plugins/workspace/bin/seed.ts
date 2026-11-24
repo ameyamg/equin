@@ -52,7 +52,7 @@ import {
   PRACTICE_TIMER_PAGE_WORK,
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
-  DEMO_PAGES,
+  demoPages,
   DEMO_PLACES,
   demoSongs,
   DEMO_STORIES,
@@ -137,9 +137,9 @@ export async function seed(
 ): Promise<void> {
   const { prototypes } = data;
   assertStoryCategoriesRegistered();
-  await writePageTree(DEMO_PAGES);
-  await settleJobQueue();
   const now = wallNow("human-time");
+  await writePageTree(demoPages(new Date(now)));
+  await settleJobQueue();
   const ago = (ms: number) => new Date(now - ms);
   const live = DEMO_STORIES.filter((s) => s.status !== "done");
   const ranks = Rank.nBetween(null, null, live.length);

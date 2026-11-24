@@ -43,7 +43,9 @@ gardens, which Google files under "Entertainment and Recreation", are `nature`
     - `integrations/google-maps/places-api.placeDetails`
   - Register: `definePlaceProvider('google')`
 - Cross-plugin:
-  - Imported by: `apps/places/page-overlay`
+  - Imported by:
+    - `apps/places/page-overlay`
+    - `apps/website/demos/workspace/story`
 - Core:
   - Exports (values): `GOOGLE_PLACE_PROVIDER_ID`
 

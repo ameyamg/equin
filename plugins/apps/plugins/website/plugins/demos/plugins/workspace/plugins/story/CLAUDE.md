@@ -6,18 +6,20 @@
 
 - Description: The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/namespace` ×5
     - `apps/prototypes/files` ×4
     - `conversations/before-after` ×3
+    - `page/place` ×3
     - `conversations/agents` ×2
+    - `page/editor` ×2
     - `conversations/model-provider.ConversationModelSchema`
     - `conversations.CONVERSATIONS_CATEGORY_ID`
     - `infra/mcp.agentToolName`
     - `packages/string-hash.hashHex`
-    - `page/editor.blockIdKind`
     - `page/inline-date.dateToken`
     - `page/inline-page-link.pageLinkToken`
+    - `page/place/google.GOOGLE_PLACE_PROVIDER_ID`
     - `page/prompt/link.PAGES_CATEGORY_ID`
     - `ui/icons/emoji.EmojiSchema`
     - `wish.WISHES_CATEGORY_ID`
@@ -33,7 +35,6 @@
     - `DEMO_AGENTS`
     - `DEMO_BEFORE_AFTERS`
     - `DEMO_PAGE_IDS`
-    - `DEMO_PAGES`
     - `DEMO_PLACES`
     - `DEMO_PRACTICE_TIMER_BEFORE_AFTER`
     - `DEMO_RECIPES_BEFORE_AFTER`
@@ -43,6 +44,7 @@
     - `demoAgentLaunchId`
     - `demoAttemptId`
     - `demoConversationId`
+    - `demoPages`
     - `demoPromptOf`
     - `demoPrototypeFixture`
     - `demoPushSha`

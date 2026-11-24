@@ -13257,18 +13257,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Plugins:
                 - **`story`** — The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
                   - Core:
-                    - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
+                    - Uses: 29 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
                       - `infra/namespace` ×5
                       - `apps/prototypes/files` ×4
                       - `conversations/before-after` ×3
+                      - `page/place` ×3
                       - `conversations/agents` ×2
+                      - `page/editor` ×2
                       - `conversations/model-provider.ConversationModelSchema`
                       - `conversations.CONVERSATIONS_CATEGORY_ID`
                       - `infra/mcp.agentToolName`
                       - `packages/string-hash.hashHex`
-                      - `page/editor.blockIdKind`
                       - `page/inline-date.dateToken`
                       - `page/inline-page-link.pageLinkToken`
+                      - `page/place/google.GOOGLE_PLACE_PROVIDER_ID`
                       - `page/prompt/link.PAGES_CATEGORY_ID`
                       - `ui/icons/emoji.EmojiSchema`
                       - `wish.WISHES_CATEGORY_ID`
@@ -13284,7 +13286,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `DEMO_AGENTS`
                       - `DEMO_BEFORE_AFTERS`
                       - `DEMO_PAGE_IDS`
-                      - `DEMO_PAGES`
                       - `DEMO_PLACES`
                       - `DEMO_PRACTICE_TIMER_BEFORE_AFTER`
                       - `DEMO_RECIPES_BEFORE_AFTER`
@@ -13294,6 +13295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `demoAgentLaunchId`
                       - `demoAttemptId`
                       - `demoConversationId`
+                      - `demoPages`
                       - `demoPromptOf`
                       - `demoPrototypeFixture`
                       - `demoPushSha`
@@ -48681,6 +48683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/places/page-overlay`
           - `apps/places/places-map`
+          - `apps/website/demos/workspace/story`
           - `page/place/google`
           - `page/place/map-layer`
       - Exemptions:
@@ -48702,7 +48705,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps/places-api.placeDetails`
             - Register: `definePlaceProvider('google')`
           - Cross-plugin:
-            - Imported by: `apps/places/page-overlay`
+            - Imported by:
+              - `apps/places/page-overlay`
+              - `apps/website/demos/workspace/story`
           - Core:
             - Exports (values): `GOOGLE_PLACE_PROVIDER_ID`
         - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a teardrop in the place card's kind colour and glyph, with the name beside it as a haloed map label, that lifts on hover and grows from its tip when active.
