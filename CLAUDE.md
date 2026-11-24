@@ -1,341 +1,215 @@
 # equin
 
-equin is a self-evolving app for the agentic era. The goal is to have an app which can replace all others, customized for each individual user, at the boundary of an application and an operating system. The vision has a few steps:
+equin is a platform where agents build and maintain large apps on their own.
 
-- At first, the app itself is an Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
+- **Plugins all the way down.** Every feature is a self-contained plugin that any app can reuse.
+- **Self-evolving.** The app is developed from inside itself: the agent manager runs many sessions in parallel, and background agents fix, push and update it.
+- **Vision: a shared plugin marketplace.** Each user's OS is their own composition of marketplace plugins. Today's apps (agent manager, pages, mail, places, music, …) are just one person's set among many.
+- **Real users.** People already fork it, and each change ships to an app someone uses every day.
 
-  The app is a nested todo list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:<port>` (`<port>` is this account's gateway port — see Ports). The UI allows seamless switching between namespaces to inspect agent work.
+How the vision unfolds: [`docs/vision.md`](docs/vision.md).
 
-- The app evolves into a Notion-like WeChat: a single unified surface where agents compose user-tailored apps on the fly from plugin building blocks. Notion gives users composable blocks (databases, pages, views) to fit their workflow; equin does the same at the *app* level, with agents doing the composing. The agent manager becomes one such composition among many, sharing the same plugins and primitives.
+## Hard rules
 
-- A plugin marketplace where users contribute and share building blocks. Each user gets a unique composition assembled by agents from marketplace plugins — not a one-size-fits-all tool, but a personal OS shaped to their workflow.
+- **NEVER `./equin push`** unless instructed — the user reviews first. "push", "publish", "ship" all mean `./equin push`.
+  - A Dependencies (or legacy Toolchain) upgrade task counts as instruction; its text says when (`plugins/infra/plugins/deps/plugins/updates`).
+- **NEVER `git commit` / `git push`** yourself.
+- **NEVER `--from-main`** without explicit approval in this conversation, for this push. On main with no worktree branch: stop and ask.
+- **Rebase, never merge**: `git rebase origin/main`. Never `git merge origin/main`, never `git reset` a branch onto main. (Exception: `./equin upstream merge`.)
+- **NEVER run `drizzle-kit generate` or the migration runner** — `./equin build` does it.
+- **NEVER `./equin start` / `stop`** (the gateway launchd service) unless the user asks.
+- **Never build or redeploy main** — it auto-builds when main advances. Don't report it as a caveat.
+- **Review diffs against the merge-base**: `git diff $(git merge-base HEAD main)`.
+- **STOP on unexpected failures** — surface and ask; never route around (e.g. curl after a failed MCP call).
 
-## Agent Workflow
+## Workflow
 
-Agents work in isolated, auto-created git worktrees:
+1. Design first for most features: the project `plan` skill (never `EnterPlanMode`).
+2. Edit in your worktree.
+3. `./equin build` — migrations, frontend, server, gateway registration.
+   - Run it with `run_in_background: true` and **end your turn**; it re-invokes you on exit (~10 min).
+   - **Subagents** must not end their turn: background it, then `./equin await <op>` in the foreground (exit 0 ok, 1 failed, 70 still running → call again).
+4. Your build is served at `http://<worktree>.localhost:<port>` (`./equin url` prints the real port). Always write the `http://` so it's clickable.
+5. `./equin push -m "…"` once the user approves.
+   - `push` first runs the tests your change affects and refuses a change that newly breaks one.
+   - A push fixing a report: `--fixes-report <report-id>` (repeatable).
 
-1. Solve the request.
-2. Deploy with `./equin build` (frontend + server + gateway registration).
+Without write access to the remote, `push` lands on local `main`. Main's auto-build watches it ([`git/remotes`](plugins/infra/plugins/git/plugins/remotes/CLAUDE.md)).
 
-   **Use `run_in_background: true` and end your turn** — build/push take ~10 min (median), over the 600 s foreground cap. The background task re-invokes you on exit; nothing to wait for or watch. Every backgrounded `./equin` call is rewritten to the 2 h timeout ceiling (the 30 min default would kill it). Guards enforce all three.
+`./equin check [<id>]` (`--list` for ids) and `./equin test` run in the foreground. If one exits 70, call the `./equin await <op>` it prints.
 
-   **A SUBAGENT must not end its turn there** — it is never re-invoked (its completion notification lands in the parent's queue). Background the op, then call `./equin await <op>` in the FOREGROUND: it blocks until the verdict and prints it (exit 0 ok, 1 failed, 70 still running — call again). A stop hook refuses a subagent turn that walks away from its running op.
-
-   **`./equin check` / `./equin test` run in the FOREGROUND** (usually seconds to a few minutes). Near the cap they hand themselves off: the op keeps running detached and the call exits 70 with `./equin await <op>` as the next step — call it, never end your turn waiting (`plugins/framework/plugins/cli/plugins/foreground-handoff`).
-
-3. The app is served at `http://<worktree>.localhost:<port>` (always write `http://` so it's clickable; `./equin url` prints main's address with the real port).
-
-4. Once reviewed, `./equin push -m "…"` merges to main (pulls main, merges, pushes).
-
-RULES:
-
-- NEVER `./equin push` unless instructed — the user reviews first. (A Dependencies-category upgrade task — or legacy Toolchain-category — counts as instruction; its text says when it may push. See `plugins/infra/plugins/deps/plugins/updates`.)
-- NEVER `git commit` yourself (branch conflicts). Always `./equin push -m "commit message"`.
-- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`; never `git reset` a branch onto `main` (deletes the commits in between). Exception: `./equin upstream merge` (see Upstream).
-- NEVER run `drizzle-kit generate` or the migration runner manually — `./equin build` does it.
-- **Review diffs against the merge-base**: `git diff $(git merge-base HEAD main)`, not `git diff main` (which includes later main commits).
-
-### MCP Tools
-
-Agents have access to MCP tools provided by the equin server. Key tools:
-
-- `query_db` — Read-only SQL query against the worktree's PostgreSQL database. For **debugging and inspection only** — mutations are rejected at the DB level. Defaults to the agent's own worktree DB; pass `database` to query another worktree or `"equin"` for main.
-- `add_task` — **When the user asks to "add a task", always use this MCP tool.** Never use the TaskCreate tool (that is for the agent's own internal task tracking during implementation, not for adding tasks to the equin task system).
-- `read_page` / `edit_page` / `write_agent_note` — pages, shaped like `Read` / `Edit` / `Write`. **These write to the SHARED instance (normally main), not your worktree** — the opposite default from `query_db`, because pages are prod documents you edit collaboratively with the user, not something to test on. **You may only write INSIDE an agent-authored block: an `<agent-inline>` card, or an `<agent-page>`.** `edit_page` takes any block id, but every block its diff creates, rewrites, moves or deletes must sit in one (a tagless `<agent-inline>` in your replacement text mints a card; a tagless `<agent-page title="…">…</agent-page>` mints a sub-page whose whole content is yours, written afterwards by its own id); a page's own prose is read-only — you annotate it, you do not edit it. Pages can carry instructions from their author: `read_page` hands you the ones covering what you read, a write is refused until you have received them, and global ones arrive when the conversation starts.
+Before a task, read the matching skill: `plan`, `api-design`, `create-app`, `debug`, `perfs-investigation`, `theme`, `css`.
 
 ## Architecture
 
-Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system.
+Every feature is a **plugin**; the core is thin plumbing joined by slots. Read before designing one:
 
-Always READ the plugin architecture doc to understand design, caveats, and rules:
-
-- Frontend: [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md)
-- Backend: [`plugins/framework/plugins/server-core/CLAUDE.md`](plugins/framework/plugins/server-core/CLAUDE.md)
-
-Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
-
-**Deployment model — one instance per user.** equin runs as exactly one instance per user: the marketplace shares *plugins*, not runtime, and multi-tenancy is a non-goal. This is a recorded architectural decision — read it before touching auth, the gateway, DB forks, secrets, or the live-state subscription path: [`research/2026-07-02-global-adr-single-instance-per-user.md`](research/2026-07-02-global-adr-single-instance-per-user.md).
-
-### Collection-consumer separation
-
-When a plugin collects sub-plugin contributions (e.g. facets, checks, collected dirs), consumers must use only the **generic collection API** — never import or name individual contributors. The collection plugin owns the registry and generic interface; each contributor implements the internal details. Adding or removing a contributor updates all consumers automatically with zero code changes. If a consumer needs to reference a specific contributor, the abstraction is leaking — redesign the generic API instead.
-
-This pattern applies to *genuinely open* sets — ones where future plugins must add entries without editing your code. For a **closed list** both runtimes need (types, constants, a dropdown's options, a validation allowlist), prefer plain data in `core/` rather than introducing a slot and the web↔server codegen bridge it implies for a set you can enumerate today.
-
-### Plugin boundary rules
-
-Enforced by `./equin check boundary-rules` (which folder may import which — the `folders` table in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`) and `./equin check plugin-boundaries` (import grammar, barrels, cycles; rules R1–R13). Details: [`boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md), [`plugin-boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md).
-
-- **Known folders only** (vocabulary in `plugins/framework/plugins/plugin-id/core`): barrel folders `web`, `server`, `machine`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`, `deps`; leaf folders `check`, `lint`, `facet`, `bin`, `scripts`, `exhibits`, `vite`, `prewarm`, `python`, `rust`, `exempt`, `guard`, `login-services`; plus `plugins/` for children. No loose root `.ts`, no unclaimed file under `plugins/`. A new folder kind = a vocabulary entry + its table row (tsc enforces the row).
-- **One import table, inside and across plugins.** Each folder's row lists the barrel folders it may import (`core` → `core`; `web` → `web`, `core`, `shared`; `e2e` → `e2e`, `core`, `data-dirs`). Relative imports in your own plugin obey it too (`core/` → `../server/x` fails). Leaf folders are never import targets. `core/` is the public channel, `shared/` the plugin-private one.
-- **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point — no `api.ts`, no deep paths.
-- **Import grammar.** A specifier ends at a barrel folder (`@plugins/<name>/<runtime>`, `@plugins/<name>/plugins/…/<runtime>`) or at `<runtime>/testing`. Forbidden: cross-plugin `shared/` (R10; your own is imported relatively), paths inside a barrel (`/web/components/`, `/server/internal/`), workspace names (`@equin/plugin-shell`), `../` escapes into another plugin.
-- **Test code** = `*.test.ts(x)`, `__tests__/`, or `<runtime>/testing/` (never under `e2e/`). It follows its folder's row; only test code and `check/` may import it (`e2e/` ships, so it may not). A public barrel publishes no test support: no `*ForTest(s)` names, nothing from a test-support module (R12), no name only tests import (R13). Own tests import by relative path; reusable helpers go in `<runtime>/testing/`.
-- **No cross-plugin re-exports** — import the source barrel directly (`@plugins/tasks/plugins/task-draft-form/web`, not a proxy via `@plugins/tasks/web`). Enforced transitively and by name (through an internal file, or import-then-export); no umbrella→descendant exception.
-- **Barrel purity.** `index.ts` holds only imports, re-exports of own files, type aliases, and one `export default { … } satisfies PluginDefinition`. No `const`/`let`, logic, or side effects.
-- **Registry exclusivity.** Default-export plugin imports live only in the generated registries (`{web,server,central}.generated.ts` under `plugins/framework/plugins/{web-sdk,server-core,central-core}/core/`) and the `bin`/`App.tsx` roots (the `exclude` list in `boundary-config.ts`). Never register by hand: create `<runtime>/index.ts` and `./equin build` (`plugins-registry-in-sync` catches drift).
-- **Exemptions are declared by the exempted plugin**, in its `plugins/<p>/exempt/index.ts` (`rule`, plugin-relative `paths`, `kind: "sanctioned" | "debt"` + `reason`, `task` for debt). Never hand-roll an allowlist (`ALLOWED_FILES`, `ignores`, `.startsWith("plugins/…")`) in a rule — `exempt/no-path-allowlist` rejects it; exempt a whole kind of file with `outOfScope`. List: `./equin exempt list [--rule <id>] [--plugin <path>] [--debt]`. Details: [`exempt/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/exempt/CLAUDE.md).
-- **No cycles.** The cross-plugin import graph is a DAG; type-only imports count.
-- **Search before writing a helper or fixture.** The plugin's own `CLAUDE.md` has an autogen reference (exports, uses, importers, contributions, test helpers); `docs/plugins-details.md` has it for every plugin, incl. reverse indexes (who imports me, contributes to my slots, calls my endpoints). A list over 20 values is summarized as per-group counts; the plugin's `REFERENCE.md` lists it in full. Kept in sync by `plugins-doc-in-sync`.
-
-### Folder Structure
+- Frontend: [`web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md)
+- Backend: [`server-core/CLAUDE.md`](plugins/framework/plugins/server-core/CLAUDE.md)
 
 ```
-├── plugins/          # All features, each as a self-contained plugin
-│   ├── framework/    # Framework primitives (web-sdk: slots, contributions)
-│   └── {name}/
-│       ├── web/      # Frontend code
-│       ├── server/   # Backend code
-│       ├── central/  # Central-runtime code (shared across worktrees)
-│       ├── core/     # Public API — types/utils importable cross-plugin and from server/web
-│       ├── shared/   # Private DRY — shared between web/server within this plugin only, never imported cross-plugin
-│       ├── cli/, e2e/, provision/, data-dirs/, deps/   # other barrel folders (CLI verbs, Playwright scripts, install steps, data-dir declarations, on-demand dependency declarations)
-│       ├── lint/     # ESLint rules contributed by this plugin (optional)
-│       ├── check/    # Custom Check[] enforced by ./equin check (optional)
-│       ├── exhibits/ # Real components shown standalone — the `plugin-meta/exhibits` catalog (optional)
-│       ├── bin/, scripts/, facet/, vite/, prewarm/   # other leaf folders — discovered or run by path, never imported
-│       └── plugins/  # child plugins
-├── web/              # Frontend bootstrap (SPA shell, plugin registry)
-├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
-├── cli/              # Agent CLI (TypeScript, Commander.js)
-├── sidequests/       # Independent side projects (see Sidequests section below)
-└── research/         # Research docs and plans
+plugins/{name}/
+  web/ server/ central/   # runtimes
+  core/                   # public API, importable cross-plugin
+  shared/                 # private, web↔server inside this plugin only
+  machine/ cli/ e2e/ provision/ data-dirs/ deps/  # other barrel folders
+  lint/ check/ exhibits/ bin/ scripts/ facet/ vite/ prewarm/ python/ rust/ exempt/ guard/ login-services/  # leaf folders, never imported
+  plugins/                # child plugins
+gateway/     # Go namespace proxy (gateway/CLAUDE.md)
+sidequests/  # unrelated side projects
+research/    # research docs and plans
 ```
 
-### Workspaces
+### Design rules
 
-The project uses bun workspaces (defined in root `package.json`). Run `bun install` from the repo root. Shared dependencies (react, icons, types) live in the root `package.json`. Plugin-specific dependencies live in each plugin's `package.json`.
+- **Collection–consumer separation.** A consumer of an open set (facets, checks, …) uses only the collection's generic API — never names a contributor. For a **closed list** (a dropdown's options, an allowlist), plain data in `core/` beats a slot.
+- **Group related plugins under an umbrella** (`plugins/<umbrella>/plugins/<child>/`). Before adding to `infra/` or `primitives/`, ask whether a more specific umbrella fits (it usually does). Never a new top-level child there.
+- **Search before writing** a type, hook, helper, fixture or slot: start with the plugin's `CLAUDE.md` autogen reference.
 
-### Key Plugins
+### Boundary rules
 
-- `shell` — App layout (sidebar, toolbar, main area, status bar). Defines the standard slots other plugins contribute to.
+Enforced by `./equin check boundary-rules` and `plugin-boundaries` — the errors explain. The model:
 
-## CLI
+- One barrel per runtime: `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry. No deep paths, no `api.ts`.
+- Barrels hold only imports, re-exports, types and one `export default { … } satisfies PluginDefinition`.
+- Which folder may import which: the `folders` table in `boundaries/core/boundary-config.ts`. Applies inside a plugin too.
+- No cross-plugin `shared/`, no re-exports of another plugin, no cycles (type-only imports count).
+- Never register a plugin by hand — create `<runtime>/index.ts` and build.
+- New check: `plugins/<name>/check/index.ts` default-exports `Check | Check[]` (id `<plugin>:<id>`), auto-discovered. Lint rules: `lint/index.ts` ([`lint`](plugins/framework/plugins/tooling/plugins/lint/CLAUDE.md)).
+- Exemptions are declared by the exempted plugin in `exempt/index.ts` — never an allowlist in the rule. `./equin exempt list`.
 
-The CLI is `./equin <verb>`. Its old name is still a shim at the repo root (`LEGACY_IDS.cliShim`) so old muscle memory works — always write `./equin`.
+Details: [`boundaries`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md), [`plugin-boundaries`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md), [`exempt`](plugins/framework/plugins/tooling/plugins/exempt/CLAUDE.md).
 
-### Deploy
+## Coding style
 
-Always deploy after changes: `./equin build`, from the worktree directory (not the main repo root). It regenerates DB migrations from `schema.ts` (applied on server restart), builds frontend and server, restarts the server and registers the worktree with the gateway (`http://<worktree>.localhost:<port>`).
+**Prefer the clean design over the hacky one, even when it's more work.** Ask: what primitive would make this *and* future cases trivial?
 
-> **NEVER run `./equin start` / `stop`** (install / stop the gateway as the machine's launchd service) unless the user explicitly asks. A pushed gateway change needs neither: main's deploy rebuilds and restarts the gateway itself once the change lands (rolling back if the new one does not come up), and the health report's Gateway row says when it is still out of date (`gateway/CLAUDE.md` § "The gateway follows main").
+- **Reuse existing concepts** before adding a type, hook, slot, config key, table or term.
+- **No polling.** Use watchers, `LISTEN/NOTIFY`, WebSocket, `network/live`, `events`/`jobs`. No change signal upstream → a scheduled `defineJob`, documented.
+- **Fail loudly.** Never swallow errors or add fallbacks that mask a broken assumption.
+  - `await p` · `.catch(err => { if (err instanceof X) …; else throw err })` · `void p` (intentional).
+  - Never `.catch(() => {})` or `.catch(console.error)`.
+- **Failure is a type.** Throw, or return a discriminated result — never `null`/`[]`/`0` a caller can mistake for empty success. See the `api-design` skill.
+- **Not-known-yet is a state, not a value.** Render loading — never an empty list or zero that later reverses. Reads return a state (`useLive`, `useConfigResult`). `Button` auto-pends and `DataView` has `loading`, so don't hand-roll pending state.
+- **Live state goes through `network/live`.**
+  - Collection: `liveCollection` + `serveCollection` (bounded: `limit` / `maxLimit`). Value: `liveValue` + `serveValue`.
+  - Read with `useLive`. No request/response reads — endpoints are for writes.
+  - Never copy `defineResource` / `useResource` / `useQuery` as precedent. See [`live/CLAUDE.md`](plugins/network/plugins/live/CLAUDE.md).
+- **Ordering is never a number** on a slot contribution — use `defineRenderSlot` and its reorder layout.
+- **Domain record lists are DataViews** (`plugins/primitives/plugins/data-view`), never a `.map()` of rows. Another list of the same records (trash, archive) is a `DataViewSwitcher` source.
 
-### Check
+### Fix the cause, not the symptom
 
-```bash
-./equin check                       # every check this checkout owns (tree + deploy scope)
-./equin check --list                # list checks
-./equin check migrations-in-sync    # one check (id as positional arg)
-```
+Ask why it was possible at all. A targeted fix at one call site leaves the rest exposed.
 
-Checks run first in `push`, and in `build` after migration/doc generation (unless `--skip-checks`). Host-scoped checks (shared machine state, e.g. the `~/.equin` data root) are not in any checkout's pass: main's hourly `checks.host-audit` runs them and files a `host-check` report; `./equin check --scope host` runs them on demand. Built-ins live in, and are registered in, `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`. Plugins contribute their own (discovered at runtime, no registry edits):
+**Beware fixes that hide the issue.** The symptom goes away, the cause stays, and the next occurrence is harder to trace:
 
-- `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rules. Each rule is enabled as `error` **repo-wide** (`**/*.{ts,tsx}`), not just in the contributing subtree; the `eslint` check runs them.
-- `plugins/<name>/check/index.ts` — default-export `Check | Check[]` (same interface as built-ins), id `<plugin-name>:<check-id>`.
+- **A deadline on a slow op**: find out why it is slow (the `perfs-investigation` skill).
+- **A retry on a failing op**: find out why it fails. A retry turns a deterministic bug into a flaky one.
+- **A cache over a slow path**: find out why the path is slow first. A cache is fine as a complement once the path is sound, never as the thing that hides the slowness.
+- **Raising a limit, cap or timeout because it got hit**: find out why the work outgrew the bound.
+- These are examples, not an exhaustive list. The rule: any fix that makes a symptom disappear without explaining its cause is suspect.
+- A deadline or retry is still right as a *bound* around something you don't control (a network peer, a third-party API), never as the fix for your own code.
 
-Notable built-ins: `migrations-in-sync` (schema changes without a committed migration — fix with `./equin build`), `type-check` (one repo TS program → tsc diagnostics + type-aware ESLint, plugin lint rules included).
+Take the **highest rung** that can express the constraint, even if it churns call sites:
 
-### Push
+1. **Inexpressible** — rethink the API until the wrong thing has no spelling: drop the parameter, derive the value, take the data instead of a callback, delete the concept.
+2. **Type error** — tsc rejects it.
+3. **Check / lint error** — cross-file invariants.
+4. **Loud runtime failure** — an assert at the boundary.
+5. **Documentation** — the weakest. Never when a rung above fits.
 
-`./equin push -m "message"`:
+The rungs rank enforcement strength, not the space of fixes. First invent the fix that makes the whole class of mistake impossible, then take its strongest form.
 
-1. Run the tests the change affects (before the push mutex; refuses a change that newly breaks one — `push/plugins/test-gate`)
-2. Run checks, fail if dirty
-3. Push the branch
-4. Pull main (`--ff-only`)
-5. Merge the branch into main (from the main worktree)
-6. Push main
-7. Main auto-builds on the `refs/heads/main` advance — never build/redeploy main yourself, and don't report it as a caveat.
+**Don't memorize gotchas.** Hit a footgun? Surface it or `add_task` it, to be fixed on this ladder — no memory file.
 
-A push that fixes a report names it: `--fixes-report <report-id>` (repeatable; one of main's reports). Main records the fix when it lands, marks it Fixed once it runs it, and Regressed if it fires again from code that has it (`plugins/reports/plugins/engine` § the fix ledger).
+## Tools & environment
 
-> **CRITICAL — NEVER push or commit on your own initiative.** No raw `git commit` / `git push`. "push", "publish", "ship" all mean `./equin push`.
+- **Search:** never unbounded `find` (has crashed macOS) — `rg --files -g`, `fd`, or `find -maxdepth`. `rg` is recursive; never pass `-r` (it means `--replace`).
+- **Scratch files** go in `$EQUIN_SCRATCH`, never a fixed `/tmp/<name>`.
+- **Scripts:** `./equin run <file>.ts`, never bare `bun <file>.ts`.
+- **Subagents:** pass `model: "opus"` for real work; `model: "sonnet"` only for lookups and mechanical refactors.
+- **On breakage**, rebase first (`git fetch origin main && git rebase origin/main`) — it may be fixed.
+- **Ports:** never write a port in code — `pagePort` / `servedGatewayPort` / `gatewayPort` (`infra/launcher/gateway-port`). Main is `http://equin.localhost:<port>`.
+- **Logs:** `~/.equin/worktrees/<wt>/logs/<channel>.jsonl`; emit from the browser with `clientLog` ([`debug/logs`](plugins/debug/plugins/logs/CLAUDE.md)).
 
-Steps 3, 4, 6 (the only network git) run only when this checkout can write to its remote (probed once, cached in `.git/config`; `plugins/infra/plugins/git/plugins/remotes`). Without write access the work lands on local `main`, which main's auto-build watches.
+### MCP tools
 
-### Upstream
-
-For a checkout cloned from someone else's repo, that repo is **upstream** (read-only). A daily main-only job records a report when it has new commits (no task; the report's Investigate button mints one). An update is an ordinary task: `./equin upstream merge` in a worktree, resolve, build, review; the user lands it with `push`. See `plugins/upstream`. This checkout owns the canonical repo, so it has no upstream.
-
-### `--from-main` (dangerous)
-
-`./equin push --from-main -m "…"` commits and pushes straight from main. **Never pass it without explicit user approval in the current conversation, for this push** — not from memory, a prior session, or a CLAUDE.md rule. On main with no worktree branch for the changes: stop and ask.
-
-## Ports
-
-- The gateway listens on **this account's port** for all browser traffic, routed by subdomain (`<name>.localhost:<port>`). The port is 8700 by default — the first free one of 8700–8709, chosen once by `./equin start` and printed by `./equin url`; installs from before 2026-11 also answer on 9000 for a while (navigations there are redirected to the new port). Code never spells a port: a page reads its own (`pagePort` / `usePagePort`), a backend the gateway that started it (`servedGatewayPort`), the CLI and scripts the port file (`gatewayPort`) — `plugins/infra/plugins/launcher/plugins/gateway-port`. The main namespace (agent manager app, served from `main`) is always at `equin.localhost:<port>` — its public host label (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace`); the namespace itself keeps its internal name (`MAIN_WORKTREE_NAME`), and its old address keeps answering as an alias.
-- Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.equin/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
-
-## Driving the app (screenshots & E2E)
-
-`./equin build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:<port>` — in an agent session the name comes out as the main namespace and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
-
-**Main is read-only for agent sessions**: on main, a write from the agent browser or an e2e run is refused with a 403 (telemetry excepted) — to exercise a write, drive your own build.
-
-**The public site (`https://equin.ai`) is not a test target**: reproduce a visitor report on your own build (`./equin build --composition website`) first; open equin.ai only for what only the deployed site shows (its server and CDN answers, the deployed files, real-network timings) or to confirm a deploy. Its intake drops automated pages, but its analytics still counts them. Two e2e scripts fake a real visitor on purpose (`navigator.webdriver` false: `site-reports/e2e/demo-error-reported.ts`, `slow-load/e2e/slow-load-reported.ts`) — pointed at equin.ai they file a real visitor report, so run them there only with a reason (verifying the live intake).
-
-**Show the user a visible UI change with `register_before_after`** (MCP, [`conversations/before-after`](plugins/conversations/plugins/before-after/CLAUDE.md)) — after `./equin build`, one call per changed screen or state: `{ route, title }` captures the route on main and on your build, or pass `{ beforePath, afterPath, title }` for two PNGs you made (`screenshot.ts --click …`). Cite the returned `ba-…` id in your final message.
-
-**Explore interactively with the `browser_*` MCP tools** ([`infra/mcp/browser`](plugins/infra/plugins/mcp/plugins/browser/CLAUDE.md)) — a headless tab that stays open across calls: routes (`/agents/…`) open your own build (so they need one), an absolute URL (any website, or main) works before you have built; script what must be repeatable with the headless scripts below. Not Claude-in-Chrome: that is one shared Chrome on the user's screen with their real accounts — only for what needs it (their sign-ins, a state they have open, a demo they watch).
-
-**A script failed mid-flow? Continue from where it stopped**: call `browser_attach`, rerun the script with the `--attach <ticket>` it returns — it drives a tab of your `browser_*` session instead of its own browser and leaves it there, pass or fail — then inspect that tab with `browser_*`.
-
-**Snapshot / verify behavior** (click, confirm state) with [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts) — prints the resolved deploy and the matched button's state, writes `-before.png` / `-after.png`:
-
-```bash
-./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out "$EQUIN_SCRATCH/shot"
-./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-  --path /agents/c/<id> --click "Artifacts" --out "$EQUIN_SCRATCH/artifacts"
-```
-
-**One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./equin run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--width <px>] [--theme <app-id>|chrome]`. With `browser_*`: `/debug/exhibit-stage/<group>/<name>;width=<px>?embed=1` is the component alone (viewport = width); `/debug/exhibit/<group>/<name>` shows every width.
-
-Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme dark|light`, `--composition <id>` (a composition this checkout built), `--url http://<namespace>.localhost:<port>` (escape hatch for a deploy you didn't build — skips the is-this-my-build check).
-
-**Compare a prototype against the real app** it mocks (`<meta name="mocks">`: a route, the whole app, or `exhibit:<id>`) with [`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts): captures both frames at one size and 100% zoom, writes a red-on-grey diff and side-by-side sheet, logs the differing-pixel ratio, a per-cell heatmap and a colour report (dominant colours, region means, luminance profiles):
-
-```bash
-./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
-  --name <proto-id> [--width 1280] [--options <name>=<value>,…] [--out "$EQUIN_SCRATCH/compare"] [--fail-above 5]
-```
-
-`--width` must be a canvas size preset (omit for the mock's declared viewport); variants are captured at their defaults unless `--options` picks one.
-
-**Tab memory leaks** with [`leak-test.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/leak-test.ts): repeats a flow, forces GC, diffs three heap snapshots. Reports what grew per constructor, detached DOM, listeners and retainer paths, with PASS/FAIL against per-iteration thresholds and the `.heapsnapshot` files. `--from <out>` re-analyses a run. A domain flow calls `runLeakTest(page, { step })` (harness CLAUDE.md):
-
-```bash
-./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/leak-test.ts \
-  --path /agents --clicks "<A>|<B>" [--iterations 10] [--attach <ticket>] --no-record --out "$EQUIN_SCRATCH/leak"
-```
-
-**Repeatable flows**: a standalone script at `plugins/<path>/e2e/<name>.ts` in the plugin it verifies — never `*.test.ts` (the test runner would pick it up). It declares what it is — `export const e2e = { kind, target, writes, run } satisfies E2eScript` (`e2e-harness` CLAUDE.md § Every script declares what it is; `e2e-harness:scripts-declared`). Manual only for now. Running an `e2e/` script is an op (host grant, "E2E in progress" banner); any other `./equin run` script is recorded as a `script` op (op log, Ops views) but takes no grant and no banner. `--headed` to watch.
-
-- Shared helpers (argv, target, `withBrowser`, `report()`): `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — extend it, don't hand-roll. Domain flows go in the owning plugin's `e2e/index.ts`.
-- `e2e` imports only other plugins' `core` and `e2e` barrels — it drives the deployed app, not the code under test.
-
-## Debugging
-
-Browser/server logs persist to `~/.equin/worktrees/<wt>/logs/<channel>.jsonl` (one JSON `{t,stream,line}` per line). Emit from the browser via `clientLog(channel, line)`. Read them by `tail`/`cat` on the file. See [`plugins/debug/plugins/logs/CLAUDE.md`](plugins/debug/plugins/logs/CLAUDE.md).
-
-## Sidequests
-
-Independent projects that live in `sidequests/`, not directly related to equin. Each has its own `CLAUDE.md`.
-
-- [`sidequests/ui-mastery/`](sidequests/ui-mastery/CLAUDE.md) — Research and tooling to make agents produce professional UI. **Read before any UI polish work.** Feature agents build functionality; polish agents apply UI Mastery knowledge separately.
-- [`sidequests/monitors/`](sidequests/monitors/CLAUDE.md) — Host-level launchd monitors that watch the machine from outside the app, for failures the app's own observability cannot survive (FD leaks before a crash; worktree checkouts deleted under a live conversation). None are auto-installed.
-
-## Instructions
-
-### Agent Workflow Rules
-
-- Most features need a design phase first: use the project `plan` SKILL (it puts the plan doc in the right place). Do NOT use `EnterPlanMode`.
-- New features are plugins in `plugins/` — see [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md).
-- Read the matching SKILL first: `create-app` (new top-level app), `debug` (before debugging — logs, profiling, crashes, DB, queues), `theme` (tokens, tweakcn, per-app config, typography/radius/z-index), `css` (layout mental model — containers share space, leaves truncate — and the layout-primitive index).
-- **When the user asks for a new app, always start with a new prototype** (see [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md)) — implement the app only once the prototype is reviewed.
-- Before writing or editing a prototype, or implementing one in the app (the default is pixel-perfect), read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.equin/apps/prototypes/<name>/`, shared by every worktree and live at `http://equin.localhost:<port>` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
-- Always edit files in your worktree, not the main branch.
-- **No unbounded `find`** — it has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'`; `find` only with `-maxdepth` / `-prune`.
-- **`rg` is already recursive — never pass `-r`** (it means `--replace`, and the `rg-replace` guard blocks it).
-- **Scratch files go in `$EQUIN_SCRATCH`** (your session's own dir), or a `mktemp` name — never a fixed `/tmp/<name>`, which every session shares (a push once landed another task's commit message from `/tmp/msg.txt`). The `shared-tmp` guard refuses such writes. A commit message needs no file: `-m "$(cat <<'EOF' … EOF)"`.
-- **Run scripts with `./equin run <file>.ts`, never bare `bun <file>.ts`** — bare `bun` resolves dependencies by walking UP, so a worktree without `node_modules` runs against main's (or a mid-install npm state). `./equin run` installs this worktree's lock first. The `bun-script` guard blocks the bare form (machine-launched scripts importing no npm package stay bare). A one-off script in `$EQUIN_SCRATCH` runs the same way (`./equin run "$EQUIN_SCRATCH/x.ts"`), against this checkout's dependencies and `@plugins/…` aliases.
-- **STOP on unexpected failures; never improvise around them.** Surface it and ask — don't route around (e.g. curl after a failed MCP call). A loud failure is debuggable; a workaround on a broken assumption is not.
-- **Subagents: Opus for the work, Sonnet only for lookups.** Debugging, planning, design, implementation and synthesis run on Opus (`model: "opus"`). Pass `model: "sonnet"` only for lookup and exploration (locate code, read and report) and large mechanical refactors (the same edit applied across many files). Review: your judgment — weigh what a missed bug would cost.
-- **On breakage, rebase to HEAD first** (`git fetch origin main && git rebase origin/main`) — it may already be fixed.
-- **Don't memorize gotchas — report them so they get fixed structurally.** On a footgun (silent-`undefined` API, "you must also update X" coupling, boot-crash-if-misplaced, build trap), do NOT write a memory file; surface it to the user or `add_task` it, to be removed at the highest rung of the fix ladder (Coding Style). Durable how-it-works knowledge goes in `CLAUDE.md` / `docs/`, not personal memory.
-- **When the user explicitly says "Exit"**: call exactly one MCP tool — `exit_clean` (all smooth; the conversation closes) or `flag_raise({ reason })` (something needs the user's attention).
-
-### Quotable choices: `<go>`
-
-Answer normally, and wrap in `<go>…</go>` each part of your answer the user could pick as their reply — an option, a next step, a follow-up. It renders tinted as one unit, `[text | ▶]`: ▶ sends it back, clicking the text puts it in the prompt to edit (a checklist block has ✎ / ▶ on its right edge).
-
-```
-I've done the change. Should I <go>implement it</go>? Or <go>file a task</go>?
-
-Possible follow-ups:
-
-<go>
-- [ ] Xxx
-- [ ] Yyy
-</go>
-```
-
-- One line is inline, wherever it is written; a multi-line `<go>` is a block.
-- In a block, `- [ ]` lines become a checklist and only the **picked lines** are sent; any other text in the block is for the reader. `- [x]` pre-picks the ones you recommend.
-- **Items with columns → a table inside `<go>`**, each row's first cell starting `[ ]` / `[x]` (`| [x] **Themes** | problem | proposal |`). The table is the choice — never follow a table with a checklist repeating its rows. A picked row comes back as `- [x] <first cell>`.
-- **One choice per item — never cluster.** `- [ ] File the 3 follow-ups` is wrong: list each follow-up on its own `- [ ]` line.
-- **A `<go>` in a USER message is the part of your answer the user picked** (possibly reworded) — do it, don't answer it as a question. A checklist comes back as just the picked `- [x]` lines; anything you listed that is missing was declined. Text around it is the user's own addition and wins over it.
-- **…unless it's a quote.** Inside a question or remark ("why <go>X</go>?"), a `<go>` just points at your text — answer the remark, don't do X. Infer from context.
-
-Details: [`plugins/active-data/plugins/go/CLAUDE.md`](plugins/active-data/plugins/go/CLAUDE.md).
+- `add_task` — whenever the user says "add a task" (never `TaskCreate`).
+- `query_db` — read-only SQL, your worktree DB by default (`database: "equin"` for main).
+- `read_page` / `edit_page` / `write_agent_note` — write to the **shared** instance (main). Only inside agent-authored blocks (`<agent-inline>`, `<agent-page>`); a page's own prose is read-only.
+- When the user says **"Exit"**: `exit_clean`, or `flag_raise({ reason })` if something needs them.
 
 ### Testing
 
-**`./equin test` is the ONLY way to run tests** — paths only, no flags, no setup (installs dependencies when stale). Never bare `bun test` / `vitest`. Optional and manual; a run is an op (host CPU grant, "Test in progress" banner).
+`./equin test [paths]` is the only way. It takes paths only, no flags. Never bare `bun test` / `vitest`.
 
-```bash
-./equin test plugins/network/plugins/live/plugins/optimistic-mutation   # one plugin
-./equin test                                                  # everything
+- `*.test.ts(x)` beside its source = pure logic; `web/__tests__/` = jsdom/React.
+- Own tests import by relative path. Reusable helpers go in `<runtime>/testing/index.ts`.
+- bun:test rejections: `expect(p).rejects.toThrow()` **without** `await`. Under vitest, `await` it.
+- **A test failing on main is never filed as a task.** `./equin test` says per file whether it already fails on main and names main's `test-failing` report. Fix it only if it's in your way, with `--fixes-report <id>` ([`failing-report`](plugins/debug/plugins/tests/plugins/failing-report/CLAUDE.md)).
+- jsdom: pinned clock, `en-US`, `UTC`. Details: [`test-layout`](plugins/framework/plugins/tooling/plugins/test-layout/CLAUDE.md).
+
+### Driving the app
+
+`./equin build` first — scripts target this checkout's build. **Main is read-only** for agents (403 on writes).
+
+**`https://equin.ai` is not a test target.** Reproduce a visitor report on your own build (`./equin build --composition website`). Open equin.ai only for what only the deployed site shows, or to confirm a deploy. Never point `demo-error-reported.ts` / `slow-load-reported.ts` at it without a reason: they file real visitor reports.
+
+| Need | Use |
+|---|---|
+| Show the user a UI change | `register_before_after` MCP after build; cite the `ba-…` id |
+| Explore interactively | `browser_*` MCP tools ([`mcp/browser`](plugins/infra/plugins/mcp/plugins/browser/CLAUDE.md)) |
+| Screenshot / click & verify | `plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path … --click … --out "$EQUIN_SCRATCH/x"` |
+| One component alone | `plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name>` ([`exhibits`](plugins/plugin-meta/plugins/exhibits/CLAUDE.md)) |
+| Prototype vs real app | `plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts` ([`compare`](plugins/apps/plugins/prototypes/plugins/compare/CLAUDE.md)) |
+| Memory leaks | `plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/leak-test.ts` |
+| Resume a failed script | `browser_attach`, rerun with `--attach <ticket>` |
+
+Run scripts with `./equin run <path>`. Never pass your own worktree URL by hand: in an agent session it resolves to main. `--url` is only for a deploy you didn't build.
+
+A repeatable flow is `plugins/<path>/e2e/<name>.ts` (never `*.test.ts`) and declares `export const e2e = { … } satisfies E2eScript`.
+
+Flags, repeatable flows and the shared helpers: [`e2e-harness/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/e2e-harness/CLAUDE.md). Claude-in-Chrome is the user's own browser — only when you need their sign-ins or screen.
+
+### Upstream (forks)
+
+A checkout cloned from someone else's repo has that repo as **upstream** (read-only).
+
+- A daily job on main files a report when upstream has new commits. The report's Investigate button creates the task.
+- An update is an ordinary task: run `./equin upstream merge` in a worktree, resolve conflicts, build, review. The user lands it with `push`.
+- The canonical repo has no upstream. Details: [`upstream`](plugins/upstream/CLAUDE.md).
+
+### UI work
+
+- **New app → prototype first** ([`prototypes/CLAUDE.md`](prototypes/CLAUDE.md)). Implement the app only after the user reviews the prototype. Read that doc before writing or implementing one. Start from `_template/`; don't open other prototypes.
+- **UI polish** → read [`sidequests/ui-mastery/`](sidequests/ui-mastery/CLAUDE.md) first.
+
+## Answer format: `<go>`
+
+Wrap each part of your answer the user could pick as their reply in `<go>…</go>`.
+
+```
+Should I <go>implement it</go>? Or <go>file a task</go>?
+
+<go>
+- [ ] Follow-up A
+- [x] Follow-up B
+</go>
 ```
 
-- Two runners, split by location: `*.test.ts(x)` beside its source = pure logic; `web/__tests__/` = jsdom/React (auto-discovered by root `vitest.config.ts`).
-- Your own plugin's tests import the file under test by relative path, never via the public barrel.
-- Reusable helpers go in `<runtime>/testing/index.ts` (imported as `@plugins/<name>/<runtime>/testing`) — never the public barrel, `__tests__/`, `check/`, or loose. Runtime by user: `web/testing/`, `server/testing/`, or `core/testing/` for both. A testing barrel may re-export a real function another plugin's test checks against. Only test code and `check/` may import it. Search `[test helpers]` / *Test helpers* in `docs/plugins-details.md` before writing a fixture.
-- **Rejections under bun:test: `expect(p).rejects.toThrow(…)` with NO `await`** — bun settles the promise synchronously inside the matcher (it returns `void`). Never a hand-rolled `rejection(p)` helper. Under vitest (`web/__tests__/`) do `await` it. See [`test-layout`](plugins/framework/plugins/tooling/plugins/test-layout/CLAUDE.md).
-- jsdom tests run on a pinned clock (fixed instant, `Date` only, still ticking; pin your own "today" if needed), locale `en-US` and timezone `UTC`.
-- **A test failing on main is never filed as a task.** Under a failing run `./equin test` says, per file, whether it already fails on main — with main's `test-failing` report. Each broken test on main gets exactly one report (main's test runner confirms it; the Broken tests stream tells its supervisor); your run is already recorded as evidence. Fix it only if it is in your way, and land the fix with `--fixes-report <id>` ([`debug/tests/failing-report`](plugins/debug/plugins/tests/plugins/failing-report/CLAUDE.md)).
-- The split, pinning and `test-layout:runner-split` check live in [`plugins/framework/plugins/tooling/plugins/test-layout`](plugins/framework/plugins/tooling/plugins/test-layout).
+`- [x]` pre-picks the items you recommend.
 
-### Coding Style
+- One line = inline chip; multi-line = block. Only picked `- [ ]` lines are sent back.
+- Items with columns → a table in `<go>`, each row's first cell `[ ]` / `[x]`. Never repeat it as a checklist.
+- One choice per item — never "File the 3 follow-ups".
+- A `<go>` in a **user** message is their pick: do it.
+  - It may be reworded: act on its text.
+  - Items you listed that are missing from it were declined.
+  - Text around it is the user's own and wins over it.
+  - Unless it's quoted in a question ("why <go>X</go>?"): then answer the question.
 
-This is the single most important coding principle:
-
-- **Prefer the clean design over the hacky one, even when it's more work.** Ask: "what primitive or abstraction would make this *and* future similar cases trivial?" — then build that, rather than patching the symptom.
-
----
-
-- **Search and reuse existing concepts and APIs, rather than introducing new ones.** Before adding a type, hook, helper, slot, config key, table or term, search for one that already expresses it.
-- **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
-- **Before adding a plugin to `infra/` or `primitives/`, ask whether it belongs under a more specific umbrella** — it usually does. Do not add new top-level plugins to either folder; nest under an existing sub-umbrella instead.
-- **No polling — use push-based mechanisms.** Never use `setInterval`/`setTimeout` loops to check for changes. Use file watchers, DB `LISTEN/NOTIFY`, WebSocket messages, a live resource (`network/live`), or the `events`/`jobs` plugin. If the upstream source has no change signal, use a `defineJob` with a schedule (not an in-process timer) and document why.
-- **Fail loudly — never silence errors.** Visible crashes are good: they surface the structural issue so it gets fixed. Never swallow exceptions, hide error states, or add fallbacks that mask broken assumptions. ESLint enforces `no-floating-promises` and `no-bare-catch`. Correct patterns: `await promise` (preferred), `.catch((err) => { if (err instanceof Expected) handle(err); else throw err; })` (specific handling), or `void promise` (intentional fire-and-forget). Never: bare `promise;`, `.catch(() => {})`, `.catch(console.error)`.
-- **Failure must be a type, not an absorbable value.** A fallible function either throws or returns a discriminated result (`{ok:false,…}` / `{kind:"error",…}`) — never `null`/`[]`/`""`/`0` that a consumer can mistake for a legitimately-empty success (ESLint: `no-absorbed-failure`). See the throw-vs-result decision rule in the `api-design` SKILL and `research/2026-07-08-global-absorbable-failure-guardrail.md`.
-- **Not-known-yet is a state to render, never a value to stand in for.** A surface without its data yet shows a loading state — never what "no data" would look like (empty list, zero count, off switch, "nothing configured"), which is a claim about the user's data that then reverses itself. Enforce it above the render site: the read returns a state, not a stand-in (`useLive` / `useConfigResult`; a per-state model shape is a union, so downstream cannot accept the unknown arm), the primitive owns the pending affordance (`Button` auto-pends, `DataView`'s `loading`), `live-state/no-pending-data-collapse` bans the collapse, and `primitives/loading` renders it. Best of all, remove the window: cheap boot-hydrated inputs everything reads declare `preload: "boot-and-keep"`.
-- **Live state is declared through `network/live`; a DB-backed collection is bounded by construction.**
-  A new collection is `liveCollection` + `serveCollection` (a required default `limit` and
-  `maxLimit`, or lookup-only by id), so every read/recompute is O(window ∪ changed), never
-  O(collection). A new value is `liveValue` + `serveValue`; a `source: "db"` array or record value
-  must state `unbounded: { reason }` (tsc). Read both with `useLive` (one row by id: `useLive(c, { id })`). The old
-  spellings that still exist (`defineResource`, `useResource`, …) remain only as the
-  substrate the unified API compiles to; the
-  `live/no-legacy-resource-spelling` lint rejects them elsewhere — never copy one as precedent.
-  There is no request/response read: endpoints are for writes, and a GET `fetchEndpoint` is a
-  tsc error (`useLiveReader` reads in an event handler); `live/no-endpoint-read` bans TanStack
-  `useQuery` and a write whose answer a render, hook or effect uses, with no debt entry. A
-  new way to read server data is an option `useLive` reads, never a new hook (its Design rule). See
-  `plugins/network/plugins/live/CLAUDE.md`.
-- **Ordering is never a number on a slot contribution.** What is drawn is a `defineRenderSlot` (or `defineOrderedDispatchSlot`) ordered by its reorder config layout — a host drawing its own rows reads it with `useSlotOrder` — and `defineSlot<P>` rejects a numeric `order`/`priority`/`rank`/`weight` at compile time; a number with another meaning is named for it. See `plugins/framework/plugins/web-sdk/CLAUDE.md`.
-- **Collections of domain records are DataViews.** Rendering a homogeneous set of domain records (rows from DB / live-state / config) is a `data-view` surface (`views={["list"]}` minimum — search/filter/sort/groupBy/item-actions come free), never a hand-rolled `.map()` of `<Row>`. Another list of the same records — a trash, an archive, a history, a queue, rows hidden by default — is a `DataViewSwitcher` source in the same view bar, never a new pane behind a button. `Row`+map is only for transient chrome (menus, pickers, tab strips), annotated `// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>` (ESLint: `no-adhoc-row-list`). See `plugins/primitives/plugins/data-view/CLAUDE.md` and `research/2026-07-17-global-data-view-adoption-guardrail.md`.
-- **Fix the structural issue, not the specific instance.** When something breaks, take a step back and ask why it was possible in the first place. A targeted fix in one call site leaves the rest exposed.
-
-  **Beware fixes that hide the issue instead of fixing it** — the symptom goes away, the cause stays, and the next occurrence is harder to trace:
-
-  - **A deadline on a slow op** → find out why it is slow (trace to the origin — `perfs-investigation` skill).
-  - **A retry on a failing op** → find out why it fails; a retry turns a deterministic bug into a flaky one.
-  - **A cache over a slow path** → find out why the path is slow first. A cache is fine as a complement once the path itself is sound — never as the thing that hides why it is slow.
-  - **Raising a limit, cap or timeout because it got hit** → find out why the work grew past the bound.
-  - These are examples, not an exhaustive list — don't restrict yourself to them. The general rule is what matters: any fix that makes a symptom disappear without explaining its cause is suspect.
-
-  A deadline or retry is still right as a *bound* around something you don't control (a network peer, a third-party API) — never as the fix for your own code.
-
-  **Structural fixes are ranked — take the highest rung that can express the constraint, even when it's more work or churns call sites:**
-
-  1. **Inexpressible** — rethink the API, abstraction or mental model until the wrong thing has no spelling: drop the parameter, derive the value, take the data not the callback, delete the concept. Nothing left to enforce.
-  2. **Type error** — `tsc` rejects it: required field, discriminated union, branded type.
-  3. **Check/lint error** — cross-file invariants a type can't see ("these two must agree", "don't use X here").
-  4. **Loud runtime failure** — an assert at the boundary, for what only runtime knows.
-  5. **Documentation** — weakest; reaches only whoever reads it. Never when a rung above fits.
-
-  The rungs rank enforcement strength, not the space of fixes — invent the fix that makes the class of mistake impossible, then use the ladder to take its strongest form.
+Details: [`active-data/go`](plugins/active-data/plugins/go/CLAUDE.md).
 ------------------------------------
 
 @docs/plugins-compact.md
