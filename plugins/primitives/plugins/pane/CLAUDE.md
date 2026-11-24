@@ -162,8 +162,70 @@ address can hold it.
 
 ## Read params
 
-`pane.useParams()` is **own-only** — only this pane's `segment` params. Read an
-ancestor's with `ancestorPane.useParams()`.
+`pane.useParams()` is **own-only** — only this pane's `segment` params. A pane
+reads only its own params: never another column's, whatever stands to its
+left. Everything it is about is in its own address (a satellite carries its
+conversation, a preview its whole path); what the column to its left already
+says is shortened in the URL only — see "Implied params".
+
+## Implied params
+
+Some own params are what the column to the LEFT already says: a satellite is
+usually about the conversation beside it, a preview usually in the folder
+beside it. The slot still holds the whole value — `history.state`, persisted
+tabs and `useParams()` see it complete, so the pane keeps meaning the same
+thing when reordered, shown alone or put beside a second instance of its
+"parent" — and only the URL omits or shortens it:
+
+```ts
+const summaryPane = Pane.define({
+  route: defineRoute({ id: "conv-summary", segment: "summary;conv" }),
+  …,
+  implied: { conv: impliedBy(conversationRoute, sameAs("convId")) },
+});
+// [conv A, summary{conv:A}] → /c/A/summary
+// [conv B, summary{conv:A}] → /c/B/summary;conv=A
+// [summary{conv:A}]         → /summary;conv=A
+
+const previewPane = Pane.define({
+  route: defineRoute({ id: "preview", segment: "preview/:path" }),
+  …,
+  implied: { path: impliedBy(folderRoute, relativeTo("dir", paths)) },
+});
+// [folder ~/p, preview ~/p/README.md] → /browse/~%2Fp/preview/README.md
+// [folder ~/p, preview /etc/hosts]    → …/preview/%2Fetc%2Fhosts (whole)
+```
+
+- **One symmetric rule.** `impliedBy(fromRoute, codec, { optional? })`: the
+  nearest column of `fromRoute`'s pane to the left implies the param. The
+  writer (`buildRouteUrl`) spells it with `codec.shorten(value, fromParams)`
+  (`undefined` omits it), whole when no such column stands to the left; the
+  reader (`parseUrl`) fills it with `codec.expand(written, fromParams)` from
+  the same column. A candidate whose required implied param cannot be
+  determined (no `;conv` and no conversation to its left; a relative path with
+  no folder) does not match, and the parser backtracks.
+- **The writer asserts the round trip**: every URL it writes checks
+  `expand(spelled) === value`, and throws naming the pane, the param and the
+  values when not — a codec cannot write a URL that reads back as something
+  else. So an absent optional param beside a column that would imply one
+  (`sameAs`) has no spelling, and throws.
+- **Codecs** (`@plugins/primitives/plugins/pane/web`, domain-free):
+  - `sameAs(fromParam)` — omitted when equal to the from-column's param, filled
+    from it when absent. It omits, so only on a keyed `;name` or optional
+    `:name?` (`Pane.define` throws on a required positional one).
+  - `relativeTo(fromParam, { within, join, isWhole })` — relative when the
+    value is inside the from-column's (`within(value, base)` → the relative
+    spelling, or `undefined`), whole otherwise. A whole spelling is recognised
+    by itself (`isWhole` — for paths: starts with `/`, is `~`, starts with
+    `~/`), so the URL needs no marker. Never omits.
+  - Any `ImpliedCodec` (`fromParams`, `omits`, `shorten`, `expand`).
+- **Typing**: an implied KEYED param is required in the pane's params
+  (`useParams()`, every open, `paneColumn`) unless `{ optional: true }` — a
+  satellite always says what it is about. tsc checks the codec's from-param
+  against `fromRoute`'s own segment; the registry sync checks it again
+  (skipped while the from pane is not registered yet).
+- `RouteDef.path` / `pane.link()` fill segments without position, so they
+  write implied params whole — longer, still read back the same.
 
 ## Query the route from outside a pane
 
@@ -178,11 +240,10 @@ so sidebar, toolbar and body read the same match.
   pane after the caller's own pane).
   - Use it for opener toggles; "last entry" heuristics are wrong.
   - `useRouteEntries()` only when the question is about the whole chain.
-- `pane.useEnclosing()` — **which instance am I in or under?** (last entry for
-  this pane at or before the caller's own pane). A satellite reading the pane
-  it hangs off (`conversationPane.useEnclosing()?.params.convId`) uses this —
-  `useRouteEntry()` reads the FIRST instance, so beside a second conversation
-  column it named the first one's conversation.
+- A pane never reads another column's params to learn what it is about: that
+  is its own param (an implied one when position usually says it — "Implied
+  params"). Reading the column to its left broke it the moment it was
+  reordered, alone, or beside a second instance of that pane.
 - **Outside every surface** (global chrome: `Core.Root` action bar,
   `Apps.TabBarActions`, their popovers) the route-read hooks **throw** — `null`
   is only the in-surface "not in the route". Use `useTabs()` / `navigate()`
@@ -191,7 +252,6 @@ so sidebar, toolbar and body read the same match.
   - `useOpenPane` (below);
   - `useOpenedHere()`, which returns `null` outside a surface (nothing opened
     there is "here"), so reusable opener widgets work in popovers too.
-  - `useEnclosing()`, likewise `null` outside a surface or any pane instance.
 
 ## Non-URL state: `options` and `hint`
 
@@ -331,9 +391,8 @@ Modes:
     an ancestor**, then it falls through to a right-push (duplicates it on the
     right).
 - `"swap"` — replace the caller's slot (same pane type), truncating children.
-  A target whose route is chained under the caller's pane replaces the
-  caller's column with the caller's pane at its new address plus the target
-  (the panes left of it stay).
+  A destination of several columns (a folder and its preview) is
+  `openPane.columns` (below), not a swap.
 - `"append"` — after the route's LAST pane, replacing it when it's the same
   pane type. The positional open for global chrome (no caller).
 
@@ -348,6 +407,27 @@ whose uuid is on screen.
 `replace: true` writes the open as a history replace rather than a push — a
 redirect: a legacy URL's pane forwarding to its successor, so Back skips the
 address that only ever forwarded.
+
+**Several columns at once** — `openPane.columns(cols, opts)` → `LinkTarget`
+(`openPane.columnsLink(cols, opts)` → the spreadable props), each column a
+`paneColumn(pane, ownParams, { options?, hint? })` typed against the pane's
+OWN params (the list is the route — no ancestor chain is consulted):
+
+```tsx
+openPane.columns(
+  [paneColumn(folderPane, { dir }), paneColumn(previewPane, { path })],
+  { mode: "swap", inPlace: true },
+);
+```
+
+- `mode: "root"` — the route IS the list; `mode: "swap"` — the caller's
+  column and everything right of it become the list (no caller in the route:
+  `root`).
+- `inPlace` / `replace` as for one pane (replace also when the LAST column
+  keeps no history); ⌥-click inserts the list right after the caller; the
+  list already on screen is no change; a list headed by another app's pane is
+  handed to that app — exactly as `to()`.
+- One pure `computeColumnsOpen(…)`, shared by the click and the href.
 
 With no caller pane, `push` / `swap` are **not** `root`: they first look for
 the target in the route —
@@ -629,6 +709,24 @@ the lookup table rebuilds from `Pane.Register` via `useSyncPaneRegistry()`.
   pane store never learns about tabs.
 - `parseUrl` is only the fallback for initial load, shared deep links, and
   entries with no snapshot.
+
+### A saved route is validated, not trusted
+
+`history.state` and a persisted tab hold the route verbatim, as the build that
+wrote it knew it — a later build may have removed the pane, or made a param
+required. `validRestoredRoute(slots)` (`pane/web`) answers `{ ok: true }` or
+`{ ok: false, reason: "unregistered", paneId }` /
+`{ ok: false, reason: "missing-param", paneId, param }`: a slot is valid when
+its pane is registered and it carries every required param of its segment
+(required positional ones and required implied ones).
+
+- `handleLocationChange` restores `history.state.route` only when valid;
+  otherwise it re-parses the URL (an old short URL re-reads through the
+  implied fill).
+- `unregistered` while the deferred tier is still loading
+  (`getDeferredLoadState().deferredComplete` false) keeps the saved route: the
+  pane may still register, and the registry sync re-runs then.
+- Tabs validates its persisted routes with the same function.
 
 ### The address bar is untrusted input
 
@@ -990,10 +1088,13 @@ out of the way: **what it opens takes its column**.
     - `HistoryAdapter`
     - `HistoryMode`
     - `HistoryWrite`
+    - `ImpliedParam`
     - `LocationChange`
     - `MatchEntry`
+    - `OpenColumnsOpts`
     - `OpenPaneFn`
     - `PaneChromeConfig`
+    - `PaneColumn`
     - `PaneExpand`
     - `PaneExpandAction`
     - `PaneExpandTarget`
@@ -1019,8 +1120,10 @@ out of the way: **what it opens takes its column**.
     - `PaneToggleOpts`
     - `ParsedRoute`
     - `PromoteAction`
+    - `RelativeSpelling`
     - `ResolveHook`
     - `ResolveResult`
+    - `RestoredRouteValidity`
     - `RouteState`
     - `SerializedSlot`
     - `SetParamsOptions`
@@ -1035,11 +1138,13 @@ out of the way: **what it opens takes its column**.
     - `currentRoutePrefix`
     - `definePaneHeaderSlot`
     - `defineRoute`
+    - `impliedBy`
     - `morphOriginProps`
     - `Pane`
     - `PaneBasePathContext`
     - `PaneBox`
     - `PaneChrome`
+    - `paneColumn`
     - `PaneEndControls`
     - `PaneHeaderCell`
     - `PaneIconAction`
@@ -1061,11 +1166,13 @@ out of the way: **what it opens takes its column**.
     - `peekBasePath`
     - `peekRoute`
     - `peekRoutePattern`
+    - `relativeTo`
     - `reorderRoute`
     - `resolveFrom`
     - `resolveRow`
     - `restoreRoute`
     - `routeHomeApp`
+    - `sameAs`
     - `setBasePath`
     - `setHistoryAdapter`
     - `setLiveStore`
@@ -1091,6 +1198,7 @@ out of the way: **what it opens takes its column**.
     - `useRouteState`
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
+    - `validRestoredRoute`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

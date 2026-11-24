@@ -2,7 +2,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { pluginConvSidePane } from "../panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -22,14 +22,16 @@ export function PluginLinkChip({
   content: string;
   value: PluginNode;
 }) {
-  const convId = conversationPane.useEnclosing()?.params.convId ?? null;
+  // Drawn in a conversation's transcript, the plugin opens as a narrow side
+  // column beside it; anywhere else, as the full plugin view.
+  const inTranscript = useJsonlConversationId() !== null;
   const openPane = useOpenPane();
   const resolvedId = value.id;
 
   return (
     <LinkChip
       activation={
-        convId
+        inTranscript
           ? openPane.to(
               pluginConvSidePane,
               { pluginId: resolvedId },

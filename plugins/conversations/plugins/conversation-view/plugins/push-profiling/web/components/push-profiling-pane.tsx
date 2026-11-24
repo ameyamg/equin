@@ -1,4 +1,3 @@
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { WorktreeOpGantt } from "@plugins/debug/plugins/profiling/plugins/ops/web";
 import { OP_KINDS, OP_KIND_IDS } from "@plugins/infra/plugins/worktree/core";
@@ -15,11 +14,8 @@ const OP_KIND_LIST = new Intl.ListFormat("en", {
   type: "disjunction",
 }).format(OP_KIND_IDS.map((id) => OP_KINDS[id].label.toLowerCase()));
 
-export function PushProfilingPaneBody() {
-  const convId = conversationPane.useEnclosing()?.params.convId;
-  const conversation = useConversationById(convId ?? null);
-
-  if (convId === undefined) return null;
+export function PushProfilingPaneBody({ convId }: { convId: string }) {
+  const conversation = useConversationById(convId);
 
   return (
     <RowView

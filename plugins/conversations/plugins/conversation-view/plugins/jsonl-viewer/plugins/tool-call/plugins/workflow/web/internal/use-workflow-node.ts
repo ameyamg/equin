@@ -11,9 +11,6 @@ export type WorkflowNodeState =
   | { phase: "loading" }
   // The transcript read failed.
   | { phase: "failed"; error: ResourceError; retry: () => Promise<void> }
-  // No conversation pane above this one: there is no transcript to read
-  // (skipped), a settled answer — never a spinner.
-  | { phase: "no-conversation" }
   // The call's input is not a Workflow input the card reads (the model got
   // the call wrong): no script to trace. `issues` says what did not match.
   | { phase: "unreadable-input"; issues: string }
@@ -31,17 +28,15 @@ export type WorkflowNodeState =
  *
  * Reads only its arguments and global resources, so it serves both the pane
  * body and the pane's `title.text` (which runs outside the app's providers).
- * `convId` is `undefined` when no conversation pane sits above this one.
+ * `convId` is the conversation whose transcript holds the call — the pane's
+ * own `conv` param.
  */
 export function useWorkflowNode(
-  convId: string | undefined,
+  convId: string,
   toolUseId: string,
   nodeId: string,
 ): WorkflowNodeState {
-  const eventsResult = useLive(
-    transcriptToolCall,
-    convId === undefined ? null : { id: convId, toolUseId },
-  );
+  const eventsResult = useLive(transcriptToolCall, { id: convId, toolUseId });
   // The trace hook runs unconditionally, so the script is read here without an
   // early return; a transcript not read yet has no script (and is reported as
   // loading / failed below, never as an empty trace).
@@ -58,7 +53,6 @@ export function useWorkflowNode(
 
   const { graph, status } = useWorkflowTrace(input?.script ?? "", input?.args);
 
-  if (convId === undefined) return { phase: "no-conversation" };
   switch (eventsResult.status) {
     case "loading":
       return { phase: "loading" };
@@ -78,19 +72,18 @@ export function useWorkflowNode(
 }
 
 /**
- * The step's label, for the pane's `title.text`. The conversation id is the
- * ANCESTOR conversation pane's param, which the title hook receives in its
- * chained params.
+ * The step's label, for the pane's `title.text` — from the pane's own params
+ * (`conv` is the conversation the step's call is in).
  */
 export function useWorkflowNodeTitle({
-  convId,
+  conv,
   toolUseId,
   nodeId,
 }: {
-  convId?: string;
+  conv: string;
   toolUseId: string;
   nodeId: string;
 }): string | undefined {
-  const state = useWorkflowNode(convId, toolUseId, nodeId);
+  const state = useWorkflowNode(conv, toolUseId, nodeId);
   return state.phase === "found" ? state.node?.label : undefined;
 }

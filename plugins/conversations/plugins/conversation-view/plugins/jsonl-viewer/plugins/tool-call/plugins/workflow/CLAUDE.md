@@ -11,13 +11,13 @@
   - Contributes:
     - `renderer` "Workflow" → `ParsedToolView`
     - `Pane.Register` "workflow-node"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×6
     - `primitives/css/spacing` ×4
-    - `primitives/pane` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `primitives/collapsible` ×2
     - `primitives/css/badge` ×2
-    - `conversations/conversation-view.conversationPane`
+    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `conversations/model-provider.familyClass`
     - `conversations.ConversationFileLinks`
     - `network/live/live-state.ResourceErrorInline`

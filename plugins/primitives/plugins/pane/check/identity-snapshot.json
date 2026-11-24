@@ -20,7 +20,7 @@
     },
     {
       "paneId": "agent-report",
-      "segment": "agent-report/:by/:key",
+      "segment": "agent-report/:by/:key;conv",
       "appIndex": false,
       "parent": null
     },
@@ -182,31 +182,31 @@
     },
     {
       "paneId": "conv-commits-graph",
-      "segment": "commits",
+      "segment": "commits;conv",
       "appIndex": false,
       "parent": null
     },
     {
       "paneId": "conv-file-tree",
-      "segment": "files;dir",
+      "segment": "files;dir;conv",
       "appIndex": false,
       "parent": null
     },
     {
       "paneId": "conv-push-profiling",
-      "segment": "pp",
+      "segment": "pp;conv",
       "appIndex": false,
       "parent": null
     },
     {
       "paneId": "conv-review",
-      "segment": "review",
+      "segment": "review;conv",
       "appIndex": false,
       "parent": null
     },
     {
       "paneId": "conv-summary",
-      "segment": "summary",
+      "segment": "summary;conv",
       "appIndex": false,
       "parent": null
     },
@@ -478,7 +478,7 @@
       "paneId": "files-preview-path",
       "segment": "preview/:path;fs",
       "appIndex": false,
-      "parent": "files-at"
+      "parent": null
     },
     {
       "paneId": "folder-peek",
@@ -692,7 +692,7 @@
     },
     {
       "paneId": "shell-output",
-      "segment": "shell/:shellId",
+      "segment": "shell/:shellId;conv",
       "appIndex": false,
       "parent": null
     },
@@ -860,7 +860,7 @@
     },
     {
       "paneId": "workflow-node",
-      "segment": "workflow-node/:toolUseId/:nodeId",
+      "segment": "workflow-node/:toolUseId/:nodeId;conv",
       "appIndex": false,
       "parent": null
     },

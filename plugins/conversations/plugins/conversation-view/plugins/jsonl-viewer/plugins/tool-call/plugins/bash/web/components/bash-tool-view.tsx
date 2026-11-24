@@ -104,7 +104,8 @@ function BackgroundBashToolView({
         }
         note={shell && <ShellStateChip shell={shell} />}
         aside={
-          shell && (
+          shell &&
+          conversationId !== null && (
             <IconButton
               icon={terminalIcon}
               label="Open output"
@@ -112,7 +113,7 @@ function BackgroundBashToolView({
               {...activationProps(
                 openPane.to(
                   shellOutputPane,
-                  { shellId: shell.shellId },
+                  { shellId: shell.shellId, conv: conversationId },
                   { mode: "push" },
                 ),
                 { isolate: true },

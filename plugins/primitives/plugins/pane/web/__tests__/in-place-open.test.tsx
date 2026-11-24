@@ -11,7 +11,7 @@ import {
   useSyncPaneRegistry,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
-import { computeOpen } from "../pane";
+import { computeColumnsOpen, computeOpen, paneColumn } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, defaultStore } from "../testing";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -143,8 +143,9 @@ describe("back / forward", () => {
 });
 
 // Two folder columns, each with its file: moving the SECOND one (its
-// breadcrumb, a folder row) is a swap of its own column — the first pair
-// stays. A root open rebuilt the whole route and lost the first pair.
+// breadcrumb, a folder row) is a swap of its own column and the file beside it
+// — `openPane.columns` in `swap` mode — and the first pair stays. A root open
+// rebuilt the whole route and lost the first pair.
 describe("an inPlace swap of a second folder column", () => {
   function seedTwoPairs() {
     store.restoreRoute([
@@ -169,10 +170,20 @@ describe("an inPlace swap of a second folder column", () => {
     if (next.changed) store.setRoute(next.route, next.replace);
   }
 
-  it("with a file open keeps the columns left of it, and its own instances", () => {
+  it("with a file open (columns) keeps the columns left of it, and its own instances", () => {
     seedTwoPairs();
     const before = ids();
-    swapFrom(2, { dir: "b/c", open: "h.md" });
+    const route = store.getRoute();
+    const next = computeColumnsOpen(
+      route,
+      route[2]!.instanceId,
+      [
+        paneColumn(folderPane, { dir: "b/c" }),
+        paneColumn(previewPane, { open: "h.md" }),
+      ],
+      { mode: "swap", inPlace: true },
+    );
+    store.setRoute(next.route, next.replace);
     expect(ids()).toEqual(before);
     expect(store.getRoute().map((s) => s.params)).toEqual([
       { dir: "a" },

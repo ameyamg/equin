@@ -39,7 +39,7 @@ export const APP_DEMO_PLACES: Readonly<Record<string, AppDemoPlace>> = {
   // Demo's home folder, a note previewed beside it.
   files: {
     home: "/files",
-    shot: "/files/browse/~;fs=browser/preview/~%2FThis%20week.md;fs=browser",
+    shot: "/files/browse/~;fs=browser/preview/This%20week.md;fs=browser",
   },
   maps: { home: "/places", shot: "/places" },
   // The two ways to use equin as a whole surface. The desktop is shot with

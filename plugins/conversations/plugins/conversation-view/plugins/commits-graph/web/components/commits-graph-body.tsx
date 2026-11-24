@@ -7,7 +7,6 @@ import {
   MergeBaseMarker,
   CommitRowItem,
 } from "@plugins/primitives/plugins/commit-list/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -23,10 +22,8 @@ const MAIN_COLOR = "var(--muted-foreground)";
 const BEHIND_COLOR =
   "color-mix(in srgb, var(--muted-foreground) 50%, transparent)";
 
-export function CommitsGraphBody() {
-  const convId = conversationPane.useEnclosing()?.params.convId;
-  const conversation = useConversationById(convId ?? null);
-  if (convId === undefined) return null;
+export function CommitsGraphBody({ convId }: { convId: string }) {
+  const conversation = useConversationById(convId);
   // No conversation row → no attempt to draw. Split rather than subscribe with a
   // placeholder id: the graph is read only once the attempt id is known.
   return (

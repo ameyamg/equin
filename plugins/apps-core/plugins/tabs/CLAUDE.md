@@ -53,6 +53,15 @@ focused tab was saved on, the panes parsed from it take the saved slots' uuids
 the pane instance (a Miller column's collapse, the prototype canvas) comes back
 after a reload, while a new link still opens new instances.
 
+A saved route is validated, not trusted (`validRestoredRoute`, pane
+`CLAUDE.md`): a persisted tab's route lacking a param its pane now requires —
+or naming a pane that is not registered once the deferred tier settled with no
+load error under its app — is re-read from its `rawPath` instead
+(`seedPending`), so an old short URL comes back through today's parser and a
+dead one shows not-found. One naming a pane not registered YET is kept, and
+`TabsProvider` re-checks every tab once the tier settles — so no store ever
+holds a slot naming an unregistered pane, and the URL writer never meets one.
+
 A tab at its app's bare root keeps its landing pane's keyed params too
 (`/places;page=x`, surface views): the index pane is not a slot, so the
 persisted tab carries them as `index` beside `route`, and its `rawPath` is
@@ -260,8 +269,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included) and whether it shows apps side by side (useSurfaceShowsAppsSideBySide: leaving it closes its app), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
 - Web:
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×22
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×23
     - `apps-core` ×9
     - `primitives/scope/app-instance` ×5
     - `primitives/embed` ×3

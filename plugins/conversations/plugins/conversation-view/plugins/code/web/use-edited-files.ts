@@ -60,15 +60,12 @@ export function useEditedFiles(
   );
 }
 
-// One edited file by path — `null` when the path is clean — wherever in the
-// set it falls; an unresolved worktree is `{ resolved: false }`. A `null`
-// conversation reads nothing.
+// One edited file of a checkout (an attempt id) by path — `null` when the
+// path is clean — wherever in the set it falls; a checkout that resolves to no
+// attempt's worktree is `{ resolved: false }`. A `null` checkout reads nothing.
 export function useEditedFile(
-  conversationId: string | null,
+  worktree: string | null,
   path: string,
 ): ResourceResult<Resolvable<EditedFile | null>> | ResourceUnavailable {
-  return useLive(
-    editedFile,
-    conversationId === null ? null : { id: conversationId, path },
-  );
+  return useLive(editedFile, worktree === null ? null : { worktree, path });
 }

@@ -76,7 +76,6 @@ const SURFACES: readonly Surface[] = [
   { name: "am-task-detail", path: "/agents/tasks/t/task-1794571510-eir76z" },
   { name: "am-conversation", path: "/agents/c/conv-1777333537-usf7" },
   { name: "am-summary", path: "/agents/c/conv-1777333537-usf7/summary" },
-  { name: "am-workflow-node", path: "/agents/workflow-node/toolu_x/n1" },
   // ── Settings ────────────────────────────────────────────────────────
   {
     name: "settings-config",
@@ -106,7 +105,7 @@ const SURFACES: readonly Surface[] = [
   },
   {
     name: "files-preview",
-    path: "/files/browse/%2Fusr%2Fshare%2Fdict/preview/%2Fusr%2Fshare%2Fdict%2FREADME",
+    path: "/files/browse/%2Fusr%2Fshare%2Fdict/preview/README",
   },
   // ── Desktop surface mode (the rest are solo, the boot mode) ─────────
   { name: "desktop-reports", path: "/desktop/debug/reports" },
@@ -125,7 +124,11 @@ const HEADER_JUMP_SURFACES: readonly Surface[] = [
   { name: "hj-detail-plain", path: "/debug/build/r/build-1794488888-ghzpsm" },
   { name: "hj-full-doc", path: "/debug/heap" },
   { name: "hj-full-plain", path: "/debug/reports" },
-  { name: "hj-agent-manager-doc", path: "/agents/workflow-node/toolu_x/n1" },
+  {
+    name: "hj-agent-manager-doc",
+    // Alone, so its conversation is written out (`;conv=`).
+    path: "/agents/workflow-node/toolu_x/n1;conv=conv-1777333537-usf7",
+  },
   { name: "hj-agent-manager-plain", path: "/agents/c/conv-1777333537-usf7" },
   {
     name: "hj-settings-doc",

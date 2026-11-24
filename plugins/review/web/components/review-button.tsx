@@ -10,7 +10,7 @@ const differenceIcon = symbol("difference");
 
 export function ReviewButton() {
   const { convId } = conversationPane.useParams();
-  const { isOpen, toggle } = convReviewPane.useToggle({});
+  const { isOpen, toggle } = convReviewPane.useToggle({ conv: convId });
   const sections = Review.Section.useContributions();
 
   return (

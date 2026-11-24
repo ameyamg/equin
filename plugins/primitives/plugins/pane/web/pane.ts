@@ -75,6 +75,7 @@ import {
 import { definePaneHeaderSlot, type PaneHeaderSlot } from "./header-slot";
 import type { ResolveResult } from "./resolve";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { ImpliedCodec, ImpliedParam, WithImplied } from "./implied";
 
 export type { PaneHeaderItem } from "./components/pane-header-item";
 
@@ -460,6 +461,27 @@ export interface PaneInternal {
   opensInPlace: boolean;
   /** From `Pane.define({ expand })` — see {@link PaneExpand}. */
   expand?: PaneExpand;
+  /**
+   * From `Pane.define({ implied })`: the own params whose URL spelling the
+   * nearest column of another pane to the LEFT implies — written by
+   * {@link buildRouteUrl}, read by {@link parseUrl}, one codec each. The slot
+   * always holds the whole value. See `./implied`.
+   */
+  implied: readonly PaneImplied[];
+}
+
+/** One {@link PaneInternal.implied} entry, erased and resolved at define time. */
+export interface PaneImplied {
+  /** The own param it is (a name of the pane's segment). */
+  param: string;
+  /** The pane whose nearest column to the left implies it. */
+  fromId: string;
+  codec: ImpliedCodec;
+  /**
+   * Whether a slot cannot stand without it: a required positional `:name`, or
+   * a keyed / implied one not declared `optional: true`.
+   */
+  required: boolean;
 }
 
 // Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
@@ -733,10 +755,18 @@ export function parseUrl(pathname: string, basePath: string): ParsedRoute {
  * leaves a remainder no chain of panes can match. Two segments can both claim
  * the same start of a URL — `t/:taskId` and `t/:pluginId/:tableName`, or one
  * ending in an optional `:name?` — and taking the longer blindly turned a
- * perfectly parseable URL into `unresolved`. Whether the rest of the URL
- * parses from a cursor does not depend on how we got there, so a cursor that
- * failed once is remembered and never searched again: linear in the URL, not
- * exponential in the alternatives.
+ * perfectly parseable URL into `unresolved`.
+ *
+ * Implied params ({@link PaneInternal.implied}) are expanded as each candidate
+ * is taken, against the nearest earlier entry of their `from` pane — so a
+ * candidate whose required implied param cannot be determined there (a
+ * satellite with no `;conv` and no conversation to its left) fails, and the
+ * next alternative is tried. That makes the rest of a parse depend on what
+ * stands to its LEFT, but only on the nearest entry of each pane some implied
+ * param is read from: the memo of failures is keyed on the cursor plus exactly
+ * that context, so it stays exact. With no implied param registered the
+ * context is always empty and the key is the cursor alone — linear in the URL,
+ * as before, not exponential in the alternatives.
  *
  * At the head, panes of the app at `home` (a normalized base path) are tried
  * before any other app's (see {@link parseUrl}); further right, a guest pane is
@@ -746,41 +776,130 @@ function parseChain(
   urlSegments: string[],
   home: string,
 ): Array<{ paneId: string; params: Record<string, string> }> | null {
-  const failed = new Set<number>();
+  // The panes an implied param is read from: the only left context a parse
+  // can depend on.
+  const fromIds = new Set<string>();
+  for (const pane of registry.values()) {
+    for (const imp of pane.implied) fromIds.add(imp.fromId);
+  }
+  type Context = ReadonlyMap<string, Record<string, string>>;
+  const memoKey = (cursor: number, context: Context): string =>
+    context.size === 0
+      ? String(cursor)
+      : `${cursor}|${JSON.stringify([...context].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))}`;
+  const failed = new Set<string>();
   const parseFrom = (
     cursor: number,
+    context: Context,
   ): Array<{ paneId: string; params: Record<string, string> }> | null => {
     if (cursor === urlSegments.length) return [];
-    if (failed.has(cursor)) return null;
+    const key = memoKey(cursor, context);
+    if (failed.has(key)) return null;
     const candidates: Array<{
-      paneId: string;
+      pane: PaneInternal;
       params: Record<string, string>;
       consumed: number;
     }> = [];
     for (const pane of registry.values()) {
       for (const m of matchSegmentParts(pane.segment, urlSegments, cursor)) {
-        candidates.push({ paneId: pane.id, ...m });
+        candidates.push({ pane, ...m });
       }
     }
     // Stable, so equal lengths keep registry order — the tie-break it always had.
     candidates.sort((a, b) => b.consumed - a.consumed);
     if (cursor === 0) {
       // The app the base path names heads its own URL whenever it can.
-      const isHome = (paneId: string) =>
-        normalizeAppPath(registry.get(paneId)!.app.basePath) === home;
+      const isHome = (pane: PaneInternal) =>
+        normalizeAppPath(pane.app.basePath) === home;
       candidates.sort(
-        (a, b) => Number(isHome(b.paneId)) - Number(isHome(a.paneId)),
+        (a, b) => Number(isHome(b.pane)) - Number(isHome(a.pane)),
       );
     }
     for (const c of candidates) {
       if (c.consumed === 0) continue;
-      const rest = parseFrom(cursor + c.consumed);
-      if (rest) return [{ paneId: c.paneId, params: c.params }, ...rest];
+      const params = expandImplied(c.pane, c.params, context);
+      if (params === null) continue;
+      const next = fromIds.has(c.pane.id)
+        ? new Map(context).set(c.pane.id, withoutSurfaceViews(params))
+        : context;
+      const rest = parseFrom(cursor + c.consumed, next);
+      if (rest) return [{ paneId: c.pane.id, params }, ...rest];
     }
-    failed.add(cursor);
+    failed.add(key);
     return null;
   };
-  return parseFrom(0);
+  return parseFrom(0, new Map());
+}
+
+/**
+ * The reader half of implied params: `written` (one URL match of `pane`) with
+ * each implied param expanded against `context` — the nearest earlier entry of
+ * its `from` pane, by pane id. `null` when a required one cannot be
+ * determined: the match is not this pane's.
+ */
+function expandImplied(
+  pane: PaneInternal,
+  written: Record<string, string>,
+  context: ReadonlyMap<string, Record<string, string>>,
+): Record<string, string> | null {
+  if (pane.implied.length === 0) return written;
+  const params = { ...written };
+  for (const imp of pane.implied) {
+    const value = imp.codec.expand(written[imp.param], context.get(imp.fromId));
+    if (value !== undefined) params[imp.param] = value;
+    else if (imp.required) return null;
+    else delete params[imp.param];
+  }
+  return params;
+}
+
+/**
+ * The writer half of implied params: the URL spelling of `params` (slot `i`
+ * of `route`, a `pane`) — each implied param shortened against the nearest
+ * earlier slot of its `from` pane, written whole when there is none. Asserts
+ * that the reader reads back exactly the value: a codec that would write a
+ * URL meaning something else throws here, at the write, instead of a reload
+ * later showing the wrong subject.
+ */
+function spellImplied(
+  pane: PaneInternal,
+  params: Record<string, string>,
+  route: readonly PaneSlot[],
+  i: number,
+): Record<string, string> {
+  if (pane.implied.length === 0) return params;
+  const spelled = { ...params };
+  for (const imp of pane.implied) {
+    const value = params[imp.param] as string | undefined;
+    if (value === undefined && imp.required) {
+      throw new MissingRouteParamError(imp.param, pane.segment);
+    }
+    const fromSlot = route.slice(0, i).findLast((s) => s.paneId === imp.fromId);
+    const from = fromSlot ? withoutSurfaceViews(fromSlot.params) : undefined;
+    const written =
+      value === undefined
+        ? undefined
+        : from === undefined
+          ? value
+          : imp.codec.shorten(value, from);
+    const readBack = imp.codec.expand(written, from);
+    if (readBack !== value) {
+      throw new Error(
+        `Pane "${pane.id}": implied param "${imp.param}" = ${JSON.stringify(value)} would be ` +
+          `written ${JSON.stringify(written)}, which reads back as ${JSON.stringify(readBack)} beside ` +
+          (from
+            ? `the "${imp.fromId}" column to its left (${JSON.stringify(from)})`
+            : `no "${imp.fromId}" column`) +
+          `. The URL would name something else than the route: fix the codec` +
+          (value === undefined
+            ? ` — or give the slot the param (an absent optional value cannot be spelled beside a column that implies one).`
+            : `.`),
+      );
+    }
+    if (written === undefined) delete spelled[imp.param];
+    else spelled[imp.param] = written;
+  }
+  return spelled;
 }
 
 const NO_PARAMS: Record<string, string> = Object.freeze({}) as Record<
@@ -823,7 +942,8 @@ export function buildRouteUrl(
   route.forEach((slot, i) => {
     const pane = registry.get(slot.paneId);
     if (!pane) throw new Error(`Unknown pane: ${slot.paneId}`);
-    let params = slot.params;
+    // What the column to the left implies is shortened or left out.
+    let params = spellImplied(pane, slot.params, route, i);
     // A segment ending in a wildcard or an optional part would read a tail
     // after it as its own value: the place keeps the plain `;view.…` spelling.
     const open = parseSegmentParts(pane.segment).at(-1)?.kind;
@@ -834,6 +954,53 @@ export function buildRouteUrl(
     parts.push(...fillSegment(pane.segment, params, { ownSlot: true }));
   });
   return joinUrlParts([...parts, ...tail]);
+}
+
+/**
+ * Whether a route written by an earlier build can stand today:
+ * `validRestoredRoute`'s answer. Invalid names the first slot that cannot.
+ */
+export type RestoredRouteValidity =
+  | { ok: true }
+  /** Its pane is not registered — gone, renamed, or a deferred plugin still loading. */
+  | { ok: false; reason: "unregistered"; paneId: string }
+  /** It lacks a param its pane now requires (a required `:name`, or a required implied one). */
+  | { ok: false; reason: "missing-param"; paneId: string; param: string };
+
+/**
+ * Can these saved slots (a `history.state` route, a persisted tab) be put on
+ * screen as they are? A saved route is the verbatim state of the build that
+ * wrote it, so it is NOT trusted: a slot is valid when its pane is registered
+ * and it carries every param its segment requires — the required positional
+ * ones and the required implied ones. An invalid route is re-read from its
+ * URL instead, which goes through today's parser.
+ */
+export function validRestoredRoute(
+  slots: ReadonlyArray<{
+    paneId: string;
+    params: Readonly<Record<string, string>>;
+  }>,
+): RestoredRouteValidity {
+  for (const slot of slots) {
+    const pane = registry.get(slot.paneId);
+    if (!pane)
+      return { ok: false, reason: "unregistered", paneId: slot.paneId };
+    const required = [
+      ...segmentRequiredParamNames(pane.segment),
+      ...pane.implied.filter((imp) => imp.required).map((imp) => imp.param),
+    ];
+    for (const param of required) {
+      if (typeof slot.params[param] !== "string") {
+        return {
+          ok: false,
+          reason: "missing-param",
+          paneId: slot.paneId,
+          param,
+        };
+      }
+    }
+  }
+  return { ok: true };
 }
 
 /**
@@ -1407,7 +1574,18 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       index?: Record<string, string>;
       pending?: string;
     } | null;
-    if (state?.route) {
+    // A saved route is the state of the build that wrote it: one naming a
+    // pane that is gone, or lacking a param its pane now requires, is re-read
+    // from its URL instead. A pane not registered YET (its plugin still in the
+    // deferred tier) is kept as before — the sync re-runs when it registers.
+    const restorable =
+      state?.route === undefined ? undefined : validRestoredRoute(state.route);
+    const reparse =
+      restorable !== undefined &&
+      !restorable.ok &&
+      (restorable.reason === "missing-param" ||
+        getDeferredLoadState().deferredComplete);
+    if (state?.route && !reparse) {
       // No `hint`: history.state never carries one (see `setRoute`). Extra
       // `{ tabId, appId }` keys a shell adapter stamped in are ignored — this
       // reads only `route`/`pending`. `routesEqual` compares options only, so a
@@ -2167,8 +2345,8 @@ function declaredAncestors(
  * skipped: the prefix's value stands and nothing is discarded.
  *
  * The ancestor asked is the NEAREST one — the last instance in the prefix,
- * the one the target will stand under (as `useEnclosing` and the chained
- * `fullParams` read it). Asking the first made a second folder column unable
+ * the one the target will stand under (as the chained `fullParams` read
+ * it). Asking the first made a second folder column unable
  * to open a file beside itself: the first folder disagreed, and the open
  * rebuilt the whole route.
  */
@@ -2617,23 +2795,6 @@ function computeModeOpen(
       sameOptions(options, caller.options)
     )
       return unchanged;
-    // A target chained under the caller's own pane (a folder column swapped to
-    // another folder with a file previewed in it): the column becomes the
-    // caller's pane at its new address plus the target under it, and the
-    // panes left of it stay. Without this, an earlier instance of the
-    // caller's pane in the prefix (a second folder column) can't host the
-    // address, and the whole route was rebuilt from scratch.
-    if (target.parentPaneIds.includes(caller.paneId)) {
-      const chain = chainSlots(target, params, EMPTY, { fromScratch: true });
-      const from = chain.findIndex((s) => s.paneId === caller.paneId);
-      if (from >= 0) {
-        return to([
-          ...currentRoute.slice(0, callerIndex),
-          ...chain.slice(from),
-          createSlot(target.id, ownParams, options, hint),
-        ]);
-      }
-    }
     return to(
       relativeHead(
         currentRoute.slice(0, callerIndex),
@@ -2680,6 +2841,130 @@ function computeModeOpen(
       hint,
     ),
   );
+}
+
+/**
+ * One column of a multi-column open ({@link OpenPaneFn.columns}): a pane, its
+ * OWN params (the list is the route, so nothing is chained from ancestors) and
+ * the opener's options / hint. Build it with {@link paneColumn}, which types
+ * `params` against the pane.
+ */
+export interface PaneColumn {
+  readonly pane: PaneInternal;
+  readonly params: Readonly<Record<string, string>>;
+  readonly options?: PaneOptions;
+  readonly hint?: PaneHintBag;
+}
+
+/**
+ * A typed {@link PaneColumn}: `params` is the pane's OWN param set (implied
+ * ones included) — what its column holds. An app's index pane has no column.
+ */
+export function paneColumn<
+  OwnParams,
+  Options extends object = NoOptions,
+  HintT extends object = NoHint,
+>(
+  pane: PaneObject<any, OwnParams, Options, HintT, false>,
+  params: NoInfer<OwnParams>,
+  opts?: { options?: Partial<Options>; hint?: HintT },
+): PaneColumn {
+  return {
+    pane: pane._internal,
+    params: params as Record<string, string>,
+    ...(opts?.options ? { options: opts.options as PaneOptions } : {}),
+    ...(opts?.hint ? { hint: opts.hint as PaneHintBag } : {}),
+  };
+}
+
+/** What a multi-column open asks for — {@link OpenPaneFn.columns}' `opts`, erased. */
+export interface ColumnsRequest {
+  /**
+   * `root` — the route IS the list. `swap` — the caller's column and every
+   * column right of it become the list (no caller in the route: `root`).
+   */
+  mode: "root" | "swap";
+  /** Write it as a history replace (a redirect). */
+  replace?: boolean;
+  /** Keep the instances standing where the new route stands them. See {@link OpenPaneOpts.inPlace}. */
+  inPlace?: boolean;
+  /**
+   * Keep the others (⌥-click): INSERT the list right after the caller (after
+   * the route's last column when there is no caller in it), every column
+   * already there staying.
+   */
+  insert?: boolean;
+}
+
+/**
+ * The route a multi-column open produces — the {@link computeOpen} of a list
+ * of columns, for a destination that is several columns at once (a folder and
+ * the file previewed beside it). No ancestor chain is consulted: the list says
+ * every column, each with its own params. Written like any open's: the URL
+ * shortens what each column's left implies.
+ */
+export function computeColumnsOpen(
+  currentRoute: PaneSlot[],
+  callerInstanceId: number | undefined,
+  columns: readonly PaneColumn[],
+  opts: ColumnsRequest,
+): OpenComputation {
+  const last = columns.at(-1);
+  if (!last) throw new Error("openPane.columns: the list of columns is empty.");
+  const slots = columns.map((c) => {
+    if (c.pane.appIndex) {
+      throw new Error(
+        `openPane.columns: "${c.pane.id}" is its app's index pane — it has no URL part of its ` +
+          `own, so it cannot be a column. Define a pane with its own segment rendering the same body.`,
+      );
+    }
+    return createSlot(
+      c.pane.id,
+      extractOwnParams(c.pane, c.params),
+      c.options ?? {},
+      c.hint ?? {},
+    );
+  });
+  const callerIndex =
+    callerInstanceId === undefined
+      ? -1
+      : currentRoute.findIndex((s) => s.instanceId === callerInstanceId);
+  let route: PaneSlot[];
+  if (opts.insert === true) {
+    const anchor =
+      opts.mode === "swap" && callerIndex >= 0
+        ? callerIndex
+        : currentRoute.length - 1;
+    route = [
+      ...currentRoute.slice(0, anchor + 1),
+      ...slots,
+      ...currentRoute.slice(anchor + 1),
+    ];
+  } else if (opts.mode === "swap" && callerIndex >= 0) {
+    route = [...currentRoute.slice(0, callerIndex), ...slots];
+  } else {
+    route = slots;
+  }
+  const replace = opts.replace === true || !last.pane.chrome.history;
+  // Already on screen as asked (each column's address and options): nothing
+  // to write — and the instances, and their views, stay.
+  const same =
+    route.length === currentRoute.length &&
+    route.every((slot, i) => {
+      const here = currentRoute[i]!;
+      return (
+        here.paneId === slot.paneId &&
+        sameAddress(slot.params, here.params) &&
+        sameOptions(slot.options, here.options)
+      );
+    });
+  if (same) return { route: currentRoute, replace, changed: false };
+  return {
+    route:
+      opts.inPlace === true ? keepInstancesInPlace(currentRoute, route) : route,
+    replace,
+    changed: true,
+  };
 }
 
 /**
@@ -3245,23 +3530,6 @@ export interface PaneObject<
    * was rendered in the Improve popover.
    */
   useOpenedHere: Hook<() => PaneRouteEntry<OwnParams> | null>;
-  /**
-   * The instance of this pane the CALLER sits in or under: the last entry for
-   * this pane at or BEFORE the caller's own pane in the route chain, or `null`
-   * when there is none. The mirror of {@link useOpenedHere}.
-   *
-   * This is the question a satellite pane asks of the pane it hangs off — "which
-   * conversation am I about?" — and {@link useRouteEntry} cannot answer it for a
-   * pane that appears more than once: it reads the FIRST entry, so a satellite
-   * opened from a second conversation column read the first column's
-   * conversation (a sub-agent pane saying the conversation had no such
-   * sub-agent, because it was looking in the parent's).
-   *
-   * A caller outside every pane instance (a sidebar) or outside every surface
-   * (global chrome) sits under nothing, so it reads `null` — a true answer, like
-   * {@link useOpenedHere}'s there, never the first entry standing in for it.
-   */
-  useEnclosing: Hook<() => PaneRouteEntry<OwnParams> | null>;
   close(instanceId: number): void;
   /** Remove this pane from the route while preserving its children. */
   unwrap(instanceId: number): void;
@@ -3464,22 +3732,6 @@ function makePaneObject(
       useContext(PaneInstanceContext),
       internal,
     );
-    return entry ? toRouteEntry(entry) : null;
-  }
-
-  function useEnclosing(): PaneRouteEntry | null {
-    // Like `useOpenedHere`, legal outside every surface: an opener widget that
-    // asks "which conversation am I in?" also lands in popovers, where the
-    // answer is "none".
-    const match = useContext(PaneMatchContext);
-    const selfInstanceId = useContext(PaneInstanceContext);
-    if (!match || selfInstanceId === undefined) return null;
-    const selfIndex = match.panes.findIndex(
-      (e) => e.instanceId === selfInstanceId,
-    );
-    const entry = match.panes
-      .slice(0, selfIndex + 1)
-      .findLast((e) => e.pane === internal);
     return entry ? toRouteEntry(entry) : null;
   }
 
@@ -3761,7 +4013,6 @@ function makePaneObject(
     useRouteEntry,
     useRouteEntries,
     useOpenedHere,
-    useEnclosing,
     close,
     unwrap,
     promote,
@@ -3866,6 +4117,7 @@ type RouteDefineArgs<
   Options extends object,
   HintT extends object,
   Index extends boolean = false,
+  Implied extends ImpliedDecl<Seg> = {},
 > = {
   route: RouteDef<Params, Seg>;
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
@@ -3930,9 +4182,23 @@ type RouteDefineArgs<
    * Where Expand shows this pane's subject in full when that is another app's
    * view of it rather than this pane re-rooted. See {@link PaneExpand}.
    */
-  expand?: PaneExpand<Closed<OwnRouteParams<Seg>>>;
+  expand?: PaneExpand<Closed<WithImplied<OwnRouteParams<Seg>, Implied>>>;
+  /**
+   * Own params whose URL spelling the nearest column of another pane to the
+   * LEFT implies (`{ conv: impliedBy(conversationRoute, sameAs("convId")) }`):
+   * the slot holds the whole value — the pane reads only its own params — and
+   * the URL omits or shortens what that column already says. An implied keyed
+   * param is required in the pane's params unless declared `optional: true`.
+   * See `./implied` and CLAUDE.md "Implied params".
+   */
+  implied?: Implied;
 } & RouteResolveField<Seg> &
   AppIndexField<Seg, Index>;
+
+/** The shape of `Pane.define({ implied })`: own param names → {@link impliedBy}. */
+type ImpliedDecl<Seg extends string> = {
+  [K in keyof OwnRouteParams<Seg>]?: ImpliedParam<boolean>;
+};
 
 // Identity comes from the `RouteDef`, so a pane always carries a `.link`.
 //
@@ -3946,11 +4212,13 @@ function define<
   HintT extends object = NoHint,
   // The `appIndex` literal, so the returned pane knows whether it is one.
   Index extends boolean = false,
+  // The `implied` declaration, so a required implied param is required.
+  Implied extends ImpliedDecl<Seg> = {},
 >(
-  args: RouteDefineArgs<Params, Seg, Options, HintT, Index>,
+  args: RouteDefineArgs<Params, Seg, Options, HintT, Index, Implied>,
 ): PaneObject<
-  Closed<Params>,
-  Closed<OwnRouteParams<Seg>>,
+  Closed<WithImplied<Params, Implied>>,
+  Closed<WithImplied<OwnRouteParams<Seg>, Implied>>,
   Options,
   HintT,
   Index
@@ -4013,6 +4281,12 @@ function define(
   // Erased like `useResolve`: the hook takes the route's own params.
   const expand = args.expand as PaneInternal["expand"];
 
+  const implied = resolveImplied(
+    id,
+    segment,
+    (args as { implied?: Record<string, ImpliedParam | undefined> }).implied,
+  );
+
   const internal: PaneInternal = {
     id,
     parentPaneIds: route.parentPaneIds,
@@ -4029,9 +4303,76 @@ function define(
     companion: args.companion ?? false,
     opensInPlace: args.opensInPlace ?? false,
     ...(expand !== undefined ? { expand } : {}),
+    implied,
   };
 
   return makePaneObject(internal, route);
+}
+
+/**
+ * `Pane.define({ implied })` checked against the pane's own segment and
+ * erased to {@link PaneImplied}. What the `from` pane declares is only known
+ * once it registers, so that half is checked at registry sync
+ * ({@link assertImpliedFrom}).
+ */
+function resolveImplied(
+  id: string,
+  segment: string,
+  decl: Record<string, ImpliedParam | undefined> | undefined,
+): PaneImplied[] {
+  if (!decl) return [];
+  const names = segmentParamNames(segment);
+  const requiredPositional = segmentRequiredParamNames(segment);
+  const keyed = segmentKeyedParamNames(segment);
+  const out: PaneImplied[] = [];
+  for (const [param, imp] of Object.entries(decl)) {
+    if (!imp) continue;
+    if (!names.includes(param)) {
+      throw new Error(
+        `Pane "${id}": implied param "${param}" is not a param of its segment "${segment}". ` +
+          `An implied param is one of the pane's OWN params — add it to the segment ` +
+          `(a keyed one: "${segment};${param}").`,
+      );
+    }
+    if (imp.codec.omits && requiredPositional.includes(param)) {
+      throw new Error(
+        `Pane "${id}": implied param "${param}" is a required positional part of "${segment}", ` +
+          `but its codec omits the param where the column to the left implies it — the URL ` +
+          `would have no part to read it from. Make it keyed ("${positionalOf(segment)};${param}"), ` +
+          `or use a codec that never omits (relativeTo).`,
+      );
+    }
+    out.push({
+      param,
+      fromId: imp.from.id,
+      codec: imp.codec,
+      required:
+        requiredPositional.includes(param) ||
+        (keyed.includes(param) && !imp.optional),
+    });
+  }
+  return out;
+}
+
+/**
+ * The registry-sync half of {@link resolveImplied}: every name the codec reads
+ * is a param of the `from` pane's segment. A `from` pane not registered yet (a
+ * deferred plugin) is checked when it registers — the sync re-runs then.
+ */
+function assertImpliedFrom(internal: PaneInternal): void {
+  for (const imp of internal.implied) {
+    const from = registry.get(imp.fromId);
+    if (!from) continue;
+    const names = segmentParamNames(from.segment);
+    for (const name of imp.codec.fromParams) {
+      if (!names.includes(name)) {
+        throw new Error(
+          `Pane "${internal.id}": implied param "${imp.param}" reads "${name}" of "${from.id}", ` +
+            `whose segment "${from.segment}" declares no such param.`,
+        );
+      }
+    }
+  }
 }
 
 export const Pane = { define, Register: PaneSlots.Register };
@@ -4125,6 +4466,9 @@ export function useSyncPaneRegistry(): void {
       }
       registry.set(internal.id, internal);
     }
+    // Every pane's implied params against the panes that imply them — after
+    // the loop, so a `from` pane registered later in it is seen.
+    for (const internal of registry.values()) assertImpliedFrom(internal);
     // Re-sync the route from the current URL now that the registry is
     // populated. On initial load the store's handleLocationChange() runs
     // (via the window listener) before any panes are registered, so the
@@ -4395,6 +4739,43 @@ export interface OpenPaneFn {
     params: NoInfer<Params>,
     opts: OpenPaneOpts<Options, HintT, IsIndex>,
   ): LinkTarget;
+  /**
+   * A destination that is SEVERAL columns at once (a folder and the file
+   * previewed beside it), as data — the {@link LinkTarget} of the open. Each
+   * column is a {@link paneColumn} (a pane and its OWN params); the list is
+   * the route, no ancestor chain consulted:
+   *
+   * - `mode: "root"` — the route IS the list;
+   * - `mode: "swap"` — the caller's column and everything right of it become
+   *   the list (no caller in the route: `root`).
+   *
+   * `inPlace` / `replace` as for a single open; ⌥-click inserts the list
+   * right after the caller; a route headed by another app's pane is handed to
+   * that app, as `to` does.
+   *
+   * ```tsx
+   * openPane.columns(
+   *   [paneColumn(folderPane, { dir }), paneColumn(previewPane, { path })],
+   *   { mode: "swap", inPlace: true },
+   * )
+   * ```
+   */
+  columns(cols: readonly PaneColumn[], opts: OpenColumnsOpts): LinkTarget;
+  /** {@link columns} as a LINK: spread the result onto the control that opens it. */
+  columnsLink(
+    cols: readonly PaneColumn[],
+    opts: OpenColumnsOpts,
+  ): LinkGestureProps;
+}
+
+/** The `opts` of {@link OpenPaneFn.columns}. */
+export interface OpenColumnsOpts {
+  /** `root`: the route is the list. `swap`: the caller's column and those right of it become it. */
+  mode: "root" | "swap";
+  /** Replace the current history entry instead of pushing one (a redirect). */
+  replace?: boolean;
+  /** Keep the instances the new route stands where they stand. See {@link OpenPaneOpts.inPlace}. */
+  inPlace?: boolean;
 }
 
 /**
@@ -4441,27 +4822,14 @@ export function useOpenPane(): OpenPaneFn {
   return useMemo(() => {
     // The store is resolved per click, never at render: global chrome outlives
     // the tab it was rendered beside (see the section comment above).
-    const compute = (
-      store: PaneStore,
-      target: AnyPane,
-      params: Record<string, string>,
-      opts: OpenRequest,
-    ) =>
-      computeOpen(
-        store.getRoute(),
-        callerInstanceId,
-        target._internal,
-        params,
-        opts,
-        store.getIndexParams(),
-      );
-    const open = (
-      target: AnyPane,
-      params: Record<string, string>,
-      opts: OpenRequest,
-    ): void => {
+    //
+    // Every open is a `compute` of where it lands against a store's route —
+    // one pane (`computeOpen`) or a list of columns (`computeColumnsOpen`) —
+    // and the plain click and the href run the same one.
+    type Compute = (store: PaneStore, insert: boolean) => OpenComputation;
+    const run = (compute: Compute, insert: boolean): void => {
       const store = resolveStore();
-      const next = compute(store, target, params, opts);
+      const next = compute(store, insert);
       if (!next.changed) return;
       // A route headed by another app's pane belongs to that app: hand it over,
       // exactly as Expand does, instead of stranding it here.
@@ -4470,31 +4838,73 @@ export function useOpenPane(): OpenPaneFn {
         store.setRoute(next.route, next.replace, next.landing?.index);
       else (navBoundary ?? navigateApp)(away);
     };
-    const to = (
-      target: AnyPane,
-      params: Record<string, string>,
-      opts: OpenRequest,
-    ): LinkTarget => ({
+    const target = (compute: Compute): LinkTarget => ({
       // ⌥-click keeps the others: the open inserts beside the caller. The
       // href (⌘/middle-click) never reads it — an elsewhere gesture is not ⌥.
-      open: (gesture) =>
-        open(target, params, { ...opts, insert: gesture.keepOthers }),
+      open: (gesture) => run(compute, gesture.keepOthers),
       // Unchanged ⇒ the destination is already on screen, and the current
       // route's URL is exactly it.
       href: () => {
         const store = resolveStore();
-        const next = compute(store, target, params, opts);
+        const next = compute(store, false);
         return (
           strandedOpenUrl(store.getBasePath(), next) ??
           store.routeUrl(next.route, next.landing?.index)
         );
       },
     });
-    const link = (
-      target: AnyPane,
+    const paneCompute =
+      (
+        pane: AnyPane,
+        params: Record<string, string>,
+        opts: OpenRequest,
+      ): Compute =>
+      (store, insert) =>
+        computeOpen(
+          store.getRoute(),
+          callerInstanceId,
+          pane._internal,
+          params,
+          insert ? { ...opts, insert } : opts,
+          store.getIndexParams(),
+        );
+    const columnsCompute =
+      (cols: readonly PaneColumn[], opts: ColumnsRequest): Compute =>
+      (store, insert) =>
+        computeColumnsOpen(
+          store.getRoute(),
+          callerInstanceId,
+          cols,
+          insert ? { ...opts, insert } : opts,
+        );
+    const open = (
+      pane: AnyPane,
       params: Record<string, string>,
       opts: OpenRequest,
-    ): LinkGestureProps => linkProps(to(target, params, opts));
-    return Object.assign(open, { link, to }) as OpenPaneFn;
+    ): void => run(paneCompute(pane, params, opts), false);
+    const to = (
+      pane: AnyPane,
+      params: Record<string, string>,
+      opts: OpenRequest,
+    ): LinkTarget => target(paneCompute(pane, params, opts));
+    const link = (
+      pane: AnyPane,
+      params: Record<string, string>,
+      opts: OpenRequest,
+    ): LinkGestureProps => linkProps(to(pane, params, opts));
+    const columns = (
+      cols: readonly PaneColumn[],
+      opts: ColumnsRequest,
+    ): LinkTarget => target(columnsCompute(cols, opts));
+    const columnsLink = (
+      cols: readonly PaneColumn[],
+      opts: ColumnsRequest,
+    ): LinkGestureProps => linkProps(columns(cols, opts));
+    return Object.assign(open, {
+      link,
+      to,
+      columns,
+      columnsLink,
+    }) as OpenPaneFn;
   }, [resolveStore, callerInstanceId, navBoundary]);
 }

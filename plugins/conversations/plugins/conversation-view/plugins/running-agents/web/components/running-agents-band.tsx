@@ -521,13 +521,13 @@ export function RunningAgentsBand({
             case "agent":
               return openPane.to(
                 agentReportPane,
-                { by: "agent", key: row.key },
+                { by: "agent", key: row.key, conv: conversation.id },
                 { mode: "push" },
               );
             case "shell":
               return openPane.to(
                 shellOutputPane,
-                { shellId: row.shellId },
+                { shellId: row.shellId, conv: conversation.id },
                 { mode: "push" },
               );
             case "workflow":

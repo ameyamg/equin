@@ -41,7 +41,8 @@ export function WorkflowNodeCard({
 }: {
   node: TracedNode;
   emphasis: NodeEmphasis;
-  activation: Activation;
+  /** Absent: the card opens nothing (no conversation to open its step in). */
+  activation: Activation | undefined;
   onHover: (nodeId: string | null) => void;
 }) {
   const modelTier = node.model

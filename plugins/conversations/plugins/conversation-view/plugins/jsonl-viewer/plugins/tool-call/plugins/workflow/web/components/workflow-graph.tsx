@@ -31,8 +31,8 @@ export function WorkflowGraph({
 }: {
   graph: TracedGraph;
   activeNodeId?: string;
-  /** What clicking a node card does — its pane's link. */
-  nodeActivation: (nodeId: string) => Activation;
+  /** What clicking a node card does — its pane's link (`undefined`: nothing). */
+  nodeActivation: (nodeId: string) => Activation | undefined;
 }) {
   const [hoverId, setHoverId] = useState<string | null>(null);
 

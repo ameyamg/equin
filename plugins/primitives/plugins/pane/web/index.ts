@@ -41,6 +41,8 @@ export {
   restoreRoute,
   clearRoute,
   useOpenPane,
+  paneColumn,
+  validRestoredRoute,
   createPaneStore,
   setLiveStore,
   PaneStoreContext,
@@ -74,10 +76,15 @@ export type {
   RouteState,
   PaneOpenMode,
   OpenPaneFn,
+  OpenColumnsOpts,
+  PaneColumn,
+  RestoredRouteValidity,
   ResolveHook,
   PaneStore,
   PaneHeaderItem,
 } from "./pane";
+export { impliedBy, sameAs, relativeTo } from "./implied";
+export type { ImpliedParam, RelativeSpelling } from "./implied";
 export { paneTarget, usePaneToggle, type PaneTarget } from "./pane-target";
 export { resolveFrom, resolveRow } from "./resolve";
 export type { ResolveResult } from "./resolve";

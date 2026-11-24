@@ -127,15 +127,13 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `Pane.Register` "shell-output"
     - `TaskNotification.Open` "background-shell"
   - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×4
+    - `primitives/pane` ×6
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `network/live/live-state` ×3
     - `network/live` ×3
-    - `primitives/css/spacing` ×2
     - `primitives/dom/auto-scroll` ×2
     - `primitives/relative-time` ×2
     - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
-    - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
@@ -145,6 +143,7 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

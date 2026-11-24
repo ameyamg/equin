@@ -7,7 +7,6 @@ import {
   useBesidePreviewNavigator,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import type { ExplorerLocation } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -25,14 +24,8 @@ import { convFileTreePane } from "../panes";
  * checkout to browse yet.
  */
 export function ConvExplorerBody() {
-  const convId = conversationPane.useEnclosing()?.params.convId;
-  if (convId === undefined)
-    return (
-      <Pending>
-        <Placeholder>No conversation open.</Placeholder>
-      </Pending>
-    );
-  return <ConvExplorer convId={convId} />;
+  const { conv } = convFileTreePane.useParams();
+  return <ConvExplorer convId={conv} />;
 }
 
 function Pending({ children }: { children: ReactNode }) {
@@ -75,7 +68,7 @@ function ConvExplorer({ convId }: { convId: string }) {
   }
   // A reaped worktree is not special-cased: the browser renders its root
   // listing's `missing` answer ("… does not exist") like any other folder.
-  return <RoutedExplorer worktree={result.data.worktreePath} />;
+  return <RoutedExplorer convId={convId} worktree={result.data.worktreePath} />;
 }
 
 /**
@@ -85,13 +78,23 @@ function ConvExplorer({ convId }: { convId: string }) {
  * file pushes its preview as a column beside this one — swapped for another
  * file, closed by × or Esc — so this listing never remounts.
  */
-function RoutedExplorer({ worktree }: { worktree: string }) {
+function RoutedExplorer({
+  convId,
+  worktree,
+}: {
+  convId: string;
+  worktree: string;
+}) {
   const { dir } = convFileTreePane.useParams();
   const openPane = useOpenPane();
   const go = useCallback(
     (next: ExplorerLocation) =>
-      openPane.to(convFileTreePane, { dir: next.dir }, { mode: "swap" }),
-    [openPane],
+      openPane.to(
+        convFileTreePane,
+        { dir: next.dir, conv: convId },
+        { mode: "swap" },
+      ),
+    [openPane, convId],
   );
   const navigator = useBesidePreviewNavigator("computer", dir ?? worktree, go);
   return (

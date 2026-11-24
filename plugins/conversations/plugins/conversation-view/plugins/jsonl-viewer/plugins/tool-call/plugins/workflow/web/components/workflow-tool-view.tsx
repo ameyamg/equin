@@ -23,6 +23,7 @@ import {
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { parseWorkflowMeta, parseWorkflowResult } from "../../core";
 import { useWorkflowTrace } from "../internal/use-workflow-trace";
 import { WorkflowGraph } from "./workflow-graph";
@@ -115,12 +116,17 @@ export function WorkflowToolView({
   const { graph, status } = useWorkflowTrace(script, input.args);
 
   const openPane = useOpenPane();
+  // A step opens about the conversation whose transcript draws this card;
+  // outside any transcript there is none to open it in.
+  const conversationId = useJsonlConversationId();
   const nodeTarget = (nodeId: string) =>
-    openPane.to(
-      workflowNodePane,
-      { toolUseId: event.toolUseId, nodeId },
-      { mode: "push" },
-    );
+    conversationId === null
+      ? undefined
+      : openPane.to(
+          workflowNodePane,
+          { toolUseId: event.toolUseId, nodeId, conv: conversationId },
+          { mode: "push" },
+        );
 
   const result = event.result;
   const parsedResult =

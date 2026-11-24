@@ -1,6 +1,5 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
@@ -28,16 +27,7 @@ const autoAwesomeIcon = symbol("auto-awesome");
 // (CLEANUP_AFTER_MS in handle-generate.ts) so the two timers agree.
 const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
 
-export function SummaryPane() {
-  const convId = conversationPane.useEnclosing()?.params.convId;
-  // No conversation in the route → there is nothing to summarise, so nothing
-  // to subscribe to. Split rather than subscribe with a placeholder id: the
-  // hook only runs once the id is known.
-  if (!convId) return null;
-  return <ConversationSummaryPane convId={convId} />;
-}
-
-function ConversationSummaryPane({ convId }: { convId: string }) {
+export function SummaryPane({ convId }: { convId: string }) {
   const latestResult = useLatestConversationSummary(convId);
 
   return (

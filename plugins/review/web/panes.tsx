@@ -3,8 +3,11 @@ import {
   Pane,
   PaneChrome,
   defineRoute,
+  impliedBy,
+  sameAs,
   PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
+import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   Inset,
@@ -14,7 +17,6 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { RowView, useLive } from "@plugins/network/plugins/live/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { pushRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { Review } from "./slots";
@@ -24,20 +26,22 @@ export const convReviewPane = Pane.define({
   title: "Review",
   route: defineRoute({
     id: "conv-review",
-    segment: "review",
+    segment: "review;conv",
   }),
+  // The conversation it is about — omitted from the URL beside that
+  // conversation's own column, written (`;conv=`) anywhere else.
+  implied: { conv: impliedBy(conversationRoute, sameAs("convId")) },
   app: agentManagerApp,
-  // Conversation-scoped satellite: promote() would strip convId from the URL.
+  // Conversation-scoped satellite: it stays a column beside its conversation
+  // (no promote to a pane of its own).
   chrome: { promote: false },
   component: ConvReviewBody,
 });
 
 function ConvReviewBody() {
-  const convId = conversationPane.useEnclosing()?.params.convId;
-  const conversation = useConversationById(convId ?? null);
+  const convId = convReviewPane.useParams().conv;
+  const conversation = useConversationById(convId);
   const [source, setSource] = useState<Source>({ kind: "working" });
-
-  if (!convId) return null;
 
   const body = <Review.Host conversationId={convId} source={source} />;
   return (

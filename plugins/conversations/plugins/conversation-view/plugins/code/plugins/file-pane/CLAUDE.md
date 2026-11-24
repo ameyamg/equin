@@ -13,7 +13,7 @@
   - Contributes:
     - `Pane.Register` "file-peek"
     - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/file-viewer` ×6
     - `primitives/pane` ×6
     - `apps/file-explorer/browser` ×3
@@ -22,7 +22,6 @@
     - `network/live/live-state` ×2
     - `primitives/path-bar` ×2
     - `conversations/conversation-view/code.useEditedFile`
-    - `conversations/conversation-view.conversationPane`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`

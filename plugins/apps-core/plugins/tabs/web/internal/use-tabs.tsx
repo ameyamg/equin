@@ -21,6 +21,7 @@ import {
   routeHomeApp,
   setLiveStore,
   setHistoryAdapter,
+  validRestoredRoute,
   appNavSink,
   AppNavBoundary,
   TabSetStoreContext,
@@ -75,9 +76,11 @@ import {
   tabSetModeChanged,
 } from "./tab-sets";
 import {
+  appContributionFor,
   appPathFor,
   loadPersistedTabs,
   normalizeRawPath,
+  rawPathForTab,
   savePersistedTabs,
   type PersistedSlot,
   type PersistedTab,
@@ -341,11 +344,48 @@ function makeBackgroundStore(appId: string, apps: AppList): PaneStore {
   return store;
 }
 
+/**
+ * Whether a saved route (a persisted tab's) can be put on screen as it is. It
+ * is the verbatim state of the build that wrote it, so it is validated, not
+ * trusted (`validRestoredRoute`): a slot lacking a param its pane now
+ * requires never can; one naming a pane not registered can only while that
+ * pane may still arrive — the deferred tier still loading, or a plugin of the
+ * tab's app failed to load (its error surface). Kept then, it is re-checked
+ * once the tier settles (`useRevalidateRestoredRoutes`).
+ */
+function isRestorable(
+  route: Parameters<typeof validRestoredRoute>[0],
+  appId: string,
+  apps: AppList,
+): boolean {
+  const validity = validRestoredRoute(route);
+  if (validity.ok) return true;
+  if (validity.reason === "missing-param") return false;
+  return !isDeadUnresolvedLink(
+    loadScopePrefixFor(appContributionFor(appId, apps)._pluginId),
+  );
+}
+
+/**
+ * Put a saved route that cannot stand back to its URL instead: pending on
+ * `rawPath`, which today's parser reads (an old short URL through the implied
+ * params; a dead one to not-found once loading settled). With no saved path
+ * (a payload older than `rawPath`), the app's bare root.
+ */
+function restoreFromPath(store: PaneStore, rawPath: string | undefined): void {
+  if (rawPath === undefined || rawPath === "") store.clearRoute();
+  else store.seedPending(rawPath);
+}
+
 /** Rebuild a persisted background tab's store + route (route held in memory). */
 function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
   const store = makeBackgroundStore(persisted.appId, apps);
   if (persisted.route.length > 0) {
-    store.restoreRoute(persisted.route, { index: persisted.index });
+    if (isRestorable(persisted.route, persisted.appId, apps)) {
+      store.restoreRoute(persisted.route, { index: persisted.index });
+    } else {
+      restoreFromPath(store, persisted.rawPath);
+    }
   } else if (persisted.index) {
     // A bare-root tab whose landing pane carried keyed params
     // (`/places;page=x`): the same empty route, with them beside it.
@@ -571,7 +611,9 @@ export function bootTabs(
   );
   if (parsed.status === "matched" && parsed.slots.length > 0) {
     // A plain reload of the URL the tab was on is the SAME panes coming back:
-    // they keep their instance ids. The URL still decides which panes there are.
+    // they keep their instance ids. The URL still decides which panes there are
+    // (and their params — today's parser's, so this route needs no validation:
+    // only the uuids come from the saved one).
     focused.store.restoreRoute(
       persistedFocused !== undefined &&
         resolved !== undefined &&
@@ -584,7 +626,10 @@ export function bootTabs(
     focused.store.clearRoute({ index: parsed.index });
   } else if (
     persistedFocused?.route.length &&
-    persistedFocused.rawPath === parsed.rawPath
+    persistedFocused.rawPath === parsed.rawPath &&
+    // A saved route that cannot stand (a pane gone, a param now required)
+    // falls through to the pending re-read of the URL below.
+    isRestorable(persistedFocused.route, focused.appId, apps)
   ) {
     focused.store.restoreRoute(persistedFocused.route, {
       index: persistedFocused.index,
@@ -1556,6 +1601,30 @@ export function TabsProvider({
     if (!capabilities.ids.has(rawMode) && !deferredComplete) return;
     if (!capabilities.allowsEmpty.has(mode)) seedHome();
   }, [capabilities, tabs.length, rawMode, mode, deferredComplete, seedHome]);
+
+  // A saved route kept at boot because it named a pane not registered YET
+  // (`isRestorable`) is judged again once the deferred tier settles: one whose
+  // pane never came is re-read from its URL, so no store holds a slot naming
+  // an unregistered pane — the URL writer (`buildRouteUrl`) never sees one.
+  useEffect(() => {
+    if (!deferredComplete) return;
+    const persistedRaw = new Map(
+      (loadPersistedTabs()?.tabs ?? []).map((t) => [t.tabId, t.rawPath]),
+    );
+    for (const tab of tabsRef.current) {
+      const state = tab.store.getRouteState();
+      if (state.kind !== "resolved" || state.slots.length === 0) continue;
+      if (isRestorable(state.slots, tab.appId, appsRef.current)) continue;
+      // Read before the reseed: the path of the route the tab holds now.
+      const rawPath = rawPathForTab(tab, persistedRaw);
+      restoreFromPath(tab.store, rawPath);
+      // Nothing re-parses a pending store after the tier settled (no
+      // registry sync is coming): resolve it now — matched, or not-found.
+      if (rawPath !== undefined && rawPath !== "") {
+        tab.store.syncRouteFromUrl("/" + rawPath);
+      }
+    }
+  }, [deferredComplete, appsRef]);
 
   useEffect(() => {
     if (page) surfaceEmpty = tabs.length === 0;

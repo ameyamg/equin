@@ -30,7 +30,11 @@ export function useShellNotificationClaim(
     s.shellId === event.taskId ||
     (event.toolUseId !== undefined && s.toolUseId === event.toolUseId);
   const shell = shells.shells.find(ends) ?? shells.delivered.find(ends);
-  if (shell === undefined) return { kind: "declined" };
+  // No conversation, no shells read (the set stays pending) — narrowed here so
+  // the pane opened names the conversation the shell belongs to.
+  if (shell === undefined || conversationId === null) {
+    return { kind: "declined" };
+  }
   return {
     kind: "claimed",
     target: {
@@ -38,16 +42,15 @@ export function useShellNotificationClaim(
       icon: terminalIcon,
       activation: openPane.to(
         shellOutputPane,
-        { shellId: shell.shellId },
+        { shellId: shell.shellId, conv: conversationId },
         { mode: "push" },
       ),
-      body:
-        conversationId === null ? undefined : (
-          <ShellOutputSection
-            conversationId={conversationId}
-            shellId={shell.shellId}
-          />
-        ),
+      body: (
+        <ShellOutputSection
+          conversationId={conversationId}
+          shellId={shell.shellId}
+        />
+      ),
     },
   };
 }

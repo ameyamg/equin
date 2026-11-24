@@ -41,7 +41,11 @@ export function useSubagentNotificationClaim(
         (agentToolEvent?.toolUseId === event.toolUseId ||
           (row.kind === "described" && row.toolUseId === event.toolUseId))),
   );
-  if (entry === undefined) return { kind: "declined" };
+  // No conversation, no sub-agents read (the set stays pending) — narrowed
+  // here so the pane opened names the conversation the sub-agent works for.
+  if (entry === undefined || conversationId === null) {
+    return { kind: "declined" };
+  }
   return {
     kind: "claimed",
     target: {
@@ -49,7 +53,7 @@ export function useSubagentNotificationClaim(
       icon: articleIcon,
       activation: openPane.to(
         agentReportPane,
-        { by: "agent", key: entry.row.agentId },
+        { by: "agent", key: entry.row.agentId, conv: conversationId },
         { mode: "push" },
       ),
     },

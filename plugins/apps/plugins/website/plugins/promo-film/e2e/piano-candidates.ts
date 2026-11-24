@@ -64,7 +64,7 @@ await withBrowser(async (h) => {
     const dir = encodeURIComponent(folder.replace(HOME_DIR, "~"));
     await open(
       page,
-      `/files/browse/${dir}/preview/${encodeURIComponent(`${folder.replace(HOME_DIR, "~")}/${name}`)}`,
+      `/files/browse/${dir}/preview/${encodeURIComponent(name)}`,
     );
     const toSonata = page.getByRole("button", { name: "Open in Sonata" });
     await visible(toSonata, 60_000);

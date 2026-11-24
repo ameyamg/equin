@@ -20,15 +20,23 @@ export function CommitsChip() {
   // with a placeholder id: the standing is read only once the attempt id is
   // known.
   if (!conversation) return null;
-  return <AttemptCommitsChip attemptId={conversation.attemptId} />;
+  return (
+    <AttemptCommitsChip convId={convId} attemptId={conversation.attemptId} />
+  );
 }
 
-function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
+function AttemptCommitsChip({
+  convId,
+  attemptId,
+}: {
+  convId: string;
+  attemptId: string;
+}) {
   // The attempt's standing is the ONE fact this chip shows — ahead/behind and the
   // push count both come from it, so there is a single subscription and nothing
   // for two resources to disagree about.
   const workResult = useLive(attemptWork, { attemptId });
-  const { isOpen, toggle } = convCommitsGraphPane.useToggle({});
+  const { isOpen, toggle } = convCommitsGraphPane.useToggle({ conv: convId });
 
   if (workResult.status === "loading") return null;
   // Measured from git: with no computer behind this app there is no branch to

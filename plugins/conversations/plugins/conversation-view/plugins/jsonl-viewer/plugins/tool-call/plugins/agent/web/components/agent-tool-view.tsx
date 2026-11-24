@@ -75,11 +75,16 @@ export function AgentToolView({ event, input }: ToolViewProps<AgentInput>) {
 
   const openPane = useOpenPane();
 
-  const report = openPane.to(
-    agentReportPane,
-    { by: "call", key: event.toolUseId },
-    { mode: "push" },
-  );
+  // Opened about the conversation whose transcript draws this card; outside
+  // any transcript (no conversation id) there is no pane to open.
+  const report =
+    conversationId === null
+      ? undefined
+      : openPane.to(
+          agentReportPane,
+          { by: "call", key: event.toolUseId, conv: conversationId },
+          { mode: "push" },
+        );
 
   // Always openable, whether or not a result has landed: while it runs the pane
   // is where you watch it, and if it died without reporting the pane is the only
@@ -123,7 +128,7 @@ export function AgentToolView({ event, input }: ToolViewProps<AgentInput>) {
   // summary content is click-through (pointer-events-none, toggles the card).
   // `aside` is auto-wrapped in CardHeaderAction by CollapsibleCard, restoring
   // its own click.
-  const aside = (
+  const aside = report && (
     <IconButton
       icon={OpenIcon}
       label={openLabel}
@@ -183,6 +188,7 @@ export function AgentToolView({ event, input }: ToolViewProps<AgentInput>) {
             </div>
           </Scroll>
 
+        {report && (
           <Row
             size="sm"
             bordered
@@ -192,6 +198,7 @@ export function AgentToolView({ event, input }: ToolViewProps<AgentInput>) {
           >
             <span className="font-medium">{openLabel}</span>
           </Row>
+        )}
         </Stack>
     </ToolCallCard>
   );

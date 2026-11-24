@@ -24,8 +24,11 @@ import {
 const articleIcon = symbol("article");
 
 /** The sub-agent behind an agent id, as its launching `Agent` call named it. */
-function useSubagentLabel(agentId: string | undefined) {
-  const subagents = useConversationSubagents(useJsonlConversationId());
+function useSubagentLabel(
+  conversationId: string | null,
+  agentId: string | undefined,
+) {
+  const subagents = useConversationSubagents(conversationId);
   if (agentId === undefined || subagents.kind !== "known") return undefined;
   const entry = subagents.entries.find((e) => e.row.agentId === agentId);
   if (entry?.row.kind !== "described") return undefined;
@@ -85,7 +88,8 @@ export function SendMessageView({
   input,
 }: ToolViewProps<SendMessageInput>) {
   const call = readSendMessage(input, event.result);
-  const subagent = useSubagentLabel(call.agentId);
+  const conversationId = useJsonlConversationId();
+  const subagent = useSubagentLabel(conversationId, call.agentId);
   const to = recipientText(call.recipient, subagent);
   const described =
     call.recipient.kind === "agent-id" && subagent !== undefined;
@@ -93,11 +97,11 @@ export function SendMessageView({
 
   const openPane = useOpenPane();
   const open =
-    call.agentId === undefined
+    call.agentId === undefined || conversationId === null
       ? undefined
       : openPane.to(
           agentReportPane,
-          { by: "agent", key: call.agentId },
+          { by: "agent", key: call.agentId, conv: conversationId },
           { mode: "push" },
         );
 

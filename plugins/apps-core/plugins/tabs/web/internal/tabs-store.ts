@@ -190,8 +190,9 @@ export function normalizeRawPath(path: string): string {
 }
 
 /**
- * The app-relative rawPath to persist for a tab, normalized as
- * {@link normalizeRawPath}. Derivation avoids `buildRouteUrl` (which throws on a
+ * The app-relative rawPath to persist for a tab — and the one to re-read a tab
+ * from when its route cannot stand (`TabsProvider`'s restore validation) —
+ * normalized as {@link normalizeRawPath}. Derivation avoids `buildRouteUrl` (which throws on a
  * pane that is not registered yet — routine during the deferred-load window when
  * a background tab's app has not loaded):
  *
@@ -208,7 +209,7 @@ export function normalizeRawPath(path: string): string {
  *   A background tab's route is immutable while unfocused, so its rawPath still
  *   describes it; rebuilding from its (possibly unregistered) panes would throw.
  */
-function rawPathForTab(
+export function rawPathForTab(
   tab: Tab,
   prevRawByTab: ReadonlyMap<string, string | undefined>,
 ): string | undefined {

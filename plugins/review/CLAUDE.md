@@ -39,26 +39,21 @@ contributions: [
   - Contributes:
     - `Pane.Register` "conv-review"
     - `Conversation.ActionBar` → `ReviewButton`
-  - Uses:
-    - `conversations.useConversationById`
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×6
+    - `network/live` ×2
+    - `primitives/css/spacing` ×2
     - `conversations/conversation-view/action-bar.Conversation`
-    - `network/live.RowView`
-    - `network/live.useLive`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.PaneMessage`
     - `ui/icons.Icon`
   - Exports (types):
     - `ReviewProps`

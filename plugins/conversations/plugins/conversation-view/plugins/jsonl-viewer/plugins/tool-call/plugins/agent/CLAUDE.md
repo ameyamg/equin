@@ -12,14 +12,13 @@
     - `renderer` "Agent" → `ParsedToolView`
     - `Pane.Register` "agent-report"
     - `TaskNotification.Open` "sub-agent"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/jsonl-viewer/subagents` ×6
-    - `primitives/pane` ×4
+    - `primitives/pane` ×6
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-    - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.familyClass`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`

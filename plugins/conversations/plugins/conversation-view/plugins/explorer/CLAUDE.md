@@ -1,12 +1,16 @@
 # explorer
 
 The conversation's file explorer: a toolbar button (`Conversation.ActionBar` id
-`explorer`) toggling the `conv-file-tree` side pane (segment `files`), whose body
+`explorer`) toggling the `conv-file-tree` side pane (segment `files;dir;conv`), whose body
 is the file explorer app's `<FileBrowser root={wt}/>` over the conversation's
 `worktreePath`. `root` stops Up and the path bar at the checkout. Git badges, the
 Changed filter and the Diff tab come from the file explorer's `git` lens, not
 from this plugin.
 
+- **About its own conversation.** `;conv` is the conversation the pane browses
+  — implied by the conversation column to its left (omitted from the URL
+  there, written anywhere else), so `useParams().conv` is always there; the
+  toggle and the folder swaps pass it.
 - **Routed, like `/files/browse/…`.** The folder rides the pane's keyed
   `;dir` (absent = the checkout): another folder swaps this slot (a history
   entry). Every folder is a link; back / forward are the browser history.
@@ -19,7 +23,8 @@ from this plugin.
 - **Files' look.** `<FileBrowser>` wears the Files app's theme wherever it is
   drawn; the pane header stays the agent manager's.
 - **Expand = Open in Files.** The pane's home stays the agent manager (it is
-  conversation-scoped: a promote of the pane itself would drop `convId`), so it
+  conversation-scoped: a promote of the pane itself would open a bare
+  conversation file tree, not Files), so it
   declares `expand: { app: fileExplorerApp }`, opening Files on the current
   location (`useOpenInFiles`).
 
@@ -36,9 +41,9 @@ reverse. The pane's id and segment predate this plugin (it moved out of
   - Contributes:
     - `Pane.Register` "conv-file-tree"
     - `Conversation.ActionBar` → `ConvTreeButton`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/file-explorer/browser` ×8
-    - `primitives/pane` ×6
+    - `primitives/pane` ×8
     - `conversations` ×2
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`

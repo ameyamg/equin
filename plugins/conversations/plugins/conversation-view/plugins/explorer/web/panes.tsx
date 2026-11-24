@@ -2,8 +2,11 @@ import { rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   defineRoute,
+  impliedBy,
+  sameAs,
   type PaneExpandTarget,
 } from "@plugins/primitives/plugins/pane/web";
+import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
@@ -12,7 +15,6 @@ import {
   filePreviewBesidePane,
   useOpenInFiles,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { ConvExplorerBody } from "./components/conv-explorer-body";
 
@@ -28,18 +30,23 @@ export const convFileTreePane = Pane.define({
   // `filePreviewBesidePane`); a stale `;open` from before is dropped on parse.
   route: defineRoute({
     id: "conv-file-tree",
-    segment: "files;dir",
+    segment: "files;dir;conv",
   }),
+  // The conversation it is about — omitted from the URL beside that
+  // conversation's own column, written (`;conv=`) anywhere else.
+  implied: { conv: impliedBy(conversationRoute, sameAs("convId")) },
   app: agentManagerApp,
-  // Conversation-scoped satellite: a promote of the pane itself would strip
-  // convId from the URL, so Expand is Files, on the current location.
+  // Conversation-scoped satellite: Expand is Files, on the current location
+  // (a promote of the pane itself would only show this tree alone).
   expand: { app: fileExplorerApp, useTarget: useOpenInFilesTarget },
   component: ConvExplorerBody,
 });
 
-function useOpenInFilesTarget(params: { dir?: string }): PaneExpandTarget {
-  const convId = conversationPane.useEnclosing()?.params.convId ?? null;
-  const conversation = useConversationById(convId);
+function useOpenInFilesTarget(params: {
+  dir?: string;
+  conv: string;
+}): PaneExpandTarget {
+  const conversation = useConversationById(params.conv);
   const worktree = rowOrStale(conversation)?.worktreePath;
   // The file previewed in the column this pane opened, if any.
   const opened = filePreviewBesidePane.useOpenedHere();
@@ -51,7 +58,7 @@ function useOpenInFilesTarget(params: { dir?: string }): PaneExpandTarget {
         ? opened.params.path
         : null,
   });
-  // Never `none`: its fallback is the pane's own promote, which drops convId.
+  // Never `none`: its fallback is the pane's own promote, not Files.
   // Pending only while the worktree may still arrive: a conversation that is
   // not there (or a read that failed with nothing seen) opens Files at its root.
   if (

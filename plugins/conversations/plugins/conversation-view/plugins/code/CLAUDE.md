@@ -11,7 +11,9 @@ which joins the two into `Resolvable<{ files, summary, complete }>`:
 `complete: false` when the files were cut at the cap (`summary.count` still
 counts them all). One file by path — wherever it falls in the set — is the
 `editedFile` value (`edited-files.file`, `useEditedFile`), the file-peek
-pane's status hint.
+pane's status hint — keyed by the checkout (`{ worktree, path }`, an attempt
+id, following `attemptWorkspaces`) rather than by a conversation, so the peek
+reads it from its own params wherever it is open.
 
 ## `[]` means *measured, and clean* — never *unknown*
 

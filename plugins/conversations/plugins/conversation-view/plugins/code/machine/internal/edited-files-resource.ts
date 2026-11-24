@@ -10,7 +10,10 @@ import {
   assertCapability,
   type WorkspaceSpec,
 } from "@plugins/conversations/plugins/workspace/core";
-import { conversationWorkspacesServed } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  attemptWorkspacesServed,
+  conversationWorkspacesServed,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { conversationWorkspaceOf } from "@plugins/tasks/plugins/tasks-core/core";
 import { editedFile, editedFiles } from "../../core";
 import type { EditedFile, EditedFilesMeta } from "../../core/protocol";
@@ -150,12 +153,17 @@ export const editedFilesServed = serveValue(editedFiles, {
 });
 
 // One file of the set, by path, from the same memoized list — the file-peek
-// pane's status hint, wherever in the set's pages the file falls.
+// pane's status hint, wherever in the set's pages the file falls. Keyed by the
+// checkout (an attempt id), so it follows that attempt's workspace row: the
+// same worktree path and workspace, and so the same memo and watch, as a
+// conversation of the attempt reads through `conversationWorkspaces`.
 export const editedFileServed = serveValue(editedFile, {
   source: "external",
   changes: "notified",
   follows: (follow) => ({
-    ws: follow(conversationWorkspacesServed, ({ id }) => ({ ids: [id] })),
+    ws: follow(attemptWorkspacesServed, ({ worktree }) => ({
+      ids: [worktree],
+    })),
   }),
   loader: async (
     { path },

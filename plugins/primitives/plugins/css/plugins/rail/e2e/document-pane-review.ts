@@ -104,9 +104,8 @@ const SURFACES: readonly Surface[] = [
   { name: "conv-summary", path: "/agents/c/conv-1777333537-usf7/summary" },
   { name: "server-create", path: "/deploy/servers/server/new" },
   { name: "mail-message", path: (f) => `/mail/search/m/${f.mailMessageId}` },
-  // The workflow step pane, in the arms a worktree can reach without a
-  // Workflow call in any transcript: a call whose input is no workflow, and
-  // the pane opened with no conversation above it.
+  // The workflow step pane, in the arm a worktree can reach without a
+  // Workflow call in any transcript: a call whose input is no workflow.
   ...(conv !== undefined && toolUse !== undefined
     ? [
         {
@@ -115,7 +114,6 @@ const SURFACES: readonly Surface[] = [
         },
       ]
     : []),
-  { name: "workflow-node-no-conv", path: "/agents/workflow-node/toolu_x/n1" },
 ];
 
 /**
@@ -138,7 +136,11 @@ const HEADER_JUMP_SURFACES: readonly Surface[] = [
   { name: "hj-detail-plain", path: "/debug/build/r/build-1794488888-ghzpsm" },
   { name: "hj-full-doc", path: "/debug/heap" },
   { name: "hj-full-plain", path: "/debug/reports" },
-  { name: "hj-agent-manager-doc", path: "/agents/workflow-node/toolu_x/n1" },
+  {
+    name: "hj-agent-manager-doc",
+    // Alone, so its conversation is written out (`;conv=`).
+    path: "/agents/workflow-node/toolu_x/n1;conv=conv-1777333537-usf7",
+  },
   { name: "hj-agent-manager-plain", path: "/agents/c/conv-1777333537-usf7" },
   {
     name: "hj-settings-doc",

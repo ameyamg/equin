@@ -8,7 +8,6 @@ import {
   PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import {
   foldResource,
@@ -128,8 +127,6 @@ function FilePeekPaneBody() {
 
 function FilePeekPaneContent() {
   const openPane = useOpenPane();
-  const convId = conversationPane.useEnclosing()?.params.convId;
-
   const { worktree, filePath: rawFilePath } = filePeekPane.useParams();
 
   const { filePath, line } = splitLine(rawFilePath);
@@ -142,11 +139,13 @@ function FilePeekPaneContent() {
   const { resolved, file } = usePeekedFile(worktree, filePath);
   const effectivePath = file.path;
 
-  // This one file's entry in the edited set (`null`: clean), wherever in the
-  // set it falls. Only a checkout file has one: a file on the computer sits outside the
-  // worktree, so it reads nothing.
+  // This one file's entry in its checkout's edited set (`null`: clean),
+  // wherever in the set it falls — keyed by the checkout the pane names, so it
+  // reads the same beside a conversation or anywhere else. Only a checkout file
+  // has one: a file on the computer sits outside the worktree, so it reads
+  // nothing.
   const fileResult = useEditedFile(
-    file.fs === "checkout" ? (convId ?? null) : null,
+    file.fs === "checkout" ? file.checkout : null,
     file.path,
   );
   // `status` is a derived renderer hint, so an unknown file set (loading, a

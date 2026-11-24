@@ -34,7 +34,7 @@ candidate on the token forever.
     - `active-data.CodeClaim`
     - `active-data.codeTag`
     - `active-data.declined`
-    - `conversations/conversation-view.conversationPane`
+    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `network/live.useLive`
     - `plugin-meta/plugin-view.PluginDetailForId`
     - `plugin-meta/plugin-view.pluginViewPane`

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -9,10 +8,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -55,24 +51,14 @@ function Muted({ children }: { children: ReactNode }) {
 }
 
 /**
- * Route ownership: which shell the URL names and which conversation it hangs
- * off. A conversation-scoped satellite with no conversation above it says so,
- * rather than subscribing to an empty conversation id.
+ * Route ownership: which shell the URL names and the conversation that
+ * launched it — both the pane's own params.
  */
 export function ShellOutputPaneBody() {
-  const { shellId } = shellOutputPane.useParams();
-  const convId = conversationPane.useEnclosing()?.params.convId;
+  const { shellId, conv } = shellOutputPane.useParams();
   return (
     <PaneChrome pane={shellOutputPane}>
-      {convId === undefined ? (
-        <Inset pad="lg">
-          <Text as="div" variant="body" className="text-muted-foreground">
-            This pane opens inside a conversation, and none is open here.
-          </Text>
-        </Inset>
-      ) : (
-        <ShellOutputView conversationId={convId} shellId={shellId} />
-      )}
+      <ShellOutputView conversationId={conv} shellId={shellId} />
     </PaneChrome>
   );
 }

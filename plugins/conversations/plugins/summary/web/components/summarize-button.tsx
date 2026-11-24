@@ -14,7 +14,7 @@ const autoAwesomeIcon = symbol("auto-awesome");
 export function SummarizeButton() {
   const { convId } = conversationPane.useParams();
   const latestResult = useLatestConversationSummary(convId);
-  const { isOpen, toggle } = convSummaryPane.useToggle({});
+  const { isOpen, toggle } = convSummaryPane.useToggle({ conv: convId });
 
   if (latestResult.status === "error") {
     return (

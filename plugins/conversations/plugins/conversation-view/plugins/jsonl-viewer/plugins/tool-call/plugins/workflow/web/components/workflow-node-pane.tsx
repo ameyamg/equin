@@ -1,6 +1,5 @@
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConversationFileLinks } from "@plugins/conversations/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -16,16 +15,16 @@ import { workflowNodePane } from "../panes";
 import { useWorkflowNode } from "../internal/use-workflow-node";
 
 export function WorkflowNodePaneBody() {
-  const convId = conversationPane.useEnclosing()?.params.convId;
+  const { conv } = workflowNodePane.useParams();
   // The step's prompt names files in its conversation's worktree.
   return (
-    <ConversationFileLinks conversationId={convId ?? null}>
-      <WorkflowNodePaneContent convId={convId} />
+    <ConversationFileLinks conversationId={conv}>
+      <WorkflowNodePaneContent convId={conv} />
     </ConversationFileLinks>
   );
 }
 
-function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
+function WorkflowNodePaneContent({ convId }: { convId: string }) {
   const { toolUseId, nodeId } = workflowNodePane.useParams();
   const state = useWorkflowNode(convId, toolUseId, nodeId);
 
@@ -45,18 +44,6 @@ function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
           error={state.error}
           refetch={state.retry}
         />
-      </PaneChrome>
-    );
-  }
-
-  // A step belongs to a conversation's transcript: opened with no
-  // conversation in the route, the pane says so.
-  if (state.phase === "no-conversation") {
-    return (
-      <PaneChrome pane={workflowNodePane} inset="document">
-        <Text as="div" variant="body" className="text-muted-foreground">
-          Open this step from its conversation.
-        </Text>
       </PaneChrome>
     );
   }

@@ -47,11 +47,14 @@ export const editedFiles = liveValue("edited-files", {
   needsMachine: NEEDS_MACHINE,
 });
 
-// One edited file of a conversation's worktree, by path — the file-peek pane's
-// status hint, whatever page of the set it falls on. `null`: the path is clean
-// (not in the set); an unresolvable worktree is `{ resolved: false, reason }`.
+// One edited file of a checkout, by path — the file-peek pane's status hint,
+// whatever page of the set it falls on. Keyed by the checkout the peek names
+// (`worktree`: an attempt id), not by a conversation, so a peek carries all it
+// needs in its own params wherever it is open. `null`: the path is clean (not
+// in the set); a checkout that is no attempt's worktree (`self`, `main`, a
+// reaped one) is `{ resolved: false, reason }`.
 export const editedFile = liveValue("edited-files.file", {
   schema: resolvableSchema(EditedFileSchema.nullable()),
-  params: ["id", "path"],
+  params: ["worktree", "path"],
   needsMachine: NEEDS_MACHINE,
 });

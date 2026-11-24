@@ -457,7 +457,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data.CodeClaim`
           - `active-data.codeTag`
           - `active-data.declined`
-          - `conversations/conversation-view.conversationPane`
+          - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
           - `network/live.useLive`
           - `plugin-meta/plugin-view.PluginDetailForId`
           - `plugin-meta/plugin-view.pluginViewPane`
@@ -5569,7 +5569,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useOpenPane`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's actions, drawn in its hover cluster and, as menu items, in its right-click menu (its own: Open with default app, Reveal in Finder, Rename, Copy, Cut, Extract here, Compress, Copy path, Move to Trash, Delete — acting on the selection a right-click was opened on; the menu adds New text file, New folder and Paste, and ⌘C / ⌘X / ⌘V copy, cut and paste through the page's file clipboard), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<file>[;fs=<system>], the file's full path — its whole address, so it works in any column order and alone —, pushed and closed so it slides in and out while the listing stays mounted), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside some other pane (the conversation's Files pane, the folder peek) previews its open file in a column of its own beside it — the shared preview-file/<file>[;fs=<system>] pane, through useBesidePreviewNavigator —, and <FileBrowser/> (no pane header) beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
+        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's actions, drawn in its hover cluster and, as menu items, in its right-click menu (its own: Open with default app, Reveal in Finder, Rename, Copy, Cut, Extract here, Compress, Copy path, Move to Trash, Delete — acting on the selection a right-click was opened on; the menu adds New text file, New folder and Paste, and ⌘C / ⌘X / ⌘V copy, cut and paste through the page's file clipboard), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<file>[;fs=<system>], the file's full path, its whole address, so it works in any column order, beside another folder and alone — written relative to the folder column to its left when the file is in it (…/browse/~%2Fp/preview/README.md), in full otherwise —, pushed and closed so it slides in and out while the listing stays mounted), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside some other pane (the conversation's Files pane, the folder peek) previews its open file in a column of its own beside it — the shared preview-file/<file>[;fs=<system>] pane, through useBesidePreviewNavigator —, and <FileBrowser/> (no pane header) beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
           - Web:
             - Slots:
               - `filesHomePane.Actions`
@@ -5594,9 +5594,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "files"
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `ThemeEngine.SubTheme` "Files document"
-            - Uses: 110 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 114 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `primitives/pane` ×13
               - `primitives/data-view` ×11
-              - `primitives/pane` ×9
               - `primitives/css/ui-kit` ×7
               - `primitives/file-viewer` ×7
               - `primitives/kept-state` ×7
@@ -14867,8 +14867,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/static-render`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included) and whether it shows apps side by side (useSurfaceShowsAppsSideBySide: leaving it closes its app), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
-        - Uses: 52 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×22
+        - Uses: 53 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×23
           - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
@@ -17936,8 +17936,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 90 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×61
+    - Imported by: 91 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×62
       - `tasks` ×10
       - `apps` ×6
       - `infra` ×3
@@ -19086,10 +19086,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 64 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
-          - `conversations` ×49
-          - `active-data` ×5
+        - Imported by: 59 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+          - `conversations` ×45
           - `tasks` ×5
+          - `active-data` ×4
           - `debug/profiling/ops`
           - `hints/ask`
           - `primitives/launch`
@@ -19409,7 +19409,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "file-peek"
                   - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-                - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
+                - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
                   - `primitives/file-viewer` ×6
                   - `primitives/pane` ×6
                   - `apps/file-explorer/browser` ×3
@@ -19418,7 +19418,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live/live-state` ×2
                   - `primitives/path-bar` ×2
                   - `conversations/conversation-view/code.useEditedFile`
-                  - `conversations/conversation-view.conversationPane`
                   - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/fill.fillClasses`
                   - `primitives/css/placeholder.Placeholder`
@@ -19447,8 +19446,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "conv-commits-graph"
               - `Conversation.ActionBar` → `CommitsChip`
-            - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md)
-              - `primitives/pane` ×5
+            - Uses: 27 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md)
+              - `primitives/pane` ×7
               - `network/live` ×3
               - `primitives/commit-list` ×2
               - `primitives/css/ui-kit` ×2
@@ -19633,9 +19632,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "conv-file-tree"
               - `Conversation.ActionBar` → `ConvTreeButton`
-            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/explorer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/explorer/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/explorer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/explorer/REFERENCE.md)
               - `apps/file-explorer/browser` ×8
-              - `primitives/pane` ×6
+              - `primitives/pane` ×8
               - `conversations` ×2
               - `conversations/conversation-view/action-bar.Conversation`
               - `conversations/conversation-view.conversationPane`
@@ -19843,8 +19842,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --measure-reading`
-            - Imported by: 52 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×49
+              - `active-data/plugin-link`
               - `apps/places/places-map`
               - `network/live`
               - `tasks/outcome-report`
@@ -20430,15 +20430,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Pane.Register` "shell-output"
                   - `TaskNotification.Open` "background-shell"
                 - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md)
-                  - `primitives/pane` ×4
+                  - `primitives/pane` ×6
                   - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                   - `network/live/live-state` ×3
                   - `network/live` ×3
-                  - `primitives/css/spacing` ×2
                   - `primitives/dom/auto-scroll` ×2
                   - `primitives/relative-time` ×2
                   - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
-                  - `conversations/conversation-view.conversationPane`
                   - `conversations.useConversationById`
                   - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/fill.Fill`
@@ -20448,6 +20446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/pin.Pin`
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/scroll.Scroll`
+                  - `primitives/css/spacing.Stack`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
@@ -21191,14 +21190,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `renderer` "Agent" → `ParsedToolView`
                       - `Pane.Register` "agent-report"
                       - `TaskNotification.Open` "sub-agent"
-                    - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md)
+                    - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md)
                       - `conversations/conversation-view/jsonl-viewer/subagents` ×6
-                      - `primitives/pane` ×4
+                      - `primitives/pane` ×6
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
                       - `primitives/css/spacing` ×2
                       - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
                       - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-                      - `conversations/conversation-view.conversationPane`
                       - `conversations/model-provider.familyClass`
                       - `network/live/live-state.ResourceErrorInline`
                       - `primitives/css/badge.Badge`
@@ -21842,13 +21840,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes:
                       - `renderer` "Workflow" → `ParsedToolView`
                       - `Pane.Register` "workflow-node"
-                    - Uses: 36 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
+                    - Uses: 38 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
+                      - `primitives/pane` ×6
                       - `primitives/css/spacing` ×4
-                      - `primitives/pane` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `primitives/collapsible` ×2
                       - `primitives/css/badge` ×2
-                      - `conversations/conversation-view.conversationPane`
+                      - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                       - `conversations/model-provider.familyClass`
                       - `conversations.ConversationFileLinks`
                       - `network/live/live-state.ResourceErrorInline`
@@ -22692,9 +22690,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
+              - `primitives/pane.impliedBy`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.PaneMessage`
+              - `primitives/pane.sameAs`
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`; useResumeConversation (the one browser resume, whose failure is a 'Couldn't resume conversation' notification) and that notification's Retry (the resume action kind); useRetryLaunch, which re-runs the launch of a conversation that failed to start.
           - Web:
             - Contributes: `Notifications.Action` "resume"
@@ -24245,9 +24245,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "summary"
           - `Pane.Register` "conv-summary"
-        - Uses: 22 symbols — full list in [`plugins/conversations/plugins/summary/REFERENCE.md`](../plugins/conversations/plugins/summary/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/conversations/plugins/summary/REFERENCE.md`](../plugins/conversations/plugins/summary/REFERENCE.md)
+          - `primitives/pane` ×5
           - `network/live/live-state` ×4
-          - `primitives/pane` ×3
           - `infra/endpoints` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
@@ -58118,10 +58118,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HistoryAdapter`
           - `HistoryMode`
           - `HistoryWrite`
+          - `ImpliedParam`
           - `LocationChange`
           - `MatchEntry`
+          - `OpenColumnsOpts`
           - `OpenPaneFn`
           - `PaneChromeConfig`
+          - `PaneColumn`
           - `PaneExpand`
           - `PaneExpandAction`
           - `PaneExpandTarget`
@@ -58147,8 +58150,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PaneToggleOpts`
           - `ParsedRoute`
           - `PromoteAction`
+          - `RelativeSpelling`
           - `ResolveHook`
           - `ResolveResult`
+          - `RestoredRouteValidity`
           - `RouteState`
           - `SerializedSlot`
           - `SetParamsOptions`
@@ -58163,11 +58168,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `currentRoutePrefix`
           - `definePaneHeaderSlot`
           - `defineRoute`
+          - `impliedBy`
           - `morphOriginProps`
           - `Pane`
           - `PaneBasePathContext`
           - `PaneBox`
           - `PaneChrome`
+          - `paneColumn`
           - `PaneEndControls`
           - `PaneHeaderCell`
           - `PaneIconAction`
@@ -58189,11 +58196,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `peekBasePath`
           - `peekRoute`
           - `peekRoutePattern`
+          - `relativeTo`
           - `reorderRoute`
           - `resolveFrom`
           - `resolveRow`
           - `restoreRoute`
           - `routeHomeApp`
+          - `sameAs`
           - `setBasePath`
           - `setHistoryAdapter`
           - `setLiveStore`
@@ -58219,6 +58228,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRouteState`
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
+          - `validRestoredRoute`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -62079,26 +62089,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `Pane.Register` "conv-review"
       - `Conversation.ActionBar` → `ReviewButton`
-    - Uses:
-      - `conversations.useConversationById`
-      - `conversations/conversation-view.conversationPane`
+    - Uses: 22 symbols — full list in [`plugins/review/REFERENCE.md`](../plugins/review/REFERENCE.md)
+      - `primitives/pane` ×6
+      - `network/live` ×2
+      - `primitives/css/spacing` ×2
       - `conversations/conversation-view/action-bar.Conversation`
-      - `network/live.RowView`
-      - `network/live.useLive`
+      - `conversations/conversation-view.conversationPane`
+      - `conversations.useConversationById`
       - `network/live/live-state.ResourceErrorInline`
       - `primitives/css/placeholder.Placeholder`
       - `primitives/css/scroll.Scroll`
-      - `primitives/css/spacing.Inset`
-      - `primitives/css/spacing.Stack`
       - `primitives/css/toggle-chip.ToggleChip`
       - `primitives/css/ui-kit.Button`
       - `primitives/detail-sections.defineDetailSections`
       - `primitives/link-gesture.linkProps`
       - `primitives/loading.Loading`
-      - `primitives/pane.defineRoute`
-      - `primitives/pane.Pane`
-      - `primitives/pane.PaneChrome`
-      - `primitives/pane.PaneMessage`
       - `ui/icons.Icon`
     - Exports (types):
       - `ReviewProps`
