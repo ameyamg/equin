@@ -173,7 +173,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `Library.SongLink` "groove"
   - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×13
-    - `primitives/css/ui-kit` ×11
+    - `primitives/css/ui-kit` ×10
     - `network/live/live-state` ×6
     - `apps/sonata/primitives/rhythm-circle` ×3
     - `config_v2` ×3
@@ -189,6 +189,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`

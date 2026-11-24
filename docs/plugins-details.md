@@ -1107,13 +1107,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`start-page`** — Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (time-of-day greeting + pill search), a grid of pins (curated quick links, then the live bookmarks), and the recently visited pages.
           - Web:
             - Contributes: `Browser.StartPage` "Start page" → `StartPage`
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md)
+            - Uses: 27 symbols — full list in [`plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md)
               - `apps/browser/shell` ×3
-              - `primitives/css/ui-kit` ×3
               - `apps/browser/bookmarks` ×2
               - `apps/browser/omnibox` ×2
               - `network/live/live-state` ×2
               - `primitives/css/spacing` ×2
+              - `primitives/css/ui-kit` ×2
               - `primitives/kept-state` ×2
               - `apps/browser/history.browserRecents`
               - `network/live.useLive`
@@ -11410,11 +11410,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
                   - `primitives/css/inline.Inline`
+                  - `primitives/css/line.Line`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/css/ui-kit.ControlSizeProvider`
-                  - `primitives/css/ui-kit.SingleLineProvider`
                   - `primitives/css/yield.yieldClass`
                   - `primitives/hover-reveal.hoverRevealTarget`
                   - `primitives/icon-button.IconButton`
@@ -11802,7 +11802,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Library.SongLink` "groove"
                 - Uses: 62 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
                   - `apps/sonata/document` ×13
-                  - `primitives/css/ui-kit` ×11
+                  - `primitives/css/ui-kit` ×10
                   - `network/live/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
                   - `config_v2` ×3
@@ -11818,6 +11818,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/center.Center`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/grid.Grid`
+                  - `primitives/css/line.Line`
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/switch.Switch`
                   - `primitives/css/text.Text`
@@ -18953,7 +18954,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
-              - `primitives/css/ui-kit.SingleLineProvider`
               - `primitives/css/yield.yieldClass`
               - `primitives/relative-time.RelativeTime`
               - `primitives/slot-render.defineDispatchSlot`
@@ -20669,8 +20669,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.RowView`
                   - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/inline.Inline`
+                  - `primitives/css/line.Line`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.SingleLineProvider`
+                  - `primitives/css/yield.yieldClass`
                   - `primitives/link-gesture.activationProps`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
@@ -27333,7 +27334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "live-state-health"
           - `DebugApp.Sidebar` "Live State"
-        - Uses: 24 symbols — full list in [`plugins/debug/plugins/live-state-health/REFERENCE.md`](../plugins/debug/plugins/live-state-health/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/debug/plugins/live-state-health/REFERENCE.md`](../plugins/debug/plugins/live-state-health/REFERENCE.md)
           - `network/live/live-state` ×7
           - `primitives/pane` ×3
           - `primitives/css/text` ×2
@@ -27343,9 +27344,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
           - `primitives/css/rigid.Rigid`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/yield.yieldClass`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
         - Exports (values): `liveStateHealthPane`
@@ -29920,12 +29923,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/trace/engine.Trace`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.SingleLineProvider`
+              - `primitives/css/yield.yieldClass`
               - `primitives/virtual-rows/row-fold.RowFoldProps`
               - `primitives/virtual-rows/row-fold.useRowFold`
               - `ui/icons.Icon`
@@ -51187,7 +51191,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder/node-types/overflow`
           - `reports/adaptive-bar`
       - Exemptions:
-        - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/adaptive-bar.tsx` (sanctioned)
+        - Exempts itself from:
+          - `layout/no-adhoc-layout` — `web/internal/adaptive-bar.tsx` (sanctioned)
+          - `line/no-raw-single-line-provider` — `web/internal/adaptive-bar.tsx` (sanctioned)
       - Core:
         - Exports (types):
           - `AbsentRungs`
@@ -51547,6 +51553,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder/node-types/header`
           - `shell/health-report`
           - `tasks/supervisor-roles/pane`
+      - Exemptions:
+        - Exempts itself from: `line/no-raw-single-line-provider` — `web/internal/collapsible.tsx` (sanctioned)
       - Core:
         - Exports (types): `FoldTiming`
         - Exports (values):
@@ -52012,6 +52020,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `hints/ask`
               - `history/dialog`
+          - Exemptions:
+            - Exempts itself from: `line/no-raw-single-line-provider` — `web/internal/column.tsx` (sanctioned)
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
             - Uses: 26 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
@@ -52328,11 +52338,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×40
-              - `primitives` ×20
-              - `conversations` ×19
-              - `debug` ×8
+            - Imported by: 140 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×42
+              - `primitives` ×21
+              - `conversations` ×20
+              - `debug` ×10
               - `tasks` ×7
               - `page` ×6
               - `ui` ×6
@@ -52350,6 +52360,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `map`
               - `tag-tree/picker`
               - `upstream`
+          - Exemptions:
+            - Exempts itself from: `line/no-raw-single-line-provider` — `web/internal/line.tsx` (sanctioned)
+            - Exempted by:
+              - `primitives/adaptive-bar` (0 debt)
+              - `primitives/collapsible` (0 debt)
+              - `primitives/css/column` (0 debt)
+              - `primitives/css/line` (0 debt)
+              - `primitives/css/spacing` (0 debt)
+              - `primitives/css/text` (0 debt)
+              - `primitives/data-table` (0 debt)
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, hover:bg-accent) rather than as underlined link text, its label sitting on the baseline of the sentence holding it. A proportional label takes one text rung above a plain Badge so it holds up beside body copy; a monospace label keeps Badge's own rung, the size markdown gives inline code in the same prose, because the mono face already sets wider at any given rung. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
             - Uses:
@@ -52871,6 +52891,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/picker`
               - `upstream`
               - `wish`
+          - Exemptions:
+            - Exempts itself from: `line/no-raw-single-line-provider` — `web/internal/stack.tsx` (sanctioned)
         - **`spinner`** — Spinner for loading states: the spinning refresh glyph (default) or, with shape="ring", a thin ring (hover-tone track, current-colour arc). Always spinning by default; spinning={false} pauses.
           - Web:
             - Uses:
@@ -53106,6 +53128,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/picker`
               - `upstream`
               - `wish`
+          - Exemptions:
+            - Exempts itself from: `line/no-raw-single-line-provider` — `exhibits/internal/text-exhibits.tsx`, `web/__tests__/single-line.test.tsx` (sanctioned)
           - Core:
             - Exports (types):
               - `CssUtility`
@@ -53400,10 +53424,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 484 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 483 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
-              - `conversations` ×55
+              - `conversations` ×54
               - `page` ×27
               - `debug` ×25
               - `ui` ×22
@@ -53535,11 +53559,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×10
-              - `conversations` ×8
-              - `debug` ×3
+              - `conversations` ×9
+              - `debug` ×5
               - `tasks` ×3
               - `ui` ×3
               - `fields` ×2
@@ -53679,7 +53703,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/table`
           - `primitives/metrics/chart-kit`
       - Exemptions:
-        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/data-table.tsx` (debt)
+        - Exempts itself from:
+          - `react-compiler:no-silent-skips` — `web/internal/data-table.tsx` (debt)
+          - `line/no-raw-single-line-provider` — `web/internal/data-table.tsx` (sanctioned)
       - Core:
         - Exports (types):
           - `FitColumn`
@@ -56147,12 +56173,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.Rigid`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/kept-state.useTransient`

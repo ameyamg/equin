@@ -1,9 +1,7 @@
 import { type Node, type NodeProps } from "@xyflow/react";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import {
-  cn,
-  SingleLineProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -45,11 +43,11 @@ export function GroupBackground({ data }: NodeProps<GroupBgFlowNode>) {
         style={{ left: "var(--space-sm)" }}
         className="max-w-[calc(100%-16px)]"
       >
-        <SingleLineProvider value={true}>
+        <Line>
           <Text className={cn("text-3xs font-medium", data.labelClassName)}>
             {data.label}
           </Text>
-        </SingleLineProvider>
+        </Line>
       </Pin>
     </div>
   );

@@ -48,12 +48,13 @@ flagged orphan roots (evicted <5 ms parent, or a detached child).
     - `debug/trace/engine.Trace`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/css/yield.yieldClass`
     - `primitives/virtual-rows/row-fold.RowFoldProps`
     - `primitives/virtual-rows/row-fold.useRowFold`
     - `ui/icons.Icon`

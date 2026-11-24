@@ -1,11 +1,9 @@
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { z } from "zod";
 import type { SpanKind } from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  cn,
-  Button,
-  SingleLineProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -270,13 +268,14 @@ function TreeLabel({
 }): ReactElement {
   const hasChildren = node.children.length > 0;
   return (
-    <SingleLineProvider value={true}>
+    <Line>
       {/* Depth indentation is a runtime value — no Tailwind class can express it. */}
       <Stack
         direction="row"
         align="center"
         gap="2xs"
         style={{ paddingLeft: depth * INDENT }}
+        className={yieldClass("x")}
       >
         {hasChildren ? (
           <button
@@ -317,7 +316,7 @@ function TreeLabel({
           </span>
         )}
       </Stack>
-    </SingleLineProvider>
+    </Line>
   );
 }
 

@@ -1,9 +1,9 @@
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { useState } from "react";
 import {
   Button,
   cn,
   Input,
-  SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   ControlPanel,
@@ -153,13 +153,13 @@ function PresetPicker({
               aria-label={`Groove preset: ${selected?.name ?? "Custom"}${edited ? " (edited)" : ""}`}
             >
               <Icon icon={grooveIcon} />
-              <SingleLineProvider value={true}>
-                <Fill as="span">
+              <Fill as="span">
+                <Line as="span">
                   <Text as="span" variant="body">
                     {selected?.name ?? "Custom"}
                   </Text>
-                </Fill>
-              </SingleLineProvider>
+                </Line>
+              </Fill>
               {edited && <Badge variant="warning">edited</Badge>}
               <Icon icon={openIcon} />
             </Button>

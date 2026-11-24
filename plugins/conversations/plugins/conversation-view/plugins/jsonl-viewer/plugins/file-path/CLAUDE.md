@@ -14,8 +14,9 @@
     - `network/live.RowView`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/css/yield.yieldClass`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`

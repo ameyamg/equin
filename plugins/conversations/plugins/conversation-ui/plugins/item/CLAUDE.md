@@ -72,7 +72,6 @@ directly — it is no longer re-exported here.)
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/css/yield.yieldClass`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineDispatchSlot`

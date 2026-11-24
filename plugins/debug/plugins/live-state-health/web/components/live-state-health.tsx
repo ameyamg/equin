@@ -1,3 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   useNotificationsClient,
@@ -12,7 +15,6 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ServerResourcesSection } from "./server-resources-section";
@@ -189,18 +191,14 @@ function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
   return (
     // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <div className="flex items-center gap-md border-b border-border/40 py-xs">
-      <SingleLineProvider value={true}>
-        <Text className="flex-[2]">
-          <Text variant="caption">{sub.key}</Text>
+      <Line className={cn("flex-[2]", yieldClass("x"))}>
+        <Text variant="caption">{sub.key}</Text>
+      </Line>
+      <Line className={cn("flex-[2]", yieldClass("x"))} title={sub.paramsKey}>
+        <Text variant="caption" tone="muted">
+          {sub.paramsKey}
         </Text>
-      </SingleLineProvider>
-      <SingleLineProvider value={true}>
-        <Text className="flex-[2]" title={sub.paramsKey}>
-          <Text variant="caption" tone="muted">
-            {sub.paramsKey}
-          </Text>
-        </Text>
-      </SingleLineProvider>
+      </Line>
       <Text
         variant="caption"
         tone="muted"

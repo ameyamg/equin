@@ -421,7 +421,9 @@ step renders, to check a caller.
     - `primitives/data-view/table`
     - `primitives/metrics/chart-kit`
 - Exemptions:
-  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/data-table.tsx` (debt)
+  - Exempts itself from:
+    - `react-compiler:no-silent-skips` — `web/internal/data-table.tsx` (debt)
+    - `line/no-raw-single-line-provider` — `web/internal/data-table.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `FitColumn`

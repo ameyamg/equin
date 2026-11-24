@@ -229,6 +229,8 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `reorder/node-types/header`
     - `shell/health-report`
     - `tasks/supervisor-roles/pane`
+- Exemptions:
+  - Exempts itself from: `line/no-raw-single-line-provider` — `web/internal/collapsible.tsx` (sanctioned)
 - Core:
   - Exports (types): `FoldTiming`
   - Exports (values):

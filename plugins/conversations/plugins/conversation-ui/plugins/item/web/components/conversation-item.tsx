@@ -1,7 +1,6 @@
 import {
   cn,
   ControlSizeProvider,
-  SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
   ConversationKind,
@@ -168,7 +167,7 @@ export function ConvTitle({
   // `<Inline>` (the inline conv chip), so it forces single-line itself to
   // ellipsize in both.
   return (
-    <SingleLineProvider value={true}>
+    <Line as="span" className={yieldClass("x")}>
       <Text
         as="span"
         variant={variant}
@@ -177,7 +176,7 @@ export function ConvTitle({
       >
         {title?.label ?? conversationTitle(conv)}
       </Text>
-    </SingleLineProvider>
+    </Line>
   );
 }
 

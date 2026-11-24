@@ -15,11 +15,11 @@
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/css/yield.yieldClass`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`

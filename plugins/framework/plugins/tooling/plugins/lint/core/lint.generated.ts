@@ -110,6 +110,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/control-panel", id: "primitives.css.control-panel", loader: () => import("@plugins/primitives/plugins/css/plugins/control-panel/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/control-size", id: "primitives.css.control-size", loader: () => import("@plugins/primitives/plugins/css/plugins/control-size/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/icon-auto", id: "primitives.css.icon-auto", loader: () => import("@plugins/primitives/plugins/css/plugins/icon-auto/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/line", id: "primitives.css.line", loader: () => import("@plugins/primitives/plugins/css/plugins/line/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/motion", id: "primitives.css.motion", loader: () => import("@plugins/primitives/plugins/css/plugins/motion/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/radio-group", id: "primitives.css.radio-group", loader: () => import("@plugins/primitives/plugins/css/plugins/radio-group/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/radius", id: "primitives.css.radius", loader: () => import("@plugins/primitives/plugins/css/plugins/radius/lint"), dependsOn: [] },

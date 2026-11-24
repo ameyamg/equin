@@ -9,12 +9,12 @@
   - Uses:
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.Rigid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/kept-state.useTransient`

@@ -1,7 +1,7 @@
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Favicon } from "@plugins/apps/plugins/browser/plugins/shell/web";
 
 /** Parse a URL's hostname; falls back to the raw string for unparseable input. */
@@ -39,11 +39,11 @@ export function LinkTile({ url, label, onClick }: LinkTileProps) {
       <Center className="browser-pin-tile">
         <Favicon url={url} size={22} />
       </Center>
-      <SingleLineProvider value={true}>
+      <Line className="w-full">
         <Text variant="caption" className="w-full text-center">
           {text}
         </Text>
-      </SingleLineProvider>
+      </Line>
     </Stack>
   );
 }

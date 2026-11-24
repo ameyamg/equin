@@ -567,7 +567,9 @@ half in the panel reads as two broken navigations.
     - `reorder/node-types/overflow`
     - `reports/adaptive-bar`
 - Exemptions:
-  - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/adaptive-bar.tsx` (sanctioned)
+  - Exempts itself from:
+    - `layout/no-adhoc-layout` — `web/internal/adaptive-bar.tsx` (sanctioned)
+    - `line/no-raw-single-line-provider` — `web/internal/adaptive-bar.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `AbsentRungs`

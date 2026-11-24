@@ -105,6 +105,7 @@ export type ExemptableRuleId =
   | "launcher:env-names"
   | "layout/no-adhoc-layout"
   | "layout/no-unanchored-has"
+  | "line/no-raw-single-line-provider"
   | "live-state/no-handrolled-result"
   | "live-state/no-linear-query-find"
   | "live-state/no-ready-negation"

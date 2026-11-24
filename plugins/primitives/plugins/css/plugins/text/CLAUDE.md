@@ -323,6 +323,8 @@ to reconcile them; they never needed reconciling.
     - `tag-tree/picker`
     - `upstream`
     - `wish`
+- Exemptions:
+  - Exempts itself from: `line/no-raw-single-line-provider` — `exhibits/internal/text-exhibits.tsx`, `web/__tests__/single-line.test.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `CssUtility`

@@ -1,3 +1,5 @@
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { RowView } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -10,7 +12,6 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { useHomeDisplay } from "@plugins/infra/plugins/host-account/web";
 import { toRelativePath } from "./shown-path";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 interface FilePathProps {
   filePath: string;
@@ -68,7 +69,7 @@ function WorktreeFilePath({
 
   return (
     <Inline gap="2xs" className="group/path">
-      <SingleLineProvider value={true}>
+      <Line as="span" className={yieldClass("x")}>
         <Text
           as="button"
           side="start"
@@ -79,7 +80,7 @@ function WorktreeFilePath({
         >
           {shown}
         </Text>
-      </SingleLineProvider>
+      </Line>
       <CopyButton
         text={relativePath}
         tooltip="Copy path"

@@ -25,7 +25,7 @@ instrumentation of its own.
   - Contributes:
     - `Pane.Register` "live-state-health"
     - `DebugApp.Sidebar` "Live State"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×7
     - `primitives/pane` ×3
     - `primitives/css/text` ×2
@@ -35,9 +35,11 @@ instrumentation of its own.
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.Rigid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/yield.yieldClass`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `liveStateHealthPane`

@@ -1,3 +1,4 @@
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   useCursorSelector,
   useSession,
@@ -8,7 +9,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   cn,
   ControlSizeProvider,
-  SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
@@ -64,26 +64,23 @@ export function SectionLabel({
   );
 
   return (
-    <SingleLineProvider value={true}>
-      <Inline
-        as="button"
-        gap="xs"
-        title={name}
-        className={cn(yieldClass("x"), "px-xs")}
-        onClick={(e) => {
-          e.stopPropagation();
-          seekTo(start);
-        }}
+    <Line
+      as="button"
+      title={name}
+      className={cn(yieldClass("x"), "px-xs")}
+      onClick={(e) => {
+        e.stopPropagation();
+        seekTo(start);
+      }}
+    >
+      <Text
+        tone={current ? "strong" : "muted"}
+        // eslint-disable-next-line text/no-adhoc-typography -- the label lane is 13px tall: line-height must stay 1 and the size below the caption role
+        className={cn("text-3xs leading-none", current && "font-bold")}
       >
-        <Text
-          tone={current ? "strong" : "muted"}
-          // eslint-disable-next-line text/no-adhoc-typography -- the label lane is 13px tall: line-height must stay 1 and the size below the caption role
-          className={cn("text-3xs leading-none", current && "font-bold")}
-        >
-          {name}
-        </Text>
-      </Inline>
-    </SingleLineProvider>
+        {name}
+      </Text>
+    </Line>
   );
 }
 
