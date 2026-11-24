@@ -15,11 +15,14 @@ export const hibernationConfig = defineConfig({
         "Kill the live process of a waiting conversation after it has been idle for the configured time (and after a reboot), keeping it shown as a normal Waiting conversation. It is silently resumed (claude --resume) the moment you open it.",
     }),
     idleHours: intField({
-      default: 48,
+      // 24 h (user decision D13, 2026-11-24): an idle agent holds ~250 MB,
+      // and on Nov 18 ~20 of them (~5 GB) sat beside the memory-pressure
+      // episodes of a 64 GB machine.
+      default: 24,
       min: 1,
       label: "Idle hours before hibernation",
       description:
-        "How long a waiting conversation may sit unopened before its process is killed to reclaim resources.",
+        "How long a waiting conversation may sit with neither you opening it nor its agent doing anything before its process is killed to reclaim resources.",
     }),
   },
 });

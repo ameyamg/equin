@@ -2,6 +2,9 @@
 
 Idle conversations are hibernated (their agent session killed, the row kept
 `waiting` with `hibernatedAt` set) and resumed when the user opens them.
+Idle means both sides quiet for `idleHours` (default 24): not viewed
+(`lastViewedAt`, else `createdAt`) and no agent activity (`updatedAt`, the
+derived last-activity stamp) — `listHibernationCandidates` in tasks-core.
 
 - `server/` (portable) — `POST /api/conversations/:id/viewed` (`markViewed`):
   stamps `lastViewedAt`, which resets the idle timer. An `{ ok: true }` ack;

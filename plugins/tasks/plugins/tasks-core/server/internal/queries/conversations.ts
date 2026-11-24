@@ -173,8 +173,12 @@ export async function listConversationIdsForAttempt(
 }
 
 // Idle-kill candidates: waiting, not already hibernated nor resuming, resumable (has a
-// saved Claude session), and idle since `before` (lastViewedAt, or createdAt
-// when never viewed). Used by the conversations.hibernate-idle job.
+// saved Claude session), and idle since `before` on BOTH sides — the user has
+// not opened it (lastViewedAt, or createdAt when never viewed) and the agent
+// has not acted (updatedAt: the derived last-activity stamp, moved by its
+// working ⇄ reply transitions). Viewed alone, a conversation that ran unviewed
+// for a day and just stopped counted as a day idle and lost its agent the
+// moment its turn ended. Used by the conversations.hibernate-idle job.
 export function listHibernationCandidates(
   before: Date,
 ): Promise<{ id: string }[]> {
@@ -188,7 +192,7 @@ export function listHibernationCandidates(
         isNull(conversations.resumingSince),
         isNotNull(conversations.claudeSessionId),
         lt(
-          sql`coalesce(${conversations.lastViewedAt}, ${conversations.createdAt})`,
+          sql`greatest(coalesce(${conversations.lastViewedAt}, ${conversations.createdAt}), ${conversations.updatedAt})`,
           before,
         ),
       ),
