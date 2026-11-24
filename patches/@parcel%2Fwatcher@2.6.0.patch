@@ -87,6 +87,7 @@ index 328f469965d3bc248c99e8a50752c549c631e20a..d3d0eb17c52c07e8db400657153e49f9
    std::string path;
    uint64_t mtime;
 diff --git a/src/Event.hh b/src/Event.hh
+index 8d09712e5032cee44450f6ed2de10f6df1b113d6..b52fa555f40757483c7ae5e1394fd47cf4b90c17 100644
 --- a/src/Event.hh
 +++ b/src/Event.hh
 @@ -8,6 +8,7 @@
@@ -97,8 +98,7 @@ diff --git a/src/Event.hh b/src/Event.hh
  
  using namespace Napi;
  
-@@ -60,8 +61,21 @@ public:
-   std::vector<Event> getEvents() {
+@@ -61,7 +62,20 @@ public:
      std::lock_guard<std::mutex> l(mMutex);
      std::vector<Event> eventsCloneVector;
      for(auto it = mEvents.begin(); it != mEvents.end(); ++it) {
@@ -121,7 +121,7 @@ diff --git a/src/Event.hh b/src/Event.hh
        }
      }
 diff --git a/src/Watcher.cc b/src/Watcher.cc
-index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc5047c5e223 100644
+index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..203ed9f15d25b521289fc3cee806805625e20646 100644
 --- a/src/Watcher.cc
 +++ b/src/Watcher.cc
 @@ -1,4 +1,5 @@
@@ -141,7 +141,7 @@ index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc50
    auto found = getSharedWatchers().find(watcher);
    if (found != getSharedWatchers().end()) {
      return *found;
-@@ -46,10 +47,11 @@ void removeShared(Watcher *watcher) {
+@@ -46,19 +47,13 @@ void removeShared(Watcher *watcher) {
    }
  }
  
@@ -150,12 +150,62 @@ index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc50
    : mDir(dir),
      mIgnorePaths(ignorePaths),
 -    mIgnoreGlobs(ignoreGlobs) {
+-      mDebounce = Debounce::getShared();
+-      mDebounce->add(this, [this] () {
+-        triggerCallbacks();
+-      });
+-    }
 +    mIgnoreGlobs(ignoreGlobs),
-+    mMaxDepth(maxDepth) {
-       mDebounce = Debounce::getShared();
-       mDebounce->add(this, [this] () {
-         triggerCallbacks();
-@@ -223,7 +225,7 @@ bool Watcher::isIgnored(std::string path) {
++    mMaxDepth(maxDepth) {}
+ 
+-Watcher::~Watcher() {
+-  mDebounce->remove(this);
+-}
++Watcher::~Watcher() {}
+ 
+ void Watcher::wait() {
+   std::unique_lock<std::mutex> lk(mMutex);
+@@ -69,13 +64,24 @@ void Watcher::notify() {
+   std::unique_lock<std::mutex> lk(mMutex);
+   mCond.notify_all();
+ 
+-  if (mCallbacks.size() > 0 && mEvents.size() > 0) {
+-    // We must release our lock before calling into the debouncer
+-    // to avoid a deadlock: the debouncer thread itself will require
+-    // our lock from its thread when calling into `triggerCallbacks`
+-    // while holding its own debouncer lock.
++  if (mCallbacks.size() > 0 && (mEvents.size() > 0 || mEvents.hasError())) {
++    // equin: the batch goes to JS now, from the backend thread that handled
++    // it. Upstream handed it to ONE debounce thread shared by every watcher of
++    // the process (`Debounce`, removed): the first change after 500 ms of
++    // quiet went at once, but while any watch of the process kept hearing
++    // changes less than 50 ms apart (an agent's transcript, a build's log)
++    // every watcher's batch waited until 500 ms after the last delivery. So
++    // each change main heard sat 0-500 ms in a queue no declaration asked for
++    // (the bulk of watch-delivery: 95-240 ms), under the engine's own
++    // per-watcher debounce (`debounceMs` / `ceilingMs`), which is the one
++    // batching policy. An error with no event goes too (a folder diff that
++    // could not `dup` / list / stat reports only that): upstream's debounce
++    // flushed every watcher of the process, so such a batch rode out with the
++    // next change anywhere; now nothing else would carry it, and `onLost`
++    // would wait for this watcher's next change. `triggerCallbacks` takes this
++    // lock: released first.
+     lk.unlock();
+-    mDebounce->trigger();
++    triggerCallbacks();
+   }
+ }
+ 
+@@ -120,7 +126,7 @@ void Watcher::notifyError(std::exception &err) {
+   clearCallbacks();
+ }
+ 
+-// This function is called from the debounce thread.
++// Called from the backend thread that handled the batch (`notify`).
+ void Watcher::triggerCallbacks() {
+   std::unique_lock<std::mutex> lk(mMutex);
+   if (mCallbacks.size() > 0 && (mEvents.size() > 0 || mEvents.hasError())) {
+@@ -223,7 +229,7 @@ bool Watcher::isIgnored(std::string path) {
      }
    }
  
@@ -164,7 +214,7 @@ index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc50
  
    if (path.rfind(basePath, 0) != 0) {
      return false;
-@@ -231,6 +233,11 @@ bool Watcher::isIgnored(std::string path) {
+@@ -231,6 +237,11 @@ bool Watcher::isIgnored(std::string path) {
  
    auto relativePath = path.substr(basePath.size());
  
@@ -176,7 +226,7 @@ index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc50
    for (auto it = mIgnoreGlobs.begin(); it != mIgnoreGlobs.end(); it++) {
      if (it->isIgnored(relativePath)) {
        return true;
-@@ -239,3 +246,16 @@ bool Watcher::isIgnored(std::string path) {
+@@ -239,3 +250,16 @@ bool Watcher::isIgnored(std::string path) {
  
    return false;
  }
@@ -194,9 +244,23 @@ index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc50
 +  return std::count(relativePath.begin(), relativePath.end(), DIR_SEP[0]) + 1 < mMaxDepth;
 +}
 diff --git a/src/Watcher.hh b/src/Watcher.hh
-index f89e9f5dca4531b5c7cdf524252973dc2c568d6a..d7c2fe349f11d184e74367d6e887f11f5bf9fc65 100644
+index f89e9f5dca4531b5c7cdf524252973dc2c568d6a..19af3ad2721f4a5feeacd36c60411a4e3475aab8 100644
 --- a/src/Watcher.hh
 +++ b/src/Watcher.hh
+@@ -2,12 +2,12 @@
+ #define WATCHER_H
+ 
+ #include <condition_variable>
++#include <thread>
+ #include <unordered_set>
+ #include <set>
+ #include <node_api.h>
+ #include "Glob.hh"
+ #include "Event.hh"
+-#include "Debounce.hh"
+ #include "DirTree.hh"
+ #include "Signal.hh"
+ 
 @@ -31,14 +31,23 @@ struct Watcher {
    std::string mDir;
    std::unordered_set<std::string> mIgnorePaths;
@@ -223,7 +287,7 @@ index f89e9f5dca4531b5c7cdf524252973dc2c568d6a..d7c2fe349f11d184e74367d6e887f11f
    }
  
    void wait();
-@@ -48,9 +57,13 @@ struct Watcher {
+@@ -48,15 +57,18 @@ struct Watcher {
    bool unwatch(Function callback);
    void unref();
    bool isIgnored(std::string path);
@@ -238,6 +302,12 @@ index f89e9f5dca4531b5c7cdf524252973dc2c568d6a..d7c2fe349f11d184e74367d6e887f11f
  
  private:
    std::mutex mMutex;
+   std::condition_variable mCond;
+   std::vector<Callback> mCallbacks;
+-  std::shared_ptr<Debounce> mDebounce;
+ 
+   std::vector<Callback>::iterator findCallback(Function callback);
+   void clearCallbacks();
 diff --git a/src/binding.cc b/src/binding.cc
 index 057b61b83385793a2f13c7adc8c2e983bef67538..9f3f89517fcfcba15e1c36ad127b61ab596f5a5d 100644
 --- a/src/binding.cc

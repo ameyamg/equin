@@ -120,6 +120,27 @@ plugin ships the fixed build.
   - `childPrefix` (`DirTree.hh`): the prefix below a path is `path + "/"`
     except for `/` itself (upstream built `//`, so a watch of `/` ignored
     nothing and its diff named entries `//bin`).
+- **`src/Watcher.cc`** (every backend): a watcher hands its batch to JS from
+  the backend thread that handled it (`Watcher::notify` → `triggerCallbacks`).
+  Upstream routed every watcher of the process through ONE debounce thread
+  (`Debounce`, no longer compiled): the first change after 500 ms of quiet
+  went at once, but while any watch kept hearing changes under 50 ms apart —
+  an agent's transcript, a build's log — every watcher's batch waited until
+  500 ms after the previous delivery. That was the bulk of main's
+  `watch-delivery` (7 days to 2026-11-24: most notices at 95–240 ms, whatever
+  the backend), a delay no declaration asked for, under the engine's own
+  per-watcher `debounceMs` / `ceilingMs` — the one batching policy now.
+  Measured (`kq-marker`-style A/B: overlapping runs in a 1,755-entry dir,
+  transcripts appended every 20 ms, markers renamed in, raw delivery): p50
+  48 → 31–38 ms, p90 117–131 → 55–66 ms, max 212–229 → 70–73 ms. The cost is
+  more, smaller callbacks: 10 files appended every 5 ms reached JS as 169
+  batches/s instead of 4/s, for +43 ms of process CPU over 10 s. A batch
+  holding only an error goes too (`notify` fires on `hasError()`): a folder
+  diff that cannot `dup` / list / stat reports nothing else, and upstream's
+  debounce flushed every watcher at once, so it used to ride out with the
+  next change anywhere in the process — without that, `onLost` would wait for
+  that folder's next change (test: the diff whose `dup` hits EMFILE). Linux
+  loads upstream's prebuild and keeps its debounce.
 - **`src/macos/FSEventsBackend.cc`** (the FSEvents backend, upstream code
   otherwise):
   - `unsubscribe` stops its stream ON the run loop thread (a performed
@@ -168,7 +189,7 @@ plugin ships the fixed build.
   unsubscribe, held them through the whole engine suite. Other platforms load
   the prebuild, as upstream does.
 - **`parcel-watcher-addon`** (`deps/`, a `build` kind of `infra/deps`) compiles
-  the patched source — twelve parallel `c++` compiles and a `-bundle` link,
+  the patched source — eleven parallel `c++` compiles and a `-bundle` link,
   binding.gyp's darwin sources and defines — against `node-addon-api` (parcel's
   own dependency) and `node-api-headers` (this plugin's). Symbols hidden
   (`-fvisibility=hidden -fvisibility-inlines-hidden`, as node-gyp builds): it

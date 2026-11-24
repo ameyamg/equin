@@ -581,6 +581,69 @@ describe.skipIf(process.platform !== "darwin")(
         );
     }, 60_000);
 
+    test("a folder diff that cannot even list reports the loss with no event", async () => {
+      // Every descriptor taken, so the diff's dup fails before any entry is
+      // read: the batch holds an error and no event. A watcher delivers its
+      // own batches (no process-wide debounce), so an error-only batch must
+      // go on its own — nothing else would carry it to `onLost`.
+      const ready = await ensureDep(parcelWatcherAddon, execContextForTests());
+      const dir = tempDir("diff-error-only");
+      const staging = tempDir("diff-error-only-staging");
+      const script = `
+        const [wrapperPath, addonPath, dir, staging] = process.argv.slice(-4);
+        const { closeSync, openSync, renameSync, writeFileSync } = require("node:fs");
+        const { join } = require("node:path");
+        const addon = require(wrapperPath).createWrapper(require(addonPath));
+        const events = [];
+        const errors = [];
+        const sub = await addon.subscribe(dir, (err, batch) => {
+          if (err) errors.push(err.message);
+          events.push(...batch);
+        }, { backend: "kqueue" });
+        writeFileSync(join(staging, "a.log"), "x");
+        const fillers = [];
+        while (true) {
+          try { fillers.push(openSync("/dev/null", "r")); }
+          catch (err) { if (err.code === "EMFILE") break; throw err; }
+        }
+        renameSync(join(staging, "a.log"), join(dir, "a.log"));
+        const start = Date.now();
+        while (errors.length === 0 && Date.now() - start < 5000) {
+          await new Promise((r) => setTimeout(r, 20));
+        }
+        for (const fd of fillers) closeSync(fd);
+        await sub.unsubscribe();
+        console.log(JSON.stringify({ events: events.length, errors }));
+        process.exit(0);`;
+      const child = spawn(
+        "/bin/sh",
+        [
+          "-c",
+          'ulimit -n $(( $(ls /dev/fd | wc -l) + 80 )) && exec "$0" -e "$1" "$2" "$3" "$4" "$5"',
+          process.execPath,
+          script,
+          createRequire(import.meta.url).resolve("@parcel/watcher/wrapper"),
+          builtFile(ready),
+          dir,
+          staging,
+        ],
+        { stdio: ["ignore", "pipe", "pipe"] },
+      );
+      let out = "";
+      let err = "";
+      child.stdout.on("data", (chunk: Buffer) => (out += chunk.toString()));
+      child.stderr.on("data", (chunk: Buffer) => (err += chunk.toString()));
+      const code = await new Promise<number | null>((resolve) =>
+        child.on("exit", (c) => resolve(c)),
+      );
+      expect({ code, err }).toEqual({ code: 0, err: "" });
+      const result = JSON.parse(out) as { events: number; errors: string[] };
+      expect(result.events).toBe(0);
+      expect(result.errors.length).toBeGreaterThan(0);
+      for (const message of result.errors)
+        expect(message).toMatch(/^error diffing .*: dup: Too many open files$/);
+    }, 60_000);
+
     test("an entry gone between a folder's listing and its open is no loss", async () => {
       // The vanished-entry race is expected, not a failure: an entry created
       // and removed while its folder is diffed is skipped (its create and

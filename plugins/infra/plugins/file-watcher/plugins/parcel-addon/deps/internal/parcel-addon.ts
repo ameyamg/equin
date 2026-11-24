@@ -26,14 +26,17 @@ export async function parcelWatcherPackageDir(root: string): Promise<string> {
 const PATCH_MARKER =
   "void KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {";
 
-/** binding.gyp's darwin target: the shared sources plus every darwin backend. */
+/**
+ * binding.gyp's darwin target: the shared sources plus every darwin backend —
+ * less `src/Debounce.cc`, which the patch leaves unused (a watcher delivers
+ * from its backend's thread, never through the process-wide debounce).
+ */
 const SOURCES = [
   "src/binding.cc",
   "src/Watcher.cc",
   "src/Backend.cc",
   "src/DirTree.cc",
   "src/Glob.cc",
-  "src/Debounce.cc",
   "src/watchman/BSER.cc",
   "src/watchman/WatchmanBackend.cc",
   "src/shared/BruteForceBackend.cc",
@@ -128,7 +131,7 @@ function darwinOnly(
  * It takes no host admission: it is awaited inside `build`, which already
  * holds its host grant, so queuing for a background unit could wait on the
  * build itself — and inside an install, which every other CLI command of the
- * checkout waits on. Cold it is ~20 s of CPU across twelve parallel compiles, once
+ * checkout waits on. Cold it is ~20 s of CPU across eleven parallel compiles, once
  * per machine per identity.
  */
 export const parcelWatcherAddon = defineDep({

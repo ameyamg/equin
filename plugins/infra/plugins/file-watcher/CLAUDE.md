@@ -151,6 +151,16 @@ naming its holder) through its own short-lived open, never the held fd
   (`lagMs`, the delivery after arming).
 - The catalog's `Heard after` fact (`FileWatcherSnapshot.lastDelivery`).
 
+**What "arrival" includes.** The arrival is read in the JS callback, so it
+counts everything between the kernel and this process's event loop: the
+backend thread (kqueue's is shared by every follow and children watch of the
+process, and a `subscribe` / `unsubscribe` holds it for as long as it lists its
+dir), then the hop to JS. It no longer counts a native debounce: upstream
+parcel held every watcher's batch on one process-wide debounce thread, up to
+500 ms while any watch was busy (`parcel-addon`'s CLAUDE.md); the patched addon
+delivers each batch from its backend thread, and the engine's own `debounceMs`
+/ `ceilingMs` (applied after the probe) is the only batching.
+
 FSEvents' lag is fseventsd's queue, shared by every stream on the machine:
 measured 2026-11-09 with fseventsd stuck at one full core, p50 3–10 s,
 p90 13–14 s, in a fresh tmp dir as in `~/.claude/projects`; kqueue on the same
