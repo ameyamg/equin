@@ -63,8 +63,8 @@ interface FixedGridProps extends GridBaseProps {
 }
 
 /** Fixed-cell path: as many exactly-`cellWidth` tracks as fit, the row centred
- *  in the leftover — a launcher / home-screen grid whose cells never stretch.
- *  Mutually exclusive with the other two paths. */
+ *  in the leftover (or held at the start edge) — a launcher / home-screen grid
+ *  whose cells never stretch. Mutually exclusive with the other two paths. */
 interface FixedCellGridProps extends GridBaseProps {
   /** The exact width of every track — drives
    *  `repeat(auto-fill, <cellWidth>)` + `justify-content: center`. e.g. `"116px"`. */
@@ -72,9 +72,13 @@ interface FixedCellGridProps extends GridBaseProps {
   cols?: never;
   minCellWidth?: never;
   mode?: never;
-  /** The tracks are centred by the path itself; a fixed-cell grid takes no
-   *  `justify`. */
-  justify?: never;
+  /** Where the leftover goes: split on both sides (`center`, the default — a
+   *  lone launcher), or all at the end (`start` — a grid hanging under a
+   *  header, whose first column must sit on the header's edge whatever the
+   *  width: centred, two grids in bands of different widths share no column
+   *  edge). The tracks never stretch, so the other distributions mean
+   *  nothing here. */
+  justify?: "center" | "start";
 }
 
 /** `{cols}` xor `{minCellWidth, mode?}` xor `{cellWidth}` — each path takes none
@@ -99,7 +103,8 @@ export type GridProps =
  *   collapses them so the present cells stretch to fill the whole row.
  * - **Fixed cell** (`cellWidth`) → `repeat(auto-fill, <cellWidth>)`: as many
  *   exactly-`cellWidth` tracks as fit, never stretched — the component centres
- *   the row (`justify-content: center`) so the leftover splits on both sides.
+ *   the row (`justify-content: center`) so the leftover splits on both sides,
+ *   unless `justify="start"` holds it at the start edge.
  */
 export function gridTemplateColumns(
   opts:
@@ -158,11 +163,11 @@ export function Grid({
       : cellWidth != null
         ? gridTemplateColumns({ cellWidth })
         : gridTemplateColumns({ minCellWidth: minCellWidth as string, mode });
-  // A fixed-cell row never stretches its tracks, so the path owns centring the
-  // leftover; the union bans `justify` on it.
+  // A fixed-cell row never stretches its tracks, so the path owns placing the
+  // leftover: centred unless held at the start; the union narrows `justify`.
   const justifyClass =
     cellWidth != null
-      ? JUSTIFY_CLASS.center
+      ? JUSTIFY_CLASS[justify ?? "center"]
       : justify && JUSTIFY_CLASS[justify];
 
   return (

@@ -141,8 +141,10 @@ interface Geometry {
   lanePad: string;
 }
 
-/** How a grid lays its columns: a menu's fixed count, else fixed-width cells. */
-type GridColumns = { cols: number } | { cellWidth: string };
+/** How a grid lays its columns: a menu's fixed count, else fixed-width cells —
+ *  centred, or held at the start edge (grouped). */
+type GridColumns =
+  { cols: number } | { cellWidth: string; justify: "center" | "start" };
 
 const CELL_WIDTH = "var(--icons-cell)";
 
@@ -237,7 +239,8 @@ function TileRef({
 }
 
 /**
- * Icons view: a launcher grid — fixed-width cells centred in the view, each a
+ * Icons view: a launcher grid — fixed-width cells centred in the view (each
+ * grouped section's grid starts under its header instead), each a
  * coloured tile with the row's name underneath (a phone home screen).
  *
  * The tile is the schema's leading field (`FieldDef.leading`) drawn inside
@@ -293,9 +296,15 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   const geometry: Geometry = menu
     ? MENU_GEOMETRY
     : GEOMETRY[props.density ?? "comfortable"];
+  // Ungrouped, the one grid is a launcher centred in the view. Grouped, each
+  // section's grid hangs under its header and starts on its edge: a nested
+  // section's band is narrower by its indent, so centred grids would each pick
+  // their own column count and split their own leftover — tiles landing
+  // anywhere from half an indent to more than a column off their header.
+  const grouped = !(sections.length === 1 && sections[0]!.key === null);
   const gridColumns: GridColumns = menu
     ? { cols: menu.columns }
-    : { cellWidth: CELL_WIDTH };
+    : { cellWidth: CELL_WIDTH, justify: grouped ? "start" : "center" };
   // Documented cast boundary: itemActions arrives type-erased. A tile has an
   // at-rest corner (the same float chip the hover arm uses) but no primary
   // slot — its click IS the row's main verb. Resolved unconditionally (hooks

@@ -29,7 +29,7 @@ mutually-exclusive paths can't be conflated:
 | Fixed (`{ cols }`)    | `repeat(<cols>, minmax(0, 1fr))`                  | exactly N equal columns                                        |
 | Responsive `fill`     | `repeat(auto-fill, minmax(<minCellWidth>, 1fr))`  | stable column count — keeps empty trailing tracks              |
 | Responsive `fit`      | `repeat(auto-fit, minmax(<minCellWidth>, 1fr))`   | collapses empty tracks so present cells stretch to fill the row|
-| Fixed cell (`{ cellWidth }`) | `repeat(auto-fill, <cellWidth>)` + `justify-content: center` | exact-width tracks, leftover split on both sides (launcher grids) |
+| Fixed cell (`{ cellWidth }`) | `repeat(auto-fill, <cellWidth>)` + `justify-content: center` (or `start`) | exact-width tracks, leftover split on both sides (launcher grids), or all at the end under `justify="start"` |
 
 The `minmax(0, …)` / `minmax(<minCellWidth>, …)` min lets a track shrink without
 forcing the row to overflow.
@@ -44,8 +44,10 @@ The two geometry props are an xor discriminated union — pass exactly one path:
 - **Fixed path** — **`cols`** (required, fixed column count). No
   `minCellWidth`/`mode` allowed.
 - **Fixed-cell path** — **`cellWidth`** (required, the exact track width, e.g.
-  `"116px"`). The path centres the row itself, so `justify` is not allowed
-  either.
+  `"116px"`). The path centres the row itself; `justify` takes only
+  `"center"` (default) or `"start"` — start for a grid hanging under a header,
+  so its first column sits on the header's edge at any width (two centred
+  grids in bands of different widths share no column edge).
 
 Shared (both paths):
 

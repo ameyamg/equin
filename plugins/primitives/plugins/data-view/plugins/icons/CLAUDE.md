@@ -11,6 +11,12 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
   classes sit on each grid, not the root, because a container query styles the
   container's descendants only. The grid starts flush: space above the first
   row is the toolbar arrangement's `spaceBelow`, never the view's own padding.
+- **Grouped, each section's grid starts on its header's edge** (`Grid cellWidth
+  justify="start"`), centred only when ungrouped. A nested section's band is
+  narrower by its indent (`NestedSectionIndent`); centred, each grid picked its
+  own column count and split its own leftover, so a nested section's tiles
+  landed anywhere from half an indent to more than a column right of its
+  header. Start-aligned, every depth sits the same way under its header.
 - **The tile** is the placement's `lead` (`ICONS_SLOTS`: the lead takes only a
   `visual` kind — data-view CLAUDE.md, "Placement") rendered through
   `leadingSlot` inside `<AvatarPresentationProvider value="tile">`, so an

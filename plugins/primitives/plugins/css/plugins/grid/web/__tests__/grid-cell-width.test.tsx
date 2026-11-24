@@ -18,6 +18,17 @@ describe("Grid cellWidth path", () => {
     expect(el.classList).toContain("justify-center");
   });
 
+  it("justify=start holds the row at the start edge", () => {
+    const { container } = render(
+      <Grid cellWidth="116px" justify="start">
+        x
+      </Grid>,
+    );
+    const el = root(container);
+    expect(el.classList).toContain("justify-start");
+    expect(el.classList).not.toContain("justify-center");
+  });
+
   it("the responsive path is unchanged and uncentred", () => {
     const { container } = render(<Grid minCellWidth="12rem">x</Grid>);
     const el = root(container);
