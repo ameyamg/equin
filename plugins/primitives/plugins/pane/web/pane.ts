@@ -3017,14 +3017,22 @@ export function peekRoutePattern(): string {
   return routePatternOf(peekBasePath(), peekRoute());
 }
 
-/** {@link peekRoutePattern} of a given base path and route. */
+/**
+ * {@link peekRoutePattern} of a given base path and route. A pane not
+ * registered (yet, or any more) is spelled `{<pane id>}`.
+ */
 export function routePatternOf(
   basePath: string,
   route: readonly Pick<PaneSlot, "paneId">[],
 ): string {
   const parts = route.flatMap((slot) => {
     const pane = registry.get(slot.paneId);
-    if (!pane) throw new Error(`Unknown pane: ${slot.paneId}`);
+    // Registration follows plugin load, so a slot can name a pane that is not
+    // registered — a deferred pane before its plugin loads, or one a later
+    // build renamed or removed, held by a tab restored from history. That is
+    // a real state of the route, not a bug: the pattern names the pane by id,
+    // so its screen still aggregates apart from every registered one.
+    if (!pane) return [`{${slot.paneId}}`];
     return positionalOf(pane.segment).split("/").filter(Boolean);
   });
   const base = normalizeAppPath(basePath);

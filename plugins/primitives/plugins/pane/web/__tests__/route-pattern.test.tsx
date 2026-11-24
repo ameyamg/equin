@@ -98,9 +98,14 @@ describe("routePatternOf", () => {
     expect(routePatternOf("/", [])).toBe("/");
   });
 
-  it("throws on a pane the registry does not know", () => {
-    expect(() => routePatternOf("/deploy", [{ paneId: "nope" }])).toThrow(
-      "Unknown pane: nope",
-    );
+  // A tab restored after a deploy that renamed a pane still names the old id
+  // (report-1795482835-53hy3f: the latency ledger threw on every interaction
+  // of such a tab). Registration follows plugin load, so it is a real state.
+  it("names a pane the registry does not know by its id", () => {
+    const r = parseUrl("/site/a", "/deploy");
+    if (r.status === "unresolved") throw new Error("unresolved");
+    expect(
+      routePatternOf("/deploy", [...r.slots, { paneId: "gone-pane" }]),
+    ).toBe("/deploy/site/:deploymentId/:tab?/{gone-pane}");
   });
 });
