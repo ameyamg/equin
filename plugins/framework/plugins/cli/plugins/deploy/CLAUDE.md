@@ -162,6 +162,12 @@ never beside its target, so a no-op converge moves no directory mtime the
 restart gate reads (it used to restart the site on every deploy, through the
 drop-in's `.new`).
 
+**Every response says HTTPS only.** The site block sends
+`Strict-Transport-Security: max-age=<1 year>` (`HSTS_MAX_AGE_SEC`, no
+`includeSubDomains`, no `preload`) on either edge, so a returning visitor's
+browser skips the `http://` → `https://` redirect. It is the code's, like the
+cache policy — Cloudflare's own HSTS setting stays off.
+
 Both generated scripts send their progress to **stderr** (`exec 1>&2`): a FAILED
 `sshRun` returns stderr only, and the failing run is the one whose log matters.
 

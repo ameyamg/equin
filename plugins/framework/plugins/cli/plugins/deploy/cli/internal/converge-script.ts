@@ -426,6 +426,17 @@ export const EDGE_ACCESS_LOG_ROLLS = 30;
 export const EDGE_ACCESS_LOG_KEEP_DAYS = 14;
 
 /**
+ * How long a browser remembers to reach the site over HTTPS only (HSTS
+ * `max-age`, one year — the usual value). Without it, a visitor typing the bare
+ * host goes to `http://` first and pays a round trip for Caddy's redirect on
+ * every new visit; with it, the browser goes straight to `https://` from the
+ * second visit on. No `includeSubDomains` (a deployment names its own hosts,
+ * not every subdomain of its zone) and no `preload` (an opt-in list that is
+ * slow to leave).
+ */
+export const HSTS_MAX_AGE_SEC = 365 * 24 * 60 * 60;
+
+/**
  * Where Cloudflare publishes the address ranges its proxies connect from. Read
  * ON THE BOX at every converge of a `cloudflare` edge (`CLOUDFLARE_RANGES_SH`),
  * so the trust list and the firewall follow Cloudflare rather than a copy in
@@ -595,6 +606,12 @@ export function caddySite(
   // shell, the unhashed root icons) is deliberately left revalidating — caching
   // index.html for a year would pin visitors to a stale build forever.
   //
+  // `Strict-Transport-Security` on every response ({@link HSTS_MAX_AGE_SEC}):
+  // Caddy serves only HTTPS (it redirects `http://` after answering the ACME
+  // challenge), on either edge, so telling browsers to skip the `http://` hop
+  // costs nothing. Here, not in Cloudflare's dashboard, for the same reason as
+  // the cache policy: one reviewed copy, and the direct edge gets it too.
+  //
   // `respond <HOST_ONLY_PREFIX>* 404` refuses the box-only routes (analytics
   // reports, read over SSH from the local deploy app) before they reach the
   // gateway. Caddy's fixed directive order runs `respond` ahead of
@@ -635,6 +652,7 @@ export function caddySite(
 \tencode zstd gzip
 \trespond ${HOST_ONLY_PREFIX}* 404
 \trespond ${GATEWAY_API_PREFIX}* 404
+\theader Strict-Transport-Security "max-age=${HSTS_MAX_AGE_SEC}"
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
 \treverse_proxy ${listenAddress(loopbackPort)} {
 ${forwardedForLine(edge)}\t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s

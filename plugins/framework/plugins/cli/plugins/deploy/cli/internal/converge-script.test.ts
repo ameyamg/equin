@@ -102,6 +102,7 @@ describe("caddySite", () => {
 \tencode zstd gzip
 \trespond /api/host-only/* 404
 \trespond /gateway/* 404
+\theader Strict-Transport-Security "max-age=31536000"
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
 \treverse_proxy 127.0.0.1:9100 {
 \t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
