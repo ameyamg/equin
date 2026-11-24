@@ -30,7 +30,7 @@ declare const chrome: {
     getCurrent(): Promise<ChromeTab | undefined>;
     query(q: { lastFocusedWindow: boolean }): Promise<ChromeTab[]>;
     update(id: number, props: { url: string }): Promise<unknown>;
-    create(props: { url: string }): Promise<unknown>;
+    create(props: { url: string; active?: boolean }): Promise<unknown>;
   };
   runtime: { reload(): void };
 };
@@ -99,7 +99,10 @@ async function answer(call: BridgeCall): Promise<unknown> {
       await chrome.tabs.update((await aboutTab()).id, { url: call.params.url });
       return null;
     case "openTab":
-      await chrome.tabs.create({ url: call.params.url });
+      await chrome.tabs.create({
+        url: call.params.url,
+        active: call.params.background !== true,
+      });
       return null;
     case "close":
       window.close();

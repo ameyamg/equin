@@ -52,7 +52,12 @@ export const BridgeCallSchema = z.discriminatedUnion("method", [
   z.object({ method: z.literal("hostInfo"), params: NoParams }),
   z.object({ method: z.literal("activeTab"), params: NoParams }),
   z.object({ method: z.literal("navigate"), params: UrlParams }),
-  z.object({ method: z.literal("openTab"), params: UrlParams }),
+  z.object({
+    method: z.literal("openTab"),
+    // `background`: open it behind the current tab, as a middle-click on a
+    // link does (the popup stays open).
+    params: UrlParams.extend({ background: z.boolean().optional() }),
+  }),
   z.object({ method: z.literal("close"), params: NoParams }),
   z.object({
     method: z.literal("setHeight"),

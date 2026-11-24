@@ -10,7 +10,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   Avatar,
   AvatarPresentationProvider,
@@ -79,12 +84,12 @@ export function PageActionsSection() {
   const [runs, setRuns] = useState<Readonly<Record<string, RunState>>>({});
 
   const flat = useMemo(() => groups.flatMap((g) => g.actions), [groups]);
-  const run = (action: PageAction) => {
+  const run = (action: PageAction, elsewhere: boolean) => {
     if (url === null || pageHost === null) return;
     const now = runs[action.id];
     if (now?.kind === "running") return;
     setRuns((r) => ({ ...r, [action.id]: { kind: "running" } }));
-    action.run(url, pageHost).then(
+    runAction(action, url, pageHost, elsewhere).then(
       () => setRuns((r) => ({ ...r, [action.id]: { kind: "done" } })),
       (err: unknown) =>
         setRuns((r) => ({
@@ -106,7 +111,7 @@ export function PageActionsSection() {
           label: action.title,
           group: "Browser extension",
           enableInInputs: true,
-          handler: () => runRef.current(action),
+          handler: () => runRef.current(action, false),
         })),
       // `runRef` always holds the latest run.
       [flat, runRef],
@@ -129,7 +134,7 @@ export function PageActionsSection() {
                 url={url}
                 shortcut={index <= MAX_SHORTCUTS ? index : null}
                 state={runs[action.id] ?? { kind: "idle" }}
-                onRun={() => run(action)}
+                onRun={(elsewhere) => run(action, elsewhere)}
               />,
             );
           })}
@@ -150,8 +155,9 @@ function PageActionRow({
   url: URL;
   shortcut: number | null;
   state: RunState;
-  onRun: () => void;
+  onRun: (elsewhere: boolean) => void;
 }) {
+  const subtitle = actionSubtitle(action, url);
   return (
     <Row
       icon={
@@ -165,19 +171,51 @@ function PageActionRow({
           </AvatarPresentationProvider>
         </span>
       }
-      onClick={onRun}
+      {...(action.kind === "link"
+        ? linkGestureProps(({ elsewhere }) => onRun(elsewhere))
+        : { onClick: () => onRun(false) })}
       actions={<RunMark state={state} shortcut={shortcut} />}
       actionsAlwaysVisible
-      title={state.kind === "failed" ? state.message : undefined}
+      title={state.kind === "failed" ? state.message : subtitle}
     >
-      <Stack gap="none">
-        <Text as="div">{action.title}</Text>
-        <Text as="div" variant="caption" tone="muted">
-          {action.subtitle(url)}
-        </Text>
-      </Stack>
+      {/* One line each: a destination is long (a deep app path), and the
+          host and the start of the path are what tell two rows apart. */}
+      <SingleLineProvider value={true}>
+        <Stack gap="none" className={yieldClass("x")}>
+          <Text as="div">{action.title}</Text>
+          <Text as="div" variant="caption" tone="muted">
+            {subtitle}
+          </Text>
+        </Stack>
+      </SingleLineProvider>
     </Row>
   );
+}
+
+/**
+ * Runs `action` on `url`: a link loads its destination in the tab the popup is
+ * about, or in a new tab when the gesture asked for one `elsewhere`.
+ */
+async function runAction(
+  action: PageAction,
+  url: URL,
+  host: PageActionHost,
+  elsewhere: boolean,
+): Promise<void> {
+  if (action.kind === "run") return action.run(url, host);
+  const href = action.href(url);
+  // Elsewhere is a new tab behind this one, as the same gesture on a link.
+  await (elsewhere
+    ? host.openTab(href, { background: true })
+    : host.navigate(href));
+}
+
+/** The row's subtitle: a link's destination, without the scheme (noise in a
+ *  300px popup). */
+function actionSubtitle(action: PageAction, url: URL): string {
+  return action.kind === "link"
+    ? action.href(url).replace(/^https?:\/\//, "")
+    : action.subtitle(url);
 }
 
 /** The row's trailing mark: its ⌘N, a spinner while it runs, then a check. */

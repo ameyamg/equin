@@ -12,8 +12,35 @@ export interface PageActionSite {
 export interface PageActionHost {
   /** Load `url` in the tab the popup is about. */
   navigate: (url: string) => Promise<void>;
-  /** Open `url` in a new tab. */
-  openTab: (url: string) => Promise<void>;
+  /** Open `url` in a new tab — behind the current one with `background`. */
+  openTab: (url: string, opts?: { background?: boolean }) => Promise<void>;
+}
+
+interface PageActionBase {
+  id: string;
+  site: PageActionSite;
+  /** The tile: a glyph on a gradient of one categorical colour. */
+  icon: { symbol: SymbolRef; color: AvatarColor };
+  title: string;
+}
+
+/**
+ * An action that goes somewhere: the panel owns what that means — a click
+ * loads the destination in the tab the popup is about, ⌘/Ctrl- or
+ * middle-click opens it in a new tab (what the same gesture does on a link),
+ * and the row's subtitle is the destination itself.
+ */
+export interface PageLinkAction extends PageActionBase {
+  kind: "link";
+  /** Where the action goes from `url` (called only where `site` matches). */
+  href: (url: URL) => string;
+}
+
+/** An action that does something other than going somewhere. */
+export interface PageRunAction extends PageActionBase {
+  kind: "run";
+  subtitle: (url: URL) => string;
+  run: (url: URL, host: PageActionHost) => Promise<void>;
 }
 
 /**
@@ -21,15 +48,7 @@ export interface PageActionHost {
  * that owns what it does (`BrowserExtension.PageAction`): a gradient tile, a
  * title and a subtitle, run on a click or its ⌘N.
  */
-export interface PageAction {
-  id: string;
-  site: PageActionSite;
-  /** The tile: a glyph on a gradient of one categorical colour. */
-  icon: { symbol: SymbolRef; color: AvatarColor };
-  title: string;
-  subtitle: (url: URL) => string;
-  run: (url: URL, host: PageActionHost) => Promise<void>;
-}
+export type PageAction = PageLinkAction | PageRunAction;
 
 /** One section of page actions: a site, and its actions on this page. */
 export interface PageActionGroup<A> {

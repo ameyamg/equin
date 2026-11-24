@@ -16816,10 +16816,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserExtension.Section` "Header" → `CompanionHeader`
           - `BrowserExtension.Section` "Page actions" → `PageActionsSection`
           - `BrowserExtension.Section` "Footer" → `ExtensionFooter`
-        - Uses: 28 symbols — full list in [`plugins/companions/plugins/browser-extension/REFERENCE.md`](../plugins/companions/plugins/browser-extension/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/companions/plugins/browser-extension/REFERENCE.md`](../plugins/companions/plugins/browser-extension/REFERENCE.md)
           - `companions/panel` ×4
           - `primitives/slot-render` ×3
           - `primitives/avatar` ×2
+          - `primitives/css/ui-kit` ×2
           - `apps-core.Apps`
           - `infra/endpoints.useFetchEndpoint`
           - `network/live/live-state.foldResource`
@@ -16831,9 +16832,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spinner.Spinner`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
+          - `primitives/css/yield.yieldClass`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/link-gesture.linkGestureProps`
           - `primitives/loading.Loading`
           - `primitives/log-channels.clientLog`
           - `primitives/shortcuts.usePageShortcuts`
@@ -16879,6 +16881,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageActionGroup`
           - `PageActionHost`
           - `PageActionSite`
+          - `PageLinkAction`
+          - `PageRunAction`
           - `ShellState`
         - Exports (values):
           - `acceptBridgePort`
@@ -53529,7 +53533,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×10
               - `conversations` ×8
@@ -53537,6 +53541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×3
               - `ui` ×3
               - `fields` ×2
+              - `companions/browser-extension`
               - `infra/claude-cli`
               - `page/page-reference`
               - `search/quick-find`
@@ -56604,7 +56609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×22
           - `primitives` ×19
           - `apps` ×14
@@ -56616,6 +56621,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell` ×2
           - `build`
           - `code-explorer/file-resolve`
+          - `companions/browser-extension`
           - `config_v2/config-link`
           - `infra/claude-cli/sign-in`
           - `integrations/google-maps/usage`

@@ -33,6 +33,8 @@ export {
   type PageActionGroup,
   type PageActionHost,
   type PageActionSite,
+  type PageLinkAction,
+  type PageRunAction,
 } from "./page-actions";
 export {
   browserExtensionConnection,

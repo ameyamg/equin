@@ -30,7 +30,9 @@ export type ExtensionHost =
       info: ExtensionHostInfo;
       tab: ActiveTab | null;
       navigate: ((url: string) => Promise<void>) | null;
-      openTab: ((url: string) => Promise<void>) | null;
+      openTab:
+        | ((url: string, opts?: { background?: boolean }) => Promise<void>)
+        | null;
       close: (() => Promise<void>) | null;
       setHeight: (px: number) => Promise<void>;
       reload: () => Promise<void>;
@@ -88,7 +90,8 @@ async function presentHost(call: Call): Promise<ExtensionHost> {
       ? (url) => done(call({ method: "navigate", params: { url } }))
       : null,
     openTab: caps.openTab
-      ? (url) => done(call({ method: "openTab", params: { url } }))
+      ? (url, opts) =>
+          done(call({ method: "openTab", params: { url, ...opts } }))
       : null,
     close: caps.close
       ? () => done(call({ method: "close", params: {} }))

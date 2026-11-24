@@ -41,6 +41,10 @@ says it runs inside the extension.
 `BrowserExtension.PageAction` is an action an app offers on the pages its
 `site` matches (`core/page-actions.ts`). The section groups the matching ones
 by `site.label`, one `PanelSection` each, in slot order, ⌘1…⌘9 in row order.
+An action is a `link` (it declares its `href`; the panel subtitles the row with
+the destination on one truncated line, full URL in the tooltip, and owns the
+gestures: click → the current tab, ⌘/Ctrl- or middle-click → a background tab,
+like a link) or a `run` (its own subtitle and `run`).
 A contributor that must not carry the extension into its own composition
 contributes from a leaf here (`plugins/equin-site`: its address model reads an
 equin page as instance — worktree / main / equin.ai — × view — app / demo /
@@ -84,10 +88,11 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `BrowserExtension.Section` "Header" → `CompanionHeader`
     - `BrowserExtension.Section` "Page actions" → `PageActionsSection`
     - `BrowserExtension.Section` "Footer" → `ExtensionFooter`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `companions/panel` ×4
     - `primitives/slot-render` ×3
     - `primitives/avatar` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps-core.Apps`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live/live-state.foldResource`
@@ -99,9 +104,10 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `primitives/css/spinner.Spinner`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/link-gesture.linkGestureProps`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/shortcuts.usePageShortcuts`
@@ -147,6 +153,8 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `PageActionGroup`
     - `PageActionHost`
     - `PageActionSite`
+    - `PageLinkAction`
+    - `PageRunAction`
     - `ShellState`
   - Exports (values):
     - `acceptBridgePort`

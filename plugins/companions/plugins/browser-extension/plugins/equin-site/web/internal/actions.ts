@@ -1,6 +1,6 @@
 import { PUBLIC_SITE_ORIGIN } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import type { PageAction } from "@plugins/companions/plugins/browser-extension/core";
+import type { PageLinkAction } from "@plugins/companions/plugins/browser-extension/core";
 import { pagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -32,9 +32,9 @@ const SITE_LABEL = "equin";
 
 /** An action from `move`'s destination: shown only where `move` has one. */
 function moveAction(
-  spec: Omit<PageAction, "site" | "subtitle" | "run">,
+  spec: Omit<PageLinkAction, "kind" | "site" | "href">,
   move: (here: EquinAddress) => EquinAddress | null,
-): PageAction {
+): PageLinkAction {
   const destination = (url: URL): string | null => {
     const here = parseEquinAddress(url);
     const there = here === null ? null : move(here);
@@ -42,13 +42,12 @@ function moveAction(
   };
   return {
     ...spec,
+    kind: "link",
     site: { label: SITE_LABEL, matches: (url) => destination(url) !== null },
-    // The row says where it goes: the scheme is noise in a 300px popup.
-    subtitle: (url) => (destination(url) ?? "").replace(/^https?:\/\//, ""),
-    run: async (url, host) => {
+    href: (url) => {
       const href = destination(url);
       if (href === null) throw new Error(`${url.href} has no destination`);
-      await host.navigate(href);
+      return href;
     },
   };
 }
