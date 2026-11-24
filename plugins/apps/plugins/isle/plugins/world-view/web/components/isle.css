@@ -367,6 +367,38 @@
 .isle-title button svg {
   font-size: 24px;
 }
+/* Tidy up: a quiet button under Start, lit (with its count) when buildings stand out of place */
+.isle-title .isle-tidy {
+  display: flex;
+  margin: 18px auto 0;
+  padding: 8px 14px;
+  gap: 6px;
+  font-size: 13px;
+  border-width: 2px;
+  border-radius: 12px;
+  box-shadow: 0 3px 0 #3a2a1c;
+  background: rgb(255 244 221 / 0.6);
+  animation: none;
+}
+.isle-title .isle-tidy svg {
+  font-size: 18px;
+}
+.isle-title .isle-tidy.isle-on {
+  background: #ffd27a;
+}
+.isle-title .isle-tidy:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.isle-tidy-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #3a2a1c;
+  color: #fff4dd;
+  font-size: 12px;
+  line-height: 18px;
+}
 .isle-title.isle-wait {
   cursor: progress;
 }

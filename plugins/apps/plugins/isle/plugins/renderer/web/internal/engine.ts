@@ -47,7 +47,6 @@ import {
   type WalkGrid,
   type WorldModel,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
-import type { AppCategory } from "@plugins/primitives/plugins/pane/core";
 import { BuildingArt, HALO_P, boundsOf, type SceneBuilding } from "./buildings";
 import { FurnitureStore } from "./furniture";
 import {
@@ -153,7 +152,10 @@ export type TimeOfDay = "day" | "dusk" | "night";
 export interface IsleApp {
   readonly id: string;
   readonly name: string;
-  readonly category: AppCategory;
+  /** Its category: the leaf tag id it is filed under (`NO_GROUP`: none) — the district it is placed in. */
+  readonly group: string;
+  /** Its category's root tag id (`NO_GROUP`: none) — the region its district opens next to. */
+  readonly region: string;
   /** Its accent (`#rrggbb`, the tile colour). */
   readonly hue: string;
   readonly spec: BuildingSpec;
@@ -472,6 +474,8 @@ export class IsleEngine {
   private furnitureWait: Promise<void> | null = null;
   private glyphTints = new Map<string, HTMLCanvasElement>();
   private districts: DistrictLabel[] = [];
+  /** Set with the world (`setWorld`), before anything is laid out. */
+  private groupName: ((group: string) => string) | null = null;
   private readonly districtPick = new Map<string, number>();
 
   // tiles and bakes
@@ -850,12 +854,17 @@ export class IsleEngine {
     }
   }
 
-  /** The world to draw: the model (its seed), the stored placement and the apps placed on it. */
+  /**
+   * The world to draw: the model (its seed), the stored placement, the apps
+   * placed on it, and the name each district's sign reads for its group.
+   */
   setWorld(
     M: WorldModel,
     placement: Placement,
     apps: readonly IsleApp[],
+    groupName: (group: string) => string,
   ): void {
+    this.groupName = groupName;
     if (this.M !== M) {
       this.M = M;
       this.furniture = new FurnitureStore(M, this.sprites);
@@ -1001,6 +1010,11 @@ export class IsleEngine {
       placement,
       layout,
       (id) => this.residents.find((r) => r.id === id)?.signHalf ?? 60,
+      (g) => {
+        if (!this.groupName)
+          throw new Error("IsleEngine: districts laid out before setWorld");
+        return this.groupName(g);
+      },
     );
     this.villagersFollow();
     this.lingerersFollow();

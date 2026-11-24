@@ -90,4 +90,6 @@ export type {
 } from "./internal/oblique";
 export { oblique } from "./internal/oblique";
 // The generator.
-export { categoryOfSeed, kitBuilding } from "./internal/kit-building";
+export { kitBuilding } from "./internal/kit-building";
+export { BUILDING_STYLES, buildingStyleOf } from "./internal/style";
+export type { BuildingStyle } from "./internal/style";

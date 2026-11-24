@@ -6,7 +6,7 @@ export const isleApp = defineApp({
   name: "Isle",
   basePath: "/isle",
   icon: symbol("sailing"),
-  category: "play",
+  category: ["System", "Launcher"],
   colorMode: "light",
   launcher: true,
 });

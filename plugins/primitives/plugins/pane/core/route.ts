@@ -141,11 +141,14 @@ export interface AppRef {
    */
   readonly audience?: "developer";
   /**
-   * What kind of app it is (see {@link AppCategory}) — read by surfaces that
-   * group or place apps by kind (Isle's districts, a launcher's sections).
-   * Omitted, the app declares no kind and each surface picks its own default.
+   * Where the app is filed by DEFAULT in the user's app categories — a path
+   * in their nested category tree, root first (`["Leisure", "Music"]`). The
+   * user may move it, rename a tag or reshape the tree (`apps-core/app-category`);
+   * this is only where a newly installed app lands. Read by every surface that
+   * groups or places apps by category (Isle's districts, the Home gallery).
+   * Omitted, the app is uncategorised.
    */
-  readonly category?: AppCategory;
+  readonly category?: AppCategoryPath;
   /**
    * `true` for an app whose purpose is opening other apps in its place (Isle:
    * walk to a building, enter it). A tab swapped from it to another app
@@ -156,22 +159,12 @@ export interface AppRef {
 }
 
 /**
- * The closed set of app kinds an app may declare on `defineApp`: `work`
- * (getting things done), `create` (making things), `music`, `life` (everyday
- * things), `data` (numbers and records), `play`, `system` (under the hood).
+ * An app's default category: a tag path, root first, one or more non-empty
+ * names (`["Office", "Documents"]`) — `defineApp` refuses an empty path or
+ * an empty name. A plain array (not a non-empty tuple) because an app's
+ * declaration also travels as build-time data, which keeps arrays plain.
  */
-export type AppCategory = (typeof APP_CATEGORIES)[number];
-
-/** Every {@link AppCategory}, in the order a picker or a legend lists them. */
-export const APP_CATEGORIES = [
-  "work",
-  "create",
-  "music",
-  "life",
-  "data",
-  "play",
-  "system",
-] as const;
+export type AppCategoryPath = readonly string[];
 
 /**
  * An app's DEFAULT colour scheme, declared once on `defineApp`:
@@ -196,7 +189,7 @@ export function defineApp(def: {
   colorMode?: AppColorMode;
   listed?: false;
   audience?: "developer";
-  category?: AppCategory;
+  category?: AppCategoryPath;
   launcher?: true;
 }): AppRef {
   for (const former of def.formerBasePaths ?? []) {
@@ -205,6 +198,15 @@ export function defineApp(def: {
         `defineApp("${def.id}"): former base path "${former}" must be an absolute path (no trailing slash, not "/") other than the app's base path "${def.basePath}".`,
       );
     }
+  }
+  if (
+    def.category !== undefined &&
+    (def.category.length === 0 ||
+      def.category.some((name) => name.trim().length === 0))
+  ) {
+    throw new Error(
+      `defineApp("${def.id}"): category ${JSON.stringify(def.category)} is empty or has an empty name — every segment of the path names a tag.`,
+    );
   }
   return Object.freeze({
     id: def.id,
@@ -221,7 +223,9 @@ export function defineApp(def: {
       def.colorMode !== "global" && { colorMode: def.colorMode }),
     ...(def.listed === false && { listed: false as const }),
     ...(def.audience !== undefined && { audience: def.audience }),
-    ...(def.category !== undefined && { category: def.category }),
+    ...(def.category !== undefined && {
+      category: Object.freeze([...def.category]),
+    }),
     ...(def.launcher === true && { launcher: true as const }),
   });
 }

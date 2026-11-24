@@ -24,7 +24,8 @@ export const islePlots = defineEntity(
         slot: false,
         n: false,
         seq: false,
-        category: false,
+        group: false,
+        region: false,
         geometry: true,
         occupant: true,
         movedByUser: true,
@@ -34,6 +35,11 @@ export const islePlots = defineEntity(
       },
     },
     columns: {
+      // Every write names both; the default only backfills the rows of
+      // earlier layout generations (keyed under another `world`, never read
+      // again) when the columns were added — as uncategorised (`NO_GROUP`).
+      group: { default: "_" },
+      region: { default: "_" },
       movedByUser: { default: false },
       wild: { default: false },
       retired: { default: false },

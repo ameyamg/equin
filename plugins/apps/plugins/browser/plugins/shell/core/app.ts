@@ -6,5 +6,5 @@ export const browserApp = defineApp({
   name: "Browser",
   basePath: "/browser",
   icon: symbol("public"),
-  category: "data",
+  category: ["Office", "Everyday"],
 });

@@ -21,6 +21,7 @@ export type {
   TagTreeTableMeta,
 } from "./internal/table";
 export { serveTagTree, singleTagCarrier, TagTrees } from "./internal/serve";
+export { ensureTagPath } from "./internal/handlers";
 export type {
   ServedTagTree,
   TagCarrier,

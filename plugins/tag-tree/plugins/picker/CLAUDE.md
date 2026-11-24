@@ -58,6 +58,7 @@
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `apps-core/app-category`
     - `apps/places/places-map`
     - `apps/prototypes/gallery`
 

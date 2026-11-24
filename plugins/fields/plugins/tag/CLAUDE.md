@@ -41,6 +41,8 @@ operator.
   - Exports (values):
     - `tagFieldType`
     - `tagIdentity`
+- Cross-plugin:
+  - Imported by: `apps-core/app-category`
 - Sub-plugins:
   - **`data-view-group`** — Tag field type: data-view grouping strategy — one section per tag, nested along the option forest (`FieldOption.parent`), labelled, ordered and coloured by `field.options`.
 

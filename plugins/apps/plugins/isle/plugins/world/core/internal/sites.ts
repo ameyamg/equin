@@ -802,7 +802,8 @@ export const tagScore = (
 
 /**
  * The best spot of a site for a building: the first free spots in the site's
- * order, the one that suits its setting winning. `boxes(side)` gives the
+ * order, the one that suits its setting winning — and when none of those fits,
+ * any spot of the site that does (null only when the site has no room for it). `boxes(side)` gives the
  * building's boxes with its sign on that side; `spare`, the settings to leave
  * for the buildings still to come ({@link tagScore}).
  */
@@ -885,5 +886,16 @@ export function bestSpot(
     if (!best || score > best.score) best = { ...r, score };
     if (r.m === 10) break;
   }
+  // none of those: the district is full only once NO spot of it fits — every
+  // other candidate (an outlying feature it does not ask for too) is tried,
+  // its setting only ranking them
+  if (!best)
+    for (let i = 0; i < site.cands.length; i++) {
+      if (site.dead.has(i)) continue;
+      const r = tryCand(i);
+      if (!r) continue;
+      const score = r.m - 2 - i * 0.01;
+      if (!best || score > best.score) best = { ...r, score };
+    }
   return best;
 }

@@ -65,3 +65,16 @@ export const movePlot = defineEndpoint({
   body: WritesBodySchema,
   response: PlotWritesResultSchema,
 });
+
+/**
+ * Tidy up: every plot of one world dropped, in one transaction — lots,
+ * wild and retired plots, and buildings moved by hand alike. Plot ids are
+ * positional within a world, so only the whole world may go. The view then
+ * places every app afresh (the first-visit path) and claims, so each lands in
+ * a district of its current category.
+ */
+export const resetPlots = defineEndpoint({
+  route: "POST /api/isle/plots/reset",
+  body: z.object({ world: z.string().min(1) }),
+  response: z.object({ dropped: z.number().int() }),
+});

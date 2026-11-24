@@ -6,5 +6,5 @@ export const prototypesApp = defineApp({
   name: "Prototypes",
   basePath: "/prototypes",
   icon: symbol("dashboard-customize"),
-  category: "create",
+  category: ["Harness"],
 });

@@ -31,8 +31,12 @@ with, and the generator that gives every app without bespoke art a building.
   stays `loading` until the deferred tier has settled — a plot is sized from
   the building, so an app is never placed with a stand-in. No contribution: a
   `kitBuilding`.
-- **`kitBuilding(app, category?, seed?)`** — the generator. `plan.ts` makes
-  every choice (archetype by category, walls, roof, chimney, porch…) from
+- **`kitBuilding(app, style, seed?)`** — the generator. `style` is one of the
+  closed `BUILDING_STYLES` (workshop, atelier, music hall, homestead, archive,
+  fairground, mill looks — they bias the archetype, the props and the setting);
+  `buildingStyleOf(key)` hashes any key onto one (Isle keys it on the app's
+  region tag, so a region's buildings look alike). `plan.ts` makes
+  every choice (archetype by style, walls, roof, chimney, porch…) from
   `mulberry32(seed)`; `paint.ts` only executes the plan. Same seed, same
   building. Neither `paint` nor `animate` mutates the plan.
 - **`core/testing`** — `paintedExtent(draw, splitY)` paints on a measuring
@@ -137,7 +141,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
 
 ## Plugin reference
 
-- Description: Isle's building contract (BuildingSpec: a declared footprint, preferred setting, sign, night lights, paint/animate on any 2D context), the watercolour-and-ink painting kit bespoke buildings reuse, and kitBuilding — a generated building per app, seeded from its id and shaped by its category. Its testing barrel measures a painter's ink without a canvas. Isle.Building: the slot an app contributes its bespoke building to (keyed by its AppRef, from its own isle-building sub-plugin); useIsleBuildings reads them by app id, loading until the deferred tier has settled.
+- Description: Isle's building contract (BuildingSpec: a declared footprint, preferred setting, sign, night lights, paint/animate on any 2D context), the watercolour-and-ink painting kit bespoke buildings reuse, and kitBuilding — a generated building per app, seeded from its id and shaped by its style (one of a closed set, picked by hashing a key). Its testing barrel measures a painter's ink without a canvas. Isle.Building: the slot an app contributes its bespoke building to (keyed by its AppRef, from its own isle-building sub-plugin); useIsleBuildings reads them by app id, loading until the deferred tier has settled.
 - Web:
   - Slots: `Isle.Building`
   - Slot contributors:
@@ -167,13 +171,12 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
   - Uses:
     - `packages/seeded-random.mulberry32`
     - `packages/string-hash.fnv1a32`
-    - `primitives/pane.APP_CATEGORIES`
-    - `primitives/pane.AppCategory`
   - Exports (types):
     - `Box`
     - `BoxFaces`
     - `BoxGeom`
     - `BuildingSpec`
+    - `BuildingStyle`
     - `Chimney`
     - `Ctx2D`
     - `Door`
@@ -201,9 +204,10 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `bbox`
     - `bench`
     - `books`
+    - `BUILDING_STYLES`
+    - `buildingStyleOf`
     - `cart`
     - `castShadow`
-    - `categoryOfSeed`
     - `chimneySmoke`
     - `crate`
     - `css`

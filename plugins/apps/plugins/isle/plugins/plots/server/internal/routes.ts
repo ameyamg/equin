@@ -5,6 +5,7 @@ import {
   claimPlots,
   geometryOf,
   movePlot,
+  resetPlots,
   restorePlot,
   type PlotWrite,
   type PlotWritesResult,
@@ -84,7 +85,8 @@ async function applyWrites(
           slot: w.plot.slot,
           n: w.plot.n,
           seq: w.plot.seq,
-          category: w.plot.category,
+          group: w.plot.group,
+          region: w.plot.region,
           geometry: geometryOf(w.plot),
           occupant: w.occupant,
           wild: w.plot.wild,
@@ -138,3 +140,12 @@ export const handleRestorePlot = implement(restorePlot, ({ body }) =>
 export const handleMovePlot = implement(movePlot, ({ body }) =>
   applyWrites(body.world, body.writes, true),
 );
+
+/** Drops every plot of a world, in one statement (one transaction). */
+export const handleResetPlots = implement(resetPlots, async ({ body }) => {
+  const gone = await db
+    .delete(_islePlots)
+    .where(eq(_islePlots.world, body.world))
+    .returning({ plotId: _islePlots.plotId });
+  return { dropped: gone.length };
+});

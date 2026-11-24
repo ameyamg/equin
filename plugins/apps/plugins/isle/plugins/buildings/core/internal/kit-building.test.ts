@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { mulberry32 } from "@plugins/packages/plugins/seeded-random/core";
 import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
-import {
-  APP_CATEGORIES,
-  type AppCategory,
-} from "@plugins/primitives/plugins/pane/core";
 import { shade } from "../shade";
 import {
   GROUND_BAND,
@@ -13,20 +9,17 @@ import {
   type PaintState,
 } from "../spec";
 import { boxWithin, paintedExtent, perspectiveProblems } from "../testing";
-import { categoryOfSeed, kitBuilding } from "./kit-building";
+import { kitBuilding } from "./kit-building";
+import { BUILDING_STYLES, buildingStyleOf } from "./style";
 import { chimneySmoke, openDoor } from "./parts";
 
-const CATEGORIES: readonly (AppCategory | undefined)[] = [
-  ...APP_CATEGORIES,
-  undefined,
-];
 const SAMPLE = 320;
 const TIMES = [0, 1.1, 2.3, 3.7, 5.2, 7.9];
 /** How far the declared extremes may exceed the measured extremes over the sample, per side. */
 const TIGHTNESS = 16;
 
 const ids = Array.from({ length: SAMPLE }, (_, i) => `app-${i}`);
-const categoryOf = (i: number) => CATEGORIES[i % CATEGORIES.length];
+const styleOf = (i: number) => BUILDING_STYLES[i % BUILDING_STYLES.length]!;
 
 function stateFor(id: string, over: Partial<PaintState> = {}): PaintState {
   return {
@@ -80,15 +73,15 @@ function measure(spec: BuildingSpec, id: string): Measured {
 
 const specs = ids.map((id, i) => ({
   id,
-  spec: kitBuilding({ id }, categoryOf(i)),
+  spec: kitBuilding({ id }, styleOf(i)),
 }));
 const measured = specs.map(({ id, spec }) => measure(spec, id));
 
 describe("kitBuilding", () => {
   test("is deterministic: the same app builds the same building", () => {
     for (const [i, id] of ids.slice(0, 40).entries()) {
-      const a = kitBuilding({ id }, categoryOf(i));
-      const b = kitBuilding({ id }, categoryOf(i));
+      const a = kitBuilding({ id }, styleOf(i));
+      const b = kitBuilding({ id }, styleOf(i));
       expect(b.footprint).toEqual(a.footprint);
       expect(b.lights).toEqual(a.lights);
       expect(b.setting).toEqual(a.setting);
@@ -97,14 +90,10 @@ describe("kitBuilding", () => {
     }
   });
 
-  test("picks a category from the seed when none is declared", () => {
-    const seen = new Set<AppCategory>();
-    for (const id of ids) seen.add(categoryOfSeed(fnv1a32(id)));
-    expect(seen.size).toBe(APP_CATEGORIES.length);
-    const a = kitBuilding({ id: "x" }, undefined);
-    expect(
-      kitBuilding({ id: "x" }, categoryOfSeed(fnv1a32("x"))).setting,
-    ).toEqual(a.setting);
+  test("a key gives a style, and the keys cover every style", () => {
+    const seen = new Set(ids.map(buildingStyleOf));
+    expect(seen.size).toBe(BUILDING_STYLES.length);
+    expect(buildingStyleOf("x")).toBe(buildingStyleOf("x"));
   });
 
   test("a different seed builds a different building", () => {
@@ -114,7 +103,7 @@ describe("kitBuilding", () => {
     expect(shapes.size).toBeGreaterThan(SAMPLE / 4);
   });
 
-  test("its settings follow the category", () => {
+  test("its settings follow the style", () => {
     expect(kitBuilding({ id: "a" }, "data").setting).toEqual([
       "shore",
       "harbour",

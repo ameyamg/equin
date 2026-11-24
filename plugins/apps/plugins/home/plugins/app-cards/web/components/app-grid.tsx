@@ -11,6 +11,7 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { capsuleToolbar } from "@plugins/primitives/plugins/data-view/plugins/capsule-toolbar/web";
 import {
+  AppLauncherSlots,
   appRow,
   appRowOverrides,
   type AppRow,
@@ -94,6 +95,8 @@ export function AppGrid() {
         // the kind (usage stats, …) join them.
         collection={installedApp}
         overrides={appRowOverrides}
+        // What plugins keep about each app (its category) is edited here.
+        itemActions={AppLauncherSlots.AppActions}
         // Icons is the launcher (tile + name only); the table shows every field,
         // contributed ones included.
         views={["icons", "table"]}

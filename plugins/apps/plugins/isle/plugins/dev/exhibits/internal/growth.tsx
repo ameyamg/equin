@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mulberry32 } from "@plugins/packages/plugins/seeded-random/core";
 import {
-  APP_CATEGORIES,
-  type AppCategory,
-} from "@plugins/primitives/plugins/pane/core";
-import {
   Button,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { kitBuilding } from "@plugins/apps/plugins/isle/plugins/buildings/core";
+import {
+  buildingStyleOf,
+  kitBuilding,
+} from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import {
   EMPTY_PLACEMENT,
   WorldModel,
@@ -29,7 +28,13 @@ import {
   useIslandShapes,
   type IsleApp,
 } from "@plugins/apps/plugins/isle/plugins/renderer/web";
-import { FAKE_APPS, MAX_APPS, MIN_APPS, type FakeApp } from "./fake-apps";
+import {
+  FAKE_APPS,
+  FAKE_GROUPS,
+  MAX_APPS,
+  MIN_APPS,
+  type FakeApp,
+} from "./fake-apps";
 import "./growth.css";
 
 /** A made-up app's sign glyph: its initial, white on transparent. */
@@ -54,15 +59,22 @@ function isleAppOf(a: FakeApp): IsleApp {
     x = {
       id: a.id,
       name: a.name,
-      category: a.category,
+      group: a.group,
+      region: a.region,
       hue: a.hue,
-      spec: kitBuilding({ id: a.id }, a.category),
+      spec: kitBuilding({ id: a.id }, buildingStyleOf(a.region)),
       glyph: initialGlyph(a.name),
     };
     drawn.set(a.id, x);
   }
   return x;
 }
+/** A fake group's sign: its name in the fake tree. */
+const groupName = (id: string): string => {
+  const g = FAKE_GROUPS.find((x) => x.id === id);
+  if (!g) throw new Error(`isle growth: no fake group ${id}`);
+  return g.name;
+};
 const residentsOf = (apps: readonly FakeApp[]): Resident[] =>
   apps.map((a) => residentOf(a, isleAppOf(a).spec));
 
@@ -126,9 +138,9 @@ export default function IsleGrowth() {
     setCountText(String(k));
     setApps(FAKE_APPS.slice(0, k));
   };
-  const addTo = (c: AppCategory) => {
+  const addTo = (group: string) => {
     const have = new Set(world.apps.map((a) => a.id));
-    const next = FAKE_APPS.find((a) => a.category === c && !have.has(a.id));
+    const next = FAKE_APPS.find((a) => a.group === group && !have.has(a.id));
     if (next) setApps([...world.apps, next]);
   };
   const removeRandom = () => {
@@ -208,9 +220,9 @@ export default function IsleGrowth() {
         >
           +1
         </Button>
-        {APP_CATEGORIES.map((c) => (
-          <Button key={c} variant="outline" onClick={() => addTo(c)}>
-            + {c}
+        {FAKE_GROUPS.map((g) => (
+          <Button key={g.id} variant="outline" onClick={() => addTo(g.id)}>
+            + {g.name}
           </Button>
         ))}
         <Button variant="outline" onClick={removeRandom}>
@@ -328,6 +340,7 @@ function GrowthCanvas(props: {
       model,
       world.placement,
       world.apps.map(isleAppOf),
+      groupName,
     );
   }, [model, world]);
 

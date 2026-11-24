@@ -20,7 +20,8 @@ export const islePlots = liveCollection("isle.plots", {
       "slot",
       "n",
       "seq",
-      "category",
+      "group",
+      "region",
       "geometry",
       "occupant",
       "movedByUser",
@@ -41,8 +42,9 @@ export const islePlots = liveCollection("isle.plots", {
  * that first stood on it and kept forever, so when the bespoke buildings are
  * redrawn at other sizes the stored plots no longer fit them: a new generation
  * lays every town out afresh (the old plots stay under their old scope).
+ * 6: districts became one category group each (the `group` / `region` columns).
  */
-const LAYOUT_GENERATION = 5;
+const LAYOUT_GENERATION = 6;
 
 /** The `world` scope of a seed: one set of plots per seed and layout generation. */
 export const worldOfSeed = (seed: number): string =>

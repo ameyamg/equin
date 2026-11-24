@@ -11,7 +11,6 @@ import {
 } from "@plugins/packages/plugins/list-bound/core";
 import { SETTINGS } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import type { Plot } from "@plugins/apps/plugins/isle/plugins/world/core";
-import { APP_CATEGORIES } from "@plugins/primitives/plugins/pane/core";
 
 const BoxSchema = z
   .tuple([z.number(), z.number(), z.number(), z.number()])
@@ -21,7 +20,7 @@ const SettingSchema = z.enum(SETTINGS);
 
 /**
  * A plot's geometry: everything `world/core`'s `Plot` holds but its identity
- * (id, n, seq, district) and the category it was made for, which are columns.
+ * (id, n, seq, district) and the group and region it was made for, which are columns.
  * Opaque to SQL — only the pure world reads it — so it is one jsonb value.
  */
 export const PlotGeometrySchema = z.object({
@@ -60,7 +59,10 @@ export const islePlotFields = {
   slot: textField(),
   n: intField(),
   seq: intField(),
-  category: textField(),
+  /** The group (leaf category tag id) of the app it was made for — world/core's `Plot.group`. */
+  group: textField(),
+  /** The region (root category tag id) of the app it was made for — world/core's `Plot.region`. */
+  region: textField(),
   geometry: jsonField({ schema: PlotGeometrySchema }),
   occupant: nullable(textField()),
   movedByUser: boolField(),
@@ -81,7 +83,8 @@ export const PlotSchema = PlotGeometrySchema.extend({
   n: z.number().int(),
   seq: z.number().int(),
   slot: z.string(),
-  category: z.enum(APP_CATEGORIES),
+  group: z.string().min(1),
+  region: z.string().min(1),
   wild: z.boolean(),
   retired: z.boolean(),
 }) satisfies z.ZodType<Plot>;

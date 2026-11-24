@@ -6,5 +6,5 @@ export const pagesApp = defineApp({
   name: "Pages",
   basePath: "/pages",
   icon: symbol("description"),
-  category: "work",
+  category: ["Office", "Documents"],
 });

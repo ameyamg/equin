@@ -10,10 +10,42 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, act } from "@testing-library/react";
 import { useSyncExternalStore, type ReactElement } from "react";
 import type { LiveFieldOptionsRead } from "@plugins/network/plugins/live/web";
+import {
+  PluginProvider,
+  type LoadedPlugin,
+} from "@plugins/framework/plugins/web-sdk/core";
+import { defineFieldIdentity, defineFieldType } from "@plugins/fields/core";
+import { Fields } from "@plugins/fields/web";
 import type { FieldDef } from "../../core";
 import { CollectFieldOptions } from "../internal/derived-fields";
 
 afterEach(cleanup);
+
+// Synthetic identities (the suite names no real field type): a closed-set
+// `enum` and a `forest` type extending it, as `tag` does.
+const enumType = defineFieldType<string>("enum");
+const forestType = defineFieldType<string>("forest");
+const identities = {
+  id: "data-view-field-options-test",
+  description: "field identities fixture",
+  contributions: [
+    Fields.Identity({
+      identity: defineFieldIdentity({
+        type: enumType,
+        label: "Enum",
+        kind: "label",
+      }),
+    }),
+    Fields.Identity({
+      identity: defineFieldIdentity({
+        type: forestType,
+        label: "Forest",
+        extends: enumType,
+      }),
+    }),
+  ],
+  slots: Fields,
+} as unknown as LoadedPlugin;
 
 const refetch = () => Promise.resolve();
 let current: LiveFieldOptionsRead = { status: "loading", refetch };
@@ -35,7 +67,7 @@ function useModelOptions(): LiveFieldOptionsRead {
   );
 }
 
-const fields: FieldDef<unknown>[] = [
+const FIELDS: FieldDef<unknown>[] = [
   { id: "title", label: "Title" },
   {
     id: "model",
@@ -45,7 +77,11 @@ const fields: FieldDef<unknown>[] = [
   },
 ];
 
-function Probe(): ReactElement {
+function Probe({
+  fields = FIELDS,
+}: {
+  fields?: FieldDef<unknown>[];
+}): ReactElement {
   return (
     <CollectFieldOptions
       readers={[{ id: "model", useOptions: useModelOptions }]}
@@ -71,7 +107,11 @@ function Probe(): ReactElement {
 
 describe("CollectFieldOptions", () => {
   it("hands the field its live options, pending first, in place of its declared ones", () => {
-    render(<Probe />);
+    render(
+      <PluginProvider plugins={[identities]}>
+        <Probe />
+      </PluginProvider>,
+    );
     const read = () => JSON.parse(screen.getByTestId("model").textContent!);
     expect(read()).toEqual({
       type: "enum",
@@ -94,5 +134,19 @@ describe("CollectFieldOptions", () => {
       pending: false,
       title: true,
     });
+  });
+
+  it("keeps a type that already extends enum (a tag's nested grouping reads it)", () => {
+    publish({ status: "ready", data: [{ value: "a", label: "A" }], refetch });
+    render(
+      <PluginProvider plugins={[identities]}>
+        <Probe
+          fields={[FIELDS[0]!, { id: "model", label: "Model", type: "forest" }]}
+        />
+      </PluginProvider>,
+    );
+    const read = JSON.parse(screen.getByTestId("model").textContent!);
+    expect(read.type).toBe("forest");
+    expect(read.options).toEqual([{ value: "a", label: "A" }]);
   });
 });

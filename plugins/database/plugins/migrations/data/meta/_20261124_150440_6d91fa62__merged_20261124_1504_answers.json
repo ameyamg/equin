@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:isle_plots.group",
+      "entityType": "column",
+      "entityName": "group",
+      "action": "create"
+    },
+    {
+      "key": "column:isle_plots.region",
+      "entityType": "column",
+      "entityName": "region",
+      "action": "create"
+    }
+  ]
+}

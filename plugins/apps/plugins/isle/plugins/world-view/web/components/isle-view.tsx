@@ -70,6 +70,7 @@ const playIcon = symbol("play-arrow");
 const placeIcon = symbol("landscape");
 const natureIcon = symbol("park");
 const pauseIcon = symbol("pause");
+const tidyIcon = symbol("auto-fix-high");
 
 /** The radio's stations, in the order N steps through them. */
 const STATIONS: readonly IsleStation[] = ["auto", ...AMBIENT_MOODS];
@@ -101,7 +102,8 @@ interface Entering {
 /**
  * The island: the canvas engine (`IsleEngine`, mounted once), and over it the
  * title card (Start, held back — a rendered loading state — until the world is
- * read and the home island drawn), the where-chip, the prompt card for the
+ * read and the home island drawn; and Tidy up, which lays every building out
+ * afresh by category, marked with how many stand out of place), the where-chip, the prompt card for the
  * building at the hero's door, the iris an app opens through, and a visually
  * hidden list of links mirroring the buildings.
  */
@@ -299,6 +301,7 @@ export function IsleView() {
       world.model,
       world.placement,
       world.residents.map((r) => r.app),
+      world.groupName,
     );
   }, [world]);
 
@@ -603,6 +606,33 @@ export function IsleView() {
               <Icon icon={playIcon} />
               Start
             </button>
+            {ready ? (
+              <button
+                type="button"
+                className={
+                  world.misplaced.length ? "isle-tidy isle-on" : "isle-tidy"
+                }
+                disabled={world.tidying}
+                title={
+                  world.misplaced.length
+                    ? `${world.misplaced.length} building${world.misplaced.length === 1 ? " stands" : "s stand"} outside ${world.misplaced.length === 1 ? "its" : "their"} category's district: lay every building out afresh, by category`
+                    : "Lay every building out afresh, by category (buildings moved by hand too)"
+                }
+                onClick={(e) => {
+                  // the title card starts the island on a click: not this one
+                  e.stopPropagation();
+                  world.tidy();
+                }}
+              >
+                <Icon icon={tidyIcon} />
+                Tidy up
+                {world.misplaced.length ? (
+                  <span className="isle-tidy-count">
+                    {world.misplaced.length}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

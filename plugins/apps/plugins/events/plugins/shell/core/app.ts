@@ -6,5 +6,5 @@ export const eventsApp = defineApp({
   name: "Events",
   basePath: "/events",
   icon: symbol("event"),
-  category: "life",
+  category: ["Office", "Everyday"],
 });

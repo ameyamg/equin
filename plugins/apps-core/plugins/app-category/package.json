@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-core-app-category",
+  "description": "Each installed app's category: one nested tag tree the user owns (app_category_tags) and each app's one tag (app_categories), filed at first sight under the default path its defineApp declares.",
+  "private": true,
+  "version": "0.0.1"
+}

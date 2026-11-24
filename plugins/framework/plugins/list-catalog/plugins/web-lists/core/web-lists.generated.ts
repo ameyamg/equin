@@ -14,6 +14,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"active-data.plugin-link.plugin-conv-side.actions","plugin":"active-data.plugin-link","key":"plugin-conv-side.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"active-data.tag","plugin":"active-data","key":"tag","meta":{"kind":"slot","reorderable":false},"inMain":true},
   {"id":"apps-core.app","plugin":"apps-core","key":"app","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"apps-core.app-launcher.app-actions","plugin":"apps-core.app-launcher","key":"app-actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps-core.app-launcher.return-tip","plugin":"apps-core.app-launcher","key":"return-tip","meta":{"kind":"slot","reorderable":false},"inMain":true},
   {"id":"apps-core.app-rail-framing.app-rail-framing-web.variant","plugin":"apps-core.app-rail-framing","key":"app-rail-framing-web.variant","meta":{"kind":"slot","reorderable":false},"inMain":true},
   {"id":"apps-core.overlay","plugin":"apps-core","key":"overlay","meta":{"kind":"slot","reorderable":false},"inMain":true},

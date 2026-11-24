@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { kitBuilding } from "@plugins/apps/plugins/isle/plugins/buildings/core";
+import {
+  buildingStyleOf,
+  kitBuilding,
+} from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import {
   WorldModel,
   applyMove,
@@ -9,19 +12,18 @@ import {
   residentOf,
   type Resident,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
-import { APP_CATEGORIES } from "@plugins/primitives/plugins/pane/core";
 import { geometryOf, placementOfRows, placementWrites } from "./codec";
 import type { PlotWrite } from "./endpoints";
 import type { IslePlotRow } from "./schemas";
 
 const M = new WorldModel(1);
+/** Made-up apps in five groups over three regions. */
+const GROUPS = ["work", "work/mail", "play", "play/music", "sys"] as const;
 const app = (i: number): Resident => {
-  const a = {
-    id: `app-${i}`,
-    name: `App ${i}`,
-    category: APP_CATEGORIES[i % APP_CATEGORIES.length]!,
-  };
-  return residentOf(a, kitBuilding(a, a.category));
+  const group = GROUPS[i % GROUPS.length]!;
+  const region = group.split("/")[0]!;
+  const a = { id: `app-${i}`, name: `App ${i}`, group, region };
+  return residentOf(a, kitBuilding(a, buildingStyleOf(region)));
 };
 
 /** A store of rows, applying writes with the server's compare-and-set. */
@@ -52,7 +54,8 @@ function store() {
           slot: w.plot.slot,
           n: w.plot.n,
           seq: w.plot.seq,
-          category: w.plot.category,
+          group: w.plot.group,
+          region: w.plot.region,
           geometry: geometryOf(w.plot),
           occupant: w.occupant,
           movedByUser: moved || (rows.get(w.plot.id)?.movedByUser ?? false),

@@ -6,5 +6,5 @@ export const fileExplorerApp = defineApp({
   name: "Files",
   basePath: "/files",
   icon: symbol("folder"),
-  category: "work",
+  category: ["Office", "Documents"],
 });

@@ -1550,9 +1550,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Slots:
     - `FieldPresentation.Register`
     - `ClientFields.Resolve`
-  - Slot contributors: 45 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×42
-    - `ClientFields.Resolve` ×3
+  - Slot contributors: 47 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×43
+    - `ClientFields.Resolve` ×4
   - Uses:
     - `network/live/live-state.PagedResourceResult`
     - `network/live/live-state.ResourceDerivation`
@@ -1938,7 +1938,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 368 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 369 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×95
     - `conversations` ×74
     - `debug` ×36
@@ -1952,11 +1952,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `integrations` ×5
     - `code-explorer` ×4
     - `review` ×4
+    - `apps-core` ×3
     - `auth` ×3
     - `plugin-meta` ×3
     - `reports` ×3
     - `ui` ×3
-    - `apps-core` ×2
     - `backup` ×2
     - `companions` ×2
     - `config_v2` ×2

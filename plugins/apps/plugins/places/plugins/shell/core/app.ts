@@ -6,7 +6,7 @@ export const placesApp = defineApp({
   name: "Places",
   basePath: "/places",
   icon: symbol("location-on"),
-  category: "life",
+  category: ["Office", "Everyday"],
   // Light only: the map's tiles are light whatever the mode, so the app
   // around them is too. Declared on the scheme, never per token group, so
   // every group — present and future — resolves its light values here.

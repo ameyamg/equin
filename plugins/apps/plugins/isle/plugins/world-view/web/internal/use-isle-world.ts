@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useListedApps, type ActiveApp } from "@plugins/apps-core/web";
 import { appTileFill } from "@plugins/apps-core/plugins/app-icon/core";
+import { appCategoryTree } from "@plugins/apps-core/plugins/app-category/core";
+import { useAppCategories } from "@plugins/apps-core/plugins/app-category/web";
+import { useTagTree } from "@plugins/tag-tree/plugins/engine/web";
 import { useConfigResult } from "@plugins/config_v2/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -9,7 +12,7 @@ import {
   foldResource,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
-  categoryOfSeed,
+  buildingStyleOf,
   kitBuilding,
   type BuildingSpec,
 } from "@plugins/apps/plugins/isle/plugins/buildings/core";
@@ -17,13 +20,16 @@ import { useIsleBuildings } from "@plugins/apps/plugins/isle/plugins/buildings/w
 import {
   claimPlots,
   islePlots,
+  resetPlots,
   placementOfRows,
   placementWrites,
   worldOfSeed,
 } from "@plugins/apps/plugins/isle/plugins/plots/core";
 import { isleApp } from "@plugins/apps/plugins/isle/plugins/shell/core";
 import {
+  NO_GROUP,
   WorldModel,
+  misplacedResidents,
   residentOf,
   type Placement,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
@@ -33,8 +39,6 @@ import {
   type IsleApp,
   type TimeOfDay,
 } from "@plugins/apps/plugins/isle/plugins/renderer/web";
-import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
-import type { AppCategory } from "@plugins/primitives/plugins/pane/core";
 import { isleConfig, isleStationOf, type IsleStation } from "../../core";
 import { useIsleFonts } from "./fonts";
 import { useGlyphImages } from "./glyphs";
@@ -57,20 +61,35 @@ export type IsleWorld =
       readonly time: TimeOfDay | "auto";
       readonly music: boolean;
       readonly station: IsleStation;
+      /** The name a district of a group is signed with: its category tag's. */
+      readonly groupName: (group: string) => string;
+      /** The apps standing in a district of another category than their own: what Tidy up would move. */
+      readonly misplaced: readonly string[];
+      /** Tidy up: drop every plot of this world and place every app afresh, by category. */
+      readonly tidy: () => void;
+      readonly tidying: boolean;
     };
 
+/** The sign of a district whose group is no category (or one deleted since). */
+const NO_GROUP_NAME = "Elsewhere";
+
 const kits = new Map<string, BuildingSpec>();
-/** An app's building: the one it contributes (`Isle.Building`), else a generated one per id and category. */
+/**
+ * An app's building: the one it contributes (`Isle.Building`), else a
+ * generated one per id, in the style of its region (a region's generated
+ * buildings look alike).
+ */
 function buildingOf(
   bespoke: ReadonlyMap<string, BuildingSpec>,
   id: string,
-  category: AppCategory,
+  region: string,
 ): BuildingSpec {
   const own = bespoke.get(id);
   if (own) return own;
-  const key = `${id}|${category}`;
+  const style = buildingStyleOf(region);
+  const key = `${id}|${style}`;
   let s = kits.get(key);
-  if (!s) kits.set(key, (s = kitBuilding({ id }, category)));
+  if (!s) kits.set(key, (s = kitBuilding({ id }, style)));
   return s;
 }
 
@@ -84,14 +103,18 @@ export const timeOf = (v: string): TimeOfDay | "auto" => {
 /**
  * Everything the island is drawn from, or what it is still waiting for: the
  * config (seed, time), the listed apps (the residents, in the rail's order),
- * the stored plots of this seed, every app's glyph and the canvas fonts. Apps
- * without a plot are placed by the pure world and claimed; the world shows as
- * loading until the claim's push comes back — the stored placement is what is
- * drawn, never a prediction of it. A failed claim is the world's `error`.
+ * each app's category (its group — the leaf tag — and region — the root;
+ * never placed before they are read), the stored plots of this seed, every
+ * app's glyph and the canvas fonts. Apps without a plot are placed by the
+ * pure world and claimed; the world shows as loading until the claim's push
+ * comes back — the stored placement is what is drawn, never a prediction of
+ * it. A failed claim or tidy is the world's `error`.
  */
 export function useIsleWorld(): IsleWorld {
   const config = useConfigResult(isleConfig);
   const listed = useListedApps();
+  const categories = useAppCategories();
+  const tags = useTagTree(appCategoryTree);
   const seed = foldResource(config, {
     ready: (c) => c.seed,
     loading: () => null,
@@ -120,11 +143,20 @@ export function useIsleWorld(): IsleWorld {
     () => (seed === null ? null : new WorldModel(seed)),
     [seed],
   );
+  const filed = foldResource(categories, {
+    ready: (c) => c,
+    loading: () => null,
+    error: () => null,
+  });
   const residents = useMemo((): Resident[] | null => {
-    if (glyphs.kind !== "ready" || buildings.kind !== "ready") return null;
+    if (glyphs.kind !== "ready" || buildings.kind !== "ready" || !filed)
+      return null;
     return entries.map((entry) => {
       const id = entry.app.id;
-      const category = entry.app.category ?? categoryOfSeed(fnv1a32(id));
+      // absent (not filed yet) or null: uncategorised, a group of its own
+      const cat = filed.get(id) ?? null;
+      const group = cat?.tagId ?? NO_GROUP;
+      const region = cat?.path[0]?.id ?? group;
       const glyph = glyphs.glyphs.get(id);
       if (!glyph) throw new Error(`isle: no glyph for ${id}`);
       return {
@@ -132,14 +164,26 @@ export function useIsleWorld(): IsleWorld {
         app: {
           id,
           name: entry.app.name,
-          category,
+          group,
+          region,
           hue: appTileFill(entry.icon, id),
-          spec: buildingOf(buildings.byApp, id, category),
+          spec: buildingOf(buildings.byApp, id, region),
           glyph,
         },
       };
     });
-  }, [entries, glyphs, buildings]);
+  }, [entries, glyphs, buildings, filed]);
+  const names = foldResource(tags, {
+    ready: (rows) => rows,
+    loading: () => null,
+    error: () => null,
+  });
+  const groupName = useMemo(() => {
+    const byId = new Map<string, string>(
+      (names ?? []).map((t) => [t.id, t.name]),
+    );
+    return (group: string) => byId.get(group) ?? NO_GROUP_NAME;
+  }, [names]);
   const stored = foldResource(plots, {
     ready: (p) => p,
     loading: () => null,
@@ -181,13 +225,30 @@ export function useIsleWorld(): IsleWorld {
     // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- idempotent by construction: a compare-and-set batch every tab computes alike; the first lands, the rest answer `stale` and write nothing
     claim.mutate({ body: { world, writes: pending } });
   }, [pending, world, claim]);
+  // Tidy up: the world's plots dropped; the empty placement's push then takes
+  // the first-visit path (place everyone, claim) — so the claim guard forgets
+  // what it claimed, or an unchanged world would never be claimed again
+  const reset = useEndpointMutation(resetPlots, {
+    meta: { suppressError: true },
+  });
+  const resetMutate = reset.mutate;
+  const tidy = useCallback(() => {
+    if (world === null) return;
+    claimed.current = null;
+    resetMutate({ body: { world } });
+  }, [world, resetMutate]);
+  const misplaced = useMemo(
+    () => (stored && placing ? misplacedResidents(stored, placing) : []),
+    [stored, placing],
+  );
 
-  const base = combineResources({ config, listed, plots });
+  const base = combineResources({ config, listed, plots, categories, tags });
   return foldResource(base, {
     loading: (): IsleWorld => ({ kind: "loading", what: "Reading the map" }),
     error: (error): IsleWorld => ({ kind: "error", error }),
     ready: (d): IsleWorld => {
       if (claim.error) return { kind: "error", error: claim.error };
+      if (reset.error) return { kind: "error", error: reset.error };
       if (glyphs.kind === "error")
         return { kind: "error", error: glyphs.error };
       if (typeof fonts === "object")
@@ -209,6 +270,10 @@ export function useIsleWorld(): IsleWorld {
         time: timeOf(d.config.time),
         music: d.config.music,
         station: isleStationOf(d.config.mood),
+        groupName,
+        misplaced,
+        tidy,
+        tidying: reset.isPending,
       };
     },
   });

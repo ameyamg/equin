@@ -1,9 +1,9 @@
-// The category props: what stands beside a generated building, by the kind of
-// app it houses (a cart for work, an easel for create, a bench and lute for
-// music…). `paintProps` draws the set for a category around the side anchor
+// The style props: what stands beside a generated building, by its style
+// (a cart for work, an easel for create, a bench and lute for
+// music…). `paintProps` draws the set for a style around the side anchor
 // `x`; the footprint declares the same set's extents in `footprint.ts`.
 
-import type { AppCategory } from "@plugins/primitives/plugins/pane/core";
+import type { BuildingStyle } from "./style";
 import type { Ctx2D } from "../spec";
 import { at, dark, accent, type Rnd } from "./colour";
 import { bbox, castShadow, hline, ink, planks, poly, wash } from "./draw";
@@ -352,14 +352,14 @@ export function waterButt(g: Ctx2D, x: number, y: number, r: Rnd): void {
 
 /** What `paintProps` needs to know of the plan. */
 export interface PropsPlan {
-  readonly cat: AppCategory;
+  readonly cat: BuildingStyle;
   /** The side the props go on (-1 left, 1 right). */
   readonly side: -1 | 1;
   readonly maxW: number;
 }
 
 /**
- * The props of a category around the side anchor `x` (outside the wall); they
+ * The props of a style around the side anchor `x` (outside the wall); they
  * sit around y 0..34.
  */
 export function paintProps(

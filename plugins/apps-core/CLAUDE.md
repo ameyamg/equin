@@ -186,9 +186,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `APP_RAIL_WIDTH`
     - `documentTitle`
 - Cross-plugin:
-  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 67 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
-    - `apps-core` ×16
+    - `apps-core` ×17
     - `ui` ×6
     - `companions` ×3
     - `config_v2` ×2
@@ -210,6 +210,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
   - Web: `@plugins/apps-core/web/testing`
     - `getFocusedAppId`
 - Sub-plugins:
+  - **`app-category`** — App categories, web half: each app's category as a `tag` field of every list of apps (group, sort and filter by it — grouping nests along the tree), a Change category action on every app of an app…
   - **`app-embed`** — <AppEmbed app? route? onLeave? fills? onTitleChange? place? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded from the page URL's place, else…
   - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
   - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of…

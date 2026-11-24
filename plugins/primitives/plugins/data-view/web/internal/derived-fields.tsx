@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import type { FieldOptionMeta } from "@plugins/fields/core";
+import { resolveTypeChain, type FieldOptionMeta } from "@plugins/fields/core";
 import {
   clockFieldValue,
   exposedColumns,
@@ -28,6 +28,7 @@ import {
 import type { FieldsRecord } from "@plugins/fields/core";
 import { foldFieldRead, splitRowReader } from "./field-read";
 import { ClockCell } from "./clock-cell";
+import { useFieldIdentities } from "./use-field-identities";
 import { valuePosition } from "../../core";
 import type {
   DataViewRowsCollection,
@@ -768,6 +769,7 @@ function FieldOptionsLevel(props: {
   const { reader, fields, render } = props;
   const { useOptions } = reader;
   const read = useOptions();
+  const identities = useFieldIdentities();
   const withOptions = useMemo(
     () =>
       fields.map((f): FieldDef<unknown> => {
@@ -782,21 +784,27 @@ function FieldOptionsLevel(props: {
           optionsWindow: _priorWindow,
           ...rest
         } = f;
-        // A single value presents as an enum of the options; a multi-valued
-        // field (`values` — tags) keeps its type, whose filter takes the
-        // options as a multi-select.
-        const typed = {
-          ...rest,
-          type: f.values === undefined ? "enum" : f.type,
-        };
+        // A single value presents as an enum of the options — unless its type
+        // already is one (extends `enum`: a `tag`, whose grouping nests along
+        // the option forest, must keep it). A multi-valued field (`values` —
+        // tags) keeps its type, whose filter takes the options as a
+        // multi-select.
+        const keepsType =
+          f.values !== undefined ||
+          (f.type !== undefined &&
+            resolveTypeChain(f.type, identities).includes(ENUM_TYPE));
+        const typed = { ...rest, type: keepsType ? f.type : ENUM_TYPE };
         return { ...typed, ...optionsStateOf(read) };
       }),
-    [fields, read, reader.id],
+    [fields, read, reader.id, identities],
   );
   return render(withOptions);
 }
 
 const LOADING: FieldOptionsResult = { status: "loading" };
+
+/** The closed-set type a single-valued field with read options presents as. */
+const ENUM_TYPE = "enum";
 
 /**
  * A live option read as the field's option state. Known options (a ready

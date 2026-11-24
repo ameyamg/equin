@@ -1,5 +1,4 @@
 export {
-  APP_CATEGORIES,
   APP_COLOR_MODES,
   defineApp,
   defineRoute,
@@ -33,7 +32,7 @@ export {
   withoutSurfaceViews,
 } from "./route";
 export type {
-  AppCategory,
+  AppCategoryPath,
   AppColorMode,
   AppRef,
   PositionalRouteParams,

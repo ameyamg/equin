@@ -2,6 +2,7 @@
 {
   "views": [
     { "id": "apps", "name": "Apps", "icon": "apps", "view": { "type": "icons" } },
+    { "id": "categories", "name": "By category", "icon": "label", "view": { "type": "icons", "groupBy": { "fieldId": "category", "groupingId": "tree" } } },
     { "id": "stats", "name": "Stats", "icon": "bar-chart", "view": { "type": "table", "sort": { "fieldId": "focusedMs7d", "direction": "desc" } } }
   ]
 }

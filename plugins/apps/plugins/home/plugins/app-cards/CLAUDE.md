@@ -27,6 +27,7 @@ one?" — opens the New app screen (`new-app`'s `newAppPane`).
   - Uses:
     - `apps-core.useCurrentAppId`
     - `apps-core.useListedApps`
+    - `apps-core/app-launcher.AppLauncherSlots`
     - `apps-core/app-launcher.appRow`
     - `apps-core/app-launcher.AppRow`
     - `apps-core/app-launcher.appRowOverrides`

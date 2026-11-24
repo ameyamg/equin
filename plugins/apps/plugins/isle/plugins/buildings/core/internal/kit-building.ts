@@ -1,24 +1,21 @@
 // The generated building: a kit of parts (archetype, wall material, roof form
 // and material, chimney, dormers, porch, windows, a door in the app's accent, a
-// hanging bracket sign with its glyph, props by category) assembled from a seed.
+// hanging bracket sign with its glyph, props by style) assembled from a seed.
 // The same seed always builds the same building.
 
 import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
-import {
-  APP_CATEGORIES,
-  type AppCategory,
-} from "@plugins/primitives/plugins/pane/core";
 import type { BuildingSpec, Ctx2D, Light, PaintState, Setting } from "../spec";
 import { at } from "./colour";
 import { baseSize, footprintBoxes, signX } from "./footprint";
 import { doorOf, smokeAnchor, propsAnchor } from "./layout";
 import { paintBuilding } from "./paint";
 import { planBuilding, SIZE_CLASSES, type Plan } from "./plan";
+import type { BuildingStyle } from "./style";
 import { ink } from "./draw";
 import { estimateLights } from "./lights";
 
-/** Where each kind of app likes to stand. */
-const SETTING_BY_CATEGORY: Readonly<Record<AppCategory, readonly Setting[]>> = {
+/** Where each style of building likes to stand. */
+const SETTING_BY_STYLE: Readonly<Record<BuildingStyle, readonly Setting[]>> = {
   data: ["shore", "harbour"],
   system: ["hill"],
   life: ["square"],
@@ -28,24 +25,19 @@ const SETTING_BY_CATEGORY: Readonly<Record<AppCategory, readonly Setting[]>> = {
   play: ["lane", "square"],
 };
 
-/** The category a seed gives an app that declares none. */
-export const categoryOfSeed = (seed: number): AppCategory =>
-  at(APP_CATEGORIES, (seed >>> 3) % APP_CATEGORIES.length);
-
 /**
  * The generated building of an app: its footprint, setting, night lights, and
- * how to paint it. `seed` defaults to a hash of the app id; `category` (absent:
- * picked from the seed) biases the archetype, the props and the setting.
+ * how to paint it. `seed` defaults to a hash of the app id; `style` (see
+ * `buildingStyleOf`) biases the archetype, the props and the setting.
  */
 export function kitBuilding(
   app: { readonly id: string },
-  category: AppCategory | undefined,
+  style: BuildingStyle,
   seed: number = fnv1a32(app.id),
 ): BuildingSpec {
-  const cat = category ?? categoryOfSeed(seed);
   const p = planBuilding(
     seed,
-    cat,
+    style,
     at(SIZE_CLASSES, seed % SIZE_CLASSES.length),
   );
   const { w, depth } = baseSize(p);
@@ -55,7 +47,7 @@ export function kitBuilding(
   return {
     footprint: { w, depth, ground, upper },
     door: doorOf(p),
-    setting: SETTING_BY_CATEGORY[cat],
+    setting: SETTING_BY_STYLE[style],
     signX: signX(p),
     lights,
     ...(chimney

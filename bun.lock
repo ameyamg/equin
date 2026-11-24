@@ -146,6 +146,10 @@
       "name": "@equin/plugin-apps-core",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-category": {
+      "name": "@equin/plugin-apps-core-app-category",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/app-embed": {
       "name": "@equin/plugin-apps-core-app-embed",
       "version": "0.0.1",
@@ -8574,6 +8578,8 @@
     "@equin/plugin-apps-chord-vocabulary": ["@equin/plugin-apps-chord-vocabulary@workspace:plugins/apps/plugins/chord/plugins/vocabulary"],
 
     "@equin/plugin-apps-core": ["@equin/plugin-apps-core@workspace:plugins/apps-core"],
+
+    "@equin/plugin-apps-core-app-category": ["@equin/plugin-apps-core-app-category@workspace:plugins/apps-core/plugins/app-category"],
 
     "@equin/plugin-apps-core-app-embed": ["@equin/plugin-apps-core-app-embed@workspace:plugins/apps-core/plugins/app-embed"],
 

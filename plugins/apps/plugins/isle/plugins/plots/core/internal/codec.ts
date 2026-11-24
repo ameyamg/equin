@@ -6,21 +6,8 @@ import type {
   Placement,
   Plot,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
-import {
-  APP_CATEGORIES,
-  type AppCategory,
-} from "@plugins/primitives/plugins/pane/core";
 import type { PlotWrite } from "./endpoints";
 import type { IslePlotRow, PlotGeometry } from "./schemas";
-
-function categoryOf(row: IslePlotRow): AppCategory {
-  const c = APP_CATEGORIES.find((k) => k === row.category);
-  if (!c)
-    throw new Error(
-      `isle plots: plot ${row.plotId} has unknown category "${row.category}"`,
-    );
-  return c;
-}
 
 /** A stored row as world/core's Plot. */
 export function plotOfRow(row: IslePlotRow): Plot {
@@ -30,7 +17,8 @@ export function plotOfRow(row: IslePlotRow): Plot {
     n: row.n,
     seq: row.seq,
     slot: row.slot,
-    category: categoryOf(row),
+    group: row.group,
+    region: row.region,
     wild: row.wild,
     retired: row.retired,
   };

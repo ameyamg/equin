@@ -5950,6 +5950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps-core.useCurrentAppId`
               - `apps-core.useListedApps`
+              - `apps-core/app-launcher.AppLauncherSlots`
               - `apps-core/app-launcher.appRow`
               - `apps-core/app-launcher.AppRow`
               - `apps-core/app-launcher.appRowOverrides`
@@ -6110,7 +6111,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `appUsageFields`
     - **`isle`** — Isle — the island launcher: every installed app is a building on an illustrated archipelago you walk around; new apps get a generated building and are placed append-only, districts fill, then new islands appear.
       - Plugins:
-        - **`buildings`** — Isle's building contract (BuildingSpec: a declared footprint, preferred setting, sign, night lights, paint/animate on any 2D context), the watercolour-and-ink painting kit bespoke buildings reuse, and kitBuilding — a generated building per app, seeded from its id and shaped by its category. Its testing barrel measures a painter's ink without a canvas. Isle.Building: the slot an app contributes its bespoke building to (keyed by its AppRef, from its own isle-building sub-plugin); useIsleBuildings reads them by app id, loading until the deferred tier has settled.
+        - **`buildings`** — Isle's building contract (BuildingSpec: a declared footprint, preferred setting, sign, night lights, paint/animate on any 2D context), the watercolour-and-ink painting kit bespoke buildings reuse, and kitBuilding — a generated building per app, seeded from its id and shaped by its style (one of a closed set, picked by hashing a key). Its testing barrel measures a painter's ink without a canvas. Isle.Building: the slot an app contributes its bespoke building to (keyed by its AppRef, from its own isle-building sub-plugin); useIsleBuildings reads them by app id, loading until the deferred tier has settled.
           - Web:
             - Slots: `Isle.Building`
             - Slot contributors:
@@ -6140,13 +6141,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `packages/seeded-random.mulberry32`
               - `packages/string-hash.fnv1a32`
-              - `primitives/pane.APP_CATEGORIES`
-              - `primitives/pane.AppCategory`
             - Exports (types):
               - `Box`
               - `BoxFaces`
               - `BoxGeom`
               - `BuildingSpec`
+              - `BuildingStyle`
               - `Chimney`
               - `Ctx2D`
               - `Door`
@@ -6174,9 +6174,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `bbox`
               - `bench`
               - `books`
+              - `BUILDING_STYLES`
+              - `buildingStyleOf`
               - `cart`
               - `castShadow`
-              - `categoryOfSeed`
               - `chimneySmoke`
               - `crate`
               - `css`
@@ -6270,10 +6271,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `viewOf`
               - `WALK_FRAMES`
               - `walkCycle`
-        - **`dev`** — Isle's dev tools, never part of the app: the growth exhibit (isle/growth) — the world drawn with N made-up apps (14…142; ±1, add to a category, remove one at random, another seed), placed in memory, never the real plots, with its stats (islands, districts, buildings, empty lots, rebuild time), a switch between baking in workers and on the page, and a fingerprint of what was baked to compare the two.
+        - **`dev`** — Isle's dev tools, never part of the app: the growth exhibit (isle/growth) — the world drawn with N made-up apps (14…142; ±1, add to a group of a fixed fake category tree, remove one at random, another seed), placed in memory, never the real plots, with its stats (islands, districts, buildings, empty lots, rebuild time), a switch between baking in workers and on the page, and a fingerprint of what was baked to compare the two.
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `exhibits/internal/growth.tsx` (debt)
-        - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
+        - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints (one compare-and-set transaction per batch, answered stale when what the writer read no longer holds), plus reset (Tidy up: every plot of a world dropped in one statement).
           - Server:
             - Contributes:
               - `resource.declare` "isle.plots"
@@ -6293,6 +6294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/isle/plots/claim`
               - `POST /api/isle/plots/move`
               - `POST /api/isle/plots/restore`
+              - `POST /api/isle/plots/reset`
           - Core:
             - Uses:
               - `apps/isle/buildings.SETTINGS`
@@ -6308,8 +6310,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/query-resource.compositeKey`
               - `packages/list-bound.cappedList`
               - `packages/list-bound.wholeList`
-              - `primitives/pane.APP_CATEGORIES`
-              - `primitives/pane.AppCategory`
             - Exports (types):
               - `IslePlotRow`
               - `PlotGeometry`
@@ -6330,6 +6330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlotSchema`
               - `PlotWriteSchema`
               - `PlotWritesResultSchema`
+              - `resetPlots`
               - `restorePlot`
               - `worldOfSeed`
           - Cross-plugin:
@@ -6416,9 +6417,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `applyMove`
               - `arcsOf`
               - `cutAt`
-              - `districtCategory`
+              - `districtGroup`
               - `districtLabels`
               - `districtName`
+              - `districtRegion`
               - `DOCK_ROOT`
               - `EMPTY_PLACEMENT`
               - `fbm`
@@ -6439,8 +6441,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `labelSpotScore`
               - `LAKE`
               - `layoutWorld`
+              - `misplacedResidents`
               - `moveTargets`
               - `newPlotAt`
+              - `NO_GROUP`
               - `pickLabelSpot`
               - `placeResidents`
               - `planIsland`
@@ -6477,7 +6481,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "isle"
               - `ConfigV2.WebRegister` "isle"
               - `BackgroundMusic.Source` "isle"
-            - Uses: 37 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
               - `apps/isle/renderer` ×8
               - `config_v2` ×4
               - `apps-core/tabs` ×3
@@ -6488,6 +6492,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture` ×2
               - `primitives/pane` ×2
               - `ui/icons` ×2
+              - `apps-core/app-category.useAppCategories`
               - `apps-core/app-usage.useAppUsageSummary`
               - `apps/isle/buildings.useIsleBuildings`
               - `infra/endpoints.useEndpointMutation`
@@ -6496,6 +6501,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/latest-ref.useEventCallback`
+              - `tag-tree/engine.useTagTree`
           - Server:
             - Contributes: `ConfigV2.Register` "isle"
             - Uses: `config_v2.ConfigV2`
@@ -14294,9 +14300,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 66 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 67 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×32
-      - `apps-core` ×16
+      - `apps-core` ×17
       - `ui` ×6
       - `companions` ×3
       - `config_v2` ×2
@@ -14318,6 +14324,98 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
+    - **`app-category`** — App categories, web half: each app's category as a `tag` field of every list of apps (group, sort and filter by it — grouping nests along the tree), a Change category action on every app of an app gallery (AppLauncherSlots.AppActions) (the shared tag picker over the app category tree), the app category id kind (`apcat-…`), and useAppCategories / useSetAppCategory for surfaces placing or filing apps by category. App categories in the DB: the app category tree (app_category_tags, served through the tag-tree engine; a deleted tag's apps move to its parent), each app's one category (app_categories) and its PUT, both live collections, and the warm-up filing each newly declared app under the default path its defineApp names.
+      - Web:
+        - Contributes:
+          - `IdKinds.Kind` "apcat"
+          - `ClientFields.Resolve` "client:apps.installed-app:category" → `CategoryResolver`
+          - `FieldPresentation.Register` "client:apps.installed-app:category"
+          - `AppLauncherSlots.AppActions` "change-category" → `CategoryAction`
+        - Uses:
+          - `apps-core/app-launcher.AppLauncherSlots`
+          - `ids.IdKinds`
+          - `infra/endpoints.useEndpointMutation`
+          - `network/live.ClientFieldReaders`
+          - `network/live.ClientFields`
+          - `network/live.ClientFieldsResolverProps`
+          - `network/live.FieldPresentation`
+          - `network/live.LiveFieldOptionsRead`
+          - `network/live.mapRow`
+          - `network/live.useLive`
+          - `network/live/live-state.combineResources`
+          - `network/live/live-state.foldResource`
+          - `network/live/live-state.mapResource`
+          - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/icon-button.IconButton`
+          - `tag-tree/engine.useTagTree`
+          - `tag-tree/picker.TagPickerPopover`
+        - Exports (types): `AppCategory`
+        - Exports (values):
+          - `useAppCategories`
+          - `useSetAppCategory`
+      - Server:
+        - Contributes:
+          - `ids.kind` "apcat"
+          - `resource.declare` "apps.categories.assignments.all"
+          - `resource.declare` "apps.categories.assignments.all:rows"
+          - `resource.declare` "apps.categories.tags.all"
+          - `resource.declare` "apps.categories.tags.all:rows"
+          - `tag-tree.tree` "app-categories"
+        - Uses:
+          - `apps-core.declaredApps`
+          - `database.db`
+          - `ids.IdKinds`
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
+          - `infra/warmup.defineWarmup`
+          - `network/live.serveCollection`
+          - `tag-tree/engine.defineTagTreeTable`
+          - `tag-tree/engine.ensureTagPath`
+          - `tag-tree/engine.serveTagTree`
+          - `tag-tree/engine.singleTagCarrier`
+          - `tag-tree/engine.TagTrees`
+        - DB schema: `plugins/apps-core/plugins/app-category/server/internal/tables.ts`
+        - Register: `defineWarmup('app-category.file-new-apps')`
+        - Resources:
+          - `apps.categories.assignments.all` (keyed)
+          - `apps.categories.assignments.all:rows` (keyed, point)
+          - `apps.categories.tags.all` (keyed)
+          - `apps.categories.tags.all:rows` (keyed, point)
+        - Routes: `PUT /api/apps/:appId/category`
+      - Core:
+        - Uses:
+          - `apps-core/app-launcher.installedApp`
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/tag.tagFieldType`
+          - `fields/text/config.textField`
+          - `ids.defineIdKind`
+          - `ids.externalIdField`
+          - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
+          - `network/live.clientFields`
+          - `network/live.liveCollection`
+          - `tag-tree/engine.defineTagTree`
+          - `tag-tree/engine.TAG_TREE_MAX`
+          - `tag-tree/engine.tagTreeEntityRef`
+        - Exports (types): `SetAppCategoryBody`
+        - Exports (values):
+          - `appCategoryAssignmentFields`
+          - `appCategoryAssignments`
+          - `appCategoryAssignmentsEntityRef`
+          - `appCategoryFields`
+          - `appCategoryIdKind`
+          - `appCategoryTags`
+          - `appCategoryTagsEntityRef`
+          - `appCategoryTree`
+          - `setAppCategory`
+          - `SetAppCategoryBodySchema`
+      - Cross-plugin:
+        - Imported by: `apps/isle/world-view`
+        - Endpoint callers: `app-manifest`
     - **`app-embed`** — <AppEmbed app? route? onLeave? fills? onTitleChange? place? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded from the page URL's place, else app + route, else the composition's home app — non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. It keeps its own place in the page URL — the enclosing pane's embed tail, <the page URL>/at/<location> — so a host writes no URL code (or, given a place binding, wherever the host keeps it: memory, its own route) — never a place no one chose (nothing is written until the user moves it); a move rewrites the current history entry (a host binding is told each move's history mode, for an embed that is the whole page); Back / Forward move it with the URL; a new browser tab opened inside opens this page there. fills: page | viewport: it is all the page shows (takes the keyboard at mount); a viewport-filling one hosts the page's floating action bar. Its box is a reveal boundary (a reveal inside never scrolls the host page), and onTitleChange hands the host its focused tab's title (<Entity> — <App>). Knows nothing about demos or where data comes from.
       - Web:
         - Uses:
@@ -14389,8 +14487,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `music/background`
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner. On a phone neither the top-left launcher nor the floating one is drawn: the phone action button's Apps sheet (PhoneActions.Action 'apps') is the app grid there.
       - Web:
-        - Slots: `AppLauncherSlots.ReturnTip`
-        - Slot contributors: `AppLauncherSlots.ReturnTip` ← `apps.desktop.windows`
+        - Slots:
+          - `AppLauncherSlots.AppActions`
+          - `AppLauncherSlots.ReturnTip`
+        - Slot contributors:
+          - `AppLauncherSlots.AppActions` ← `apps-core.app-category`
+          - `AppLauncherSlots.ReturnTip` ← `apps.desktop.windows`
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
@@ -14398,13 +14500,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
           - `Hints.Hint` "app-launcher.switch-apps"
-        - Uses: 49 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 50 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×6
           - `apps-core` ×6
+          - `primitives/data-view` ×4
           - `hints` ×3
           - `network/live/live-state` ×3
           - `primitives/css/ui-kit` ×3
-          - `primitives/data-view` ×3
           - `apps-core/app-icon` ×2
           - `audience/developer-mark` ×2
           - `primitives/app-shell` ×2
@@ -14461,6 +14563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent-foreground`
           - `ui/tokens/type-scale --font-weight-bold`
         - Imported by:
+          - `apps-core/app-category`
           - `apps/desktop/windows`
           - `apps/home/app-cards`
           - `apps/home/usage-fields`
@@ -25046,7 +25149,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 184 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 185 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×50
       - `conversations` ×22
       - `tasks` ×21
@@ -25059,11 +25162,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build` ×3
       - `network` ×3
       - `stats` ×3
+      - `apps-core` ×2
       - `backup` ×2
       - `framework` ×2
       - `integrations` ×2
       - `reports` ×2
-      - `apps-core/app-usage`
       - `code-explorer`
       - `hints`
       - `history/engine`
@@ -30079,7 +30182,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 145 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 146 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
       - `apps` ×25
       - `conversations` ×12
@@ -30088,9 +30191,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `debug` ×5
       - `page` ×4
       - `primitives` ×4
+      - `apps-core` ×2
       - `backup` ×2
       - `build` ×2
-      - `apps-core/app-launcher`
       - `config_v2`
       - `hints`
       - `history/engine`
@@ -30510,7 +30613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 70 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 71 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×18
               - `conversations` ×12
               - `tasks` ×8
@@ -30519,6 +30622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×5
               - `primitives` ×3
               - `active-data`
+              - `apps-core/app-category`
               - `backup`
               - `build/run-ledger`
               - `hints`
@@ -32000,6 +32104,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `tagFieldType`
           - `tagIdentity`
+      - Cross-plugin:
+        - Imported by: `apps-core/app-category`
       - Plugins:
         - **`data-view-group`** — Tag field type: data-view grouping strategy — one section per tag, nested along the option forest (`FieldOption.parent`), labelled, ordered and coloured by `field.options`.
           - Web:
@@ -32156,7 +32262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 119 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 120 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×33
               - `conversations` ×22
               - `tasks` ×17
@@ -32164,10 +32270,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×8
               - `primitives` ×6
               - `debug` ×5
+              - `apps-core` ×2
               - `build` ×2
               - `fields` ×2
               - `active-data`
-              - `apps-core/app-launcher`
               - `auth/apple-signing`
               - `backup`
               - `hints`
@@ -36109,8 +36215,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 46 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×36
+    - Slot contributors: 47 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×37
       - `IdKinds.Presenter` ×10
     - Exports (types):
       - `IdPresenter`
@@ -36165,7 +36271,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 53 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 54 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×15
       - `conversations` ×8
       - `tasks` ×6
@@ -36176,6 +36282,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page` ×2
       - `release` ×2
       - `reports` ×2
+      - `apps-core/app-category`
       - `code-explorer/commit-detail`
       - `database/table-mirror/replica`
       - `debug/tests`
@@ -37844,7 +37951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 282 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 283 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×37
           - `infra` ×23
@@ -37857,10 +37964,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth` ×5
           - `framework` ×4
           - `integrations` ×4
+          - `apps-core` ×3
           - `build` ×3
           - `network` ×3
           - `active-data` ×2
-          - `apps-core` ×2
           - `companions` ×2
           - `config_v2` ×2
           - `history` ×2
@@ -37957,7 +38064,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 56 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 57 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×11
           - `conversations` ×9
           - `infra` ×7
@@ -37966,6 +38073,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×4
           - `primitives` ×3
           - `active-data`
+          - `apps-core/app-category`
           - `backup`
           - `build/run-ledger`
           - `hints`
@@ -42137,12 +42245,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `apps` ×8
           - `tasks` ×8
           - `infra` ×6
           - `conversations` ×4
           - `debug` ×4
+          - `apps-core/app-category`
           - `database/lock-watch`
           - `page/links`
           - `plugin-meta/plugin-tree`
@@ -43767,9 +43876,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 45 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×42
-          - `ClientFields.Resolve` ×3
+        - Slot contributors: 47 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×43
+          - `ClientFields.Resolve` ×4
         - Uses:
           - `network/live/live-state.PagedResourceResult`
           - `network/live/live-state.ResourceDerivation`
@@ -44155,7 +44264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 368 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 369 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×95
           - `conversations` ×74
           - `debug` ×36
@@ -44169,11 +44278,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations` ×5
           - `code-explorer` ×4
           - `review` ×4
+          - `apps-core` ×3
           - `auth` ×3
           - `plugin-meta` ×3
           - `reports` ×3
           - `ui` ×3
-          - `apps-core` ×2
           - `backup` ×2
           - `companions` ×2
           - `config_v2` ×2
@@ -44578,7 +44687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 322 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 323 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×87
               - `conversations` ×50
               - `debug` ×31
@@ -44589,7 +44698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×11
               - `build` ×9
               - `active-data` ×5
-              - `apps-core` ×4
+              - `apps-core` ×5
               - `auth` ×4
               - `plugin-meta` ×4
               - `companions` ×3
@@ -46041,8 +46150,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 54 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
-          - `apps` ×17
+        - Imported by: 53 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+          - `apps` ×16
           - `database` ×6
           - `network` ×5
           - `framework` ×4
@@ -53424,7 +53533,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 483 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 484 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
               - `conversations` ×54
@@ -53433,7 +53542,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×22
               - `tasks` ×20
               - `fields` ×13
-              - `apps-core` ×11
+              - `apps-core` ×12
               - `plugin-meta` ×10
               - `infra` ×7
               - `shell` ×6
@@ -56249,7 +56358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 142 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×48
           - `primitives` ×23
           - `conversations` ×21
@@ -56259,10 +56368,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×4
           - `infra` ×3
           - `shell` ×3
+          - `apps-core` ×2
           - `hints` ×2
           - `screenshot` ×2
           - `ui` ×2
-          - `apps-core/tab-bar`
           - `build`
           - `companions/menu-bar/app-grid`
           - `fields/enum/column-config`
@@ -58280,8 +58389,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×79
+        - Imported by: 217 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×77
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
@@ -58321,14 +58430,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane` (0 debt)
       - Core:
         - Exports (types):
-          - `AppCategory`
+          - `AppCategoryPath`
           - `AppColorMode`
           - `AppRef`
           - `PositionalRouteParams`
           - `RouteDef`
           - `RouteParams`
         - Exports (values):
-          - `APP_CATEGORIES`
           - `APP_COLOR_MODES`
           - `defineApp`
           - `defineRoute`
@@ -60713,8 +60821,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 308 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×308
+    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×309
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -60738,8 +60846,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 307 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×307
+    - Contributes: 308 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×308
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -63726,6 +63834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TagTreeTx`
         - Exports (values):
           - `defineTagTreeTable`
+          - `ensureTagPath`
           - `serveTagTree`
           - `singleTagCarrier`
           - `TagTrees`
@@ -63808,6 +63917,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wouldCycle`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-category`
+          - `apps/isle/world-view`
           - `apps/places/fixtures`
           - `apps/places/places-core`
           - `apps/places/places-map`
@@ -63868,6 +63979,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
+          - `apps-core/app-category`
           - `apps/places/places-map`
           - `apps/prototypes/gallery`
 
@@ -67445,7 +67557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 607 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 608 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×124
           - `primitives` ×54
@@ -67456,8 +67568,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×16
           - `ui` ×13
           - `active-data` ×11
+          - `apps-core` ×8
           - `infra` ×8
-          - `apps-core` ×7
           - `auth` ×6
           - `companions` ×6
           - `shell` ×6

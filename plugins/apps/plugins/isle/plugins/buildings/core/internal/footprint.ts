@@ -275,7 +275,7 @@ function waterButtBox(x: number, y: number): Box {
   return [b[0], Math.min(b[1], y - 58.2), Math.max(b[2], x + 5.2), b[3]];
 }
 
-/** The boxes of the props of a category (the set `paintProps` draws), around the anchor `x`. */
+/** The boxes of the props of a style (the set `paintProps` draws), around the anchor `x`. */
 function propBoxes(p: Plan, x: number): Box[] {
   const s = p.side;
   const X = (d: number) => x + s * d;

@@ -1,18 +1,41 @@
 // Made-up apps, to watch the world grow: 14 standing in for the installed ones,
-// then the rest interleaved by category, so adding them one by one grows every
-// district a little. Deterministic: the same list, in the same order (the
-// prototype's `apps.js`).
+// then the rest interleaved by group, so adding them one by one grows every
+// district a little. Each is filed under a group of a fixed fake category tree
+// (FAKE_GROUPS: 7 groups over 5 regions). Deterministic: the same list, in the
+// same order (the prototype's `apps.js`).
 
-import type { AppCategory } from "@plugins/primitives/plugins/pane/core";
+type Kind = "work" | "data" | "create" | "music" | "play" | "life" | "system";
+
+/** A group of the fake category tree: its tag id, its sign's name and its root tag (region). */
+export interface FakeGroup {
+  readonly id: string;
+  readonly name: string;
+  readonly region: string;
+}
+
+/** The fake category tree's groups (Work › Records, Art › Studio, Art › Music…). */
+const GROUP_OF: Readonly<Record<Kind, FakeGroup>> = {
+  work: { id: "work", name: "Work", region: "work" },
+  data: { id: "work/data", name: "Records", region: "work" },
+  create: { id: "art/create", name: "Studio", region: "art" },
+  music: { id: "art/music", name: "Music", region: "art" },
+  play: { id: "play", name: "Games", region: "play" },
+  life: { id: "life", name: "Life", region: "life" },
+  system: { id: "system", name: "System", region: "system" },
+};
+export const FAKE_GROUPS: readonly FakeGroup[] = Object.values(GROUP_OF);
 
 export interface FakeApp {
   readonly id: string;
   readonly name: string;
-  readonly category: AppCategory;
+  /** Its group's tag id (see FAKE_GROUPS). */
+  readonly group: string;
+  /** Its group's root tag id. */
+  readonly region: string;
   readonly hue: string;
 }
 
-const BASE: readonly (readonly [string, string, AppCategory, string])[] = [
+const BASE: readonly (readonly [string, string, Kind, string])[] = [
   ["agents", "Agents", "work", "#e8a04a"],
   ["pages", "Pages", "create", "#6f8fd8"],
   ["mail", "Mail", "life", "#d9604c"],
@@ -29,7 +52,7 @@ const BASE: readonly (readonly [string, string, AppCategory, string])[] = [
   ["settings", "Settings", "system", "#8f9aa8"],
 ];
 
-const MORE: Readonly<Record<AppCategory, readonly string[]>> = {
+const MORE: Readonly<Record<Kind, readonly string[]>> = {
   work: [
     "Tasks",
     "Kanban",
@@ -191,13 +214,14 @@ const HUES = [
 
 /** Every made-up app, in the order they are added: 142 of them. */
 export const FAKE_APPS: readonly FakeApp[] = (() => {
-  const out: FakeApp[] = BASE.map(([id, name, category, hue]) => ({
+  const out: FakeApp[] = BASE.map(([id, name, kind, hue]) => ({
     id: `x-${id}`,
     name,
-    category,
+    group: GROUP_OF[kind].id,
+    region: GROUP_OF[kind].region,
     hue,
   }));
-  const cats = Object.keys(MORE) as AppCategory[];
+  const cats = Object.keys(MORE) as Kind[];
   const total = out.length + cats.reduce((n, c) => n + MORE[c].length, 0);
   for (let i = 0; out.length < total; i++)
     for (const c of cats) {
@@ -206,7 +230,8 @@ export const FAKE_APPS: readonly FakeApp[] = (() => {
       out.push({
         id: `x-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
         name,
-        category: c,
+        group: GROUP_OF[c].id,
+        region: GROUP_OF[c].region,
         hue: HUES[out.length % HUES.length]!,
       });
     }

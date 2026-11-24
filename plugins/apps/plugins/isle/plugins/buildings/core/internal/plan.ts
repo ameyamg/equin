@@ -3,7 +3,7 @@
 // executes it. The order of the random draws below is part of the contract —
 // the same seed must keep producing the same building.
 
-import type { AppCategory } from "@plugins/primitives/plugins/pane/core";
+import type { BuildingStyle } from "./style";
 import { mulberry32 } from "@plugins/packages/plugins/seeded-random/core";
 import { at, type Rnd } from "./colour";
 
@@ -35,7 +35,7 @@ export const MAX_WIDTH: Readonly<Record<SizeClass, number>> = {
 
 export interface Plan {
   readonly arch: Arch;
-  readonly cat: AppCategory;
+  readonly cat: BuildingStyle;
   /** Max footprint width. */
   readonly maxW: number;
   readonly wall: Wall;
@@ -65,7 +65,7 @@ export interface Plan {
 }
 
 const ARCH_MIX: Readonly<
-  Record<AppCategory, readonly (readonly [Arch, number])[]>
+  Record<BuildingStyle, readonly (readonly [Arch, number])[]>
 > = {
   work: [
     ["workshop", 4],
@@ -121,10 +121,10 @@ function weightedPick<T>(r: Rnd, table: readonly (readonly [T, number])[]): T {
   return at(table, 0)[0];
 }
 
-/** Plans the building of a seed, for an app of this category. */
+/** Plans the building of a seed, in this style. */
 export function planBuilding(
   seed: number,
-  cat: AppCategory,
+  cat: BuildingStyle,
   size: SizeClass,
 ): Plan {
   const r = mulberry32(seed);
