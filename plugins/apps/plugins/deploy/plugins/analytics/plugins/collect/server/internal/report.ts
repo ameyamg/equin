@@ -113,23 +113,26 @@ async function periodData(
       source,
       groupBy,
     });
-  const [daily, hourly, summaryVisitors, rowVisitors, bucketVisitors] =
-    await Promise.all([
-      dailyRows(dbx, ask, period),
-      period.granularity === "hour"
-        ? rawHourlyTotals(dbx, { day: period.from, audience, filters })
-        : null,
-      visitors({ kind: "total" }),
-      visitors({ kind: "dimension" }),
-      visitors({ kind: "bucket", granularity: period.granularity }),
-    ]);
+  const [daily, hourly, rowVisitors, bucketVisitors] = await Promise.all([
+    dailyRows(dbx, ask, period),
+    period.granularity === "hour"
+      ? rawHourlyTotals(dbx, { day: period.from, audience, filters })
+      : null,
+    // Every row's visitors, the summary's `total` row among them.
+    visitors({ kind: "rows" }),
+    visitors({ kind: "bucket", granularity: period.granularity }),
+  ]);
+  const summaryVisitors = rowVisitors.find(
+    (r) => r.dimension === TOTAL_DIMENSION,
+  );
   const totals = daily.filter((r) => r.dimension === TOTAL_DIMENSION);
   return {
     period: {
       from: period.from,
       to: period.to,
       summary: {
-        visitors: summaryVisitors[0]?.visitors ?? 0,
+        // No `total` row is no visit in the period: a real zero.
+        visitors: summaryVisitors?.visitors ?? 0,
         ...sumMetrics(totals),
       },
       series: denseSeries(period, hourly ?? totals, bucketVisitors),

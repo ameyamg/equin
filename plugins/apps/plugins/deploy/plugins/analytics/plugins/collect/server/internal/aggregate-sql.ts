@@ -446,10 +446,15 @@ export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
  */
 export type MembershipSource = "raw" | "totals";
 
-/** How {@link visitorCounts} groups: the whole span, each (dimension, value), or each series bucket. */
+/**
+ * How {@link visitorCounts} groups: the whole span (the `total` row alone),
+ * every report row (each (dimension, value), the `total` summary row among
+ * them — one read gives a report period its summary and its rows), or each
+ * series bucket.
+ */
 export type VisitorGrouping =
   | { kind: "total" }
-  | { kind: "dimension" }
+  | { kind: "rows" }
   | { kind: "bucket"; granularity: Granularity };
 
 const VisitorRowSchema = z.object({
@@ -465,6 +470,14 @@ export type VisitorRow = z.infer<typeof VisitorRowSchema>;
  * filter's value. Counted over the whole span, never summed per day: a
  * visitor keeps one id while they keep returning, so they count once however
  * many days they came.
+ *
+ * The grouping and the distinct count compare text byte-wise (`COLLATE
+ * "C"`): every deterministic collation calls two strings equal exactly when
+ * their bytes are, so the groups and counts are the same as under any other —
+ * only their order, which nothing reads, differs. On a database created under
+ * a linguistic collation (main's: `en_US.UTF-8`, libc `strcoll`), sorting the
+ * ~90k memberships of a 30-day span by (dimension, value, visitor) that way
+ * cost ~3× the rest of the query.
  */
 export async function visitorCounts(
   dbx: AnalyticsReadDb,
@@ -504,38 +517,37 @@ export async function visitorCounts(
           WHERE s.day BETWEEN ${opts.from} AND ${opts.to} AND NOT s.owner${sql.join(storedKept, sql``)}
           UNION ALL ${rawArm}
         )`;
-  const [key, dimScope, groupBy] = visitorGrouping(opts.groupBy, opts.source);
+  const [key, dimScope] = visitorGrouping(opts.groupBy, opts.source);
   return executeRows(dbx, {
     label: "analytics.visitorCounts",
     row: VisitorRowSchema,
     query: sql`
       ${mem}
-      SELECT ${key} AS "key", mm.dim AS "dimension", mm.value AS "value",
-        count(DISTINCT mm.visitor_id)::int AS "visitors"
-      FROM mem mm
-      WHERE ${dimScope}
-      GROUP BY ${groupBy}`,
+      SELECT g.key AS "key", g.dim AS "dimension", g.value AS "value",
+        count(DISTINCT g.visitor_id)::int AS "visitors"
+      FROM (
+        SELECT (${key}) COLLATE "C" AS key, mm.dim COLLATE "C" AS dim,
+          mm.value COLLATE "C" AS value, mm.visitor_id COLLATE "C" AS visitor_id
+        FROM mem mm
+        WHERE ${dimScope}
+      ) g
+      GROUP BY g.key, g.dim, g.value`,
   });
 }
 
+/** The grouping's key (`''` but for a series bucket) and which memberships it counts. */
 function visitorGrouping(
   grouping: VisitorGrouping,
   source: MembershipSource,
-): [key: SQL, dimScope: SQL, groupBy: SQL] {
+): [key: SQL, dimScope: SQL] {
   const total = sql`mm.dim = ${TOTAL_DIMENSION}`;
   switch (grouping.kind) {
     case "total":
-      return [sql`''`, total, sql`mm.dim, mm.value`];
-    case "dimension":
-      return [
-        sql`''`,
-        sql`mm.dim <> ${TOTAL_DIMENSION}`,
-        sql`mm.dim, mm.value`,
-      ];
-    case "bucket": {
-      const key = bucketKey(grouping.granularity, source);
-      return [key, total, sql`1, mm.dim, mm.value`];
-    }
+      return [sql`''`, total];
+    case "rows":
+      return [sql`''`, sql`TRUE`];
+    case "bucket":
+      return [bucketKey(grouping.granularity, source), total];
   }
 }
 

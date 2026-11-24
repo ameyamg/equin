@@ -17,7 +17,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { TransactionRollbackError, and, eq, sql } from "drizzle-orm";
+import { TransactionRollbackError, and, eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import {
   createTestDb,
@@ -72,6 +72,7 @@ import {
   dailyTotalsRows,
   visitorCounts,
   type KeyedRow,
+  type VisitorGrouping,
   type VisitorRow,
 } from "./aggregate-sql";
 import {
@@ -538,7 +539,7 @@ describe("rollup", () => {
           audience: "visitors",
           filters,
           source,
-          groupBy: { kind: "dimension" },
+          groupBy: { kind: "rows" },
         }).then(canonicalVisitors);
       expect({ level, visitors: await visitors("totals") }).toEqual({
         level,
@@ -679,6 +680,97 @@ describe("report", () => {
     );
     if (result.kind !== "report") throw new Error("expected a report");
     expect(result.report.current.summary.visits).toBe(5);
+  });
+
+  test("visitor counts compare text byte-wise: the same counts as a linguistic collation, ids that differ only in case or accents kept apart", async () => {
+    // Ids a linguistic collation sorts side by side (case, a precomposed and a
+    // decomposed accent), on two days, one visitor on both.
+    const days = ["2025-01-15", "2025-01-16"] as const;
+    const visits: { day: string; visitorId: string; country: string }[] = [
+      { day: days[0], visitorId: "a", country: "FR" },
+      { day: days[0], visitorId: "A", country: "FR" },
+      { day: days[0], visitorId: "\u00e1", country: "DE" },
+      { day: days[1], visitorId: "a\u0301", country: "DE" },
+      { day: days[1], visitorId: "b", country: "FR" },
+      { day: days[1], visitorId: "a", country: "FR" },
+    ];
+    expect(
+      t.db.transaction(async (tx) => {
+        await tx.insert(analyticsVisitMembers).values(
+          visits.flatMap((v) => {
+            const visitId = crypto.randomUUID();
+            const base = { visitId, day: v.day, visitorId: v.visitorId };
+            return [
+              { ...base, dim: "total" as const, value: "" },
+              { ...base, dim: "country" as const, value: v.country },
+            ];
+          }),
+        );
+        const counts = (groupBy: VisitorGrouping) =>
+          visitorCounts(tx, {
+            from: days[0],
+            to: days[1],
+            audience: "visitors",
+            filters: [],
+            source: "totals",
+            groupBy,
+          });
+        // The counts under a linguistic collation — main's database's
+        // default (test databases are created under "C").
+        const reference = (key: SQL) =>
+          executeRows(tx, {
+            label: "test.referenceVisitors",
+            row: z.object({
+              key: z.string(),
+              dimension: z.string(),
+              value: z.string(),
+              visitors: z.coerce.number().int(),
+            }),
+            query: sql`
+              SELECT ${key} AS "key", dim AS "dimension", value AS "value",
+                count(DISTINCT visitor_id COLLATE "en_US.UTF-8")::int AS "visitors"
+              FROM analytics_visit_members
+              WHERE day BETWEEN ${days[0]} AND ${days[1]} AND NOT owner
+              GROUP BY 1, dim, value`,
+          });
+        const sorted = (
+          rows: readonly {
+            key: string;
+            dimension: string;
+            value: string;
+            visitors: number;
+          }[],
+        ) =>
+          [...rows].sort((x, y) =>
+            `${x.key}\t${x.dimension}\t${x.value}`.localeCompare(
+              `${y.key}\t${y.dimension}\t${y.value}`,
+            ),
+          );
+        const rows = await counts({ kind: "rows" });
+        expect(sorted(rows)).toEqual(sorted(await reference(sql`''`)));
+        expect(sorted(rows)).toEqual([
+          { key: "", dimension: "country", value: "DE", visitors: 2 },
+          { key: "", dimension: "country", value: "FR", visitors: 3 },
+          { key: "", dimension: "total", value: "", visitors: 5 },
+        ]);
+        expect(await counts({ kind: "total" })).toEqual([
+          { key: "", dimension: "total", value: "", visitors: 5 },
+        ]);
+        const buckets = await counts({ kind: "bucket", granularity: "day" });
+        expect(sorted(buckets)).toEqual(
+          sorted(
+            (await reference(sql`day::text`)).filter(
+              (r) => r.dimension === "total",
+            ),
+          ),
+        );
+        expect(sorted(buckets).map((r) => [r.key, r.visitors])).toEqual([
+          [days[0], 3],
+          [days[1], 3],
+        ]);
+        tx.rollback();
+      }),
+    ).rejects.toThrow(TransactionRollbackError);
   });
 
   test("today is hourly, and the hours add up to the day's visits", async () => {
