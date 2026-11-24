@@ -26,7 +26,7 @@ const EXPLAIN: Record<ModelUnrecognizedPayload["problem"], string> = {
   "family-mismatch":
     "is a family alias that resolves to another family's model",
   "family-missing":
-    "is a family this code knows that the menu does not list — the CLI dropped or renamed its alias",
+    "is a family this code knows that the menu offers no version of, by alias or by name — the CLI dropped or renamed the family",
 };
 
 /**

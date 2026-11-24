@@ -107,7 +107,28 @@ describe("readMenu", () => {
     expect(menu.problems).toEqual([]);
   });
 
-  test("a family the menu leaves out is reported", () => {
+  test("the user's own pick with a context variant, listed in place of its family's alias: that family, no problem", () => {
+    // Recorded (2026-11-24): settings `model: "claude-fable-5-2[1m]"` turns
+    // the `fable` row into this one.
+    const menu = readMenu([
+      ...RECORDED.filter((m) => m.value !== "fable"),
+      alias(`${cliName("fable-5-2")}[1m]`, cliName("fable-5-2")),
+    ]);
+    expect(menu.current.fable).toBe(id("fable-5-2"));
+    expect(menu.offered).toContain(id("fable-5-2"));
+    expect(menu.problems).toEqual([]);
+  });
+
+  test("a family offered by name only runs its newest offered version", () => {
+    const menu = readMenu([
+      alias(cliName("haiku-4-5"), cliName("haiku-4-5")),
+      alias(cliName("haiku-5-5"), cliName("haiku-5-5")),
+    ]);
+    expect(menu.current.haiku).toBe(id("haiku-5-5"));
+  });
+
+  test("a family the menu offers no version of is reported", () => {
+    // The recorded menu offers Haiku through its alias only.
     const menu = readMenu(RECORDED.filter((m) => m.value !== "haiku"));
     expect(menu.current.haiku).toBeUndefined();
     expect(menu.problems).toEqual([

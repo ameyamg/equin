@@ -11,6 +11,16 @@ import type { CliModel } from "./cli-models";
 /** The menu entry `--model default` stands for: the CLI's own pick, not a family. */
 const DEFAULT_ENTRY = "default";
 
+/**
+ * A context-window variant on a menu value: `claude-fable-5-2[1m]`. The CLI
+ * lists the user's own `model` setting in place of its family's alias row when
+ * that setting is a concrete name with a variant (recorded: settings
+ * `claude-fable-5-2[1m]` → the `fable` row becomes `claude-fable-5-2[1m]` →
+ * `claude-fable-5-2`). The variant is the same model version, so it is read as
+ * the name without it.
+ */
+const CONTEXT_VARIANT = /\[\w+\]$/;
+
 /** Something in the menu this code cannot place. Reported; nothing in the catalog changes for it. */
 export type MenuProblem =
   /** A `value` that is neither a family nor a CLI model name: the CLI added an alias (or a family) this code does not know. */
@@ -46,27 +56,43 @@ function isFamily(value: string): value is ModelTier {
  * `default` is ignored (it is the CLI's pick of a family, already listed), and
  * anything else is a {@link MenuProblem}. A listed family's current version is
  * the newest of its offered versions, so a new release is picked up as soon as
- * the CLI offers it, whether or not its alias has moved yet.
+ * the CLI offers it, whether or not its alias has moved yet — and a family the
+ * menu offers by name only is listed too. A family is missing only when the
+ * menu offers no version of it at all.
  */
 export function readMenu(models: readonly CliModel[]): CliMenu {
   const current: Partial<Record<ModelTier, ConversationModel>> = {};
   const offered = new Set<ConversationModel>();
   const problems: MenuProblem[] = [];
-  for (const { value, resolvedModel } of models) {
+  for (const entry of models) {
+    const value = entry.value.replace(CONTEXT_VARIANT, "");
+    const resolvedModel = entry.resolvedModel.replace(CONTEXT_VARIANT, "");
     if (value === DEFAULT_ENTRY) continue;
     const family = isFamily(value);
     if (!family && !modelIdFromCliName(value).ok) {
-      problems.push({ problem: "unknown-alias", value, resolvedModel });
+      problems.push({
+        problem: "unknown-alias",
+        value: entry.value,
+        resolvedModel: entry.resolvedModel,
+      });
       continue;
     }
     const id = modelIdFromCliName(resolvedModel);
     if (!id.ok) {
-      problems.push({ problem: "not-a-model-id", value, resolvedModel });
+      problems.push({
+        problem: "not-a-model-id",
+        value: entry.value,
+        resolvedModel: entry.resolvedModel,
+      });
       continue;
     }
     if (family) {
       if (modelMeta(id.id).family !== value) {
-        problems.push({ problem: "family-mismatch", value, resolvedModel });
+        problems.push({
+          problem: "family-mismatch",
+          value: entry.value,
+          resolvedModel: entry.resolvedModel,
+        });
         continue;
       }
       current[value] = id.id;
@@ -76,7 +102,9 @@ export function readMenu(models: readonly CliModel[]): CliMenu {
   for (const version of [...offered].sort(compareModelsNewestFirst)) {
     const family = modelMeta(version).family;
     const now = current[family];
-    if (now !== undefined && compareModelsNewestFirst(version, now) < 0)
+    // A family with no alias row (the CLI showed the user's own pick of it in
+    // that place) still runs the newest version of it the menu offers.
+    if (now === undefined || compareModelsNewestFirst(version, now) < 0)
       current[family] = version;
   }
   for (const family of MODEL_TIERS)
