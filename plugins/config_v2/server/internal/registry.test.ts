@@ -765,7 +765,7 @@ describe("placing the rows an update added (the placement job's write)", () => {
     await seed(file(DELTA, "ancestor"), ANCESTOR);
     await seed(file(DELTA, "override"), PRE_MERGE, computeHash(ANCESTOR));
     shutdownRegistry();
-    await initRegistry();
+    await initRegistry(OWNER);
     const state = (await readAutoMerge(DELTA))!;
     expect(state.status).toBe("current");
     expect(state.record.placement).toEqual({
@@ -794,7 +794,7 @@ describe("placing the rows an update added (the placement job's write)", () => {
         computeHash({ enabled: true, title: "old" }),
       );
       shutdownRegistry();
-      await initRegistry();
+      await initRegistry(OWNER);
       expect((await readAutoMerge(GAMMA))?.record.placement).toEqual({
         status: "not-needed",
       });
