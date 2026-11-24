@@ -391,6 +391,48 @@ describe("NotificationsClient — HTTP fetch path", () => {
     expect(drops).toHaveLength(0);
   });
 
+  // report-1795440515-xzx052: `code.resolve-file` (on-demand) took 1.02 s on
+  // every slow open. Its watch, opened on subscribe, notifies once open, so an
+  // `invalidate` minted the next version ahead of the sub-ack. Adopting it with
+  // nothing applied dropped the sub-ack at the same version as stale, and the
+  // mount's HTTP read (answered at the version before) as never-vouched — the
+  // value landed only on React Query's retry, 1 s later.
+  test("an invalidate before the first value adopts no version: the sub-ack still applies", async () => {
+    const { client, qc, socket, fetchQueue } = await setup();
+    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    socket.serverSend({ kind: "invalidate", key: "k", params: {}, version: 2 });
+    await flush();
+    // Still re-read: the change it announces may postdate the sub-ack's value.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeyFor("k", {}) });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v2" },
+      version: 2,
+      epoch: "b1",
+    });
+    await flush();
+    expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "v2" });
+
+    // The mount's read, answered before the sub opened its span: older, and
+    // now dropped against an APPLIED value — the cached value, not a throw.
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "v1" }, version: 1, epoch: "b1" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      { schema: pushSchema },
+      "fallback",
+    );
+    expect(out).toEqual({ status: "v2" });
+  });
+
   test("7: cross-epoch adopt (case 2) → applies, version+epoch adopted", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, { schema: pushSchema });

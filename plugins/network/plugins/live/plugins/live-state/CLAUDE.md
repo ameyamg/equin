@@ -216,6 +216,10 @@ frames, which still reach **all** tabs — hence the gates below.
 - **`entry.version`/`etag` must name a value THIS tab holds**
   (`hasAppliedValue`):
   - A value-less `up-to-date` for a never-applied entry is ignored.
+  - An `invalidate` for a never-applied entry re-reads without adopting its
+    version (a watch that notifies on open sends one ahead of the sub-ack;
+    adopting it drops that sub-ack, and an on-demand read waits out the 1 s
+    retry).
   - `replaySubs`/`sendSub` echo version/etag only when backed by a cached value
     (the sub outlives the GC'd query).
   - Don't restore an unconditional echo; don't make the ignored `up-to-date`

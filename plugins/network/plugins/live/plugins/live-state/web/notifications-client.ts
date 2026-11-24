@@ -3241,6 +3241,28 @@ export class NotificationsClient {
       );
       return;
     }
+    // The same invariant for an `invalidate`: it says "re-read the value",
+    // and carries none. With nothing applied yet, its version names no value
+    // this tab holds — adopting it would drop our own value-carrying `sub-ack`
+    // at that version as stale (the server mints one when a watch opened on
+    // subscribe notifies, ahead of the sub-ack), and the mount's HTTP read,
+    // answered at the version before, too: the read then waited out React
+    // Query's 1 s retry (`code.resolve-file`: 1.02 s on every slow open,
+    // report-1795440515-xzx052). Re-read without adopting it: the sub-ack
+    // applies against the untouched baseline, and the refetch answers at
+    // least the invalidated version. Still a live frame: the missed-update
+    // probe must not read the version it did not adopt as a frame missed.
+    if (
+      msg.kind === "invalidate" &&
+      !this.hasAppliedValue(msg.key, msg.params)
+    ) {
+      trace(
+        `invalidate key=${msg.key} params=${pk} version=${msg.version} no-applied-value → refetch, version not adopted`,
+      );
+      entry.liveFrameSeq++;
+      this.applyInvalidate(msg.key, msg.params);
+      return;
+    }
     // A DERIVED sub-ack carries no value: it says "the rows your derivation
     // named are this tuple's value". The same invariant as above — only a tab
     // that holds exactly those rows may adopt its version: the one whose
