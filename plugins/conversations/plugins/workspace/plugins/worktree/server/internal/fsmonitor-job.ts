@@ -27,6 +27,11 @@ import {
   reconcileCheckoutFsmonitors,
   type FsmonitorCheckout,
 } from "@plugins/infra/plugins/git/plugins/fsmonitor/server";
+import {
+  onCheckoutWatchOpened,
+  watchedCheckoutRoots,
+} from "@plugins/infra/plugins/git/plugins/checkout-watch/server";
+import type { CheckoutTier } from "@plugins/infra/plugins/git/plugins/index-refresh/server";
 import { worktreePrepareJob } from "./prepare-job";
 
 const fsmonitorLog = defineLogSink({
@@ -44,8 +49,8 @@ const DAEMONS_LANE: SerialSpec = { with: "worktree-fsmonitor" };
 
 /**
  * Keeps git's fsmonitor daemon running for main's own checkout (always) and
- * for exactly the attempt checkouts the user has not finished with
- * (`attempts_v.retained`), on main.
+ * for exactly the attempt checkouts in use — retained (`attempts_v.retained`)
+ * or read now (a checkout watch open in this backend: {@link inUse}), on main.
  *
  * Main's checkout has no `setupWorktree`: this job is its whole lifecycle —
  * the first pass turns it on (`core.fsmonitor` in
@@ -139,6 +144,7 @@ export const fsmonitorReconcileJob = defineJob({
       [mainCheckout, ...checkouts],
       notReady,
       signal,
+      { tier: "background", orphans: true },
     );
   },
 });
@@ -173,9 +179,75 @@ export const fsmonitorReleaseJob = defineJob({
       closed,
       notReady,
       signal,
+      { tier: "background", orphans: false },
     );
   },
 });
+
+/**
+ * One attempt's checkout gained a reader (its checkout watch opened in main's
+ * backend): its daemon started, and its index token renewed, unless it runs
+ * current already or the checkout is being set up. On the lane, like every
+ * other change to a daemon. At `foreground`: someone is looking at it.
+ *
+ * The first read is still a scan (it raced this job); every read after it
+ * costs what changed. A reader leaving does not stop the daemon: the next
+ * pass does, once the checkout is neither retained nor read — a tab switched
+ * back and forth would otherwise start and stop it each time.
+ */
+export const fsmonitorOnReadJob = defineJob({
+  name: "worktree.fsmonitor-on-read",
+  description:
+    "Starts the file-watching daemon of an agent checkout someone opened (a closed conversation's edited files, a file explorer over it), so its git reads cost what changed rather than every file.",
+  // A start and one index refresh (~1 s warm, seconds cold).
+  hold: "seconds",
+  input: z.object({ attemptId: z.string() }),
+  event: z.never(),
+  dedup: { key: ({ attemptId }) => attemptId },
+  serial: DAEMONS_LANE,
+  async run({ input: { attemptId }, ctx: { signal } }) {
+    // A retained checkout's daemon is the pass's to keep current (and its
+    // setup's to start): opening any live conversation's tab must not cost a
+    // listing and a probe.
+    if ((await attemptRetention([attemptId])).get(attemptId) !== false) return;
+    const { main, attempts } = await listCheckouts(signal);
+    const { checkouts, notReady } = await decideCheckouts(
+      attempts.filter((e) => nameOf(e.path) === attemptId),
+    );
+    const read = checkouts.filter((c) => c.want === "on");
+    if (read.length === 0) return;
+    await converge("worktree.fsmonitor-on-read", main, read, notReady, signal, {
+      tier: "foreground",
+      orphans: false,
+    });
+  },
+});
+
+/**
+ * From main's start on, every agent checkout whose first reader comes queues
+ * {@link fsmonitorOnReadJob} (the ones already watched at once — the tabs a
+ * restart replays). Main only: only main's backend decides daemons, and only
+ * its watches are what this process can see.
+ */
+export function followCheckoutReaders(): void {
+  if (runtimeNamespace() !== MAIN_WORKTREE_NAME) return;
+  unfollowCheckoutReaders();
+  unfollow = onCheckoutWatchOpened((root) => {
+    const attemptId = nameOf(root);
+    // Main's own root and other checkouts are not attempts; the job checks
+    // the path is the attempt's registered checkout.
+    if (!isCanonicalWorktreeName(attemptId)) return;
+    void fsmonitorOnReadJob.enqueue({ attemptId });
+  });
+}
+
+let unfollow: (() => void) | null = null;
+
+/** Stop hearing new readers (shutdown). */
+export function unfollowCheckoutReaders(): void {
+  unfollow?.();
+  unfollow = null;
+}
 
 /** An attempt's checkout is `<worktrees dir>/<attempt id>`. */
 function nameOf(path: string): string {
@@ -228,18 +300,44 @@ async function decideCheckouts(attempts: readonly WorktreeEntry[]): Promise<{
   );
   const retention = await attemptRetention(attempts.map((e) => nameOf(e.path)));
   const checkouts = attempts.map((e): FsmonitorCheckout => {
-    const retained = notReady.has(e)
-      ? undefined
-      : retention.get(nameOf(e.path));
+    if (notReady.has(e)) {
+      // A checkout not set up yet is still passed, as left alone (`unknown`),
+      // so its daemon is never taken for an orphan's.
+      return { path: e.path, gitDir: e.gitDir, want: "unknown" };
+    }
+    const used = inUse(e.path, retention.get(nameOf(e.path)));
     return {
       path: e.path,
       gitDir: e.gitDir,
-      // A checkout not set up yet is still passed, as left alone (`unknown`),
-      // so its daemon is never taken for an orphan's.
-      want: retained === undefined ? "unknown" : retained ? "on" : "off",
+      want: used === undefined ? "unknown" : used ? "on" : "off",
     };
   });
   return { checkouts, notReady };
+}
+
+/**
+ * Whether a checkout is in use — the one rule its daemon's lifetime follows:
+ * its attempt is retained (an agent may work there), OR someone reads it now
+ * (a live value holds a checkout watch on it in this backend: a tab showing
+ * its edited files, its file explorer, its code). Undefined when main holds no
+ * attempt row for it (another backend minted it): left as it is.
+ *
+ * The reader half is what "retained" alone missed: a closed conversation
+ * opened in a tab, or a file explorer over a finished checkout, read a
+ * checkout whose daemon the release had stopped — every read a full scan
+ * of its ~26k files (2.8 s at boot, task-1795552567-l55l0m).
+ */
+function inUse(
+  path: string,
+  retained: boolean | undefined,
+): boolean | undefined {
+  // By attempt id, not by path string: a reader's root may be spelled
+  // otherwise than git's registration (a realpath, a symlinked repo).
+  const attemptId = nameOf(path);
+  if (watchedCheckoutRoots().some((root) => nameOf(root) === attemptId)) {
+    return true;
+  }
+  return retained;
 }
 
 /** Converge these checkouts, log what it did, and fail on any failure. */
@@ -249,13 +347,20 @@ async function converge(
   checkouts: readonly FsmonitorCheckout[],
   notReady: ReadonlySet<WorktreeEntry>,
   signal: AbortSignal,
+  scope: { tier: CheckoutTier; orphans: boolean },
 ): Promise<void> {
+  const { tier } = scope;
   const result = await reconcileCheckoutFsmonitors(checkouts, {
-    orphanRoot: `${main.gitDir}/worktrees`,
-    tier: "background",
-    // A resume may have taken the checkout back since it was decided.
+    // Only a pass names every checkout, so only a pass sweeps orphans.
+    orphanRoot: scope.orphans ? `${main.gitDir}/worktrees` : null,
+    tier,
+    // A resume may have taken the checkout back since it was decided, or a
+    // reader opened it.
     stillOff: async (c) =>
-      (await attemptRetention([nameOf(c.path)])).get(nameOf(c.path)) === false,
+      inUse(
+        c.path,
+        (await attemptRetention([nameOf(c.path)])).get(nameOf(c.path)),
+      ) === false,
     signal,
   });
   fsmonitorLog.publish(

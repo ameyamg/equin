@@ -162,6 +162,64 @@ const OWN: CheckoutBranch = {
 };
 
 describe("createCheckoutWatchHub", () => {
+  test("a checkout's readers are heard: its watch opening, once per first reader, and whether it is watched", async () => {
+    const { hub } = linkedHub();
+    const early: string[] = [];
+    const stopEarly = hub.onOpened((root) => void early.push(root));
+    expect(hub.roots()).toEqual([]);
+    const r1 = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+    });
+    const r2 = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+    });
+    await tick();
+    // One open, however many readers share it.
+    expect(early).toEqual(["/wt"]);
+    expect(hub.roots()).toEqual(["/wt"]);
+    // A listener added later hears the checkouts already watched.
+    const late: string[] = [];
+    const stopLate = hub.onOpened((root) => void late.push(root));
+    await tick();
+    expect(late).toEqual(["/wt"]);
+    r1();
+    expect(hub.roots()).toEqual(["/wt"]);
+    r2();
+    expect(hub.roots()).toEqual([]);
+    // Its readers coming back is a new open; a removed listener hears nothing.
+    stopLate();
+    const r3 = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+    });
+    await tick();
+    expect(early).toEqual(["/wt", "/wt"]);
+    expect(late).toEqual(["/wt"]);
+    r3();
+    stopEarly();
+  });
+
+  test("a listener that throws fails the open: its readers' acquire rejects and nothing stays watched", async () => {
+    const { dirs, hub } = linkedHub();
+    const stop = hub.onOpened(() => {
+      throw new Error("listener broke");
+    });
+    const acquired = hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+    });
+    expect(acquired).rejects.toThrow("listener broke");
+    await acquired.catch((err: unknown) => {
+      if (!(err instanceof Error && err.message === "listener broke"))
+        throw err;
+    });
+    expect(hub.roots()).toEqual([]);
+    expect(dirs.released.length).toBe(dirs.acquired.length);
+    stop();
+  });
+
   test("a watch losing events is a resync for every reader, from any of its dirs", async () => {
     const { dirs, hub } = linkedHub();
     let a = 0;

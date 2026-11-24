@@ -234,6 +234,7 @@ type Delivery =
  * the main checkout's watch when that one is open too).
  */
 export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
+  const openedListeners = new Set<(root: string) => void>();
   const hub = createRefcountHub<Delivery>(async (root, emit) => {
     const { gitDir, commonDir, infoDir } = await deps.locate(root);
     const inside = (dir: string) => relativeTo(root, dir) !== null;
@@ -376,6 +377,16 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
       releaseAll();
       throw err;
     }
+    // Someone reads this checkout now: tell whoever keeps per-checkout state
+    // that follows its readers (the fsmonitor daemon's owner). A listener
+    // that throws fails this open — every waiting reader's acquire rejects
+    // with it — rather than leave the checkout read with its state unkept.
+    try {
+      for (const listener of [...openedListeners]) listener(root);
+    } catch (err) {
+      releaseAll();
+      throw err;
+    }
     refresh.trigger();
     return releaseAll;
   });
@@ -416,5 +427,23 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
     },
     /** The checkouts watched, or being opened. */
     roots: () => hub.keys(),
+    /**
+     * Hear each checkout whose watch opens (its first reader came), until the
+     * returned function runs. Every checkout already watched (or opening — it
+     * may then be heard twice) is heard at once, here; a throw from that
+     * replay throws from this call.
+     */
+    onOpened(listener: (root: string) => void): () => void {
+      openedListeners.add(listener);
+      try {
+        for (const root of hub.keys()) listener(root);
+      } catch (err) {
+        openedListeners.delete(listener);
+        throw err;
+      }
+      return () => {
+        openedListeners.delete(listener);
+      };
+    },
   };
 }

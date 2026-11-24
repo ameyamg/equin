@@ -536,7 +536,12 @@ async function mapBounded<T, R>(
 export async function reconcileCheckoutFsmonitors(
   checkouts: readonly FsmonitorCheckout[],
   opts: {
-    orphanRoot: string;
+    /**
+     * Where the repo's linked worktrees' git dirs live: a daemon of one gone
+     * from there is signalled. Null skips that sweep (one `lsof`) — a caller
+     * converging one checkout leaves orphans to the pass over all of them.
+     */
+    orphanRoot: string | null;
     tier: CheckoutTier;
     /**
      * Asked again just before an `off` checkout is stopped: its owner may
@@ -627,6 +632,7 @@ export async function reconcileCheckoutFsmonitors(
   // directory is deleted (measured), so this only catches one whose checkout
   // was moved away (the reap renames it into the trash) and its registration
   // pruned. A daemon whose socket does not name its git dir is left alone.
+  if (orphanRoot === null) return out;
   const named = new Set(checkouts.map((c) => c.gitDir));
   for (const d of await listFsmonitorDaemons(signal)) {
     if (d.gitDir === null || named.has(d.gitDir)) continue;

@@ -118,3 +118,28 @@ export function acquireCheckoutWatch(
 ): Promise<CheckoutWatchRelease> {
   return hub.acquire(root, request);
 }
+
+/**
+ * The checkouts someone reads now: a watch on each is open or opening in this
+ * process, keyed by the root its readers passed (not normalized — match on
+ * what names the checkout, e.g. its basename). Per-checkout state whose
+ * lifetime follows its readers (git's fsmonitor daemon —
+ * `conversations/workspace/worktree`) asks this before it lets one go.
+ */
+export function watchedCheckoutRoots(): string[] {
+  return hub.roots();
+}
+
+/**
+ * Hear every checkout whose first reader came (its watch opened), from now
+ * until the returned function runs — and, at once, every checkout already
+ * watched. A checkout's later readers share its watch and are not heard
+ * again; one whose readers all left and came back is. The listener runs
+ * inside the watch's open: a throw fails that open (its readers' acquires
+ * reject), so keep it to queueing work.
+ */
+export function onCheckoutWatchOpened(
+  listener: (root: string) => void,
+): () => void {
+  return hub.onOpened(listener);
+}

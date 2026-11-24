@@ -76,6 +76,13 @@ its cost is `checkouts × passes`; both multipliers are held down there:
   beside each other.
 - **A close enqueues `worktree.fsmonitor-release` for its attempt**, never a
   pass. Anything else that concerns one checkout should do the same.
+- **A checkout's first reader enqueues `worktree.fsmonitor-on-read`** for its
+  attempt (`followCheckoutReaders`, from `onReady`: each checkout watch that
+  opens in main's backend). Every decision — pass, release, on-read — goes
+  through one rule, `inUse`: retained, or watched now (on-read returns at
+  once for a retained one: the pass keeps it). A finished checkout
+  shown in a tab keeps its daemon until its readers leave and a pass finds it
+  unused.
 
 Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../../../../research/2026-10-28-global-supervised-worktree-checkout.md).
 
@@ -83,10 +90,10 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
 
 ## Plugin reference
 
-- Description: The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for main's own checkout and for exactly the checkouts whose attempt is still retained (main only: worktree.fsmonitor-reconcile at start and every 10 minutes, one pass at a time; worktree.fsmonitor-release for the one checkout whose conversation closed).
+- Description: The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for main's own checkout and for exactly the checkouts in use — whose attempt is still retained, or that someone reads now (a checkout watch open in main's backend: a tab showing a closed conversation's edited files, a file explorer over it) — main only: worktree.fsmonitor-reconcile at start and every 10 minutes, one pass at a time; worktree.fsmonitor-on-read for a checkout whose first reader came; worktree.fsmonitor-release for the one checkout whose conversation closed.
 - Server:
   - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×12
     - `infra/jobs/supervised-job` ×6
     - `infra/jobs` ×4
@@ -94,6 +101,7 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
     - `tasks/tasks-core` ×3
     - `conversations/launch-timeline` ×2
     - `infra/events` ×2
+    - `infra/git/checkout-watch` ×2
     - `config_v2.getConfig`
     - `conversations/workspace.Workspace`
     - `database/admin.databaseExists`
@@ -107,6 +115,7 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
     - `defineSupervisedJob('worktree.prepare')`
     - `defineJob('worktree.fsmonitor-reconcile')`
     - `defineJob('worktree.fsmonitor-release')`
+    - `defineJob('worktree.fsmonitor-on-read')`
     - `defineJob('worktree.fsmonitor-on-conversation-ended')`
     - `defineWarmup('worktree.fsmonitor-reconcile')`
 - Exemptions:

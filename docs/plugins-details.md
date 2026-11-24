@@ -25206,10 +25206,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `withDirTrusted`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/claude-trust.ts`, `server/internal/reap-job.ts`, `server/internal/scratch-workspace.ts` (debt)
-        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for main's own checkout and for exactly the checkouts whose attempt is still retained (main only: worktree.fsmonitor-reconcile at start and every 10 minutes, one pass at a time; worktree.fsmonitor-release for the one checkout whose conversation closed).
+        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for main's own checkout and for exactly the checkouts in use — whose attempt is still retained, or that someone reads now (a checkout watch open in main's backend: a tab showing a closed conversation's edited files, a file explorer over it) — main only: worktree.fsmonitor-reconcile at start and every 10 minutes, one pass at a time; worktree.fsmonitor-on-read for a checkout whose first reader came; worktree.fsmonitor-release for the one checkout whose conversation closed.
           - Server:
             - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
-            - Uses: 39 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
+            - Uses: 41 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
               - `infra/worktree` ×12
               - `infra/jobs/supervised-job` ×6
               - `infra/jobs` ×4
@@ -25217,6 +25217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core` ×3
               - `conversations/launch-timeline` ×2
               - `infra/events` ×2
+              - `infra/git/checkout-watch` ×2
               - `config_v2.getConfig`
               - `conversations/workspace.Workspace`
               - `database/admin.databaseExists`
@@ -25230,6 +25231,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineSupervisedJob('worktree.prepare')`
               - `defineJob('worktree.fsmonitor-reconcile')`
               - `defineJob('worktree.fsmonitor-release')`
+              - `defineJob('worktree.fsmonitor-on-read')`
               - `defineJob('worktree.fsmonitor-on-conversation-ended')`
               - `defineWarmup('worktree.fsmonitor-reconcile')`
           - Exemptions:
@@ -38730,7 +38732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `framework/cli/release`
     - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
       - Plugins:
-        - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending).
+        - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending). watchedCheckoutRoots / onCheckoutWatchOpened say who reads a checkout now, for state whose lifetime follows its readers (the fsmonitor daemon).
           - Server:
             - Uses:
               - `infra/file-watcher.acquireDirWatch`
@@ -38744,13 +38746,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CheckoutRefs`
               - `CheckoutWatchRelease`
               - `CheckoutWatchRequest`
-            - Exports (values): `acquireCheckoutWatch`
+            - Exports (values):
+              - `acquireCheckoutWatch`
+              - `onCheckoutWatchOpened`
+              - `watchedCheckoutRoots`
           - Cross-plugin:
             - Imported by:
               - `apps/file-explorer/git`
               - `code-explorer`
               - `conversations/conversation-progress`
               - `conversations/conversation-view/code`
+              - `conversations/workspace/worktree`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-watch.ts` (debt)
           - Test helpers:

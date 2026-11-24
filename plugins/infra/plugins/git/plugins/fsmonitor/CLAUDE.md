@@ -32,7 +32,8 @@ not the checkout or the cache.
 - `reconcileCheckoutFsmonitors(checkouts, { orphanRoot, tier, stillOff })` —
   converge each checkout on `on` / `off` / `unknown` (left alone); `stillOff`
   is asked again just before a stop. Signals a daemon whose checkout's
-  registration is gone. Failures are collected per checkout. The `on`
+  registration is gone (only with a non-null `orphanRoot`: a caller naming
+  every checkout). Failures are collected per checkout. The `on`
   checkouts are first asked where they stand four at a time (read-only: one
   `git diff-files` each, ~0.2 s); only what must change — a start, restart,
   renewal or stop — runs one checkout at a time. Asked one after the other,
@@ -46,10 +47,24 @@ writes, before the index refresh (so the refresh records the token), and
 ensures it for an existing one (a resume) — a failure there is a result
 (`fsmonitor: { kind: "failed" }`), never a failed launch.
 `conversations/workspace/worktree`'s `worktree.fsmonitor-reconcile` (main
-only) does the rest: on while the attempt is retained, off once not — at
+only) does the rest: on while the checkout is **in use**, off once not — at
 main's start and every 10 minutes, with `worktree.fsmonitor-release` stopping
 the one checkout whose conversation closed, in between (a hard-deleted
-conversation, which no longer names its attempt, gets a pass). Both share one serial
+conversation, which no longer names its attempt, gets a pass).
+
+**In use = its attempt is retained, OR someone reads it now** — a checkout
+watch (`infra/git/checkout-watch`, the one way a live value watches a
+checkout) is open on it in main's backend: a tab showing a closed
+conversation's edited files, a file explorer or code view over it. The
+watch's first reader queues `worktree.fsmonitor-on-read` (the tabs a restart
+replays included), which starts the daemon and renews its token at
+`foreground`; no stop runs while a watch is open in main's backend
+(matched by attempt id). A reader leaving stops
+nothing: the next pass does, once neither holds. Retention alone was a proxy
+for "someone uses it" and missed every reader of a finished checkout — each
+of its reads a full ~26k-file scan (2.8 s at boot, task-1795552567-l55l0m).
+One-shot reads that hold no watch (attempt-work, a push) are not readers
+here. Both share one serial
 lane: a pass costs one git per retained checkout, so overlapping passes
 multiply exactly that (four in lock-step, 16 git at once, 2026-11-22), and a
 per-checkout event never starts one. The pass decides
