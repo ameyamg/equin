@@ -6,7 +6,11 @@ with, and the generator that gives every app without bespoke art a building.
 - **`core/spec.ts`** — `BuildingSpec`: a `footprint`, the `setting` it likes,
   `signX`, night `lights`, `paint` (the static picture, cached per time of day),
   `animate` (a swing, a beam) and the `door` the engine opens while the player
-  stands at it (`openDoor`: a leaf swung in, or an always-open bay lit up).
+  stands at it (`openDoor`). Every door declares its doorway's shape (`w`, `h`,
+  `head`, `y`) — required by the type, so no building can have a door with no
+  open state: a `leaf` opens onto its reveal, sill and a warm-lit room; an
+  `opening` (a bay, a tent, a stage) keeps its painted inside and its lamps
+  come on.
   Coordinates are
   door-relative: (0, 0) is the middle of the threshold, y grows down.
 - **The painting kit** (`core/internal/{colour,draw,parts,props}.ts`, exported
@@ -239,7 +243,6 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `shrub`
     - `sketch`
     - `SOLID_ALPHA`
-    - `spill`
     - `steps`
     - `stones`
     - `swingFrame`

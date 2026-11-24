@@ -354,7 +354,7 @@ function patch(g: Ctx2D, r: () => number, pts: readonly Pt[]): void {
 }
 
 export const partyTent: BuildingSpec = {
-  door: { kind: "opening", w: 36, h: 60 },
+  door: { kind: "opening", w: 36, h: 60, head: 20 },
   footprint: {
     w: 192,
     depth: 44,

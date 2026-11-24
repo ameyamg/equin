@@ -496,7 +496,7 @@ function blindAt(t: number): number {
 const headPaint = (s: PaintState): string => mix(accent(s.hue), "#6e5a44", 0.3);
 
 export const windowGallery: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 58, arch: true },
+  door: { kind: "leaf", w: 34, h: 58, head: 17 },
   footprint: {
     w: W,
     depth: 74,

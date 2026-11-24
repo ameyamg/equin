@@ -373,7 +373,7 @@ function glazing(i: number): Face {
 }
 
 export const forge: BuildingSpec = {
-  door: { kind: "opening", w: 86 },
+  door: { kind: "opening", w: 2 * BAY, h: RISE - BS, head: RISE },
   footprint: {
     w: 276,
     depth: 96,

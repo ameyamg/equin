@@ -286,7 +286,7 @@ function sheet(
 }
 
 export const filingChest: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 60, arch: true },
+  door: { kind: "leaf", w: 34, h: 60, head: 17 },
   footprint: {
     w: 240,
     depth: 80,

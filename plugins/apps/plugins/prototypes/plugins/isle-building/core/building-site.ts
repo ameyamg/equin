@@ -188,7 +188,7 @@ function doorOutline(g: Ctx2D): void {
 }
 
 export const buildingSite: BuildingSpec = {
-  door: { kind: "opening", w: 34 },
+  door: { kind: "opening", w: SHEET[2] - SHEET[0], h: -SHEET[1], head: 0 },
   footprint: {
     w: 230,
     depth: 80,

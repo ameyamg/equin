@@ -350,7 +350,7 @@ const SIGNS = [
 ] as const;
 
 export const globeHouse: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 56, arch: true },
+  door: { kind: "leaf", w: 34, h: 56, head: 17 },
   footprint: {
     w: 184,
     depth: 104,

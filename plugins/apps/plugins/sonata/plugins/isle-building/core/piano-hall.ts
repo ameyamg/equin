@@ -156,7 +156,7 @@ function sweep(g: Ctx2D): void {
 }
 
 export const pianoHall: BuildingSpec = {
-  door: { kind: "leaf", w: 32, h: 56, arch: true },
+  door: { kind: "leaf", w: 32, h: 56, head: 16 },
   footprint: {
     w: 232,
     depth: 70,

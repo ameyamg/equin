@@ -136,7 +136,7 @@ function mapPin(
 }
 
 export const lighthouse: BuildingSpec = {
-  door: { kind: "leaf", w: 32, h: 56, arch: true },
+  door: { kind: "leaf", w: 32, h: 56, head: 16 },
   footprint: {
     w: 190,
     depth: 96,

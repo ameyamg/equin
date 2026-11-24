@@ -6216,7 +6216,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shrub`
               - `sketch`
               - `SOLID_ALPHA`
-              - `spill`
               - `steps`
               - `stones`
               - `swingFrame`

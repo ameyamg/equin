@@ -109,25 +109,34 @@ export interface PaintState {
 }
 
 /**
- * The front door, its threshold at the origin (or `y` below it). Data, not
- * paint: the engine opens it while the player stands there (`openDoor`) — so
- * every building's door opens the same way, and none can forget to.
- *
- * - `leaf`: a door `w` × `h` (round-headed when `arch`) that swings in on a
- *   warm-lit inside, light spilling out over the ground.
- * - `opening`: always open — a bay, wide doors swung back, a stand with no
- *   door — `w` wide (`h` tall, lit warm inside, when given): only the light
- *   spills out.
+ * The doorway's shape — what the open door lights up, so it is REQUIRED of
+ * every door: a building cannot declare a door with no open state. `w` wide,
+ * `h` tall from its threshold to the top of its head; `head` is how far the head
+ * rises above its jambs (0 a square head, `w / 2` a round arch, between: a
+ * segmental or elliptical one); the threshold lies `y` below the origin
+ * (default 0; negative: up a step, on a stage).
  */
-export type Door =
-  | {
-      readonly kind: "leaf";
-      readonly w: number;
-      readonly h: number;
-      readonly arch: boolean;
-      readonly y?: number;
-    }
-  | { readonly kind: "opening"; readonly w: number; readonly h?: number };
+export interface Doorway {
+  readonly w: number;
+  readonly h: number;
+  readonly head: number;
+  readonly y?: number;
+}
+
+/**
+ * The front door. Data, not paint: the engine opens it while the player stands
+ * there (`openDoor`) — so every building's door opens the same way, and none
+ * can forget to.
+ *
+ * - `leaf`: a door the building paints shut; open, it has swung in out of
+ *   sight (hinged on the right, it lies behind the front wall in the high 3/4
+ *   view): the doorway shows its reveal, its sill and a warm-lit room, its
+ *   light spilling out over the ground.
+ * - `opening`: always open — a bay, wide doors swung back, a tent's tied-back
+ *   flaps, a stage: the building paints what is inside; open, its lamps come
+ *   on — a warm glow over the doorway, the light spilling out.
+ */
+export type Door = { readonly kind: "leaf" | "opening" } & Doorway;
 
 export interface BuildingSpec {
   readonly footprint: Footprint;

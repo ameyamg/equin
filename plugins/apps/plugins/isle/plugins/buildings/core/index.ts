@@ -53,7 +53,6 @@ export {
   lantern,
   openDoor,
   sack,
-  spill,
   steps,
   windowRect,
 } from "./internal/parts";

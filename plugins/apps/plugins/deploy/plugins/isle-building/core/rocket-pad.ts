@@ -117,7 +117,7 @@ function beltPath(g: Ctx2D, y0: number, y1: number): void {
 }
 
 export const rocketPad: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 60, arch: true },
+  door: { kind: "leaf", w: 34, h: 60, head: 17 },
   footprint: {
     w: 264,
     depth: 84,

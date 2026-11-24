@@ -40,8 +40,13 @@ export const storehouseOpening = (p: Plan): { w: number; h: number } => ({
 /** The building's door, as the engine opens it. */
 export const doorOf = (p: Plan): Door =>
   p.arch === "storehouse"
-    ? { kind: "opening", ...storehouseOpening(p) }
-    : { kind: "leaf", w: doorWidth(p), h: doorHeight(p), arch: p.arched };
+    ? { kind: "opening", ...storehouseOpening(p), head: 0 }
+    : {
+        kind: "leaf",
+        w: doorWidth(p),
+        h: doorHeight(p),
+        head: p.arched ? doorWidth(p) / 2 : 0,
+      };
 
 /** The soft cast shadow polygon on the ground beside the body. */
 export function shadowPts(p: Plan): Pt[] {

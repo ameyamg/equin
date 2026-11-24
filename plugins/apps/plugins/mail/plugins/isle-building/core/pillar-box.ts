@@ -242,7 +242,7 @@ function flier(
 }
 
 export const pillarBox: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 60, arch: true },
+  door: { kind: "leaf", w: 34, h: 60, head: 17 },
   footprint: {
     w: 176,
     depth: 66,

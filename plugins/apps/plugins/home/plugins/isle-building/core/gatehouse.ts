@@ -151,7 +151,7 @@ function arm(
 }
 
 export const gatehouse: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 58, arch: true },
+  door: { kind: "leaf", w: 34, h: 58, head: 17 },
   footprint: {
     w: 184,
     depth: 72,

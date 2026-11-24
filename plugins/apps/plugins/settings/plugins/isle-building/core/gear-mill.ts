@@ -296,7 +296,7 @@ function cog(g: Ctx2D, x: number, y: number, ang: number, o: CogOptions): void {
 }
 
 export const gearMill: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 60, arch: true },
+  door: { kind: "leaf", w: 34, h: 60, head: 17 },
   footprint: {
     w: 270,
     depth: 86,

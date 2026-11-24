@@ -432,7 +432,7 @@ function pulse(g: Ctx2D, x: number, y: number, a: number): void {
 const UPPER_TABS: Tabs = [{ dir: 1, at: 0.3 }, 0, 0, 1];
 
 export const blockWorkshop: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 60, arch: true },
+  door: { kind: "leaf", w: 34, h: 60, head: 17 },
   footprint: {
     w: 236,
     depth: 80,

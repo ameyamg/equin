@@ -367,7 +367,7 @@ function feeler(g: Ctx2D, d: number, sway: number): void {
 }
 
 export const beetleStation: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 58, arch: true },
+  door: { kind: "leaf", w: 34, h: 58, head: 17 },
   footprint: {
     w: 150,
     depth: 70,

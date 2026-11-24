@@ -297,7 +297,7 @@ function gooseneck(g: Ctx2D, x: number, dir: number, lit: boolean): void {
 }
 
 export const shopfront: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 58, arch: true },
+  door: { kind: "leaf", w: 34, h: 58, head: 17 },
   footprint: {
     w: 200,
     depth: 72,

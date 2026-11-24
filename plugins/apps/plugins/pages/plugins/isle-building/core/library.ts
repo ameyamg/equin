@@ -273,7 +273,7 @@ const LEAVES = [
 ] as const;
 
 export const library: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 58, arch: true },
+  door: { kind: "leaf", w: 34, h: 58, head: 17 },
   footprint: {
     w: 256,
     depth: 96,

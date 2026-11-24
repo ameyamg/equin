@@ -215,7 +215,7 @@ function calLeaf(g: Ctx2D, s: PaintState, day: number, curl: number): void {
 }
 
 export const calendarTower: BuildingSpec = {
-  door: { kind: "leaf", w: 34, h: 60, arch: true },
+  door: { kind: "leaf", w: 34, h: 60, head: 17 },
   footprint: {
     w: 108,
     depth: 60,

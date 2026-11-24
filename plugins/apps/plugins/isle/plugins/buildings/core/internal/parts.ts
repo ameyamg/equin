@@ -2,7 +2,7 @@
 // crates, barrels, sacks, a bench, books, a lantern, smoke, the light that
 // spills from an open door.
 
-import type { Chimney, Ctx2D, Door } from "../spec";
+import type { Chimney, Ctx2D, Door, Doorway } from "../spec";
 import { at, jit, type Rnd } from "./colour";
 import { castShadow, hline, ink, planks, wash } from "./draw";
 import { oblique } from "./oblique";
@@ -497,79 +497,144 @@ export function chimneySmoke(
   smoke(g, c.x, c.y, t + (c.phase ?? 0), c.puffs ?? 6, c.spread ?? 1, amount);
 }
 
-/** Warm light spilling from an open door at (0, 0) onto the ground in front. */
-export function spill(g: Ctx2D, w: number, a: number): void {
-  const gr = g.createRadialGradient(0, 6, 2, 0, 6, w * 1.4);
-  gr.addColorStop(0, `rgba(255,205,120,${a})`);
-  gr.addColorStop(1, "rgba(255,205,120,0)");
-  g.fillStyle = gr;
+/** How deep a doorway's reveal is (the wall's thickness), px of depth. */
+const REVEAL = 6;
+
+/** The doorway's outline, its threshold at `y`, shifted `dx`, `dy`. */
+function doorwayPath(g: Ctx2D, d: Doorway, dx = 0, dy = 0): void {
+  const y = (d.y ?? 0) + dy;
+  const L = -d.w / 2 + dx;
+  const R = d.w / 2 + dx;
+  const spring = y - d.h + d.head;
   g.beginPath();
-  g.moveTo(-w / 2, 0);
-  g.lineTo(w / 2, 0);
-  g.lineTo(w * 1.1, 38);
-  g.lineTo(-w * 1.1, 38);
+  g.moveTo(L, y);
+  g.lineTo(L, spring);
+  if (d.head > 0) g.ellipse(dx, spring, d.w / 2, d.head, 0, Math.PI, 0);
+  else g.lineTo(R, spring);
+  g.lineTo(R, y);
   g.closePath();
-  g.fill();
+}
+
+/**
+ * The light an open doorway throws on the ground in front: a soft fan, thrown
+ * toward the viewer (down and to the left, the receding vector backwards),
+ * fading to nothing at its edges — no hard side.
+ */
+function spill(g: Ctx2D, d: Doorway, a: number): void {
+  const y = d.y ?? 0;
+  const rx = d.w / 2 + 12;
+  const ry = 24;
+  g.save();
+  g.beginPath();
+  g.rect(-rx - 6, y, 2 * rx + 6, ry);
+  g.clip();
+  g.translate(-6, y);
+  g.scale(1, ry / rx);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+  gr.addColorStop(0, `rgba(255,206,128,${a})`);
+  gr.addColorStop(0.55, `rgba(255,196,112,${a * 0.45})`);
+  gr.addColorStop(1, "rgba(255,190,100,0)");
+  g.fillStyle = gr;
+  g.fillRect(-rx, 0, 2 * rx, rx);
+  g.restore();
 }
 
 /**
  * A building's door, open: what the engine draws over the building while the
- * player stands at it. A leaf swings in on a warm-lit inside, light spilling
- * out; an opening (always open) lights up inside and spills its light.
+ * player stands at it.
+ *
+ * - A `leaf` has swung in out of sight: the doorway shows the wall's thickness
+ *   — its left reveal and its sill, the faces the high 3/4 view sees — and,
+ *   beyond, a room lit warm from within: its floor running back to the far
+ *   wall, a lamp's glow.
+ * - An `opening` keeps what the building painted inside it; its lamps come on:
+ *   a warm glow over the doorway.
+ *
+ * Either way the light spills out over the ground.
  */
 export function openDoor(g: Ctx2D, door: Door): void {
+  const y = door.y ?? 0;
+  const top = y - door.h;
   if (door.kind === "opening") {
-    if (door.h) {
-      g.fillStyle = "rgba(255,190,100,.22)";
-      g.fillRect(-door.w / 2, -door.h, door.w, door.h);
-    }
-    spill(g, door.w, 0.45);
+    g.save();
+    doorwayPath(g, door);
+    g.clip();
+    g.globalCompositeOperation = "lighter";
+    const gr = g.createRadialGradient(
+      0,
+      y - door.h * 0.4,
+      0,
+      0,
+      y - door.h * 0.4,
+      Math.max(door.w, door.h) * 0.65,
+    );
+    gr.addColorStop(0, "rgba(255,170,80,.42)");
+    gr.addColorStop(1, "rgba(255,150,60,.08)");
+    g.fillStyle = gr;
+    g.fillRect(-door.w / 2, top, door.w, door.h);
+    g.restore();
+    spill(g, door, 0.42);
     return;
   }
-  const { w, h, arch } = door;
-  const y = door.y ?? 0;
-  const L = -w / 2;
-  const T = y - h;
-  const outline = () => {
-    g.beginPath();
-    if (arch) {
-      g.moveTo(L, y);
-      g.lineTo(L, T + w / 2);
-      g.arc(0, T + w / 2, w / 2, Math.PI, 0);
-      g.lineTo(L + w, y);
-    } else g.rect(L, T, w, h);
-    g.closePath();
-  };
-  // the warm inside
+  const [bx, by] = oblique.back([0, 0], REVEAL);
+  const L = -door.w / 2;
   g.save();
-  outline();
+  doorwayPath(g, door);
   g.clip();
-  const gr = g.createLinearGradient(0, T, 0, y);
-  gr.addColorStop(0, "#5a3a1c");
-  gr.addColorStop(1, "#f2b860");
-  g.fillStyle = gr;
-  g.fillRect(L, T, w, h);
-  g.restore();
-  // the leaf, swung in against the jamb
-  g.fillStyle = "#4e3a26";
+  // the reveal: the wall's thickness, in shadow (its left side faces the room's light a little)
+  const rv = g.createLinearGradient(L, 0, L + bx, 0);
+  rv.addColorStop(0, "#5a412b");
+  rv.addColorStop(1, "#7a5838");
+  g.fillStyle = rv;
+  g.fillRect(L - 1, top - 1, door.w + 2, door.h + 2);
+  // the sill: the threshold's top, lit from inside
+  g.fillStyle = "#b99566";
   g.beginPath();
   g.moveTo(L, y);
-  g.lineTo(L - w * 0.28, y + 3);
-  g.lineTo(L - w * 0.28, T + w * 0.35);
-  g.lineTo(L, T + (arch ? w * 0.45 : 0));
+  g.lineTo(-L, y);
+  g.lineTo(-L + bx, y + by);
+  g.lineTo(L + bx, y + by);
   g.closePath();
   g.fill();
-  ink(g, 0.9, 0.7);
-  g.stroke();
-  // the light on the ground
-  const sp = g.createLinearGradient(0, y, 0, y + 22);
-  sp.addColorStop(0, "rgba(255,200,120,.5)");
-  sp.addColorStop(1, "rgba(255,200,120,0)");
-  g.fillStyle = sp;
+  // the room, through the doorway's far edge
+  doorwayPath(g, door, bx, by);
+  g.clip();
+  const back = y + by; // where the floor meets the doorway's far edge
+  const wallFoot = back - Math.min(9, door.h * 0.16); // the floor meets the far wall
+  const room = g.createLinearGradient(0, top + by, 0, wallFoot);
+  room.addColorStop(0, "#4a2c18");
+  room.addColorStop(1, "#c07c3c");
+  g.fillStyle = room;
+  g.fillRect(L, top + by - 1, door.w + bx, door.h + 2);
+  // the floor, lit: brightest by the far wall, under the lamp
+  const fl = g.createLinearGradient(0, wallFoot, 0, back);
+  fl.addColorStop(0, "#f4c47a");
+  fl.addColorStop(1, "#b87a42");
+  g.fillStyle = fl;
+  g.fillRect(L, wallFoot, door.w + bx, back - wallFoot + 1);
+  // the lamp's glow on the far wall
+  const lx = bx * 0.6;
+  const ly = wallFoot - door.h * 0.38;
+  const glow = g.createRadialGradient(lx, ly, 0, lx, ly, door.h * 0.55);
+  glow.addColorStop(0, "rgba(255,226,160,.95)");
+  glow.addColorStop(0.5, "rgba(255,196,110,.45)");
+  glow.addColorStop(1, "rgba(255,180,90,0)");
+  g.fillStyle = glow;
+  g.fillRect(L, top + by - 1, door.w + bx, door.h + 2);
+  // the floor's far edge, faint
+  ink(g, 0.8, 0.25);
   g.beginPath();
-  g.moveTo(L, y);
-  g.lineTo(L + w, y);
-  g.lineTo(L + w + 10, y + 22);
-  g.lineTo(L - 10, y + 22);
-  g.fill();
+  g.moveTo(L, wallFoot);
+  g.lineTo(-L + bx, wallFoot);
+  g.stroke();
+  g.restore();
+  // the doorway's far edge, inked faint over the reveal
+  g.save();
+  doorwayPath(g, door);
+  g.clip();
+  ink(g, 0.8, 0.45);
+  doorwayPath(g, door, bx, by);
+  g.stroke();
+  g.restore();
+  spill(g, door, 0.5);
 }

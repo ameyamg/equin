@@ -568,7 +568,7 @@ const LAMP_LIGHTS: Light[] = [0, 1, 2, 3].map((i) => {
 });
 
 export const bandstand: BuildingSpec = {
-  door: { kind: "opening", w: 40 },
+  door: { kind: "opening", w: 2 * F(1)[0], h: HC, head: 0, y: F(1)[1] },
   footprint: {
     w: 208,
     depth: 74,
