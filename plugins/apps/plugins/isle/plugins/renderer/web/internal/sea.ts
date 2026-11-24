@@ -1,8 +1,9 @@
 // The open sea, painted into a map tile on the page: nothing here repeats.
 // The colour is a slow field of the WORLD position — a paler shelf round each
 // island, deeper basins offshore, currents, the shade of a cloud — sampled on
-// a coarse grid whose points the tiles share (so they join without a seam) and
-// washed in smoothly; the seamless grain (`oceanKernel`) lies over it as fine
+// a coarse grid once for the whole world (`SeaField`) that every tile is cut
+// from (so they join without a seam) and that stands in for a tile not built
+// yet (so a tile appearing never changes the sea's colour), washed in smoothly; the seamless grain (`oceanKernel`) lies over it as fine
 // paper tooth only; and the wave marks are strokes placed by world-space noise
 // — ruffled water here, calm there, their lengths and headings varying — fewer
 // and fainter the further out the tile's zoom, so they never read as a
@@ -20,13 +21,13 @@ import {
   DEEP_C,
   GT,
   mixTo,
+  OCEAN_FLAT,
   type HeightFn,
   type Rgb,
 } from "./ground-pixels";
 
 /** World px between the colour field's samples. */
 const Q = 16;
-const N = GT / Q + 1;
 
 const TRENCH: Rgb = [29, 80, 126];
 const CURRENT: Rgb = [62, 132, 172];
@@ -76,50 +77,123 @@ function seaColour(
   col[2] += k;
 }
 
-let field: { c: HTMLCanvasElement; g: Ctx; img: ImageData } | null = null;
+/**
+ * The open sea's colour over the whole world, one sample every Q world px on
+ * the grid every tile shares — what each tile's sea is cut from, and what
+ * stands in for a tile not built yet, so a tile appearing changes nothing but
+ * its wave marks. It spans `box` (world px: what the camera can show), on
+ * the tile grid. Built a row at a time within the bake budget (`step`); a
+ * world whose islands change, or a view reaching past it, gets a new one, the
+ * old drawn until it is done.
+ */
+export class SeaField {
+  /** World position of sample (0, 0). */
+  readonly x0: number;
+  readonly y0: number;
+  private readonly nx: number;
+  private readonly ny: number;
+  readonly c: HTMLCanvasElement;
+  private readonly g: Ctx;
+  private readonly img: ImageData;
+  private row = 0;
+
+  constructor(
+    /** The islands it was built for (their shelves). */
+    readonly islandKey: string,
+    box: readonly number[],
+    private readonly islands: readonly Island[],
+  ) {
+    this.x0 = Math.floor(box[0]! / GT) * GT;
+    this.y0 = Math.floor(box[1]! / GT) * GT;
+    this.nx = (Math.ceil(box[2]! / GT) * GT - this.x0) / Q + 1;
+    this.ny = (Math.ceil(box[3]! / GT) * GT - this.y0) / Q + 1;
+    this.c = canvas(this.nx, this.ny);
+    this.g = ctx2d(this.c);
+    this.img = this.g.createImageData(this.nx, this.ny);
+  }
+
+  /** Whether it spans the world box (x0, y0, x1, y1). */
+  covers(box: readonly number[]): boolean {
+    return (
+      box[0]! >= this.x0 &&
+      box[1]! >= this.y0 &&
+      box[2]! <= this.x0 + (this.nx - 1) * Q &&
+      box[3]! <= this.y0 + (this.ny - 1) * Q
+    );
+  }
+
+  get done(): boolean {
+    return this.row >= this.ny;
+  }
+
+  /** Samples rows while `left()`; → true once every row is in (and on the canvas). */
+  step(left: () => boolean): boolean {
+    if (this.done) return true;
+    const d = this.img.data;
+    const col: Rgb = [0, 0, 0];
+    while (this.row < this.ny && left()) {
+      const j = this.row++;
+      for (let i = 0; i < this.nx; i++) {
+        seaColour(col, this.islands, this.x0 + i * Q, this.y0 + j * Q);
+        const k = (j * this.nx + i) * 4;
+        d[k] = col[0];
+        d[k + 1] = col[1];
+        d[k + 2] = col[2];
+        d[k + 3] = 255;
+      }
+    }
+    if (!this.done) return false;
+    this.g.putImageData(this.img, 0, 0);
+    return true;
+  }
+
+  /**
+   * Paints the world rect (X0, Y0, w, h) of it, washed in smoothly: each
+   * sample's centre on its grid point, so every rect it is cut into joins.
+   */
+  draw(g: Ctx, X0: number, Y0: number, w: number, h: number): void {
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(
+      this.c,
+      (X0 - this.x0) / Q + 0.5,
+      (Y0 - this.y0) / Q + 0.5,
+      w / Q,
+      h / Q,
+      X0,
+      Y0,
+      w,
+      h,
+    );
+  }
+}
 
 /** How many wave marks a 512 px cell may hold at full zoom. */
 const MARKS = 150;
 
 /**
- * Paints tile (X0, Y0)'s open sea, under its baked ground: `lod` is the tile's
- * zoom (px per world px), `grain` the seamless tooth (null until baked), `H`
- * the islands' height (null where no island is near: open water all over).
+ * Paints tile (X0, Y0)'s open sea, under its baked ground: its colour cut from
+ * `sea`, `lod` is the tile's zoom (px per world px), `grain` the seamless tooth
+ * (null until baked), `H` the islands' height (null where no island is near:
+ * open water all over).
  */
 export function paintSea(
   g: Ctx,
+  sea: SeaField,
   grain: CanvasPattern | null,
   X0: number,
   Y0: number,
   lod: number,
-  islands: readonly Island[],
   H: HeightFn | null,
 ): void {
-  if (!field) {
-    const c = canvas(N, N);
-    const fg = ctx2d(c);
-    field = { c, g: fg, img: fg.createImageData(N, N) };
-  }
-  const d = field.img.data;
-  const col: Rgb = [0, 0, 0];
-  for (let j = 0; j < N; j++)
-    for (let i = 0; i < N; i++) {
-      seaColour(col, islands, X0 + i * Q, Y0 + j * Q);
-      const k = (j * N + i) * 4;
-      d[k] = col[0];
-      d[k + 1] = col[1];
-      d[k + 2] = col[2];
-      d[k + 3] = 255;
-    }
-  field.g.putImageData(field.img, 0, 0);
   g.save();
   g.beginPath();
   g.rect(X0, Y0, GT, GT);
   g.clip();
-  g.imageSmoothingEnabled = true;
-  g.imageSmoothingQuality = "high";
-  // sample centres on the shared grid points: the tile's edge is its neighbour's
-  g.drawImage(field.c, 0.5, 0.5, N - 1, N - 1, X0, Y0, GT, GT);
+  // (past the field — a zoom overshooting further than it reaches — the sea's flat colour)
+  g.fillStyle = OCEAN_FLAT;
+  g.fillRect(X0, Y0, GT, GT);
+  sea.draw(g, X0, Y0, GT, GT);
   if (grain) {
     g.fillStyle = grain;
     g.fillRect(X0, Y0, GT, GT);

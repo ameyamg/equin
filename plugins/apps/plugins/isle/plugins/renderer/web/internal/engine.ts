@@ -142,7 +142,7 @@ import {
   teleportPose,
   type Teleport,
 } from "./teleport";
-import { paintSea } from "./sea";
+import { paintSea, SeaField } from "./sea";
 import { DOCK_LEN, makeSprites, type SpriteSet } from "./sprites";
 import { WaterLife } from "./water";
 
@@ -328,6 +328,8 @@ type GroundEntry = Omit<GroundTile, "c"> & {
 };
 
 const LODS = [0.25, 0.5, 1, 2] as const;
+/** How far past the fit-zoom view the sea field reaches (a zoom overshooting the fit). */
+const SEA_REACH = 1.25;
 const TILE_BUDGET = 64e6;
 /** Ground tiles whose full-resolution colour is kept (`trimGround`). */
 const GROUND_MAX = 120;
@@ -420,6 +422,13 @@ export class IsleEngine {
   /** The open sea's texture, once baked (its bake job until then): tiles drawn before it are not final. */
   private oceanPat: CanvasPattern | null = null;
   private oceanJob: Job<HTMLCanvasElement> | null = null;
+  /**
+   * The open sea's colour over the world, once built (`stepSea`): every tile's
+   * sea is cut from it, and it stands in for a tile not built yet. `seaNext`
+   * is the one being built for the world's islands as they are now.
+   */
+  private sea: SeaField | null = null;
+  private seaNext: SeaField | null = null;
   private readonly people = new People();
   private readonly wolf = new Werewolf(this.rnd);
   private readonly fireworks = new Fireworks(this.rnd);
@@ -869,6 +878,8 @@ export class IsleEngine {
       this.previews.clear();
       this.islandKey = "";
       this.prevIslands = [];
+      this.sea = null;
+      this.seaNext = null;
       this.scene = null;
       this.hero.placed = false;
       this.readySent = false;
@@ -997,6 +1008,7 @@ export class IsleEngine {
       this.islandKey = islandKey;
       this.islandsChanged(M, layout);
     }
+    this.seaFollows();
     this.grid = walkGrid(M, layout, scene.solids);
     this.districts = districtLabels(
       M,
@@ -1352,6 +1364,35 @@ export class IsleEngine {
     for (const e of this.tileCache.values()) e.stale = true;
   }
 
+  /**
+   * A new sea field when the islands changed, or the camera can show sea the
+   * field does not reach (a wider or taller window): zoomed out the view fits
+   * the world rect to its shape, so it shows more than the rect across one way.
+   */
+  private seaFollows(): void {
+    const layout = this.layout;
+    if (!layout || !this.vw || !this.vh) return;
+    const [x0, y0, x1, y1] = layout.rect;
+    const aspect = this.vw / this.vh;
+    // the view at the fit zoom, plus a zoom overshooting it by a quarter
+    const hw = (Math.max(x1 - x0, (y1 - y0) * aspect) / 2) * SEA_REACH;
+    const hh = (Math.max(y1 - y0, (x1 - x0) / aspect) / 2) * SEA_REACH;
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const reach = [cx - hw, cy - hh, cx + hw, cy + hh];
+    const F = this.seaNext ?? this.sea;
+    if (F && F.islandKey === this.islandKey && F.covers(reach)) return;
+    this.seaNext = new SeaField(this.islandKey, reach, layout.islands);
+  }
+
+  /** The sea's colour for the islands as they are now: once it is in, every tile cut from the old one is drawn again. */
+  private stepSea(left: () => boolean): void {
+    if (!this.seaNext?.step(left)) return;
+    this.sea = this.seaNext;
+    this.seaNext = null;
+    for (const e of this.tileCache.values()) e.stale = true;
+  }
+
   /** Previews first, then the ground tiles in view nearest the centre, then nearby, within the budget. */
   private stepBakes(budgetMs: number, view: readonly number[]): void {
     const M = this.M;
@@ -1361,6 +1402,7 @@ export class IsleEngine {
     const t0 = performance.now();
     const left = () => performance.now() - t0 < budgetMs;
     this.stepOcean(left);
+    this.stepSea(left);
     this.trimGround(view);
     for (let i = 0; i < this.previewJobs.length && left();) {
       const j = this.previewJobs[i]!;
@@ -1508,31 +1550,36 @@ export class IsleEngine {
     return (this.ground.has(k) || !this.groundKeySet.has(k)) && !!e && e.final;
   }
 
-  /** → false when it had to use the coarse preview, or the sea's texture is not baked yet. */
+  /** → false when it had to use the coarse preview, or the sea's texture or colour is not in yet. */
   private paintGround(
     tg: Ctx,
     X0: number,
     Y0: number,
     X1: number,
     Y1: number,
-    /** The zoom of the tile being built; null for a frame's stand-in (the sea's flat colour, nothing computed). */
+    /**
+     * The zoom of the tile being built; null for a frame's stand-in, laid over
+     * the sea the frame drew under every tile (its flat colour until the sea's
+     * colour is in).
+     */
     lod: number | null,
   ): boolean {
     const k = tileKey(Math.floor(X0 / GT), Math.floor(Y0 / GT));
     const layout = this.layout;
-    if (lod !== null && this.M && layout) {
+    const sea = this.sea;
+    if (lod !== null && sea && this.M && layout) {
       // the open sea, from the world position: nothing of it repeats (`sea.ts`)
       const coastal = this.groundKeySet.has(k);
       paintSea(
         tg,
+        sea,
         this.oceanPat,
         X0,
         Y0,
         lod,
-        layout.islands,
         coastal ? heightOver(this.M, layout.islands) : null,
       );
-    } else {
+    } else if (lod !== null || !sea) {
       tg.fillStyle = OCEAN_FLAT;
       tg.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
       if (this.oceanPat) {
@@ -1544,7 +1591,7 @@ export class IsleEngine {
     if (G?.c) {
       G.used = this.frameNo;
       tg.drawImage(G.c, X0, Y0, GT, GT);
-      return this.oceanPat !== null;
+      return this.seaFinal();
     }
     tg.imageSmoothingQuality = "high";
     for (const I of this.layout?.islands ?? []) {
@@ -1569,9 +1616,14 @@ export class IsleEngine {
       );
     }
     return (
-      this.oceanPat !== null &&
+      this.seaFinal() &&
       !this.islandAt(Math.floor(X0 / GT), Math.floor(Y0 / GT))
     );
+  }
+
+  /** Whether a tile's sea is drawn as it will stay: its texture and its colour for the islands as they are now. */
+  private seaFinal(): boolean {
+    return this.oceanPat !== null && this.sea !== null && this.seaNext === null;
   }
 
   /** A tile: its ground (terrain, roads, squares, lots) and what stands on it (bridges, reeds, docks, scenery, buildings). */
@@ -1680,6 +1732,7 @@ export class IsleEngine {
         0.08,
         Math.min(this.vw / (x1 - x0), this.vh / (y1 - y0)),
       );
+      this.seaFollows();
     }
   }
 
@@ -2788,7 +2841,18 @@ export class IsleEngine {
       v.e = this.buildTile(lod, v.tx, v.ty);
       built++;
     }
-    // 3. drawn: the tile, else the nearest zoom's, else the bare ground
+    // 3. drawn: the tile, else the nearest zoom's, else the bare ground over the
+    //    world's sea — drawn once under them all, the very colour the tile will have
+    const sea = this.sea;
+    if (sea && inView.some((v) => !v.e && !v.fb)) {
+      world2screen();
+      sea.draw(g, x0, y0, x1 - x0, y1 - y0);
+      if (this.oceanPat) {
+        g.fillStyle = this.oceanPat;
+        g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+    }
     for (const v of inView) {
       const e = v.e ?? v.fb;
       v.e = e;
