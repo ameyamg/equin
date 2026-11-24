@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { propagate, threeWayMerge } from "./tier-logic";
+import { propagate } from "./tier-logic";
 import { computeHash, readonlyProxy } from "./config-proxy";
 import type { ConfigFileContent, ConfigProxy } from "./config-proxy";
 import type { JsonValue } from "./types";
@@ -24,52 +24,6 @@ function memProxy(initial?: ConfigFileContent): ConfigProxy & {
 function overrideFor(content: JsonValue, originContent: JsonValue): ConfigProxy {
   return memProxy({ content, hash: computeHash(originContent) });
 }
-
-describe("threeWayMerge", () => {
-  test("auto-resolves single-sided changes, flags divergent fields", () => {
-    const base = { a: 1, b: 1, c: 1 };
-    const ours = { a: 2, b: 1, c: 2 }; // user changed a and c
-    const theirs = { a: 1, b: 9, c: 9 }; // origin changed b and c
-    const { merged, conflicts } = threeWayMerge(base, ours, theirs);
-    expect(merged).toEqual({ a: 2, b: 9, c: 2 });
-    expect(conflicts).toEqual(["c"]);
-  });
-
-  test("both sides made the same change → no conflict", () => {
-    const { merged, conflicts } = threeWayMerge({ a: 1 }, { a: 5 }, { a: 5 });
-    expect(merged).toEqual({ a: 5 });
-    expect(conflicts).toEqual([]);
-  });
-
-  test("key only in theirs (new upstream field) is added", () => {
-    const { merged, conflicts } = threeWayMerge({ a: 1 }, { a: 1 }, { a: 1, b: 2 });
-    expect(merged).toEqual({ a: 1, b: 2 });
-    expect(conflicts).toEqual([]);
-  });
-
-  test("key only in ours (user-added field) is kept", () => {
-    const { merged, conflicts } = threeWayMerge({ a: 1 }, { a: 1, z: 9 }, { a: 1 });
-    expect(merged).toEqual({ a: 1, z: 9 });
-    expect(conflicts).toEqual([]);
-  });
-
-  test("clean (no changes either side) is a no-op", () => {
-    const doc = { a: 1, b: 2 };
-    const { merged, conflicts } = threeWayMerge(doc, doc, doc);
-    expect(merged).toEqual(doc);
-    expect(conflicts).toEqual([]);
-  });
-
-  test("idempotent: re-merging the merged result yields the same conflicts", () => {
-    const base = { a: 1, b: 1, c: 1 };
-    const ours = { a: 2, b: 1, c: 2 };
-    const theirs = { a: 1, b: 9, c: 9 };
-    const first = threeWayMerge(base, ours, theirs);
-    const second = threeWayMerge(base, first.merged, theirs);
-    expect(second.conflicts).toEqual(first.conflicts);
-    expect(second.merged).toEqual(first.merged);
-  });
-});
 
 describe("propagate ancestor capture", () => {
   const v1: JsonValue = { x: 1 };

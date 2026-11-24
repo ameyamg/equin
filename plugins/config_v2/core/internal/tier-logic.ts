@@ -181,47 +181,6 @@ export function propagate(
   return { conflict: false };
 }
 
-// Per-field three-way merge of a config document. `base` is the origin the
-// override was written against (the ancestor snapshot); `ours` is the user
-// override; `theirs` is the new origin. A field only one side changed takes
-// that side; a field both sides changed identically agrees; a field both sides
-// changed differently is a true conflict — left as `ours` (a tentative pick)
-// and reported in `conflicts` for the user to resolve. Equality is structural
-// JSON equality, matching the rest of config_v2's change detection.
-export function threeWayMerge(
-  base: Record<string, JsonValue>,
-  ours: Record<string, JsonValue>,
-  theirs: Record<string, JsonValue>,
-): { merged: Record<string, JsonValue>; conflicts: string[] } {
-  const eq = (a: unknown, b: unknown) =>
-    JSON.stringify(a) === JSON.stringify(b);
-  const merged: Record<string, JsonValue> = {};
-  const conflicts: string[] = [];
-  const keys = new Set([
-    ...Object.keys(base),
-    ...Object.keys(ours),
-    ...Object.keys(theirs),
-  ]);
-  for (const key of keys) {
-    const b = base[key];
-    const o = ours[key];
-    const t = theirs[key];
-    const oursChanged = !eq(o, b);
-    const theirsChanged = !eq(t, b);
-    if (!oursChanged) {
-      merged[key] = t as JsonValue;
-    } else if (!theirsChanged) {
-      merged[key] = o as JsonValue;
-    } else if (eq(o, t)) {
-      merged[key] = o as JsonValue;
-    } else {
-      merged[key] = o as JsonValue;
-      conflicts.push(key);
-    }
-  }
-  return { merged, conflicts };
-}
-
 // WHICH LAYER SUPPLIED THE VALUES THE RUNTIME IS SERVING.
 //
 // "user" = the per-worktree override document won; "git" = the propagated origin

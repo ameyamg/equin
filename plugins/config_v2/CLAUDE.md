@@ -133,11 +133,20 @@ Overwrites are **full copies**, not deltas: `setConfig` writes `{ ...currentValu
 
 ### Three-way merge (ancestor snapshot)
 
-"Keep my values" and "Accept new defaults" are all-or-nothing. The **Merge** resolver reconciles per field: only-user-changed keeps the user's value, only-upstream-changed takes the new default, and both-changed-differently is a true conflict left for manual resolution.
+"Keep my values" and "Accept new defaults" are all-or-nothing. The **Merge** resolver carries the user's override onto the new origin: what only the user changed is kept, what only the update changed is taken, and whatever it cannot decide stays a conflict.
 
 A three-way merge needs the **base** — the origin the override was written against — but only its hash lives in `// @hash`, and the user-layer origin is propagated by build, not versioned. So `propagate()` **snapshots the base at the conflict transition**: about to overwrite a user origin an *in-sync* override depends on (`oldOrigin.hash === override.hash && override.hash !== newHash`), it first writes the old origin to a sibling `<name>.ancestor.jsonc`. That predicate is idempotent — once the override is stale the hashes differ, so repeated builds never clobber the true base — and `propagateConfigToUser` deletes any orphaned ancestor on a no-conflict build.
 
-`threeWayMerge(base, ours, theirs)` (pure, `tier-logic.ts`) returns the merged document plus the truly-conflicting keys. `computeAllConflicts` attaches `trueConflictKeys` to the `kind: "hash"` entry when an ancestor exists; its presence is what makes the UI offer **Merge** (legacy conflicts with no ancestor fall back to binary Keep/Accept). `mergeConflictByPath` bumps the hash and deletes the ancestor when nothing truly conflicts; otherwise it keeps the stale hash so the conflict stays surfaced, and re-running Merge finalizes it. Every terminal resolution (acknowledge-conflict, delete-override) also deletes the ancestor.
+The capture covers `@app/<id>` scopes too (`propagateGitLayerDocument` hands each scope its own ancestor), and the build deletes a document's ancestor once it is out of conflict.
+
+**`mergeConfigDocument({ descriptor, base, yours, theirs })`** (pure, `core/internal/merge/`) is THE merge — the Merge button (`mergeConflictByPath`), the banner's `trueConflictKeys` (`computeDescriptorConflict`, via `mergeConflictFields`) and, later, auto-merge all run it, so they cannot disagree. It returns `{ status: "merged" | "conflict", document, decisions, reasons?, issues? }`:
+
+- **Completion first.** `yours` is `base ⊕ override` — a partial override (`{ "enabled": true }`) changed one key, it did not delete the others — and all three sides drop the `auto-` row ids `normalizeCollectionItems` seeds, so they don't read as a row deleted plus one added.
+- **Deep** (`deepMerge`, `deep-merge.ts`). Objects merge per key. Lists merge per row when every row has a unique key (`id` > `item` > `label` > the string itself); otherwise both sides changing one is a conflict (`unkeyed-list`). A row only one side added goes after its neighbour from that side. In a reorder tree's `items` the user's order wins; elsewhere both sides reordering differently is a conflict (`order`). The update removing something the user changed is a conflict (`delete-modify`).
+- **Both sides changed the same value**: the user's wins, listed as a `yours-won` decision. A key the user changed that neither the descriptor nor the new origin has is dropped and listed (`removed-dropped`).
+- **Schema gate.** The merged document must pass `descriptor.schema`, else it is a conflict with `issues`.
+
+`mergeConflictByPath` writes the merged document under the new hash and deletes the ancestor on `merged`; on `conflict` it writes nothing and returns the undecided top-level fields. Every terminal resolution (acknowledge-conflict, delete-override) also deletes the ancestor. `merge/corpus.test.ts` replays committed overrides restamped in `config/**` history (`merge-corpus.json`) and asserts none is left undecided, none gains a duplicate row or brings back a row either side deleted, and how many match the committed resolution. Design: [`research/2026-11-24-global-config-auto-merge.md`](../../research/2026-11-24-global-config-auto-merge.md).
 
 **Every config file carries a `// @hash` header** — the anchor conflict detection compares against. Origins, ancestors and committed files are written only by the build and the registry, so one without it is corrupt: `parseConfigFile` throws (the file store's `read` of an origin / ancestor, the git layer), and `setConfig` throws rather than write an override when no origin has been propagated.
 
@@ -536,6 +545,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `ConfigFileRef`
     - `ConfigGitLayerImpl`
     - `ConfigListVisitor`
+    - `ConfigMergeResult`
     - `ConfigMigration`
     - `ConfigProxy`
     - `ConfigSource`
@@ -552,8 +562,11 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `ConfigV2Values`
     - `ConfigValues`
     - `Disposable`
+    - `FieldDecision`
     - `GitLayerDocument`
     - `JsonValue`
+    - `MergeConflictReason`
+    - `MergePath`
     - `OriginDefaultsFrom`
     - `OrphanEntry`
     - `OrphanFile`
@@ -603,6 +616,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `hasReviewMarker`
     - `loadedProxy`
     - `mapConfigLists`
+    - `mergeConfigDocument`
+    - `mergeConflictFields`
     - `normalizeCollectionItems`
     - `orphanEntrySchema`
     - `orphanFileRoleSchema`
@@ -628,7 +643,6 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `setConfigField`
     - `storePathParts`
     - `stringifyConfigValue`
-    - `threeWayMerge`
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
@@ -660,7 +674,9 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `review/code-review`
     - `upstream`
 - Exemptions:
-  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/overrides-authored.ts` (debt)
+  - Exempts itself from:
+    - `check-thread-safety/no-blocking-check-work` — `check/overrides-authored.ts` (debt)
+    - `relocate:moved-plugins-unnamed` — `core/internal/merge/merge-corpus.json` (sanctioned)
 - Test helpers:
   - Server: `@plugins/config_v2/server/testing`
     - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.

@@ -13,7 +13,8 @@ import {
   loadedProxy,
   normalizeCollectionItems,
   readTypedConfig,
-  threeWayMerge,
+  mergeConfigDocument,
+  mergeConflictFields,
 } from "../../core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -1071,13 +1072,11 @@ export async function acknowledgeConflictByPath(
 }
 
 // Three-way merge resolution: reconcile a stale override against its origin
-// using the ancestor snapshot propagate() captured. Fields only one side changed
-// are auto-resolved; fields both sides changed differently are returned in
-// `conflictKeys` (left as the user's value, tentatively). When nothing truly
-// conflicts the override is rewritten against the current origin (resolved) and
-// the ancestor dropped; otherwise the stale hash is kept so the conflict stays
-// surfaced and re-running merge after the user resolves the remaining fields
-// finalizes it (idempotent — the same conflictKeys recur until resolved).
+// using the ancestor snapshot propagate() captured (`mergeConfigDocument`).
+// When the merge decides everything and the result passes the schema, the
+// override is rewritten against the current origin (resolved) and the ancestor
+// dropped; otherwise nothing is written and the top-level fields it could not
+// decide are returned in `conflictKeys` — the conflict stays surfaced.
 export async function mergeConflictByPath(
   storePath: string,
   opts: ConfigWriteOpts,
@@ -1108,22 +1107,31 @@ async function mergeConflictNow(
   if (!ow) throw new Error(`Cannot read override for "${storePath}"`);
   if (!originData) throw new Error(`Cannot read origin for "${storePath}"`);
 
-  const { merged, conflicts } = threeWayMerge(
-    base.content as Record<string, JsonValue>,
-    ow.content as Record<string, JsonValue>,
-    originData.content as Record<string, JsonValue>,
-  );
-  const normalized = normalizeCollectionItems(merged, descriptor.fields);
+  // The same merge the conflict banner's trueConflictKeys come from, over the
+  // override COMPLETED by its base (a partial override changed only its keys).
+  const result = mergeConfigDocument({
+    descriptor,
+    base: base.content,
+    yours: ow.content,
+    theirs: originData.content,
+  });
+  if (result.status === "conflict") {
+    // Nothing is written: the conflict stays surfaced as it was, and the user
+    // resolves it field by field (any edit rewrites the override against the
+    // current origin) or with Keep / Accept.
+    return { resolved: false, conflictKeys: mergeConflictFields(result) };
+  }
 
-  const resolved = conflicts.length === 0;
-  const hash = resolved ? computeHash(originData.content) : ow.hash;
   await editEntry(opts, entry, "merge-conflict", async () => {
-    await store.write(entry.files.override, normalized as JsonValue, hash);
-    if (resolved) await store.remove(entry.files.ancestor);
+    await store.write(
+      entry.files.override,
+      result.document as JsonValue,
+      computeHash(originData.content),
+    );
+    await store.remove(entry.files.ancestor);
     await refreshEntryNow(descriptor, entry);
   });
-
-  return { resolved, conflictKeys: conflicts };
+  return { resolved: true, conflictKeys: [] };
 }
 
 export async function deleteOverrideByPath(

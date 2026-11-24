@@ -255,6 +255,24 @@ describe("conflict resolution", () => {
       expect(lastEdits(1)).toEqual(["merge-conflict"]);
     }));
 
+  test("merge completes a partial override with its base instead of dropping the rest", () =>
+    run(async () => {
+      const ancestor = { enabled: true, title: "old" };
+      await seed(file(ALPHA, "ancestor"), ancestor);
+      await seed(
+        file(ALPHA, "override"),
+        { enabled: false },
+        computeHash(ancestor),
+      );
+      await reloadConfigDocument(ALPHA, "");
+      const result = await mergeConflictByPath(ALPHA, { writer });
+      expect(result).toEqual({ resolved: true, conflictKeys: [] });
+      expect((await read(file(ALPHA, "override")))?.content).toEqual({
+        enabled: false,
+        title: "committed",
+      });
+    }));
+
   test("delete-override drops the override and the ancestor", () =>
     run(async () => {
       await conflict();

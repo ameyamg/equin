@@ -17393,6 +17393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigFileRef`
       - `ConfigGitLayerImpl`
       - `ConfigListVisitor`
+      - `ConfigMergeResult`
       - `ConfigMigration`
       - `ConfigProxy`
       - `ConfigSource`
@@ -17409,8 +17410,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigV2Values`
       - `ConfigValues`
       - `Disposable`
+      - `FieldDecision`
       - `GitLayerDocument`
       - `JsonValue`
+      - `MergeConflictReason`
+      - `MergePath`
       - `OriginDefaultsFrom`
       - `OrphanEntry`
       - `OrphanFile`
@@ -17460,6 +17464,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hasReviewMarker`
       - `loadedProxy`
       - `mapConfigLists`
+      - `mergeConfigDocument`
+      - `mergeConflictFields`
       - `normalizeCollectionItems`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
@@ -17485,7 +17491,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `setConfigField`
       - `storePathParts`
       - `stringifyConfigValue`
-      - `threeWayMerge`
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
@@ -17517,7 +17522,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `review/code-review`
       - `upstream`
   - Exemptions:
-    - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/overrides-authored.ts` (debt)
+    - Exempts itself from:
+      - `check-thread-safety/no-blocking-check-work` — `check/overrides-authored.ts` (debt)
+      - `relocate:moved-plugins-unnamed` — `core/internal/merge/merge-corpus.json` (sanctioned)
   - Test helpers:
     - Server: `@plugins/config_v2/server/testing`
       - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
@@ -34479,8 +34486,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 174 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `config_v2` ×17
+            - Uses: 176 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `config_v2` ×19
               - `plugin-meta/parse-utils` ×17
               - `framework/plugin-id` ×13
               - `framework/tooling/checks/source-analysis` ×11

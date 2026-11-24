@@ -18,8 +18,8 @@ function isScoped(relPath: string): boolean {
 }
 
 // Role of an on-disk file, from its `.jsonc` suffix (longest first) and scope.
-// A scoped ancestor is never written (propagate captures ancestors for the base
-// layer only), so ancestor has no scoped variant.
+// An ancestor (the merge base propagate captures, base or `@app/<id>` scope)
+// has one role either way: nothing about an orphan depends on its scope.
 function fileRole(relPath: string): OrphanFileRole {
   const scoped = isScoped(relPath);
   if (relPath.endsWith(".origin.jsonc"))

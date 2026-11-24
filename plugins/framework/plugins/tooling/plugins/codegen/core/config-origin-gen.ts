@@ -20,7 +20,9 @@ import {
   readCommittedFilesSync,
   stringifyConfigValue,
   APP_SCOPE_DIR,
+  appScopeId,
   configFileOwner,
+  type ConfigDocRef,
 } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
 import type { FieldDef } from "@plugins/fields/core";
@@ -708,17 +710,26 @@ export async function propagateConfigToUser(opts: {
       );
     }
     // Sibling snapshot of the merge base, captured by propagate() when an
-    // in-sync override is about to go stale (see threeWayMerge / mergeConflict).
-    // No live base conflict — any leftover ancestor snapshot is orphaned
-    // (override reconciled or deleted out-of-band). Self-correcting cleanup so
-    // the file never lingers and can't seed a stale merge base on a future
-    // conflict.
-    const ancestorPath = joinAppPath(
-      userConfigDir,
-      configFileRelPath({ storePath, file: "ancestor" }),
-    );
-    const baseConflict = conflicts.some((ref) => ref.scopeId === undefined);
-    if (!baseConflict && existsSync(ancestorPath)) unlinkSync(ancestorPath);
+    // in-sync override is about to go stale (see mergeConfigDocument /
+    // mergeConflict). A document of this propagation with no live conflict has
+    // any leftover ancestor snapshot orphaned (override reconciled or deleted
+    // out-of-band). Self-correcting cleanup so the file never lingers and
+    // can't seed a stale merge base on a future conflict.
+    const propagatedRefs: ConfigDocRef[] = [
+      { storePath },
+      ...Object.keys(gitLayer.scopes).map((appId) => ({
+        storePath,
+        scopeId: appScopeId(appId),
+      })),
+    ];
+    for (const ref of propagatedRefs) {
+      if (conflicts.some((c) => c.scopeId === ref.scopeId)) continue;
+      const ancestorPath = joinAppPath(
+        userConfigDir,
+        configFileRelPath({ ...ref, file: "ancestor" }),
+      );
+      if (existsSync(ancestorPath)) unlinkSync(ancestorPath);
+    }
 
     const gitScopedAppIds = new Set(Object.keys(gitLayer.scopes));
     // Reconcile: a user scoped origin with NO git backing is a scope that was

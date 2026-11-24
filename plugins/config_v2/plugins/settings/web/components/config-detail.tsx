@@ -327,10 +327,10 @@ function ConfigDetailBody({
   const resetOverrideM = useEndpointMutation(deleteOverride);
   const removeScopeM = useEndpointMutation(removeDescriptorScope);
   // Merge is the one resolution whose success can leave the banner standing: when
-  // fields conflict on both sides it keeps the stale hash on purpose so the
-  // conflict stays surfaced. A spinner alone would read as "nothing happened", so
-  // report the outcome — how many fields it settled, and how many still need the
-  // user — from the response the endpoint already returns.
+  // the merge cannot decide a field it writes nothing, so the conflict stays
+  // surfaced. A spinner alone would read as "nothing happened", so report the
+  // outcome — and which fields still need the user — from the response the
+  // endpoint already returns.
   const mergeM = useEndpointMutation(mergeConflict, {
     onSuccess: ({ resolved, conflictKeys }) => {
       toast(
@@ -346,7 +346,7 @@ function ConfigDetailBody({
               type: "config-conflict-merge-partial",
               category: "other",
               title: `${conflictKeys.length} field${conflictKeys.length === 1 ? "" : "s"} still need${conflictKeys.length === 1 ? "s" : ""} your attention`,
-              description: `Merged the rest. Resolve ${conflictKeys.join(", ")} below, then merge again.`,
+              description: `Nothing was changed. Resolve ${conflictKeys.join(", ")} below, then merge again.`,
               variant: "warning",
             },
       );

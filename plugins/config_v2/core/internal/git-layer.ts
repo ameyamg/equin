@@ -190,7 +190,7 @@ export function readCommittedFilesSync(
  * seeding itself (over memory), so the two cannot disagree: the base becomes the
  * user origin (`propagate`, capturing the merge base into the ancestor at the
  * conflict transition), and each committed `@app/<id>` scope becomes that
- * scope's user origin. Returns the documents whose user override was written
+ * scope's user origin, with its own ancestor captured the same way. Returns the documents whose user override was written
  * against a different upstream (a conflict the caller reports).
  */
 export function propagateGitLayerDocument(
@@ -217,6 +217,8 @@ export function propagateGitLayerDocument(
         readonlyProxy(scoped),
         proxyOf({ ...ref, file: "origin" }),
         proxyOf({ ...ref, file: "override" }),
+        // A scoped override is merged like a base one, so it gets a merge base too.
+        proxyOf({ ...ref, file: "ancestor" }),
       ).conflict
     ) {
       conflicts.push(ref);

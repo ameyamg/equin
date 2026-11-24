@@ -55,7 +55,6 @@ export {
   effective,
   hasConflict,
   propagate,
-  threeWayMerge,
   readTypedConfig,
   readTypedConfigWithLayer,
   validationIssues,
@@ -79,6 +78,16 @@ export {
   parseOverrideFile,
 } from "./internal/config-file";
 export { createMemoryConfigStore } from "./internal/memory-store";
+export {
+  mergeConfigDocument,
+  mergeConflictFields,
+} from "./internal/merge/merge-document";
+export type { ConfigMergeResult } from "./internal/merge/merge-document";
+export type {
+  FieldDecision,
+  MergeConflictReason,
+  MergePath,
+} from "./internal/merge/deep-merge";
 export {
   configFileRelPath,
   parseConfigFileRelPath,

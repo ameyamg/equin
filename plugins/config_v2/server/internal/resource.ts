@@ -14,7 +14,8 @@ import {
   hasConflict,
   validationIssues,
   effective,
-  threeWayMerge,
+  mergeConfigDocument,
+  mergeConflictFields,
   readTypedConfigWithLayer,
   scopeAppId,
   loadedProxy,
@@ -28,7 +29,7 @@ import type {
   ConfigV2ConflictMap,
   ConfigV2ModifiedCounts,
 } from "../../core";
-import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
+import type { ConfigDescriptor, ConfigValues } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { documentFiles } from "./scope-paths";
 import { documentStamp } from "./document-stamp";
@@ -323,19 +324,21 @@ async function computeDescriptorConflict(
       : (descriptor.defaults as Record<string, unknown>);
 
     // When propagate captured a merge base (`<name>.ancestor.jsonc`), a
-    // three-way merge is available: compute which fields truly conflict (both
-    // sides changed differently) so the UI can offer Merge and flag only those
-    // fields. A corrupt ancestor fails loud here exactly like a corrupt
-    // origin/override above — consistent with how this treats its inputs.
+    // three-way merge is available: the fields it cannot decide (the same
+    // `mergeConfigDocument` the Merge button runs, so the two cannot disagree)
+    // are flagged, and the UI offers Merge. A corrupt ancestor fails loud here
+    // exactly like a corrupt origin/override above.
     let trueConflictKeys: string[] | undefined;
     const ancestor = await store.read(files.ancestor);
-    if (ancestor !== null) {
-      const base = ancestor.content as Record<string, JsonValue>;
-      trueConflictKeys = threeWayMerge(
-        base,
-        overrideValues as Record<string, JsonValue>,
-        originValues as Record<string, JsonValue>,
-      ).conflicts;
+    if (ancestor !== null && overrideData !== null && originData !== null) {
+      trueConflictKeys = mergeConflictFields(
+        mergeConfigDocument({
+          descriptor,
+          base: ancestor.content,
+          yours: overrideData.content,
+          theirs: originData.content,
+        }),
+      );
     }
 
     return {
