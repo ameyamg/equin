@@ -22,3 +22,4 @@ export { DECISION_TAB_OPTIONS, DECISION_TABS } from "./internal/tab";
 export type { DecisionTab } from "./internal/tab";
 export { decisionExchanges, decisionsList } from "./internal/live";
 export type { DecisionExchangeRow, DecisionRow } from "./internal/live";
+export { markDecisionSeenEndpoint } from "./internal/endpoints";

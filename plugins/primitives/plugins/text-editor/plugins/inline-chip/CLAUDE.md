@@ -197,6 +197,7 @@ might show one.
     - `InlineChip.Tag` ← `active-data.task-link`
     - `InlineChip.Tag` ← `hints.ask`
     - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
+    - `InlineChip.Tag` ← `tasks.decisions.inbox`
   - Uses:
     - `primitives/dom/copy-source-text.copiesAsText`
     - `primitives/error-boundary.PluginErrorBoundary`

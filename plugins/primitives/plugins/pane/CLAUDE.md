@@ -922,9 +922,9 @@ out of the way: **what it opens takes its column**.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 104 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×104
-  - Contributes: 135 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 105 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×105
+  - Contributes: 137 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -969,6 +969,8 @@ out of the way: **what it opens takes its column**.
     - `debug-boot-profile-detail.actions` "title" → `PaneTitleItem`
     - `debug-boot-profile.actions` "title" → `PaneTitleItem`
     - `debug-boot-profiles-list.actions` "title" → `PaneTitleItem`
+    - `decisionDetailPane.Actions` "title" → `PaneTitleItem`
+    - `decisionsPane.Actions` "title" → `PaneTitleItem`
     - `demoPane.Actions` "title" → `PaneTitleItem`
     - `dependencies.actions` "title" → `PaneTitleItem`
     - `deploy-activity.actions` "title" → `PaneTitleItem`
@@ -1233,12 +1235,12 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 217 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 218 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×77
     - `conversations` ×33
     - `debug` ×29
     - `active-data` ×14
-    - `tasks` ×10
+    - `tasks` ×11
     - `primitives` ×9
     - `apps-core` ×7
     - `plugin-meta` ×6

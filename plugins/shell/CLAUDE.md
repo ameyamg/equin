@@ -18,6 +18,7 @@
     - `Shell.Sidebar` ← `conversations.runtime-sdk`
     - `Shell.Sidebar` ← `stats`
     - `Shell.Sidebar` ← `tasks.automations`
+    - `Shell.Sidebar` ← `tasks.decisions.inbox`
     - `Shell.Sidebar` ← `tasks.supervisor-roles.pane`
     - `Shell.Sidebar` ← `tasks.task-detail`
   - Uses: `primitives/slot-render.defineRenderSlot`
@@ -32,6 +33,7 @@
     - `conversations/runtime-sdk`
     - `stats`
     - `tasks/automations`
+    - `tasks/decisions/inbox`
     - `tasks/supervisor-roles/pane`
     - `tasks/task-detail`
 - Sub-plugins:

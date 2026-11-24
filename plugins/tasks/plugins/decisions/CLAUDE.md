@@ -80,12 +80,36 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
 
 ## Plugin reference
 
-- Description: Agent decisions, web half: registers the dec and dex id kinds. The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins, in later phases. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open (a closed decision accepts only notes and replies unless the call reopens it).
+- Description: Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen. The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open (a closed decision accepts only notes and replies unless the call reopens it); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
 - Web:
   - Contributes:
     - `IdKinds.Kind` "dec"
     - `IdKinds.Kind` "dex"
-  - Uses: `ids.IdKinds`
+  - Uses:
+    - `apps-core/tabs.useSurfaceShown`
+    - `ids.IdKinds`
+    - `infra/endpoints.useEndpointMutation`
+    - `network/live.rowOrStale`
+    - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/card.Card`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/spacing.selfClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/loading.Loading`
+    - `primitives/markdown.Markdown`
+    - `primitives/relative-time.RelativeTime`
+  - Exports (types): `DecisionPresentation`
+  - Exports (values):
+    - `DecisionCard`
+    - `decisionPresentation`
+    - `NewMark`
+    - `useMarkDecisionSeen`
 - Server:
   - Contributes:
     - `ids.kind` "dec"
@@ -105,6 +129,8 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `history/engine.defineHistorySource`
     - `history/engine.recordVersion`
     - `ids.IdKinds`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/mcp.Mcp`
@@ -133,6 +159,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `decisions.list:count` (push)
     - `decisions.list:groups` (push)
     - `decisions.list:rows` (keyed, point)
+  - Routes: `POST /api/decisions/:decisionId/seen`
 - Core:
   - Uses:
     - `conversations/turn-ledger.turnIdKind`
@@ -147,6 +174,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `ids.defineIdKind`
     - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `packages/list-bound.cappedList`
@@ -178,8 +206,13 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `decisionsList`
     - `EXCHANGE_KINDS`
     - `EXCHANGES_PER_DECISION_MAX`
+    - `markDecisionSeenEndpoint`
     - `OPEN_DECISION_STATES`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --info`
+  - Imported by: `tasks/decisions/inbox`
 - Sub-plugins:
   - **`capability`** — The decisions.open mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through decisions, which imports…
+  - **`inbox`** — The Decisions inbox in the agent manager, read-only: the Decisions sidebar entry with the count of decisions that need the user (a grouping of the derived tab), the decisions pane — one view bar…
 
 <!-- AUTOGENERATED:END -->

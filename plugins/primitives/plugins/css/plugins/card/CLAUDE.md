@@ -57,13 +57,13 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --pad-card`
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
     - `page` ×3
     - `primitives` ×3
+    - `tasks` ×3
     - `conversations` ×2
     - `debug` ×2
-    - `tasks` ×2
     - `active-data/task`
     - `plugin-meta/exhibits`
     - `review/plugin-changes`

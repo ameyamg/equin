@@ -1,4 +1,4 @@
-// @hash 1c66794d496c
+// @hash aa6ddf088d18
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -50,6 +50,7 @@
   "items": [
     "apps.agent-manager.welcome:new-conversation",
     "tasks.task-detail:tasks",
+    "tasks.decisions.inbox:decisions",
     "tasks.supervisor-roles.pane:supervisors",
     {
       "type": "header",

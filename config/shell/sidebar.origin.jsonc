@@ -1,4 +1,4 @@
-// @hash 1c66794d496c
+// @hash aa6ddf088d18
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -14,6 +14,7 @@
     "conversations.runtime-sdk:claude-account",
     "stats:stats",
     "tasks.automations:automations",
+    "tasks.decisions.inbox:decisions",
     "tasks.supervisor-roles.pane:supervisors",
     "tasks.task-detail:tasks"
   ]

@@ -25,9 +25,9 @@
     - `AGENT_MANAGER_READY_ATTR`
     - `agentManagerApp`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×18
-    - `tasks` ×8
+    - `tasks` ×9
     - `apps` ×5
     - `stats` ×2
     - `active-data/plugin-link`

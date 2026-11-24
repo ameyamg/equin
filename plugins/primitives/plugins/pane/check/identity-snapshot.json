@@ -343,6 +343,18 @@
       "parent": null
     },
     {
+      "paneId": "decision-detail",
+      "segment": "decision/:decisionId",
+      "appIndex": false,
+      "parent": "decisions"
+    },
+    {
+      "paneId": "decisions",
+      "segment": "decisions",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "dependencies",
       "segment": "dependencies",
       "appIndex": false,
