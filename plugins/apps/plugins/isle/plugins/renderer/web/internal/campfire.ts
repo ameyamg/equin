@@ -1,12 +1,14 @@
 // The campfire's secrets, beside easter-eggs.ts and surprises.ts: the fire
 // burning low in the small hours and flaring up at dawn (by the real clock),
 // sparks when it is clicked (and fireworks when it is clicked five times
-// running), the hero toasting a marshmallow when left standing by it at night,
-// and the villagers gathering round it at night to tell stories. Pure drawing,
+// running), and one of two things a night (`firesideNight`): the hero toasting
+// a marshmallow when left standing by it, or the villagers gathering round it
+// to tell stories. Pure drawing,
 // timing and lines; the engine says where the fire is, who stands where, and
 // walks them.
 
 import type { Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
+import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import { put, type Ctx, type Rnd, type Sprite } from "./kit";
 
 // ---------------------------------------------------------------- the clock
@@ -38,6 +40,35 @@ export function fireStrength(h: number): number {
 
 /** Whether the fire is flaring (spitting sparks by itself). */
 export const flaring = (strength: number): boolean => strength > 1.2;
+
+// ---------------------------------------------------------------- what the night holds
+
+/**
+ * What happens round the fire on a night — one thing a night, never both at
+ * once (their lines would talk over each other round the same stones):
+ * `stories` — the villagers gather round it and tell stories, welcoming the
+ * hero; `marshmallow` — the villagers stay home and the hero, left standing by
+ * the fire, toasts marshmallows.
+ */
+export type FiresideNight = "stories" | "marshmallow";
+
+const FIRESIDE_NIGHTS: readonly FiresideNight[] = ["stories", "marshmallow"];
+
+/**
+ * The night `d` falls in, as its evening's local date (`2026-11-24` from noon
+ * on the 24th until noon on the 25th), so the small hours belong to the
+ * evening before.
+ */
+export function nightOf(d: Date): string {
+  const e = new Date(d.getTime() - 12 * 3600_000);
+  const mm = String(e.getMonth() + 1).padStart(2, "0");
+  const dd = String(e.getDate()).padStart(2, "0");
+  return `${e.getFullYear()}-${mm}-${dd}`;
+}
+
+/** What the fire holds the night `d` falls in: the same all night, and on every reload. */
+export const firesideNight = (d: Date): FiresideNight =>
+  FIRESIDE_NIGHTS[hash53(`fireside|${nightOf(d)}`) % FIRESIDE_NIGHTS.length]!;
 
 // ---------------------------------------------------------------- the flames
 

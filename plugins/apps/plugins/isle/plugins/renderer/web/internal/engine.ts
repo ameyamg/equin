@@ -99,6 +99,8 @@ import {
   clockHours,
   drawFlames,
   FireClicks,
+  firesideNight,
+  type FiresideNight,
   fireStrength,
   flaring,
   Marshmallow,
@@ -427,6 +429,8 @@ export class IsleEngine {
   private readonly fireClicks = new FireClicks();
   private readonly marshmallow = new Marshmallow(this.rnd);
   private readonly storyteller = new Storyteller(this.rnd);
+  /** What the fire holds tonight — stories or marshmallows, one a night (read at nightfall). */
+  private fireside: FiresideNight = firesideNight(new Date());
   /** How high the fire burns (by the clock, re-read every few seconds), and when it was read. */
   private fire = { strength: 1, readAt: -Infinity, sparkAt: 0 };
   private serpent: Serpent | null = null;
@@ -831,7 +835,10 @@ export class IsleEngine {
       };
     }
     this.time = time;
-    if (time === "night") this.wolf.nightfall();
+    if (time === "night") {
+      this.wolf.nightfall();
+      this.fireside = firesideNight(new Date());
+    }
     // every painted building and every tile's object layer (lamps, buildings) is per time of day
     this.art.stop();
     this.art = this.newArt();
@@ -2165,6 +2172,7 @@ export class IsleEngine {
     const ready =
       !!camp &&
       this.time === "night" &&
+      this.fireside === "marshmallow" &&
       this.started &&
       hero.placed &&
       !hero.walking &&
@@ -3666,8 +3674,10 @@ export class IsleEngine {
 
   private walkVillagers(dt: number, t: number, night: boolean): void {
     const camp = this.layout?.squares.find((q) => q.camp) ?? null;
+    // the villagers gather round the fire only on a night of stories
+    const gathering = night && this.fireside === "stories";
     this.villagers.forEach((v, i) =>
-      this.walkVillager(v, i, camp, dt, t, night),
+      this.walkVillager(v, i, camp, dt, t, night, gathering),
     );
     if (camp) this.tellStories(camp, t);
   }
@@ -3679,11 +3689,12 @@ export class IsleEngine {
     dt: number,
     t: number,
     night: boolean,
+    gathering: boolean,
   ): void {
     const rnd = this.rnd;
     // round the fire at night: facing it, listening (or telling) — not stopping for the hero
     // (nor on the way there: the fire welcomes them)
-    if (v.gather?.kind === "seated" && camp && night) {
+    if (v.gather?.kind === "seated" && camp && gathering) {
       v.walking = false;
       v.speed = 0;
       this.turnTo(v, camp.x - v.x, camp.y - v.y, dt * 6);
@@ -3709,7 +3720,7 @@ export class IsleEngine {
       return;
     }
     if (!v.route) return;
-    if (this.gatherStep(v, i, camp, dt, night)) return;
+    if (this.gatherStep(v, i, camp, dt, gathering)) return;
     if (v.wait > 0) {
       v.wait -= dt;
       v.walking = false;
@@ -3730,9 +3741,9 @@ export class IsleEngine {
   }
 
   /**
-   * A route-walking villager's night round the campfire: at night it walks
-   * (A*) to its place round the fire and stays; once the night is over it
-   * walks back to where it left its route. True while that walk (or the stay)
+   * A route-walking villager's night round the campfire: on a night of
+   * stories it walks (A*) to its place round the fire and stays; once the
+   * night is over it walks back to where it left its route. True while that walk (or the stay)
    * is what it does instead of its route.
    */
   private gatherStep(
@@ -3740,11 +3751,11 @@ export class IsleEngine {
     i: number,
     camp: Square | null,
     dt: number,
-    night: boolean,
+    gathering: boolean,
   ): boolean {
     const grid = this.grid;
     const G = v.gather;
-    if (night && camp && grid) {
+    if (gathering && camp && grid) {
       if (!G || G.kind === "leaving") {
         const seat = seatAround(camp.x, camp.y, i, this.villagers.length);
         const path = findPath(grid, v.x, v.y, seat[0], seat[1]);

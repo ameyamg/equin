@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import {
   FIRE_CLICKS_FOR_FIREWORKS,
   FireClicks,
+  firesideNight,
   fireStrength,
   flaring,
+  nightOf,
   Marshmallow,
   seatAround,
   Storyteller,
@@ -108,5 +110,26 @@ describe("Storyteller", () => {
     expect(s.next(0, 1, -Infinity, false)).toBeNull();
     expect(s.next(1, 1, -Infinity, true)?.who).toBe(0);
     expect(s.next(5, 1, -Infinity, true)).toBeNull();
+  });
+});
+
+describe("firesideNight", () => {
+  test("the small hours belong to the evening before", () => {
+    expect(nightOf(new Date(2026, 10, 24, 21))).toBe("2026-11-24");
+    expect(nightOf(new Date(2026, 10, 25, 3))).toBe("2026-11-24");
+    expect(nightOf(new Date(2026, 10, 25, 13))).toBe("2026-11-25");
+  });
+  test("one thing all night long", () => {
+    const evening = firesideNight(new Date(2026, 10, 24, 19));
+    for (const h of [20, 23, 26, 29, 33])
+      expect(firesideNight(new Date(2026, 10, 24, h))).toBe(evening);
+  });
+  test("both come round, night after night", () => {
+    const seen = new Set(
+      Array.from({ length: 30 }, (_, i) =>
+        firesideNight(new Date(2026, 0, 1 + i, 22)),
+      ),
+    );
+    expect([...seen].sort()).toEqual(["marshmallow", "stories"]);
   });
 });
