@@ -156,7 +156,7 @@ never be clobbered.
     - `ui/tokens/overlay --overlay-enter-duration`
     - `ui/tokens/overlay --overlay-enter-easing`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `primitives` ×8
     - `page` ×4
@@ -167,6 +167,7 @@ never be clobbered.
     - `debug/queue`
     - `fields/json/config`
     - `hints/ask`
+    - `search/find-in-surface`
     - `shell/notifications`
     - `stats`
     - `tasks/supervisor-roles/spend`

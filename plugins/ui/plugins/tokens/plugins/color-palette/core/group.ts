@@ -396,6 +396,24 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     darkDefault: "oklch(0.62 0.16 255 / 0.5)",
     label: "Text selection",
   },
+  // Find-in-page matches (`search/find-in-surface`): every match a translucent
+  // amber wash, the current one solid amber with dark ink — the convention
+  // readers know from every browser's find, and distinct from the blue of a
+  // text selection, so a match is never mistaken for selected text.
+  findMatch: {
+    default: "oklch(0.86 0.15 90 / 0.45)",
+    darkDefault: "oklch(0.8 0.14 85 / 0.32)",
+    label: "Find match",
+  },
+  findMatchActive: {
+    default: "oklch(0.8 0.17 75)",
+    darkDefault: "oklch(0.83 0.15 82)",
+    label: "Find match (current)",
+  },
+  findMatchActiveForeground: {
+    default: "oklch(0.2 0.03 75)",
+    label: "Find match (current) text",
+  },
 });
 
 export type ColorPaletteTokenValues = {

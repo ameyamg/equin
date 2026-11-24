@@ -313,6 +313,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`search`** — Umbrella for the reusable full-text search primitive: the indexed search engine substrate and the reusable quick-find UI.
   - Plugins:
     - **`engine`** — Domain-agnostic indexed full-text search substrate: search_documents table (tsvector GIN), generic index API, the live search.results typed-query value, and the GET /api/search endpoint.
+    - **`find-in-surface`** — Ctrl+F inside one surface: <FindScope> around a <FindRoot> (the searched region, as drawn — no box of its own) and a <FindBar label> (pinned top-right in a non-scrolling overlay). Every match…
     - **`quick-find`** — Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (each result a link, injected via resultActivation).
 
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.

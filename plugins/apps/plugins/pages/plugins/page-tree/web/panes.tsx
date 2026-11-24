@@ -52,6 +52,11 @@ import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { PageCover } from "./components/page-cover";
 import { PageDetail } from "./slots";
 import {
+  FindBar,
+  FindRoot,
+  FindScope,
+} from "@plugins/search/plugins/find-in-surface/web";
+import {
   useBlockTarget,
   useBlockTargetTitle,
   useBlockTypeLabel,
@@ -261,10 +266,28 @@ function PageSurface({
     // `PageDetail.Overlay`, which PaneChrome renders as a SIBLING of the
     // scroller — outside the editor's subtree. This is the common ancestor of
     // the editor that publishes the block grid and the rail that reads it.
+    //
+    // Ctrl+F searches the pane's content as drawn (title, blocks, sections);
+    // its bar floats in the same overlay layer as the rail, so it stays put
+    // while the page scrolls under it.
     <blockContentScope.Provider>
-      <PaneChrome pane={pane} overlay={overlay}>
-        <PageNavigationProvider value={nav}>{children}</PageNavigationProvider>
-      </PaneChrome>
+      <FindScope>
+        <PaneChrome
+          pane={pane}
+          overlay={
+            <>
+              {overlay}
+              <FindBar label="Find in page" />
+            </>
+          }
+        >
+          <FindRoot>
+            <PageNavigationProvider value={nav}>
+              {children}
+            </PageNavigationProvider>
+          </FindRoot>
+        </PaneChrome>
+      </FindScope>
     </blockContentScope.Provider>
   );
 }

@@ -195,7 +195,7 @@ it, so an id means the same thing wherever it is clicked.
     - `pageDetailPane.Actions` "page-menu" → `PageMenuAction`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 105 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 108 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `page/editor` ×8
     - `primitives/data-view` ×8
@@ -206,6 +206,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/overlay/image-viewer` ×4
     - `network/live` ×3
     - `primitives/breadcrumb` ×3
+    - `search/find-in-surface` ×3
     - `apps/pages/shell` ×2
     - `page/read-only-view` ×2
     - `primitives/collapsible` ×2

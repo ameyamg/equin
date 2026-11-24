@@ -267,6 +267,8 @@ export const LUCIDE_MAP = {
   mail: "mail",
   map: "map",
   markdown: "square-letter-m",
+  "match-case": "case-sensitive",
+  "match-word": "whole-word",
   memory: "cpu",
   menu: "menu",
   "menu-book": "book-open",

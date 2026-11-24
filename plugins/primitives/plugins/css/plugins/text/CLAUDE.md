@@ -287,7 +287,7 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/type-scale` ×37
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family` ×2
-  - Imported by: 442 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 443 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×113
     - `conversations` ×85
     - `primitives` ×48
@@ -315,11 +315,11 @@ to reconcile them; they never needed reconciling.
     - `hints` ×2
     - `map` ×2
     - `screenshot` ×2
+    - `search` ×2
     - `history/dialog`
     - `layouts/route-fallback`
     - `media/player`
     - `music/background`
-    - `search/quick-find`
     - `tag-tree/picker`
     - `upstream`
     - `wish`

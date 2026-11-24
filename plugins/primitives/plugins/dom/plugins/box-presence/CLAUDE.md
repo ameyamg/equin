@@ -39,6 +39,7 @@ suites went red. So the read has one home:
     - `primitives/css/ui-kit`
     - `primitives/dom/auto-scroll`
     - `primitives/ui-context/element-picker`
+    - `search/find-in-surface`
 - Exemptions:
   - Exempts itself from: `box-presence/no-raw-box-presence` — `web/internal/generates-box.ts` (sanctioned)
   - Exempted by:

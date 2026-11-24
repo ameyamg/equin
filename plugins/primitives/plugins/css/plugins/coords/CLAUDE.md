@@ -161,7 +161,7 @@ default is stated twice and can therefore drift.
     - `placedClasses`
     - `placedStyle`
 - Cross-plugin:
-  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
     - `primitives` ×12
     - `debug` ×3
@@ -172,6 +172,7 @@ default is stated twice and can therefore drift.
     - `apps-core/phone-actions`
     - `conversations/before-after`
     - `map`
+    - `search/find-in-surface`
     - `shell/notifications`
     - `tasks/supervisor-roles/spend`
 

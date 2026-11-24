@@ -7524,7 +7524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pageDetailPane.Actions` "page-menu" → `PageMenuAction`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 105 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 108 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/css/ui-kit` ×14
               - `page/editor` ×8
               - `primitives/data-view` ×8
@@ -7535,6 +7535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/image-viewer` ×4
               - `network/live` ×3
               - `primitives/breadcrumb` ×3
+              - `search/find-in-surface` ×3
               - `apps/pages/shell` ×2
               - `page/read-only-view` ×2
               - `primitives/collapsible` ×2
@@ -52423,7 +52424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×12
               - `debug` ×3
@@ -52434,6 +52435,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/phone-actions`
               - `conversations/before-after`
               - `map`
+              - `search/find-in-surface`
               - `shell/notifications`
               - `tasks/supervisor-roles/spend`
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
@@ -52449,7 +52451,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×52
               - `primitives` ×34
               - `conversations` ×28
@@ -52464,12 +52466,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×3
               - `build` ×2
               - `hints` ×2
+              - `search` ×2
               - `active-data/go`
               - `apps-core/app-launcher`
               - `auth`
               - `companions/panel`
               - `music/background`
-              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -52811,7 +52813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×21
               - `apps` ×17
               - `page` ×9
@@ -52824,6 +52826,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/exhibits`
               - `reorder/editor`
               - `screenshot/draw-on-app`
+              - `search/find-in-surface`
               - `shell/notifications`
               - `ui/tab-bar`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error). Declares only block padding: its inline edge is the region's (on the rows' text edge in a row host), so a spot with nothing padding it needs an owner, never an inset on the Placeholder.
@@ -52926,7 +52929,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 153 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 154 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×37
               - `conversations` ×29
               - `primitives` ×21
@@ -52947,6 +52950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth`
               - `hints/ask`
               - `reorder/node-types/header`
+              - `search/find-in-surface`
               - `stats/commits`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
@@ -53155,7 +53159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 463 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 464 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×81
               - `primitives` ×55
@@ -53183,12 +53187,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts` ×2
               - `music` ×2
               - `screenshot` ×2
+              - `search` ×2
               - `hints/ask`
               - `history/dialog`
               - `map/google`
               - `network/live/live-state`
               - `reports/launch-fix`
-              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
               - `wish`
@@ -53315,7 +53319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/overlay --overlay-enter-duration`
               - `ui/tokens/overlay --overlay-enter-easing`
               - `ui/tokens/shadow --shadow`
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×8
               - `page` ×4
@@ -53326,6 +53330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/queue`
               - `fields/json/config`
               - `hints/ask`
+              - `search/find-in-surface`
               - `shell/notifications`
               - `stats`
               - `tasks/supervisor-roles/spend`
@@ -53393,7 +53398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 443 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×85
               - `primitives` ×48
@@ -53421,11 +53426,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints` ×2
               - `map` ×2
               - `screenshot` ×2
+              - `search` ×2
               - `history/dialog`
               - `layouts/route-fallback`
               - `media/player`
               - `music/background`
-              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
               - `wish`
@@ -53725,7 +53730,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 485 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 486 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
               - `conversations` ×54
@@ -53752,6 +53757,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts` ×2
               - `music` ×2
               - `screenshot` ×2
+              - `search` ×2
               - `stats` ×2
               - `wish` ×2
               - `audience/developer-mark`
@@ -53761,7 +53767,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `media/player`
               - `network/live/live-state`
               - `reports/popover-anchor-lost`
-              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
           - Exemptions:
@@ -55388,13 +55393,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
               - `primitives` ×9
               - `apps` ×8
               - `conversations` ×4
               - `apps-core/tab-surface`
               - `layouts/miller`
               - `page/editor`
+              - `search/find-in-surface`
               - `stats`
           - Exemptions:
             - Exempts itself from:
@@ -55419,6 +55425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit`
               - `primitives/dom/auto-scroll`
               - `primitives/ui-context/element-picker`
+              - `search/find-in-surface`
           - Exemptions:
             - Exempts itself from: `box-presence/no-raw-box-presence` — `web/internal/generates-box.ts` (sanctioned)
             - Exempted by:
@@ -55745,16 +55752,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×16
               - `page` ×6
               - `conversations` ×4
               - `apps-core` ×2
+              - `search` ×2
               - `hints`
               - `layouts/miller`
               - `media/player`
-              - `search/quick-find`
               - `tag-tree/picker`
           - Exemptions:
             - Exempts itself from:
@@ -56556,7 +56563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×48
           - `primitives` ×23
           - `conversations` ×21
@@ -56579,6 +56586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `music/background`
           - `network/live/live-state`
           - `plugin-meta/exhibits`
+          - `search/find-in-surface`
           - `tag-tree/picker`
           - `upstream`
           - `wish/element-picker`
@@ -56697,7 +56705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×38
           - `primitives` ×27
           - `conversations` ×13
@@ -56710,6 +56718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core` ×2
           - `infra` ×2
           - `screenshot` ×2
+          - `search` ×2
           - `active-data/task`
           - `build`
           - `hints/ask`
@@ -56717,7 +56726,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `map`
           - `media/player`
           - `reorder/editor`
-          - `search/quick-find`
           - `shell/global-action-bar`
           - `tag-tree/picker`
           - `wish`
@@ -56777,7 +56785,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×35
           - `apps` ×26
           - `page` ×5
@@ -56797,6 +56805,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `music/background`
           - `reorder`
           - `screenshot`
+          - `search/find-in-surface`
           - `tasks/supervisor-roles/spend`
           - `ui/icons/sprites`
       - Exemptions:
@@ -59236,6 +59245,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser`
               - `conversations/conversation-view/jsonl-viewer`
               - `page/editor`
+              - `search/find-in-surface`
         - **`host-election`** — Which mounted root host of a page-global service runs: useElectedHost(service) — for a `scope: "each"` root host whose engine is ONE per page (a hints tour, the background music), mounted at the page root and in every `<PluginScope>`. Every mounted host registers under its service; exactly one is elected: the page's when the page holds the plugin, else the first scope's (the standalone website, which holds the plugin only for its demo's scope). A static render registers nothing and elects no one.
           - Cross-plugin:
             - Imported by:
@@ -59517,7 +59527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShortcuts`
           - `useSurfaceSignal`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×15
           - `primitives` ×10
           - `apps-core` ×2
@@ -59526,6 +59536,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints`
           - `layouts/miller`
           - `media/player`
+          - `search/find-in-surface`
       - Exemptions:
         - Exempts itself from:
           - `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
@@ -62963,6 +62974,49 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/content-search`
           - `search/quick-find`
+    - **`find-in-surface`** — Ctrl+F inside one surface: <FindScope> around a <FindRoot> (the searched region, as drawn — no box of its own) and a <FindBar label> (pinned top-right in a non-scrolling overlay). Every match painted with the CSS Custom Highlight API (the DOM is never touched), the current one distinct and scrolled into view, a mark per match on the scroller's edge; match case / whole word; a line break in the query matches a line break on screen (Shift+Enter types one). Enter or ↓ on the last line: next; ↑ on the first line: previous; ⌘G / ⇧⌘G; Esc closes. The key goes to the region holding focus, else the one last pressed in, else the only visible one — none, and the browser's own find opens.
+      - Web:
+        - Uses: 21 symbols — full list in [`plugins/search/plugins/find-in-surface/REFERENCE.md`](../plugins/search/plugins/find-in-surface/REFERENCE.md)
+          - `primitives/kept-state` ×3
+          - `primitives/css/ui-kit` ×2
+          - `primitives/dom/scroll-reveal` ×2
+          - `primitives/css/coords.Placed`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/surface.Surface`
+          - `primitives/css/text.Text`
+          - `primitives/dom/auto-scroll.findScrollParent`
+          - `primitives/dom/box-presence.generatesBox`
+          - `primitives/icon-button.IconButton`
+          - `primitives/latest-ref.useLatestRef`
+          - `primitives/scope/dom-scope.defineDomScope`
+          - `primitives/shortcuts.useSurfaceShortcuts`
+          - `ui/icons.Icon`
+        - Exports (types): `FindBarProps`
+        - Exports (values):
+          - `FindBar`
+          - `FindRoot`
+          - `FindScope`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --find-match`
+          - `ui/tokens/color-palette --find-match-active`
+          - `ui/tokens/color-palette --find-match-active-foreground`
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/density --control-height-sm`
+          - `ui/tokens/density --space-2xs`
+        - Imported by: `apps/pages/page-tree`
+      - Core:
+        - Exports (types):
+          - `FindOptions`
+          - `PartPoint`
+          - `TextPart`
+        - Exports (values):
+          - `endPoint`
+          - `findPattern`
+          - `startPoint`
     - **`quick-find`** — Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (each result a link, injected via resultActivation).
       - Web:
         - Uses: 21 symbols — full list in [`plugins/search/plugins/quick-find/REFERENCE.md`](../plugins/search/plugins/quick-find/REFERENCE.md)
@@ -67776,7 +67830,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 609 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 610 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×124
           - `primitives` ×54
@@ -67806,6 +67860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations` ×2
           - `map` ×2
           - `screenshot` ×2
+          - `search` ×2
           - `fullscreen`
           - `layouts/miller`
           - `media/player`
@@ -67813,7 +67868,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state`
           - `phone-window`
           - `runs/run-outcome`
-          - `search/quick-find`
           - `stats`
           - `tag-tree/picker`
           - `upstream`
@@ -69121,7 +69175,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 563 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 564 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×125
               - `conversations` ×96
               - `primitives` ×81
@@ -69149,6 +69203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations` ×2
               - `runs` ×2
               - `screenshot` ×2
+              - `search` ×2
               - `audience/developer-mark`
               - `database/query-deadline`
               - `framework/web-core`
@@ -69158,7 +69213,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `music/chord-box`
               - `network/live/live-state`
               - `release/runs-arm`
-              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
               - `wish`
@@ -69279,7 +69333,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 364 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 365 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×74
               - `primitives` ×73
               - `conversations` ×51
@@ -69304,13 +69358,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework` ×2
               - `map` ×2
               - `screenshot` ×2
+              - `search` ×2
               - `auth`
               - `hints/ask`
               - `history/dialog`
               - `integrations/youtube`
               - `layouts/miller`
               - `reports/launch-fix`
-              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
               - `wish/github-issue`

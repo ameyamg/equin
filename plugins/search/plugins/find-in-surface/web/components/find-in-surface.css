@@ -1,0 +1,48 @@
+/*
+ * Matches are painted with the CSS Custom Highlight API (`internal/paint.ts`).
+ * Scoped to the find root: an unscoped `::highlight()` rule is computed for
+ * every element of the document on every style recalc (see the page editor's
+ * `block-selection-scope.css`); the region's text inherits it through
+ * highlight inheritance (the root has no box, but it is in the element tree).
+ */
+[data-find-root]::highlight(find-match) {
+  background-color: var(--find-match);
+}
+[data-find-root]::highlight(find-match-active) {
+  background-color: var(--find-match-active);
+  color: var(--find-match-active-foreground);
+}
+
+/* The bar — on the pin itself, so the % is the pane's (a % inside a
+   shrink-to-fit box resolves to nothing): wide enough for a sentence, never
+   wider than its pane. */
+.find-bar {
+  width: min(26rem, calc(100% - 1rem));
+}
+/* One line until the query has a line break, then it grows up to five. */
+.find-query {
+  width: 100%;
+  resize: none;
+  max-height: calc(5lh + 0.5rem);
+  white-space: pre;
+  overflow-x: hidden;
+  padding-block: calc((var(--control-height-sm) - 1lh) / 2);
+  line-height: 1.25rem;
+}
+.find-query:focus-visible {
+  /* The bar is the field's box; a ring inside it would be a box in a box. */
+  outline: none;
+}
+.find-bar-glyph,
+.find-bar-count {
+  line-height: var(--control-height-sm);
+  height: var(--control-height-sm);
+}
+
+.find-tick {
+  border-radius: 1px;
+  background-color: var(--find-match);
+}
+.find-tick-active {
+  background-color: var(--find-match-active);
+}

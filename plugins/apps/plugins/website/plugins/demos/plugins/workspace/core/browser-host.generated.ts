@@ -837,6 +837,7 @@ export const browserHost = {
     "screenshot",
     "screenshot.draw-canvas",
     "screenshot.draw-on-app",
+    "search.find-in-surface",
     "search.quick-find",
     "shell",
     "shell.action-bar",

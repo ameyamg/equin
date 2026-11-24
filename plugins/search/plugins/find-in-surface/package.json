@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-search-find-in-surface",
+  "description": "Ctrl+F inside one surface: a find bar over a region's rendered text, highlighting every match without touching the DOM.",
+  "private": true,
+  "version": "0.0.1"
+}

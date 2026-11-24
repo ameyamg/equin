@@ -7616,6 +7616,10 @@
       "name": "@equin/plugin-search-engine",
       "version": "0.0.1",
     },
+    "plugins/search/plugins/find-in-surface": {
+      "name": "@equin/plugin-search-find-in-surface",
+      "version": "0.0.1",
+    },
     "plugins/search/plugins/quick-find": {
       "name": "@equin/plugin-search-quick-find",
       "version": "0.0.1",
@@ -12085,6 +12089,8 @@
     "@equin/plugin-search": ["@equin/plugin-search@workspace:plugins/search"],
 
     "@equin/plugin-search-engine": ["@equin/plugin-search-engine@workspace:plugins/search/plugins/engine"],
+
+    "@equin/plugin-search-find-in-surface": ["@equin/plugin-search-find-in-surface@workspace:plugins/search/plugins/find-in-surface"],
 
     "@equin/plugin-search-quick-find": ["@equin/plugin-search-quick-find@workspace:plugins/search/plugins/quick-find"],
 

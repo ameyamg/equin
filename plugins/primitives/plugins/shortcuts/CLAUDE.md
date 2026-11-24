@@ -106,7 +106,7 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `useSurfaceShortcuts`
     - `useSurfaceSignal`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `primitives` ×10
     - `apps-core` ×2
@@ -115,6 +115,7 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `hints`
     - `layouts/miller`
     - `media/player`
+    - `search/find-in-surface`
 - Exemptions:
   - Exempts itself from:
     - `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
