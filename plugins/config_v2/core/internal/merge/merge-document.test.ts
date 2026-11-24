@@ -4,7 +4,10 @@ import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineConfig } from "../define-config";
 import type { JsonValue } from "../types";
+import { objectField } from "@plugins/fields/plugins/object/plugins/config/core";
 import { mergeConfigDocument, mergeConflictFields } from "./merge-document";
+import { buildMergeRecord } from "./merge-record";
+import { mergeReviewFields } from "./merge-review";
 
 const descriptor = defineConfig({
   name: "merge-test",
@@ -73,6 +76,156 @@ describe("mergeConfigDocument", () => {
     expect(result.document).not.toHaveProperty("legacy");
     expect(result.decisions).toEqual([
       { kind: "removed-dropped", path: ["legacy"], yours: "mine" },
+    ]);
+  });
+
+  test("a retired field the user changed is carried to its new key", () => {
+    const renamed = defineConfig({
+      name: "merge-rename",
+      fields: {
+        instructions: textField({ label: "Instructions", default: "p1" }),
+        model: textField({ label: "Model", default: "opus" }),
+      },
+      retiredFields: {
+        prompt: {
+          renamedTo: "instructions",
+          reason: "renamed to instructions",
+        },
+      },
+    });
+    const base = { prompt: "p1", model: "opus" };
+    const result = mergeConfigDocument({
+      descriptor: renamed,
+      base,
+      yours: { ...base, prompt: "mine" },
+      theirs: { instructions: "p2", model: "sonnet" },
+    });
+    expect(result).toEqual({
+      status: "merged",
+      document: { instructions: "mine", model: "sonnet" },
+      decisions: [
+        {
+          kind: "removed-renamed",
+          path: ["prompt"],
+          to: ["instructions"],
+          yours: "mine",
+        },
+      ],
+    });
+  });
+
+  test("a retired field the user did not change goes with no decision", () => {
+    const renamed = defineConfig({
+      name: "merge-rename-untouched",
+      fields: { instructions: textField({ label: "I", default: "p1" }) },
+      retiredFields: { prompt: { renamedTo: "instructions", reason: "r" } },
+    });
+    const result = mergeConfigDocument({
+      descriptor: renamed,
+      base: { prompt: "p1" },
+      yours: { prompt: "p1" },
+      theirs: { instructions: "p2" },
+    });
+    expect(result).toEqual({
+      status: "merged",
+      document: { instructions: "p2" },
+      decisions: [],
+    });
+  });
+
+  test("a retired list the user never touched is not their change, seeded row ids aside", () => {
+    const renamed = defineConfig({
+      name: "merge-rename-list",
+      fields: {
+        rows: listField({
+          label: "Rows",
+          itemFields: { label: textField({}) },
+        }),
+      },
+      retiredFields: { items: { renamedTo: "rows", reason: "renamed" } },
+    });
+    const result = mergeConfigDocument({
+      descriptor: renamed,
+      base: { items: [{ label: "a" }] },
+      // What setConfig saved: the same rows, with seeded ids.
+      yours: { items: [{ id: "auto-1", label: "a" }] },
+      theirs: { rows: [{ label: "b" }] },
+    });
+    expect(result.status).toBe("merged");
+    expect(result.decisions).toEqual([]);
+    expect(
+      (result.document.rows as { label: string }[]).map((r) => r.label),
+    ).toEqual(["b"]);
+  });
+
+  test("a rename into an object field: the review's yours holds the carried value", () => {
+    const nested = defineConfig({
+      name: "merge-rename-nested",
+      fields: {
+        limits: objectField({
+          subFields: {
+            maxRuns: textField({ default: "3" }),
+            other: textField({ default: "o" }),
+          },
+        }),
+      },
+      retiredFields: {
+        "limits.max": { renamedTo: "limits.maxRuns", reason: "renamed" },
+      },
+    });
+    const base = { limits: { max: "3", other: "o" } };
+    const yours = { limits: { max: "9", other: "o" } };
+    const theirs = { limits: { maxRuns: "3", other: "o2" } };
+    const result = mergeConfigDocument({
+      descriptor: nested,
+      base,
+      yours,
+      theirs,
+    });
+    expect(result.status).toBe("merged");
+    expect(result.document).toEqual({ limits: { maxRuns: "9", other: "o2" } });
+    const record = buildMergeRecord({
+      id: "r",
+      now: new Date(0),
+      fromHash: "a",
+      toHash: "b",
+      base,
+      yours,
+      theirs,
+      result: result.document,
+      decisions: result.decisions,
+      undo: {
+        override: { content: yours, hash: "a" },
+        ancestor: { content: base, hash: "a" },
+      },
+    });
+    const [limits] = mergeReviewFields(record);
+    expect(limits?.outcome).toBe("carried");
+    expect(limits?.yours).toEqual({ maxRuns: "9", other: "o" });
+  });
+
+  test("a removed field declared retired is dropped with its reason", () => {
+    const removed = defineConfig({
+      name: "merge-removed",
+      fields: { model: textField({ label: "Model", default: "opus" }) },
+      retiredFields: { legacy: { reason: "the legacy mode is gone" } },
+    });
+    const base = { model: "opus", legacy: "x" };
+    const result = mergeConfigDocument({
+      descriptor: removed,
+      base,
+      yours: { ...base, legacy: "mine" },
+      theirs: { model: "opus" },
+    });
+    expect(result.status).toBe("merged");
+    expect(result.document).toEqual({ model: "opus" });
+    expect(result.decisions).toEqual([
+      {
+        kind: "removed-dropped",
+        path: ["legacy"],
+        yours: "mine",
+        reason: "the legacy mode is gone",
+      },
     ]);
   });
 

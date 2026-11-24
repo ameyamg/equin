@@ -94,6 +94,9 @@ function AutoMergeLine({
   const removed = record.decisions.flatMap((d) =>
     d.kind === "removed-dropped" ? [d] : [],
   );
+  const renamed = record.decisions.flatMap((d) =>
+    d.kind === "removed-renamed" ? [d] : [],
+  );
   const target = { storePath, ...(scopeId ? { scopeId } : {}) };
   return (
     <Text
@@ -136,8 +139,15 @@ function AutoMergeLine({
         )}
         {removed.map((d) => (
           <Text key={d.path.join(".")} variant="caption" tone="muted">
-            {d.path.join(".")} was removed; your value {shown(d.yours)} no
+            {d.path.join(".")} was removed
+            {d.reason ? ` (${d.reason})` : ""}; your value {shown(d.yours)} no
             longer applies.
+          </Text>
+        ))}
+        {renamed.map((d) => (
+          <Text key={d.path.join(".")} variant="caption" tone="muted">
+            {d.path.join(".")} was renamed to {d.to.join(".")}; your value{" "}
+            {shown(d.yours)} moved with it.
           </Text>
         ))}
       </Stack>

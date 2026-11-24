@@ -1,6 +1,12 @@
 export { defineConfig } from "./internal/define-config";
 export { defineConfigMigration } from "./internal/config-migration";
 export type { ConfigMigration } from "./internal/config-migration";
+export {
+  declaredRetiredPaths,
+  fieldPathExists,
+  undeclaredFieldPaths,
+} from "./internal/retired-fields";
+export type { RetiredField, RetiredFields } from "./internal/retired-fields";
 export type {
   Disposable,
   JsonValue,

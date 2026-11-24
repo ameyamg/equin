@@ -17438,6 +17438,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `OrphanRiskClass`
       - `ResolvedConfig`
       - `ResolvedLayer`
+      - `RetiredField`
+      - `RetiredFields`
     - Exports (values):
       - `APP_SCOPE_DIR`
       - `appScopeId`
@@ -17470,10 +17472,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `configValues`
       - `createMemoryConfigStore`
       - `currentOrigin`
+      - `declaredRetiredPaths`
       - `defineConfig`
       - `defineConfigMigration`
       - `deleteScope`
       - `effective`
+      - `fieldPathExists`
       - `forkDescriptorScope`
       - `forkScope`
       - `hasConflict`
@@ -17512,6 +17516,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `setConfigField`
       - `storePathParts`
       - `stringifyConfigValue`
+      - `undeclaredFieldPaths`
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:

@@ -1567,7 +1567,10 @@ export async function resolveAutoMergeFieldByPath(
         );
         return false;
       }
-      if (choice === "mine" && reviewed.outcome === "removed") {
+      if (
+        choice === "mine" &&
+        (reviewed.outcome === "removed" || reviewed.outcome === "renamed")
+      ) {
         throw new AutoMergeResolveRefused(
           `[config-v2] "${field}" no longer exists in ${where}; your value cannot be put back.`,
         );

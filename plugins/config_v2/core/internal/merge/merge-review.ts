@@ -11,6 +11,10 @@ import type { ConfigMergeRecord } from "./merge-record";
  * - `combined`: both changed it and the merge combined them below the field
  *   (list rows, object keys) — its `notes` say where the user's side won.
  * - `removed`: the update removed the field; the user's value is dropped.
+ * - `renamed`: the update renamed the field (`retiredFields`); the user's
+ *   value moved to the new key, listed as `carried`.
+ * - `carried`: the new key of a renamed field, holding the value the user
+ *   had set under the old one (`yours` is that value).
  */
 export type MergeFieldOutcome =
   | "took-new"
@@ -18,7 +22,9 @@ export type MergeFieldOutcome =
   | "same-change"
   | "yours-won"
   | "combined"
-  | "removed";
+  | "removed"
+  | "renamed"
+  | "carried";
 
 /** A per-field review choice, as the record keeps it (`resolutions`). */
 export type MergeFieldChoice =
@@ -50,7 +56,7 @@ export interface MergeReviewField {
  * carries them and an origin does not, so a list nobody touched would read as
  * changed. Authored ids stay — they are what the rows are.
  */
-function withoutSeededIds(value: unknown): unknown {
+export function withoutSeededIds(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutSeededIds);
   if (typeof value !== "object" || value === null) return value;
   const out: Record<string, unknown> = {};
@@ -106,9 +112,24 @@ export function mergeReviewFields(
     const removed = inField.some(
       (d) => d.kind === "removed-dropped" && d.path.length === 1,
     );
-    const [b, y, t] = [base[key], yours[key], theirs[key]];
+    const renamed = inField.some(
+      (d) => d.kind === "removed-renamed" && d.path.length === 1,
+    );
+    // A renamed field's new key (or the field holding it, for a nested
+    // `renamedTo`): the user's value is the one carried to it.
+    const carriedHere = record.decisions.flatMap((d) =>
+      d.kind === "removed-renamed" && d.to[0] === key ? [d] : [],
+    );
+    const carried = carriedHere.length > 0;
+    const [b, t] = [base[key], theirs[key]];
+    const y = carriedHere.reduce<unknown>(
+      (value, d) => withValueAt(value, d.path, d.to, key, d.yours),
+      yours[key],
+    );
     let outcome: MergeFieldOutcome;
     if (removed) outcome = "removed";
+    else if (renamed) outcome = "renamed";
+    else if (carried) outcome = "carried";
     else if (same(y, b) && same(t, b)) continue;
     else if (same(y, b)) outcome = "took-new";
     else if (same(t, b)) outcome = "kept-yours";
@@ -136,6 +157,39 @@ export function mergeReviewFields(
     });
   }
   return out;
+}
+
+/**
+ * `value` (the user's pre-merge value of top-level field `key`) with a rename
+ * applied: the carried value set at `to` below `key`, and the old key removed
+ * when it sat under `key` too — what "yours" means for a field a rename
+ * carried a value into, so Use mine writes the carried value back.
+ */
+function withValueAt(
+  value: unknown,
+  from: readonly string[],
+  to: readonly string[],
+  key: string,
+  carried: unknown,
+): unknown {
+  if (to.length === 1) return carried;
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null && !Array.isArray(v);
+  const root: Record<string, unknown> = isObj(value)
+    ? structuredClone(value)
+    : {};
+  if (from.length > 1 && from[0] === key) {
+    let at: unknown = root;
+    for (const k of from.slice(1, -1)) at = isObj(at) ? at[k] : undefined;
+    if (isObj(at)) delete at[from.at(-1)!];
+  }
+  let at = root;
+  for (const k of to.slice(1, -1)) {
+    const next = at[k];
+    at = isObj(next) ? next : (at[k] = {});
+  }
+  at[to.at(-1)!] = carried;
+  return root;
 }
 
 /** Whether two values of a field are the same, seeded row ids and key order aside. */

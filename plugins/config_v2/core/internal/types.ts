@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { FieldsRecord, InferFieldsObject } from "@plugins/fields/core";
 import type { ConfigMigration } from "./config-migration";
+import type { RetiredFields } from "./retired-fields";
 
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
@@ -81,6 +82,10 @@ export interface ConfigDescriptor<
   // (see `defineConfigMigration`). In declaration order; never remove one that
   // may not have run everywhere yet.
   readonly migrations?: readonly ConfigMigration[];
+  // Field keys this config no longer has, each removed or renamed (see
+  // `RetiredFields`): what an automatic merge drops or carries over, and what
+  // `config-v2:fields-retired-declared` accepts as a deliberate removal.
+  readonly retiredFields?: RetiredFields;
   readonly requiresAuthoredOverride?: {
     guidance: string[];
     // "Is there anything here to author?" — the descriptor's own answer, asked

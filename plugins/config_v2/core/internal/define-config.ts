@@ -7,6 +7,7 @@ import type {
 } from "./types";
 import type { DefaultedFields, FieldsRecord } from "@plugins/fields/core";
 import type { ConfigMigration } from "./config-migration";
+import { assertRetiredFields, type RetiredFields } from "./retired-fields";
 import { fieldDefaults, fieldsToZodObject } from "@plugins/fields/core";
 
 interface DefineConfigOpts<F extends FieldsRecord> {
@@ -17,6 +18,11 @@ interface DefineConfigOpts<F extends FieldsRecord> {
   source?: ConfigSource;
   overrideLegend?: readonly string[];
   migrations?: readonly ConfigMigration[];
+  /**
+   * Field keys this config no longer has (removed, or renamed without a
+   * migration rewriting saved documents) — see {@link RetiredFields}.
+   */
+  retiredFields?: RetiredFields;
   requiresAuthoredOverride?: {
     guidance: string[];
     seedWhen?: SeedCondition;
@@ -56,6 +62,10 @@ export function defineConfig<const F extends FieldsRecord>(
     throw new Error(
       `defineConfig: "${opts.name ?? "config"}" declares a migration id twice (${ids.join(", ")}).`,
     );
+  }
+
+  if (opts.retiredFields) {
+    assertRetiredFields(opts.name ?? "config", opts.fields, opts.retiredFields);
   }
 
   // `seedWhen` is data naming a field: a field the config does not declare
@@ -108,6 +118,7 @@ export function defineConfig<const F extends FieldsRecord>(
     source: opts.source ?? "manual",
     overrideLegend: opts.overrideLegend,
     migrations: opts.migrations ?? [],
+    retiredFields: opts.retiredFields,
     requiresAuthoredOverride: opts.requiresAuthoredOverride,
   });
 }

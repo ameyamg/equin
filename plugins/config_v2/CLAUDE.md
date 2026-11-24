@@ -144,6 +144,7 @@ The capture covers `@app/<id>` scopes too (`propagateGitLayerDocument` hands eac
 - **Completion first.** `yours` is `base ⊕ override` — a partial override (`{ "enabled": true }`) changed one key, it did not delete the others — and all three sides drop the `auto-` row ids `normalizeCollectionItems` seeds, so they don't read as a row deleted plus one added.
 - **Deep** (`deepMerge`, `deep-merge.ts`). Objects merge per key. Lists merge per row when every row has a unique key (`id` > `item` > `label` > the string itself); otherwise both sides changing one is a conflict (`unkeyed-list`). A row only one side added goes after its neighbour from that side. In a reorder tree's `items` the user's order wins; elsewhere both sides reordering differently is a conflict (`order`). The update removing something the user changed is a conflict (`delete-modify`).
 - **Both sides changed the same value**: the user's wins, listed as a `yours-won` decision. A key the user changed that neither the descriptor nor the new origin has is dropped and listed (`removed-dropped`).
+- **Retired fields** (`descriptor.retiredFields`, below): a value the user changed under a renamed key is carried to the new key (`removed-renamed`, unless the user also set the new key); under a removed key it is dropped with the declared reason (`removed-dropped`, `reason`).
 - **Schema gate.** The merged document must pass `descriptor.schema`, else it is a conflict with `issues`.
 
 `mergeConflictByPath` writes the merged document under the new hash and deletes the ancestor on `merged`; on `conflict` it writes nothing and returns the undecided top-level fields. Every terminal resolution (acknowledge-conflict, delete-override) also deletes the ancestor. `merge/corpus.test.ts` replays committed overrides restamped in `config/**` history (`merge-corpus.json`) and asserts none is left undecided, none gains a duplicate row or brings back a row either side deleted, and how many match the committed resolution. Design: [`research/2026-11-24-global-config-auto-merge.md`](../../research/2026-11-24-global-config-auto-merge.md).
@@ -191,6 +192,41 @@ be idempotent; never delete a migration that may not have run everywhere. The
 committed `config/` files are rewritten by hand in the same diff. The ledger
 engine (`runConfigLedger`, `rewriteConfigFiles`) is `config_v2/plugins/ledger`,
 shared with plugin moves.
+
+### Removed and renamed fields (`retiredFields`)
+
+A config's schema is `.passthrough()`, so a saved value under a field key the
+code no longer declares is never flagged: the new key backfills its default and
+the setting silently reverts. So a field key that goes away is **declared**,
+one of two ways:
+
+```ts
+defineConfig({
+  fields: { instructions: textField({ … }) },
+  retiredFields: {
+    prompt: { renamedTo: "instructions", reason: "renamed to instructions" },
+    legacyMode: { reason: "the legacy runner is gone" },
+  },
+});
+// or, when saved documents must be rewritten:
+defineConfigMigration({ id: "prompt-to-instructions", renames: { prompt: "instructions" }, removes: ["legacyMode"], apply });
+```
+
+Keys are dotted paths, through `objectField` sub-fields (`limits.max`); a
+list's rows are data, not walked. `defineConfig` refuses a retired key that is
+still a field and a `renamedTo` that is not one. The automatic merge reads
+`retiredFields` (above); a migration has rewritten the documents before any
+merge reads them.
+
+`config-v2:fields-retired-declared` (`check/fields-retired-declared.ts`, rule in
+`check/fields-retired.ts`) enforces it: every field key path a registered
+descriptor's committed origin held at `git merge-base HEAD main` (read with
+`git cat-file --batch`, so an origin not regenerated yet still counts) that the
+current descriptor neither declares as a field nor as retired (`retiredFields`,
+a migration's `renames` keys / `removes`) fails. A config with no origin at the
+merge base (new, or its plugin moved — the move ledger's business) is not
+judged. The merge base is part of its cache signature, as in
+`published-migrations-immutable`.
 
 ### Plugin moves and stranded overrides
 
@@ -600,6 +636,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `OrphanRiskClass`
     - `ResolvedConfig`
     - `ResolvedLayer`
+    - `RetiredField`
+    - `RetiredFields`
   - Exports (values):
     - `APP_SCOPE_DIR`
     - `appScopeId`
@@ -632,10 +670,12 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `configValues`
     - `createMemoryConfigStore`
     - `currentOrigin`
+    - `declaredRetiredPaths`
     - `defineConfig`
     - `defineConfigMigration`
     - `deleteScope`
     - `effective`
+    - `fieldPathExists`
     - `forkDescriptorScope`
     - `forkScope`
     - `hasConflict`
@@ -674,6 +714,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `setConfigField`
     - `storePathParts`
     - `stringifyConfigValue`
+    - `undeclaredFieldPaths`
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:

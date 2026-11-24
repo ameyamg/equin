@@ -26,7 +26,10 @@ export interface MergeConflictReason {
  * - `yours-won`: both sides changed the same value differently (or the user
  *   deleted what the update changed); the user's side is kept.
  * - `removed-dropped`: the user changed a field the current config no longer
- *   has; their value no longer applies and is dropped.
+ *   has; their value no longer applies and is dropped. `reason` is the
+ *   descriptor's own (`retiredFields`), when it declared the removal.
+ * - `removed-renamed`: the user changed a field the config renamed
+ *   (`retiredFields[path].renamedTo`); their value is carried to `to`.
  */
 export type FieldDecision =
   | {
@@ -39,6 +42,13 @@ export type FieldDecision =
   | {
       readonly kind: "removed-dropped";
       readonly path: MergePath;
+      readonly yours: JsonValue;
+      readonly reason?: string;
+    }
+  | {
+      readonly kind: "removed-renamed";
+      readonly path: MergePath;
+      readonly to: MergePath;
       readonly yours: JsonValue;
     };
 

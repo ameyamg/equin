@@ -50,6 +50,8 @@ const OUTCOMES: { value: MergeFieldOutcome; label: string }[] = [
   { value: "yours-won", label: "Yours won" },
   { value: "combined", label: "Combined" },
   { value: "removed", label: "Removed" },
+  { value: "renamed", label: "Renamed" },
+  { value: "carried", label: "Carried from old key" },
 ];
 
 /** Why the merge decided what it did, per outcome — the outcome cell's title. */
@@ -62,6 +64,15 @@ const OUTCOME_REASON: Record<MergeFieldOutcome, string> = {
     "You and the update both changed it; the merge combined the two below the field.",
   removed:
     "The update removed this field; your value no longer applies and was dropped.",
+  renamed: "The update renamed this field; your value moved to its new key.",
+  carried:
+    "The update renamed a field you changed to this key; your value was carried over.",
+};
+
+const NOTE_LABEL: Record<ReviewRow["notes"][number]["kind"], string> = {
+  "yours-won": "yours won at",
+  "removed-dropped": "dropped",
+  "removed-renamed": "moved",
 };
 
 type ReviewState = "none" | MergeFieldChoice | "edited";
@@ -101,7 +112,7 @@ const FIELDS: FieldDef<ReviewRow>[] = [
         <Text variant="code">{r.key}</Text>
         {r.notes.map((n) => (
           <Text key={`${n.kind}:${n.at}`} variant="caption" tone="muted">
-            {n.kind === "yours-won" ? "yours won at" : "dropped"} {n.at}
+            {NOTE_LABEL[n.kind]} {n.at}
           </Text>
         ))}
       </Stack>

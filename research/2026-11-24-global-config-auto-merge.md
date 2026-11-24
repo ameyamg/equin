@@ -1,6 +1,6 @@
 # Config updates: automatic merge of the user layer, and config owned by the backend that reads it
 
-Task: task-1795524794-221nve. Status: phases 1 (merge engine), 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) and 3 (developer review: per-field Keep / Use mine / Use new default, nav view, notice) implemented; phases 4–6 planned.
+Task: task-1795524794-221nve. Status: phases 1 (merge engine), 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) 3 (developer review: per-field Keep / Use mine / Use new default, nav view, notice) and 4 (retired / renamed fields: `retiredFields`, migration `renames` / `removes`, `removed-renamed`, the `config-v2:fields-retired-declared` check) implemented; phases 5–6 planned.
 
 ## Context
 
@@ -265,6 +265,17 @@ written for the new code.
   auto-merge).
 - Still open: the notification's developer action (Review instead of Undo
   all) and settling it in place once everything is reviewed.
+
+### Phase 4 as built (deviations)
+
+- Key paths are dotted and walk `objectField` sub-fields only; list rows are
+  data and are not walked (a rename inside list items is not checked).
+- The check is `config-v2:fields-retired-declared`, against `git merge-base
+  HEAD main` (local main), all origins read in one `git cat-file --batch`.
+- A config with no origin at the merge base (new, or moved — the plugin-move
+  ledger re-roots those) is not judged.
+- The review gains two outcomes: `renamed` (the old key; Use mine refused) and
+  `carried` (the new key, whose `yours` is the carried value).
 
 ## Critical files
 

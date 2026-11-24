@@ -90,6 +90,8 @@ export function UseMineFieldAction({
   const offWhen =
     row.outcome === "removed"
       ? "The update removed this field; your value no longer applies."
+      : row.outcome === "renamed"
+        ? "The update renamed this field; your value is under its new key."
       : sameFieldValue(row.result, row.yours)
         ? "The result already holds your value."
         : null;

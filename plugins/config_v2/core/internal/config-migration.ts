@@ -1,4 +1,5 @@
 import type { JsonValue } from "./types";
+import { assertMigrationKeys } from "./retired-fields";
 
 /**
  * A one-time rewrite of a config's SAVED values, for when the shape its fields
@@ -20,6 +21,15 @@ export interface ConfigMigration {
   /** Unique within its descriptor, and never reused: the ledger records it. */
   readonly id: string;
   apply(document: JsonValue): JsonValue;
+  /**
+   * The field keys this migration moves, old dotted key path → new one. A
+   * field key the config no longer has must be declared somewhere —
+   * `config-v2:fields-retired-declared` reads these (and `removes`, and the
+   * descriptor's `retiredFields`) to know the key was not dropped by mistake.
+   */
+  readonly renames?: Readonly<Record<string, string>>;
+  /** The field keys (dotted paths) this migration deletes from saved documents. */
+  readonly removes?: readonly string[];
 }
 
 export function defineConfigMigration(
@@ -30,5 +40,6 @@ export function defineConfigMigration(
       `defineConfigMigration: id "${migration.id}" must be kebab-case (it is recorded in every namespace's ledger)`,
     );
   }
+  assertMigrationKeys(migration);
   return Object.freeze(migration);
 }

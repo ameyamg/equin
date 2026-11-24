@@ -40,6 +40,13 @@ const fieldDecisionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("removed-dropped"),
     path: mergePathSchema,
     yours: z.unknown(),
+    reason: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("removed-renamed"),
+    path: mergePathSchema,
+    to: mergePathSchema,
+    yours: z.unknown(),
   }),
 ]);
 
@@ -147,7 +154,11 @@ export function buildMergeRecord(input: {
     },
     result: input.result,
     undo: input.undo,
-    decisions: input.decisions.map((d) => ({ ...d, path: [...d.path] })),
+    decisions: input.decisions.map((d) =>
+      d.kind === "removed-renamed"
+        ? { ...d, path: [...d.path], to: [...d.to] }
+        : { ...d, path: [...d.path] },
+    ),
     placement: { status: "not-needed" },
     resolutions: [],
   };

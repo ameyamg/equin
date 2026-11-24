@@ -7,6 +7,10 @@ import {
   type FieldDecision,
   type MergeConflictReason,
 } from "./deep-merge";
+import {
+  sameFieldValue,
+  withoutSeededIds as withoutAnySeededIds,
+} from "./merge-review";
 
 type Doc = Record<string, JsonValue>;
 
@@ -57,6 +61,97 @@ function withoutSeededIds(doc: Doc, fields: FieldsRecord): Doc {
   }) as Doc;
 }
 
+function isDoc(v: unknown): v is Doc {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function getAt(doc: Doc, path: readonly string[]): JsonValue | undefined {
+  let at: JsonValue | undefined = doc;
+  for (const key of path) {
+    if (!isDoc(at)) return undefined;
+    at = at[key];
+  }
+  return at;
+}
+
+/** Whether `path` can be set in `doc`: nothing but objects (or nothing) on the way. */
+function canSetAt(doc: Doc, path: readonly string[]): boolean {
+  let at: JsonValue | undefined = doc;
+  for (const key of path.slice(0, -1)) {
+    if (at === undefined) return true;
+    if (!isDoc(at)) return false;
+    at = at[key];
+  }
+  return at === undefined || isDoc(at);
+}
+
+/** Set `path` in `doc`, creating the objects on the way ({@link canSetAt} first). */
+function setAt(doc: Doc, path: readonly string[], value: JsonValue): void {
+  let at: Doc = doc;
+  for (const key of path.slice(0, -1)) {
+    const next: JsonValue | undefined = at[key];
+    if (isDoc(next)) at = next;
+    else at = at[key] = {};
+  }
+  at[path.at(-1)!] = value;
+}
+
+function deleteAt(doc: Doc, path: readonly string[]): void {
+  const parent = getAt(doc, path.slice(0, -1));
+  if (isDoc(parent)) delete parent[path.at(-1)!];
+}
+
+/**
+ * Apply a descriptor's `retiredFields` to the merge's inputs, in place: each
+ * retired key leaves `base` and `yours`, and a value the user changed under it
+ * is carried to its `renamedTo` (on both `yours` and `base`, base taking the
+ * new origin's value, so the carried value reads as the user's own change) or
+ * reported dropped. Returns what it decided.
+ */
+function retireDeclaredFields(
+  retired: NonNullable<ConfigDescriptor["retiredFields"]>,
+  sides: { base: Doc; yours: Doc; theirs: Doc },
+): FieldDecision[] {
+  const { base, yours, theirs } = sides;
+  const decisions: FieldDecision[] = [];
+  for (const [dotted, decl] of Object.entries(retired)) {
+    const path = dotted.split(".");
+    // A retired key is no longer a field, so `withoutSeededIds` (which walks
+    // the declared fields) left its list rows' seeded ids in place: compare
+    // without them, or a list the user never touched reads as changed.
+    const raw = getAt(yours, path);
+    const mine =
+      raw === undefined ? undefined : (withoutAnySeededIds(raw) as JsonValue);
+    const changed =
+      mine !== undefined && !sameFieldValue(mine, getAt(base, path));
+    deleteAt(yours, path);
+    deleteAt(base, path);
+    if (!changed) continue;
+    if (decl.renamedTo !== undefined) {
+      const to = decl.renamedTo.split(".");
+      const target = getAt(yours, to);
+      // The user already set the new key themselves: theirs stands.
+      const untouched =
+        target === undefined || sameFieldValue(target, getAt(base, to));
+      if (untouched && canSetAt(yours, to) && canSetAt(base, to)) {
+        const theirsTo = getAt(theirs, to);
+        setAt(yours, to, mine);
+        if (theirsTo === undefined) deleteAt(base, to);
+        else setAt(base, to, theirsTo);
+        decisions.push({ kind: "removed-renamed", path, to, yours: mine });
+        continue;
+      }
+    }
+    decisions.push({
+      kind: "removed-dropped",
+      path,
+      yours: mine,
+      reason: decl.reason,
+    });
+  }
+  return decisions;
+}
+
 /**
  * The three-way merge of a config document: the user's override (`yours`,
  * written against `base`, the origin it was stamped with) carried onto the new
@@ -66,8 +161,14 @@ function withoutSeededIds(doc: Doc, fields: FieldsRecord): Doc {
  * - **Completion first.** `yours` is `base ⊕ override`: a partial override
  *   (`{ "enabled": true }`) changed one key, it did not delete the rest. All
  *   three sides drop seeded row ids (`withoutSeededIds`) before comparing.
- * - **Removed fields.** A key the user changed that neither the descriptor nor
- *   the new origin has any more is dropped and listed (`removed-dropped`).
+ * - **Retired fields** (`descriptor.retiredFields`, dotted key paths). A value
+ *   the user changed under a renamed key is carried to its new key
+ *   (`removed-renamed`) — unless they also set the new key, whose value then
+ *   stands and the old one is dropped; under a removed key it is dropped
+ *   with the declared reason (`removed-dropped`).
+ * - **Removed fields.** Any other top-level key the user changed that neither
+ *   the descriptor nor the new origin has any more is dropped and listed
+ *   (`removed-dropped`).
  * - **The rest** is {@link deepMerge}.
  * - **Schema gate.** The merged document must pass `descriptor.schema`, or the
  *   result is a conflict carrying the `issues`.
@@ -75,32 +176,40 @@ function withoutSeededIds(doc: Doc, fields: FieldsRecord): Doc {
  * Pure; the caller writes `document` only on `status: "merged"`.
  */
 export function mergeConfigDocument(input: {
-  descriptor: Pick<ConfigDescriptor, "fields" | "schema">;
+  descriptor: Pick<ConfigDescriptor, "fields" | "schema" | "retiredFields">;
   base: JsonValue;
   yours: JsonValue;
   theirs: JsonValue;
 }): ConfigMergeResult {
   const { fields, schema } = input.descriptor;
-  // Copied: removed fields are deleted from it below, and the caller's
-  // document (a store's cached content) must not change under it.
-  const base = { ...withoutSeededIds(asDocument(input.base, "base"), fields) };
+  // Deep copies: retired and removed fields are moved and deleted in them
+  // below, at any depth, and the caller's documents (a store's cached
+  // content) must not change under it.
+  const base = structuredClone(
+    withoutSeededIds(asDocument(input.base, "base"), fields),
+  );
   const theirs = withoutSeededIds(
     asDocument(input.theirs, "new origin"),
     fields,
   );
-  const yours = withoutSeededIds(
-    { ...base, ...asDocument(input.yours, "override") },
-    fields,
+  const yours = structuredClone(
+    withoutSeededIds(
+      { ...base, ...asDocument(input.yours, "override") },
+      fields,
+    ),
   );
 
-  const removed: FieldDecision[] = [];
+  const removed: FieldDecision[] = retireDeclaredFields(
+    input.descriptor.retiredFields ?? {},
+    { base, yours, theirs },
+  );
   for (const key of Object.keys(yours)) {
     if (key in fields || key in theirs) continue;
-    if (JSON.stringify(yours[key]) !== JSON.stringify(base[key])) {
+    if (!sameFieldValue(yours[key], base[key])) {
       removed.push({
         kind: "removed-dropped",
         path: [key],
-        yours: yours[key]!,
+        yours: withoutAnySeededIds(yours[key]) as JsonValue,
       });
     }
     delete yours[key];
