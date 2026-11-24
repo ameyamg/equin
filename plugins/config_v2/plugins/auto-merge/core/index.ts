@@ -8,7 +8,11 @@ export type {
   AutoMergeStateView,
   AutoMergeSummary,
 } from "./internal/resources";
-export { acknowledgeAutoMerge, undoAutoMerge } from "./internal/endpoints";
+export {
+  acknowledgeAutoMerge,
+  resolveAutoMergeField,
+  undoAutoMerge,
+} from "./internal/endpoints";
 export {
   AUTO_MERGE_ACTION_KIND,
   AUTO_MERGE_NOTIFICATION_TYPE,

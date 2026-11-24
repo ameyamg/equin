@@ -28,6 +28,7 @@
   - Imported by:
     - `apps-core/app-launcher`
     - `build`
+    - `config_v2/auto-merge`
     - `config_v2/git-defaults-preview`
     - `conversations/runtime-sdk`
     - `hints/ask`

@@ -51,6 +51,30 @@
       }
     },
     {
+      "id": "auto-merged",
+      "name": "Auto-merged",
+      "icon": "merge",
+      "view": {
+        "type": "table",
+        "presentation": "outline",
+        "properties": [{ "id": "label" }, { "id": "modified" }, { "id": "conflict" }, { "id": "source" }],
+        "filter": {
+          "kind": "group",
+          "id": "auto-merged",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "auto-merged-flag",
+              "fieldId": "autoMerged",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "reorder",
       "name": "Reorder",
       "icon": "swap-vert",

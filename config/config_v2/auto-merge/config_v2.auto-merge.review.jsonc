@@ -1,0 +1,22 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "fields",
+      "name": "Fields",
+      "icon": "merge",
+      "view": {
+        "type": "table",
+        "properties": [
+          { "id": "key" },
+          { "id": "base" },
+          { "id": "yours" },
+          { "id": "theirs" },
+          { "id": "result" },
+          { "id": "outcome" },
+          { "id": "review" }
+        ]
+      }
+    }
+  ]
+}

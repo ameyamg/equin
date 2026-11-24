@@ -17,9 +17,15 @@ import {
   mergeConflictFields,
   buildMergeRecord,
   mergeRecordStatus,
+  mergeReviewFields,
   parseMergeRecord,
+  sameFieldValue,
 } from "../../core";
-import type { ConfigMergeRecord, MergeRecordStatus } from "../../core";
+import type {
+  ConfigMergeRecord,
+  MergeFieldChoice,
+  MergeRecordStatus,
+} from "../../core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { diffValue } from "@plugins/packages/plugins/value-patch/core";
@@ -1325,6 +1331,30 @@ async function autoMergeDocumentNow(
 export interface AutoMergeState {
   record: ConfigMergeRecord;
   status: MergeRecordStatus;
+  /**
+   * The top-level fields the user changed since the merge (the override no
+   * longer holds what the merge left there) — a per-field review action on
+   * one is refused, as it would discard that change. Every field when the
+   * override is gone.
+   */
+  editedFields: string[];
+}
+
+function fieldsEditedSince(
+  record: ConfigMergeRecord,
+  override: { content: JsonValue } | null,
+): string[] {
+  const now = override?.content;
+  const doc = isPlainDocument(now ?? null)
+    ? (now as Record<string, unknown>)
+    : null;
+  const keys = new Set([
+    ...Object.keys(record.result),
+    ...(doc ? Object.keys(doc) : []),
+  ]);
+  return [...keys].filter(
+    (k) => doc === null || !sameFieldValue(doc[k], record.result[k]),
+  );
 }
 
 /**
@@ -1348,7 +1378,11 @@ export async function readAutoMerge(
     stored.content,
     configFileRelPath(files.merge),
   );
-  return { record, status: mergeRecordStatus(record, origin, override) };
+  return {
+    record,
+    status: mergeRecordStatus(record, origin, override),
+    editedFields: fieldsEditedSince(record, override),
+  };
 }
 
 /**
@@ -1454,4 +1488,150 @@ export async function stampAutoMergeByPath(
       valuesMoved: false,
     });
   return stamped;
+}
+
+/**
+ * A developer's per-field review choice on an automatic merge refused: the
+ * record is not the one named (a later merge replaced it), it is undone or
+ * superseded, the user changed the field since, the field no longer exists
+ * (Use mine), or the result would fail the schema.
+ */
+export class AutoMergeResolveRefused extends Error {
+  override name = "AutoMergeResolveRefused";
+}
+
+/**
+ * Review one top-level field of an automatic merge (`field`, of the record
+ * `recordId` names):
+ *
+ * - `keep` — the merge's decision is right: recorded, nothing rewritten.
+ * - `mine` — the field becomes the user's pre-merge value.
+ * - `new-default` — the field becomes the update's new default (absent when
+ *   the update removed it).
+ *
+ * A rewrite goes through the schema like any write, lands in the override
+ * under its hash, and is mirrored into the record's `result` so the record
+ * still says what the override holds (Undo stays available). Every choice is
+ * appended to `resolutions`. Refused (`AutoMergeResolveRefused`) per its
+ * class doc.
+ */
+export async function resolveAutoMergeFieldByPath(
+  storePath: string,
+  input: { recordId: string; field: string; choice: MergeFieldChoice },
+  opts: ConfigWriteOpts,
+): Promise<void> {
+  const { recordId, field, choice } = input;
+  const movedValues = await withWriteTarget(
+    storePath,
+    opts,
+    async (descriptor, entry) => {
+      const where = `"${storePath}"${entry.scopeId ? ` (${entry.scopeId})` : ""}`;
+      const state = await readAutoMerge(storePath, entry.scopeId);
+      if (state === null || state.record.id !== recordId) {
+        throw new AutoMergeResolveRefused(
+          `[config-v2] ${where} has no automatic merge ${recordId} any more: a later merge replaced it.`,
+        );
+      }
+      if (state.status === "undone" || state.status === "superseded") {
+        throw new AutoMergeResolveRefused(
+          `[config-v2] the automatic merge of ${where} is ${state.status}; there is nothing to review.`,
+        );
+      }
+      if (state.editedFields.includes(field)) {
+        throw new AutoMergeResolveRefused(
+          `[config-v2] "${field}" of ${where} was changed since its automatic merge; reviewing it would discard that change.`,
+        );
+      }
+      const reviewed = mergeReviewFields(state.record).find(
+        (f) => f.key === field,
+      );
+      if (reviewed === undefined) {
+        throw new AutoMergeResolveRefused(
+          `[config-v2] the automatic merge of ${where} did not touch "${field}".`,
+        );
+      }
+      const at = new Date().toISOString();
+      const store = ConfigStore.get();
+      const resolutions = [
+        ...state.record.resolutions,
+        { path: [field], choice, at },
+      ];
+      if (choice === "keep") {
+        const next: ConfigMergeRecord = { ...state.record, resolutions };
+        await editEntry(opts, entry, "auto-merge-keep-field", () =>
+          store.write(
+            entry.files.merge,
+            next as JsonValue,
+            state.record.toHash,
+          ),
+        );
+        return false;
+      }
+      if (choice === "mine" && reviewed.outcome === "removed") {
+        throw new AutoMergeResolveRefused(
+          `[config-v2] "${field}" no longer exists in ${where}; your value cannot be put back.`,
+        );
+      }
+      const override = await store.read(entry.files.override);
+      if (override === null || !isPlainDocument(override.content)) {
+        throw new AutoMergeResolveRefused(
+          `[config-v2] ${where} has no override to rewrite.`,
+        );
+      }
+      const value = (choice === "mine" ? reviewed.yours : reviewed.theirs) as
+        JsonValue | undefined;
+      const patched: Record<string, JsonValue> = { ...override.content };
+      if (value === undefined) delete patched[field];
+      else patched[field] = value;
+      const document = normalizeCollectionItems(
+        patched,
+        descriptor.fields,
+      ) as Record<string, JsonValue>;
+      const parsed = descriptor.schema.safeParse(document);
+      if (!parsed.success) {
+        const spell = (i: (typeof parsed.error.issues)[number]) =>
+          `${i.path.map(String).join(".") || "(root)"}: ${i.message}`;
+        const own = parsed.error.issues.filter((i) => i.path[0] === field);
+        // Issues elsewhere are the document's own (a later hand edit), not
+        // this choice's: say so rather than blame the value.
+        throw new AutoMergeResolveRefused(
+          own.length > 0
+            ? `[config-v2] ${choice === "mine" ? "your value" : "the new default"} of "${field}" does not fit ${where}: ${own.map(spell).join("; ")}`
+            : `[config-v2] ${where} does not pass its schema as it stands, so "${field}" cannot be rewritten: ${parsed.error.issues.map(spell).join("; ")}`,
+        );
+      }
+      // The record mirrors the override: a current merge stays current (Undo
+      // still restores the pre-merge state); an edited one keeps its other
+      // fields as the merge left them.
+      const result: Record<string, unknown> =
+        state.status === "current"
+          ? { ...document }
+          : { ...state.record.result };
+      if (state.status !== "current") {
+        if (document[field] === undefined) delete result[field];
+        else result[field] = document[field];
+      }
+      const next: ConfigMergeRecord = { ...state.record, result, resolutions };
+      await editEntry(opts, entry, `auto-merge-use-${choice}`, async () => {
+        await store.write(
+          entry.files.merge,
+          next as JsonValue,
+          state.record.toHash,
+        );
+        await store.write(
+          entry.files.override,
+          document as JsonValue,
+          override.hash,
+        );
+        await refreshEntryNow(descriptor, entry);
+      });
+      return true;
+    },
+  );
+  // A Keep writes the record alone, which no value reads: the fan-out is
+  // called directly for the record's listeners (as `stampAutoMergeByPath`).
+  if (!movedValues)
+    await notifyDocument(storePath, opts.scopeId ?? BASE_SCOPE, {
+      valuesMoved: false,
+    });
 }

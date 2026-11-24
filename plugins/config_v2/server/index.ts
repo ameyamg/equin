@@ -40,6 +40,8 @@ export {
   AutoMergeUndoRefused,
   undoAutoMergeByPath,
   stampAutoMergeByPath,
+  AutoMergeResolveRefused,
+  resolveAutoMergeFieldByPath,
 } from "./internal/registry";
 export type {
   AutoMergeState,

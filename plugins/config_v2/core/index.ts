@@ -94,6 +94,15 @@ export type {
   ConfigMergeRecord,
   MergeRecordStatus,
 } from "./internal/merge/merge-record";
+export {
+  mergeReviewFields,
+  sameFieldValue,
+} from "./internal/merge/merge-review";
+export type {
+  MergeFieldChoice,
+  MergeFieldOutcome,
+  MergeReviewField,
+} from "./internal/merge/merge-review";
 export type {
   FieldDecision,
   MergeConflictReason,

@@ -2,8 +2,15 @@ import {
   foldResource,
   useCombinedResources,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useCallback, useMemo } from "react";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Fragment, useCallback, useMemo, type ReactNode } from "react";
+import type {
+  Contribution,
+  SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
+import {
+  useOpenPane,
+  usePaneViewParam,
+} from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configModifiedCounts } from "@plugins/config_v2/core";
@@ -22,8 +29,36 @@ import {
 } from "../internal/flatten-config-tree";
 import { useConflictMap } from "../internal/use-conflicts";
 import { ConfigRowBadge } from "./config-row-badge";
+import {
+  ConfigNavSlots,
+  type ConfigNavField,
+  type ConfigNavFieldRead,
+} from "../slots";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 
 const CONFIG_NAV_VIEW = defineDataView("config_v2.settings.nav");
+
+/**
+ * Switch the config nav to one of its views (an authored view's id) — for a
+ * nav notice pointing at the configs it is about. `null` outside the nav's
+ * pane, where there is no nav to switch.
+ */
+export function useShowConfigNavView(): ((viewId: string) => void) | null {
+  const param = usePaneViewParam(CONFIG_NAV_VIEW);
+  return useMemo(
+    () => (param === null ? null : (viewId: string) => param.set(viewId)),
+    [param],
+  );
+}
+
+/** A contributed nav field with its read (`ConfigNavSlots.Field`). */
+interface NavFieldRead {
+  id: string;
+  label: string;
+  read: ConfigNavFieldRead;
+}
+
+type NavFieldContribution = SealContributions<ConfigNavField>;
 
 // No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
 // local render state owned by the data-view primitive — never a domain field —
@@ -35,7 +70,46 @@ const configHierarchy: HierarchyConfig<ConfigNavRow> = {
   getRank: (r) => r.rank,
 };
 
+/**
+ * The config nav: every registered config as a tree, filterable by Modified,
+ * Conflict, Source and each contributed field (`ConfigNavSlots.Field`).
+ */
 export function ConfigNav() {
+  const contributed = ConfigNavSlots.Field.useContributions();
+  return <CollectNavFields fields={contributed} reads={EMPTY_READS} />;
+}
+
+const EMPTY_READS: readonly NavFieldRead[] = [];
+
+/**
+ * Mount each contributed field's reader — one isolated level per field,
+ * keyed by its id, so a field contributed later (a deferred plugin) mounts a
+ * level of its own instead of reshaping a mounted one — and collect its read.
+ */
+function CollectNavFields({
+  fields,
+  reads,
+}: {
+  fields: readonly NavFieldContribution[];
+  reads: readonly NavFieldRead[];
+}): ReactNode {
+  if (fields.length === 0) return <ConfigNavView navFields={reads} />;
+  const [first, ...rest] = fields;
+  return (
+    <Fragment key={first!.id}>
+      {renderIsolated(ConfigNavSlots.Field, first as unknown as Contribution, {
+        children: (read: ConfigNavFieldRead) => (
+          <CollectNavFields
+            fields={rest}
+            reads={[...reads, { id: first!.id, label: first!.label, read }]}
+          />
+        ),
+      })}
+    </Fragment>
+  );
+}
+
+function ConfigNavView({ navFields }: { navFields: readonly NavFieldRead[] }) {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
 
@@ -53,9 +127,12 @@ export function ConfigNav() {
   // loading. The rows themselves need no read: they are built from the config
   // registrations (`buildConfigTree`), which every browser has — never from the
   // plugin tree, a scan of `plugins/` on disk only the computer can answer.
+  // Each contributed field decides rows a view keeps, like Conflict: the nav
+  // waits for it too.
   const readiness = useCombinedResources({
     modified: modifiedRes,
     conflict: conflictRes,
+    ...Object.fromEntries(navFields.map((f) => [`field:${f.id}`, f.read])),
   });
 
   const rows = useMemo<ConfigNavRow[]>(
@@ -156,8 +233,25 @@ export function ConfigNav() {
         ],
         value: (r) => r.registration?.descriptor.source ?? undefined,
       },
+      ...navFields.map((f): FieldDef<ConfigNavRow> => ({
+        id: f.id,
+        label: f.label,
+        type: "bool",
+        filterable: false,
+        value: (r) => {
+          // A group header has no config of its own: known false.
+          if (!r.registration) return false;
+          const storePath = r.registration.storePath;
+          return foldResource(f.read, {
+            loading: () => undefined,
+            // Not known: the nav renders the failure through `readiness`.
+            error: () => undefined,
+            ready: (paths) => paths.has(storePath),
+          });
+        },
+      })),
     ],
-    [modifiedCountOf, conflictOf],
+    [modifiedCountOf, conflictOf, navFields],
   );
 
   const tableOptions = useMemo(

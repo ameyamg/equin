@@ -1,11 +1,17 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/core";
 import {
+  AutoMergeResolveRefused,
   AutoMergeUndoRefused,
+  resolveAutoMergeFieldByPath,
   stampAutoMergeByPath,
   undoAutoMergeByPath,
 } from "@plugins/config_v2/server";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
-import { acknowledgeAutoMerge, undoAutoMerge } from "../../core";
+import {
+  acknowledgeAutoMerge,
+  resolveAutoMergeField,
+  undoAutoMerge,
+} from "../../core";
 
 // Every write passes `originOf(req)`, never a literal: an agent's Undo is
 // ledgered like any other agent config write.
@@ -51,6 +57,24 @@ export const handleAcknowledgeAutoMerge = implement(
         400,
         err instanceof Error ? err.message : String(err),
       );
+    }
+  },
+);
+
+export const handleResolveAutoMergeField = implement(
+  resolveAutoMergeField,
+  async ({ body, req }) => {
+    try {
+      await resolveAutoMergeFieldByPath(
+        body.storePath,
+        { recordId: body.recordId, field: body.field, choice: body.choice },
+        { writer: originOf(req), scopeId: body.scopeId },
+      );
+    } catch (err) {
+      // The registry's refusals are an answer about this field; anything
+      // else is a failure.
+      if (!(err instanceof AutoMergeResolveRefused)) throw err;
+      throw new HttpError(400, err.message);
     }
   },
 );

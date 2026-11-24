@@ -25,6 +25,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "build.run-log-steps", pluginId: "build.build-logs" },
   { id: "build.run-logs", pluginId: "build.build-logs" },
   { id: "commit-files", pluginId: "code-explorer.commit-detail" },
+  { id: "config_v2.auto-merge.review", pluginId: "config_v2.auto-merge" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
   { id: "conversations-sidebar", pluginId: "conversations.conversations-view.data-view" },
   { id: "conversations.before-after.gallery", pluginId: "conversations.before-after" },

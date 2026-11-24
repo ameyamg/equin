@@ -65,7 +65,7 @@ declared as its main axis. The disagreement is the design, not an oversight.
 
 - Description: Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
 - Cross-plugin:
-  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×10
     - `conversations` ×9
@@ -74,6 +74,7 @@ declared as its main axis. The disagreement is the design, not an oversight.
     - `ui` ×3
     - `fields` ×2
     - `companions/browser-extension`
+    - `config_v2/auto-merge`
     - `infra/claude-cli`
     - `page/page-reference`
     - `search/quick-find`

@@ -15096,6 +15096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `audience/developer-mark`
       - `audience/view-option`
       - `build`
+      - `config_v2/auto-merge`
       - `reports/reload-loss`
       - `shell/notifications`
       - `shell/toast`
@@ -15124,6 +15125,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/app-launcher`
           - `build`
+          - `config_v2/auto-merge`
           - `config_v2/git-defaults-preview`
           - `conversations/runtime-sdk`
           - `hints/ask`
@@ -17330,6 +17332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `FieldStorageProvider`
     - Exports (values):
       - `acknowledgeConflictByPath`
+      - `AutoMergeResolveRefused`
       - `AutoMergeUndoRefused`
       - `ConfigGitLayer`
       - `configRegistryReady`
@@ -17358,6 +17361,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reloadConfigDocument`
       - `removeDescriptorScope`
       - `resetConfigByPath`
+      - `resolveAutoMergeFieldByPath`
       - `setConfig`
       - `setConfigByPath`
       - `stampAutoMergeByPath`
@@ -17420,8 +17424,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `GitLayerDocument`
       - `JsonValue`
       - `MergeConflictReason`
+      - `MergeFieldChoice`
+      - `MergeFieldOutcome`
       - `MergePath`
       - `MergeRecordStatus`
+      - `MergeReviewField`
       - `OriginDefaultsFrom`
       - `OrphanEntry`
       - `OrphanFile`
@@ -17477,6 +17484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `mergeConfigDocument`
       - `mergeConflictFields`
       - `mergeRecordStatus`
+      - `mergeReviewFields`
       - `normalizeCollectionItems`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
@@ -17497,6 +17505,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `removeDescriptorScope`
       - `resolveGitLayer`
       - `REVIEW_MARKER`
+      - `sameFieldValue`
       - `scopeAppId`
       - `scopeSegment`
       - `seedConditionHolds`
@@ -17544,30 +17553,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
       - `proxyFiles` — Config files held in a map, each behind a synchronous read / write / exists proxy — what `propagate` and `propagateGitLayerDocument` write through.
   - Plugins:
-    - **`auto-merge`** — Config updates merged automatically, in the app: a line above a merged config in Settings → Config (updated with the new defaults, your changes kept, the fields the update removed, Undo, Dismiss) and the Undo of the update notification announcing them (config-auto-merge). Serves the automatic-merge records the config registry writes when an update's new defaults merge cleanly under a user override: config-v2.auto-merges (every document with one) and config-v2.auto-merge (one document's record and where it stands — current, superseded, edited since), moved with the registry's document fan-out; and POST /api/config-v2/auto-merge/undo (put the normal conflict back) and /ack (dismiss the note); and the config-auto-merge.notify warm-up, which writes ONE user notification (category updates, action config-auto-merge — Undo) for every merge record no notification announced yet, each then stamped notified.
+    - **`auto-merge`** — Config updates merged automatically, in the app: above a merged config in Settings → Config, a line for users (updated with the new defaults, your changes kept, the fields the update removed, Undo, Dismiss) and for developers the review — every field the merge touched (old default, yours, new default, result, outcome and why) with Keep / Use mine / Use new default, Undo merge and Mark reviewed; the config nav's Auto-merged field (its authored view) and, for developers, a notice counting the merges not reviewed yet; and the Undo of the update notification announcing them (config-auto-merge). Serves the automatic-merge records the config registry writes when an update's new defaults merge cleanly under a user override: config-v2.auto-merges (every document with one) and config-v2.auto-merge (one document's record and where it stands — current, superseded, edited since), moved with the registry's document fan-out; and POST /api/config-v2/auto-merge/undo (put the normal conflict back) /ack (dismiss the note — Mark reviewed) and /resolve-field (the developer review's Keep / Use mine / Use new default on one field); and the config-auto-merge.notify warm-up, which writes ONE user notification (category updates, action config-auto-merge — Undo) for every merge record no notification announced yet, each then stamped notified.
       - Web:
+        - Slots: `review-actions`
+        - Slot contributors: `review-actions` ← `config_v2.auto-merge`
         - Contributes:
           - `ConfigDetailSlots.Banner` → `AutoMergeBanner`
           - `Notifications.Action` "config-auto-merge"
-        - Uses:
-          - `config_v2/settings.ConfigDetailSlots`
-          - `infra/endpoints.useEndpointMutation`
+          - `ConfigNavSlots.Field` → `AutoMergedNavField`
+          - `ConfigNavSlots.Notice` → `AutoMergeNavNotice`
+          - `review-actions` "keep" → `KeepFieldAction`
+          - `review-actions` "use-mine" → `UseMineFieldAction`
+          - `review-actions` "use-new-default" → `UseNewDefaultFieldAction`
+        - Uses: 30 symbols — full list in [`plugins/config_v2/plugins/auto-merge/REFERENCE.md`](../plugins/config_v2/plugins/auto-merge/REFERENCE.md)
+          - `primitives/data-view` ×5
+          - `config_v2/settings` ×4
+          - `infra/endpoints` ×3
+          - `network/live/live-state` ×3
+          - `primitives/css/ui-kit` ×2
+          - `shell/notifications` ×2
+          - `audience/developer-mark.DeveloperMark`
+          - `audience.useAudience`
           - `network/live.useLive`
-          - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/fill.Fill`
           - `primitives/css/rigid.rigidClass`
+          - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `shell/notifications.Notifications`
-          - `shell/notifications.useToast`
+          - `primitives/css/yield.yieldClass`
+          - `primitives/relative-time.RelativeTime`
           - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `resource.declare` "config-v2.auto-merge"
           - `resource.declare` "config-v2.auto-merges"
         - Uses:
+          - `config_v2.AutoMergeResolveRefused`
           - `config_v2.AutoMergeState`
           - `config_v2.AutoMergeUndoRefused`
           - `config_v2.configRegistryReady`
@@ -17575,6 +17596,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.getAllDescriptors`
           - `config_v2.onDocumentChange`
           - `config_v2.readAutoMerge`
+          - `config_v2.resolveAutoMergeFieldByPath`
           - `config_v2.stampAutoMergeByPath`
           - `config_v2.undoAutoMergeByPath`
           - `infra/warmup.defineWarmup`
@@ -17582,11 +17604,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications.recordNotification`
         - Register: `defineWarmup('config-auto-merge.notify')`
         - Resources:
-          - `config-v2.auto-merge` (push, notified)
+          - `config-v2.auto-merge` (push, notified, whole: a subset of one config document's field keys)
           - `config-v2.auto-merges` (push, notified, whole: one per config document merged automatically — at most one per registered descriptor and scope (~250), whole: the fields one config document's merge dropped — its fields)
         - Routes:
           - `POST /api/config-v2/auto-merge/undo`
           - `POST /api/config-v2/auto-merge/ack`
+          - `POST /api/config-v2/auto-merge/resolve-field`
       - Core:
         - Uses:
           - `config_v2.configMergeRecordSchema`
@@ -17608,6 +17631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `configAutoMerge`
           - `configAutoMerges`
           - `configDisplayName`
+          - `resolveAutoMergeField`
           - `undoAutoMerge`
       - Cross-plugin:
         - Uses tokens:
@@ -17809,21 +17833,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigDetailSlots.ConflictAction`
           - `ConfigDetailSlots.Banner`
           - `ConfigNavSlots.Notice`
+          - `ConfigNavSlots.Field`
         - Slot contributors:
           - `configNavPane.Actions` ← `primitives.pane`
           - `configDetailPane.Actions` ← `primitives.pane`
           - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
           - `ConfigDetailSlots.Banner` ← `config_v2.auto-merge`
+          - `ConfigNavSlots.Notice` ← `config_v2.auto-merge`
           - `ConfigNavSlots.Notice` ← `debug.config-orphans`
+          - `ConfigNavSlots.Field` ← `config_v2.auto-merge`
         - Contributes:
           - `Pane.Register` "config-v2-detail"
           - `Pane.Register` "config-v2-nav"
-        - Uses: 47 symbols — full list in [`plugins/config_v2/plugins/settings/REFERENCE.md`](../plugins/config_v2/plugins/settings/REFERENCE.md)
+        - Uses: 49 symbols — full list in [`plugins/config_v2/plugins/settings/REFERENCE.md`](../plugins/config_v2/plugins/settings/REFERENCE.md)
+          - `primitives/pane` ×5
           - `config_v2/fields` ×4
           - `network/live/live-state` ×4
           - `primitives/data-view` ×4
-          - `primitives/pane` ×4
           - `primitives/css/ui-kit` ×3
+          - `primitives/slot-render` ×2
           - `apps-core/app-icon.AppIconView`
           - `apps-core.Apps`
           - `config_v2.useConfigRegistrations`
@@ -17848,7 +17876,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
-          - `primitives/slot-render.defineRenderSlot`
           - `primitives/syntax-highlight.HighlightedCode`
           - `shell/notifications.useToast`
           - `ui/icons.Icon`
@@ -17858,6 +17885,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigConflictFieldStatus`
           - `ConfigConflictKind`
           - `ConfigDocumentBannerProps`
+          - `ConfigNavField`
+          - `ConfigNavFieldRead`
         - Exports (values):
           - `configDetailPane`
           - `configDetailRoute`
@@ -17865,6 +17894,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigNav`
           - `configNavPane`
           - `ConfigNavSlots`
+          - `useShowConfigNavView`
       - Server:
         - Contributes: `taskCategory` "config"
         - Uses:
@@ -35825,17 +35855,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `whenPageCanFetch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 119 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×28
           - `apps` ×20
           - `ui` ×10
           - `reports` ×8
           - `apps-core` ×6
           - `debug` ×6
+          - `config_v2` ×4
           - `framework` ×4
           - `page` ×4
           - `shell` ×4
-          - `config_v2` ×3
           - `conversations` ×3
           - `fields` ×3
           - `infra` ×3
@@ -52917,7 +52947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Imported by: 100 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×30
               - `apps` ×22
               - `primitives` ×16
@@ -52925,12 +52955,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×5
               - `build` ×2
               - `companions` ×2
+              - `config_v2` ×2
               - `infra` ×2
               - `plugin-meta` ×2
               - `review` ×2
               - `stats` ×2
               - `code-explorer/file-resolve`
-              - `config_v2/settings`
               - `fields/json/config`
               - `shell/notifications`
               - `ui/theme-engine/theme-gallery`
@@ -53751,7 +53781,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×10
               - `conversations` ×9
@@ -53760,6 +53790,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×3
               - `fields` ×2
               - `companions/browser-extension`
+              - `config_v2/auto-merge`
               - `infra/claude-cli`
               - `page/page-reference`
               - `search/quick-find`
@@ -53936,8 +53967,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×105
+        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×106
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -54221,8 +54252,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 107 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×105
+        - Contributes: 108 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×106
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getAllDescriptors`
@@ -54428,7 +54459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
           - `apps` ×29
           - `debug` ×17
@@ -54436,12 +54467,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×9
           - `tasks` ×7
           - `infra` ×4
+          - `config_v2` ×2
           - `apps-core/app-launcher`
           - `auth`
           - `build/build-logs`
           - `code-explorer/commit-detail`
           - `companions/menu-bar/app-grid`
-          - `config_v2/settings`
           - `history/dialog`
           - `integrations/google-maps/usage`
           - `page/links`
@@ -58948,7 +58979,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×27
           - `debug` ×15
           - `conversations` ×11
@@ -58960,6 +58991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/commit-link`
           - `code-explorer/commit-detail`
           - `companions/browser-extension/accounts-row`
+          - `config_v2/auto-merge`
           - `fields/date/table`
           - `framework/web-core`
           - `page/annotations/agent-notes/authorship`
@@ -60907,8 +60939,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 310 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×310
+    - Contributes: 311 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×311
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -60932,8 +60964,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×309
+    - Contributes: 310 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×310
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

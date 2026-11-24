@@ -1,6 +1,8 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /**
  * Which of the two config-detail conflict banners is hosting the action.
@@ -80,7 +82,31 @@ export const ConfigDetailSlots = {
   }>(),
 };
 
+/** What a contributed nav field reads: the store paths it is true for. */
+export type ConfigNavFieldRead = ResourceResult<ReadonlySet<string>>;
+
+/**
+ * A yes/no field of every config row in the nav, contributed by a plugin that
+ * knows something about configs the nav does not (e.g. "auto-merged"): a
+ * filterable bool an authored nav view can filter on.
+ *
+ * `component` reads the field — its own fixed hook — and hands the read to
+ * `children`. While it is loading the whole nav renders its loading state (a
+ * view filtered on the field would otherwise claim "none"); a failure renders
+ * the nav's error.
+ */
+export interface ConfigNavField {
+  /** The field id an authored view's filter names (`fieldId`). */
+  id: string;
+  label: string;
+  component: ComponentType<{
+    children: (read: ConfigNavFieldRead) => ReactNode;
+  }>;
+}
+
 export const ConfigNavSlots = {
+  /** Contributed nav fields (data, never drawn): see {@link ConfigNavField}. */
+  Field: defineSlot<ConfigNavField>(),
   /**
    * Notices pinned above the config nav — something about the user's saved
    * settings as a whole that no single config row can say (e.g. overrides that

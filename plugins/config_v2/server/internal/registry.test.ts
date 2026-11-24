@@ -28,6 +28,7 @@ import {
   type JsonValue,
 } from "../../core";
 import { ConfigV2 } from "./contribution";
+import { mergeReviewFields } from "../../core";
 import { ConfigGitLayer, ConfigStore } from "./host-services";
 import {
   acknowledgeConflictByPath,
@@ -38,6 +39,7 @@ import {
   mergeConflictByPath,
   onDocumentChange,
   readAutoMerge,
+  resolveAutoMergeFieldByPath,
   reloadConfigDocument,
   stampAutoMergeByPath,
   undoAutoMergeByPath,
@@ -635,5 +637,95 @@ describe("automatic merge at boot", () => {
       await deleteOverrideByPath(GAMMA, { writer });
       expect(await exists(file(GAMMA, "merge"))).toBe(false);
       expect(await readAutoMerge(GAMMA)).toBeNull();
+    }));
+});
+
+describe("reviewing an automatic merge per field", () => {
+  const ANCESTOR = { enabled: true, title: "old" };
+  const NEW_ORIGIN = { enabled: true, title: "new" };
+  // The user turned `enabled` off (only they changed it) and retitled
+  // (the update retitled too: their value wins).
+  const PRE_MERGE = { enabled: false, title: "mine" };
+
+  async function merged(): Promise<string> {
+    await deleteOverrideByPath(GAMMA, { writer });
+    await seed(file(GAMMA, "origin"), NEW_ORIGIN);
+    await seed(file(GAMMA, "ancestor"), ANCESTOR);
+    await seed(file(GAMMA, "override"), PRE_MERGE, computeHash(ANCESTOR));
+    shutdownRegistry();
+    await initRegistry();
+    const state = await readAutoMerge(GAMMA);
+    expect(state?.status).toBe("current");
+    return state!.record.id;
+  }
+  const resolve = (
+    recordId: string,
+    field: string,
+    choice: "keep" | "mine" | "new-default",
+  ) =>
+    resolveAutoMergeFieldByPath(GAMMA, { recordId, field, choice }, { writer });
+
+  test("the review lists each field a side changed, with its outcome", () =>
+    run(async () => {
+      await merged();
+      const { record } = (await readAutoMerge(GAMMA))!;
+      expect(
+        mergeReviewFields(record).map((f) => [f.key, f.outcome, f.result]),
+      ).toEqual([
+        ["enabled", "kept-yours", false],
+        ["title", "yours-won", "mine"],
+      ]);
+    }));
+
+  test("Use new default rewrites the field, keeps the merge current and undoable", () =>
+    run(async () => {
+      const id = await merged();
+      await resolve(id, "title", "new-default");
+      expect(getConfig(gamma)).toEqual({ enabled: false, title: "new" });
+      const state = (await readAutoMerge(GAMMA))!;
+      expect(state.status).toBe("current");
+      expect(state.editedFields).toEqual([]);
+      expect(state.record.resolutions.map((r) => [r.path, r.choice])).toEqual([
+        [["title"], "new-default"],
+      ]);
+      // Use mine puts the user's pre-merge value back.
+      await resolve(id, "title", "mine");
+      expect(getConfig(gamma).title).toBe("mine");
+      // Undo still restores the exact pre-merge state.
+      await undoAutoMergeByPath(GAMMA, { writer });
+      expect((await read(file(GAMMA, "override")))?.content).toEqual(PRE_MERGE);
+    }));
+
+  test("Keep records the choice and rewrites nothing", () =>
+    run(async () => {
+      const id = await merged();
+      const before = await read(file(GAMMA, "override"));
+      changes.length = 0;
+      await resolve(id, "enabled", "keep");
+      expect(await read(file(GAMMA, "override"))).toEqual(before);
+      expect(
+        mergeReviewFields((await readAutoMerge(GAMMA))!.record).find(
+          (f) => f.key === "enabled",
+        )?.resolution?.choice,
+      ).toBe("keep");
+      expect(changes).toContainEqual({ path: GAMMA });
+    }));
+
+  test("a field edited since, a replaced record and an untouched field are refused", () =>
+    run(async () => {
+      const id = await merged();
+      await setConfig(gamma, "title", "edited", { writer });
+      const state = (await readAutoMerge(GAMMA))!;
+      expect(state.status).toBe("edited");
+      expect(state.editedFields).toEqual(["title"]);
+      expect(resolve(id, "title", "new-default")).rejects.toThrow(
+        "changed since",
+      );
+      expect(resolve("other", "enabled", "keep")).rejects.toThrow(
+        "replaced it",
+      );
+      // A field the user did not edit can still be reviewed.
+      await resolve(id, "enabled", "new-default");
+      expect(getConfig(gamma)).toEqual({ enabled: true, title: "edited" });
     }));
 });

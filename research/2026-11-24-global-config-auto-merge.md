@@ -1,6 +1,6 @@
 # Config updates: automatic merge of the user layer, and config owned by the backend that reads it
 
-Task: task-1795524794-221nve. Status: phases 1 (merge engine) and 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) implemented; phases 3–6 planned.
+Task: task-1795524794-221nve. Status: phases 1 (merge engine), 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) and 3 (developer review: per-field Keep / Use mine / Use new default, nav view, notice) implemented; phases 4–6 planned.
 
 ## Context
 
@@ -251,6 +251,20 @@ So config gets a **generation per config-relevant code version**:
 Phase 2's startup auto-merge already uses the schema of the code that reads the
 config. Phase 5 then closes the window in which the old backend reads files
 written for the new code.
+
+### Phase 3 as built (deviations)
+
+- The review works per **top-level field** (`mergeReviewFields`): a field's
+  deeper choices (list rows, object keys) are listed as notes under it, and
+  Use mine / Use new default rewrite the whole field. Deep-path actions need a
+  row-key path resolver over seeded ids; not needed yet.
+- The `auto-merged` nav view is authored config, so it shows for every user
+  (a DataView view has no audience); it lists configs only. The review, the
+  per-field actions and the nav notice are developer-only.
+- The nav field is a generic `ConfigNavSlots.Field` (settings never names
+  auto-merge).
+- Still open: the notification's developer action (Review instead of Undo
+  all) and settling it in place once everything is reviewed.
 
 ## Critical files
 

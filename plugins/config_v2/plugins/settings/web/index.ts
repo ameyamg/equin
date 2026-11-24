@@ -8,7 +8,7 @@ export {
   configDetailPane,
   configDetailRoute,
 } from "./internal/panes";
-export { ConfigNav } from "./components/config-nav";
+export { ConfigNav, useShowConfigNavView } from "./components/config-nav";
 export { ConfigDetailSlots, ConfigNavSlots } from "./slots";
 export type {
   ConfigConflictContext,
@@ -16,6 +16,8 @@ export type {
   ConfigConflictFieldStatus,
   ConfigConflictKind,
   ConfigDocumentBannerProps,
+  ConfigNavField,
+  ConfigNavFieldRead,
 } from "./slots";
 
 export default {
@@ -31,5 +33,6 @@ export default {
     ConflictAction: ConfigDetailSlots.ConflictAction,
     DetailBanner: ConfigDetailSlots.Banner,
     NavNotice: ConfigNavSlots.Notice,
+    NavField: ConfigNavSlots.Field,
   },
 } satisfies PluginDefinition;

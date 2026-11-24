@@ -13,8 +13,12 @@ import {
   acknowledgeAutoMerge,
   configAutoMerge,
   undoAutoMerge,
+  type AutoMergeStateView,
 } from "../../core";
 import { useAnnounceRefused } from "./undo-refused";
+import { useAudience } from "@plugins/audience/web";
+import { reachesAudience } from "@plugins/audience/core";
+import { AutoMergeReview } from "./auto-merge-review";
 
 const mergeIcon = symbol("merge");
 const ACTION_CLASS = cn("bg-info/20 hover:bg-info/30");
@@ -25,24 +29,18 @@ function shown(value: unknown): string {
 }
 
 /**
- * Above a config the last update merged automatically: "Updated with the new
- * defaults; your changes kept", how many notes the merge left, each field it
- * dropped (the update removed it; the user's value no longer applies), Undo —
- * the normal conflict back — and Dismiss. Nothing once dismissed, undone or
- * superseded by a later update; Undo is off once the user edited the config
- * since (it would discard that edit).
+ * Above a config the last update merged automatically: a developer gets the
+ * review of every field the merge touched (`AutoMergeReview`), anyone else the
+ * one line (`AutoMergeLine`). Nothing while who the user is is not known.
  */
-export function AutoMergeBanner({
-  storePath,
-  scopeId,
-}: ConfigDocumentBannerProps) {
-  const merge = useLive(configAutoMerge, { path: storePath, scopeId });
-  const announceRefused = useAnnounceRefused();
-  const undo = useEndpointMutation(undoAutoMerge, {
-    onSuccess: ({ refused }) => announceRefused(refused),
+export function AutoMergeBanner(props: ConfigDocumentBannerProps) {
+  const audience = useAudience();
+  const merge = useLive(configAutoMerge, {
+    path: props.storePath,
+    scopeId: props.scopeId,
   });
-  const ack = useEndpointMutation(acknowledgeAutoMerge);
-  if (merge.status === "loading") return null;
+  if (audience.status === "loading" || merge.status === "loading") return null;
+  if (audience.status === "error") throw audience.error;
   if (merge.status === "error")
     return (
       <ResourceErrorInline
@@ -56,10 +54,41 @@ export function AutoMergeBanner({
   if (
     state === null ||
     state.status === "superseded" ||
-    state.status === "undone" ||
-    state.record.acknowledgedAt !== undefined
+    state.status === "undone"
   )
     return null;
+  if (reachesAudience("developer", audience.data))
+    return (
+      <AutoMergeReview
+        storePath={props.storePath}
+        scopeId={props.scopeId}
+        state={state}
+      />
+    );
+  if (state.record.acknowledgedAt !== undefined) return null;
+  return <AutoMergeLine {...props} state={state} />;
+}
+
+/**
+ * Above a config the last update merged automatically: "Updated with the new
+ * defaults; your changes kept", how many notes the merge left, each field it
+ * dropped (the update removed it; the user's value no longer applies), Undo —
+ * the normal conflict back — and Dismiss. Nothing once dismissed, undone or
+ * superseded by a later update; Undo is off once the user edited the config
+ * since (it would discard that edit).
+ */
+function AutoMergeLine({
+  storePath,
+  scopeId,
+  state,
+}: ConfigDocumentBannerProps & {
+  state: NonNullable<AutoMergeStateView>;
+}) {
+  const announceRefused = useAnnounceRefused();
+  const undo = useEndpointMutation(undoAutoMerge, {
+    onSuccess: ({ refused }) => announceRefused(refused),
+  });
+  const ack = useEndpointMutation(acknowledgeAutoMerge);
   const { record } = state;
   const notes = record.decisions.length;
   const removed = record.decisions.flatMap((d) =>

@@ -494,6 +494,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `FieldStorageProvider`
   - Exports (values):
     - `acknowledgeConflictByPath`
+    - `AutoMergeResolveRefused`
     - `AutoMergeUndoRefused`
     - `ConfigGitLayer`
     - `configRegistryReady`
@@ -522,6 +523,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `reloadConfigDocument`
     - `removeDescriptorScope`
     - `resetConfigByPath`
+    - `resolveAutoMergeFieldByPath`
     - `setConfig`
     - `setConfigByPath`
     - `stampAutoMergeByPath`
@@ -584,8 +586,11 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `GitLayerDocument`
     - `JsonValue`
     - `MergeConflictReason`
+    - `MergeFieldChoice`
+    - `MergeFieldOutcome`
     - `MergePath`
     - `MergeRecordStatus`
+    - `MergeReviewField`
     - `OriginDefaultsFrom`
     - `OrphanEntry`
     - `OrphanFile`
@@ -641,6 +646,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `mergeConfigDocument`
     - `mergeConflictFields`
     - `mergeRecordStatus`
+    - `mergeReviewFields`
     - `normalizeCollectionItems`
     - `orphanEntrySchema`
     - `orphanFileRoleSchema`
@@ -661,6 +667,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `removeDescriptorScope`
     - `resolveGitLayer`
     - `REVIEW_MARKER`
+    - `sameFieldValue`
     - `scopeAppId`
     - `scopeSegment`
     - `seedConditionHolds`
@@ -708,7 +715,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
     - `proxyFiles` — Config files held in a map, each behind a synchronous read / write / exists proxy — what `propagate` and `propagateGitLayerDocument` write through.
 - Sub-plugins:
-  - **`auto-merge`** — Config updates merged automatically, in the app: a line above a merged config in Settings → Config (updated with the new defaults, your changes kept, the fields the update removed, Undo, Dismiss)…
+  - **`auto-merge`** — Config updates merged automatically, in the app: above a merged config in Settings → Config, a line for users (updated with the new defaults, your changes kept, the fields the update removed, Undo…
   - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is…
   - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never…
   - **`config-link`** [exempt] — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…

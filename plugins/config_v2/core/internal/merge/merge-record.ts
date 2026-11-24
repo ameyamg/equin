@@ -57,8 +57,10 @@ const fieldDecisionSchema = z.discriminatedUnion("kind", [
  *   input). Refused once the origin moved past `toHash` (superseded) or the
  *   override no longer holds `result` (edited since).
  * - `decisions`: what the merge chose on the user's behalf worth showing them.
- * - `placement` / `resolutions`: reserved for the placement job and the
- *   per-field Use mine / Use new default actions (later phases).
+ * - `placement`: reserved for the placement job (a later phase).
+ * - `resolutions`: the developer review's per-field choices (Keep / Use mine /
+ *   Use new default), in the order they were made; `result` already holds
+ *   what a Use mine / Use new default wrote.
  * - `acknowledgedAt`: the user dismissed it. `notifiedAt`: the update
  *   notification has announced it (announced once).
  */
@@ -86,7 +88,9 @@ export const configMergeRecordSchema = z.object({
   resolutions: wholeList(
     z.object({
       path: mergePathSchema,
-      choice: z.enum(["mine", "new-default"]),
+      // keep: the merge's decision reviewed and kept; mine / new-default:
+      // the field rewritten to the user's pre-merge value / the new default.
+      choice: z.enum(["keep", "mine", "new-default"]),
       at: z.string(),
     }),
     { reason: "per-field resolutions of one document's merge — its fields" },

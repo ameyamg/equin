@@ -36,6 +36,7 @@
     - `audience/developer-mark`
     - `audience/view-option`
     - `build`
+    - `config_v2/auto-merge`
     - `reports/reload-loss`
     - `shell/notifications`
     - `shell/toast`

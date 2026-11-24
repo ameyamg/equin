@@ -63,6 +63,22 @@ Why a slot rather than a button: this is a generic config editor and must not
 import the conversations/launch stack. `plugins/conflict-agent/` is the
 contributor that hands a conflict to an agent.
 
+## Contributed nav fields
+
+The nav's rows carry Modified, Conflict and Source, which the settings know.
+A plugin that knows something else about configs adds a filterable bool field
+through `ConfigNavSlots.Field` (`{ id, label, component }` — a component
+that reads the field with its own hook and hands `children` the read: a
+`ResourceResult` of the store paths the field is true for), and
+an authored nav view filters on its `id` (`config_v2.settings.nav.jsonc`'s
+`auto-merged` view filters on auto-merge's `autoMerged`). The nav calls each
+contributed reader in an isolated level of its own, keyed by the field id, so
+a field a deferred plugin contributes later mounts a level instead of
+reshaping a mounted one; and it waits for every field's read before
+showing rows, as it does for Conflict, since a filtered view would otherwise
+claim "none". `useShowConfigNavView()` switches the nav to an authored view
+(a notice's Review button), `null` outside the nav's pane.
+
 ## The field-gallery exhibit
 
 `config/field-gallery` (`exhibits/`, an `appExhibit` in the `plugin-meta/exhibits`
@@ -83,21 +99,25 @@ renderer, which only the running app has.
     - `ConfigDetailSlots.ConflictAction`
     - `ConfigDetailSlots.Banner`
     - `ConfigNavSlots.Notice`
+    - `ConfigNavSlots.Field`
   - Slot contributors:
     - `configNavPane.Actions` ← `primitives.pane`
     - `configDetailPane.Actions` ← `primitives.pane`
     - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
     - `ConfigDetailSlots.Banner` ← `config_v2.auto-merge`
+    - `ConfigNavSlots.Notice` ← `config_v2.auto-merge`
     - `ConfigNavSlots.Notice` ← `debug.config-orphans`
+    - `ConfigNavSlots.Field` ← `config_v2.auto-merge`
   - Contributes:
     - `Pane.Register` "config-v2-detail"
     - `Pane.Register` "config-v2-nav"
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×5
     - `config_v2/fields` ×4
     - `network/live/live-state` ×4
     - `primitives/data-view` ×4
-    - `primitives/pane` ×4
     - `primitives/css/ui-kit` ×3
+    - `primitives/slot-render` ×2
     - `apps-core/app-icon.AppIconView`
     - `apps-core.Apps`
     - `config_v2.useConfigRegistrations`
@@ -122,7 +142,6 @@ renderer, which only the running app has.
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/slot-render.defineRenderSlot`
     - `primitives/syntax-highlight.HighlightedCode`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`
@@ -132,6 +151,8 @@ renderer, which only the running app has.
     - `ConfigConflictFieldStatus`
     - `ConfigConflictKind`
     - `ConfigDocumentBannerProps`
+    - `ConfigNavField`
+    - `ConfigNavFieldRead`
   - Exports (values):
     - `configDetailPane`
     - `configDetailRoute`
@@ -139,6 +160,7 @@ renderer, which only the running app has.
     - `ConfigNav`
     - `configNavPane`
     - `ConfigNavSlots`
+    - `useShowConfigNavView`
 - Server:
   - Contributes: `taskCategory` "config"
   - Uses:

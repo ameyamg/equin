@@ -40,7 +40,14 @@ export const configAutoMerges = liveValue("config-v2.auto-merges", {
 });
 
 export const autoMergeStateSchema = z
-  .object({ record: configMergeRecordSchema, status: statusSchema })
+  .object({
+    record: configMergeRecordSchema,
+    status: statusSchema,
+    /** Top-level fields the user changed since the merge (per-field review refuses them). */
+    editedFields: wholeList(z.string(), {
+      reason: "a subset of one config document's field keys",
+    }),
+  })
   .nullable();
 export type AutoMergeStateView = z.infer<typeof autoMergeStateSchema>;
 
