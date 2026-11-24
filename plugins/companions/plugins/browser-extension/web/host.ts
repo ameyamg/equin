@@ -3,13 +3,36 @@ import {
   acceptBridgePort,
   BRIDGE_HELLO,
   BRIDGE_RESULTS,
+  BridgeEventSchema,
   BridgeResponseSchema,
   EXTENSION_ORIGIN,
   type ActiveTab,
   type BridgeCall,
   type BridgeResult,
   type ExtensionHostInfo,
+  type RecorderCommand,
+  type RecorderOptions,
+  type RecorderSnapshot,
+  type TabFit,
 } from "../core";
+
+/**
+ * The shell's tab recorder (capability `record`): the session lives in the
+ * extension's service worker, so the popup may close mid-recording.
+ * `snapshot()` reads it and subscribes this page to its changes, which reach
+ * every `onSnapshot` listener by push.
+ */
+export interface ExtensionRecorder {
+  snapshot: () => Promise<RecorderSnapshot>;
+  onSnapshot: (listener: (s: RecorderSnapshot) => void) => () => void;
+  /** The tab measured for the size presets, or why it cannot be recorded. */
+  fit: () => Promise<TabFit>;
+  start: (options: RecorderOptions) => Promise<void>;
+  setOptions: (options: RecorderOptions) => Promise<void>;
+  command: (command: RecorderCommand) => Promise<void>;
+  /** Open the extension's one-time microphone grant page. */
+  requestMicrophone: () => Promise<void>;
+}
 
 /**
  * The extension hosting this page, as the panel's sections read it:
@@ -36,6 +59,7 @@ export type ExtensionHost =
       close: (() => Promise<void>) | null;
       setHeight: (px: number) => Promise<void>;
       reload: () => Promise<void>;
+      recorder: ExtensionRecorder | null;
     };
 
 type ProbeState = ExtensionHost | { kind: "failed"; error: Error };
@@ -44,14 +68,26 @@ type Call = <C extends BridgeCall>(
   call: C,
 ) => Promise<BridgeResult<C["method"]>>;
 
-/** A client over the bridge port: each call answered by its id, parsed. */
-function bridgeClient(port: MessagePort): Call {
+/** A client over the bridge port: each call answered by its id, parsed; the
+ *  shell's pushes (`BridgeEvent`) go to `onEvent`. */
+function bridgeClient(
+  port: MessagePort,
+  onRecorder: (s: RecorderSnapshot) => void,
+): Call {
   let nextId = 0;
   const waiting = new Map<
     number,
     { resolve: (v: unknown) => void; reject: (e: Error) => void }
   >();
   port.onmessage = (event: MessageEvent<unknown>) => {
+    if (
+      typeof event.data === "object" &&
+      event.data !== null &&
+      "event" in event.data
+    ) {
+      onRecorder(BridgeEventSchema.parse(event.data).value);
+      return;
+    }
     const response = BridgeResponseSchema.parse(event.data);
     const entry = waiting.get(response.id);
     if (entry === undefined)
@@ -73,7 +109,10 @@ function bridgeClient(port: MessagePort): Call {
   };
 }
 
-async function presentHost(call: Call): Promise<ExtensionHost> {
+async function presentHost(
+  call: Call,
+  recorderListeners: Set<(s: RecorderSnapshot) => void>,
+): Promise<ExtensionHost> {
   const info = await call({ method: "hostInfo", params: {} });
   const caps = info.capabilities;
   const tab = caps.activeTab
@@ -98,6 +137,25 @@ async function presentHost(call: Call): Promise<ExtensionHost> {
       : null,
     setHeight: (px) => done(call({ method: "setHeight", params: { px } })),
     reload: () => done(call({ method: "reload", params: {} })),
+    recorder:
+      caps.record === true
+        ? {
+            snapshot: () => call({ method: "recorder", params: {} }),
+            onSnapshot: (listener) => {
+              recorderListeners.add(listener);
+              return () => recorderListeners.delete(listener);
+            },
+            fit: () => call({ method: "recorderFit", params: {} }),
+            start: (options) =>
+              done(call({ method: "recorderStart", params: { options } })),
+            setOptions: (options) =>
+              done(call({ method: "recorderOptions", params: { options } })),
+            command: (command) =>
+              done(call({ method: "recorderCommand", params: { command } })),
+            requestMicrophone: () =>
+              done(call({ method: "requestMicrophone", params: {} })),
+          }
+        : null,
   };
 }
 
@@ -146,7 +204,11 @@ function probe(): ProbeState {
     );
     if (port === null) return;
     window.removeEventListener("message", onMessage);
-    presentHost(bridgeClient(port)).then(settle, (err: unknown) =>
+    const recorderListeners = new Set<(s: RecorderSnapshot) => void>();
+    const client = bridgeClient(port, (snapshot) => {
+      for (const l of recorderListeners) l(snapshot);
+    });
+    presentHost(client, recorderListeners).then(settle, (err: unknown) =>
       settle(failed(err)),
     );
   };

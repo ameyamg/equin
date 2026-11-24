@@ -608,7 +608,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 285 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 286 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×86
     - `conversations` ×37
     - `infra` ×23
@@ -623,10 +623,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `integrations` ×4
     - `apps-core` ×3
     - `build` ×3
+    - `companions` ×3
     - `config_v2` ×3
     - `network` ×3
     - `active-data` ×2
-    - `companions` ×2
     - `history` ×2
     - `screenshot` ×2
     - `shell` ×2

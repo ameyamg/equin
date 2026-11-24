@@ -13,27 +13,27 @@ import {
   BridgeHelloSchema,
   BridgeRequestSchema,
   type BridgeCall,
+  type BridgeEvent,
   type BridgeResponse,
   type ExtensionHostInfo,
 } from "../core/bridge";
-
-/** The part of Chrome's extension API this popup uses. */
-interface ChromeTab {
-  id?: number;
-  url?: string;
-  title?: string;
-  active: boolean;
-  lastAccessed?: number;
-}
-declare const chrome: {
-  tabs: {
-    getCurrent(): Promise<ChromeTab | undefined>;
-    query(q: { lastFocusedWindow: boolean }): Promise<ChromeTab[]>;
-    update(id: number, props: { url: string }): Promise<unknown>;
-    create(props: { url: string; active?: boolean }): Promise<unknown>;
-  };
-  runtime: { reload(): void };
-};
+import {
+  WorkerReplySchema,
+  type MicPermission,
+  type RecorderCommand,
+  type RecorderSnapshot,
+  type TabFit,
+  type WorkerCommand,
+} from "../core/recorder";
+import { chrome, errorText, type ChromeTab } from "./chrome-api";
+import { measureTab } from "./measure";
+import {
+  OPTIONS_KEY,
+  readRecorderOptions,
+  readRecorderState,
+  STATE_KEY,
+  writeRecorderOptions,
+} from "./recorder-store";
 
 /** Chrome's own cap on a popup's height. */
 const MAX_HEIGHT = 600;
@@ -84,10 +84,72 @@ const hostInfo: ExtensionHostInfo = {
     navigate: true,
     openTab: true,
     close: true,
+    record: true,
   },
 };
 
-async function answer(call: BridgeCall): Promise<unknown> {
+// ── The recorder: commands go to the worker, state comes back by push ──────
+
+async function toWorker(command: WorkerCommand): Promise<void> {
+  const reply = WorkerReplySchema.parse(
+    await chrome.runtime.sendMessage(command),
+  );
+  if (!reply.ok) throw new Error(reply.error);
+}
+
+const WORKER_COMMAND: Record<
+  RecorderCommand,
+  Exclude<WorkerCommand, { type: "recorder.start" }>
+> = {
+  stop: { type: "recorder.stop" },
+  pause: { type: "recorder.pause" },
+  resume: { type: "recorder.resume" },
+  discard: { type: "recorder.discard" },
+  "forget-last": { type: "recorder.forget-last" },
+};
+
+async function micPermission(): Promise<MicPermission> {
+  const status = await navigator.permissions.query({
+    name: "microphone" as PermissionName,
+  });
+  return status.state;
+}
+
+async function recorderSnapshot(): Promise<RecorderSnapshot> {
+  return {
+    state: await readRecorderState(),
+    options: await readRecorderOptions(),
+    mic: await micPermission(),
+  };
+}
+
+async function tabFit(): Promise<TabFit> {
+  const tab = await aboutTab();
+  try {
+    return { kind: "measured", measure: await measureTab(tab.id) };
+  } catch (err) {
+    // Chrome lets no extension script its own pages (chrome://, the Web
+    // Store): those tabs cannot be recorded, and the panel says so.
+    return { kind: "unrecordable", reason: errorText(err) };
+  }
+}
+
+/** Ports that asked for the recorder: each change is pushed to them. */
+const recorderPorts = new Set<MessagePort>();
+
+function pushRecorder(): void {
+  if (recorderPorts.size === 0) return;
+  void recorderSnapshot().then((value) => {
+    const event: BridgeEvent = { event: "recorder", value };
+    for (const port of recorderPorts) port.postMessage(event);
+  });
+}
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (STATE_KEY in changes || OPTIONS_KEY in changes) pushRecorder();
+});
+
+async function answer(call: BridgeCall, port: MessagePort): Promise<unknown> {
   switch (call.method) {
     case "hostInfo":
       return hostInfo;
@@ -113,6 +175,30 @@ async function answer(call: BridgeCall): Promise<unknown> {
     case "reload":
       chrome.runtime.reload();
       return null;
+    case "recorder":
+      recorderPorts.add(port);
+      return recorderSnapshot();
+    case "recorderFit":
+      return tabFit();
+    case "recorderStart":
+      await writeRecorderOptions(call.params.options);
+      await toWorker({
+        type: "recorder.start",
+        tabId: (await aboutTab()).id,
+        options: call.params.options,
+      });
+      return null;
+    case "recorderOptions":
+      await writeRecorderOptions(call.params.options);
+      return null;
+    case "recorderCommand":
+      await toWorker(WORKER_COMMAND[call.params.command]);
+      return null;
+    case "requestMicrophone":
+      await chrome.tabs.create({
+        url: chrome.runtime.getURL("permissions.html"),
+      });
+      return null;
   }
 }
 
@@ -134,7 +220,7 @@ async function serve(port: MessagePort, data: unknown): Promise<void> {
   const { id, ...call } = parsed.data;
   let response: BridgeResponse;
   try {
-    response = { id, ok: true, value: await answer(call as BridgeCall) };
+    response = { id, ok: true, value: await answer(call as BridgeCall, port) };
   } catch (err) {
     response = {
       id,

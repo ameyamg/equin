@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { EXTENSION_ORIGIN } from "./extension-id";
+import {
+  RecorderCommandSchema,
+  RecorderOptionsSchema,
+  RecorderSnapshotSchema,
+  TabFitSchema,
+} from "./recorder";
 
 /**
  * The bridge between the extension's shell (`browser-extension/popup.ts`) and
@@ -25,6 +31,10 @@ export const ExtensionCapabilitiesSchema = z.object({
   openTab: z.boolean(),
   /** Close the popup (`close`). */
   close: z.boolean(),
+  /** Record the tab (`recorder`, `recorderFit`, `recorderStart`,
+   *  `recorderOptions`, `recorderCommand`, `requestMicrophone`). Absent on a
+   *  shell from before the recorder. */
+  record: z.boolean().optional(),
 });
 export type ExtensionCapabilities = z.infer<typeof ExtensionCapabilitiesSchema>;
 
@@ -64,6 +74,23 @@ export const BridgeCallSchema = z.discriminatedUnion("method", [
     params: z.object({ px: z.number().int().nonnegative() }),
   }),
   z.object({ method: z.literal("reload"), params: NoParams }),
+  // The recorder (capability `record`). `recorder` also subscribes this port
+  // to the snapshot's changes, pushed as `BridgeEvent`s.
+  z.object({ method: z.literal("recorder"), params: NoParams }),
+  z.object({ method: z.literal("recorderFit"), params: NoParams }),
+  z.object({
+    method: z.literal("recorderStart"),
+    params: z.object({ options: RecorderOptionsSchema }),
+  }),
+  z.object({
+    method: z.literal("recorderOptions"),
+    params: z.object({ options: RecorderOptionsSchema }),
+  }),
+  z.object({
+    method: z.literal("recorderCommand"),
+    params: z.object({ command: RecorderCommandSchema }),
+  }),
+  z.object({ method: z.literal("requestMicrophone"), params: NoParams }),
 ]);
 export type BridgeCall = z.infer<typeof BridgeCallSchema>;
 export type BridgeMethod = BridgeCall["method"];
@@ -77,6 +104,12 @@ export const BRIDGE_RESULTS = {
   close: z.null(),
   setHeight: z.null(),
   reload: z.null(),
+  recorder: RecorderSnapshotSchema,
+  recorderFit: TabFitSchema,
+  recorderStart: z.null(),
+  recorderOptions: z.null(),
+  recorderCommand: z.null(),
+  requestMicrophone: z.null(),
 } as const satisfies Record<BridgeMethod, z.ZodType>;
 export type BridgeResult<M extends BridgeMethod> = z.infer<
   (typeof BRIDGE_RESULTS)[M]
@@ -94,6 +127,17 @@ export const BridgeResponseSchema = z.discriminatedUnion("ok", [
   z.object({ id: z.number().int(), ok: z.literal(false), error: z.string() }),
 ]);
 export type BridgeResponse = z.infer<typeof BridgeResponseSchema>;
+
+/**
+ * What the shell pushes on the port unasked: the recorder's snapshot, each
+ * time it changes, to a port that called `recorder` (a page that never did
+ * gets none, so an older page never sees one).
+ */
+export const BridgeEventSchema = z.object({
+  event: z.literal("recorder"),
+  value: RecorderSnapshotSchema,
+});
+export type BridgeEvent = z.infer<typeof BridgeEventSchema>;
 
 /** The page's hello to its parent, asking for the port. */
 export const BRIDGE_HELLO = { type: "equin-bridge-hello" } as const;

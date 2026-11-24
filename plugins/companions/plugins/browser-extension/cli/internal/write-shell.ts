@@ -20,6 +20,19 @@ import {
 const SHELL_SOURCES =
   "plugins/companions/plugins/browser-extension/browser-extension";
 
+/**
+ * The shell's scripts, each bundled on its own: the popup, the recorder's
+ * service worker and offscreen document, the microphone grant page (modules),
+ * and the content script the worker injects — a classic script, so an IIFE.
+ */
+const ENTRYPOINTS: readonly { name: string; format: "esm" | "iife" }[] = [
+  { name: "popup", format: "esm" },
+  { name: "background", format: "esm" },
+  { name: "offscreen", format: "esm" },
+  { name: "permissions", format: "esm" },
+  { name: "content", format: "iife" },
+];
+
 /** The icons the manifest names, each from the generated logo PNG at that path's end. */
 const ICONS: readonly { name: string; logo: string }[] = [
   { name: "icon-16.png", logo: "/icon_16x16.png" },
@@ -94,18 +107,20 @@ async function shellFiles(
   const sources = join(repoRoot, SHELL_SOURCES);
   const files = new Map<string, Buffer>();
 
-  const built = await Bun.build({
-    entrypoints: [join(sources, "popup.ts")],
-    target: "browser",
-    format: "esm",
-    minify: true,
-  });
-  const [bundle] = built.outputs;
-  if (!built.success || bundle === undefined || built.outputs.length !== 1)
-    throw new Error(
-      `the extension shell did not bundle: ${built.logs.map(String).join("\n")}`,
-    );
-  files.set("popup.js", Buffer.from(await bundle.text()));
+  for (const entry of ENTRYPOINTS) {
+    const built = await Bun.build({
+      entrypoints: [join(sources, `${entry.name}.ts`)],
+      target: "browser",
+      format: entry.format,
+      minify: true,
+    });
+    const [bundle] = built.outputs;
+    if (!built.success || bundle === undefined || built.outputs.length !== 1)
+      throw new Error(
+        `the extension shell's ${entry.name}.ts did not bundle: ${built.logs.map(String).join("\n")}`,
+      );
+    files.set(`${entry.name}.js`, Buffer.from(await bundle.text()));
+  }
 
   // The key is the core's, so the id Chrome derives is the one the page trusts.
   const manifest = JSON.parse(
@@ -122,6 +137,18 @@ async function shellFiles(
   if (!html.includes("{{ORIGIN}}") || !html.includes("{{SHELL_DIGEST}}"))
     throw new Error("popup.html lost its {{ORIGIN}} / {{SHELL_DIGEST}} slots");
   files.set("popup.html", Buffer.from(html.replace("{{ORIGIN}}", origin)));
+  // The offscreen recorder frames the relay page at the same origin.
+  const offscreen = await readFile(join(sources, "offscreen.html"), "utf8");
+  if (!offscreen.includes("{{ORIGIN}}"))
+    throw new Error("offscreen.html lost its {{ORIGIN}} slot");
+  files.set(
+    "offscreen.html",
+    Buffer.from(offscreen.replace("{{ORIGIN}}", origin)),
+  );
+  files.set(
+    "permissions.html",
+    Buffer.from(await readFile(join(sources, "permissions.html"), "utf8")),
+  );
 
   for (const icon of ICONS) {
     const matches = LOGO_FILES.filter(

@@ -5755,6 +5755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/git`
               - `apps/file-explorer/places`
               - `apps/website/promo-film/seed`
+              - `companions/browser-extension/recorder`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
@@ -14248,8 +14249,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 28 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `Apps.App` ×22
+    - Slot contributors: 29 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `Apps.App` ×23
       - `Apps.Overlay` ×2
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
@@ -14311,11 +14312,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 67 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 68 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×32
       - `apps-core` ×17
       - `ui` ×6
-      - `companions` ×3
+      - `companions` ×4
       - `config_v2` ×2
       - `hints` ×2
       - `debug/icons`
@@ -16926,6 +16927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserExtension.PageAction`
         - Slot contributors:
           - `BrowserExtension.Section` ← `companions.browser-extension`
+          - `BrowserExtension.Section` ← `companions.browser-extension.recorder`
           - `BrowserExtension.Section` ← `companions.browser-extension.wish`
           - `BrowserExtension.PageAction` ← `companions.browser-extension.equin-site`
         - Contributes:
@@ -16959,7 +16961,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/shortcuts.usePageShortcuts`
           - `ui/icons.Icon`
           - `ui/logo.Logo`
-        - Exports (types): `ExtensionHost`
+        - Exports (types):
+          - `ExtensionHost`
+          - `ExtensionRecorder`
         - Exports (values):
           - `BrowserExtension`
           - `useExtensionHost`
@@ -16987,6 +16991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `ActiveTab`
           - `BridgeCall`
+          - `BridgeEvent`
           - `BridgeMethod`
           - `BridgePortMessage`
           - `BridgeRequest`
@@ -16995,13 +17000,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConnectionState`
           - `ExtensionCapabilities`
           - `ExtensionHostInfo`
+          - `LastRecording`
+          - `MicPermission`
           - `PageAction`
           - `PageActionGroup`
           - `PageActionHost`
           - `PageActionSite`
           - `PageLinkAction`
           - `PageRunAction`
+          - `PointerSample`
+          - `PointerTrack`
+          - `RecorderCommand`
+          - `RecorderOptions`
+          - `RecorderSnapshot`
+          - `RecorderState`
+          - `RecordPreset`
+          - `RecordPresetId`
+          - `RelayRequest`
+          - `RelayResponse`
+          - `SavedRecording`
           - `ShellState`
+          - `SizeRefusal`
+          - `SizeResult`
+          - `TabFit`
+          - `TabMeasure`
+          - `WindowBounds`
         - Exports (values):
           - `acceptBridgePort`
           - `ActiveTabSchema`
@@ -17009,6 +17032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BRIDGE_PORT`
           - `BRIDGE_RESULTS`
           - `BridgeCallSchema`
+          - `BridgeEventSchema`
           - `BridgeHelloSchema`
           - `BridgeRequestSchema`
           - `BridgeResponseSchema`
@@ -17016,6 +17040,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `browserExtensionConnection`
           - `browserExtensionShell`
           - `ConnectionStateSchema`
+          - `DEFAULT_RECORD_PRESET`
+          - `DEFAULT_RECORDER_OPTIONS`
           - `EXTENSION_ID`
           - `EXTENSION_ORIGIN`
           - `EXTENSION_PUBLIC_KEY`
@@ -17023,8 +17049,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExtensionHostInfoSchema`
           - `extensionIdFromKey`
           - `groupPageActions`
+          - `LastRecordingSchema`
+          - `MicPermissionSchema`
+          - `outputFor`
+          - `PointerTrackSchema`
+          - `presetFit`
+          - `RECORD_PRESETS`
+          - `recordedMs`
+          - `RECORDER_RELAY_PATH`
+          - `RecorderCommandSchema`
+          - `RecorderOptionsSchema`
+          - `RecorderSnapshotSchema`
+          - `RecorderStateSchema`
           - `recordExtensionOpen`
+          - `recordPreset`
+          - `RelayCreatedSchema`
+          - `RelayFinishedSchema`
+          - `RelayRequestSchema`
+          - `RelayResponseSchema`
+          - `SavedRecordingSchema`
           - `ShellStateSchema`
+          - `sizeRefusalText`
+          - `TabFitSchema`
+          - `windowBoundsFor`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -17034,9 +17081,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `companions/browser-extension/accounts-row`
           - `companions/browser-extension/equin-site`
+          - `companions/browser-extension/recorder`
           - `companions/browser-extension/wish`
       - Exemptions:
-        - Exempts itself from: `frame/no-raw-frame` — `browser-extension/popup.ts` (sanctioned)
+        - Exempts itself from:
+          - `frame/no-raw-frame` — `browser-extension/popup.ts` (sanctioned)
+          - `frame/no-raw-frame` — `browser-extension/offscreen.ts` (sanctioned)
+          - `audio-context/no-raw-audio-context` — `browser-extension/offscreen.ts` (sanctioned)
+          - `media-element/no-raw-media-play` — `browser-extension/offscreen.ts` (sanctioned)
       - Cli:
         - Exports (types): `ShellWrite`
         - Exports (values): `writeExtensionShell`
@@ -17094,6 +17146,75 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `moveInstance`
               - `parseEquinAddress`
               - `sameInstance`
+        - **`recorder`** — The browser extension's tab recorder, in the panel: the Record section (BrowserExtension.Section 'record', after Wish) — the 'Record this tab' row with the size dropdown (720p / 1080p / 1440p / 9:16 / As is, each with its video size, one this tab cannot record disabled with the reason), the tab audio / mic / pointer / countdown toggles and the round Record button (⌥⇧R); the live recording card (timer, Discard, Pause, Stop); and the last recording saved, with Show in Files and Delete (to the Trash) on hover. The relay page the extension's offscreen recorder frames to upload a recording as the owner (its own unlisted app at /home/browser-extension-recorder). Registers the Recordings folder setting. The tab recorder, every host's half: registers the Recordings folder setting (Settings → Config), which the machine half writes recordings into.
+          - Web:
+            - Contributes:
+              - `ConfigV2.WebRegister` "recorder"
+              - `BrowserExtension.Section` "Record" → `RecordSection`
+              - `Apps.App` "Recorder relay" → `RecorderRelayPage`
+            - Uses: 27 symbols — full list in [`plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md`](../plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md)
+              - `primitives/css/ui-kit` ×5
+              - `companions/browser-extension` ×4
+              - `infra/endpoints` ×3
+              - `apps-core.Apps`
+              - `apps/file-explorer/browser.useOpenInFiles`
+              - `companions/panel.PanelSection`
+              - `config_v2.ConfigV2`
+              - `primitives/css/center.Center`
+              - `primitives/css/line.Line`
+              - `primitives/css/row.Row`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/spinner.Spinner`
+              - `primitives/css/text.Text`
+              - `primitives/css/yield.yieldClass`
+              - `primitives/dom/reload-readiness.useReloadHold`
+              - `primitives/icon-button.IconButton`
+              - `primitives/loading.Loading`
+              - `ui/icons.Icon`
+          - Server:
+            - Contributes:
+              - `ConfigV2.Register` "recorder"
+              - `DocumentHead.FrameAncestors` "browser-extension-recorder (/home/browser-extension-recorder)"
+            - Uses: `config_v2.ConfigV2`
+          - Machine:
+            - Uses: `infra/endpoints.implementMachine`
+            - Routes:
+              - `POST /api/tab-recordings`
+              - `POST /api/tab-recordings/:id/chunks/:seq`
+              - `POST /api/tab-recordings/:id/finish`
+              - `POST /api/tab-recordings/:id/discard`
+          - Core:
+            - Uses:
+              - `companions/browser-extension.PointerTrackSchema`
+              - `companions/browser-extension.RECORDER_RELAY_PATH`
+              - `companions/browser-extension.RelayCreatedSchema`
+              - `companions/browser-extension.RelayFinishedSchema`
+              - `config_v2.defineConfig`
+              - `fields/directory-path/config.dirPathField`
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+              - `primitives/pane.defineApp`
+              - `ui/icons.symbol`
+            - Exports (values):
+              - `appendTabRecordingChunk`
+              - `createTabRecording`
+              - `discardTabRecording`
+              - `finishTabRecording`
+              - `numberedName`
+              - `recorderConfig`
+              - `recorderRelayApp`
+              - `recordingBaseName`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --destructive`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --primary-foreground`
+              - `ui/tokens/color-palette --success`
+              - `ui/tokens/color-palette --warning`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-size-body`
+              - `ui/tokens/type-scale --line-height-body`
         - **`wish`** — The browser extension's Wish section (BrowserExtension.Section 'wish'): wish's WishField under a 'Wish' title — the task composer with its own ↑, filing one task under Wishes and confirming inline — about the tab the popup was opened on (DraftPage: that tab's URL for the Page URL toggle, no element picker).
           - Web:
             - Contributes: `BrowserExtension.Section` "Wish" → `ExtensionWishSection`
@@ -17292,6 +17413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
           - `companions/browser-extension`
+          - `companions/browser-extension/recorder`
           - `companions/browser-extension/wish`
           - `companions/menu-bar`
           - `companions/menu-bar/app-grid`
@@ -17304,8 +17426,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 103 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×103
+    - Slot contributors: 104 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×104
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -17570,7 +17692,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withListOrder`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 153 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 154 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×17
       - `conversations` ×14
@@ -17588,6 +17710,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell` ×2
       - `stats` ×2
       - `audience`
+      - `companions/browser-extension/recorder`
       - `fields/secret/config`
       - `hints/ask`
       - `map/google`
@@ -30931,7 +31054,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `dirPathField`
               - `dirPathSample`
           - Cross-plugin:
-            - Imported by: `apps/sonata/sources/midi/folders`
+            - Imported by:
+              - `apps/sonata/sources/midi/folders`
+              - `companions/browser-extension/recorder`
     - **`duration`** — Duration field type: identity only, extends number — a span in milliseconds, drawn compact (`850ms`, `4.2s`, `1m 04s`, `2h 05m`) and filtered by operands typed in units (`30s`, `5m`); sort and grouping inherited from number.
       - Web:
         - Contributes: `Fields.Identity` "duration"
@@ -34976,7 +35101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isE2eScriptPath`
               - `MANUAL_REASONS`
           - Cross-plugin:
-            - Imported by: 207 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 208 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×64
               - `primitives` ×30
               - `conversations` ×26
@@ -34986,11 +35111,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×5
               - `framework` ×4
               - `active-data` ×3
+              - `companions` ×3
               - `config_v2` ×3
               - `reports` ×3
               - `shell` ×3
               - `ui` ×3
-              - `companions` ×2
               - `hints` ×2
               - `infra` ×2
               - `network` ×2
@@ -37527,11 +37652,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+        - Imported by: 42 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
           - `infra` ×16
           - `framework` ×6
           - `apps` ×5
-          - `companions` ×2
+          - `companions` ×3
           - `database` ×2
           - `installer` ×2
           - `integrations` ×2
@@ -37858,6 +37983,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/engine`
               - `apps/prototypes/thumbnails`
               - `companions/browser-extension`
+              - `companions/browser-extension/recorder`
               - `debug/profiling/tab-memory`
               - `framework/tooling/e2e-harness`
               - `infra/mcp/browser`
@@ -38131,7 +38257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 285 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 286 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×37
           - `infra` ×23
@@ -38146,10 +38272,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations` ×4
           - `apps-core` ×3
           - `build` ×3
+          - `companions` ×3
           - `config_v2` ×3
           - `network` ×3
           - `active-data` ×2
-          - `companions` ×2
           - `history` ×2
           - `screenshot` ×2
           - `shell` ×2
@@ -39777,6 +39903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `code-explorer`
           - `code-explorer/file-resolve`
+          - `companions/browser-extension/recorder`
           - `infra/host-account`
           - `infra/host-fs/image`
           - `infra/host-fs/zip`
@@ -41647,13 +41774,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `snapEdge`
               - `writeFileLocations`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md)
               - `primitives` ×10
               - `apps` ×6
               - `conversations` ×4
               - `infra` ×3
               - `active-data/folder-link`
               - `code-explorer`
+              - `companions/browser-extension/recorder`
               - `debug/browser-recordings`
         - **`repo-root`** — REPO_ROOT — the checkout this code runs from, the one place any file gets it. Derived without counting ../ (its own repo-relative dir is a literal `./equin plugin move` rewrites; a stale one throws at load), and the repo-root/no-depth-counted-path lint rejects a ../ chain from a file's own location that leaves its plugin, so moving a plugin cannot silently re-aim a path.
           - Core:
@@ -41997,6 +42125,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/url-extract`
               - `apps/prototypes/thumbnails`
               - `companions/browser-extension`
+              - `companions/browser-extension/recorder`
               - `debug/profiling/tab-memory`
               - `framework/tooling/e2e-harness`
               - `infra/mcp/browser`
@@ -42139,7 +42268,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnToFile`
           - `watchChildKills`
       - Cross-plugin:
-        - Imported by: 112 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 113 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `infra` ×34
           - `framework` ×33
           - `apps` ×10
@@ -42155,6 +42284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats` ×2
           - `auth/apple-signing`
           - `backup`
+          - `companions/browser-extension/recorder`
           - `hints/ask`
           - `integrations/github-events`
           - `plugin-meta/relocate`
@@ -43808,6 +43938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/website/promo-film`
+          - `companions/browser-extension/recorder`
           - `media/film`
     - **`film`** — Film engine: a composition of layers over captured app stills, animated by keyframe tracks and a 3D camera, rendered frame by frame in a headless page (renderAt(t) is a pure function of film time), mixed with a music bed and synthesized SFX, encoded to MP4.
       - Deps:
@@ -45451,7 +45582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×24
           - `debug` ×13
           - `framework` ×13
@@ -45464,6 +45595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth`
           - `backup/targets/google-drive`
           - `build`
+          - `companions/browser-extension/recorder`
           - `config_v2`
           - `installer/waits`
           - `integrations/youtube`
@@ -46483,7 +46615,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withChangedFilesWork`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 198 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 199 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
           - `framework` ×32
           - `apps` ×18
@@ -46497,12 +46629,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×4
           - `integrations` ×3
           - `release` ×3
+          - `companions` ×2
           - `config_v2` ×2
           - `installer` ×2
           - `primitives` ×2
           - `apps-core/app-preload`
           - `code-explorer`
-          - `companions/browser-extension`
           - `hints/ask`
           - `stats/commits`
           - `toolchain`
@@ -52170,7 +52302,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 148 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×47
               - `primitives` ×30
               - `page` ×18
@@ -52180,13 +52312,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×5
               - `plugin-meta` ×3
               - `tasks` ×3
+              - `companions` ×2
               - `fields` ×2
               - `framework` ×2
               - `integrations` ×2
               - `map` ×2
               - `shell` ×2
               - `active-data/go`
-              - `companions/browser-extension`
               - `config_v2/settings`
               - `layouts/route-fallback`
               - `network/live/live-state`
@@ -52654,7 +52786,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 140 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 141 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×42
               - `primitives` ×21
               - `conversations` ×20
@@ -52667,10 +52799,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×3
               - `shell` ×3
               - `apps-core` ×2
+              - `companions` ×2
               - `fields` ×2
               - `infra` ×2
               - `reorder` ×2
-              - `companions/browser-extension`
               - `hints/ask`
               - `integrations/youtube`
               - `map`
@@ -53001,15 +53133,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×2
-            - Imported by: 74 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×16
               - `ui` ×14
               - `page` ×11
               - `primitives` ×9
               - `conversations` ×7
               - `tasks` ×4
+              - `companions` ×3
               - `plugin-meta` ×3
-              - `companions` ×2
               - `reorder` ×2
               - `shell` ×2
               - `code-explorer/file-resolve`
@@ -53174,7 +53306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 466 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 467 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×81
               - `primitives` ×55
@@ -53188,9 +53320,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×7
               - `stats` ×7
               - `build` ×5
+              - `companions` ×5
               - `shell` ×5
               - `auth` ×4
-              - `companions` ×4
               - `review` ×4
               - `config_v2` ×3
               - `integrations` ×3
@@ -53221,12 +53353,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SpinnerProps`
             - Exports (values): `Spinner`
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×3
+              - `companions` ×2
               - `conversations` ×2
               - `build`
-              - `companions/browser-extension`
               - `debug/worktree-cleanup`
               - `hints/ask`
               - `infra/claude-cli/sign-in`
@@ -53413,7 +53545,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 445 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 446 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×85
               - `primitives` ×48
@@ -53427,11 +53559,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stats` ×7
               - `build` ×5
               - `auth` ×4
+              - `companions` ×4
               - `integrations` ×4
               - `review` ×4
               - `shell` ×4
               - `apps-core` ×3
-              - `companions` ×3
               - `config_v2` ×3
               - `reorder` ×3
               - `active-data` ×2
@@ -53745,7 +53877,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 488 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 489 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
               - `conversations` ×54
@@ -53763,9 +53895,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder` ×5
               - `review` ×5
               - `auth` ×4
+              - `companions` ×4
               - `integrations` ×4
               - `active-data` ×3
-              - `companions` ×3
               - `framework` ×3
               - `backup` ×2
               - `hints` ×2
@@ -53880,15 +54012,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×10
               - `conversations` ×9
               - `debug` ×5
               - `tasks` ×3
               - `ui` ×3
+              - `companions` ×2
               - `fields` ×2
-              - `companions/browser-extension`
               - `config_v2/auto-merge`
               - `infra/claude-cli`
               - `page/page-reference`
@@ -55341,7 +55473,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `music/ambient`
           - Exemptions:
             - Exempts itself from: `audio-context/no-raw-audio-context` — `web/internal/owned-audio-context.ts` (sanctioned)
-            - Exempted by: `primitives/dom/audio-context` (0 debt)
+            - Exempted by:
+              - `companions/browser-extension` (0 debt)
+              - `primitives/dom/audio-context` (0 debt)
           - Web:
             - Exports (types):
               - `AudioGraphContext`
@@ -55638,7 +55772,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `media-element/no-raw-media-play` — `web/internal/media-play.ts` (sanctioned)
               - `media-element/no-raw-request-picture-in-picture` — `web/internal/video-pip.ts` (sanctioned)
-            - Exempted by: `primitives/dom/media-element` (0 debt)
+            - Exempted by:
+              - `companions/browser-extension` (0 debt)
+              - `primitives/dom/media-element` (0 debt)
           - Web:
             - Exports (types):
               - `PlayOutcome`
@@ -55712,6 +55848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/keyboard-party/party`
               - `apps/sonata/audio/engine`
               - `build`
+              - `companions/browser-extension/recorder`
               - `infra/attachments`
               - `integrations/youtube`
               - `music/background`
@@ -56578,7 +56715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×48
           - `primitives` ×23
           - `conversations` ×21
@@ -56589,11 +56726,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×3
           - `shell` ×3
           - `apps-core` ×2
+          - `companions` ×2
           - `hints` ×2
           - `screenshot` ×2
           - `ui` ×2
           - `build`
-          - `companions/menu-bar/app-grid`
           - `fields/enum/column-config`
           - `fullscreen`
           - `map/google`
@@ -57059,7 +57196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 244 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 245 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×74
           - `conversations` ×26
           - `ui` ×24
@@ -57068,7 +57205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×18
           - `page` ×11
           - `build` ×6
-          - `companions` ×5
+          - `companions` ×6
           - `plugin-meta` ×4
           - `review` ×4
           - `apps-core` ×3
@@ -58623,7 +58760,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×77
           - `conversations` ×33
           - `debug` ×29
@@ -58632,8 +58769,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×9
           - `apps-core` ×7
           - `plugin-meta` ×6
+          - `companions` ×4
           - `layouts` ×4
-          - `companions` ×3
           - `infra` ×3
           - `stats` ×3
           - `page` ×2
@@ -63167,6 +63304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-preload`
           - `apps/website/landing/hero`
           - `companions/browser-extension`
+          - `companions/browser-extension/recorder`
           - `framework/cli/build/experimental-marks`
           - `network/live/boot-snapshot`
           - `ui/icons/sprites`
@@ -68032,7 +68170,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 611 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 612 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×124
           - `primitives` ×54
@@ -68045,8 +68183,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×11
           - `apps-core` ×8
           - `infra` ×8
+          - `companions` ×7
           - `auth` ×6
-          - `companions` ×6
           - `config_v2` ×6
           - `shell` ×6
           - `build` ×4
@@ -69377,7 +69515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 565 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 566 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×125
               - `conversations` ×96
               - `primitives` ×81
@@ -69397,7 +69535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×5
               - `review` ×5
               - `auth` ×4
-              - `companions` ×3
+              - `companions` ×4
               - `hints` ×3
               - `backup` ×2
               - `code-explorer` ×2
@@ -70005,7 +70143,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 417 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 418 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×95
               - `apps` ×81
               - `primitives` ×62
@@ -70015,10 +70153,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×14
               - `fields` ×8
               - `plugin-meta` ×8
+              - `companions` ×6
               - `infra` ×6
               - `reorder` ×6
               - `apps-core` ×5
-              - `companions` ×5
               - `stats` ×5
               - `review` ×4
               - `shell` ×4
@@ -70202,7 +70340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 238 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 239 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×62
               - `conversations` ×41
               - `primitives` ×38
@@ -70215,11 +70353,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×4
               - `stats` ×4
               - `auth` ×3
+              - `companions` ×3
               - `reorder` ×3
               - `shell` ×3
               - `build` ×2
               - `code-explorer` ×2
-              - `companions` ×2
               - `config_v2` ×2
               - `apps-core/app-launcher`
               - `backup/runs-arm`

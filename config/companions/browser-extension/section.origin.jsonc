@@ -1,4 +1,4 @@
-// @hash b9f6f95ed952
+// @hash 95287c8e3c52
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "companions.browser-extension:header",
     "companions.browser-extension:page-actions",
     "companions.browser-extension:footer",
+    "companions.browser-extension.recorder:record",
     "companions.browser-extension.wish:wish"
   ]
 }

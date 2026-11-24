@@ -1,4 +1,4 @@
-// @hash bcce067345da
+// @hash 09704a69d1af
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -27,6 +27,7 @@
     "apps.sonata.shell:sonata",
     "apps.website.shell:website",
     "companions.browser-extension:browser-extension",
+    "companions.browser-extension.recorder:browser-extension-recorder",
     "companions.menu-bar:menu-bar"
   ]
 }

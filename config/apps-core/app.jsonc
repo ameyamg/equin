@@ -1,4 +1,4 @@
-// @hash bcce067345da
+// @hash 09704a69d1af
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -44,6 +44,8 @@
     // is unlisted (`defineApp({ listed: false })`) — the native helper opens it.
     { "item": "companions.menu-bar:menu-bar", "hidden": true },
     // The browser extension's panel likewise: the extension's popup opens it.
-    { "item": "companions.browser-extension:browser-extension", "hidden": true }
+    { "item": "companions.browser-extension:browser-extension", "hidden": true },
+    // The extension's recorder relay: framed, hidden, by its offscreen document.
+    { "item": "companions.browser-extension.recorder:browser-extension-recorder", "hidden": true }
   ]
 }

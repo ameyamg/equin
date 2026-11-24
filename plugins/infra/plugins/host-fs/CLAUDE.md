@@ -270,6 +270,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   - Imported by:
     - `code-explorer`
     - `code-explorer/file-resolve`
+    - `companions/browser-extension/recorder`
     - `infra/host-account`
     - `infra/host-fs/image`
     - `infra/host-fs/zip`

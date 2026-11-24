@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-companions-browser-extension-recorder",
+  "description": "The browser extension's tab recorder: the Record section of the panel, the hidden relay page the offscreen recorder uploads through, and the machine endpoints that write the video into the Recordings folder.",
+  "private": true,
+  "version": "0.0.1"
+}

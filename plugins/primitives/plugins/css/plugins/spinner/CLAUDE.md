@@ -12,12 +12,12 @@
   - Exports (types): `SpinnerProps`
   - Exports (values): `Spinner`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×3
+    - `companions` ×2
     - `conversations` ×2
     - `build`
-    - `companions/browser-extension`
     - `debug/worktree-cleanup`
     - `hints/ask`
     - `infra/claude-cli/sign-in`

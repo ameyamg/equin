@@ -8,7 +8,11 @@ import { ExtensionFooter } from "./components/extension-footer";
 import { PageActionsSection } from "./components/page-actions";
 
 export { BrowserExtension } from "./slots";
-export { useExtensionHost, type ExtensionHost } from "./host";
+export {
+  useExtensionHost,
+  type ExtensionHost,
+  type ExtensionRecorder,
+} from "./host";
 
 export default {
   description:

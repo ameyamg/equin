@@ -128,7 +128,7 @@ The rule has no allowlist. A genuinely-fixed one-off escapes per-site via
     - `Stack`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 466 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 467 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×111
     - `conversations` ×81
     - `primitives` ×55
@@ -142,9 +142,9 @@ The rule has no allowlist. A genuinely-fixed one-off escapes per-site via
     - `apps-core` ×7
     - `stats` ×7
     - `build` ×5
+    - `companions` ×5
     - `shell` ×5
     - `auth` ×4
-    - `companions` ×4
     - `review` ×4
     - `config_v2` ×3
     - `integrations` ×3

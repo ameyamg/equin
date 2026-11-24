@@ -221,6 +221,7 @@ proven by hand:
     - `apps/events/sources/url-extract`
     - `apps/prototypes/thumbnails`
     - `companions/browser-extension`
+    - `companions/browser-extension/recorder`
     - `debug/profiling/tab-memory`
     - `framework/tooling/e2e-harness`
     - `infra/mcp/browser`

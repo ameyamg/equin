@@ -1,0 +1,573 @@
+/**
+ * The extension's service worker: the tab recorder's session owner. The popup
+ * forwards the panel's Record / Stop / Pause / Discard here (and ⌥⇧R arrives
+ * here as a command), because the popup closes as soon as the user clicks back
+ * into the page — nothing about a session may live in it.
+ *
+ * A recording: measure the tab, resize its window so the page is the preset's
+ * layout (old bounds kept to put back), count down in the page (before the
+ * capture, so it is never in the video), take a tab-capture stream id and hand
+ * it to the offscreen document, which records and uploads through the relay
+ * page. Stop flushes, saves, restores the window and clears the badge.
+ *
+ * The worker can be stopped by Chrome at any time: the state is in
+ * `chrome.storage.session` (`recorder-store.ts`), the session's facts too
+ * ({@link SESSION_KEY}), so a restarted worker picks up where it was.
+ *
+ * Bundled by the build (`cli/internal/write-shell.ts`). Contracts:
+ * `core/recorder.ts`, sizes: `core/viewport.ts`.
+ */
+import { z } from "zod";
+import {
+  ContentCommandSchema,
+  OffscreenEventSchema,
+  OffscreenReplySchema,
+  PointerTrackSchema,
+  recordedMs,
+  WorkerCommandSchema,
+  type ContentCommand,
+  type OffscreenCommand,
+  type PointerTrack,
+  type RecorderOptions,
+  type RecorderState,
+  type SavedRecording,
+  type WorkerCommand,
+  type WorkerReply,
+} from "../core/recorder";
+import {
+  outputFor,
+  recordPreset,
+  sizeRefusalText,
+  windowBoundsFor,
+  type TabMeasure,
+  type WindowBounds,
+} from "../core/viewport";
+import {
+  chrome,
+  errorText,
+  messageType,
+  onMessageAsync,
+  type ChromeWindow,
+} from "./chrome-api";
+import {
+  readRecorderOptions,
+  readRecorderState,
+  writeRecorderState,
+} from "./recorder-store";
+import { measureTab } from "./measure";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
+
+/** The running session's facts, beside its state. */
+const SESSION_KEY = "recorder.session";
+const SessionSchema = z.object({
+  tabId: z.number().int(),
+  windowId: z.number().int(),
+  /** The window as it was, put back on stop; `null`: not resized. */
+  restore: z
+    .object({
+      left: z.number(),
+      top: z.number(),
+      width: z.number(),
+      height: z.number(),
+      state: z.string(),
+    })
+    .nullable(),
+  /** Whether the content script runs in the tab (countdown or pointer). */
+  content: z.boolean(),
+  pointer: z.boolean(),
+  /** The window's size once recording started (`null` before): only a
+   *  change from it stops the recording, not a late event of our own resize. */
+  recordedSize: z.object({ width: z.number(), height: z.number() }).nullable(),
+});
+type Session = z.infer<typeof SessionSchema>;
+
+const REC_RED = "#e5383b";
+
+// The recording's clock is the person's: a timer they watch, a duration they
+// share — wall time (`wallNow("human-time")`).
+
+// ── State ───────────────────────────────────────────────────────────────────
+
+async function setState(state: RecorderState): Promise<void> {
+  await writeRecorderState(state);
+  await paintBadge(state);
+}
+
+async function paintBadge(state: RecorderState): Promise<void> {
+  const text =
+    state.kind === "recording"
+      ? state.pausedAt === null
+        ? "REC"
+        : "II"
+      : state.kind === "saving"
+        ? "…"
+        : state.kind === "idle" && state.last?.kind === "failed"
+          ? "ERR"
+          : "";
+  await chrome.action.setBadgeBackgroundColor({ color: REC_RED });
+  await chrome.action.setBadgeTextColor?.({ color: "#ffffff" });
+  await chrome.action.setBadgeText({ text });
+  await chrome.action.setTitle({
+    title:
+      state.kind === "recording" ? "equin — recording · ⌥⇧R to stop" : "equin",
+  });
+}
+
+async function readSession(): Promise<Session | null> {
+  const raw = (await chrome.storage.session.get(SESSION_KEY))[SESSION_KEY];
+  return raw === undefined ? null : SessionSchema.parse(raw);
+}
+
+async function writeSession(session: Session | null): Promise<void> {
+  if (session === null) await chrome.storage.session.remove(SESSION_KEY);
+  else await chrome.storage.session.set({ [SESSION_KEY]: session });
+}
+
+// ── Messages to the other contexts ──────────────────────────────────────────
+
+async function toContent(
+  tabId: number,
+  command: ContentCommand,
+): Promise<unknown> {
+  const answer = await chrome.tabs.sendMessage(
+    tabId,
+    ContentCommandSchema.parse(command),
+  );
+  // The content script answers a failure as `{ error }`.
+  if (typeof answer === "object" && answer !== null && "error" in answer)
+    throw new Error(String((answer as { error: unknown }).error));
+  return answer;
+}
+
+async function toOffscreen(
+  command: OffscreenCommand,
+): Promise<SavedRecording | null> {
+  const reply = OffscreenReplySchema.parse(
+    await chrome.runtime.sendMessage(command),
+  );
+  if (!reply.ok) throw new Error(reply.error);
+  return reply.saved;
+}
+
+async function hasOffscreen(): Promise<boolean> {
+  if (chrome.runtime.getContexts === undefined)
+    throw new Error(
+      "This Chrome is too old to record (it lacks runtime.getContexts).",
+    );
+  const contexts = await chrome.runtime.getContexts({
+    contextTypes: ["OFFSCREEN_DOCUMENT"],
+  });
+  return contexts.length > 0;
+}
+
+async function ensureOffscreen(): Promise<void> {
+  if (await hasOffscreen()) return;
+  await chrome.offscreen.createDocument({
+    url: "offscreen.html",
+    reasons: ["USER_MEDIA"],
+    justification: "Records the tab you asked to record.",
+  });
+}
+
+async function closeOffscreen(): Promise<void> {
+  if (await hasOffscreen()) await chrome.offscreen.closeDocument();
+}
+
+// ── The window ──────────────────────────────────────────────────────────────
+
+/**
+ * Size the window so the tab's page is `page`: resize, wait for the page to
+ * take it, and correct once by what is left (the chrome can change as the
+ * window shrinks — a bookmarks bar wrapping). Still off: fail loudly.
+ */
+async function sizeWindow(
+  tabId: number,
+  windowId: number,
+  page: { width: number; height: number },
+): Promise<void> {
+  let measure = await measureTab(tabId);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const bounds = windowBoundsFor(page, measure);
+    if (!bounds.ok) throw new Error(sizeRefusalText(bounds.reason));
+    await resizeTo(windowId, bounds.value);
+    measure = await measureTab(tabId, page);
+    if (
+      measure.innerWidth === page.width &&
+      measure.innerHeight === page.height
+    )
+      return;
+  }
+  throw new Error(
+    `The window would not size the page to ${page.width} × ${page.height} (it is ${measure.innerWidth} × ${measure.innerHeight}).`,
+  );
+}
+
+async function resizeTo(windowId: number, b: WindowBounds): Promise<void> {
+  await chrome.windows.update(windowId, {
+    left: Math.round(b.left),
+    top: Math.round(b.top),
+    width: Math.round(b.width),
+    height: Math.round(b.height),
+  });
+}
+
+async function restoreWindow(session: Session): Promise<void> {
+  const r = session.restore;
+  if (r === null) return;
+  await chrome.windows.update(session.windowId, {
+    left: r.left,
+    top: r.top,
+    width: r.width,
+    height: r.height,
+  });
+  if (r.state === "maximized" || r.state === "fullscreen")
+    await chrome.windows.update(session.windowId, {
+      state: r.state as ChromeWindow["state"],
+    });
+}
+
+// ── The session ─────────────────────────────────────────────────────────────
+
+/**
+ * Every command and event runs one at a time, in arrival order: ⌥⇧R pressed
+ * twice, or the tab closing while Stop is clicked, must not run two stops
+ * against one recording.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+function serial<T>(work: () => Promise<T>): Promise<T> {
+  const run = queue.then(work);
+  // The queue goes on whatever one step did; the step's caller hears it.
+  queue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+/** End a session that failed: undo what it left, then idle with the error. */
+async function fail(err: unknown): Promise<void> {
+  const left = await abandon();
+  await setState({
+    kind: "idle",
+    last: {
+      kind: "failed",
+      error: [errorText(err), ...left].join(" — and while cleaning up: "),
+    },
+  });
+}
+
+async function start(tabId: number, options: RecorderOptions): Promise<void> {
+  const now = await readRecorderState();
+  if (now.kind !== "idle") throw new Error("A recording is already running.");
+  await setState({ kind: "starting", options });
+  // The answer goes back at once (the popup closes as the window resizes);
+  // the start itself is the next step of the queue, and a failure is the
+  // state's to show (the panel's next open, the badge).
+  void serial(() => begin(tabId, options).catch(fail));
+}
+
+async function begin(tabId: number, options: RecorderOptions): Promise<void> {
+  const tab = await chrome.tabs.get(tabId);
+  const win = await chrome.windows.get(tab.windowId);
+  const preset = recordPreset(options.preset);
+  const before = await measureTab(tabId);
+  const session: Session = {
+    tabId,
+    windowId: tab.windowId,
+    restore:
+      preset.page === null
+        ? null
+        : {
+            left: win.left ?? 0,
+            top: win.top ?? 0,
+            width: win.width ?? before.window.width,
+            height: win.height ?? before.window.height,
+            state: win.state ?? "normal",
+          },
+    content: options.countdown || options.pointer,
+    pointer: options.pointer,
+    recordedSize: null,
+  };
+  await writeSession(session);
+
+  let measure: TabMeasure = before;
+  if (preset.page !== null) {
+    if (win.state !== "normal")
+      await chrome.windows.update(tab.windowId, { state: "normal" });
+    await sizeWindow(tabId, tab.windowId, preset.page);
+    measure = await measureTab(tabId);
+  }
+  const output = outputFor(preset, measure);
+  if (!output.ok) throw new Error(sizeRefusalText(output.reason));
+
+  if (session.content)
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["content.js"],
+    });
+  if (options.countdown) await toContent(tabId, { type: "content.countdown" });
+
+  const streamId = await chrome.tabCapture.getMediaStreamId({
+    targetTabId: tabId,
+  });
+  await ensureOffscreen();
+  await toOffscreen({
+    type: "offscreen.start",
+    streamId,
+    width: output.value.width,
+    height: output.value.height,
+    tabAudio: options.tabAudio,
+    mic: options.mic,
+    title: tab.title ?? "",
+  });
+  if (options.pointer)
+    await toContent(tabId, { type: "content.pointer-start" });
+  const sized = await chrome.windows.get(tab.windowId);
+  await writeSession({
+    ...session,
+    recordedSize: { width: sized.width ?? 0, height: sized.height ?? 0 },
+  });
+  await setState({
+    kind: "recording",
+    options,
+    startedAt: wallNow("human-time"),
+    pausedMs: 0,
+    pausedAt: null,
+    width: output.value.width,
+    height: output.value.height,
+  });
+}
+
+/**
+ * Undo whatever a failed start or a discard left — the page's overlay, the
+ * capture, the window's size — each step tried whatever the one before did.
+ * Answers what could not be undone (the window was closed, …), for the
+ * failure the panel shows.
+ */
+async function abandon(): Promise<string[]> {
+  const left: string[] = [];
+  const step = async (work: () => Promise<unknown>) => {
+    try {
+      await work();
+    } catch (err) {
+      left.push(errorText(err));
+    }
+  };
+  const session = await readSession();
+  await writeSession(null);
+  if (session !== null && session.content)
+    await step(() =>
+      toContent(session.tabId, { type: "content.finish" }).catch(
+        (err: unknown) => {
+          // The tab is gone (closed, navigated): nothing left to remove.
+          if (!isGoneTab(err)) throw err;
+        },
+      ),
+    );
+  await step(closeOffscreen);
+  if (session !== null) await step(() => restoreWindow(session));
+  return left;
+}
+
+/** Chrome's answer when the page holds no content script any more. */
+function isGoneTab(err: unknown): boolean {
+  const text = errorText(err);
+  return (
+    text.includes("Receiving end does not exist") ||
+    text.includes("No tab with id") ||
+    text.includes("message port closed")
+  );
+}
+
+async function stop(): Promise<void> {
+  const state = await readRecorderState();
+  if (state.kind !== "recording") throw new Error("Nothing is recording.");
+  const session = await readSession();
+  if (session === null) throw new Error("The recording session is lost.");
+  await setState({ kind: "saving" });
+  try {
+    const pointer = session.pointer ? await finishContent(session.tabId) : null;
+    if (session.content && !session.pointer) await finishContent(session.tabId);
+    const saved = await toOffscreen({
+      type: "offscreen.stop",
+      durationMs: recordedMs(state, wallNow("human-time")),
+      pointer,
+    });
+    if (saved === null) throw new Error("The recording was not saved.");
+    await writeSession(null);
+    await closeOffscreen();
+    await restoreWindow(session);
+    await setState({ kind: "idle", last: { kind: "saved", recording: saved } });
+  } catch (err) {
+    await fail(err);
+  }
+}
+
+/** The pointer track the content script kept, or `null` once the tab is gone. */
+async function finishContent(tabId: number): Promise<PointerTrack | null> {
+  try {
+    const answer = await toContent(tabId, { type: "content.finish" });
+    return answer === null ? null : PointerTrackSchema.parse(answer);
+  } catch (err) {
+    if (isGoneTab(err)) return null;
+    throw err;
+  }
+}
+
+async function discard(): Promise<void> {
+  const state = await readRecorderState();
+  if (state.kind !== "recording") throw new Error("Nothing is recording.");
+  await setState({ kind: "saving" });
+  try {
+    await toOffscreen({ type: "offscreen.discard" });
+  } catch (err) {
+    await fail(err);
+    return;
+  }
+  const left = await abandon();
+  await setState({
+    kind: "idle",
+    last:
+      left.length === 0
+        ? null
+        : { kind: "failed", error: `Discarded, but: ${left.join("; ")}` },
+  });
+}
+
+async function pause(paused: boolean): Promise<void> {
+  const state = await readRecorderState();
+  if (state.kind !== "recording") throw new Error("Nothing is recording.");
+  if ((state.pausedAt !== null) === paused) return;
+  const session = await readSession();
+  await toOffscreen({ type: paused ? "offscreen.pause" : "offscreen.resume" });
+  const now = wallNow("human-time");
+  // The video is paused (or not) from here: the state says so before the
+  // pointer is told, whatever the page does.
+  await setState(
+    paused
+      ? { ...state, pausedAt: now }
+      : {
+          ...state,
+          pausedAt: null,
+          pausedMs: state.pausedMs + (now - (state.pausedAt ?? now)),
+        },
+  );
+  if (session?.pointer)
+    await toContent(session.tabId, {
+      type: paused ? "content.pointer-pause" : "content.pointer-resume",
+    }).catch((err: unknown) => {
+      // The page navigated: its new content script starts as the state says.
+      if (!isGoneTab(err)) throw err;
+    });
+}
+
+async function command(cmd: WorkerCommand): Promise<void> {
+  switch (cmd.type) {
+    case "recorder.start":
+      return start(cmd.tabId, cmd.options);
+    case "recorder.stop":
+      return stop();
+    case "recorder.pause":
+      return pause(true);
+    case "recorder.resume":
+      return pause(false);
+    case "recorder.discard":
+      return discard();
+    case "recorder.forget-last": {
+      const state = await readRecorderState();
+      if (state.kind === "idle") await setState({ kind: "idle", last: null });
+      return;
+    }
+  }
+}
+
+// ── Listeners (registered at the top level, as MV3 requires) ────────────────
+
+onMessageAsync(
+  (m) => messageType(m)?.startsWith("recorder.") === true,
+  async (message): Promise<WorkerReply> => {
+    const cmd = WorkerCommandSchema.parse(message);
+    await serial(() => command(cmd));
+    return { ok: true };
+  },
+);
+
+// The offscreen document keeps this worker awake through a long finish.
+onMessageAsync(
+  (m) => messageType(m) === "offscreen.heartbeat",
+  async () => null,
+);
+
+// The offscreen document says the capture ended (the tab closed) or failed.
+onMessageAsync(
+  (m) => messageType(m) === "offscreen.ended",
+  async (message) => {
+    const event = OffscreenEventSchema.parse(message);
+    await serial(async () => {
+      const state = await readRecorderState();
+      if (state.kind !== "recording") return;
+      if (event.reason === "error")
+        await fail(new Error(event.error ?? "The recording failed."));
+      else await stop();
+    });
+    return null;
+  },
+);
+
+chrome.commands.onCommand.addListener((name, tab) => {
+  if (name !== "toggle-recording") return;
+  void serial(() => toggle(tab?.id).catch(fail));
+});
+
+async function toggle(tabId: number | undefined): Promise<void> {
+  const state = await readRecorderState();
+  if (state.kind === "recording") return stop();
+  if (state.kind !== "idle") return;
+  if (tabId === undefined) throw new Error("There is no tab to record.");
+  await start(tabId, await readRecorderOptions());
+}
+
+// A manual resize mid-recording would change the video's size: stop instead
+// (a recording of one size, never a variable one).
+chrome.windows.onBoundsChanged.addListener((win) => {
+  void serial(async () => {
+    const state = await readRecorderState();
+    if (state.kind !== "recording") return;
+    const session = await readSession();
+    if (session === null || session.windowId !== win.id) return;
+    const at = session.recordedSize;
+    if (at === null || (win.width === at.width && win.height === at.height))
+      return;
+    await stop();
+  });
+});
+
+// The recorded tab navigated: its content script went with the old page.
+// Draw the pointer again on the new one (its samples start over there).
+chrome.tabs.onUpdated.addListener((tabId, change) => {
+  if (change.status !== "complete") return;
+  void serial(async () => {
+    const state = await readRecorderState();
+    if (state.kind !== "recording") return;
+    const session = await readSession();
+    if (session === null || session.tabId !== tabId || !session.pointer) return;
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["content.js"],
+    });
+    await toContent(tabId, { type: "content.pointer-start" });
+    if (state.pausedAt !== null)
+      await toContent(tabId, { type: "content.pointer-pause" });
+  });
+});
+
+// A worker Chrome restarted finds the state it left. A session whose
+// offscreen recorder is gone (Chrome was quit, the extension reloaded) can
+// never finish: say so rather than stay "recording" for good.
+void serial(async () => {
+  const state = await readRecorderState();
+  if (state.kind === "idle" || (await hasOffscreen())) return;
+  await fail(
+    new Error("The recording was interrupted: Chrome stopped the recorder."),
+  );
+});

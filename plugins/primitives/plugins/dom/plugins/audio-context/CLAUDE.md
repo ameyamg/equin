@@ -13,7 +13,9 @@
     - `music/ambient`
 - Exemptions:
   - Exempts itself from: `audio-context/no-raw-audio-context` — `web/internal/owned-audio-context.ts` (sanctioned)
-  - Exempted by: `primitives/dom/audio-context` (0 debt)
+  - Exempted by:
+    - `companions/browser-extension` (0 debt)
+    - `primitives/dom/audio-context` (0 debt)
 - Web:
   - Exports (types):
     - `AudioGraphContext`

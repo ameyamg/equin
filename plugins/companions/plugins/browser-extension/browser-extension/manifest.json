@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "equin",
-  "description": "equin from any tab: send a wish, jump between equin.ai and your own equin, and run the actions your apps offer on the page.",
+  "description": "equin from any tab: send a wish, jump between equin.ai and your own equin, run the actions your apps offer on the page, and record the tab to a video.",
   "version": "1.0.0",
   "action": {
     "default_title": "equin",
@@ -17,6 +17,27 @@
     "32": "icon-32.png",
     "128": "icon-128.png"
   },
-  "permissions": ["activeTab", "tabs"],
-  "host_permissions": ["http://*.localhost/*"]
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "tabCapture",
+    "offscreen",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*.localhost/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "commands": {
+    "toggle-recording": {
+      "suggested_key": {
+        "default": "Alt+Shift+R"
+      },
+      "description": "Record this tab, or stop recording"
+    }
+  }
 }

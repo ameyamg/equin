@@ -82,6 +82,7 @@ forced) is the policy's, read from `useReloadReadiness()`.
     - `apps/keyboard-party/party`
     - `apps/sonata/audio/engine`
     - `build`
+    - `companions/browser-extension/recorder`
     - `infra/attachments`
     - `integrations/youtube`
     - `music/background`

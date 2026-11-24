@@ -84,6 +84,7 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
     - `apps/browser/engine`
     - `apps/prototypes/thumbnails`
     - `companions/browser-extension`
+    - `companions/browser-extension/recorder`
     - `debug/profiling/tab-memory`
     - `framework/tooling/e2e-harness`
     - `infra/mcp/browser`

@@ -1951,6 +1951,10 @@
       "name": "@equin/plugin-companions-browser-extension-equin-site",
       "version": "0.0.1",
     },
+    "plugins/companions/plugins/browser-extension/plugins/recorder": {
+      "name": "@equin/plugin-companions-browser-extension-recorder",
+      "version": "0.0.1",
+    },
     "plugins/companions/plugins/browser-extension/plugins/wish": {
       "name": "@equin/plugin-companions-browser-extension-wish",
       "version": "0.0.1",
@@ -9421,6 +9425,8 @@
     "@equin/plugin-companions-browser-extension-accounts-row": ["@equin/plugin-companions-browser-extension-accounts-row@workspace:plugins/companions/plugins/browser-extension/plugins/accounts-row"],
 
     "@equin/plugin-companions-browser-extension-equin-site": ["@equin/plugin-companions-browser-extension-equin-site@workspace:plugins/companions/plugins/browser-extension/plugins/equin-site"],
+
+    "@equin/plugin-companions-browser-extension-recorder": ["@equin/plugin-companions-browser-extension-recorder@workspace:plugins/companions/plugins/browser-extension/plugins/recorder"],
 
     "@equin/plugin-companions-browser-extension-wish": ["@equin/plugin-companions-browser-extension-wish@workspace:plugins/companions/plugins/browser-extension/plugins/wish"],
 

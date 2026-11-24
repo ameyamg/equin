@@ -13,7 +13,9 @@
   - Exempts itself from:
     - `media-element/no-raw-media-play` — `web/internal/media-play.ts` (sanctioned)
     - `media-element/no-raw-request-picture-in-picture` — `web/internal/video-pip.ts` (sanctioned)
-  - Exempted by: `primitives/dom/media-element` (0 debt)
+  - Exempted by:
+    - `companions/browser-extension` (0 debt)
+    - `primitives/dom/media-element` (0 debt)
 - Web:
   - Exports (types):
     - `PlayOutcome`

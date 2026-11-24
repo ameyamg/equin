@@ -78,6 +78,7 @@ pick which companions they appear in.
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `companions/browser-extension`
+    - `companions/browser-extension/recorder`
     - `companions/browser-extension/wish`
     - `companions/menu-bar`
     - `companions/menu-bar/app-grid`

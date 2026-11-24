@@ -178,6 +178,7 @@
     - `apps/file-explorer/git`
     - `apps/file-explorer/places`
     - `apps/website/promo-film/seed`
+    - `companions/browser-extension/recorder`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/explorer`
     - `plugin-meta/plugin-view/file-tree`
