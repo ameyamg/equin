@@ -25,6 +25,7 @@ export {
   HolderPeakRecordSchema,
   holderReserve,
   peaksByWork,
+  shareReserve,
 } from "./internal/holders";
 export type {
   CpuHolderMarker,

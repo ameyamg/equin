@@ -6,7 +6,12 @@ import {
   PER_UNIT_BYTES,
   type HostFacts,
 } from "./budget";
-import { holderReserve, peaksByWork, type HolderReading } from "./holders";
+import {
+  holderReserve,
+  peaksByWork,
+  shareReserve,
+  type HolderReading,
+} from "./holders";
 import {
   fleetAdmission,
   fleetCharge,
@@ -294,6 +299,22 @@ describe("holderReserve", () => {
     });
     const byWork = peaksByWork([rec(1, 1 * GB), rec(20, 9 * GB)], now);
     expect(byWork.get("test")).toEqual([1 * GB]);
+  });
+
+  // A holder that states its own weight is reserved it, whatever units it was
+  // granted (an elastic share that came back short) and whatever its work's
+  // other holders used.
+  test("a share whose holder states its weight is reserved that weight", () => {
+    const others = Array.from({ length: 12 }, () => 13 * GB);
+    expect(shareReserve({ units: 1, weightBytes: 9 * GB }, others)).toEqual({
+      bytes: 9 * GB,
+      basis: "measured",
+      samples: 1,
+    });
+    expect(shareReserve({ units: 2 }, [])).toMatchObject({
+      bytes: 2 * PER_UNIT_BYTES,
+      basis: "unmeasured",
+    });
   });
 });
 

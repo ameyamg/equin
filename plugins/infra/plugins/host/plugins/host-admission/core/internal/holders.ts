@@ -37,6 +37,12 @@ export const HOLDER_WORK = [
   "job",
   /** The type-check backstop's dual-mode worker run (`TYPE_CHECK_BACKSTOP_UNITS`). */
   "type-check-backstop",
+  /**
+   * A plain `./equin run` script whose own recent runs peaked at a quantum or
+   * more (`framework/cli/run`). "script" is not one kind of program, so each
+   * holder states its own measured weight (`CpuHolderMarker.weightBytes`).
+   */
+  "script",
 ] as const;
 export type HolderWork = (typeof HOLDER_WORK)[number];
 
@@ -55,6 +61,15 @@ export const CpuHolderMarkerSchema = z.object({
   lane: z.enum(["interactive", "background"]),
   /** When the share was taken (epoch ms). */
   since: z.number(),
+  /**
+   * What THIS holder was measured to peak at, when it knows (a heavy script:
+   * the peak of that script's own recent runs). The share is then reserved
+   * this, whatever units it was granted and whatever other holders of its
+   * work used (`shareReserve`) — so a holder that cannot narrow is never
+   * booked for less than its weight because its share came back short (an
+   * elastic acquire, a lane narrower than the holder).
+   */
+  weightBytes: z.number().positive().optional(),
 });
 export type CpuHolderMarker = z.infer<typeof CpuHolderMarkerSchema>;
 
@@ -204,6 +219,20 @@ function quantile(values: readonly number[], q: number): number {
     Math.ceil(q * sorted.length) - 1,
   );
   return sorted[Math.max(0, rank)]!;
+}
+
+/**
+ * What one live share is reserved: the holder's own measured weight when its
+ * marker states one, else what holders of its work were measured to peak at
+ * (`holderReserve`).
+ */
+export function shareReserve(
+  marker: Pick<CpuHolderMarker, "units" | "weightBytes">,
+  workPeaks: readonly number[],
+): HolderReserve {
+  if (marker.weightBytes !== undefined)
+    return { bytes: marker.weightBytes, basis: "measured", samples: 1 };
+  return holderReserve(marker.units, workPeaks);
 }
 
 /** Each work's recorded peaks inside the window ending at `nowMs`, in record order. */

@@ -167,6 +167,13 @@ export async function withHostGrant<T>(
      * whole life, which is how main's owner sampler measures it.
      */
     work: HolderWork;
+    /**
+     * What this holder was measured to peak at, when the caller knows it (a
+     * heavy script's own recorded peak): the share is reserved this instead
+     * of its work's record, whatever units it is granted
+     * (`CpuHolderMarker.weightBytes`).
+     */
+    weightBytes?: number;
     hooks?: GrantHooks;
   },
   fn: (grant: Grant) => Promise<T>,
@@ -216,6 +223,9 @@ export async function withHostGrant<T>(
           units: grant.units,
           lane: opts.lane,
           since: Date.now(),
+          ...(opts.weightBytes === undefined
+            ? {}
+            : { weightBytes: opts.weightBytes }),
         });
         try {
           return await fn(grant);

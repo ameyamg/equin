@@ -121,7 +121,7 @@ exit code; the child inherits stdin/stdout/stderr, so it is indistinguishable
 from the script run by hand. A child killed by a signal is reported as a
 failure even when its exit code is 0 — it did not finish, it was killed.
 
-## Every script is an op; only an e2e script is admitted
+## Every script is an op; an e2e script and a heavy script are admitted
 
 Every script run plants the worktree op marker and lands an op-log record —
 `withDirectOp` from `op-runtime`, shared with `check` and `test` — so it shows
@@ -134,14 +134,45 @@ with. Two kinds:
   drives the deployed app with a browser, so it is **admitted**: one slot of
   the `e2e` pool (its queue time a `host-grant` wait), and the conversation's
   op banner reads "E2E in progress".
-- **`script`** — any other. **Recorded, not admitted**: no slot to wait for or
-  hold (a one-off data script must not queue behind builds, and how heavy it is
-  is known only once it has run), and no grant handed down — a `./equin check`
-  it spawns acquires its own. It does not read as the conversation working
-  either (`OP_KINDS.script.readsAsWorking: false`): it may be a watcher or a
-  dev server that never ends, and the banner and sidebar chip would read
-  "working" for as long as it lived — and a bare `./equin await` skips it for
-  the same reason (`./equin await script` still waits on one).
+- **`script`** — any other. **Recorded, and admitted only when heavy.** A
+  light script — ~98 % of runs — has no slot to wait for or hold (a one-off
+  data script must not queue behind builds) and no grant handed down — a
+  `./equin check` it spawns acquires its own. It does not read as the
+  conversation working either (`OP_KINDS.script.readsAsWorking: false`): it
+  may be a watcher or a dev server that never ends, and the banner and sidebar
+  chip would read "working" for as long as it lived — and a bare
+  `./equin await` skips it for the same reason (`./equin await script` still
+  waits on one).
+
+### A heavy script takes a memory share before it starts
+
+How heavy a script is cannot be declared (the heavy ones are one-off
+investigation scripts whose author does not know either) and is not assumed
+(charging the unknown a quantum would queue every small script). It is
+**measured**:
+
+- Every plain script reports its peak physical footprint as it exits
+  (`spawnPassthrough`'s `peakFootprint: "report"`), and the run appends it to
+  the host-wide **script-peak ledger** (`logs/script-peaks/script-peaks.jsonl`,
+  `cli/internal/script-peaks.ts`), under the script's repo-relative path — the
+  same script in every checkout — or a scratch script's absolute path.
+- Before it spawns, a run reads that script's records
+  (`cli/internal/script-weight.ts`, `scriptWeight`): **heavy** when the
+  largest peak of its last 5 runs within 14 days is at least one quantum
+  (`PER_UNIT_BYTES`, 3.6 GB — the `cpu` pool's own unit).
+- A heavy script takes `ceil(peak / quantum)` `cpu` units (at most the
+  background window) with `work: "script"`, rigid in the background lane —
+  one process cannot narrow to a short share — and says so on stderr. It then
+  waits like a check when the host is short of memory, and runs lifted to the
+  foreground like every grant holder. Its share is reserved its own
+  recorded peak, whatever units it was granted (the holder marker's
+  `weightBytes`, host-admission's `shareReserve`).
+
+Limits: the **first** heavy run of a script is not admitted (it is still
+charged against the window by the sampler, like every op); a script killed by
+a signal reports no peak; only the script's own process is measured, not its
+children. Numbers, alternatives and what is left open:
+[`research/2026-11-24-global-heavy-script-memory-admission.md`](../../../../../../research/2026-11-24-global-heavy-script-memory-admission.md).
 
 **A `script` run at darwinbg prints its tier on stderr, before and after its
 output.** It inherits the session's background tier, which throttles CPU and

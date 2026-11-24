@@ -1,4 +1,9 @@
-import type { GrantShare } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import {
+  cpuBudget,
+  type GrantShare,
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { formatBytes } from "@plugins/packages/plugins/proc-rusage/core";
+import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   existsSync,
   realpathSync,
@@ -29,6 +34,8 @@ import {
   getWorktreeRoot,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
+import { readScriptPeaks, recordScriptPeak } from "./internal/script-peaks";
+import { scriptWeight } from "./internal/script-weight";
 
 /**
  * Refuse, naming the path, rather than running something else.
@@ -124,16 +131,22 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // charges its process tree to `agent ops`. The lifecycle is shared with
   // `check` and `test`, see op-runtime/cli/direct-op.ts.
   //
-  // Only an e2e script — one under a plugin's `e2e/` dir, the convention the
-  // harness owns — is ADMITTED: it drives the deployed app with a browser, so
-  // it takes one slot of the `e2e` pool. Any other script is kind `script`,
-  // recorded but never admitted: no slot to wait for or hold — a one-off data
-  // script must not queue behind builds — and no grant handed down, so a
-  // `./equin check` it spawns acquires its own; it stays in the session's
-  // (darwinbg) tier. Recorded because unrecorded they were invisible: on
-  // 2026-11-06 four agent-run `blocking-fs/scripts/inventory.ts` held ~11 GB
-  // with nothing naming them
-  // (research/2026-11-06-global-host-pressure-by-owner.md).
+  // An e2e script — one under a plugin's `e2e/` dir, the convention the
+  // harness owns — is always ADMITTED: it drives the deployed app with a
+  // browser, so it takes one slot of the `e2e` pool. Any other script is kind
+  // `script`, and admitted only when HEAVY: when one of its own recent runs
+  // peaked at a quantum of memory or more (`scriptWeight`, from the peak
+  // every run reports at exit), it takes that many `cpu` units before it
+  // starts, like a check. Every other script — ~98 % of runs — is recorded
+  // but not admitted: no slot to wait for or hold (a one-off data script must
+  // not queue behind builds) and no grant handed down, so a `./equin check`
+  // it spawns acquires its own; it stays in the session's (darwinbg) tier.
+  // Recorded because unrecorded they were invisible: on 2026-11-06 four
+  // agent-run `blocking-fs/scripts/inventory.ts` held ~11 GB with nothing
+  // naming them (research/2026-11-06-global-host-pressure-by-owner.md).
+  // Admitted when heavy because unadmitted heavy scripts were alive 1.4 % of
+  // the time and in 38 % of the host's memory-pressure episodes
+  // (research/2026-11-24-global-heavy-script-memory-admission.md).
   //
   // An e2e script runs in the FOREGROUND tier, and so does the Chromium it
   // launches (darwinbg is inherited at spawn). An agent session is darwinbg
@@ -148,16 +161,39 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // `e2e` pool bounds what is lifted (two runs host-wide), the same argument
   // that lets a `cpu` grant holder run in the foreground; this process does
   // nothing else while it waits on the script. An unadmitted script has no
-  // bound, so it is not lifted.
+  // bound, so it is not lifted; a heavy one holds a `cpu` share, so it is.
   const kind = isE2eScriptPath(rel) ? "e2e" : "script";
+  // The script's name in the peak ledger: its repo path — the same script in
+  // every checkout — or a scratch script's absolute path.
+  const weight =
+    kind === "script"
+      ? scriptWeight(await readScriptPeaks(rel), cpuBudget().backgroundLimit)
+      : null;
+  const heavy = weight?.kind === "heavy" ? weight : null;
+  // Said only by a run that acquires: nested in another op, the script runs on
+  // its parent's grant and waits for nothing.
+  if (heavy !== null && inheritedGrant() === undefined)
+    console.error(
+      `[./equin run] ${rel} peaked at ${formatBytes(heavy.peakBytes)} in a recent run, so it is admitted like a check: ` +
+        `it takes ${heavy.units} host memory slot(s) before it starts, and waits for them when the host is short of memory.`,
+    );
   // An unlifted script inherits the session's tier, and darwinbg throttles its
   // CPU and I/O: on 2026-11-14 a plugin-tree bench run this way read 1.25–2.1 s
   // for a build that takes 0.29–0.57 s in the foreground, and the false "main
   // costs 4×" cost a whole task. So the tier a script ran at is printed next to
   // its output, before and after, where whoever reads a timing reads it too.
-  const tierNote = kind === "script" ? darwinbgNote() : null;
+  const tierNote = kind === "script" && heavy === null ? darwinbgNote() : null;
   if (tierNote !== null) console.error(tierNote);
-  const outcome = await withDirectOp(kind, { max: 1 }, async (grant) => {
+  const opOptions =
+    kind === "e2e"
+      ? { max: 1 }
+      : heavy === null
+        ? { max: 1, admitted: false }
+        : // One process as large as what it runs: it cannot narrow to a short
+          // share, so exactly its units or keep waiting.
+          // Reserved its own measured peak, whatever units it is granted.
+          { max: heavy.units, rigid: true, weightBytes: heavy.reserveBytes };
+  const outcome = await withDirectOp(kind, opOptions, async (grant, ctx) => {
     const spawnScript = (share: GrantShare | null) =>
       spawnPassthrough(
         scratch
@@ -172,6 +208,9 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
         {
         cwd: root,
         stdin: "inherit",
+          // A plain script reports its peak footprint as it exits: the record
+          // its next run's admission is decided from.
+          ...(kind === "script" ? { peakFootprint: "report" as const } : {}),
         // Paced heap: a script that builds a whole-repo TypeScript program
         // (an inventory, a rename) holds GBs, and JSC sized against the
         // machine's RAM lets it grow ~2.7× before collecting. A small script's
@@ -183,14 +222,21 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
         }),
         },
       );
-    const { exitCode, signalCode } =
+    const { exitCode, signalCode, resourceUsage } =
       grant === null
         ? await spawnScript(null)
-        : // The script is the op's whole work: it is handed the grant's share
-          // (an e2e run's carries no cpu units, so its env is empty).
-          await grant.run((share) =>
-            withForegroundPriority(() => spawnScript(share)),
+        : // The script is the op's whole work: it is handed the whole share
+          // it acquired (an e2e run's carries no cpu units, so its env is
+          // empty). Nested, the grant is the parent's, and the script spends
+          // one unit of it like any other child.
+          await grant.run(
+            (share) => withForegroundPriority(() => spawnScript(share)),
+            ctx.nested ? {} : { units: grant.units },
           );
+    // Unmeasured (killed by a signal before it could report, or not a bun
+    // process after all) records nothing: no number is better than a wrong one.
+    if (kind === "script" && resourceUsage.peakFootprint.kind === "measured")
+      await recordScriptPeak(rel, resourceUsage.peakFootprint.bytes);
     if (tierNote !== null) console.error(`\n${tierNote}`);
     // A signalled child can still report exit 0. Reporting that as success is
     // the absorbed failure this repo bans — the script did not finish, it was

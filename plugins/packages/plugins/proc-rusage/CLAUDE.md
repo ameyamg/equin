@@ -105,6 +105,7 @@ orchestrator's own peak and the build-progress log.
     - `framework/cli/bootstrap`
     - `framework/cli/build`
     - `framework/cli/build-progress`
+    - `framework/cli/run`
     - `framework/tooling/checks/type-check/backstop`
     - `infra/spawn`
     - `packages/sleep-clock`

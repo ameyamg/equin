@@ -13,9 +13,13 @@ recording — and the whole lifecycle of a **direct op**.
 
 `check`, `test` and a script run (`./equin run <script>`; kind `e2e` for an
 `e2e/` script, `script` for any other) are the same op shape: nothing to lock but the host CPU grant.
-`script` is the one kind RECORDED but not ADMITTED (`OP_POOL` maps it to no
-pool): marker and op-log record, no grant — its body is handed `null`
-(`OpGrant<K>`), so it has no slots to spend and none to pass down. Before
+`script` is the one kind whose admission is OPTIONAL (`OP_POOL`): always a
+marker and an op-log record, and a `cpu` share only when its caller found the
+script heavy (`framework/cli/run`, from that script's own measured peaks).
+Run with `admitted: false` its body is handed `null` (`OpGrant<K>`), so it has
+no slots to spend and none to pass down; `rigid: true` makes a heavy one's
+share exactly its units where a rigid share exists (background lane, normal
+priority). Before
 `direct-op.ts` the check command hand-rolled the sequence — identity, the
 broadcast banner, the interrupted-predecessor warning, the lane, the per-op
 liveness marker (a flocked `ops/<opId>.json`, published before `requested` and

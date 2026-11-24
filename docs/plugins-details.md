@@ -38612,6 +38612,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling/op-log`
           - `framework/cli/build-progress`
           - `framework/cli/op-runtime`
+          - `framework/cli/run`
           - `framework/cli/start`
           - `framework/tooling/checks`
           - `framework/tooling/checks/type-check`
@@ -39371,6 +39372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PER_UNIT_BYTES`
               - `rawFleetCeiling`
               - `rigidShareFit`
+              - `shareReserve`
               - `unmeasuredWindow`
           - Cross-plugin:
             - Imported by:
@@ -39381,6 +39383,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/check`
               - `framework/cli/op-runtime`
               - `framework/cli/push`
+              - `framework/cli/run`
               - `framework/cli/test`
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
@@ -41174,9 +41177,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 150 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 151 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×39
-          - `framework` ×26
+          - `framework` ×27
           - `apps` ×19
           - `debug` ×15
           - `build` ×8
@@ -45429,10 +45432,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 65 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×15
           - `debug` ×12
-          - `framework` ×11
+          - `framework` ×12
           - `apps` ×7
           - `conversations` ×5
           - `database` ×3
@@ -45819,6 +45822,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/bootstrap`
           - `framework/cli/build`
           - `framework/cli/build-progress`
+          - `framework/cli/run`
           - `framework/tooling/checks/type-check/backstop`
           - `infra/spawn`
           - `packages/sleep-clock`

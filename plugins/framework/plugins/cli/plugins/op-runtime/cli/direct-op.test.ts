@@ -74,7 +74,9 @@ function makeHarness(
   const deps: DirectOpDeps = {
     inheritedGrant: () => opts.inherited,
     withHostGrant: async (o, fn) => {
-      events.push(`acquire:${o.lane}:${o.priority}:${o.max}`);
+      events.push(
+        `acquire:${o.lane}:${o.priority}:${o.max}${o.min === undefined ? "" : `:min${o.min}`}`,
+      );
       events.push(`work:${o.work}`);
       o.hooks?.onWaitStart?.();
       o.hooks?.onAcquired?.(0);
@@ -237,11 +239,11 @@ describe("withDirectOp — top-level path", () => {
     expect(h.events.some((e) => e.startsWith("acquire:"))).toBe(false);
   });
 
-  test("a script op is recorded but never admitted: no grant, marker and log intact", async () => {
+  test("an unadmitted script op is recorded but not admitted: no grant, marker and log intact", async () => {
     const h = makeHarness();
     const outcome = await withDirectOp(
       "script",
-      { max: 1 },
+      { max: 1, admitted: false },
       async (grant) => {
         expect(grant).toBeNull();
         return "success";
@@ -258,11 +260,60 @@ describe("withDirectOp — top-level path", () => {
     expect(completed?.waits).toEqual([]);
   });
 
-  test("a nested script op hands its body no grant either", async () => {
+  test("a heavy script takes a rigid background cpu share of its units", async () => {
+    const h = makeHarness();
+    await withDirectOp(
+      "script",
+      { max: 3, rigid: true },
+      async (grant) => {
+        expect(grant).not.toBeNull();
+        return "success";
+      },
+      h.deps,
+    );
+    expect(h.events).toContain("acquire:background:normal:3:min3");
+    expect(h.events).toContain("work:script");
+  });
+
+  test("a rigid op on main acquires elastically: the interactive lane has no rigid share", async () => {
+    const h = makeHarness({ slug: MAIN_WORKTREE_NAME });
+    await withDirectOp(
+      "script",
+      { max: 3, rigid: true },
+      async () => "success",
+      h.deps,
+    );
+    expect(h.events).toContain("acquire:interactive:normal:3");
+  });
+
+  test("a rigid op at low priority acquires elastically: a rigid share is normal-priority only", async () => {
+    const h = makeHarness({ priority: "low" });
+    await withDirectOp(
+      "script",
+      { max: 3, rigid: true },
+      async () => "success",
+      h.deps,
+    );
+    expect(h.events).toContain("acquire:background:low:3");
+  });
+
+  test("only an optional kind may run unadmitted", async () => {
+    const h = makeHarness();
+    expect(
+      withDirectOp(
+        "check",
+        { max: 1, admitted: false },
+        async () => "success",
+        h.deps,
+      ),
+    ).rejects.toThrow("always admitted");
+  });
+
+  test("a nested unadmitted script op hands its body no grant either", async () => {
     const h = makeHarness({ inherited: fakeGrant(3, "background") });
     await withDirectOp(
       "script",
-      { max: 1 },
+      { max: 1, admitted: false },
       async (grant) => {
         expect(grant).toBeNull();
         return "success";

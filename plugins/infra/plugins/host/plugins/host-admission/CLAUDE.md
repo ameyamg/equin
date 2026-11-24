@@ -111,8 +111,8 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
 - **Holders are charged per holder, by what their work was measured to use**
   (`core/internal/holders.ts`, `fleetCharge`). Every `withHostGrant` names
   its kind of work (`work: HolderWork` — `build`, `check`, `test`, `push`,
-  `job`, `type-check-backstop`; required, so no share is taken without
-  saying what it is) and publishes a **holder marker** for the share's life
+  `job`, `type-check-backstop`, `script`; required, so no share is taken
+  without saying what it is) and publishes a **holder marker** for the share's life
   (`locks/cpu-holders/<pid>-<n>.json`: pid, work, units, lane — flocked, the
   lock is the liveness, like an op marker). Main's owner sampler measures each
   holder's process tree every 30 s, appends its peak to the **holder-peak
@@ -133,6 +133,14 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   worker's footprint per unit, while the fleet's slots used p50 1.0 GB
   (2026-11-13: 24 of 81 readings closed by reservations, "6 slots held,
   2.0 GB measured, ops charged 21.6 GB").
+  **A holder that knows its own weight states it** (`withHostGrant`'s
+  `weightBytes`, carried by its marker): the share is then reserved that,
+  whatever units it was granted and whatever its work's other holders used
+  (`shareReserve`). A heavy `./equin run` script does (`framework/cli/run`:
+  the peak of that script's own recent runs — "script" is not one kind of
+  program), so a share that came back short (an elastic acquire on the
+  interactive lane or at low priority, a holder larger than the lane) is
+  still booked the holder's whole weight.
   Holder trees count as agent ops wherever they run (a backend's supervised
   job child too), so their memory leaves `otherBytes`.
 - `withHostGrant` hands the acquire a **capacity feed** (`fleetCapacity`):
@@ -590,6 +598,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `PER_UNIT_BYTES`
     - `rawFleetCeiling`
     - `rigidShareFit`
+    - `shareReserve`
     - `unmeasuredWindow`
 - Cross-plugin:
   - Imported by:
@@ -600,6 +609,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `framework/cli/check`
     - `framework/cli/op-runtime`
     - `framework/cli/push`
+    - `framework/cli/run`
     - `framework/cli/test`
     - `framework/tooling/checks/type-check`
     - `framework/tooling/checks/type-check/backstop`

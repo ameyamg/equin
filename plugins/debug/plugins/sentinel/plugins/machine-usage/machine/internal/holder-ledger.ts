@@ -1,7 +1,7 @@
 import {
   HOLDER_PEAK_WINDOW_MS,
-  holderReserve,
   peaksByWork,
+  shareReserve,
   type CpuHolderMarker,
   type HolderPeakRecord,
   type HolderReading,
@@ -159,10 +159,7 @@ export function createHolderLedger(deps: HolderLedgerDeps): {
       }
       const peaks = peaksByWork(ledger, now);
       return [...measured].map(([marker, { bytes }]) => {
-        const reserve = holderReserve(
-          marker.units,
-          peaks.get(marker.work) ?? [],
-        );
+        const reserve = shareReserve(marker, peaks.get(marker.work) ?? []);
         return {
           work: marker.work,
           units: marker.units,

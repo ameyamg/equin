@@ -50,8 +50,8 @@ import { publishLane } from "./lane";
 import { opPriority } from "./priority";
 
 // The lifecycle of a DIRECT op — one whose only entry ticket is the host CPU
-// grant: `check`, `test`, and an `e2e` script run — plus the one op recorded
-// with NO grant, a plain script run (`script`; see `OP_POOL`). Before this file the whole
+// grant: `check`, `test`, and an `e2e` script run — plus the one op that may be
+// recorded with NO grant, a plain script run (`script`; see `OP_POOL`). Before this file the whole
 // sequence lived inline in the check command, and `test` / `e2e` needed the
 // identical sequence: identity, the broadcast banner, the interrupted
 // predecessor, the lane, the per-op liveness marker,
@@ -158,9 +158,32 @@ export interface DirectOpOptions<K extends OpKind = OpKind> {
    * acquire is elastic — it hands back the slots it could get, `>= 1` — so this
    * is a ceiling, not a demand: `cpuBudget().B` for work that fans out (a check
    * pass, a vitest worker pool), `1` for a single process driving a browser.
-   * Unread by an unadmitted kind (`OP_POOL`), which acquires nothing.
+   * Unread by an op that runs unadmitted (`admitted: false`).
    */
   max: number;
+  /**
+   * `false` runs the op RECORDED but not ADMITTED: its marker and op-log
+   * record, no slot waited for or held, and a `null` grant for its body. Only
+   * a kind whose admission is optional (`OP_POOL`: a plain script, admitted
+   * only once it was measured heavy) may say so; any other kind throws.
+   */
+  admitted?: boolean;
+  /**
+   * The share is RIGID where a rigid share exists — the background lane at
+   * normal priority: exactly `max` units or keep waiting (`withHostGrant`'s
+   * `min`) — for an op that is one process as large as what it runs, which
+   * cannot narrow to a short share. An interactive op (the main checkout) or
+   * a low-priority one (a sidequest checkout, an opportunistic op) acquires
+   * elastically: it may be granted, and is then reserved, fewer units than
+   * it asked for — still charged its measured tree at every reading.
+   */
+  rigid?: boolean;
+  /**
+   * What this op's process was measured to peak at, when its caller knows
+   * (`withHostGrant`'s `weightBytes`): its `cpu` share is reserved this,
+   * whatever units it is granted.
+   */
+  weightBytes?: number;
   /**
    * Adopt a parent-supplied id rather than minting one. Nested-only by
    * contract (the check command's `--run-id`): a top-level op must mint its
@@ -203,7 +226,9 @@ type CpuGrantAcquire = <T>(
     lane: Lane;
     priority: Priority;
     max: number;
+    min?: number;
     work: HolderWork;
+    weightBytes?: number;
     hooks?: GrantHooks;
   },
   fn: (grant: Grant) => Promise<T>,
@@ -219,19 +244,24 @@ type GrantPool = "cpu" | "e2e";
 
 /**
  * How one kind is admitted: a `cpu` share of the kind of work it is (its memory
- * reservation is what that work was measured to peak at — `holderReserve`), an
- * `e2e` slot, or nothing.
+ * reservation is what that work was measured to peak at — `holderReserve`) or
+ * an `e2e` slot. `optional` marks a kind its caller may run unadmitted
+ * (`DirectOpOptions.admitted`).
  */
-type OpAdmission = { pool: "cpu"; work: HolderWork } | { pool: "e2e" };
+type OpAdmission =
+  | { pool: "cpu"; work: HolderWork; optional?: true }
+  | { pool: "e2e"; optional?: undefined };
 
 /**
- * Which pool each kind's grant comes from, or `null` for a kind that is
- * RECORDED but not ADMITTED: a plain `./equin run` script (`script`) writes its
- * marker and op-log record — so the Ops views show it and the machine-usage
- * sampler charges its process tree to `agent ops` — but never waits on or holds
- * a slot. A one-off script must not queue behind builds, and its weight is not
- * known before it runs. A `Record` over every kind, so a new kind states its
- * admission rather than inheriting one.
+ * Which pool each kind's grant comes from. A `Record` over every kind, so a
+ * new kind states its admission rather than inheriting one.
+ *
+ * A plain `./equin run` script (`script`) is the one OPTIONAL kind: every run
+ * writes its marker and op-log record — so the Ops views show it and the
+ * machine-usage sampler charges its process tree to `agent ops` — but it
+ * waits on and holds a share only when its caller says it is heavy (the run
+ * command, from that script's own measured peaks). A one-off script must not
+ * queue behind builds, and its weight is not known before it has run once.
  */
 const OP_POOL = {
   build: { pool: "cpu", work: "build" },
@@ -239,19 +269,22 @@ const OP_POOL = {
   check: { pool: "cpu", work: "check" },
   test: { pool: "cpu", work: "test" },
   e2e: { pool: "e2e" },
-  script: null,
-} as const satisfies Record<OpKind, OpAdmission | null>;
+  script: { pool: "cpu", work: "script", optional: true },
+} as const satisfies Record<OpKind, OpAdmission>;
 
 /**
- * What a direct op's body is handed: the grant it runs under, or `null` for an
- * unadmitted kind — it holds no slots, so there is nothing to spend and nothing
- * to hand a child (a `./equin check` it spawns acquires its own grant).
+ * What a direct op's body is handed: the grant it runs under — or, for a kind
+ * whose admission is optional, `null` when it runs unadmitted: it holds no
+ * slots, so there is nothing to spend and nothing to hand a child (a
+ * `./equin check` it spawns acquires its own grant).
  */
-export type OpGrant<K extends OpKind> = (typeof OP_POOL)[K] extends null
-  ? null
+export type OpGrant<K extends OpKind> = (typeof OP_POOL)[K] extends {
+  optional: true;
+}
+  ? Grant | null
   : Grant;
 
-function admissionFor(kind: OpKind): OpAdmission | null {
+function admissionFor(kind: OpKind): OpAdmission {
   return OP_POOL[kind];
 }
 
@@ -269,7 +302,10 @@ function describeQueueFromOpLog(pool: GrantPool, selfOpId: string): string {
   for (const st of readOpStates().values()) {
     const id = st.identity;
     if (st.opId === selfOpId || st.closedBy !== null || !id) continue;
-    if (admissionFor(id.kind)?.pool !== pool) continue;
+    // An optional kind is left out: its op record does not say whether that
+    // run holds a share, and most do not (a dev server, a one-off script).
+    const admission = admissionFor(id.kind);
+    if (admission.pool !== pool || admission.optional) continue;
     const who = `${id.kind} ${id.opSlug ?? "?"}`;
     if (st.openWait?.kind === "host-grant") queued++;
     else if (st.grantedAt !== null) {
@@ -529,8 +565,8 @@ export async function withDirectOp<K extends OpKind>(
       // wait for). The host grant IS a direct op's entry ticket: it does no
       // further waiting after this point.
       profiler?.markGranted();
-      // `grant` is null exactly when `admission` is, which is what `OpGrant<K>`
-      // spells; tsc cannot follow that through the generic.
+      // `grant` is null only for an optional kind run unadmitted, which is
+      // what `OpGrant<K>` spells; tsc cannot follow that through the generic.
       const outcome = await body(grant as OpGrant<K>, ctx);
       profiler?.complete(outcome);
       return outcome;
@@ -567,21 +603,40 @@ export async function withDirectOp<K extends OpKind>(
       };
     };
     const run = async (): Promise<OutcomeByKind[K]> => {
-      // Recorded, not admitted: no slot to wait for, none to hold.
-      if (admission === null) return await runUnder(null);
+      if (opts.admitted === false) {
+        if (!admission.optional)
+          throw new Error(
+            `withDirectOp(${kind}): a ${kind} is always admitted — only a kind whose admission is optional may run with \`admitted: false\``,
+          );
+        // Recorded, not admitted: no slot to wait for, none to hold.
+        return await runUnder(null);
+      }
       if (inherited) return await runUnder(inherited);
+      const priority: Priority = opportunistic
+        ? "low"
+        : await deps.priority(kind, isInteractiveOrigin);
       const acquireOpts = {
         lane,
-        priority: opportunistic
-          ? "low"
-          : await deps.priority(kind, isInteractiveOrigin),
+        priority,
         max: opts.max,
         hooks: grantHooks(admission.pool),
       };
       return admission.pool === "e2e"
         ? await deps.withE2eGrant(acquireOpts, runUnder)
         : await deps.withHostGrant(
-            { ...acquireOpts, work: admission.work },
+            {
+              ...acquireOpts,
+              work: admission.work,
+              ...(opts.weightBytes === undefined
+                ? {}
+                : { weightBytes: opts.weightBytes }),
+              // A rigid share exists only in the background lane at normal
+              // priority (host-semaphore refuses any other): elsewhere the
+              // acquire is elastic.
+              ...(opts.rigid && lane === "background" && priority === "normal"
+                ? { min: opts.max }
+                : {}),
+            },
             runUnder,
           );
     };

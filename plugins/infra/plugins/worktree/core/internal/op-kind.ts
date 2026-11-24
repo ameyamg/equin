@@ -1,7 +1,8 @@
 // The closed set of ops a worktree runs that hold a live marker and land a
 // durable op-log record: build, push, check, test, e2e, script. Every kind but
-// `script` also takes a host grant (op-runtime's `OP_POOL`) and reads as the
-// conversation working (`readsAsWorking` below).
+// `script` always takes a host grant (op-runtime's `OP_POOL`; a `script` only
+// when it was measured heavy) and reads as the conversation working
+// (`readsAsWorking` below).
 //
 // Declared ONCE, as data, here in the worktree plugin's web-safe core — the
 // marker primitive (`worktree/server`) is where the vocabulary originates, and
