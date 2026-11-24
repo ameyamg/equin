@@ -2165,6 +2165,12 @@ function declaredAncestors(
  *
  * A param the caller did not supply cannot disagree with anything, so it is
  * skipped: the prefix's value stands and nothing is discarded.
+ *
+ * The ancestor asked is the NEAREST one — the last instance in the prefix,
+ * the one the target will stand under (as `useEnclosing` and the chained
+ * `fullParams` read it). Asking the first made a second folder column unable
+ * to open a file beside itself: the first folder disagreed, and the open
+ * rebuilt the whole route.
  */
 function prefixHosts(
   prefix: PaneSlot[],
@@ -2172,7 +2178,7 @@ function prefixHosts(
   params: Record<string, string>,
 ): boolean {
   for (const { id, internal } of declaredAncestors(target)) {
-    const slot = prefix.find((s) => s.paneId === id);
+    const slot = prefix.findLast((s) => s.paneId === id);
     if (!slot) continue;
     // A slot's params are own-only by construction, so its own keys are the
     // honest fallback for an ancestor whose pane is not registered to be asked.

@@ -182,6 +182,30 @@ describe("an inPlace swap of a second folder column", () => {
     ]);
   });
 
+  it("opening a file from it keeps the first pair", () => {
+    store.restoreRoute([
+      { paneId: "ip-folder", params: { dir: "a" } },
+      { paneId: "ip-preview", params: { open: "f.md" } },
+      { paneId: "ip-folder", params: { dir: "b" } },
+    ]);
+    const route = store.getRoute();
+    const next = computeOpen(
+      route,
+      route[2]!.instanceId,
+      previewPane._internal,
+      { dir: "b", open: "g.md" },
+      { mode: "push" },
+    );
+    store.setRoute(next.route, next.replace);
+    expect(store.getRoute().map((s) => s.params)).toEqual([
+      { dir: "a" },
+      { open: "f.md" },
+      { dir: "b" },
+      { open: "g.md" },
+    ]);
+    expect(store.getRoute()[0]!.instanceId).toBe(route[0]!.instanceId);
+  });
+
   it("to a folder alone keeps the columns left of it", () => {
     seedTwoPairs();
     swapFrom(2, { dir: "c" });
