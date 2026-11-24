@@ -16,7 +16,7 @@ import {
   type Layout,
   type WorldModel,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
-import type { Ctx } from "./kit";
+import { canvas, ctx2d, type Ctx } from "./kit";
 
 /** What the water reads of an island's furniture (`FurnitureStore`). */
 export interface ShoreSource {
@@ -105,10 +105,20 @@ interface Swell {
 
 const paths = (n: number) => Array.from({ length: n }, () => new Path2D());
 
+/** One stroke of a set drawn unstacked: a path, its colour (`r,g,b`), opacity and width. */
+interface Stroke {
+  readonly path: Path2D;
+  readonly rgb: string;
+  readonly alpha: number;
+  readonly width: number;
+}
+
 export class WaterLife {
   private readonly shores = new Map<number, Shore>();
   private readonly swells: Swell[] = [];
   private builtAt = -1;
+  /** Scratch layer the size of the target canvas, where strokes overlap without stacking. */
+  private scratch: Ctx | null = null;
 
   constructor(
     private readonly M: WorldModel,
@@ -142,6 +152,46 @@ export class WaterLife {
       this.shores.set(I.id, (S = shoreOf(this.M, I, this.src)));
     }
     return S ?? null;
+  }
+
+  /**
+   * Strokes drawn so that where two overlap, the more opaque one shows — never
+   * both stacked. Neighbouring shore points sit in different slices of their
+   * wave's cycle (each slice its own translucent stroke), and their dashes
+   * overlap: stacked, every overlap was a blob twice as opaque, popping on and
+   * off as points crossed from one slice to the next — the waves flickered.
+   * Drawn in `g`'s transform into a scratch layer (most transparent first, each
+   * stroke first clearing what it covers), then laid onto `g` in one draw.
+   */
+  private unstacked(g: Ctx, strokes: Stroke[]): void {
+    if (strokes.length === 0) return;
+    const { width, height } = g.canvas;
+    let L = this.scratch;
+    if (!L) L = this.scratch = ctx2d(canvas(width, height));
+    if (L.canvas.width !== width || L.canvas.height !== height) {
+      L.canvas.width = width;
+      L.canvas.height = height;
+    } else {
+      L.setTransform(1, 0, 0, 1, 0, 0);
+      L.clearRect(0, 0, width, height);
+    }
+    L.setTransform(g.getTransform());
+    L.lineCap = "round";
+    L.lineJoin = "round";
+    strokes.sort((a, b) => a.alpha - b.alpha);
+    for (const s of strokes) {
+      L.lineWidth = s.width;
+      L.globalCompositeOperation = "destination-out";
+      L.strokeStyle = "#000";
+      L.stroke(s.path);
+      L.globalCompositeOperation = "source-over";
+      L.strokeStyle = `rgba(${s.rgb},${s.alpha})`;
+      L.stroke(s.path);
+    }
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(L.canvas, 0, 0);
+    g.restore();
   }
 
   private visible(x0: number, y0: number, x1: number, y1: number): Island[] {
@@ -221,12 +271,18 @@ export class WaterLife {
       }
     }
     if (anyCrest)
-      crest.forEach((C, b) => {
-        const q = (b + 0.5) / NC;
-        g.strokeStyle = `rgba(248,252,250,${0.08 + q * 0.42})`;
-        g.lineWidth = 1.1 + q * 1.3;
-        g.stroke(C);
-      });
+      this.unstacked(
+        g,
+        crest.map((C, b) => {
+          const q = (b + 0.5) / NC;
+          return {
+            path: C,
+            rgb: "248,252,250",
+            alpha: 0.08 + q * 0.42,
+            width: 1.1 + q * 1.3,
+          };
+        }),
+      );
     if (anyRing)
       rings.forEach((P2, b) => {
         const q = (b + 0.5) / 4;
@@ -333,22 +389,31 @@ export class WaterLife {
         }
       }
     }
-    g.lineCap = "round";
+    // the wet sand under the foam: each its own unstacked set, the foam laid over the wet
     const upBins = ((UP - IN) / (1 - IN)) * NB;
+    const wetStrokes: Stroke[] = [];
+    const foamStrokes: Stroke[] = [];
     for (let b = 0; b < NB; b++) {
       if (!used[b]) continue;
       const mid = b + 0.5;
       const back = mid < upBins ? 0 : (mid - upBins) / (NB - upBins);
-      if (wetToo) {
-        g.strokeStyle = `rgba(104,84,54,${mid < upBins ? 0.15 : 0.17 * (1 - back) ** 1.3})`;
-        g.lineWidth = mid < upBins ? 3 + (mid / upBins) * 4.5 : 7.5;
-        g.stroke(wet[b]!);
-      }
+      if (wetToo)
+        wetStrokes.push({
+          path: wet[b]!,
+          rgb: "104,84,54",
+          alpha: mid < upBins ? 0.15 : 0.17 * (1 - back) ** 1.3,
+          width: mid < upBins ? 3 + (mid / upBins) * 4.5 : 7.5,
+        });
       const a = mid < upBins ? 0.78 : 0.78 * (1 - back) ** 2.2;
       if (a < 0.02) continue;
-      g.strokeStyle = `rgba(250,252,250,${a})`;
-      g.lineWidth = mid < upBins ? 2.3 : 2.1 - back * 1.3;
-      g.stroke(foam[b]!);
+      foamStrokes.push({
+        path: foam[b]!,
+        rgb: "250,252,250",
+        alpha: a,
+        width: mid < upBins ? 2.3 : 2.1 - back * 1.3,
+      });
     }
+    this.unstacked(g, wetStrokes);
+    this.unstacked(g, foamStrokes);
   }
 }
