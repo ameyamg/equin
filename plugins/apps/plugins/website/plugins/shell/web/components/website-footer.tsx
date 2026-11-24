@@ -1,3 +1,4 @@
+import { linkPlacement } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -52,11 +53,13 @@ export function WebsiteFooter() {
               href={SOURCE_REPO_URL}
               icon={githubIcon}
               label="Source on GitHub"
+              placement="footer_github"
             />
             <FooterIconLink
               href={DISCORD_URL}
               icon={discordIcon}
               label="Community on Discord"
+              placement="footer_discord"
             />
           </Inline>
         </Inline>
@@ -75,10 +78,13 @@ function FooterIconLink({
   href,
   icon,
   label,
+  placement,
 }: {
   href: string;
   icon: IconRef;
   label: string;
+  /** Its analytics placement (`linkPlacement`). */
+  placement: string;
 }) {
   return (
     <a
@@ -86,6 +92,7 @@ function FooterIconLink({
       target="_blank"
       rel="noreferrer noopener"
       aria-label={label}
+      {...linkPlacement(placement)}
       className={cn(
         insetClass({ pad: "sm" }),
         "border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground rounded-full border",

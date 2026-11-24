@@ -1,7 +1,7 @@
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import { AnalyticsTracker } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
-import { websiteApp } from "../../core";
+import { websiteApp, websiteDestinationOf } from "../../core";
 import { Website } from "../slots";
 
 /**
@@ -28,7 +28,7 @@ import { Website } from "../slots";
 export function WebsiteLayout() {
   return (
     <div className="h-full min-h-0">
-      <AnalyticsTracker app={websiteApp} />
+      <AnalyticsTracker app={websiteApp} destinationOf={websiteDestinationOf} />
       <Website.Resident.Wrap>
         <FullPane />
       </Website.Resident.Wrap>

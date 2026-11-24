@@ -14,5 +14,6 @@ export {
   PUBLIC_SITE_ORIGIN,
   publicSitePageUrl,
   publicSiteUrl,
+  websiteDestinationOf,
 } from "./site";
 export { landingPage } from "./pages";

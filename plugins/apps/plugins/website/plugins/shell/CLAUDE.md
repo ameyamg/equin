@@ -200,6 +200,7 @@ hover.
     - `publicSitePageUrl`
     - `publicSiteUrl`
     - `websiteApp`
+    - `websiteDestinationOf`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/chart --chart-1`

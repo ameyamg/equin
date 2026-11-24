@@ -1,3 +1,4 @@
+import { linkPlacement } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import {
@@ -339,7 +340,14 @@ function ReplayView({
             runs, because nothing prevents it. */}
         <Button
           ref={focusOnMount}
-          render={<a href={href} target="_blank" rel="noopener noreferrer" />}
+          render={
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              {...linkPlacement("improve_file_issue")}
+            />
+          }
           onClick={onFiled}
         >
           <Icon icon={githubIcon} />

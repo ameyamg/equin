@@ -8,7 +8,11 @@ import {
   PUBLIC_SITE_ORIGIN,
   publicSitePageUrl,
   publicSiteUrl,
+  DISCORD_URL,
+  ISSUES_URL,
+  websiteDestinationOf,
 } from "./site";
+import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 
 const local = localAppUrl(8700);
 
@@ -78,5 +82,21 @@ describe("the site's two origins", () => {
     expect(() =>
       localSiteUrl(new URL("https://example.com/about"), 8700),
     ).toThrow();
+  });
+});
+
+describe("websiteDestinationOf", () => {
+  const of = (href: string) => websiteDestinationOf(new URL(href));
+  test("names the site's own off-site destinations", () => {
+    expect(of(SOURCE_REPO_URL)).toBe("github_repo");
+    expect(of(`${SOURCE_REPO_URL}/releases`)).toBe("github_repo");
+    expect(of(ISSUES_URL)).toBe("github_issues");
+    expect(of(`${ISSUES_URL}?template=wish&title=x`)).toBe("github_issues");
+    expect(of(DISCORD_URL)).toBe("discord");
+  });
+  test("leaves any other address to its host", () => {
+    expect(of("https://github.com/someone/else")).toBeUndefined();
+    expect(of(`${SOURCE_REPO_URL}-fork`)).toBeUndefined();
+    expect(of("https://claude.ai/download")).toBeUndefined();
   });
 });

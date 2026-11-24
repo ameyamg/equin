@@ -2,6 +2,8 @@ import {
   averageTimeOnPageMs,
   bounceRate,
   conversionRate,
+  OUTBOUND_CLICK_EVENT,
+  OUTBOUND_PROPS,
   parseEventPropValue,
   visitorShare,
   type AnalyticsReport,
@@ -11,6 +13,7 @@ import {
 import { IP_COUNTRY_SOURCE } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/core";
 import {
   formatAverage,
+  formatCount,
   formatDurationMs,
   formatPercent,
   orDash,
@@ -27,6 +30,13 @@ export interface PanelTab {
   id: string;
   label: string;
   dimension: Dimension;
+  /**
+   * The tab's rows, when it ranks a subset of its dimension's (one event's
+   * prop); else every row of `dimension`.
+   */
+  rows?: (report: AnalyticsReport) => readonly ReportRow[];
+  /** How a row is named, when not by its dimension's own label. */
+  rowLabel?: (value: string) => string;
   /** The count the row's bar is proportional to, and its column. */
   primary: { label: string; value: (row: ReportRow) => number };
   /** The columns after the primary one. */
@@ -88,6 +98,40 @@ function eventPropBreakdown(
     rows,
     rowLabel: (value) => parseEventPropValue(value).value,
   }));
+}
+
+/**
+ * One `outbound_click` prop as a tab: its `event_prop` rows (each a filter
+ * like any row, so a click on "discord" narrows the whole dashboard to the
+ * visits that went there), named by the prop's value.
+ */
+function outboundTab(
+  id: string,
+  label: string,
+  key: (typeof OUTBOUND_PROPS)[keyof typeof OUTBOUND_PROPS],
+  note: string,
+): PanelTab {
+  return {
+    id,
+    label,
+    dimension: "event_prop",
+    rows: (report) =>
+      report.rows.event_prop.filter((row) => {
+        const prop = parseEventPropValue(row.value);
+        return prop.event === OUTBOUND_CLICK_EVENT && prop.key === key;
+      }),
+    rowLabel: (value) => parseEventPropValue(value).value,
+    primary: { label: "Clicks", value: (r) => r.events },
+    columns: [
+      { label: "Visitors", cell: (row) => formatCount(row.visitors) },
+      {
+        label: "Conversion",
+        cell: (row, report) =>
+          orDash(conversionRate(row, report.current.summary), formatPercent),
+      },
+    ],
+    note,
+  };
 }
 
 const visitors = { label: "Visitors", value: (r: ReportRow) => r.visitors };
@@ -233,6 +277,31 @@ export const PANELS: readonly PanelDef[] = [
         primary: visitors,
         columns: [share],
       },
+    ],
+  },
+  {
+    id: "outbound",
+    title: "Outbound links",
+    wide: true,
+    tabs: [
+      outboundTab(
+        "destination",
+        "Destination",
+        OUTBOUND_PROPS.to,
+        "Clicks on links that leave the site. Conversion is the share of unique visitors who clicked at least once. Filter by Device for the mobile / desktop split.",
+      ),
+      outboundTab(
+        "page",
+        "Page",
+        OUTBOUND_PROPS.page,
+        "The page each outbound click was made on.",
+      ),
+      outboundTab(
+        "link",
+        "Link",
+        OUTBOUND_PROPS.link,
+        "Which link was clicked: its placement, else the page section it sits in.",
+      ),
     ],
   },
   {

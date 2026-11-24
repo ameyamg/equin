@@ -1,3 +1,4 @@
+import { linkPlacement } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
@@ -73,6 +74,7 @@ export function ContactSection() {
                 render={
                   <a
                     href={ISSUES_URL}
+                    {...linkPlacement("contact_issues")}
                     // GitHub opens beside the site.
                     target="_blank"
                     rel="noreferrer noopener"
@@ -88,6 +90,7 @@ export function ContactSection() {
                 render={
                   <a
                     href={DISCORD_URL}
+                    {...linkPlacement("contact_discord")}
                     // Discord opens beside the site.
                     target="_blank"
                     rel="noreferrer noopener"

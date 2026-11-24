@@ -1,3 +1,4 @@
+import { linkPlacement } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   ActionFormShield,
@@ -29,8 +30,11 @@ function WebsiteNavIconLink({
   icon,
   name,
   label,
+  placement,
 }: {
   href: string;
+  /** The link's analytics placement suffix: `github` → `header_github` (`menu_github` in the ☰ menu). */
+  placement: string;
   icon: IconRef;
   /** The destination's name, as the ☰ menu's row reads it. */
   name: string;
@@ -40,6 +44,7 @@ function WebsiteNavIconLink({
   const form = useActionForm(WEBSITE_NAV_LADDER);
   if (form === "row") {
     return (
+      <span {...linkPlacement(`menu_${placement}`)} className="contents">
       <WebsiteMenuRow
         label={name}
         tone="muted"
@@ -47,10 +52,11 @@ function WebsiteNavIconLink({
         target="_blank"
         rel="noreferrer noopener"
       />
+      </span>
     );
   }
   return (
-    <div className="website-nav-icon">
+    <div className="website-nav-icon" {...linkPlacement(`header_${placement}`)}>
       <ActionFormShield>
         <IconButton
           icon={icon}
@@ -70,6 +76,7 @@ export function WebsiteGithubLink() {
       href={SOURCE_REPO_URL}
       icon={githubIcon}
       name="GitHub"
+      placement="github"
       label="equin on GitHub"
     />
   );
@@ -82,6 +89,7 @@ export function WebsiteDiscordLink() {
       href={DISCORD_URL}
       icon={discordIcon}
       name="Discord"
+      placement="discord"
       label="equin on Discord"
     />
   );

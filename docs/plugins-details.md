@@ -2012,7 +2012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, the report and its mirror set), and the dashboard half in the local deploy app, which runs that report on its copy of the site's tables.
           - Plugins:
-            - **`collect`** — The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local page framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local page framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; every click on a link leaving the site records outbound_click (destination named by the tracker's destinationOf, else the host; the page; the link's data-link-placement, else its page section) from one delegated listener, so no link can skip it; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `table-mirror-set` "analytics"
@@ -2128,6 +2128,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `LoadTiming`
                   - `Metrics`
                   - `OsFamily`
+                  - `OutboundClick`
+                  - `OutboundClickProps`
+                  - `OutboundDestinationOf`
                   - `PageSections`
                   - `PageviewBody`
                   - `PeriodReport`
@@ -2204,6 +2207,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `HIT_DIMENSIONS`
                   - `IDENTITY_WINDOW_DAYS`
                   - `IDLE_AFTER_MS`
+                  - `LINK_PLACEMENT_ATTRIBUTE`
+                  - `LINK_PLACEMENT_PATTERN`
+                  - `linkPlacement`
                   - `loadMs`
                   - `LoadTimingSchema`
                   - `MAX_COLLECT_BODY_BYTES`
@@ -2228,6 +2234,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `normalizeHost`
                   - `OS_FAMILIES`
                   - `OsFamilySchema`
+                  - `OUTBOUND_CLICK_EVENT`
+                  - `OUTBOUND_PROPS`
+                  - `outboundClick`
                   - `OWNER_MARK_FRAGMENT`
                   - `OWNER_UNMARK_FRAGMENT`
                   - `ownerMarkUrl`
@@ -2260,6 +2269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteHostSchema`
                   - `TOTAL_DIMENSION`
                   - `UNFILTERED_LEVEL`
+                  - `UNPLACED_LINK`
                   - `utcDay`
                   - `UtmTagsSchema`
                   - `ViewportSchema`
@@ -2279,6 +2289,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/site-messages/intake`
                   - `apps/deploy/site-reports/channel/slow-load`
                   - `apps/website/improve`
+                  - `apps/website/landing/contact`
                   - `apps/website/landing/hero`
                   - `apps/website/landing/layers`
                   - `apps/website/landing/screenshot`
@@ -14198,6 +14209,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `publicSitePageUrl`
               - `publicSiteUrl`
               - `websiteApp`
+              - `websiteDestinationOf`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/chart --chart-1`

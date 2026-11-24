@@ -23,6 +23,11 @@ export interface PageSectionRegistry {
   sectionsOf: (path: string) => readonly string[];
   /** The element mounted as section `name` of `path` now, or null (not mounted, never registered). */
   elementOf: (path: string, name: string) => Element | null;
+  /**
+   * The innermost section of `path` mounted now that contains `el`, or null
+   * (outside every section) — names an outbound link no placement names.
+   */
+  sectionOf: (path: string, el: Element) => string | null;
 }
 
 interface Entry {
@@ -67,6 +72,15 @@ export function createPageSectionRegistry(): PageSectionRegistry {
       };
     },
     sectionsOf: (path) => byPath.get(path)?.map((e) => e.name) ?? [],
+    sectionOf: (path, el) => {
+      let best: { name: string; el: Element } | null = null;
+      for (const e of byPath.get(path) ?? []) {
+        if (e.el === null || !e.el.isConnected || !e.el.contains(el)) continue;
+        if (best === null || best.el.contains(e.el))
+          best = { name: e.name, el: e.el };
+      }
+      return best?.name ?? null;
+    },
     elementOf: (path, name) => {
       const el = byPath.get(path)?.find((e) => e.name === name)?.el ?? null;
       return el !== null && el.isConnected ? el : null;

@@ -149,7 +149,10 @@ export function RankedList({
   filters: readonly AnalyticsFilter[];
 } & RankedListMode): ReactNode {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const rows = report.rows[tab.dimension].slice(0, excerpt?.limit);
+  const rows = (tab.rows?.(report) ?? report.rows[tab.dimension]).slice(
+    0,
+    excerpt?.limit,
+  );
   if (rows.length === 0) {
     return <Placeholder>Nothing recorded in this period.</Placeholder>;
   }
@@ -197,7 +200,9 @@ export function RankedList({
       {rows.map((row) => {
         const groups = tab.breakdown?.(row, report) ?? [];
         const open = expanded.has(row.value);
-        const label = dimensionValueLabel(tab.dimension, row.value);
+        const label =
+          tab.rowLabel?.(row.value) ??
+          dimensionValueLabel(tab.dimension, row.value);
         return (
           <Fragment key={row.value}>
             <Line>

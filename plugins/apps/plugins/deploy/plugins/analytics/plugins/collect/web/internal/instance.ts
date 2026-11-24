@@ -27,6 +27,7 @@ import {
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { createPageSectionRegistry } from "./page-sections";
 import { followReplay } from "./replay-follow";
+import { watchOutboundLinks, type OutboundScope } from "./outbound";
 import {
   createTracker,
   type CollectSent,
@@ -67,6 +68,22 @@ async function send(body: CollectBody): Promise<CollectSent> {
 }
 
 let instance: Tracker | null = null;
+
+/**
+ * Records every outbound link click under `scope` (`outbound.ts`) until the
+ * returned uninstall — called by `<AnalyticsTracker />` in an effect, so the
+ * listener lives exactly as long as the tracker that knows the app.
+ */
+export function watchOutboundLinksUnder(scope: OutboundScope): () => void {
+  const tracker = getTracker();
+  return watchOutboundLinks(document, {
+    scope,
+    pageUrl: () => window.location.href,
+    path: () => tracker.currentPath() ?? pagePathOf(currentRoutePath()),
+    sectionOf: (path, el) => pageSections.sectionOf(path, el),
+    track: (name, props) => track(name, props),
+  });
+}
 
 /** The page load's sections per path; module scope, like the tracker. */
 const pageSections = createPageSectionRegistry();

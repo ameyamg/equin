@@ -198,6 +198,20 @@ export {
 } from "./internal/plugin-id";
 export { ANALYTICS_MIRROR_SET_ID } from "./internal/mirror";
 export {
+  LINK_PLACEMENT_ATTRIBUTE,
+  LINK_PLACEMENT_PATTERN,
+  OUTBOUND_CLICK_EVENT,
+  OUTBOUND_PROPS,
+  UNPLACED_LINK,
+  linkPlacement,
+  outboundClick,
+} from "./internal/outbound";
+export type {
+  OutboundClick,
+  OutboundClickProps,
+  OutboundDestinationOf,
+} from "./internal/outbound";
+export {
   PULSE_MINUTES,
   VISITORS_NOW_WINDOW_MS,
   VisitorPulseSchema,

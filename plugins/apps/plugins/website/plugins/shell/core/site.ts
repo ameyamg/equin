@@ -147,3 +147,19 @@ export function publicSiteUrl(url: URL): string {
     ? `${PUBLIC_SITE_ORIGIN}${addressPathOf(url.pathname, PUBLIC_SITE_ROOT)}${url.search}${url.hash}`
     : `${PUBLIC_SITE_ORIGIN}/`;
 }
+
+/**
+ * The site's names for where its off-site links go, for the analytics
+ * `outbound_click` event's `to` (collect's `OutboundDestinationOf`): the new-issue
+ * page, the rest of the repository, the Discord server. Any other address is
+ * named by its host. Read from the same constants the links use, so a link and
+ * its name cannot point at different places.
+ */
+export function websiteDestinationOf(url: URL): string | undefined {
+  const at = `${url.origin}${url.pathname}`.replace(/\/+$/, "");
+  const under = (base: string) => at === base || at.startsWith(`${base}/`);
+  if (under(ISSUES_URL)) return "github_issues";
+  if (under(SOURCE_REPO_URL)) return "github_repo";
+  if (url.origin === new URL(DISCORD_URL).origin) return "discord";
+  return undefined;
+}
