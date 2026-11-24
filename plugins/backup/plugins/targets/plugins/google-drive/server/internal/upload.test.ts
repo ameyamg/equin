@@ -6,6 +6,7 @@ import { uploadToDrive, type DriveUploadDeps } from "./upload";
 
 const KIB256 = 256 * 1024;
 const SESSION = "https://upload.test/session/1";
+const tok = async () => "tok";
 
 /**
  * An in-memory Drive resumable session. A PUT can be cut off mid-body: the
@@ -35,13 +36,16 @@ function fakeDrive(total: number) {
   const fetchImpl: DriveUploadDeps["fetch"] = async (url, init) => {
     const headers = new Headers(init.headers);
     if (init.method === "POST") {
-      log.push("init");
+      log.push(`init ${headers.get("Authorization")}`);
       return new Response(null, {
         status: 200,
         headers: { Location: SESSION },
       });
     }
     expect(url).toBe(SESSION);
+    // The session URI is the PUTs' credential: no access token rides on them,
+    // so an upload that outlives one is unaffected.
+    expect(headers.get("Authorization")).toBeNull();
     const range = headers.get("Content-Range") ?? "";
     if (range.startsWith("bytes */")) {
       log.push(`query → ${confirmed}`);
@@ -125,7 +129,7 @@ describe("uploadToDrive", () => {
       archive,
       "folder",
       "a.tar.gz",
-      "tok",
+      tok,
       deps(drive.fetchImpl, sleeps),
     );
     expect(res).toEqual({
@@ -146,13 +150,13 @@ describe("uploadToDrive", () => {
       archive,
       "folder",
       "a.tar.gz",
-      "tok",
+      tok,
       deps(drive.fetchImpl, sleeps),
     );
     expect(res.recovered).toBe(1);
     expect(drive.received()).toEqual(content);
     expect(drive.log).toEqual([
-      "init",
+      "init Bearer tok",
       `put 0-${KIB256 * 4} → 308`,
       `put ${KIB256 * 4}-${KIB256 * 8} → reset at ${KIB256 * 5.5}`,
       `query → ${KIB256 * 5}`,
@@ -170,7 +174,7 @@ describe("uploadToDrive", () => {
       archive,
       "folder",
       "a.tar.gz",
-      "tok",
+      tok,
       deps(drive.fetchImpl, []),
     );
     expect(res.recovered).toBe(1);
@@ -186,7 +190,7 @@ describe("uploadToDrive", () => {
       archive,
       "folder",
       "a.tar.gz",
-      "tok",
+      tok,
       deps(drive.fetchImpl, []),
     );
     expect(res.recovered).toBe(10);
@@ -202,7 +206,7 @@ describe("uploadToDrive", () => {
         archive,
         "folder",
         "a.tar.gz",
-        "tok",
+        tok,
         deps(drive.fetchImpl, sleeps),
       ),
     ).rejects.toThrow(
@@ -216,7 +220,7 @@ describe("uploadToDrive", () => {
     // so the stall count never trips — only the total cap stops it.
     for (let i = 0; i < 20; i++) drive.plan.push({ resetAfter: KIB256 });
     expect(
-      uploadToDrive(archive, "folder", "a.tar.gz", "tok", {
+      uploadToDrive(archive, "folder", "a.tar.gz", tok, {
         ...deps(drive.fetchImpl, []),
         maxFailures: 5,
       }),
@@ -233,7 +237,7 @@ describe("uploadToDrive", () => {
         archive,
         "folder",
         "a.tar.gz",
-        "tok",
+        tok,
         deps(drive.fetchImpl, []),
       ),
     ).rejects.toThrow(
@@ -250,7 +254,7 @@ describe("uploadToDrive", () => {
         archive,
         "folder",
         "a.tar.gz",
-        "tok",
+        tok,
         deps(drive.fetchImpl, sleeps),
       ),
     ).rejects.toThrow(/Drive upload: 404/);

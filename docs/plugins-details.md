@@ -15786,6 +15786,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.target` "Google Drive"
             - Uses:
               - `auth.getTokenFromCentral`
+              - `auth.TokenFailure`
+              - `auth.TokenNeedsConsent`
               - `backup.BackupTarget`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`

@@ -1,5 +1,6 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { exponential } from "@plugins/packages/plugins/retry/core";
+import { authHeader, type DriveToken } from "./token";
 
 /**
  * Upload one archive to Drive with Google's RESUMABLE upload protocol, for
@@ -21,6 +22,11 @@ import { exponential } from "@plugins/packages/plugins/retry/core";
  * rejects) is cut at `requestTimeoutMs` and counts as a failure. Drive
  * refusing the session itself (4xx other than 408/429, e.g. 404 for an
  * expired session) is not transient and fails at once.
+ *
+ * Only the session-opening POST is authorized (with a token asked for then);
+ * the chunk PUTs and status queries carry no Authorization header — the
+ * session URI is their credential, valid for a week — so an upload that
+ * outlives an access token (a night the Mac sleeps through) is unaffected.
  */
 
 /** 64 MiB: a multiple of 256 KiB, as Drive requires for every non-final chunk. */
@@ -64,7 +70,7 @@ export async function uploadToDrive(
   archivePath: string,
   folderId: string,
   filename: string,
-  accessToken: string,
+  token: DriveToken,
   overrides: Partial<DriveUploadDeps> = {},
 ): Promise<DriveUploadResult> {
   const deps: DriveUploadDeps = { ...defaultDeps, ...overrides };
@@ -76,13 +82,7 @@ export async function uploadToDrive(
   const total = (await stat(archivePath)).size;
   const file = Bun.file(archivePath);
 
-  const uploadUrl = await openSession(
-    deps,
-    folderId,
-    filename,
-    accessToken,
-    total,
-  );
+  const uploadUrl = await openSession(deps, folderId, filename, token, total);
 
   let offset = 0;
   let stalls = 0;
@@ -155,7 +155,7 @@ async function openSession(
   deps: DriveUploadDeps,
   folderId: string,
   filename: string,
-  accessToken: string,
+  token: DriveToken,
   total: number,
 ): Promise<string> {
   const initRes = await deps.fetch(
@@ -163,7 +163,7 @@ async function openSession(
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        ...authHeader(await token()),
         "Content-Type": "application/json",
         "X-Upload-Content-Type": "application/gzip",
         "X-Upload-Content-Length": String(total),

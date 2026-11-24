@@ -1,3 +1,4 @@
+import { authHeader, type DriveToken } from "./token";
 import {
   LEGACY_PRODUCT_NAMES,
   PRODUCT_NAME,
@@ -37,15 +38,14 @@ export async function resolveFolder(drive: DriveFolders): Promise<string> {
   return drive.create(FOLDER_NAME);
 }
 
-function driveFolders(accessToken: string): DriveFolders {
-  const auth = { Authorization: `Bearer ${accessToken}` };
+function driveFolders(token: DriveToken): DriveFolders {
   return {
     async find(name) {
       const res = await fetch(
         `${FILES_URL}?q=${encodeURIComponent(
           `name='${name}' and mimeType='${FOLDER_MIME}' and trashed=false`,
         )}&fields=files(id)`,
-        { headers: auth },
+        { headers: authHeader(await token()) },
       );
       if (!res.ok) throw new Error(`Drive folder search: ${res.status}`);
       const { files } = (await res.json()) as { files: { id: string }[] };
@@ -54,7 +54,10 @@ function driveFolders(accessToken: string): DriveFolders {
     async rename(id, name) {
       const res = await fetch(`${FILES_URL}/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        headers: { ...auth, "Content-Type": "application/json" },
+        headers: {
+          ...authHeader(await token()),
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ name }),
       });
       if (!res.ok) throw new Error(`Drive folder rename: ${res.status}`);
@@ -62,7 +65,10 @@ function driveFolders(accessToken: string): DriveFolders {
     async create(name) {
       const res = await fetch(FILES_URL, {
         method: "POST",
-        headers: { ...auth, "Content-Type": "application/json" },
+        headers: {
+          ...authHeader(await token()),
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ name, mimeType: FOLDER_MIME }),
       });
       if (!res.ok) throw new Error(`Drive folder create: ${res.status}`);
@@ -74,8 +80,8 @@ function driveFolders(accessToken: string): DriveFolders {
 
 let cachedFolderId: string | null = null;
 
-export async function ensureFolder(accessToken: string): Promise<string> {
+export async function ensureFolder(token: DriveToken): Promise<string> {
   if (cachedFolderId) return cachedFolderId;
-  cachedFolderId = await resolveFolder(driveFolders(accessToken));
+  cachedFolderId = await resolveFolder(driveFolders(token));
   return cachedFolderId;
 }
