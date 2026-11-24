@@ -11,6 +11,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import {
   clearCollectedContributions,
@@ -46,6 +47,7 @@ import {
   resetConfigByPath,
   setConfig,
   setConfigByPath,
+  settleAutoMergePlacementByPath,
   shutdownRegistry,
   watchConfig,
   type ConfigDocumentTuple,
@@ -73,7 +75,16 @@ const beta = defineConfig({
   fields: { title: textField({ label: "Title", default: "b" }) },
 });
 
+const delta = defineConfig({
+  name: "delta",
+  fields: {
+    items: stringListField({ label: "Items", default: [] }),
+    title: textField({ label: "Title", default: "d" }),
+  },
+});
+
 const PLUGIN = "registry-test";
+const DELTA = `${PLUGIN}/delta.jsonc`;
 const ALPHA = `${PLUGIN}/alpha.jsonc`;
 const BETA = `${PLUGIN}/beta.jsonc`;
 const GAMMA = `${PLUGIN}/gamma.jsonc`;
@@ -134,6 +145,7 @@ beforeAll(async () => {
   await seed(file(ALPHA, "origin"), ALPHA_ORIGIN);
   await seed(file(BETA, "origin"), { title: "b" });
   await seed(file(GAMMA, "origin"), { enabled: true, title: "g" });
+  await seed(file(DELTA, "origin"), { items: [], title: "d" });
   // A committed scope the build propagated before boot: rehydrated by init.
   await seed(file(BETA, "origin", "app:mail"), { title: "mail" });
   collectContributions([
@@ -143,6 +155,7 @@ beforeAll(async () => {
         ConfigV2.Register({ descriptor: alpha, pluginId: asPluginId(PLUGIN) }),
         ConfigV2.Register({ descriptor: beta, pluginId: asPluginId(PLUGIN) }),
         ConfigV2.Register({ descriptor: gamma, pluginId: asPluginId(PLUGIN) }),
+        ConfigV2.Register({ descriptor: delta, pluginId: asPluginId(PLUGIN) }),
       ],
     },
   ]);
@@ -727,5 +740,172 @@ describe("reviewing an automatic merge per field", () => {
       // A field the user did not edit can still be reviewed.
       await resolve(id, "enabled", "new-default");
       expect(getConfig(gamma)).toEqual({ enabled: true, title: "edited" });
+    }));
+});
+
+describe("placing the rows an update added (the placement job's write)", () => {
+  const ANCESTOR = { items: ["a", "b", "c"], title: "d" };
+  // The update added `n` before `c`; the user had moved `c` first.
+  const NEW_ORIGIN = { items: ["a", "b", "n", "c"], title: "d" };
+  const PRE_MERGE = { items: ["c", "a", "b"] };
+  const LIST = {
+    path: ["items"],
+    order: ["s:c", "s:a", "s:b", "s:n"],
+    movable: ["s:n"],
+  };
+
+  async function merged(): Promise<string> {
+    await deleteOverrideByPath(DELTA, { writer });
+    await seed(file(DELTA, "origin"), NEW_ORIGIN);
+    await seed(file(DELTA, "ancestor"), ANCESTOR);
+    await seed(file(DELTA, "override"), PRE_MERGE, computeHash(ANCESTOR));
+    shutdownRegistry();
+    await initRegistry();
+    const state = (await readAutoMerge(DELTA))!;
+    expect(state.status).toBe("current");
+    expect(state.record.placement).toEqual({
+      status: "pending",
+      lists: [LIST],
+    });
+    expect(getConfig(delta).items).toEqual(["c", "a", "b", "n"]);
+    return state.record.id;
+  }
+  const answer = (id: string, answers: unknown[]) =>
+    settleAutoMergePlacementByPath(
+      DELTA,
+      id,
+      { kind: "answered", model: "sonnet", answers },
+      { writer },
+    );
+
+  test("a merge that placed no new row needs no placement", () =>
+    run(async () => {
+      await deleteOverrideByPath(GAMMA, { writer });
+      await seed(file(GAMMA, "origin"), { enabled: true, title: "new" });
+      await seed(file(GAMMA, "ancestor"), { enabled: true, title: "old" });
+      await seed(
+        file(GAMMA, "override"),
+        { enabled: false },
+        computeHash({ enabled: true, title: "old" }),
+      );
+      shutdownRegistry();
+      await initRegistry();
+      expect((await readAutoMerge(GAMMA))?.record.placement).toEqual({
+        status: "not-needed",
+      });
+    }));
+
+  test("a valid answer is written; the merge stays current and undoable", () =>
+    run(async () => {
+      const id = await merged();
+      const placement = await answer(id, [["s:c", "s:n", "s:a", "s:b"]]);
+      expect(placement).toMatchObject({
+        status: "decided",
+        model: "sonnet",
+        results: [
+          {
+            path: ["items"],
+            verdict: "moved",
+            order: ["s:c", "s:n", "s:a", "s:b"],
+          },
+        ],
+      });
+      expect(getConfig(delta).items).toEqual(["c", "n", "a", "b"]);
+      const state = (await readAutoMerge(DELTA))!;
+      expect(state.status).toBe("current");
+      expect(state.record.result.items).toEqual(["c", "n", "a", "b"]);
+      expect(lastEdits(1)).toEqual(["auto-merge-placement"]);
+      // Settled once: a retried job finds nothing to do.
+      expect(await answer(id, [["s:c", "s:a", "s:n", "s:b"]])).toBeNull();
+      await undoAutoMergeByPath(DELTA, { writer });
+      expect((await read(file(DELTA, "override")))?.content).toEqual(PRE_MERGE);
+    }));
+
+  test("an answer that is not a permutation keeping your order is refused", () =>
+    run(async () => {
+      const id = await merged();
+      const before = await read(file(DELTA, "override"));
+      // Reorders the user's rows (a before c).
+      expect(await answer(id, [["s:a", "s:c", "s:b", "s:n"]])).toMatchObject({
+        status: "decided",
+        results: [{ verdict: "rejected", reason: "reordered your rows" }],
+      });
+      expect(await read(file(DELTA, "override"))).toEqual(before);
+      // Drops a row.
+      const id2 = await merged();
+      expect(await answer(id2, [["s:c", "s:a", "s:b"]])).toMatchObject({
+        results: [{ verdict: "rejected", reason: "dropped s:n" }],
+      });
+      // No answer at all for the list.
+      const id3 = await merged();
+      expect(await answer(id3, [])).toMatchObject({
+        results: [{ verdict: "rejected" }],
+      });
+      expect(getConfig(delta).items).toEqual(["c", "a", "b", "n"]);
+    }));
+
+  test("a skipped placement (usage limit) records why and writes nothing else", () =>
+    run(async () => {
+      const id = await merged();
+      const before = await read(file(DELTA, "override"));
+      expect(
+        await settleAutoMergePlacementByPath(
+          DELTA,
+          id,
+          { kind: "skipped", reason: "usage-limit" },
+          { writer },
+        ),
+      ).toMatchObject({ status: "skipped", reason: "usage-limit" });
+      expect(await read(file(DELTA, "override"))).toEqual(before);
+      expect((await readAutoMerge(DELTA))?.status).toBe("current");
+    }));
+
+  test("a list the user changed since the merge is never rewritten", () =>
+    run(async () => {
+      const id = await merged();
+      await setConfig(delta, "items", ["n", "c", "a", "b"], { writer });
+      expect(await answer(id, [["s:c", "s:n", "s:a", "s:b"]])).toMatchObject({
+        results: [{ verdict: "edited" }],
+      });
+      expect(getConfig(delta).items).toEqual(["n", "c", "a", "b"]);
+    }));
+
+  test("a review choice made while the model answers is never overwritten", () =>
+    run(async () => {
+      // Use mine: the list lacks the new row — refused, not thrown.
+      const id = await merged();
+      await resolveAutoMergeFieldByPath(
+        DELTA,
+        { recordId: id, field: "items", choice: "mine" },
+        { writer },
+      );
+      expect(await answer(id, [["s:c", "s:n", "s:a", "s:b"]])).toMatchObject({
+        status: "decided",
+        results: [{ verdict: "edited" }],
+      });
+      expect(getConfig(delta).items).toEqual(["c", "a", "b"]);
+      // Use new default: the same rows, the update's order — left as chosen.
+      const id2 = await merged();
+      await resolveAutoMergeFieldByPath(
+        DELTA,
+        { recordId: id2, field: "items", choice: "new-default" },
+        { writer },
+      );
+      expect(await answer(id2, [["s:c", "s:n", "s:a", "s:b"]])).toMatchObject({
+        results: [{ verdict: "edited" }],
+      });
+      expect(getConfig(delta).items).toEqual(["a", "b", "n", "c"]);
+    }));
+
+  test("an undone merge is not placed", () =>
+    run(async () => {
+      const id = await merged();
+      await undoAutoMergeByPath(DELTA, { writer });
+      expect(await answer(id, [["s:c", "s:n", "s:a", "s:b"]])).toMatchObject({
+        status: "skipped",
+        reason: "undone",
+      });
+      expect((await read(file(DELTA, "override")))?.content).toEqual(PRE_MERGE);
+      expect(await answer("other", [])).toBeNull();
     }));
 });

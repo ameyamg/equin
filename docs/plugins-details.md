@@ -17330,6 +17330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigDocumentTuple`
       - `ConfigWriteOpts`
       - `FieldStorageProvider`
+      - `PlacementSettlement`
     - Exports (values):
       - `acknowledgeConflictByPath`
       - `AutoMergeResolveRefused`
@@ -17364,6 +17365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resolveAutoMergeFieldByPath`
       - `setConfig`
       - `setConfigByPath`
+      - `settleAutoMergePlacementByPath`
       - `stampAutoMergeByPath`
       - `undoAutoMergeByPath`
       - `watchConfig`
@@ -17427,10 +17429,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `FieldDecision`
       - `GitLayerDocument`
       - `JsonValue`
+      - `ListPlacement`
       - `MergeConflictReason`
       - `MergeFieldChoice`
       - `MergeFieldOutcome`
       - `MergePath`
+      - `MergePlacement`
+      - `MergePlacementResult`
       - `MergeRecordStatus`
       - `MergeReviewField`
       - `OriginDefaultsFrom`
@@ -17440,6 +17445,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `OrphanReason`
       - `OrphanReport`
       - `OrphanRiskClass`
+      - `PlacementCheck`
+      - `PlacementSkipReason`
       - `RegisteredConfig`
       - `ResolvedConfig`
       - `ResolvedLayer`
@@ -17449,6 +17456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_SCOPE_DIR`
       - `appScopeId`
       - `buildMergeRecord`
+      - `checkPlacement`
       - `codeConfigProxy`
       - `committedDocument`
       - `committedFilesFromMap`
@@ -17515,6 +17523,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseConfigText`
       - `parseMergeRecord`
       - `parseOverrideFile`
+      - `parsePlacementAnswer`
+      - `PLACEMENT_SKIP_REASONS`
+      - `PLACEMENT_SYSTEM`
+      - `placementPrompt`
+      - `placementRowKey`
       - `propagate`
       - `propagateGitLayerDocument`
       - `readCommittedFilesSync`
@@ -17534,7 +17547,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stringifyConfigValue`
       - `undeclaredFieldPaths`
       - `validationIssues`
+      - `valueAtMergePath`
       - `withConfigTextHash`
+      - `withListOrder`
       - `withOverrideLegend`
   - Cross-plugin:
     - Imported by: 153 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
@@ -17624,6 +17639,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/warmup.defineWarmup`
           - `network/live.serveValue`
           - `shell/notifications.recordNotification`
+        - Exports (values): `listAutoMerges`
         - Register: `defineWarmup('config-auto-merge.notify')`
         - Resources:
           - `config-v2.auto-merge` (push, notified, whole: a subset of one config document's field keys)
@@ -17653,6 +17669,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `configAutoMerge`
           - `configAutoMerges`
           - `configDisplayName`
+          - `placementNotes`
+          - `placementSummary`
           - `resolveAutoMergeField`
           - `undoAutoMerge`
       - Cross-plugin:
@@ -17662,6 +17680,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+      - Machine:
+        - Register:
+          - `defineJob('config-auto-merge.place')`
+          - `defineWarmup('config-auto-merge.place')`
     - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is persistent), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
       - Server:
         - Contributes: `host-service:config-v2.store` "config-v2.store"
@@ -36913,6 +36935,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/sources/url-extract`
           - `apps/pages/auto-icon`
           - `apps/places/places-core`
+          - `config_v2/auto-merge`
           - `conversations/conversation-category`
           - `conversations/conversation-view/turn-summary`
           - `conversations/runtime-sdk`
@@ -37053,6 +37076,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/agent-manager/welcome`
               - `apps/home/new-app`
               - `apps/sonata/transcription`
+              - `config_v2/auto-merge`
               - `conversations`
               - `conversations/agents`
               - `conversations/model-provider/catalog`
@@ -40055,7 +40079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 92 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 93 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
           - `conversations` ×18
           - `infra` ×16
@@ -40064,6 +40088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×4
           - `page` ×3
           - `build`
+          - `config_v2/auto-merge`
           - `integrations/youtube/audio-fetch`
           - `network/live/live-state-snapshot`
           - `shell/notifications`

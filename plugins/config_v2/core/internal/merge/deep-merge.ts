@@ -52,11 +52,31 @@ export type FieldDecision =
       readonly yours: JsonValue;
     };
 
+/**
+ * A list where the merge placed rows the update added into a list the user
+ * changed — by the neighbour rule, which matched the committed placement in
+ * only part of the history replay. The placement job may re-place exactly
+ * these rows (`config_v2/plugins/auto-merge`).
+ *
+ * - `path`: the list, as a {@link MergePath}.
+ * - `order`: the merge's order, as row keys (`id:x`, `item:y`, `s:z`).
+ * - `movable`: the rows the update added (in `order`, absent from the user's
+ *   side) — the only ones a re-placement may move; every other row keeps its
+ *   relative order, which is the user's arrangement.
+ */
+export interface ListPlacement {
+  readonly path: MergePath;
+  readonly order: readonly string[];
+  readonly movable: readonly string[];
+}
+
 export interface DeepMergeOutcome {
   /** `undefined` only when the merged root itself is absent. */
   readonly merged: JsonValue | undefined;
   readonly reasons: MergeConflictReason[];
   readonly decisions: FieldDecision[];
+  /** Lists holding rows the update added among the user's changes. */
+  readonly placements: ListPlacement[];
 }
 
 type Obj = { [key: string]: JsonValue };
@@ -70,7 +90,7 @@ function isObj(v: unknown): v is Obj {
 }
 
 /** A row's identity, by precedence `id` > `item` > `label` > the string itself. */
-function rowKey(row: JsonValue): string | null {
+export function rowKey(row: JsonValue): string | null {
   if (typeof row === "string") return `s:${row}`;
   if (isObj(row)) {
     if (typeof row.id === "string") return `id:${row.id}`;
@@ -144,10 +164,16 @@ export function deepMerge(
   yours: Absent,
   theirs: Absent,
 ): DeepMergeOutcome {
-  const reasons: MergeConflictReason[] = [];
-  const decisions: FieldDecision[] = [];
-  const merged = mergeAt(base, yours, theirs, [], reasons, decisions);
-  return { merged, reasons, decisions };
+  const sink: Sink = { reasons: [], decisions: [], placements: [] };
+  const merged = mergeAt(base, yours, theirs, [], sink);
+  return { merged, ...sink };
+}
+
+/** Where a merge collects what it could not decide, chose, and placed. */
+interface Sink {
+  reasons: MergeConflictReason[];
+  decisions: FieldDecision[];
+  placements: ListPlacement[];
 }
 
 function mergeAt(
@@ -155,9 +181,9 @@ function mergeAt(
   yours: Absent,
   theirs: Absent,
   path: string[],
-  reasons: MergeConflictReason[],
-  decisions: FieldDecision[],
+  sink: Sink,
 ): Absent {
+  const { reasons, decisions } = sink;
   if (eq(yours, base)) return theirs;
   if (eq(theirs, base) || eq(yours, theirs)) return yours;
 
@@ -175,8 +201,7 @@ function mergeAt(
         yours[key],
         theirs[key],
         [...path, key],
-        reasons,
-        decisions,
+        sink,
       );
       if (value !== undefined) out[key] = value;
     }
@@ -198,7 +223,7 @@ function mergeAt(
       reasons.push({ kind: "unkeyed-list", path });
       return yours;
     }
-    return mergeRows(B, Y, T, path, reasons, decisions);
+    return mergeRows(B, Y, T, path, sink);
   }
 
   if (theirs === undefined) {
@@ -216,9 +241,9 @@ function mergeRows(
   Y: Map<string, JsonValue>,
   T: Map<string, JsonValue>,
   path: string[],
-  reasons: MergeConflictReason[],
-  decisions: FieldDecision[],
+  sink: Sink,
 ): JsonValue[] {
+  const { reasons } = sink;
   const rows = new Map<string, JsonValue>();
   for (const key of new Set([...B.keys(), ...Y.keys(), ...T.keys()])) {
     const value = mergeAt(
@@ -226,8 +251,7 @@ function mergeRows(
       Y.get(key),
       T.get(key),
       [...path, `[${key}]`],
-      reasons,
-      decisions,
+      sink,
     );
     if (value !== undefined) rows.set(key, value);
   }
@@ -255,5 +279,9 @@ function mergeRows(
     if (rows.has(k) && !seq.includes(k)) insertAfterNeighbour(seq, k, other);
   }
   for (const k of rows.keys()) if (!seq.includes(k)) seq.push(k);
+  // Rows only the update added, placed among the user's: worth a second look.
+  const movable = seq.filter((k) => !Y.has(k));
+  if (movable.length > 0 && seq.length > 1)
+    sink.placements.push({ path, order: seq, movable });
   return seq.map((k) => rows.get(k)!);
 }

@@ -268,6 +268,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `apps/events/sources/url-extract`
     - `apps/pages/auto-icon`
     - `apps/places/places-core`
+    - `config_v2/auto-merge`
     - `conversations/conversation-category`
     - `conversations/conversation-view/turn-summary`
     - `conversations/runtime-sdk`

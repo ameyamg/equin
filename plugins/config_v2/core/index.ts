@@ -95,10 +95,14 @@ export {
   configMergeRecordSchema,
   mergeRecordStatus,
   parseMergeRecord,
+  PLACEMENT_SKIP_REASONS,
 } from "./internal/merge/merge-record";
 export type {
   ConfigMergeRecord,
+  MergePlacement,
+  MergePlacementResult,
   MergeRecordStatus,
+  PlacementSkipReason,
 } from "./internal/merge/merge-record";
 export {
   mergeReviewFields,
@@ -111,9 +115,20 @@ export type {
 } from "./internal/merge/merge-review";
 export type {
   FieldDecision,
+  ListPlacement,
   MergeConflictReason,
   MergePath,
 } from "./internal/merge/deep-merge";
+export {
+  checkPlacement,
+  parsePlacementAnswer,
+  PLACEMENT_SYSTEM,
+  placementPrompt,
+  placementRowKey,
+  valueAtMergePath,
+  withListOrder,
+} from "./internal/merge/placement";
+export type { PlacementCheck } from "./internal/merge/placement";
 export {
   configFileRelPath,
   parseConfigFileRelPath,

@@ -13,6 +13,8 @@ import {
 /** A row of the review: one field the merge touched, and whether the user changed it since. */
 export interface ReviewRow extends MergeReviewField {
   editedSince: boolean;
+  /** What the placement job did in this field's lists (`placementNotes`). */
+  placement: string[];
 }
 
 /** Per-field actions of the automatic-merge review. */

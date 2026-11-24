@@ -1,6 +1,6 @@
 # Config updates: automatic merge of the user layer, and config owned by the backend that reads it
 
-Task: task-1795524794-221nve. Status: phases 1 (merge engine), 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) 3 (developer review: per-field Keep / Use mine / Use new default, nav view, notice) and 4 (retired / renamed fields: `retiredFields`, migration `renames` / `removes`, `removed-renamed`, the `config-v2:fields-retired-declared` check) and 5 (config generations, deviations below) implemented; phase 6 planned.
+Task: task-1795524794-221nve. Status: phases 1 (merge engine), 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) 3 (developer review: per-field Keep / Use mine / Use new default, nav view, notice) and 4 (retired / renamed fields: `retiredFields`, migration `renames` / `removes`, `removed-renamed`, the `config-v2:fields-retired-declared` check) and 5 (config generations, deviations below) and 6 (the placement job, deviations below) implemented.
 
 ## Context
 
@@ -340,6 +340,36 @@ written for the new code.
 - **Legacy writes during the first derive** (a pre-generation backend writes
   the flat dir without the lock) are detected by stamp at promote and named in
   an error line; they stay at `<ns>/`.
+
+### Phase 6 as built (deviations)
+
+- **A usage limit skips, it does not hold.** `heldAtClaudeLimit` would
+  sleep the job until the reset (up to a week) and then reorder the user's
+  list long after the update; the merge's order already stands, so the job
+  records `skipped: usage-limit` instead. Same for no runnable Claude account
+  (`checkLaunchReadiness`) and a failed call. One attempt, no retry.
+- **The registry validates, not the job.** `settleAutoMergePlacementByPath`
+  takes the model's raw answer per list and runs `checkPlacement` itself
+  under the document lock, so no caller can write a non-permutation.
+- **Movable rows** are the rows in the merged list absent from the user's
+  side (the update's additions); every other row — the user's own additions
+  included — keeps its relative order. A list the user did not change is
+  taken from the update whole and is never asked about.
+- **One call per record**, every placed list in it; the answer is a JSON
+  array with one key list per list. Field docs are the top-level field's
+  label and description (the record holds parsed JSON, not the commented
+  origin).
+- **Measured** (the job's own prompt, `checkPlacement` and `withListOrder`
+  over the corpus, Sonnet via the CLI): 215 of the 327 cases place new rows;
+  on those, exact matches with the committed file went 48 → 85 (40 better,
+  3 worse), content mismatches stayed at 23 (content is never touched), 3
+  answers refused (a bare key array for one list — now accepted as that
+  list's answer). Whole corpus: 151 → 188 exact.
+- **Edited since** is checked per list (the override's rows at the list's
+  path must be exactly the merge's, in its order, and no Use mine / Use new
+  default on the field), so editing another field does not forfeit the
+  placement and a review choice made while the model answers is never
+  overwritten.
 
 ## Critical files
 

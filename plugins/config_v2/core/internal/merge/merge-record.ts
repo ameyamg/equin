@@ -5,7 +5,7 @@ import {
 } from "@plugins/packages/plugins/list-bound/core";
 import { computeHash, type ConfigFileContent } from "../config-proxy";
 import type { JsonValue } from "../types";
-import type { FieldDecision } from "./deep-merge";
+import type { FieldDecision, ListPlacement } from "./deep-merge";
 
 /**
  * Which merge engine wrote a record: `mergeConfigDocument`'s deep merge
@@ -50,6 +50,84 @@ const fieldDecisionSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+const rowKeysSchema = wholeList(z.string(), {
+  reason: "the row keys of one config list — its rows",
+});
+
+/** A list the merge placed the update's new rows in (`ListPlacement`). */
+const listPlacementSchema = z.object({
+  path: mergePathSchema,
+  order: rowKeysSchema,
+  movable: rowKeysSchema,
+});
+const placementListsSchema = wholeList(listPlacementSchema, {
+  reason: "the lists of one config document holding new rows — its fields",
+});
+
+/**
+ * What the placement job decided for one list:
+ *
+ * - `moved`: the model's order was accepted and written (`order`).
+ * - `same`: the model kept the merge's order.
+ * - `rejected`: the answer was no permutation that keeps your rows' order
+ *   (`reason`; `answer`, when it was a list of strings) — the merge's order
+ *   stands.
+ * - `edited`: the list was changed since the merge; nothing was written.
+ */
+const placementResultSchema = z.object({
+  path: mergePathSchema,
+  verdict: z.enum(["moved", "same", "rejected", "edited"]),
+  order: rowKeysSchema.optional(),
+  answer: rowKeysSchema.optional(),
+  reason: z.string().optional(),
+});
+
+/**
+ * Why the placement job asked nothing (or nothing usable) and the merge's
+ * order stands: no Claude account on this computer, the account at its usage
+ * limit, the call failed, or the record moved on (undone, superseded, every
+ * placed list edited since).
+ */
+export const PLACEMENT_SKIP_REASONS = [
+  "no-claude-account",
+  "usage-limit",
+  "failed",
+  "undone",
+  "superseded",
+  "edited",
+] as const;
+export type PlacementSkipReason = (typeof PLACEMENT_SKIP_REASONS)[number];
+
+/**
+ * The placement job's state on a record. `not-needed`: the merge placed no
+ * new row among the user's. `pending`: it did (`lists`), and the job has not
+ * decided yet. `decided`: the model answered (`model`), each list's result in
+ * `results`. `skipped`: nothing was asked or the answer was unusable
+ * (`reason`, `detail`) — the merge's order stands.
+ */
+const placementSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("not-needed") }),
+  z.object({ status: z.literal("pending"), lists: placementListsSchema }),
+  z.object({
+    status: z.literal("decided"),
+    lists: placementListsSchema,
+    decidedAt: z.string(),
+    model: z.string(),
+    results: wholeList(placementResultSchema, {
+      reason: "one per placed list of one config document",
+    }),
+  }),
+  z.object({
+    status: z.literal("skipped"),
+    lists: placementListsSchema,
+    decidedAt: z.string(),
+    reason: z.enum(PLACEMENT_SKIP_REASONS),
+    detail: z.string().optional(),
+  }),
+]);
+export type MergePlacement = z.infer<typeof placementSchema>;
+export type MergePlacementResult = z.infer<typeof placementResultSchema>;
+
 /**
  * The record of one automatic merge — `<name>.merge.jsonc` beside the
  * document (`ConfigDocumentFile` `"merge"`), one per document, a later merge
@@ -64,7 +142,8 @@ const fieldDecisionSchema = z.discriminatedUnion("kind", [
  *   input). Refused once the origin moved past `toHash` (superseded) or the
  *   override no longer holds `result` (edited since).
  * - `decisions`: what the merge chose on the user's behalf worth showing them.
- * - `placement`: reserved for the placement job (a later phase).
+ * - `placement`: the placement job's state (`MergePlacement`) — the lists
+ *   where the merge placed rows the update added, and what the job decided.
  * - `resolutions`: the developer review's per-field choices (Keep / Use mine /
  *   Use new default), in the order they were made; `result` already holds
  *   what a Use mine / Use new default wrote.
@@ -91,7 +170,7 @@ export const configMergeRecordSchema = z.object({
   decisions: wholeList(fieldDecisionSchema, {
     reason: "the notable choices of one document's merge — its fields",
   }),
-  placement: z.object({ status: z.enum(["not-needed", "pending"]) }),
+  placement: placementSchema,
   resolutions: wholeList(
     z.object({
       path: mergePathSchema,
@@ -133,6 +212,7 @@ export function buildMergeRecord(input: {
   theirs: JsonValue;
   result: Record<string, JsonValue>;
   decisions: readonly FieldDecision[];
+  placements: readonly ListPlacement[];
   undo: {
     override: { content: JsonValue; hash: string | null };
     ancestor: { content: JsonValue; hash: string | null };
@@ -159,7 +239,17 @@ export function buildMergeRecord(input: {
         ? { ...d, path: [...d.path], to: [...d.to] }
         : { ...d, path: [...d.path] },
     ),
-    placement: { status: "not-needed" },
+    placement:
+      input.placements.length === 0
+        ? { status: "not-needed" }
+        : {
+            status: "pending",
+            lists: input.placements.map((l) => ({
+              path: [...l.path],
+              order: [...l.order],
+              movable: [...l.movable],
+            })),
+          },
     resolutions: [],
   };
 }

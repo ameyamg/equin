@@ -21,3 +21,4 @@ export {
   configDisplayName,
 } from "./internal/notification";
 export type { AutoMergePayload } from "./internal/notification";
+export { placementNotes, placementSummary } from "./internal/placement-text";

@@ -34,6 +34,7 @@ describe("mergeConfigDocument", () => {
       status: "merged",
       document: { enabled: true, prompt: "p2", model: "opus", rows: [] },
       decisions: [],
+      placements: [],
     });
   });
 
@@ -111,6 +112,7 @@ describe("mergeConfigDocument", () => {
           yours: "mine",
         },
       ],
+      placements: [],
     });
   });
 
@@ -130,6 +132,7 @@ describe("mergeConfigDocument", () => {
       status: "merged",
       document: { instructions: "p2" },
       decisions: [],
+      placements: [],
     });
   });
 
@@ -194,6 +197,7 @@ describe("mergeConfigDocument", () => {
       theirs,
       result: result.document,
       decisions: result.decisions,
+      placements: [],
       undo: {
         override: { content: yours, hash: "a" },
         ancestor: { content: base, hash: "a" },

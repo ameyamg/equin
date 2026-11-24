@@ -5,6 +5,7 @@ import type { ConfigDescriptor, JsonValue } from "../types";
 import {
   deepMerge,
   type FieldDecision,
+  type ListPlacement,
   type MergeConflictReason,
 } from "./deep-merge";
 import {
@@ -20,6 +21,8 @@ export type ConfigMergeResult =
       /** The user's document against the new origin, ready to be written. */
       readonly document: Doc;
       readonly decisions: FieldDecision[];
+      /** Lists where rows the update added were placed among the user's (`ListPlacement`). */
+      readonly placements: ListPlacement[];
     }
   | {
       readonly status: "conflict";
@@ -244,7 +247,12 @@ export function mergeConfigDocument(input: {
       })),
     };
   }
-  return { status: "merged", document, decisions };
+  return {
+    status: "merged",
+    document,
+    decisions,
+    placements: outcome.placements,
+  };
 }
 
 /**

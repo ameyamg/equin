@@ -192,6 +192,7 @@ computer's login — that is what they are about.
     - `apps/agent-manager/welcome`
     - `apps/home/new-app`
     - `apps/sonata/transcription`
+    - `config_v2/auto-merge`
     - `conversations`
     - `conversations/agents`
     - `conversations/model-provider/catalog`

@@ -42,9 +42,11 @@ export {
   stampAutoMergeByPath,
   AutoMergeResolveRefused,
   resolveAutoMergeFieldByPath,
+  settleAutoMergePlacementByPath,
 } from "./internal/registry";
 export type {
   AutoMergeState,
+  PlacementSettlement,
   ConfigDocumentTuple,
   ConfigWriteOpts,
 } from "./internal/registry";

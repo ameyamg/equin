@@ -28,6 +28,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   acknowledgeAutoMerge,
+  placementNotes,
+  placementSummary,
   resolveAutoMergeField,
   undoAutoMerge,
   type AutoMergeStateView,
@@ -113,6 +115,11 @@ const FIELDS: FieldDef<ReviewRow>[] = [
         {r.notes.map((n) => (
           <Text key={`${n.kind}:${n.at}`} variant="caption" tone="muted">
             {NOTE_LABEL[n.kind]} {n.at}
+          </Text>
+        ))}
+        {r.placement.map((text) => (
+          <Text key={text} variant="caption" tone="muted">
+            {text}
           </Text>
         ))}
       </Stack>
@@ -202,14 +209,15 @@ export function AutoMergeReview({
   });
   const resolveMutateAsync = resolve.mutateAsync;
 
-  const rows = useMemo<ReviewRow[]>(
-    () =>
-      mergeReviewFields(record).map((f) => ({
-        ...f,
-        editedSince: editedFields.includes(f.key),
-      })),
-    [record, editedFields],
-  );
+  const rows = useMemo<ReviewRow[]>(() => {
+    const placed = placementNotes(record.placement);
+    return mergeReviewFields(record).map((f) => ({
+      ...f,
+      editedSince: editedFields.includes(f.key),
+      placement: placed.filter((p) => p.field === f.key).map((p) => p.text),
+    }));
+  }, [record, editedFields]);
+  const placement = placementSummary(record.placement);
   const actions = useMemo<ReviewActionContext>(
     () => ({
       pending,
@@ -292,6 +300,11 @@ export function AutoMergeReview({
           </Button>
         )}
       </Stack>
+      {placement !== null && (
+        <Text variant="caption" tone="muted">
+          {placement}
+        </Text>
+      )}
       <ReviewActionContext.Provider value={actions}>
         <Scroll axis="x">
           <DataView<ReviewRow>

@@ -178,7 +178,9 @@ The record (`ConfigMergeRecord`, `core/internal/merge/merge-record.ts`; file kin
 - `stampAutoMergeByPath(path, recordId, "acknowledgedAt" | "notifiedAt")` stamps only the record it names, then runs the document fan-out (values unmoved) so record readers move.
 - Delete-override, a per-field reset that removes the override and Stop customizing remove the record with the ancestor. The agent-write ledger, the memory store, the orphan audit (`merge-record` role, noise) and `configFileOwner` all cover the file.
 
-The live values, endpoints, banner and update notification are [`plugins/auto-merge`](plugins/auto-merge/CLAUDE.md).
+- `settleAutoMergePlacementByPath(path, recordId, settlement)` settles the record's `pending` placement (the lists where the merge placed rows the update added among the user's — `ListPlacement`): an answered order is written only when `checkPlacement` accepts it (a permutation moving only those rows) and the override still holds the merged list there, the record's `result` moving with it; everything else is recorded (`rejected`, `edited`, `skipped` with why).
+
+The live values, endpoints, banner, update notification and placement job are [`plugins/auto-merge`](plugins/auto-merge/CLAUDE.md).
 
 **Every config file carries a `// @hash` header** — the anchor conflict detection compares against. Origins, ancestors and committed files are written only by the build and the registry, so one without it is corrupt: `parseConfigFile` throws (the file store's `read` of an origin / ancestor, the git layer), and `setConfig` throws rather than write an override when no origin has been propagated.
 
@@ -549,6 +551,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `ConfigDocumentTuple`
     - `ConfigWriteOpts`
     - `FieldStorageProvider`
+    - `PlacementSettlement`
   - Exports (values):
     - `acknowledgeConflictByPath`
     - `AutoMergeResolveRefused`
@@ -583,6 +586,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `resolveAutoMergeFieldByPath`
     - `setConfig`
     - `setConfigByPath`
+    - `settleAutoMergePlacementByPath`
     - `stampAutoMergeByPath`
     - `undoAutoMergeByPath`
     - `watchConfig`
@@ -646,10 +650,13 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `FieldDecision`
     - `GitLayerDocument`
     - `JsonValue`
+    - `ListPlacement`
     - `MergeConflictReason`
     - `MergeFieldChoice`
     - `MergeFieldOutcome`
     - `MergePath`
+    - `MergePlacement`
+    - `MergePlacementResult`
     - `MergeRecordStatus`
     - `MergeReviewField`
     - `OriginDefaultsFrom`
@@ -659,6 +666,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `OrphanReason`
     - `OrphanReport`
     - `OrphanRiskClass`
+    - `PlacementCheck`
+    - `PlacementSkipReason`
     - `RegisteredConfig`
     - `ResolvedConfig`
     - `ResolvedLayer`
@@ -668,6 +677,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `APP_SCOPE_DIR`
     - `appScopeId`
     - `buildMergeRecord`
+    - `checkPlacement`
     - `codeConfigProxy`
     - `committedDocument`
     - `committedFilesFromMap`
@@ -734,6 +744,11 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `parseConfigText`
     - `parseMergeRecord`
     - `parseOverrideFile`
+    - `parsePlacementAnswer`
+    - `PLACEMENT_SKIP_REASONS`
+    - `PLACEMENT_SYSTEM`
+    - `placementPrompt`
+    - `placementRowKey`
     - `propagate`
     - `propagateGitLayerDocument`
     - `readCommittedFilesSync`
@@ -753,7 +768,9 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `stringifyConfigValue`
     - `undeclaredFieldPaths`
     - `validationIssues`
+    - `valueAtMergePath`
     - `withConfigTextHash`
+    - `withListOrder`
     - `withOverrideLegend`
 - Cross-plugin:
   - Imported by: 153 plugins — full list in [REFERENCE.md](./REFERENCE.md)

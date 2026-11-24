@@ -16,15 +16,22 @@ import {
   mergeConfigDocument,
   mergeConflictFields,
   buildMergeRecord,
+  checkPlacement,
   mergeRecordStatus,
+  placementRowKey,
   mergeReviewFields,
   parseMergeRecord,
   sameFieldValue,
+  valueAtMergePath,
+  withListOrder,
 } from "../../core";
 import type {
   ConfigMergeRecord,
   MergeFieldChoice,
+  MergePlacement,
+  MergePlacementResult,
   MergeRecordStatus,
+  PlacementSkipReason,
 } from "../../core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -1315,6 +1322,7 @@ async function autoMergeDocumentNow(
     theirs: origin.content,
     result: result.document,
     decisions: result.decisions,
+    placements: result.placements,
     undo: {
       override: { content: override.content, hash: override.hash },
       ancestor: { content: ancestor.content, hash: ancestor.hash },
@@ -1643,4 +1651,182 @@ export async function resolveAutoMergeFieldByPath(
     await notifyDocument(storePath, opts.scopeId ?? BASE_SCOPE, {
       valuesMoved: false,
     });
+}
+
+/**
+ * What the placement job brings back for a record's `pending` placement:
+ * nothing asked (`skipped`, with why), or the model's answer per placed list
+ * (`answered` — each entry whatever the model gave for that list, checked
+ * here).
+ */
+export type PlacementSettlement =
+  | {
+      kind: "skipped";
+      reason: PlacementSkipReason;
+      detail?: string;
+    }
+  | { kind: "answered"; model: string; answers: readonly unknown[] };
+
+/**
+ * Settle the placement job's `pending` placement of the record `recordId`
+ * names, in the document's lock. Each answered list's order is written only
+ * when:
+ *
+ * - it passes `checkPlacement` (a permutation of the merge's order that moves
+ *   only the rows the update added) — else `rejected`, the merge's order
+ *   stands;
+ * - the record is neither undone nor superseded (else the whole placement is
+ *   `skipped` with that reason);
+ * - the override still holds, at that list, exactly what the merge wrote (its
+ *   rows, in the merge's order) and no review choice rewrote its field — a
+ *   list changed since is never rewritten (`edited`).
+ *
+ * The override and the record's `result` are rewritten together, so a merge
+ * that was current stays current (Undo still restores the pre-merge state).
+ * Returns the placement the record now holds, or null when there was nothing
+ * to settle (the record was replaced, or its placement already settled — a
+ * retried job).
+ */
+export async function settleAutoMergePlacementByPath(
+  storePath: string,
+  recordId: string,
+  settlement: PlacementSettlement,
+  opts: ConfigWriteOpts,
+): Promise<MergePlacement | null> {
+  const settled = await withWriteTarget(
+    storePath,
+    opts,
+    async (descriptor, entry) => {
+      const store = ConfigStore.get();
+      const stored = await store.read(entry.files.merge);
+      if (stored === null) return null;
+      const record = parseMergeRecord(
+        stored.content,
+        configFileRelPath(entry.files.merge),
+      );
+      if (record.id !== recordId || record.placement.status !== "pending")
+        return null;
+      const { lists } = record.placement;
+      const decidedAt = new Date().toISOString();
+      const [origin, override] = await Promise.all([
+        store.read(entry.files.origin),
+        store.read(entry.files.override),
+      ]);
+      const status = mergeRecordStatus(record, origin, override);
+      const skipped = (
+        reason: PlacementSkipReason,
+        detail?: string,
+      ): MergePlacement => ({
+        status: "skipped",
+        lists,
+        decidedAt,
+        reason,
+        ...(detail !== undefined ? { detail } : {}),
+      });
+
+      let placement: MergePlacement;
+      let document: Record<string, JsonValue> | null = null;
+      let result = record.result as Record<string, JsonValue>;
+      if (settlement.kind === "skipped") {
+        placement = skipped(settlement.reason, settlement.detail);
+      } else if (status === "undone" || status === "superseded") {
+        placement = skipped(status);
+      } else {
+        let doc =
+          override !== null && isPlainDocument(override.content)
+            ? override.content
+            : null;
+        const rewrittenByReview = new Set(
+          record.resolutions
+            .filter((r) => r.choice !== "keep")
+            .map((r) => r.path[0]!),
+        );
+        const results = lists.map((list, i): MergePlacementResult => {
+          const answer = settlement.answers[i];
+          const check = checkPlacement(list, answer);
+          if (!check.ok) {
+            const keys =
+              Array.isArray(answer) &&
+              answer.every((k) => typeof k === "string")
+                ? { answer: answer as string[] }
+                : {};
+            return {
+              path: [...list.path],
+              verdict: "rejected",
+              reason: check.reason,
+              ...keys,
+            };
+          }
+          if (JSON.stringify(check.order) === JSON.stringify(list.order))
+            return { path: [...list.path], verdict: "same" };
+          // The list must still be exactly what the merge wrote: its rows in
+          // the merge's order, unchanged in the override, and its field not
+          // rewritten by a review choice (which mirrors into `result` too).
+          const now =
+            doc === null ? undefined : valueAtMergePath(doc, list.path);
+          const keysNow = Array.isArray(now) ? now.map(placementRowKey) : null;
+          if (
+            doc === null ||
+            JSON.stringify(keysNow) !== JSON.stringify(list.order) ||
+            rewrittenByReview.has(list.path[0]!) ||
+            !sameFieldValue(now, valueAtMergePath(result, list.path))
+          )
+            return {
+              path: [...list.path],
+              verdict: "edited",
+              order: check.order,
+            };
+          doc = withListOrder(doc, list.path, check.order);
+          result = withListOrder(result, list.path, check.order);
+          return { path: [...list.path], verdict: "moved", order: check.order };
+        });
+        if (results.some((r) => r.verdict === "moved") && doc !== null) {
+          document = normalizeCollectionItems(doc, descriptor.fields) as Record<
+            string,
+            JsonValue
+          >;
+          const parsed = descriptor.schema.safeParse(document);
+          if (!parsed.success) {
+            // A permutation of rows the schema accepted in the merge's order:
+            // a schema that refuses it is a bug worth failing on, not a
+            // placement to shrug off.
+            throw new Error(
+              `[config-v2] re-placing rows of "${storePath}" fails its schema: ${parsed.error.message}`,
+            );
+          }
+          // A current merge stays current: the record mirrors the override.
+          if (status === "current") result = { ...document };
+        }
+        placement = {
+          status: "decided",
+          lists,
+          decidedAt,
+          model: settlement.model,
+          results,
+        };
+      }
+
+      const next: ConfigMergeRecord = { ...record, result, placement };
+      await editEntry(opts, entry, "auto-merge-placement", async () => {
+        await store.write(entry.files.merge, next as JsonValue, stored.hash);
+        if (document !== null && override !== null) {
+          await store.write(
+            entry.files.override,
+            document as JsonValue,
+            override.hash,
+          );
+          await refreshEntryNow(descriptor, entry);
+        }
+      });
+      return { placement, movedValues: document !== null };
+    },
+  );
+  if (settled === null) return null;
+  // A record-only write moves no value: the fan-out is called directly for
+  // the record's listeners (as `stampAutoMergeByPath`).
+  if (!settled.movedValues)
+    await notifyDocument(storePath, opts.scopeId ?? BASE_SCOPE, {
+      valuesMoved: false,
+    });
+  return settled.placement;
 }
