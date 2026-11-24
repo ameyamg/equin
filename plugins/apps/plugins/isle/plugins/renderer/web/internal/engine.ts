@@ -116,7 +116,6 @@ import {
   drawSerpent,
   drawSnow,
   Fireworks,
-  isNewYear,
   isSnowSeason,
   Pokes,
   SERPENT_REACH,
@@ -429,7 +428,7 @@ export class IsleEngine {
   private readonly fireClicks = new FireClicks();
   private readonly marshmallow = new Marshmallow(this.rnd);
   private readonly storyteller = new Storyteller(this.rnd);
-  /** What the fire holds tonight — stories or marshmallows, one a night (read at nightfall). */
+  /** What the fire holds tonight — stories, marshmallows or New Year's fireworks, one a night (read at nightfall). */
   private fireside: FiresideNight = firesideNight(new Date());
   /** How high the fire burns (by the clock, re-read every few seconds), and when it was read. */
   private fire = { strength: 1, readAt: -Infinity, sparkAt: 0 };
@@ -3193,13 +3192,13 @@ export class IsleEngine {
     const serpent = this.serpent;
     if (serpent && vis(serpent.x, serpent.y, SERPENT_REACH))
       dyn.push({ y: serpent.y, d: () => drawSerpent(g, serpent, t) });
-    // New Year's night: volleys over the campfire
+    // New Year's Eve: volleys over the campfire
     if (
       night &&
       village &&
       t > this.newYearAt &&
       !this.opts.reducedMotion &&
-      isNewYear(new Date())
+      this.fireside === "fireworks"
     ) {
       this.newYearAt = t + 6 + this.rnd() * 6;
       if (vis(village.x, village.y, 400))

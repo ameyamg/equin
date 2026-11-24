@@ -1,7 +1,7 @@
 // More of the island's secrets, beside easter-eggs.ts: a sea serpent that
 // now and then surfaces on the open water in view, fireworks (an old cheat
-// code typed on the island; on New Year's Day at night they go up over the
-// campfire by themselves), a hero who minds being poked, and snow falling in
+// code typed on the island; on New Year's Eve they go up over the
+// campfire by themselves — campfire.ts' firesideNight), a hero who minds being poked, and snow falling in
 // December. Pure drawing and state; the engine says when and where.
 
 import type { Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
@@ -235,10 +235,6 @@ export class Fireworks {
     }
   }
 }
-
-/** Whether `date` is New Year's Day (local time). */
-export const isNewYear = (date: Date): boolean =>
-  date.getMonth() === 0 && date.getDate() === 1;
 
 /** Whether it snows on the island on `date`: all of December. */
 export const isSnowSeason = (date: Date): boolean => date.getMonth() === 11;

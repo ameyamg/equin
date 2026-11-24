@@ -1,9 +1,9 @@
 // The campfire's secrets, beside easter-eggs.ts and surprises.ts: the fire
 // burning low in the small hours and flaring up at dawn (by the real clock),
 // sparks when it is clicked (and fireworks when it is clicked five times
-// running), and one of two things a night (`firesideNight`): the hero toasting
-// a marshmallow when left standing by it, or the villagers gathering round it
-// to tell stories. Pure drawing,
+// running), and one thing a night (`firesideNight`): the hero toasting a
+// marshmallow when left standing by it, the villagers gathering round it to
+// tell stories, or — on New Year's Eve — fireworks. Pure drawing,
 // timing and lines; the engine says where the fire is, who stands where, and
 // walks them.
 
@@ -44,14 +44,16 @@ export const flaring = (strength: number): boolean => strength > 1.2;
 // ---------------------------------------------------------------- what the night holds
 
 /**
- * What happens round the fire on a night — one thing a night, never both at
- * once (their lines would talk over each other round the same stones):
+ * What happens round the fire on a night — one thing a night, never two at
+ * once (they would play over each other round the same stones):
  * `stories` — the villagers gather round it and tell stories, welcoming the
  * hero; `marshmallow` — the villagers stay home and the hero, left standing by
- * the fire, toasts marshmallows.
+ * the fire, toasts marshmallows; `fireworks` — New Year's Eve, and only then:
+ * volleys go up over the fire all night.
  */
-export type FiresideNight = "stories" | "marshmallow";
+export type FiresideNight = "stories" | "marshmallow" | "fireworks";
 
+/** The nights drawn by date; New Year's Eve is always `fireworks`. */
 const FIRESIDE_NIGHTS: readonly FiresideNight[] = ["stories", "marshmallow"];
 
 /**
@@ -67,8 +69,11 @@ export function nightOf(d: Date): string {
 }
 
 /** What the fire holds the night `d` falls in: the same all night, and on every reload. */
-export const firesideNight = (d: Date): FiresideNight =>
-  FIRESIDE_NIGHTS[hash53(`fireside|${nightOf(d)}`) % FIRESIDE_NIGHTS.length]!;
+export function firesideNight(d: Date): FiresideNight {
+  const night = nightOf(d);
+  if (night.endsWith("-12-31")) return "fireworks";
+  return FIRESIDE_NIGHTS[hash53(`fireside|${night}`) % FIRESIDE_NIGHTS.length]!;
+}
 
 // ---------------------------------------------------------------- the flames
 

@@ -132,4 +132,10 @@ describe("firesideNight", () => {
     );
     expect([...seen].sort()).toEqual(["marshmallow", "stories"]);
   });
+  test("New Year's Eve is fireworks, from the evening into the small hours", () => {
+    expect(firesideNight(new Date(2026, 11, 31, 19))).toBe("fireworks");
+    expect(firesideNight(new Date(2027, 0, 1, 2))).toBe("fireworks");
+    expect(firesideNight(new Date(2027, 0, 1, 20))).not.toBe("fireworks");
+    expect(firesideNight(new Date(2026, 11, 30, 22))).not.toBe("fireworks");
+  });
 });
