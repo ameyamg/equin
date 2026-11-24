@@ -10,6 +10,7 @@ import {
   buildSnapshot,
   checkSnapshotHeader,
 } from "./snapshot";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** A snapshot younger than this is left alone: at most one download a week per machine. */
 export const SNAPSHOT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -80,7 +81,7 @@ export async function refreshSnapshot(opts: {
 
   const deadline = AbortSignal.any([
     signal,
-    AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+    awakeTimeoutSignal(DOWNLOAD_TIMEOUT_MS),
   ]);
   for (const month of candidateMonths(now)) {
     const url = monthUrl(month);

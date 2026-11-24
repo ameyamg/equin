@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-call-handoff",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Op hand-off: a build / push / check / test an agent runs in a Bash call — foreground or background — runs off the call (re-parented, so the call's wall-clock time limit, which a sleeping Mac reaches on wake, cannot kill it), streams its output like any command, and at the call's limit hands itself off — still running — exiting 70 naming `./equin await <op>`."
+}

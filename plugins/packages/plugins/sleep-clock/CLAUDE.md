@@ -66,6 +66,8 @@ Pick by what you have:
 | You have | Use |
 |---|---|
 | An in-process timer: "fire after N of work" | `armAwakeDeadline(ms, fn)` / `withDeadline` — `packages/deadline`. Never a bare `setTimeout` as a watchdog: timers count sleep. |
+| A request's timeout (`fetch`'s `signal`) | `awakeTimeoutSignal(ms)` — `packages/deadline`. Never `AbortSignal.timeout(ms)`: it is a timer too. |
+| A tool call that runs an op (`./equin build` …) | Nothing to do: the op runs off the call (`cli/call-handoff`), so the harness's wall-clock time limit cannot kill it. |
 | An age measured in one process (start and now both read here) | `performance.now()` differences (`awakeClock`, `packages/deadline`): it pauses through sleep. |
 | An instant stored and judged later, maybe by another process (a file, a log line, a DB row) | Stamp it with `clockStampNow()` (here), store the `ClockStamp`'s `sleep` beside the wall instant, judge with `awakeBetween(from, to)` — `sleep-clock/stamp` (pure, web-safe). Exact across processes. |
 | A process's age from its own start, judged later or by another process | `processStartStamp()` (here). Never `performance.timeOrigin` beside a `sleep` read later: the sleep in between would count as awake. |

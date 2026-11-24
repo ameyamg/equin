@@ -31,10 +31,25 @@ ruleTester.run("no-wall-clock-deadline", rule, {
       code: `setTimeout(() => ctl.abort(), 1000);`,
       filename: "/repo/plugins/foo/web/a.ts",
     },
-    // The awake timer itself.
+    // The awake timer itself, and its signal.
     { code: `armAwakeDeadline(1000, () => ctl.abort());`, filename: MACHINE },
+    {
+      code: `fetch(u, { signal: awakeTimeoutSignal(5000) });`,
+      filename: SERVER,
+    },
+    // A browser fetch is out of scope.
+    {
+      code: `fetch(u, { signal: AbortSignal.timeout(5000) });`,
+      filename: "/repo/plugins/foo/web/a.ts",
+    },
   ],
   invalid: [
+    {
+      // A request to this machine's gateway, aborted the instant the Mac woke.
+      code: `await fetch(u, { signal: AbortSignal.timeout(30_000) });`,
+      filename: MACHINE,
+      errors: [{ messageId: "wallClockAbortSignal" }],
+    },
     {
       // The give-up runs in a continuation the timer starts.
       code: `setTimeout(() => { read().then((s) => reject(new Error(s)), reject); }, 5);`,

@@ -138,5 +138,10 @@
     "at": "2026-11-23T17:31:06.665Z",
     "from": "infra.deps.pin-drift",
     "to": "infra.deps.daemon-binaries"
+  },
+  {
+    "at": "2026-11-24T20:32:08.576Z",
+    "from": "framework.cli.foreground-handoff",
+    "to": "framework.cli.call-handoff"
   }
 ]

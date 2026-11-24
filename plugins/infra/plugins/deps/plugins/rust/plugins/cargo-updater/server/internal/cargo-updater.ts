@@ -30,6 +30,7 @@ import {
   cargoEnv,
   crateCheckTargetDir,
 } from "@plugins/infra/plugins/deps/plugins/rust/deps";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 const MINUTE = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -199,7 +200,7 @@ async function crateReleases(pkg: string): Promise<CrateRelease[]> {
     const res = await fetch(url, {
       // crates.io refuses requests without an identifying User-Agent.
       headers: { "User-Agent": "equin-deps-cargo-updater" },
-      signal: AbortSignal.timeout(MINUTE),
+      signal: awakeTimeoutSignal(MINUTE),
     });
     if (!res.ok) {
       throw new Error(`crates.io ${url} answered ${res.status}`);

@@ -27,6 +27,7 @@ import {
   type RecordWriteTiming,
 } from "../../core";
 import { pluginRecordsDir } from "../../data-dirs";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * The shared record store: one SQLite database (WAL, so every worktree's build
@@ -297,7 +298,7 @@ class WriterLineError extends Error {
  * flush, for as long as it lives); a wait it ends is a lost write, said.
  */
 async function joinLine(line: TicketLine): Promise<Ticket> {
-  const signal = AbortSignal.timeout(LINE_WAIT_MS);
+  const signal = awakeTimeoutSignal(LINE_WAIT_MS);
   try {
     return await line.join({ signal });
   } catch (err) {

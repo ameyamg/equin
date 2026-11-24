@@ -16,6 +16,7 @@ import {
   type GatewayPortRecord,
 } from "../../core/internal/port-file";
 import { servedGatewayPort } from "../../core/internal/served";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * The port record, read: `set` with what the file says, or `unset` when there
@@ -192,7 +193,7 @@ export async function probeGateway(port: number): Promise<GatewayProbe> {
   let res: Response;
   try {
     res = await fetch(`${gatewayOriginFor(port)}/gateway/identity`, {
-      signal: AbortSignal.timeout(2000),
+      signal: awakeTimeoutSignal(2000),
     });
     // eslint-disable-next-line promise-safety/no-bare-catch -- a listener that does not speak HTTP (or hangs) is, by definition, not an equin gateway: that IS the answer
   } catch {

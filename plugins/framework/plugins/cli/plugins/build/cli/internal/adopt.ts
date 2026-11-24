@@ -17,6 +17,7 @@ import {
   type AdoptVerdict,
   type CannotJudgePayload,
 } from "@plugins/build/plugins/restart-skip/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * Ask a running backend (or central) to adopt this deploy instead of being
@@ -72,7 +73,7 @@ export async function askAdoption(opts: {
       {
         origin: opts.origin,
         body: { bin, entry: resolve(opts.server, entry), commit },
-        signal: AbortSignal.timeout(adaptiveTimeoutMs(30_000, 120_000)),
+        signal: awakeTimeoutSignal(adaptiveTimeoutMs(30_000, 120_000)),
       },
     );
   } catch (err) {

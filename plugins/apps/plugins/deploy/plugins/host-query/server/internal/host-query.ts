@@ -20,6 +20,7 @@ import {
   type HostQueryOptions,
   type ThisInstanceResponse,
 } from "./query-over-ssh";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** SSH sessions to boxes at once, across every reader of every host-only route. */
 const SSH_SESSIONS = 2;
@@ -78,7 +79,7 @@ async function fetchThisInstance(path: string): Promise<ThisInstanceResponse> {
     const res = await fetch(
       namespaceUrl(runtimeNamespace(), path, servedGatewayPort()),
       {
-        signal: AbortSignal.timeout(CURL_MAX_SECONDS * 1000),
+        signal: awakeTimeoutSignal(CURL_MAX_SECONDS * 1000),
       },
     );
     return { kind: "response", status: res.status, body: await res.text() };

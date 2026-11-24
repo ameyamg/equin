@@ -282,7 +282,7 @@ Two kinds, placed at opposite ends of the registry:
   result re-parsed to check it, and `null` — so the guard falls back to its old
   denial — the moment anything is uncertain (a `$( … )` or heredoc inside the call's own text, a call text
   that occurs twice).
-- **Plumbing** (`pipefail`, `foreground-deadline`, `background-timeout`,
+- **Plumbing** (`pipefail`, `background-timeout`, `call-deadline`,
   `e2e-tool-use-id`) — run LAST, so the judging guards see what the agent
   typed.
 
@@ -322,13 +322,17 @@ the walk's size is the danger, not the command. Translating to `rg` changes
 the result set instead (gitignored and hidden files vanish; `-type d`,
 `-mtime`, `-exec` have no equivalent).
 
-`foreground-deadline` exports the call's cut-off instant
-(`EQUIN_FOREGROUND_DEADLINE`) into a foreground `check` / `test` and raises its
-timeout to the 600 s ceiling, so the op hands itself off before the harness can
-kill it (`cli/plugins/foreground-handoff`); `background-ops` therefore lets those
-two through in the foreground and holds only `build` / `push` / `release` to the
-background. `background-timeout` raises a backgrounded `./equin` call to the
-2 h ceiling; `e2e-tool-use-id` exports the tool-use id into an e2e run.
+`call-deadline` exports the call's cut-off instant (`EQUIN_CALL_DEADLINE`)
+into every call running a `build` / `push` / `check` / `test`, foreground or
+background, and raises a foreground one's timeout to the 600 s ceiling: the op
+runs off the call, out of reach of the harness's kill, and hands itself off at
+that instant (`cli/plugins/call-handoff`) — so neither the 600 s limit nor the
+2 h one, which a sleeping Mac reaches on wake, can end it. `background-ops`
+lets `check` / `test` through in the foreground (`FOREGROUND_OPS`) and holds
+`build` / `push` / `release` to the background. `background-timeout` raises a
+backgrounded `./equin` call to the 2 h ceiling — before `call-deadline`, which
+reads the limit it set; `e2e-tool-use-id` exports the tool-use id into an e2e
+run.
 
 `pipefail`: `cmd | tail -20` exits with tail's status, so a
 failing `cmd` read as a pass. It prefixes `set -o pipefail; ` when a pipe feeds
@@ -400,13 +404,13 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/paths` ×5
     - `framework/cli/cli-name` ×4
     - `framework/tooling/guards/bypass` ×4
     - `packages/timed-fs` ×4
+    - `framework/cli/call-handoff` ×3
     - `infra/host-fs/user-path` ×3
-    - `framework/cli/foreground-handoff` ×2
     - `framework/tooling/collected-dir` ×2
     - `framework/tooling/guards/refusal-format` ×2
     - `infra/launcher/agent-scratch` ×2

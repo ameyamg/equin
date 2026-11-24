@@ -78,12 +78,12 @@ async function runTests(
   files: readonly string[],
 ): Promise<{ ran: true } | { ran: false; exitCode: number }> {
   console.log(`\n$ (${root}) ./${CLI_NAME} test <${files.length} files>`);
-  // Never the foreground hand-off: the gate waits for the verdict itself, and
+  // Never the call hand-off: the gate waits for the verdict itself, and
   // a handed-off run would exit before it had one.
   // The gate judges each failure against main itself (and prints main's
   // report for it): the run need not print its own standing lines too.
   const env = { ...process.env, ...envEntries({ TEST_NO_STANDING: "1" }) };
-  unsetEnv("FOREGROUND_DEADLINE", env);
+  unsetEnv("CALL_DEADLINE", env);
   const { exitCode } = await spawnPassthrough(
     [join(root, CLI_NAME), "test", ...files],
     { cwd: root, env },

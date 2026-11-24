@@ -4,8 +4,8 @@ import { disarmOrphanGuard } from "@plugins/framework/plugins/cli/plugins/bootst
 import {
   isHandoffOp,
   type HandoffOp,
-} from "@plugins/framework/plugins/cli/plugins/foreground-handoff/core";
-import { runHandedOff } from "@plugins/framework/plugins/cli/plugins/foreground-handoff/cli";
+} from "@plugins/framework/plugins/cli/plugins/call-handoff/core";
+import { runHandedOff } from "@plugins/framework/plugins/cli/plugins/call-handoff/cli";
 import {
   envName,
   readEnv,
@@ -46,22 +46,22 @@ export function registerCommands(
 }
 
 /**
- * The foreground deadline an agent's guard exported into this call, when this
- * command is an op that hands off at one (`foreground-handoff`). Absent for a
- * human at a terminal, a background call, and the op the hand-off detached —
- * all of which run the command in place.
+ * The call deadline an agent's guard exported into this call, when this
+ * command is an op that runs off the call (`call-handoff`). Absent for a
+ * human at a terminal and for the op the hand-off started — both of which run
+ * the command in place.
  */
 function handoffOf(
   spec: CliCommand,
   topLevel: boolean,
 ): { op: HandoffOp; deadline: number } | null {
   if (!topLevel || !isHandoffOp(spec.name)) return null;
-  const raw = readEnv("FOREGROUND_DEADLINE");
+  const raw = readEnv("CALL_DEADLINE");
   if (raw === undefined) return null;
   const deadline = Number(raw);
   if (!Number.isFinite(deadline))
     throw new Error(
-      `The foreground deadline is not an epoch-ms instant: ${JSON.stringify(raw)}.`,
+      `The call deadline is not an epoch-ms instant: ${JSON.stringify(raw)}.`,
     );
   return { op: spec.name, deadline };
 }
@@ -190,8 +190,9 @@ function attach(parent: Command, spec: CliCommand, topLevel = false): void {
     // has run yet.
     if (spec.heavy === true) enterOwnOpScope(spec.name);
 
-    // An agent's foreground call: run as a detached op that hands itself off
-    // before the call's limit, instead of in place where the limit would kill it.
+    // An agent's Bash call: run the op off the call — where the call's time
+    // limit, which counts machine sleep, cannot kill it — and hand it off at
+    // that limit, instead of in place as a descendant the limit kills.
     const handoff = handoffOf(spec, topLevel);
     if (handoff !== null) await runHandedOff(handoff.op, handoff.deadline);
 

@@ -16,6 +16,7 @@ import type { HeldBackend } from "@plugins/infra/plugins/worktree/plugins/backen
 import { z } from "zod";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { gatewayOriginFor } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** The gateway refused, or did not confirm, the hold — nothing was touched. */
 export class BackendHoldError extends Error {
@@ -69,7 +70,7 @@ export async function holdBackendDown(
       `${gatewayWorktreeUrl(ns, gatewayPort, "stop")}?hold=1`,
       {
         method: "POST",
-        signal: AbortSignal.timeout(60_000),
+        signal: awakeTimeoutSignal(60_000),
       },
     );
   } catch (err) {
@@ -109,7 +110,7 @@ export async function startBackend(backend: HeldBackend): Promise<void> {
   try {
     resp = await fetch(gatewayWorktreeUrl(ns, backend.gatewayPort, "restart"), {
       method: "POST",
-      signal: AbortSignal.timeout(180_000),
+      signal: awakeTimeoutSignal(180_000),
     });
   } catch (err) {
     if (err instanceof TypeError) return; // gateway down: spawns on first request

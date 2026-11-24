@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { armAwakeDeadline } from "./awake-deadline";
+import { armAwakeDeadline, awakeTimeoutSignal } from "./awake-deadline";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -40,5 +40,26 @@ describe("armAwakeDeadline", () => {
     cancel();
     await wait(50);
     expect(fired).toBe(0);
+  });
+});
+
+describe("awakeTimeoutSignal", () => {
+  test("aborts with AbortSignal.timeout's TimeoutError once the awake budget is spent", async () => {
+    const signal = awakeTimeoutSignal(20);
+    expect(signal.aborted).toBe(false);
+    await wait(60);
+    expect(signal.aborted).toBe(true);
+    expect(signal.reason).toBeInstanceOf(DOMException);
+    expect((signal.reason as DOMException).name).toBe("TimeoutError");
+  });
+
+  test("a sleep the awake clock did not see does not abort it", async () => {
+    let awake = 0;
+    const signal = awakeTimeoutSignal(30, { clock: () => awake });
+    await wait(60); // wall time passed, awake time did not
+    expect(signal.aborted).toBe(false);
+    awake = 30;
+    await wait(60);
+    expect(signal.aborted).toBe(true);
   });
 });

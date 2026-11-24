@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { statusFromOembedCode, type CodeVerdict } from "../../core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * Longest one oEmbed check may take. A normal answer takes ~80 ms; this only
@@ -78,7 +79,7 @@ export async function checkOembed(videoId: string): Promise<OembedCheck> {
   let res: Response;
   try {
     res = await fetch(url, {
-      signal: AbortSignal.timeout(VIDEO_CHECK_TIMEOUT_MS),
+      signal: awakeTimeoutSignal(VIDEO_CHECK_TIMEOUT_MS),
     });
   } catch (err) {
     // Only the request itself is inside this try, and everything it can throw

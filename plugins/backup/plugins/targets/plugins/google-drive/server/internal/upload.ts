@@ -1,6 +1,7 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { exponential } from "@plugins/packages/plugins/retry/core";
 import { authHeader, type DriveToken } from "./token";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * Upload one archive to Drive with Google's RESUMABLE upload protocol, for
@@ -194,7 +195,7 @@ async function putChunk(
   const end = Math.min(offset + deps.chunkBytes, total);
   return deps.fetch(uploadUrl, {
     method: "PUT",
-    signal: AbortSignal.timeout(deps.requestTimeoutMs),
+    signal: awakeTimeoutSignal(deps.requestTimeoutMs),
     headers: {
       "Content-Length": String(end - offset),
       "Content-Range":
@@ -212,7 +213,7 @@ async function queryStatus(
 ): Promise<Response> {
   return deps.fetch(uploadUrl, {
     method: "PUT",
-    signal: AbortSignal.timeout(deps.requestTimeoutMs),
+    signal: awakeTimeoutSignal(deps.requestTimeoutMs),
     headers: { "Content-Length": "0", "Content-Range": `bytes */${total}` },
   });
 }

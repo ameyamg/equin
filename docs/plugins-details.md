@@ -32875,7 +32875,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/op-log.readOpRecords`
               - `infra/file-watcher.watchForCommand`
           - Cross-plugin:
-            - Imported by: `framework/cli/foreground-handoff`
+            - Imported by: `framework/cli/call-handoff`
           - Core:
             - Exports (types):
               - `AwaitedOp`
@@ -33020,6 +33020,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `openBuildProgress`
               - `PROGRESS_FILE`
               - `readBuildProgress`
+        - **`call-handoff`** — Op hand-off: a build / push / check / test an agent runs in a Bash call — foreground or background — runs off the call (re-parented, so the call's wall-clock time limit, which a sleeping Mac reaches on wake, cannot kill it), streams its output like any command, and at the call's limit hands itself off — still running — exiting 70 naming `./equin await <op>`.
+          - Cross-plugin:
+            - Imported by: `framework/tooling/guards`
+          - Exemptions:
+            - Exempts itself from: `watcher-safety/no-raw-fs-watch` — `cli/handoff.ts` (sanctioned)
+          - Core:
+            - Exports (types): `HandoffOp`
+            - Exports (values):
+              - `callDeadline`
+              - `FOREGROUND_OPS`
+              - `HANDOFF_OPS`
+              - `isCallLimitSignal`
+              - `isForegroundOp`
+              - `isHandoffOp`
+          - Cli:
+            - Exports (values): `runHandedOff`
         - **`check`** — `./equin check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
             - Uses:
@@ -33064,19 +33080,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/start`
           - Cli:
             - Exports (values): `assertPrerequisites`
-        - **`foreground-handoff`** — Foreground op hand-off: a `check` / `test` an agent runs in the foreground streams its output like any command, and if it would outlive the call's 600 s limit it hands itself off before the cap — detached, still running — and exits 70 naming `./equin await <op>`, so a foreground op can never time out handle-less.
-          - Cross-plugin:
-            - Imported by: `framework/tooling/guards`
-          - Exemptions:
-            - Exempts itself from: `watcher-safety/no-raw-fs-watch` — `cli/handoff.ts` (sanctioned)
-          - Core:
-            - Exports (types): `HandoffOp`
-            - Exports (values):
-              - `FOREGROUND_HANDOFF_OPS`
-              - `foregroundDeadline`
-              - `isHandoffOp`
-          - Cli:
-            - Exports (values): `runHandedOff`
         - **`format`** — `./equin format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
         - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
           - Cross-plugin:
@@ -35129,13 +35132,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isGeneratedArtifactPath`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 42 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 43 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `infra/paths` ×5
               - `framework/cli/cli-name` ×4
               - `framework/tooling/guards/bypass` ×4
               - `packages/timed-fs` ×4
+              - `framework/cli/call-handoff` ×3
               - `infra/host-fs/user-path` ×3
-              - `framework/cli/foreground-handoff` ×2
               - `framework/tooling/collected-dir` ×2
               - `framework/tooling/guards/refusal-format` ×2
               - `infra/launcher/agent-scratch` ×2
@@ -35537,7 +35540,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)
               - Exemptions:
                 - Exempted by:
-                  - `framework/cli/foreground-handoff` (0 debt)
+                  - `framework/cli/call-handoff` (0 debt)
                   - `framework/cli/op-runtime` (0 debt)
                   - `infra/file-watcher` (0 debt)
                   - `infra/host/duress/latch` (0 debt)
@@ -45404,7 +45407,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`blocking-write`** — writeAllSync(fd, data): every byte written before it returns, on a blocking or a NON-blocking fd alike — a full non-blocking pipe (EAGAIN) is waited out with poll(2) until the reader drains it, never spun on, dropped or swallowed. Bun turns a piped stdout non-blocking the first time process.stdout is touched, so a synchronous writer to fd 1 or 2 (`./equin build | tail`) must use this, not a bare writeSync.
       - Cross-plugin:
         - Imported by:
-          - `framework/cli/foreground-handoff`
+          - `framework/cli/call-handoff`
           - `framework/cli/op-runtime`
           - `infra/jobs/supervised-job`
           - `installer`
@@ -45440,20 +45443,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
-          - `infra` ×15
-          - `debug` ×12
-          - `framework` ×12
-          - `apps` ×7
+        - Imported by: 82 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+          - `infra` ×24
+          - `debug` ×13
+          - `framework` ×13
+          - `apps` ×10
           - `conversations` ×5
           - `database` ×3
           - `network` ×2
           - `packages` ×2
           - `tasks` ×2
           - `auth`
+          - `backup/targets/google-drive`
           - `build`
           - `config_v2`
           - `installer/waits`
+          - `integrations/youtube`
+          - `plugin-meta/plugin-records`
           - `shell/notifications`
       - Core:
         - Exports (types):
@@ -45463,6 +45469,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `armAwakeDeadline`
           - `awakeClock`
+          - `awakeTimeoutSignal`
           - `wallNow`
           - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
@@ -45839,9 +45846,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by: `debug/heap-snapshot` (0 debt)
     - **`process-alive`** — Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown, a non-pid refused; isProcessGroupAlive(pgid) the same for kill(-pgid, 0) — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
           - `infra` ×13
-          - `framework` ×9
+          - `framework` ×10
           - `conversations` ×2
           - `debug` ×2
           - `packages` ×2
@@ -46468,9 +46475,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withChangedFilesWork`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 197 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 198 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
-          - `framework` ×31
+          - `framework` ×32
           - `apps` ×18
           - `debug` ×17
           - `conversations` ×13

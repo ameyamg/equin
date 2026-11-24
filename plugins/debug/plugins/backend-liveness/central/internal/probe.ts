@@ -1,4 +1,7 @@
-import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import {
+  wallNow,
+  awakeTimeoutSignal,
+} from "@plugins/packages/plugins/deadline/core";
 import {
   gatewayOriginFor,
   servedGatewayPort,
@@ -97,7 +100,7 @@ async function readFleet(): Promise<
 > {
   try {
     const res = await fetch(gatewayWorktreesUrl(), {
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      signal: awakeTimeoutSignal(PROBE_TIMEOUT_MS),
     });
     if (!res.ok) return { ok: false, error: `gateway responded ${res.status}` };
     return { ok: true, fleet: FleetSchema.parse(await res.json()) };
@@ -165,7 +168,7 @@ async function ask(
       // A direct-socket call from a trusted local process, like the gateway's
       // own readiness probe.
       headers: { [PRINCIPAL_HEADER]: "owner" },
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      signal: awakeTimeoutSignal(PROBE_TIMEOUT_MS),
     });
     await res.body?.cancel();
     return "answered";

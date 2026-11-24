@@ -106,7 +106,7 @@ Design: [`research/2026-09-20-global-subagent-op-wakeup.md`](../../../../../../r
     - `debug/profiling/op-log.readOpRecords`
     - `infra/file-watcher.watchForCommand`
 - Cross-plugin:
-  - Imported by: `framework/cli/foreground-handoff`
+  - Imported by: `framework/cli/call-handoff`
 - Core:
   - Exports (types):
     - `AwaitedOp`

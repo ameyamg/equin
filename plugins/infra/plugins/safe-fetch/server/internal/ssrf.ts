@@ -14,6 +14,7 @@
  * the connection is bound to the address we security-checked.
  */
 import { lookup } from "node:dns/promises";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** Thrown when a URL is disallowed (bad scheme, or resolves to a non-public IP). */
 export class SsrfError extends Error {
@@ -378,7 +379,7 @@ export async function safeFetch(
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     const dial = buildPinnedDial(logicalUrl, ip);
-    const signal = mergeSignals(AbortSignal.timeout(timeoutMs), init.signal);
+    const signal = mergeSignals(awakeTimeoutSignal(timeoutMs), init.signal);
     const res = await fetch(dial.href, {
       method,
       body,

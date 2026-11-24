@@ -44,6 +44,7 @@ import { join } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { distNames } from "./dist-publish";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * Short on purpose. A `--hermetic` build must stay hermetic: on a bare release
@@ -82,7 +83,7 @@ export async function readGatewayWebPath(
   let resp: Response;
   try {
     resp = await fetch(`${origin}/gateway/worktrees`, {
-      signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
+      signal: awakeTimeoutSignal(GATEWAY_TIMEOUT_MS),
     });
   } catch (err) {
     // Gateway not running (connection refused) or the request timed out. Both

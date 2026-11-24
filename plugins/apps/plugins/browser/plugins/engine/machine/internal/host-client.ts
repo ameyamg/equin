@@ -1,7 +1,10 @@
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
-import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
+import {
+  armAwakeDeadline,
+  awakeTimeoutSignal,
+} from "@plugins/packages/plugins/deadline/core";
 import { requestDep } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { PLAYWRIGHT_BUNDLE_EXTERNAL } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
@@ -276,7 +279,7 @@ async function shutdownHost(reason: string): Promise<void> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ reason }),
-    signal: AbortSignal.timeout(SHUTDOWN_MS),
+    signal: awakeTimeoutSignal(SHUTDOWN_MS),
   });
   if (!res.ok) {
     throw new Error(

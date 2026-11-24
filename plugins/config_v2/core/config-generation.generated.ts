@@ -5,7 +5,7 @@
 // config/ tree, the plugin-move ledger, every config migration and the merge
 // engine; its user layer is `<namespace>/gens/<id>/` — and the move ledger its
 // derive replays (config_v2#machine).
-export const CONFIG_GENERATION = "1e5fab74c4b09c89";
+export const CONFIG_GENERATION = "33407fbd4d8ac1c8";
 
 export const CONFIG_PLUGIN_MOVES: readonly {
   key: string;
@@ -179,6 +179,12 @@ export const CONFIG_PLUGIN_MOVES: readonly {
     "key": "2026-11-23T17:31:06.665Z infra.deps.pin-drift infra.deps.daemon-binaries",
     "from": "infra.deps.pin-drift",
     "to": "infra.deps.daemon-binaries",
+    "fromIsPlugin": false
+  },
+  {
+    "key": "2026-11-24T20:32:08.576Z framework.cli.foreground-handoff framework.cli.call-handoff",
+    "from": "framework.cli.foreground-handoff",
+    "to": "framework.cli.call-handoff",
     "fromIsPlugin": false
   }
 ];

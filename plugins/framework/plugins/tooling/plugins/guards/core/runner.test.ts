@@ -160,17 +160,18 @@ describe("a guard bypass (postgres, a hard denial)", () => {
 });
 
 describe("a foreground build backgrounded by background-ops", () => {
-  test("runs backgrounded, at the 2 h ceiling, the command unchanged", async () => {
+  test("runs backgrounded, at the 2 h ceiling, with that limit's deadline", async () => {
     const out = await bash(newSession(), "./equin build 2>&1");
     const specific = out?.hookSpecificOutput as
       | { updatedInput?: Record<string, unknown>; additionalContext?: string }
       | undefined;
-    // background-timeout judges the rewritten input, so it raises the timeout.
-    expect(specific?.updatedInput).toEqual({
-      command: "./equin build 2>&1",
-      run_in_background: true,
-      timeout: 7_200_000,
-    });
+    // background-timeout judges the rewritten input, so it raises the timeout;
+    // call-deadline then exports the deadline of that limit.
+    expect(specific?.updatedInput?.run_in_background).toBe(true);
+    expect(specific?.updatedInput?.timeout).toBe(7_200_000);
+    expect(specific?.updatedInput?.command).toMatch(
+      /^export EQUIN_CALL_DEADLINE=\d+; \.\/equin build 2>&1$/,
+    );
     expect(specific?.additionalContext).toContain("END YOUR TURN");
   });
 
@@ -179,8 +180,8 @@ describe("a foreground build backgrounded by background-ops", () => {
     const specific = out?.hookSpecificOutput as
       { updatedInput?: Record<string, unknown> } | undefined;
     expect(specific?.updatedInput?.run_in_background).toBe(true);
-    expect(specific?.updatedInput?.command).toBe(
-      "set -o pipefail; ./equin push -m x 2>&1 | tail -15",
+    expect(specific?.updatedInput?.command).toMatch(
+      /^export EQUIN_CALL_DEADLINE=\d+; set -o pipefail; \.\/equin push -m x 2>&1 \| tail -15$/,
     );
   });
 

@@ -84,6 +84,7 @@ import {
   type ServiceExecutable,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -212,7 +213,7 @@ export async function readPid(): Promise<number | null> {
 export async function isGatewayListening(port: number): Promise<boolean> {
   try {
     const resp = await fetch(`http://localhost:${port}/gateway/worktrees`, {
-      signal: AbortSignal.timeout(1000),
+      signal: awakeTimeoutSignal(1000),
     });
     return resp.ok;
     // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- any network error (connection refused, timeout, DNS) means the gateway is not listening; propagating would misrepresent a probe failure as a fatal error
@@ -752,7 +753,7 @@ async function readServiceError(
   try {
     const resp = await fetch(
       `http://localhost:${port}/gateway/services/${service}/status`,
-      { signal: AbortSignal.timeout(1000) },
+      { signal: awakeTimeoutSignal(1000) },
     );
     if (!resp.ok) return null;
     const snapshot = (await resp.json()) as { error?: unknown };
@@ -844,7 +845,7 @@ async function awaitAppReady(name: Namespace, port: number): Promise<void> {
         await callEndpoint(
           getHealthReady,
           {},
-          { origin, signal: AbortSignal.timeout(2000) },
+          { origin, signal: awakeTimeoutSignal(2000) },
         );
         return true;
         // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses

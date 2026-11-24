@@ -7,6 +7,7 @@ import { CONTACT_EMAIL } from "@plugins/apps/plugins/website/plugins/shell/core"
 import { RESEND_API_KEY, siteMessageIdKind } from "../../core";
 import { confirmSiteMessage } from "./confirm";
 import { notifySiteMessage } from "./notify";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** Attempts before a send is recorded `failed` (graphile backs off between them). */
 export const NOTIFY_MAX_ATTEMPTS = 5;
@@ -36,7 +37,7 @@ export const siteMessagesNotifyJob = defineJob({
         sendEmail(apiKey, email, {
           signal: AbortSignal.any([
             ctx.signal,
-            AbortSignal.timeout(SEND_TIMEOUT_MS),
+            awakeTimeoutSignal(SEND_TIMEOUT_MS),
           ]),
         }),
       attempt: ctx.attempt,
@@ -70,7 +71,7 @@ export const siteMessagesConfirmJob = defineJob({
         sendEmail(apiKey, email, {
           signal: AbortSignal.any([
             ctx.signal,
-            AbortSignal.timeout(SEND_TIMEOUT_MS),
+            awakeTimeoutSignal(SEND_TIMEOUT_MS),
           ]),
         }),
       attempt: ctx.attempt,

@@ -1,4 +1,7 @@
-import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import {
+  wallNow,
+  awakeTimeoutSignal,
+} from "@plugins/packages/plugins/deadline/core";
 import {
   gatewayOriginFor,
   servedGatewayPort,
@@ -71,7 +74,7 @@ async function readFleetFromGateway(log: Logger): Promise<{
 } | null> {
   try {
     const res = await fetch(gatewayWorktreesUrl(), {
-      signal: AbortSignal.timeout(2_000),
+      signal: awakeTimeoutSignal(2_000),
     });
     if (!res.ok) throw new Error(`gateway responded ${res.status}`);
     const list = (await res.json()) as GatewayWorktree[];

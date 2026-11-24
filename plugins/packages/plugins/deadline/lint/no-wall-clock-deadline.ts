@@ -83,6 +83,22 @@ function isNode(v: unknown): v is TSESTree.Node {
   );
 }
 
+/**
+ * `AbortSignal.timeout(ms)`: a timer whose one job is to abort the work it is
+ * handed — a deadline by construction, whatever its caller does next.
+ */
+function isAbortSignalTimeout(call: TSESTree.CallExpression): boolean {
+  const callee = call.callee;
+  return (
+    callee.type === "MemberExpression" &&
+    !callee.computed &&
+    callee.object.type === "Identifier" &&
+    callee.object.name === "AbortSignal" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "timeout"
+  );
+}
+
 /** The timer's callback gives up on work when it fires: a deadline. */
 function isDeadline(call: TSESTree.CallExpression): boolean {
   // `setTimeout(fn)` / `setTimeout(fn, 0)` defers to the next turn: no time
@@ -106,17 +122,26 @@ export default createRule({
     docs: {
       description:
         "A `setTimeout` whose callback gives up on work (reject, abort, kill, " +
-        "process.exit) is a deadline, and `setTimeout` counts machine sleep: on " +
+        "process.exit), or an `AbortSignal.timeout(ms)`, is a deadline, and " +
+        "timers count machine sleep: on " +
         "wake every timer whose time passed during the nap fires at once, so " +
         "work that ran 0.3 s is declared failed (report-1795305324-8wpwx2). " +
         "Bound work this machine runs with `armAwakeDeadline` / `withDeadline` " +
-        "(`@plugins/packages/plugins/deadline/core`), which count awake time. " +
+        "(`@plugins/packages/plugins/deadline/core`), which count awake time, " +
+        "and `awakeTimeoutSignal(ms)` in place of `AbortSignal.timeout(ms)`. " +
         "A deadline on something that really ages across sleep (a remote " +
         "peer's lease, an external token) is declared in the exempted " +
         "plugin's `exempt/index.ts`, with its reason.",
     },
     schema: [],
     messages: {
+      wallClockAbortSignal:
+        "`AbortSignal.timeout(ms)` is a timer, and timers count machine sleep: " +
+        "a request made just before a nap is aborted the instant the Mac wakes. " +
+        "Use `awakeTimeoutSignal(ms)` from " +
+        "`@plugins/packages/plugins/deadline/core` (same TimeoutError, awake " +
+        "time). If the bound really is on wall time, declare it in the " +
+        "plugin's `exempt/index.ts` with the reason.",
       wallClockDeadline:
         "This `setTimeout` gives up on work when it fires — a deadline — and " +
         "`setTimeout` counts machine sleep, so a Mac wake fails work that " +
@@ -134,6 +159,8 @@ export default createRule({
       CallExpression(node: TSESTree.CallExpression) {
         if (isSetTimeout(node) && isDeadline(node)) {
           context.report({ node, messageId: "wallClockDeadline" });
+        } else if (isAbortSignalTimeout(node)) {
+          context.report({ node, messageId: "wallClockAbortSignal" });
         }
       },
     };

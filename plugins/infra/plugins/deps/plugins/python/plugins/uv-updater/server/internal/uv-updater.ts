@@ -28,6 +28,7 @@ import {
   UV_HOLDS_FILE,
 } from "@plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/core";
 import { uvEnv } from "@plugins/infra/plugins/deps/plugins/python/deps";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 const MINUTE = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -321,7 +322,7 @@ const pypiRelease = z.object({
  */
 async function pypiPublished(pkg: string, version: string): Promise<string> {
   const url = `https://pypi.org/pypi/${encodeURIComponent(pkg)}/${encodeURIComponent(version)}/json`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(MINUTE) });
+  const res = await fetch(url, { signal: awakeTimeoutSignal(MINUTE) });
   if (!res.ok) throw new Error(`PyPI ${url} answered ${res.status}`);
   const times = pypiRelease
     .parse(await res.json())

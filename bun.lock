@@ -3892,6 +3892,10 @@
       "name": "@equin/plugin-framework-cli-build-experimental-marks",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/call-handoff": {
+      "name": "@equin/plugin-framework-cli-call-handoff",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/check": {
       "name": "@equin/plugin-framework-cli-check",
       "version": "0.0.1",
@@ -3910,10 +3914,6 @@
     },
     "plugins/framework/plugins/cli/plugins/doctor": {
       "name": "@equin/plugin-framework-cli-doctor",
-      "version": "0.0.1",
-    },
-    "plugins/framework/plugins/cli/plugins/foreground-handoff": {
-      "name": "@equin/plugin-framework-cli-foreground-handoff",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/cli/plugins/format": {
@@ -10352,6 +10352,8 @@
 
     "@equin/plugin-framework-cli-build-progress": ["@equin/plugin-framework-cli-build-progress@workspace:plugins/framework/plugins/cli/plugins/build-progress"],
 
+    "@equin/plugin-framework-cli-call-handoff": ["@equin/plugin-framework-cli-call-handoff@workspace:plugins/framework/plugins/cli/plugins/call-handoff"],
+
     "@equin/plugin-framework-cli-check": ["@equin/plugin-framework-cli-check@workspace:plugins/framework/plugins/cli/plugins/check"],
 
     "@equin/plugin-framework-cli-cli-name": ["@equin/plugin-framework-cli-cli-name@workspace:plugins/framework/plugins/cli/plugins/cli-name"],
@@ -10361,8 +10363,6 @@
     "@equin/plugin-framework-cli-deploy": ["@equin/plugin-framework-cli-deploy@workspace:plugins/framework/plugins/cli/plugins/deploy"],
 
     "@equin/plugin-framework-cli-doctor": ["@equin/plugin-framework-cli-doctor@workspace:plugins/framework/plugins/cli/plugins/doctor"],
-
-    "@equin/plugin-framework-cli-foreground-handoff": ["@equin/plugin-framework-cli-foreground-handoff@workspace:plugins/framework/plugins/cli/plugins/foreground-handoff"],
 
     "@equin/plugin-framework-cli-format": ["@equin/plugin-framework-cli-format@workspace:plugins/framework/plugins/cli/plugins/format"],
 

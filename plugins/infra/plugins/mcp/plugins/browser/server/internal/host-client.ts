@@ -1,7 +1,10 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
-import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
+import {
+  armAwakeDeadline,
+  awakeTimeoutSignal,
+} from "@plugins/packages/plugins/deadline/core";
 import { requestDep } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { PLAYWRIGHT_BUNDLE_EXTERNAL } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
@@ -385,7 +388,7 @@ async function post(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: awakeTimeoutSignal(timeoutMs),
   });
 }
 

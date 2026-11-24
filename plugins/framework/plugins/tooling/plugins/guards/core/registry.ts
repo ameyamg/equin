@@ -5,7 +5,7 @@ import { bunScriptGuard } from "./guards/bun-script";
 import { claudeMdHint } from "./guards/claude-md-hint";
 import { e2eToolUseIdGuard } from "./guards/e2e-tool-use-id";
 import { findGuard } from "./guards/find";
-import { foregroundDeadlineGuard } from "./guards/foreground-deadline";
+import { callDeadlineGuard } from "./guards/call-deadline";
 import { gitDiffMainGuard } from "./guards/git-diff-main";
 import { gitPushGuard } from "./guards/git-push";
 import { gitResetMainGuard } from "./guards/git-reset-main";
@@ -50,7 +50,7 @@ export const GUARDS: Guard<any>[] = [
   // agent typed (plus any correction above).
   pipefailGuard,
   backgroundTimeoutGuard,
-  foregroundDeadlineGuard,
+  callDeadlineGuard,
   e2eToolUseIdGuard,
   // File writes
   mainEditsGuard,

@@ -5,6 +5,7 @@ import {
 import { agentOriginHeaders } from "@plugins/infra/plugins/request-origin/core";
 import { revertAgentWrites } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/core";
 import { browserSessionSource } from "./protocol";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 const REVERT_MS = 30_000;
 
@@ -33,7 +34,7 @@ export async function revertSessionWrites(
     {
       headers: agentOriginHeaders(source),
       body: { scope: "source", source },
-      signal: AbortSignal.timeout(REVERT_MS),
+      signal: awakeTimeoutSignal(REVERT_MS),
     },
   );
   await readEndpointResponse(

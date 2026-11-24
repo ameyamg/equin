@@ -30,6 +30,7 @@ import {
   type Plan,
   type Workspace,
 } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 const MINUTE = 60_000;
 
@@ -50,7 +51,7 @@ const PackumentSchema = z.object({
 
 async function fetchPackument(name: string): Promise<Packument> {
   const url = `https://registry.npmjs.org/${name.replace("/", "%2F")}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(MINUTE) });
+  const res = await fetch(url, { signal: awakeTimeoutSignal(MINUTE) });
   if (!res.ok) throw new Error(`GET ${url} → ${res.status} ${res.statusText}`);
   const doc = PackumentSchema.parse(await res.json());
   const published = new Map(

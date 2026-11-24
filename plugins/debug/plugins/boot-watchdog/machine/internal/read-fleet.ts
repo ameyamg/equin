@@ -4,6 +4,7 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
 import type { FleetEntry } from "./classify-wedge";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** The gateway's worktree registry, on the gateway this backend runs under. */
 function gatewayWorktreesUrl(): string {
@@ -42,7 +43,7 @@ interface GatewayWorktree {
 export async function readFleet(): Promise<Map<string, FleetEntry> | null> {
   try {
     const res = await fetch(gatewayWorktreesUrl(), {
-      signal: AbortSignal.timeout(2_000),
+      signal: awakeTimeoutSignal(2_000),
     });
     if (!res.ok) throw new Error(`gateway responded ${res.status}`);
     const list = (await res.json()) as GatewayWorktree[];

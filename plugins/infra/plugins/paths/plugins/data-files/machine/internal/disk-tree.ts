@@ -21,6 +21,7 @@ import {
   type Mount,
   type RelPath,
 } from "../../core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * How long `withLock` waits before giving up. Every lock taken through a root
@@ -83,7 +84,7 @@ export async function withFileLock<T>(
   waitMs: number,
   fn: () => Promise<T>,
 ): Promise<T> {
-  const signal = AbortSignal.timeout(waitMs);
+  const signal = awakeTimeoutSignal(waitMs);
   try {
     return await inProcess.run(
       lockPath,

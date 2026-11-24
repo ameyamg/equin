@@ -3,6 +3,7 @@ import {
   servedGatewayPort,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * Ask the gateway to run main's convergence (`./equin build --allow-main
@@ -32,7 +33,7 @@ export async function requestConvergence(cause: string): Promise<void> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ cause }),
     // A wedge-breaker: the gateway answers before it spawns anything.
-    signal: AbortSignal.timeout(30_000),
+      signal: awakeTimeoutSignal(30_000),
     },
   );
   if (resp.status !== 202) {

@@ -1,5 +1,9 @@
 export { withDeadline } from "./internal/deadline";
-export { armAwakeDeadline, awakeClock } from "./internal/awake-deadline";
+export {
+  armAwakeDeadline,
+  awakeClock,
+  awakeTimeoutSignal,
+} from "./internal/awake-deadline";
 export type {
   AwakeClock,
   AwakeDeadlineOptions,

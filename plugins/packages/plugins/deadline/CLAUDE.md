@@ -22,6 +22,16 @@ The rule reports it everywhere except browser code (`web/`, `e2e/`,
 A deadline that really is on wall time (a remote peer's lease, an external
 token) is declared in the plugin's `exempt/index.ts`, with its reason.
 
+`AbortSignal.timeout(ms)` is the same deadline with the timer hidden inside
+the runtime, and the rule reports it too: use `awakeTimeoutSignal(ms)` (here),
+which aborts with the same `TimeoutError` `DOMException` after `ms` of awake
+time. Found by the 2026-11-24 audit: 41 calls outside browser code, 30 of them
+to this machine's own gateway, backends or sockets — a build's adopt request
+made before a nap was aborted on wake ("no answer to the adopt request (The
+operation timed out.)", build-1795343567-5hlm5g), so the build restarted the
+backend it could have adopted. All 41 now count awake time; a remote peer that
+does not answer in N awake seconds is as good a verdict as N wall ones.
+
 It recognises the give-up by the callback's own calls, so a debounce, a backoff
 or a `setTimeout(resolve, ms)` sleep is not reported — and a watchdog that only
 sets a flag or resolves `"timeout"` is not either; those still belong on
@@ -65,20 +75,23 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
 
 - Description: Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
 - Cross-plugin:
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×15
-    - `debug` ×12
-    - `framework` ×12
-    - `apps` ×7
+  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×24
+    - `debug` ×13
+    - `framework` ×13
+    - `apps` ×10
     - `conversations` ×5
     - `database` ×3
     - `network` ×2
     - `packages` ×2
     - `tasks` ×2
     - `auth`
+    - `backup/targets/google-drive`
     - `build`
     - `config_v2`
     - `installer/waits`
+    - `integrations/youtube`
+    - `plugin-meta/plugin-records`
     - `shell/notifications`
 - Core:
   - Exports (types):
@@ -88,6 +101,7 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
   - Exports (values):
     - `armAwakeDeadline`
     - `awakeClock`
+    - `awakeTimeoutSignal`
     - `wallNow`
     - `withDeadline`
 

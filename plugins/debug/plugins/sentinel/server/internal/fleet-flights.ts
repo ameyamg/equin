@@ -16,6 +16,7 @@ import {
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 // The fleet-flights event class: on a cluster-onset trip (and ONLY then —
 // enrich returns undefined for every other trigger, the engine's documented
@@ -70,7 +71,7 @@ async function fetchFlightWindow(name: Namespace): Promise<FleetFlightCell> {
           windowMs: FLIGHT_WINDOW_MS,
           maxCompleted: FLIGHT_WINDOW_COMPLETED_DEFAULT,
         },
-        signal: AbortSignal.timeout(PER_BACKEND_TIMEOUT_MS),
+        signal: awakeTimeoutSignal(PER_BACKEND_TIMEOUT_MS),
       },
     );
     return { ok: true, wallAnchor, window };
@@ -90,7 +91,7 @@ export const fleetFlightsClass = defineTraceEventClass({
     if (ctx.trigger.kind !== "cluster-onset") return undefined;
 
     const res = await fetch(gatewayWorktreesUrl(), {
-      signal: AbortSignal.timeout(2_000),
+      signal: awakeTimeoutSignal(2_000),
     });
     if (!res.ok) throw new Error(`gateway worktrees responded ${res.status}`);
     const fleet = z

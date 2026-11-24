@@ -64,3 +64,30 @@ export function armAwakeDeadline(
   set(Math.min(Math.max(0, left()), MAX_TIMER_MS));
   return () => clearTimeout(timer);
 }
+
+/**
+ * An `AbortSignal` that aborts once `budgetMs` of AWAKE time has passed — the
+ * awake twin of `AbortSignal.timeout(ms)`, which is a timer and so counts
+ * machine sleep: a request to this machine's own gateway made just before a
+ * nap was aborted the instant the Mac woke (2026-11-22, build-1795343567-5hlm5g:
+ * "no answer to the adopt request (The operation timed out.)", so the build
+ * restarted the backend instead of adopting it). Aborts with the same
+ * `TimeoutError` `DOMException` `AbortSignal.timeout` does, so a caller's
+ * `err instanceof DOMException` handling is unchanged; never holds the
+ * process open, like it.
+ */
+export function awakeTimeoutSignal(
+  budgetMs: number,
+  opts: Pick<AwakeDeadlineOptions, "clock"> = {},
+): AbortSignal {
+  const controller = new AbortController();
+  armAwakeDeadline(
+    budgetMs,
+    () =>
+      controller.abort(
+        new DOMException("The operation timed out.", "TimeoutError"),
+      ),
+    { ...opts, unref: true },
+  );
+  return controller.signal;
+}

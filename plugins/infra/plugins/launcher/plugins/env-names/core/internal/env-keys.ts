@@ -132,8 +132,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "marks a build that must outlive the process that started it: set by the backend for the build it spawns (build/machine run-build.ts), and by the gateway for main's convergence run, which a gateway restart must not end (gateway/main_deploy.go)",
   OP_SCOPE_REEXEC:
     "`<pid>:<unit>` — a heavy command re-executed (same pid) into its own op scope, set for that re-exec only, so the new image can tell it already entered one and never loops; read only when the pid is the reader's own (cli/bin register-commands.ts, packages/systemd-scope heavyCommandScope)",
-  FOREGROUND_DEADLINE:
-    "the instant (epoch ms) an agent's foreground Bash call is cut off; a PreToolUse guard exports it into that one command, and the op hand-off takes it out of the env of the op it detaches (cli/op-runtime foreground-handoff.ts)",
+  CALL_DEADLINE:
+    "the instant (epoch ms) an agent's Bash call — foreground or background — is cut off at its time limit; the call-deadline PreToolUse guard exports it into that one command, the CLI mapper runs a hand-off op off the call when it is set, and the hand-off takes it out of the env of the op it starts (cli/call-handoff)",
   TEST_HEARTBEAT:
     "the file a bun:test process stamps with its awake clock every 30 s, set by `./equin test` for the runner it spawns so it can tell a run whose event loop stopped (cli/test run.ts, test/bun-preload.ts)",
   TEST_DOM_FILES:
@@ -145,7 +145,7 @@ export const RUNTIME_WITHHELD_ENV = {
   OP_OPPORTUNISTIC:
     "marks an op that runs only because the host is idle and yields to any other work (`1`): it acquires its grant on the background lane at low priority and is stamped opportunistic on its marker and op-log record, so the idle signal does not count it as work; set by the backend for the idle test batch it supervises (debug/tests/idle-runner), read by cli/op-runtime direct-op.ts",
   OP_HANDED_OFF:
-    "the pid of the agent that owns an op detached by the foreground hand-off — the op outlives the call that started it, never that agent; set by the hand-off for that one op (cli/foreground-handoff handoff.ts), read by its orphan guard (cli/bootstrap orphan-guard.ts), which ends the op once that pid is gone",
+    "the pid of the agent that owns an op run off an agent's call by the call hand-off — the op outlives the call that started it, never that agent; set by the hand-off for that one op (cli/call-handoff handoff.ts), read by its orphan guard (cli/bootstrap orphan-guard.ts), which ends the op once that pid is gone",
   BUILD_IN_PROGRESS:
     "marks the check pass a build spawns, set by that build (tooling/checks/core run-context.ts)",
   CHECK_JOBS:

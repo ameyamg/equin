@@ -168,6 +168,7 @@ import {
 } from "@plugins/build/plugins/run-ledger/core";
 import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { runBuildSteps } from "@plugins/framework/plugins/cli/plugins/build/plugins/build-steps/cli";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
 // magnitude above what any of them take. A CLI command owns no deadline of its
@@ -2216,7 +2217,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           try {
             const resp = await fetch(
               `${gatewayOriginSync()}/gateway/worktrees/central/restart`,
-              { method: "POST", signal: AbortSignal.timeout(30_000) },
+              { method: "POST", signal: awakeTimeoutSignal(30_000) },
             );
             if (resp.ok) {
               const gwNote = await probeGatewayHealth();

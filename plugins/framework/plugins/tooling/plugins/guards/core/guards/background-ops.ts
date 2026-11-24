@@ -10,7 +10,7 @@ import {
   CLI_NAME,
   CLI_NAME_PATTERN,
 } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
-import { isHandoffOp } from "@plugins/framework/plugins/cli/plugins/foreground-handoff/core";
+import { isForegroundOp } from "@plugins/framework/plugins/cli/plugins/call-handoff/core";
 
 /**
  * Subcommands that take a host slot and run for minutes. From
@@ -170,8 +170,8 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
  * `check` and `test` are usually short (p50 192 s / 35 s), so a forced
  * background run cost a turn end and a re-invocation for a result that was
  * often seconds away — and blocked every other command typed in the same call.
- * They run in the foreground instead: `foreground-deadline` exports the call's
- * deadline, and the op hands itself off before it (`cli/foreground-handoff`),
+ * They run in the foreground instead: `call-deadline` exports the call's
+ * deadline, and the op hands itself off before it (`cli/call-handoff`),
  * so the handle-less timeout cannot happen to them either. Only the ops that
  * cannot hand off are held to the background.
  *
@@ -257,7 +257,7 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
 
     // Foreground is fine for ops that hand off at the call's deadline; a chain
     // is held to the background by any op in it that cannot.
-    const pinned = ops.find((o) => !isHandoffOp(o));
+    const pinned = ops.find((o) => !isForegroundOp(o));
     if (pinned === undefined) {
       // A hand-off leaves the op running past this call, so the stop hook
       // must know whose it is, exactly as for a backgrounded one.

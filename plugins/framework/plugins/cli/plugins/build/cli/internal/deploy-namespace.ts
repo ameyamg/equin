@@ -59,6 +59,7 @@ import {
   type SettleObservation,
 } from "./stay-up";
 import { namedBackendCommand } from "./named-backend";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /**
  * Deploy ONE namespace into the live dev cluster: the per-target half of
@@ -168,7 +169,7 @@ async function getWorktreeState(
 ): Promise<{ state: string; lastSpawnErr: string } | null> {
   try {
     const resp = await fetch(`${gatewayOriginSync()}/gateway/worktrees`, {
-      signal: AbortSignal.timeout(5_000),
+      signal: awakeTimeoutSignal(5_000),
     });
     if (!resp.ok) return null;
     const entries = (await resp.json()) as Array<{
@@ -202,7 +203,7 @@ async function readHealthStartedAt(name: Namespace): Promise<number | null> {
       {},
       {
         origin: namespaceUrl(name, "", gatewayPortSync()),
-        signal: AbortSignal.timeout(5_000),
+        signal: awakeTimeoutSignal(5_000),
       },
     );
     return startedAt;
@@ -277,7 +278,7 @@ async function probeHealth(
         const { startedAt, boot } = await callEndpoint(
           getHealth,
           {},
-          { origin: site, signal: AbortSignal.timeout(5_000) },
+          { origin: site, signal: awakeTimeoutSignal(5_000) },
         );
         // Only a process started after the restart was requested is one this
         // deploy brought up — hot restart and cold start alike. The gateway
@@ -430,7 +431,7 @@ async function awaitSettled(
         const { startedAt, boot } = await callEndpoint(
           getHealth,
           {},
-          { origin: site, signal: AbortSignal.timeout(5_000) },
+          { origin: site, signal: awakeTimeoutSignal(5_000) },
         );
         obs = { kind: "answer", startedAt, boot };
       } catch (err) {
@@ -516,7 +517,7 @@ async function restartBackend(
       `${gatewayOriginSync()}/gateway/worktrees/${ns}/restart`,
       {
         method: "POST",
-        signal: AbortSignal.timeout(adaptiveTimeoutMs(30_000, 130_000)),
+        signal: awakeTimeoutSignal(adaptiveTimeoutMs(30_000, 130_000)),
       },
     );
     if (resp.ok) {

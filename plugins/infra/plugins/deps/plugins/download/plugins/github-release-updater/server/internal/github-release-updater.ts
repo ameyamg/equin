@@ -32,6 +32,7 @@ import {
   GITHUB_RELEASE_HOLDS,
   GITHUB_RELEASE_HOLDS_FILE,
 } from "@plugins/infra/plugins/deps/plugins/download/plugins/github-release-updater/core";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 const MINUTE = 60_000;
 
@@ -97,7 +98,7 @@ async function github(path: string): Promise<unknown> {
       "User-Agent": "equin-deps-github-release-updater",
       Accept: "application/vnd.github+json",
     },
-    signal: AbortSignal.timeout(MINUTE),
+    signal: awakeTimeoutSignal(MINUTE),
   });
   if (!res.ok) throw new Error(`GitHub ${url} answered ${res.status}`);
   return res.json();

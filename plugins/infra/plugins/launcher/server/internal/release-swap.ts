@@ -49,6 +49,7 @@ import {
 } from "./boot";
 import { LOOPBACK_BIND, type ListenAddress } from "./listen";
 import { handOverGateway } from "./gateway-handover";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** Which release a bundle is, from its `RELEASE.json`. */
 export interface ReleaseManifest {
@@ -383,7 +384,7 @@ export async function swapReleaseBackend(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ spec }),
-      signal: AbortSignal.timeout(SWAP_REQUEST_TIMEOUT_MS),
+      signal: awakeTimeoutSignal(SWAP_REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
     return {

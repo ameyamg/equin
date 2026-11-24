@@ -9,6 +9,7 @@
  * Design: research/2026-11-14-gateway-handover.md.
  */
 import { z } from "zod";
+import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** What a handover runs; an omitted field keeps the running gateway's. */
 export interface GatewayHandoverLaunch {
@@ -59,7 +60,7 @@ export async function handOverGateway(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(HANDOVER_TIMEOUT_MS),
+      signal: awakeTimeoutSignal(HANDOVER_TIMEOUT_MS),
     });
   } catch (err) {
     return {
@@ -107,7 +108,7 @@ export async function readGatewayGeneration(
   let res: Response;
   try {
     res = await fetch(`http://${dialAddress}/gateway/handover`, {
-      signal: AbortSignal.timeout(5_000),
+      signal: awakeTimeoutSignal(5_000),
     });
   } catch (err) {
     return {
