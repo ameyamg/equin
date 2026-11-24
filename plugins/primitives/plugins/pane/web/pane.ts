@@ -2642,6 +2642,17 @@ function computeModeOpen(
       sameOptions(options, caller.options)
     )
       return unchanged;
+    // The caller's children go with its old address — those right of it by
+    // truncation, and those reordered LEFT of it (hanging off it) here.
+    const prefix = currentRoute
+      .slice(0, callerIndex)
+      .filter(
+        (s, i) =>
+          !(registry.get(s.paneId)?.parentPaneIds ?? []).some(
+            (id) =>
+              anchorIndex(currentRoute, i, id, (r) => r.paneId) === callerIndex,
+          ),
+      );
     // A target chained under the caller's own pane (a folder column swapped to
     // another folder with a file previewed in it): the column becomes the
     // caller's pane at its new address plus the target under it, and the
@@ -2653,22 +2664,13 @@ function computeModeOpen(
       const from = chain.findIndex((s) => s.paneId === caller.paneId);
       if (from >= 0) {
         return to([
-          ...currentRoute.slice(0, callerIndex),
+          ...prefix,
           ...chain.slice(from),
           createSlot(target.id, ownParams, options, hint),
         ]);
       }
     }
-    return to(
-      relativeHead(
-        currentRoute.slice(0, callerIndex),
-        target,
-        params,
-        ownParams,
-        options,
-        hint,
-      ),
-    );
+    return to(relativeHead(prefix, target, params, ownParams, options, hint));
   }
 
   if (opts.side === "left") {

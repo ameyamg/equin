@@ -13,6 +13,7 @@ import {
   useSyncPaneRegistry,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
+import { computeOpen } from "../pane";
 import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -186,6 +187,30 @@ describe("a pane reordered left of the pane it hangs off", () => {
       PLAIN_GESTURE,
     );
     expect(ids()).toEqual(["other"]);
+  });
+});
+
+describe("swapping the ancestor a pane was reordered off", () => {
+  function swap(params: Record<string, string>) {
+    const target =
+      "open" in params ? previewPane._internal : folderPane._internal;
+    const route = store.getRoute();
+    const next = computeOpen(route, route[1]!.instanceId, target, params, {
+      mode: "swap",
+    });
+    if (next.changed) store.setRoute(next.route, next.replace);
+  }
+
+  it("to another folder drops the preview left of it", () => {
+    seedReordered();
+    swap({ dir: "b" });
+    expect(ids()).toEqual(["folder"]);
+  });
+
+  it("to another folder and file leaves one preview", () => {
+    seedReordered();
+    swap({ dir: "b", open: "y" });
+    expect(ids()).toEqual(["folder", "preview"]);
   });
 });
 
