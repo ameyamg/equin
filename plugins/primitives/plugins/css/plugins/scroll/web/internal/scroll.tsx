@@ -2,7 +2,11 @@ import {
   cn,
   SidewaysScrollProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useKeptScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import {
+  SCROLLER_ATTR,
+  useKeptScroll,
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import type { Transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useMemo, type Ref, type RefCallback } from "react";
 import type React from "react";
 import "./scroll.css";
@@ -98,8 +102,14 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
    * scrollers apart: a body that scrolls in a box of its own (a file preview, a
    * code listing) names it, so it is kept like the pane's own scroller.
    * Outside a scope it keeps nothing; unset keeps nothing.
+   *
+   * `transient("<why>")` says its offset is throwaway by design (a picker's
+   * list that opens at its top). Unset and filling most of its pane, a
+   * vertical scroller the user scrolls is filed by the dev loss detector
+   * (`kept-state/loss-detector`) as a `reload-loss`: a reload would open it
+   * at its top.
    */
-  keep?: string;
+  keep?: string | Transient;
 }
 
 /**
@@ -129,7 +139,7 @@ export function Scroll({
   ...rest
 }: ScrollProps) {
   const bleeds = bleed && axis === "x";
-  const kept = useKeptScroll(keep);
+  const kept = useKeptScroll(typeof keep === "string" ? keep : undefined);
   // Stable across renders: a new callback ref would detach and re-attach the
   // scroller on every render.
   const scrollRef = useMemo(() => bothRefs(kept, ref), [kept, ref]);
@@ -145,6 +155,11 @@ export function Scroll({
       // plugin's CSS keys the pinning of everything else on, and what the
       // table checks is the box actually clipping it.
       data-scroll-x-host={axis === "y" ? "" : undefined}
+      // What the dev loss detector judges: a vertical scroller, and the reason
+      // it is transient when it says so (auto-scroll's scroller marks).
+      {...(axis === "x"
+        ? {}
+        : { [SCROLLER_ATTR]: typeof keep === "object" ? keep.reason : "" })}
       // Bleed: the region and the bleeding scroller are keyed on in scroll.css.
       data-bleed-region={bleed && axis === "y" ? "" : undefined}
       data-bleed={bleeds ? "" : undefined}

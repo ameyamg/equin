@@ -58,7 +58,7 @@ function ConvReviewBody() {
               onChange={setSource}
               pushGroups="pending"
             />
-            <Scroll axis="both" fill>
+            <Scroll axis="both" fill keep="review">
               {body}
             </Scroll>
           </Stack>
@@ -76,7 +76,7 @@ function ConvReviewBody() {
               source={source}
               onChange={setSource}
             />
-            <Scroll axis="both" fill>
+            <Scroll axis="both" fill keep="review">
               {body}
             </Scroll>
           </Stack>

@@ -134,7 +134,7 @@ function SongsheetInner({ score }: SongsheetProps) {
     // `relative` is the positioning context for the corner-pinned HUD over the
     // scroll body.
     <div className="relative h-full w-full bg-background">
-      <Scroll axis="y" className="h-full">
+      <Scroll axis="y" keep="songsheet" className="h-full">
         <Inset pad="lg">
           <Stack gap="lg">
             {groups.map((group, gi) => (

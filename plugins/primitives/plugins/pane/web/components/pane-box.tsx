@@ -2,7 +2,8 @@ import type { CSSProperties, Ref } from "react";
 import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import type { PaneInternal } from "../pane";
+import { KeepScrollScope } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { usePaneInstanceKey, type PaneInternal } from "../pane";
 import { PaneResolveGuard } from "./pane-resolve-guard";
 
 /**
@@ -62,6 +63,11 @@ interface PaneBoxProps {
  * subtree carries. Same role the placement paints, so where scope and host agree
  * this is a no-op repaint.
  *
+ * It also opens the pane instance's scroll keep scope (auto-scroll's
+ * `KeepScrollScope`, keyed by tab, pane, address and views), so any scroller
+ * of the pane's body — `PaneScroll`, or a `<Scroll keep="…">` filling a body
+ * that never renders one — keeps its offset across a reload.
+ *
  * Layout renderers own where the box sits and how big it is (`className`,
  * `style`, `ref`); they do not own its identity. Bundling the stamping with the
  * render of the pane component itself is what keeps a new layout renderer from
@@ -81,7 +87,9 @@ export function PaneBox({ pane, params, className, style, ref }: PaneBoxProps) {
       style={style}
     >
       <PortalForwardProvider name="data-pane-id" value={pane.id}>
-        <PaneResolveGuard pane={pane} params={params} />
+        <KeepScrollScope scope={usePaneInstanceKey()}>
+          <PaneResolveGuard pane={pane} params={params} />
+        </KeepScrollScope>
       </PortalForwardProvider>
     </Theme>
   );

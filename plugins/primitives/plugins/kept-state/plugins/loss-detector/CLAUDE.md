@@ -77,6 +77,30 @@ named components above it, the state's index among the component's
 `data-ui-owner` (element-picker's build stamps — the file), and the value's
 **shape** (`string(15)`, `array(3)`, `object {a, b}`), never its content.
 
+## Scroll: `watchScrollLoss`
+
+Scroll lives only in the DOM, which the fiber walk cannot see — and a hidden
+tab's scrollers read 0 by the time it unmounts. So scroll is judged where it
+happens: one capture `scroll` listener on the document, and once a `<Scroll>`
+(`data-scroller`) settles (400 ms after its last scroll event),
+`judgeScroller` reports it when all of these hold:
+
+- it is away from its top (`scrollTop > 0`);
+- nothing keeps it: no `data-scroll-kept` mark (set by whatever keeps the
+  offset while it is attached — `useScrollAcrossReload`, so `PaneScroll` and
+  every `<Scroll keep="…">`, and a `useStickyScroll({ persist })`), and not
+  `keep={transient("<why>")}`;
+- it is not a follower (`useStickyScroll`) resting within 50 px of its bottom,
+  where a reload opens it anyway;
+- it is its pane's **main scroller**: inside a pane box (`data-pane-id`) and
+  at least half the pane's height. A capped list inside a card, a sidebar and
+  a popover are not judged.
+
+The marks are auto-scroll's (`scroller-marks.ts`, read with `scrollerKeep`),
+so the detector names no scroller. One report per place (the `<Scroll>`'s
+`data-ui-owner` stamp, else its element, else its pane) per page. Filed by
+`reports/reload-loss` as `origin: "scroll"`.
+
 ## Limits
 
 - A component the stamp cannot see is not judged: one with no PascalCase
@@ -86,8 +110,9 @@ named components above it, the state's index among the component's
   calls keeps its state in that component's fiber and is judged as the
   component's (it is state the component chose to hold).
 - Fiber internals are private React; every read is defensive (`internal/fiber.ts`).
-- State that lives only in the DOM (an uncontrolled input, scroll) is the
-  reload drill's to find; state that never reaches React (a module store) is
+- State that lives only in the DOM (an uncontrolled input) is the reload
+  drill's to find — scroll is `watchScrollLoss`'s, for a `<Scroll>` only (a
+  raw `overflow-auto` box is lint-banned); state that never reaches React (a module store) is
   neither net's.
 - A handler that commits twice synchronously (`flushSync` then more updates
   in the same listener) has its second commit read as a cascade.
@@ -106,16 +131,22 @@ named components above it, the state's index among the component's
 
 ## Plugin reference
 
-- Description: The dev unmount detector, the coverage net under kept-state: watchStateLoss(onLoss) follows every React commit through the page's commit bridge (each state hook's baseline — its value before the user touched it; a change no user input caused moves it) and, when a page-level place (an outermost KeepScope: a tab's app, the global action bar) unmounts without being closed, walks its fibers and reports each useState / useReducer the user changed that is neither kept (useKept / useDraft) nor marked useTransient("<why>") — state a remount, so a reload, throws away. reports/reload-loss files them.
+- Description: The dev unmount detector, the coverage net under kept-state: watchStateLoss(onLoss) follows every React commit through the page's commit bridge (each state hook's baseline — its value before the user touched it; a change no user input caused moves it) and, when a page-level place (an outermost KeepScope: a tab's app, the global action bar) unmounts without being closed, walks its fibers and reports each useState / useReducer the user changed that is neither kept (useKept / useDraft) nor marked useTransient("<why>") — state a remount, so a reload, throws away. watchScrollLoss(onLoss) is its twin for state that lives only in the DOM: once a <Scroll> the user scrolled settles, it reports a pane's main scroller (at least half the pane's height) away from its top that nothing keeps — no keep mark from useScrollAcrossReload / PaneScroll / a persisting useStickyScroll, not transient by its own say, not a follower at its bottom (auto-scroll's scroller marks). reports/reload-loss files both.
 - Web:
   - Uses:
+    - `primitives/dom/auto-scroll.SCROLLER_ATTR`
+    - `primitives/dom/auto-scroll.scrollerKeep`
     - `primitives/kept-state.KeepScopeUnmount`
     - `primitives/kept-state.onKeepScopeUnmount`
     - `primitives/kept-state.StateMark`
     - `primitives/kept-state.stateMarkOf`
     - `primitives/overlay/popup-open.anyPopupOpen`
-  - Exports (types): `StateLoss`
-  - Exports (values): `watchStateLoss`
+  - Exports (types):
+    - `ScrollLoss`
+    - `StateLoss`
+  - Exports (values):
+    - `watchScrollLoss`
+    - `watchStateLoss`
 - Cross-plugin:
   - Imported by: `reports/reload-loss`
 

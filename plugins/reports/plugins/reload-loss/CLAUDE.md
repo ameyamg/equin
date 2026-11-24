@@ -11,9 +11,14 @@ away** — the coverage nets of kept-state
   audience is **developer** (Developer mode) — it follows every React commit,
   which only a developer dogfooding the app should pay for — and files one
   `report({ kind: "reload-loss", source: "client-reload-loss" })` per loss.
+- `origin: "scroll"` — the same plugin's scroll watch (`watchScrollLoss`),
+  run by the same controller: a pane's main `<Scroll>` the user scrolled that
+  nothing keeps across a reload. Scroll lives only in the DOM, which the
+  unmount detector cannot see.
 
 Fingerprint: origin + component + state index + source line — one piece of
-state in one component is one defect. The bell re-arms daily (the same state
+state in one component is one defect; for a scroller, origin + the owner
+stamp of the `<Scroll>` + its element. The bell re-arms daily (the same state
 is lost on every unload of its tab). The task says how to fix it: classify the
 state (kept work, kept view, or `useTransient("<why>")`).
 
@@ -21,7 +26,7 @@ state (kept work, kept view, or `useTransient("<why>")`).
 
 ## Plugin reference
 
-- Description: Reload-loss collector: for a developer (Developer mode on), a Core.Root controller runs kept-state's dev unmount detector (watchStateLoss) and files each piece of React state a remount throws away — a page-level place unmounting with useState / useReducer the user changed that is neither kept nor useTransient — as a deduped reload-loss report, plus the Debug → Reports summary view. Reload-loss report kind: validates the payload of a piece of React state a remount threw away (component, which state hook, the first element it renders, the value's shape), fingerprints by origin + component + state index + source line, and renders a task saying how to classify it (kept work, kept view, or useTransient). Re-arms daily.
+- Description: Reload-loss collector: for a developer (Developer mode on), a Core.Root controller runs kept-state's dev unmount detector (watchStateLoss) and files each piece of React state a remount throws away — a page-level place unmounting with useState / useReducer the user changed that is neither kept nor useTransient — as a deduped reload-loss report, and with its scroll watch (watchScrollLoss) each pane's main <Scroll> the user scrolled that nothing keeps (origin scroll), plus the Debug → Reports summary view. Reload-loss report kind: validates the payload of a piece of React state a remount threw away (component, which state hook, the first element it renders, the value's shape) or of a pane's main scroller nothing keeps (owner stamp, element, offset), fingerprints by origin + component + state index + source line (or origin + owner stamp + element), and renders a task saying how to classify it (kept work, kept view, or useTransient). Re-arms daily.
 - Web:
   - Contributes:
     - `Core.Root` → `ReloadLossController`
@@ -30,6 +35,7 @@ state (kept work, kept view, or `useTransient("<why>")`).
     - `audience.useAudience`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/kept-state/loss-detector.watchScrollLoss`
     - `primitives/kept-state/loss-detector.watchStateLoss`
     - `reports.report`
     - `reports.Reports`

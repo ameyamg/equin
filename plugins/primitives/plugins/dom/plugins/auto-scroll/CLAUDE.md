@@ -200,14 +200,23 @@ a full-height box (the content scope is `h-full`), so the scroller's children
 never change size as the page loads. The subtree observer exists only while a
 restore is pending, and is disconnected the moment it lands or the reader acts.
 
-**Every scroller of a pane, not only its body.** `PaneScroll` opens a
-`KeepScrollScope` keyed by its pane instance and keeps itself under the name
-`pane`. A body that fills the pane (`h-full`) and scrolls in a box of its own —
+**Every scroller of a pane, not only its body.** The pane box (`PaneBox`)
+opens a `KeepScrollScope` keyed by its pane instance, and `PaneScroll` keeps
+itself under the name `pane`. A body that fills the pane (`h-full`) and scrolls in a box of its own —
 a file preview, a code listing — leaves the pane's scroller at 0, so that box
 names itself (`<Scroll keep="file-preview">`, `useKeptScroll`) and is kept under
 `<scope>#<name>`. The names keep the scope's entries apart: a pane scroller at
-0 removes its OWN entry, never the inner one's. Two live scrollers of one scope
-must not share a name.
+0 removes its OWN entry, never the inner one's. Two live scrollers keeping
+under one key throw at the second's attach (`claimKeptKey`): they would
+overwrite each other's entry.
+
+**Each scroller says how its offset fares, as DOM marks** (`scroller-marks.ts`,
+read with `scrollerKeep`): `<Scroll>` stamps `data-scroller` (vertical only;
+its value is the reason when `keep={transient("<why>")}`), whatever keeps an
+offset stamps `data-scroll-kept` while it is attached (this hook, and a
+persisting `useStickyScroll`), and a follower stamps `data-scroll-follows`.
+The dev loss detector's scroll watch (`kept-state/loss-detector`) reads them
+to file a pane's main scroller the user scrolled that nothing keeps.
 
 **Only across documents.** Each entry is stamped with the document that wrote
 it: an entry from THIS document is an in-app revisit, which opens at the top the
@@ -270,7 +279,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, or useKeptScroll(name) — keyed by the enclosing KeepScrollScope, the pane instance — put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, or useKeptScroll(name) — keyed by the enclosing KeepScrollScope, the pane instance — put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), each scroller's keep as DOM marks the dev loss detector reads (scrollerKeep: kept by whatever keeps its offset, transient, a follower, or unkept — and two live scrollers keeping under one key throw), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
 - Web:
   - Contributes: `Core.Root` → `BrowserHoldRelease`
   - Uses:
@@ -297,6 +306,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `KeepScrollAcrossProps`
     - `ScrollAlign`
     - `ScrollChildIntoViewOptions`
+    - `ScrollerKeep`
     - `ScrollToBottomOptions`
     - `StickyScrollHandle`
     - `StickyScrollPersist`
@@ -314,6 +324,8 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `KeepScrollScope`
     - `restoreScrollOffset`
     - `scrollChildIntoView`
+    - `SCROLLER_ATTR`
+    - `scrollerKeep`
     - `ScrollRevival`
     - `scrollToBottom`
     - `scrollToTop`
@@ -325,9 +337,9 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×9
     - `apps` ×8
-    - `primitives` ×8
     - `conversations` ×4
     - `apps-core/tab-surface`
     - `layouts/miller`

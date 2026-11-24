@@ -8,7 +8,7 @@ import {
 
 export default {
   description:
-    "Reload-loss report kind: validates the payload of a piece of React state a remount threw away (component, which state hook, the first element it renders, the value's shape), fingerprints by origin + component + state index + source line, and renders a task saying how to classify it (kept work, kept view, or useTransient). Re-arms daily.",
+    "Reload-loss report kind: validates the payload of a piece of React state a remount threw away (component, which state hook, the first element it renders, the value's shape) or of a pane's main scroller nothing keeps (owner stamp, element, offset), fingerprints by origin + component + state index + source line (or origin + owner stamp + element), and renders a task saying how to classify it (kept work, kept view, or useTransient). Re-arms daily.",
   contributions: [
     ReportKind({
       kind: "reload-loss",

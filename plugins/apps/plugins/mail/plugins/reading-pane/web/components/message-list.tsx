@@ -38,7 +38,7 @@ export function MessageList({ newestFirst, older }: MessageListProps) {
 
   const lastIndex = messages.length - 1;
   return (
-    <Scroll axis="y" fill>
+    <Scroll axis="y" fill keep="thread">
       <Inset pad="md">
         <Stack gap="sm">
           {older.canGrow || older.growing ? (

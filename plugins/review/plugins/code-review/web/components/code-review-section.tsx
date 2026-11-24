@@ -361,7 +361,7 @@ function ToolbarRow({
 
 function Body({ children }: { children: React.ReactNode }) {
   return (
-    <Scroll axis="both" fill isolate>
+    <Scroll axis="both" fill isolate keep="code-review">
       {children}
     </Scroll>
   );

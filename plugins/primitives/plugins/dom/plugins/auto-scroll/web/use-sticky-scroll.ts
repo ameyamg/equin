@@ -23,6 +23,7 @@ import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto
 import { findViewAnchor } from "./internal/view-anchor";
 import { claimBottomPin, releaseBottomPin } from "./internal/bottom-pin";
 import { listenForNavigation } from "./announce-navigation";
+import { markFollows, markKept } from "./scroller-marks";
 import {
   distanceToBottom,
   resolveRestore,
@@ -359,6 +360,23 @@ export function useStickyScroll(
     // keys on the route params), which is what makes a `resetKey` option
     // unnecessary.
   }, [sentinelEl, writeToBottom, persistRef, applyAnchoring, positions]);
+
+  // ---- marks: a follower, kept when it persists ---------------------------
+  // What the dev loss detector reads (`scroller-marks.ts`): a follower at its
+  // bottom opens there after a reload anyway; a persisting one keeps the row
+  // being read.
+  const persistKey = persist?.key;
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !sentinelEl) return;
+    const unfollow = markFollows(el);
+    const unkeep =
+      persistKey === undefined ? null : markKept(el, `sticky:${persistKey}`);
+    return () => {
+      unfollow();
+      unkeep?.();
+    };
+  }, [sentinelEl, persistKey]);
 
   // ---- the sensor ----------------------------------------------------------
   // The getter carries the "no scroll container, no sensor" guard the effect used

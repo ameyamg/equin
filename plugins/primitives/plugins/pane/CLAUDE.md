@@ -517,8 +517,11 @@ body root:
 - Custom viewport (terminal, canvas) → root `h-full` (`overflow-hidden` OK).
   A custom viewport that scrolls (`<Scroll className="h-full">` filling the
   body) must name itself — `<Scroll keep="<name>">` — or a reload opens it at
-  its top: only `PaneScroll` (and what names itself in its keep scope) is
-  kept across a reload.
+  its top: only `PaneScroll` and what names itself in the pane's keep scope
+  (opened by `PaneBox`, so a body with no `PaneScroll` has one too) are kept
+  across a reload. For a developer, the dev loss detector files a main
+  scroller that does neither as a `reload-loss`; one whose offset is
+  throwaway by design says `keep={transient("<why>")}`.
 
 It forwards `ref` and `Scroll`'s props (`hideScrollbar`, `isolate`, `as`,
 `className`).

@@ -52943,6 +52943,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SidewaysScrollProvider`
+              - `primitives/dom/auto-scroll.SCROLLER_ATTR`
               - `primitives/dom/auto-scroll.useKeptScroll`
             - Exports (types):
               - `ScrollAxis`
@@ -55257,7 +55258,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `AudioContextError`
               - `openAudioContext`
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, or useKeptScroll(name) — keyed by the enclosing KeepScrollScope, the pane instance — put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, or useKeptScroll(name) — keyed by the enclosing KeepScrollScope, the pane instance — put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), each scroller's keep as DOM marks the dev loss detector reads (scrollerKeep: kept by whatever keeps its offset, transient, a follower, or unkept — and two live scrollers keeping under one key throw), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
           - Web:
             - Contributes: `Core.Root` → `BrowserHoldRelease`
             - Uses:
@@ -55284,6 +55285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `KeepScrollAcrossProps`
               - `ScrollAlign`
               - `ScrollChildIntoViewOptions`
+              - `ScrollerKeep`
               - `ScrollToBottomOptions`
               - `StickyScrollHandle`
               - `StickyScrollPersist`
@@ -55301,6 +55303,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `KeepScrollScope`
               - `restoreScrollOffset`
               - `scrollChildIntoView`
+              - `SCROLLER_ATTR`
+              - `scrollerKeep`
               - `ScrollRevival`
               - `scrollToBottom`
               - `scrollToTop`
@@ -55312,9 +55316,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+              - `primitives` ×9
               - `apps` ×8
-              - `primitives` ×8
               - `conversations` ×4
               - `apps-core/tab-surface`
               - `layouts/miller`
@@ -56670,16 +56674,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveTextKeep`
           - `transient`
       - Plugins:
-        - **`loss-detector`** — The dev unmount detector, the coverage net under kept-state: watchStateLoss(onLoss) follows every React commit through the page's commit bridge (each state hook's baseline — its value before the user touched it; a change no user input caused moves it) and, when a page-level place (an outermost KeepScope: a tab's app, the global action bar) unmounts without being closed, walks its fibers and reports each useState / useReducer the user changed that is neither kept (useKept / useDraft) nor marked useTransient("<why>") — state a remount, so a reload, throws away. reports/reload-loss files them.
+        - **`loss-detector`** — The dev unmount detector, the coverage net under kept-state: watchStateLoss(onLoss) follows every React commit through the page's commit bridge (each state hook's baseline — its value before the user touched it; a change no user input caused moves it) and, when a page-level place (an outermost KeepScope: a tab's app, the global action bar) unmounts without being closed, walks its fibers and reports each useState / useReducer the user changed that is neither kept (useKept / useDraft) nor marked useTransient("<why>") — state a remount, so a reload, throws away. watchScrollLoss(onLoss) is its twin for state that lives only in the DOM: once a <Scroll> the user scrolled settles, it reports a pane's main scroller (at least half the pane's height) away from its top that nothing keeps — no keep mark from useScrollAcrossReload / PaneScroll / a persisting useStickyScroll, not transient by its own say, not a follower at its bottom (auto-scroll's scroller marks). reports/reload-loss files both.
           - Web:
             - Uses:
+              - `primitives/dom/auto-scroll.SCROLLER_ATTR`
+              - `primitives/dom/auto-scroll.scrollerKeep`
               - `primitives/kept-state.KeepScopeUnmount`
               - `primitives/kept-state.onKeepScopeUnmount`
               - `primitives/kept-state.StateMark`
               - `primitives/kept-state.stateMarkOf`
               - `primitives/overlay/popup-open.anyPopupOpen`
-            - Exports (types): `StateLoss`
-            - Exports (values): `watchStateLoss`
+            - Exports (types):
+              - `ScrollLoss`
+              - `StateLoss`
+            - Exports (values):
+              - `watchScrollLoss`
+              - `watchStateLoss`
           - Cross-plugin:
             - Imported by: `reports/reload-loss`
     - **`keyset`** — Field-agnostic keyset pagination machinery: a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL, over keys the caller builds from declared columns. No data-view dependency, so any server-delegated windowed query can reuse it.
@@ -62137,7 +62147,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `popoverAnchorLostFingerprint`
           - `PopoverAnchorLostPayloadSchema`
-    - **`reload-loss`** — Reload-loss collector: for a developer (Developer mode on), a Core.Root controller runs kept-state's dev unmount detector (watchStateLoss) and files each piece of React state a remount throws away — a page-level place unmounting with useState / useReducer the user changed that is neither kept nor useTransient — as a deduped reload-loss report, plus the Debug → Reports summary view. Reload-loss report kind: validates the payload of a piece of React state a remount threw away (component, which state hook, the first element it renders, the value's shape), fingerprints by origin + component + state index + source line, and renders a task saying how to classify it (kept work, kept view, or useTransient). Re-arms daily.
+    - **`reload-loss`** — Reload-loss collector: for a developer (Developer mode on), a Core.Root controller runs kept-state's dev unmount detector (watchStateLoss) and files each piece of React state a remount throws away — a page-level place unmounting with useState / useReducer the user changed that is neither kept nor useTransient — as a deduped reload-loss report, and with its scroll watch (watchScrollLoss) each pane's main <Scroll> the user scrolled that nothing keeps (origin scroll), plus the Debug → Reports summary view. Reload-loss report kind: validates the payload of a piece of React state a remount threw away (component, which state hook, the first element it renders, the value's shape) or of a pane's main scroller nothing keeps (owner stamp, element, offset), fingerprints by origin + component + state index + source line (or origin + owner stamp + element), and renders a task saying how to classify it (kept work, kept view, or useTransient). Re-arms daily.
       - Web:
         - Contributes:
           - `Core.Root` → `ReloadLossController`
@@ -62146,6 +62156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `audience.useAudience`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/kept-state/loss-detector.watchScrollLoss`
           - `primitives/kept-state/loss-detector.watchStateLoss`
           - `reports.report`
           - `reports.Reports`

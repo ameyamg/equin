@@ -71,6 +71,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SidewaysScrollProvider`
+    - `primitives/dom/auto-scroll.SCROLLER_ATTR`
     - `primitives/dom/auto-scroll.useKeptScroll`
   - Exports (types):
     - `ScrollAxis`

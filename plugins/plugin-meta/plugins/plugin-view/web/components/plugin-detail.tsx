@@ -32,7 +32,7 @@ export function PluginDetail({ node, plugins }: PluginDetailProps) {
   }
 
   return (
-    <Scroll className="h-full">
+    <Scroll keep="plugin" className="h-full">
       <div className="mx-auto max-w-3xl">
         <Stack as="header" gap="md" className="px-xl pt-xl">
           <Text as="div" variant="title" className="tracking-tight">

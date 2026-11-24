@@ -7,6 +7,7 @@ import {
 import { listenForNavigation } from "./announce-navigation";
 import { useScrollRevival } from "./scroll-revival";
 import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
+import { claimKeptKey, markKept } from "./scroller-marks";
 
 /**
  * This document. An offset saved under another one was saved before a reload
@@ -74,6 +75,9 @@ export function useScrollAcrossReload(
 
   useLayoutEffect(() => {
     if (!el || key === undefined) return;
+    // Throws when another live scroller keeps under this key (see claimKeptKey).
+    const release = claimKeptKey(el, key);
+    const unmark = markKept(el, key);
     const saved = store.read(key);
     let target =
       saved.kind === "value" &&
@@ -157,6 +161,8 @@ export function useScrollAcrossReload(
     window.addEventListener("pagehide", flush);
     return () => {
       flush();
+      unmark();
+      release();
       stopRestoring();
       unlisten();
       el.removeEventListener("scroll", onScroll);
