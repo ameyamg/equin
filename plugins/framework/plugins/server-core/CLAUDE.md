@@ -271,7 +271,9 @@ and fails at once with `SchemaNotReadyError` when none is (a supervised child
 exits `SUPERVISED_EXIT_SCHEMA_NOT_READY`). While it waits it gives its host
 admission back: the verifier role carries `yieldAdmission`, over the
 `ExecAdmission` its entry declared (`runExec`'s `admission`, a supervised
-child's `--admit` slot). Why: until 2026-11-15 every child (~800 a
+child's `--admit` slot). Several hooks may wait at once (the schema check and
+config_v2's wait for its generation): the first gives the slot back, the last
+to succeed takes it again. Why: until 2026-11-15 every child (~800 a
 day on main) ran the whole layer under the schema-layer advisory lock — main's
 own boot waited 0.2–0.6 s behind any child mid-boot, and a child booted in a
 deploy window applied the push's migration itself under the old backend

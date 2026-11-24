@@ -8,7 +8,10 @@ import {
 import { fileConfigStore } from "./internal/file-store";
 import { repoConfigLayer } from "./internal/repo-layer";
 import { configRawFileServed } from "./internal/raw-file";
-import { thisGeneration } from "./internal/this-generation";
+import {
+  generationArrivalWatcher,
+  thisGeneration,
+} from "./internal/this-generation";
 
 export { configGenerationDir } from "./internal/config-dir";
 
@@ -20,7 +23,7 @@ export default {
     ConfigGitLayer.provide(repoConfigLayer),
     ...configRawFileServed.declare,
   ],
-  register: [configFilesWatcher],
+  register: [configFilesWatcher, generationArrivalWatcher],
   async onReady() {
     // Ready is when the gateway swaps this backend in: from here this code's
     // config generation is the one served — HEAD moves to it (when this boot

@@ -33,6 +33,7 @@ awake timer or `sleptDuring`: the table in `packages/sleep-clock/CLAUDE.md`.
 - Description: The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it. ClockStamp is branded, so an object literal is not one: clockStamp(wallMs, sleep) names two halves read together (a decoded record), unstampedInstant(wallMs) an instant with no sleep reading.
 - Cross-plugin:
   - Imported by:
+    - `config_v2`
     - `conversations`
     - `conversations/launch-timeline`
     - `conversations/runtime-sdk`

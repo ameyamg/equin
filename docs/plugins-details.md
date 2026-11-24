@@ -17381,7 +17381,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Machine:
     - Uses: `network/live.serveValue`
     - Exports (values): `configGenerationDir`
-    - Register: `defineFileWatcher('config_v2.config-files')`
+    - Register:
+      - `defineFileWatcher('config_v2.config-files')`
+      - `defineFileWatcher('config_v2.generation-arrival')`
   - Core:
     - Uses:
       - `fields.fieldDefaults`
@@ -17461,7 +17463,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `committedDocument`
       - `committedFilesFromMap`
       - `computeHash`
+      - `CONFIG_GENERATION_LEASE_FILE`
       - `CONFIG_GENERATION_LOCK_FILE`
+      - `CONFIG_GENERATION_LOCK_HOLDER_FILE`
       - `CONFIG_GENERATION_RETIRED_FILE`
       - `CONFIG_GENERATION_ROOT_ENTRIES`
       - `CONFIG_GENS_DIR`
@@ -25294,7 +25298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 185 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 186 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×50
       - `conversations` ×22
       - `tasks` ×21
@@ -25313,6 +25317,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `integrations` ×2
       - `reports` ×2
       - `code-explorer`
+      - `config_v2`
       - `hints`
       - `history/engine`
       - `release`
@@ -45412,7 +45417,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 63 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×15
           - `debug` ×12
           - `framework` ×11
@@ -45424,6 +45429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×2
           - `auth`
           - `build`
+          - `config_v2`
           - `installer/waits`
           - `shell/notifications`
       - Core:
@@ -45809,13 +45815,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by: `debug/heap-snapshot` (0 debt)
     - **`process-alive`** — Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown, a non-pid refused; isProcessGroupAlive(pgid) the same for kill(-pgid, 0) — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
           - `infra` ×13
           - `framework` ×9
           - `conversations` ×2
           - `debug` ×2
           - `packages` ×2
           - `apps/browser/engine`
+          - `config_v2`
           - `installer`
       - Exemptions:
         - Exempts itself from: `process-alive/no-signal-zero-probe` — `core/internal/process-alive.ts` (sanctioned)
@@ -46051,6 +46058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `auth`
+          - `config_v2`
           - `conversations`
           - `conversations/runtime-sdk`
           - `conversations/workspace/worktree`
@@ -46103,6 +46111,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it. ClockStamp is branded, so an object literal is not one: clockStamp(wallMs, sleep) names two halves read together (a decoded record), unstampedInstant(wallMs) an instant with no sleep reading.
           - Cross-plugin:
             - Imported by:
+              - `config_v2`
               - `conversations`
               - `conversations/launch-timeline`
               - `conversations/runtime-sdk`
@@ -46142,6 +46151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SleepStampSchema`
               - Cross-plugin:
                 - Imported by:
+                  - `config_v2`
                   - `conversations/launch-timeline`
                   - `conversations/runtime-sdk`
     - **`smooth-clock`** — Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.

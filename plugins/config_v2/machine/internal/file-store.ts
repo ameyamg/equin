@@ -27,7 +27,7 @@ import { configGenerationDir } from "./config-dir";
 import { configFilesWatcherArmed, watchFileChange } from "./config-watcher";
 import { configLedgerDocument, configLedgerKey } from "./config-ledger-key";
 import { readConfigFile, writeConfigFile, writeRawAtomic } from "./jsonc-proxy";
-import { thisGeneration } from "./this-generation";
+import { generationOpener, thisGeneration } from "./this-generation";
 
 /** Where a user-layer file lives on this machine. */
 export function userFilePath(ref: ConfigFileRef): AppPath {
@@ -134,8 +134,10 @@ async function fileStamp(path: AppPath): Promise<string> {
  * agent-origin write ledgered.
  */
 export const fileConfigStore: ConfigStoreImpl = {
-  // This code's config generation: derived here when it is new (serve mode).
-  open: async (configs) => (await thisGeneration()).open(configs),
+  // This code's config generation: derived here when it is new (the serving
+  // backend), waited for by an `exec` child.
+  open: async (configs, schema) =>
+    (await thisGeneration()).open(configs, generationOpener(schema)),
   read: (ref) => readConfigFile(userFilePath(ref), ref.file),
   write: (ref, content, hash) =>
     writeConfigFile(userFilePath(ref), content, hash),

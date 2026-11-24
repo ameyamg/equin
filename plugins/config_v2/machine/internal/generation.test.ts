@@ -22,9 +22,13 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
+  ConfigGenerationLockTimeout,
   ConfigGenerationMissing,
   ConfigGenerationRetired,
   configGenerations,
+  type ConfigGenerations,
+  type DeriversSettled,
+  type GenerationOpener,
 } from "./generation";
 
 let ns: AppPath;
@@ -41,9 +45,54 @@ beforeEach(() => {
   logged = [];
 });
 
+/** Every generation view a test opened: their leases let go after it. */
+let opened: ConfigGenerations[] = [];
+
 afterEach(() => {
+  for (const g of opened) g.close();
+  opened = [];
   rmSync(dirname(ns), { recursive: true, force: true });
 });
+
+/** The serving backend's opener. */
+const DERIVER: GenerationOpener = { kind: "deriver" };
+
+/** The watch a reader opened on the generations dir: fire it by hand. */
+let heard: (() => void) | null = null;
+
+/**
+ * An `exec` child's opener: `settled` answers its wait for the derivers in
+ * flight (never, when absent — the wait then ends on its bound or on the
+ * watch, `heard`); `events` records the admission given back and taken again.
+ */
+function reader(
+  settled: (() => Promise<DeriversSettled>) | null,
+  events: string[] = [],
+): GenerationOpener {
+  return {
+    watchDir: async (_dir, onChange) => {
+      heard = onChange;
+      return {
+        stop: async () => {
+          heard = null;
+        },
+      };
+    },
+    kind: "reader",
+    awaitDerivers: (signal) =>
+      settled !== null
+        ? settled()
+        : new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason));
+          }),
+    yieldWhileWaiting: async (wait) => {
+      events.push("yield");
+      const out = await wait();
+      events.push("back");
+      return out;
+    },
+  };
+}
 
 const text = (content: JsonValue, hash: string) =>
   `// @hash ${hash}\n${JSON.stringify(content, null, 2)}\n`;
@@ -70,15 +119,28 @@ function commit(content: JsonValue): string {
   return hash;
 }
 
-function generations(generation: string, derives = true) {
-  return configGenerations({
+/**
+ * One process's view of generation `generation`; `open` derives by default
+ * (the serving backend's), or opens as `opener` says.
+ */
+function generations(
+  generation: string,
+  opts: { lockWaitMs?: number; deriveWaitMs?: number } = {},
+) {
+  const g = configGenerations({
     namespaceDir: ns,
     generation,
-    derives: () => derives,
     readCommitted: async () => committedFilesFromMap(new Map(committed)),
     moves: [],
     log: (line) => logged.push(line),
+    ...opts,
   });
+  opened.push(g);
+  return {
+    ...g,
+    open: (configs: RegisteredConfig[], opener: GenerationOpener = DERIVER) =>
+      g.open(configs, opener),
+  };
 }
 
 const config = (migrations: ConfigDescriptor["migrations"] = []) =>
@@ -300,6 +362,8 @@ describe("config generations", () => {
     // so it is derived again. Then two newer generations apply a migration
     // g3's code does not know, and g3 is collected under them: g3's code
     // coming back can neither derive nor reuse — its boot fails loudly.
+    // g2's backend has exited (its lease let go): collected under g3.
+    g2.close();
     const g3 = generations("g3");
     await g3.open(migrated);
     await g3.promote();
@@ -307,6 +371,7 @@ describe("config generations", () => {
     const newer = config([
       defineConfigMigration({ id: "only-in-g4", apply: (doc) => doc }),
     ]);
+    g3.close();
     for (const g of ["g4", "g5"]) {
       const next = generations(g);
       await next.open(newer);
@@ -318,9 +383,176 @@ describe("config generations", () => {
     );
   });
 
-  test("a process that does not derive requires its generation on disk", async () => {
-    expect(generations("g1", false).open(config())).rejects.toThrow(
-      ConfigGenerationMissing,
+  test("a generation a running process still reads is kept until it lets go", async () => {
+    commit({ n: 1 });
+    const g1 = generations("g1");
+    await g1.open(config());
+    await g1.promote();
+    // An `exec` child of g1's backend, still running.
+    const child = generations("g1");
+    await child.open(config(), reader(null));
+    g1.close();
+    for (const [g, n] of [
+      ["g2", 2],
+      ["g3", 3],
+    ] as const) {
+      commit({ n });
+      const next = generations(g);
+      await next.open(config());
+      await next.promote();
+    }
+    // g3 replaced g2; g1 is neither, but its child holds its lease.
+    expect(existsSync(join(child.dir, "a/b/config.origin.jsonc"))).toBe(true);
+    expect(logged.some((l) => l.includes("kept g1"))).toBe(true);
+
+    child.close();
+    commit({ n: 4 });
+    const g4 = generations("g4");
+    await g4.open(config());
+    await g4.promote();
+    expect(existsSync(join(ns, "gens", "g1"))).toBe(false);
+  });
+
+  test("a child waits for its generation while a deploy is in flight, its admission given back", async () => {
+    commit({ n: 1 });
+    const g1 = generations("g1");
+    await g1.open(config());
+    await g1.promote();
+
+    // The checkout advanced to g2; its backend boots while the child waits.
+    commit({ n: 2 });
+    const events: string[] = [];
+    const child = generations("g2");
+    await child.open(
+      config(),
+      reader(async () => {
+        const g2 = generations("g2");
+        await g2.open(config());
+        await g2.promote();
+        return { kind: "settled", waitedOn: ["main's deploy"] };
+      }, events),
     );
+    expect(events).toEqual(["yield", "back"]);
+    expect(get(child.dir, "a/b/config.origin.jsonc").content).toEqual({ n: 2 });
+  });
+
+  test("a child wakes the moment its generation is renamed into place", async () => {
+    commit({ n: 1 });
+    const child = generations("g1");
+    const opening = child.open(config(), reader(null));
+    await Bun.sleep(20);
+    const g1 = generations("g1");
+    await g1.open(config());
+    heard!();
+    await opening;
+    expect(get(child.dir, "a/b/config.origin.jsonc").content).toEqual({ n: 1 });
+    await g1.promote();
+  });
+
+  test("a generation derived again over one still read keeps its readers' leases", async () => {
+    commit({ n: 1 });
+    const g1 = generations("g1");
+    await g1.open(config());
+    await g1.promote();
+    // A child of g1's backend, still draining.
+    const child = generations("g1");
+    await child.open(config(), reader(null));
+    g1.close();
+    commit({ n: 2 });
+    const g2 = generations("g2");
+    await g2.open(config());
+    await g2.promote();
+    // A reverted config change: g1's code again, derived again from g2,
+    // replacing gens/g1 under the child.
+    commit({ n: 1 });
+    const back = generations("g1");
+    await back.open(config());
+    await back.promote();
+    back.close();
+    expect(existsSync(join(ns, "gens", "g1", ".lease"))).toBe(true);
+    for (const [g, n] of [
+      ["g3", 3],
+      ["g4", 4],
+    ] as const) {
+      commit({ n });
+      const next = generations(g);
+      await next.open(config());
+      await next.promote();
+      next.close();
+    }
+    // Neither HEAD nor the one it replaced, but the child's lease (carried
+    // over by the swap) still holds it.
+    expect(existsSync(join(ns, "gens", "g1"))).toBe(true);
+    child.close();
+    commit({ n: 5 });
+    const g5 = generations("g5");
+    await g5.open(config());
+    await g5.promote();
+    expect(existsSync(join(ns, "gens", "g1"))).toBe(false);
+  });
+
+  test("a child whose generation nothing is deriving fails at once, saying so", async () => {
+    commit({ n: 1 });
+    expect(
+      generations("g1").open(
+        config(),
+        reader(async () => ({ kind: "settled", waitedOn: [] })),
+      ),
+    ).rejects.toThrow(
+      /no build, deploy or backend boot .* run `\.\/equin build`/,
+    );
+  });
+
+  test("a child that waited for a deploy which built other code fails, naming it", async () => {
+    commit({ n: 1 });
+    expect(
+      generations("g1").open(
+        config(),
+        reader(async () => ({ kind: "settled", waitedOn: ["main's deploy"] })),
+      ),
+    ).rejects.toThrow(/main's deploy ended without deriving it/);
+  });
+
+  test("a child's wait for its generation is bounded", async () => {
+    commit({ n: 1 });
+    let err: unknown = null;
+    try {
+      await generations("g1", { deriveWaitMs: 50 }).open(
+        config(),
+        reader(null),
+      );
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(ConfigGenerationMissing);
+    expect(String(err)).toContain("did not derive it");
+  });
+
+  test("a write waiting on a backend that derived and never promoted gives up, naming it", async () => {
+    commit({ n: 1 });
+    const g1 = generations("g1", { lockWaitMs: 200 });
+    await g1.open(config());
+    await g1.promote();
+
+    commit({ n: 2 });
+    const g2 = generations("g2");
+    await g2.open(config());
+    // g2's backend is ready and wedged: it never promotes.
+    let ran = false;
+    let err: unknown = null;
+    try {
+      await g1.withWrite(async () => {
+        ran = true;
+      });
+    } catch (e) {
+      err = e;
+    }
+    expect(ran).toBe(false);
+    expect(err).toBeInstanceOf(ConfigGenerationLockTimeout);
+    expect(String(err)).toContain(`pid ${String(process.pid)} (alive)`);
+    expect(String(err)).toContain(
+      "the backend that derived generation g2 and has not promoted it",
+    );
+    await g2.promote();
   });
 });

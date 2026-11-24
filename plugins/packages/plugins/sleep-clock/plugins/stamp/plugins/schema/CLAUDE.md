@@ -24,6 +24,7 @@ exists and so may not import zod (`cli:bootstrap-package-free`).
     - `SleepStampSchema`
 - Cross-plugin:
   - Imported by:
+    - `config_v2`
     - `conversations/launch-timeline`
     - `conversations/runtime-sdk`
 

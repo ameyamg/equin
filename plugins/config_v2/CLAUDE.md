@@ -124,17 +124,22 @@ This is the base-override workflow (Layer 1) one path segment deeper. Any regist
 A deploy used to rewrite the user layer (plugin moves, migrations, propagation) **before** the new backend served, so the backend still serving read new-shape files (a migrated shape failed its old schema → invalid banner, defaults), and a failed deploy reverted the web bundle but never the config. Now each config-relevant code version has its own generation, and only the process running that code writes it (`machine/internal/generation.ts`, layout in `core/internal/generation-layout.ts`):
 
 ```
-<ns>/HEAD                { generation, history } — the generation served
-<ns>/.generation.lock    flock: derive → promote, and a write to HEAD's generation
-<ns>/gens/<id>/…         one whole user layer (origins, overrides, ancestors, merge records, applied-ledger markers)
-<ns>/gens/<id>/.retired  once HEAD moved past it
+<ns>/HEAD                     { generation, history } — the generation served
+<ns>/.generation.lock         flock: derive → promote, and a write to HEAD's generation
+<ns>/.generation.lock.holder  who took that lock (pid, derive | write, since — a ClockStamp)
+<ns>/gens/<id>/…              one whole user layer (origins, overrides, ancestors, merge records, applied-ledger markers)
+<ns>/gens/<id>/.retired       once HEAD moved past it
+<ns>/gens/<id>/.lease         flock held shared by every process running that generation's code
 ```
 
 - **Derive** (the store's `open`, first thing in `initRegistry`, serve mode): when `CONFIG_GENERATION` is not HEAD's, the backend takes the lock, reads HEAD's generation (or the pre-generation flat `<ns>/` layout) into memory, replays the move ledger and every migration (live descriptors), propagates its committed layer (`propagateUserLayer`) — the engine is `machine/internal/user-layer/`, the move ledger comes from the generation module (`CONFIG_PLUGIN_MOVES`), loaded with a literal `import()` (generated after the build imports the barrels, so no barrel may reach it statically; restart-skip still follows it) — writes the result to a temp dir and renames it into `gens/<id>/`. All in memory between one async read and one async write — no blocking fs on the backend. The boot auto-merge sweep then runs on it. Most deploys don't change config: old and new backend share one generation, as before.
-- **Promote** (machine `onReady`, after `markServerReady` — when the gateway swaps the backend in): HEAD names it, the replaced generation gets `.retired`, every generation but those two is collected, the lock is released.
+- **Promote** (machine `onReady`, after `markServerReady` — when the gateway swaps the backend in): HEAD names it, the replaced generation gets `.retired`, every generation but those two is collected — except one whose `.lease` a live process holds — and the lock is released.
+- **Lease.** Every process running a generation's code (its backend, the backend's `exec` children, an old backend still draining after a swap) holds `gens/<id>/.lease` shared from `open` for its whole life; the collection takes it exclusively before removing a generation and skips one it cannot take. So two config-changing deploys inside one drain never remove a generation a draining job reads. A derive that replaces a generation already on disk (a leftover, or this code's old one after a reverted config change) moves its `.lease` file into the replacement — the same inode, so the leases held on it still pin it — and swaps the directories by rename. A rollback to code no process runs any more finds its generation only if it is HEAD's predecessor (below).
 - **The lock spans derive → promote.** A write to HEAD's generation holds the lock around itself (`withWrite`, in the file store's `edit`), so the backend still serving either writes before the clone (carried over) or waits and is then refused with `ConfigGenerationRetired` — never lost between the two. A generation not HEAD's yet (a booting backend's `exec` children) writes freely: it cannot be retired under them.
+- **A lock wait is bounded** at `CONFIG_GENERATION_LOCK_WAIT_MS` (10 min of awake time, `armAwakeDeadline`): the longest legitimate hold is one backend's boot from its derive to its promote, which the gateway's readiness kill bounds (≤ 90 s + a 90 s escalation) and a dead holder's kernel releases. A hold past it is a peer that became ready and wedged before its machine `onReady` — not ours to fix — so the waiter throws `ConfigGenerationLockTimeout`, naming the holder from `.generation.lock.holder` (pid, alive or not, what for, since when in awake seconds), and writes nothing.
 - **Failed deploy**: HEAD never moves and nothing the serving backend reads was touched; the half-derived generation is derived again by the next attempt (the process dying released the lock).
-- **Code coming back** (its generation was HEAD before — a reverted config change, a rollback): when HEAD's generation applied nothing it does not know (its markers' move and migration keys are all this code's), it is derived again from HEAD like a new one, so writes since carry over. Otherwise (HEAD applied a migration or move this code does not know — one-way) it reuses its old generation as it was and says so on the `config-generations` log channel (writes since are not carried); collected, its boot fails (`ConfigGenerationMissing`). An `exec` child requires its generation on disk.
+- **Code coming back** (its generation was HEAD before — a reverted config change, a rollback): when HEAD's generation applied nothing it does not know (its markers' move and migration keys are all this code's), it is derived again from HEAD like a new one, so writes since carry over. Otherwise (HEAD applied a migration or move this code does not know — one-way) it reuses its old generation as it was and says so on the `config-generations` log channel (writes since are not carried); collected, its boot fails (`ConfigGenerationMissing`).
+- **`exec` children read, never derive.** The store's `open` is handed the process's `SchemaRole`: the owner derives; a verifier (an `exec` child) whose generation is not on disk yet — a push advanced the checkout, the new backend has not derived it — waits until the generation is renamed into place (`config_v2.generation-arrival`, a children watch of `gens/`) or no build, deploy or backend boot is in flight any more (database's `awaitDeploysSettled`, the signal its schema check waits on: a serving backend's boot marker is let go in database's `onReady`, after the derive), its host admission given back (`yieldAdmission`, shared with the schema wait), at most 10 min awake. Then the generation is there, or it fails with `ConfigGenerationMissing` saying why (nothing in flight — run `./equin build`; the deploy ended without deriving it; main moved past the slot).
 - **Readers off disk** (`readEffectiveConfigFromDisk` callers, e2e scripts, the relocate CLI) read `servedConfigDir(ns)` (`config_v2/plugins/disk-read`): HEAD's generation, or the flat layout before any. A worktree is forked from main's served generation, copied flat; a composition reset removes `<ns>/` and its cold start derives from scratch; a release backend derives from its bundle's `config/` like any other.
 - **From the flat layout**: the first generation-aware boot derives from `<ns>/` itself and leaves it as is. A pre-generation backend writes it without the lock; a file it changed during the derive is named in an error at promote (it stays at `<ns>/`).
 
@@ -602,7 +607,9 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
 - Machine:
   - Uses: `network/live.serveValue`
   - Exports (values): `configGenerationDir`
-  - Register: `defineFileWatcher('config_v2.config-files')`
+  - Register:
+    - `defineFileWatcher('config_v2.config-files')`
+    - `defineFileWatcher('config_v2.generation-arrival')`
 - Core:
   - Uses:
     - `fields.fieldDefaults`
@@ -682,7 +689,9 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `committedDocument`
     - `committedFilesFromMap`
     - `computeHash`
+    - `CONFIG_GENERATION_LEASE_FILE`
     - `CONFIG_GENERATION_LOCK_FILE`
+    - `CONFIG_GENERATION_LOCK_HOLDER_FILE`
     - `CONFIG_GENERATION_RETIRED_FILE`
     - `CONFIG_GENERATION_ROOT_ENTRIES`
     - `CONFIG_GENS_DIR`

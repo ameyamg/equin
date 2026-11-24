@@ -1,3 +1,4 @@
+import type { SchemaRole } from "@plugins/framework/plugins/server-core/core";
 import type {
   ConfigDescriptor,
   ConfigDocRef,
@@ -592,7 +593,12 @@ export async function syncScopeEntryNow(
  */
 const INIT_CONCURRENCY = 16;
 
-export async function initRegistry(): Promise<void> {
+/**
+ * Build the registry from every registered config: the store opened first
+ * (handed this process's schema role — whether it derives the user layer it
+ * reads or waits for its owner to have), then every document read.
+ */
+export async function initRegistry(schema: SchemaRole): Promise<void> {
   try {
     setConfigGetter(getConfig);
     const contributions = ConfigV2.Register.getContributions();
@@ -651,7 +657,7 @@ export async function initRegistry(): Promise<void> {
     // code reads — on the desktop, deriving its config generation (plugin
     // moves, migrations with these live descriptors, propagation) when the
     // running code's generation does not exist yet.
-    await store.open?.(registered);
+    await store.open?.(registered, schema);
     const reads = createSemaphore(INIT_CONCURRENCY);
     await Promise.all(
       registered.map(({ descriptor, storePath }) =>

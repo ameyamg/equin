@@ -30,13 +30,14 @@ cache's temp and flight-publish sweeps, and corpus-index's checkpoint sweep.
 
 - Description: Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown, a non-pid refused; isProcessGroupAlive(pgid) the same for kill(-pgid, 0) — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
 - Cross-plugin:
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×13
     - `framework` ×9
     - `conversations` ×2
     - `debug` ×2
     - `packages` ×2
     - `apps/browser/engine`
+    - `config_v2`
     - `installer`
 - Exemptions:
   - Exempts itself from: `process-alive/no-signal-zero-probe` — `core/internal/process-alive.ts` (sanctioned)

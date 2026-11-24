@@ -8,9 +8,13 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 //
 //   <ns>/HEAD                  { generation, history } — the generation served
 //   <ns>/.generation.lock      flock: derive → promote, and every write to HEAD's
+//   <ns>/.generation.lock.holder  who holds that lock, since when (for a waiter
+//                              that gives up to name)
 //   <ns>/gens/<id>/…           a whole user layer (origins, overrides, ancestors,
 //                              merge records, the applied-ledger markers)
 //   <ns>/gens/<id>/.retired    written by the promote that moved HEAD past it
+//   <ns>/gens/<id>/.lease      flock, held shared by every process running the
+//                              generation's code: a held one is never collected
 //
 // The backend whose code reads a generation is the one that derives it, at its
 // own boot, and moves HEAD once it serves. Design:
@@ -24,6 +28,18 @@ export const CONFIG_HEAD_FILE = "HEAD";
 export const CONFIG_GENERATION_LOCK_FILE = ".generation.lock";
 /** Inside a generation: present once HEAD moved past it. Writes to it are refused. */
 export const CONFIG_GENERATION_RETIRED_FILE = ".retired";
+/**
+ * The record of who holds {@link CONFIG_GENERATION_LOCK_FILE} (pid, what for,
+ * since), written by each holder once it has the lock.
+ */
+export const CONFIG_GENERATION_LOCK_HOLDER_FILE = ".generation.lock.holder";
+/**
+ * Inside a generation: the flock every process running its code holds shared
+ * for its whole life (a backend, its `exec` children, an old backend still
+ * draining). Collecting a generation takes it exclusively first, so a
+ * generation some process still reads is never collected under it.
+ */
+export const CONFIG_GENERATION_LEASE_FILE = ".lease";
 
 /**
  * Every entry the generation machinery keeps at a namespace dir's root — what
@@ -33,6 +49,7 @@ export const CONFIG_GENERATION_ROOT_ENTRIES: ReadonlySet<string> = new Set([
   CONFIG_GENS_DIR,
   CONFIG_HEAD_FILE,
   CONFIG_GENERATION_LOCK_FILE,
+  CONFIG_GENERATION_LOCK_HOLDER_FILE,
 ]);
 
 /** How many earlier HEADs a namespace remembers — what tells a rollback from a leftover. */

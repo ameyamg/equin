@@ -98,8 +98,8 @@ export default {
   // config-driven loaders don't briefly serve empty during a hot-swap.
   // `initRegistry` opens its own gate in a `finally`, so a partial failure
   // surfaces loudly per-path rather than hanging.
-  async onReadyBlocking() {
-    await initRegistry();
+  async onReadyBlocking({ schema }) {
+    await initRegistry(schema);
   },
   onShutdown() {
     shutdownRegistry();

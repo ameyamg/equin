@@ -15,6 +15,7 @@ import { stringListField } from "@plugins/fields/plugins/string-list/plugins/con
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import {
   clearCollectedContributions,
+  testSchemaOwner,
   withHostServices,
 } from "@plugins/framework/plugins/server-core/core/testing";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -29,6 +30,7 @@ import {
   type JsonValue,
 } from "../../core";
 import { ConfigV2 } from "./contribution";
+
 import { mergeReviewFields } from "../../core";
 import { ConfigGitLayer, ConfigStore } from "./host-services";
 import {
@@ -55,6 +57,9 @@ import {
 import { configValuesServed } from "./resource";
 import { getConfigScopeIds } from "./resource";
 import { forkDescriptorScope, removeDescriptorScope } from "./scope-fork";
+
+/** The schema role a serving host boots its registry with. */
+const OWNER = { kind: "owner", owner: testSchemaOwner() } as const;
 
 const alpha = defineConfig({
   name: "alpha",
@@ -159,7 +164,7 @@ beforeAll(async () => {
       ],
     },
   ]);
-  await run(() => initRegistry());
+  await run(() => initRegistry(OWNER));
   offChanges = onDocumentChange((doc) => changes.push(doc));
 });
 
@@ -514,7 +519,7 @@ describe("automatic merge at boot", () => {
   }
   async function reboot(): Promise<void> {
     shutdownRegistry();
-    await initRegistry();
+    await initRegistry(OWNER);
   }
 
   test("a stale override that merges cleanly is applied, with a record", () =>
@@ -666,7 +671,7 @@ describe("reviewing an automatic merge per field", () => {
     await seed(file(GAMMA, "ancestor"), ANCESTOR);
     await seed(file(GAMMA, "override"), PRE_MERGE, computeHash(ANCESTOR));
     shutdownRegistry();
-    await initRegistry();
+    await initRegistry(OWNER);
     const state = await readAutoMerge(GAMMA);
     expect(state?.status).toBe("current");
     return state!.record.id;

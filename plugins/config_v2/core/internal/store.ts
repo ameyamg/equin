@@ -1,4 +1,5 @@
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
+import type { SchemaRole } from "@plugins/framework/plugins/server-core/core";
 import type { ConfigFileContent } from "./config-proxy";
 import type { ConfigDescriptor, JsonValue } from "./types";
 import type { GitLayerDocument } from "./git-layer";
@@ -59,10 +60,15 @@ export interface ConfigStoreImpl {
    * Make the store ready to be read, before the registry reads any document:
    * handed every config this host registers (the live descriptors, migrations'
    * code included). The desktop's file store derives the config generation the
-   * running code reads here (config_v2#machine); a store with nothing to
-   * prepare leaves it out.
+   * running code reads here (config_v2#machine) — when this process owns the
+   * schema (`schema`: the serving backend), or waits for its backend to have
+   * derived it (an `exec` child); a store with nothing to prepare leaves it
+   * out.
    */
-  open?(configs: readonly RegisteredConfig[]): Promise<void>;
+  open?(
+    configs: readonly RegisteredConfig[],
+    schema: SchemaRole,
+  ): Promise<void>;
   /**
    * One file's parsed content, or `null` when it is absent. Asynchronous: on
    * the desktop it is the disk, which a backend's thread never waits on.

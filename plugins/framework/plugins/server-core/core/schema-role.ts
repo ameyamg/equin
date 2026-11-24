@@ -74,15 +74,50 @@ export function declareExecAdmission(admission: ExecAdmission): void {
   execAdmission = admission;
 }
 
+/**
+ * The waits running with the admission given back. Several boot hooks of one
+ * child may wait at once (the schema verifier and config's generation wait):
+ * the first gives the slot back, the last to succeed takes it again. A wait
+ * starting while that reacquire is still queued gives the slot back only once
+ * it is held again (`reacquired`) — never one this process does not hold.
+ */
+let yielded: { count: number; released: Promise<void> } | null = null;
+/** The last reacquire, settled or not. */
+let reacquired: Promise<void> = Promise.resolve();
+/** A wait failed with the slot given back: the boot is failing, nothing is held. */
+let slotGivenUp = false;
+
 async function yieldAdmission<T>(wait: () => Promise<T>): Promise<T> {
   const admission = execAdmission;
-  if (admission === null) return wait();
-  await admission.release();
-  const result = await wait();
-  // Only once the wait succeeded: a wait that throws fails the boot, and the
-  // process exits — queueing for a slot first would only hold its exit back
-  // behind every admitted child.
-  await admission.reacquire();
+  if (admission === null || slotGivenUp) return wait();
+  if (yielded === null) {
+    const after = reacquired;
+    yielded = { count: 0, released: after.then(() => admission.release()) };
+  }
+  const turn = yielded;
+  turn.count++;
+  let result: T;
+  try {
+    await turn.released;
+    result = await wait();
+  } catch (err) {
+    // A wait that throws fails the boot, and the process exits: the slot is
+    // not taken again — queueing for one would only hold its exit back
+    // behind every admitted child.
+    turn.count--;
+    if (turn.count === 0 && yielded === turn) {
+      yielded = null;
+      slotGivenUp = true;
+    }
+    throw err;
+  }
+  turn.count--;
+  // The last wait out takes the slot again; the boot's barrier waits for it.
+  if (turn.count === 0 && yielded === turn) {
+    yielded = null;
+    reacquired = admission.reacquire();
+    await reacquired;
+  }
   return result;
 }
 

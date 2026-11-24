@@ -115,6 +115,7 @@ can always be told from a forgotten one.
 - Cross-plugin:
   - Imported by:
     - `auth`
+    - `config_v2`
     - `conversations`
     - `conversations/runtime-sdk`
     - `conversations/workspace/worktree`
