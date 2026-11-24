@@ -115,6 +115,9 @@ export function CodePaneSurface({
     <Scroll
       ref={ref}
       axis="both"
+      // A pane's code is read in this box, not the pane's own scroller: kept
+      // across a reload in the pane's keep scope.
+      keep="code"
       style={{ backgroundColor: codeBackground(dark) }}
       className={className ? `h-full ${className}` : "h-full"}
       {...(html !== undefined

@@ -515,6 +515,10 @@ body root:
 - Header + scrollable body → root `flex h-full flex-col`, inner region a
   `<PaneScroll>`.
 - Custom viewport (terminal, canvas) → root `h-full` (`overflow-hidden` OK).
+  A custom viewport that scrolls (`<Scroll className="h-full">` filling the
+  body) must name itself — `<Scroll keep="<name>">` — or a reload opens it at
+  its top: only `PaneScroll` (and what names itself in its keep scope) is
+  kept across a reload.
 
 It forwards `ref` and `Scroll`'s props (`hideScrollbar`, `isolate`, `as`,
 `className`).
@@ -1074,7 +1078,7 @@ out of the way: **what it opens takes its column**.
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/yield.yieldClass`
-    - `primitives/dom/auto-scroll.useScrollAcrossReload`
+    - `primitives/dom/auto-scroll.KeepScrollScope`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/gesture-origin.isChromeGesture`
     - `primitives/dom/in-view.useInView`

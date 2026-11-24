@@ -52938,6 +52938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SidewaysScrollProvider`
+              - `primitives/dom/auto-scroll.useKeptScroll`
             - Exports (types):
               - `ScrollAxis`
               - `ScrollProps`
@@ -55251,7 +55252,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `AudioContextError`
               - `openAudioContext`
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, or useKeptScroll(name) — keyed by the enclosing KeepScrollScope, the pane instance — put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
           - Web:
             - Contributes: `Core.Root` → `BrowserHoldRelease`
             - Uses:
@@ -55292,21 +55293,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `KeepAnchorAcross`
               - `keepInPlace`
               - `KeepScrollAcross`
+              - `KeepScrollScope`
               - `restoreScrollOffset`
               - `scrollChildIntoView`
               - `ScrollRevival`
               - `scrollToBottom`
               - `scrollToTop`
               - `useEdgeAutoScroll`
+              - `useKeptScroll`
               - `useScrollAcrossReload`
               - `useStickyScroll`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
               - `apps` ×8
-              - `primitives` ×7
+              - `primitives` ×8
               - `conversations` ×4
               - `apps-core/tab-surface`
               - `layouts/miller`
@@ -58354,7 +58357,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/yield.yieldClass`
-          - `primitives/dom/auto-scroll.useScrollAcrossReload`
+          - `primitives/dom/auto-scroll.KeepScrollScope`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/dom/gesture-origin.isChromeGesture`
           - `primitives/dom/in-view.useInView`

@@ -397,7 +397,9 @@ export function FilePreviewBody(): ReactNode {
       // window, keyed on this mark.
       data-files-preview=""
       body={
-        <Scroll axis="both" className="h-full">
+        // Kept across a reload in the pane's keep scope; a renderer that is
+        // its own scroll box (the code listing) keeps that box itself.
+        <Scroll axis="both" keep="file-preview" className="h-full">
           <Theme
             name={subThemeScope(filesDocumentTheme)}
             surface="none"
@@ -433,6 +435,7 @@ function FileTextEditor({
         // The read body's boxes, so the code stays where it was read.
         <Scroll
           axis="both"
+          keep="file-edit"
           className="h-full"
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "s") {

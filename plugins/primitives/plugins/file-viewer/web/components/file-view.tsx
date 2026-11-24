@@ -50,7 +50,7 @@ export function FileView({
         </Text>
       }
       body={
-        <Scroll axis="both" className="h-full">
+        <Scroll axis="both" keep="file-view" className="h-full">
           <FileContent file={file} line={line} renderers={renderers} />
         </Scroll>
       }

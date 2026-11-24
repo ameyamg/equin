@@ -2,6 +2,8 @@ import {
   cn,
   SidewaysScrollProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useKeptScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { useMemo, type Ref, type RefCallback } from "react";
 import type React from "react";
 import "./scroll.css";
 
@@ -89,6 +91,15 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
    * column's width.
    */
   bleed?: boolean;
+  /**
+   * Keep this scroller's offset across a page reload, under this name within
+   * the enclosing keep scope (auto-scroll's `KeepScrollScope` — every pane
+   * body opens one, keyed by its pane instance). The name tells the scope's
+   * scrollers apart: a body that scrolls in a box of its own (a file preview, a
+   * code listing) names it, so it is kept like the pane's own scroller.
+   * Outside a scope it keeps nothing; unset keeps nothing.
+   */
+  keep?: string;
 }
 
 /**
@@ -112,14 +123,19 @@ export function Scroll({
   as: As = "div",
   ref,
   bleed = false,
+  keep,
   className,
   children,
   ...rest
 }: ScrollProps) {
   const bleeds = bleed && axis === "x";
+  const kept = useKeptScroll(keep);
+  // Stable across renders: a new callback ref would detach and re-attach the
+  // scroller on every render.
+  const scrollRef = useMemo(() => bothRefs(kept, ref), [kept, ref]);
   const scroller = (
     <As
-      ref={ref}
+      ref={scrollRef}
       className={cn(
         scrollClasses({ axis, fill, hideScrollbar, isolate }),
         bleeds ? null : className,
@@ -152,4 +168,15 @@ export function Scroll({
   ) : (
     scroller
   );
+}
+
+function bothRefs(
+  own: RefCallback<HTMLElement>,
+  theirs: Ref<HTMLElement> | undefined,
+): RefCallback<HTMLElement> {
+  return (el) => {
+    own(el);
+    if (typeof theirs === "function") theirs(el);
+    else if (theirs) theirs.current = el;
+  };
 }
