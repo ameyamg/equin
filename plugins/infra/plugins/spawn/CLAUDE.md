@@ -375,13 +375,13 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnToFile`
     - `watchChildKills`
 - Cross-plugin:
-  - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×34
+  - Imported by: 112 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×34
+    - `framework` ×33
     - `apps` ×10
     - `database` ×5
     - `debug` ×5
-    - `build` ×3
+    - `build` ×2
     - `code-explorer` ×2
     - `conversations` ×2
     - `installer` ×2

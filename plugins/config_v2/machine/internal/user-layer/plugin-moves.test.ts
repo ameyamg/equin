@@ -1,68 +1,73 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { computeHash, type JsonValue } from "@plugins/config_v2/core";
+  committedFilesFromMap,
+  computeHash,
+  type ConfigPluginMove,
+  type JsonValue,
+} from "../../../core";
 import {
   APPLIED_MOVES_FILE,
   applyPluginMoves,
   rerootMigrationKey,
-} from "./apply-moves";
-import { APPLIED_CONFIG_MIGRATIONS_FILE } from "@plugins/config_v2/plugins/ledger/core";
+} from "./plugin-moves";
+import { APPLIED_CONFIG_MIGRATIONS_FILE } from "./config-migrations";
+import { memoryConfigTree } from "./config-tree";
 import {
-  asFsPath,
   asPluginId,
+  type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { PLUGIN_MOVES_FILE } from "./ledger";
-import {
-  type AppPath,
-  asAppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-let root: AppPath;
-let ns: AppPath;
+let tree: ReturnType<typeof memoryConfigTree>;
+let moves: { at: string; from: string; to: string }[];
+/** The checkout's committed `config/`, by layer-relative path. */
+let committed: Map<string, string>;
+/** Plugin ids that are plugins of the tree (a reused old id). */
+let plugins: Set<PluginId>;
 
 beforeEach(() => {
-  const base = mkdtempSync(join(tmpdir(), "plugin-moves-"));
-  root = asAppPath(join(base, "repo"));
-  ns = asAppPath(join(base, "config", "wt"));
-  mkdirSync(dirname(join(root, PLUGIN_MOVES_FILE)), { recursive: true });
-  mkdirSync(ns, { recursive: true });
+  tree = memoryConfigTree();
+  moves = [];
+  committed = new Map();
+  plugins = new Set();
 });
 
-afterEach(() => {
-  rmSync(dirname(root), { recursive: true, force: true });
-});
+function ledger(entries: { at: string; from: string; to: string }[]): void {
+  moves = entries;
+}
 
-function ledger(moves: { at: string; from: string; to: string }[]): void {
-  writeFileSync(join(root, PLUGIN_MOVES_FILE), JSON.stringify(moves));
+/** Apply the ledger to the namespace's tree, as a generation derive does. */
+function apply(opts: { fresh?: boolean } = {}) {
+  return applyPluginMoves({
+    tree,
+    // As codegen bakes them: the ledger key, and whether the old id is a
+    // plugin again.
+    moves: moves.map((m): ConfigPluginMove => ({
+      key: `${m.at} ${m.from} ${m.to}`,
+      from: asPluginId(m.from),
+      to: asPluginId(m.to),
+      fromIsPlugin: plugins.has(asPluginId(m.from)),
+    })),
+    committed: committedFilesFromMap(committed),
+    fresh: opts.fresh ?? false,
+  });
 }
 
 /** Write a config file the way the canonical writers do: `// @hash` + JSON. */
 function put(rel: string, content: JsonValue, hash: string): void {
-  const file = join(ns, rel);
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(
-    file,
-    `// @hash ${hash}\n${JSON.stringify(content, null, 2)}\n`,
-  );
+  tree.write(rel, `// @hash ${hash}\n${JSON.stringify(content, null, 2)}\n`);
 }
 
 function get(rel: string): { hash: string; content: JsonValue } {
-  const raw = readFileSync(join(ns, rel), "utf8");
+  const raw = tree.read(rel)!;
   const m = /^\/\/ @hash ([a-f0-9]+)\n/.exec(raw)!;
   return {
     hash: m[1]!,
     content: JSON.parse(raw.slice(m[0].length)) as JsonValue,
   };
 }
+
+const hasUnder = (dir: string) =>
+  tree.paths().some((p) => p.startsWith(`${dir}/`));
 
 const MOVE = { at: "2026-09-23T00:00:00.000Z", from: "a.b", to: "x.b" };
 
@@ -75,7 +80,7 @@ describe("applyPluginMoves", () => {
     put("a/b/child/config.jsonc", { c: 1 }, "a2");
     put("a/other/config.jsonc", { o: 1 }, "a3");
 
-    const [r] = applyPluginMoves({ root, userConfigDir: ns });
+    const [r] = apply();
 
     expect(r!.moved.sort()).toEqual([
       "@app/home/view-state.jsonc",
@@ -86,8 +91,8 @@ describe("applyPluginMoves", () => {
     expect(get("x/b/view-state.jsonc").content).toEqual({ v: 1 });
     expect(get("x/b/@app/home/view-state.jsonc").content).toEqual({ v: 2 });
     expect(get("x/b/child/config.jsonc").content).toEqual({ c: 1 });
-    expect(existsSync(join(ns, "a/b"))).toBe(false);
-    expect(existsSync(join(ns, "a/other/config.jsonc"))).toBe(true);
+    expect(hasUnder("a/b")).toBe(false);
+    expect(tree.read("a/other/config.jsonc")).not.toBeNull();
   });
 
   test("rewrites reorder keys in every slot's file and keeps overrides non-stale", () => {
@@ -101,7 +106,7 @@ describe("applyPluginMoves", () => {
       originHash,
     );
 
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
 
     const newOrigin = get("shell/sidebar.origin.jsonc");
     expect(newOrigin.content).toEqual({
@@ -124,14 +129,12 @@ describe("applyPluginMoves", () => {
     put("shell/sidebar.jsonc", { items: ["m:two", "a.b:one"] }, originHash);
     // The checkout's regenerated origin: the renamed key re-sorts.
     const upstream = { items: ["m:two", "x.b:one"] };
-    const repoOrigin = join(root, "config/shell/sidebar.origin.jsonc");
-    mkdirSync(dirname(repoOrigin), { recursive: true });
-    writeFileSync(
-      repoOrigin,
+    committed.set(
+      "shell/sidebar.origin.jsonc",
       `// @hash ${computeHash(upstream)}\n${JSON.stringify(upstream)}\n`,
     );
 
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
 
     // Propagation stamps computeHash(upstream): the override is already there.
     expect(get("shell/sidebar.origin.jsonc").hash).toBe(computeHash(upstream));
@@ -145,14 +148,12 @@ describe("applyPluginMoves", () => {
     put("shell/sidebar.origin.jsonc", origin, originHash);
     put("shell/sidebar.jsonc", { items: ["m:two", "a.b:one"] }, originHash);
     const upstream = { items: ["m:two", "new:three", "x.b:one"] };
-    const repoOrigin = join(root, "config/shell/sidebar.origin.jsonc");
-    mkdirSync(dirname(repoOrigin), { recursive: true });
-    writeFileSync(
-      repoOrigin,
+    committed.set(
+      "shell/sidebar.origin.jsonc",
       `// @hash ${computeHash(upstream)}\n${JSON.stringify(upstream)}\n`,
     );
 
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
 
     const rewritten = get("shell/sidebar.origin.jsonc");
     expect(rewritten.hash).toBe(computeHash(rewritten.content));
@@ -167,7 +168,7 @@ describe("applyPluginMoves", () => {
     put("shell/s.origin.jsonc", current, computeHash(current));
     put("shell/s.jsonc", { items: ["a.b:one"] }, computeHash(base));
 
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
 
     expect(get("shell/s.jsonc").hash).toBe(get("shell/s.ancestor.jsonc").hash);
     expect(get("shell/s.jsonc").hash).not.toBe(
@@ -180,7 +181,7 @@ describe("applyPluginMoves", () => {
     put("a/b/config.jsonc", { old: true }, "a0");
     put("x/b/config.jsonc", { new: true }, "a0");
 
-    const [r] = applyPluginMoves({ root, userConfigDir: ns });
+    const [r] = apply();
 
     expect(r!.kept).toEqual(["config.jsonc"]);
     expect(get("x/b/config.jsonc").content).toEqual({ new: true });
@@ -191,37 +192,36 @@ describe("applyPluginMoves", () => {
     ledger([MOVE, { at: "2026-09-24T00:00:00.000Z", from: "x.b", to: "y" }]);
     put("a/b/config.jsonc", { v: 1 }, "a0");
 
-    expect(applyPluginMoves({ root, userConfigDir: ns })).toHaveLength(2);
+    expect(apply()).toHaveLength(2);
     expect(get("y/config.jsonc").content).toEqual({ v: 1 });
 
     // A new plugin reusing the old id is not swept along on the next build.
     put("a/b/config.jsonc", { reused: true }, "a0");
-    expect(applyPluginMoves({ root, userConfigDir: ns })).toEqual([]);
+    expect(apply()).toEqual([]);
     expect(get("a/b/config.jsonc").content).toEqual({ reused: true });
   });
 
   test("a namespace created after the move records it without moving anything", () => {
     ledger([MOVE]);
-    const fresh = asAppPath(join(dirname(ns), "new-wt"));
 
-    expect(applyPluginMoves({ root, userConfigDir: fresh })).toEqual([]);
-    expect(
-      JSON.parse(readFileSync(join(fresh, APPLIED_MOVES_FILE), "utf8")),
-    ).toEqual({ applied: [`${MOVE.at} ${MOVE.from} ${MOVE.to}`] });
+    expect(apply({ fresh: true })).toEqual([]);
+    expect(JSON.parse(tree.read(APPLIED_MOVES_FILE)!)).toEqual({
+      applied: [`${MOVE.at} ${MOVE.from} ${MOVE.to}`],
+    });
   });
 });
 
 describe("applied config-migration markers follow the move", () => {
   const markers = (keys: string[]) =>
-    writeFileSync(
-      join(ns, APPLIED_CONFIG_MIGRATIONS_FILE),
+    tree.write(
+      APPLIED_CONFIG_MIGRATIONS_FILE,
       JSON.stringify({ applied: keys }),
     );
   const readMarkers = (): string[] =>
     (
-      JSON.parse(
-        readFileSync(join(ns, APPLIED_CONFIG_MIGRATIONS_FILE), "utf8"),
-      ) as { applied: string[] }
+      JSON.parse(tree.read(APPLIED_CONFIG_MIGRATIONS_FILE)!) as {
+        applied: string[];
+      }
     ).applied;
 
   test("rerootMigrationKey swaps the moved path prefix, in ledger order", () => {
@@ -238,7 +238,7 @@ describe("applied config-migration markers follow the move", () => {
     put("a/b/view.origin.jsonc", { v: 0 }, "a1");
     markers(["a/b/view:m1", "a/other/view:m1"]);
 
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
 
     expect(readMarkers()).toEqual(["x/b/view:m1", "a/other/view:m1"]);
   });
@@ -246,31 +246,24 @@ describe("applied config-migration markers follow the move", () => {
   test("an already-applied move still heals stale markers (idempotent)", () => {
     ledger([MOVE]);
     put("x/b/view.origin.jsonc", { v: 0 }, "a1");
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
     // Markers left under the old path by a replay that predates the re-root.
     markers(["a/b/view:m1", "x/b/view:m1"]);
 
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
     expect(readMarkers()).toEqual(["x/b/view:m1"]);
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
     expect(readMarkers()).toEqual(["x/b/view:m1"]);
   });
 
   test("a reused old id keeps its own markers", () => {
     ledger([MOVE]);
-    // The old directory is a plugin again (its fs path, built from the id).
-    const pkg = join(
-      root,
-      "plugins",
-      asFsPath(asPluginId(MOVE.from)),
-      "package.json",
-    );
-    mkdirSync(dirname(pkg), { recursive: true });
-    writeFileSync(pkg, "{}");
+    // The old id is a plugin of the tree again.
+    plugins.add(asPluginId(MOVE.from));
     put("a/b/view.origin.jsonc", { v: 0 }, "a1");
     markers(["a/b/view:m1"]);
 
-    applyPluginMoves({ root, userConfigDir: ns });
+    apply();
 
     expect(readMarkers()).toEqual(["a/b/view:m1"]);
   });

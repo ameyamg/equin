@@ -24,7 +24,8 @@ import {
   type RelativeRef,
   type RelativeRefSyntax,
 } from "@plugins/plugin-meta/plugins/plugin-refs/core";
-import { movedPluginId, PLUGIN_MOVES_FILE } from "../../core";
+import { PLUGIN_MOVES_FILE } from "../../core";
+import { movedPluginId } from "@plugins/plugin-meta/plugins/relocate/plugins/reroot/core";
 
 const PLUGINS_DIR = "plugins";
 const SEGMENT_RE = /^[A-Za-z0-9_-]+$/;
@@ -148,7 +149,7 @@ export function editKind(ref: PluginRef | PluginMention): EditKind {
  * codegen, the lockfile, and config snapshots (an `.origin.jsonc` is generated
  * from its `defineConfig` defaults or the slot catalog, so the build needs the
  * PRE-move origin on disk to tell a pure move from a real default change; see
- * `restampMovedOverrides`).
+ * `restampMovedOverridesSync`).
  */
 function isDerivedFile(file: string): boolean {
   return (

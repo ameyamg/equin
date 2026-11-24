@@ -109,10 +109,16 @@ as before. This is why origins must reach the build un-edited.
 
 The user's own config (`~/.equin/state/config/<namespace>/`) is not in
 git, so no commit can carry it — and a hand-run migration is a step that gets
-skipped. Instead every `./equin build` calls `applyPluginMoves` for its
-namespace just before it propagates the git config there
-(`build/cli/internal/deploy-namespace.ts`). For each ledger entry that
-namespace has not applied (recorded in its `.plugin-moves-applied.json`):
+skipped. Instead the backend deriving a namespace's config generation (its
+first boot on code with a new generation — `config_v2#machine`) calls
+config_v2's `applyPluginMoves` (`config_v2/machine/internal/user-layer/`)
+over the user layer it starts from, held in memory, just before it propagates
+the git config into it. The moves are the ledger as the code was built:
+codegen bakes it into config_v2's generation module (`CONFIG_PLUGIN_MOVES`:
+each entry's key, and whether its old id is a plugin of the tree again) — a
+release has no checkout. The key re-rooting is `relocate/reroot`, the leaf the
+mover and `plugin-refs` read keys with too. For each entry the namespace has not
+applied (recorded in its `.plugin-moves-applied.json`):
 
 - files under `<from path>/` move to `<to path>/`; a file already at the
   destination wins and the source stays, where the orphan audit flags it;
@@ -130,17 +136,19 @@ config-migration markers (`.config-migrations-applied.json`, keyed
 `<config path>/<name>:<migration>`) under a moved plugin's old slash path are
 re-rooted to its new one (`rerootMigrationKey`) — the migrations already ran on
 the files that moved, and a marker left behind made them look un-migrated at
-the new path, so the build re-ran them. A move whose old directory is a plugin
-again is skipped: a reused id's markers are its own.
+the new path, so the derive re-ran them. A move whose old id is a plugin of the
+tree again is skipped: a reused id's markers are its own (a release's tree has
+no `plugins/` on disk, so there every moved-away id reads as gone).
 
 The marker, the fresh-namespace rule and the hash re-stamping are the shared
-config ledger's (`config_v2/plugins/ledger`), which config migrations
+config ledger's (in `config_v2#machine`), which config migrations
 (`defineConfigMigration`) ride too.
 
-So a namespace's settings change exactly when its code does: the worktree that
-moved the plugin on its next build, main on its auto-build after the push, new
-worktrees by forking main's already-migrated dir, older worktrees when they
-rebase. Entries are keyed by `at from to`, so a later plugin reusing an old id
+So a namespace's settings change exactly when its code does, in a generation
+of their own — the backend still serving the old code keeps reading the old
+shape: the worktree that moved the plugin on its next deploy, main on its
+auto-build after the push, new worktrees by forking main's served generation,
+older worktrees when they rebase. Entries are keyed by `at from to`, so a later plugin reusing an old id
 is never swept along, and a namespace created after an entry records it without
 moving anything.
 
@@ -148,38 +156,42 @@ moving anything.
 
 ## Plugin reference
 
-- Description: `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
+- Description: `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that a backend replays onto its namespace's saved user config when it derives a config generation (folder moved, reorder keys re-rooted, hash chain kept).
 - Core:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `config_v2` ×8
-    - `config_v2/ledger` ×7
-    - `framework/plugin-id` ×4
-    - `infra/host-fs/user-path` ×3
-    - `packages/timed-fs` ×3
+  - Uses:
+    - `config_v2.APP_SCOPE_DIR`
+    - `config_v2.configTextHash`
+    - `config_v2.parseConfigText`
+    - `config_v2.sameDocumentModuloOrder`
+    - `config_v2.withConfigTextHash`
+    - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.PluginId`
     - `framework/tooling.noteRepoWrites`
-    - `plugin-meta/plugin-refs.scanReorderItemRefs`
-  - Exports (types):
-    - `AppliedMove`
-    - `PluginMove`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
+    - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.readdirSync`
+    - `packages/timed-fs.readFileSync`
+    - `plugin-meta/relocate/reroot.rerootReorderKeys`
+  - Exports (types): `PluginMove`
   - Exports (values):
-    - `appendPluginMove`
-    - `APPLIED_MOVES_FILE`
-    - `applyPluginMoves`
-    - `movedPluginId`
-    - `namespacesHolding`
+    - `appendPluginMoveSync`
     - `parsePluginMoves`
     - `PLUGIN_MOVES_FILE`
     - `pluginMoveKey`
-    - `readPluginMoves`
-    - `restampMovedOverrides`
-    - `snapshotConfigOrigins`
+    - `readPluginMovesSync`
+    - `restampMovedOverridesSync`
+    - `snapshotConfigOriginsSync`
 - Cross-plugin:
-  - Imported by: `framework/cli/build`
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from:
     - `product-name:legacy-id` — `core/plugin-moves.json` (sanctioned)
     - `relocate:moved-plugins-unnamed` — `core/plugin-moves.json` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (debt)
-    - `blocking-fs/sync-named` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (debt)
+- Sub-plugins:
+  - **`reroot`** — A plugin id re-rooted through a move, as a leaf every reader of a move shares: movedPluginId (where an id lands after moving from → to) and, in a config file's text, the plugin-id half of every…
 
 <!-- AUTOGENERATED:END -->

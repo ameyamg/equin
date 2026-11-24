@@ -1,7 +1,10 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { readEffectiveConfigFromDiskSync } from "@plugins/config_v2/plugins/disk-read/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import {
+  readEffectiveConfigFromDiskSync,
+  servedConfigDirSync,
+} from "@plugins/config_v2/plugins/disk-read/core";
 import {
   MAIN_COMPOSITION_ID,
   namespaceFor,
@@ -123,7 +126,7 @@ export async function decideConvergence(i: {
 
   const autoBuild = readEffectiveConfigFromDiskSync(buildConfig, {
     root: i.root,
-    userConfigDir: configDir.file(i.namespace),
+    userConfigDir: servedConfigDirSync(configDir.file(i.namespace)),
     hierarchyPath: BUILD_HIERARCHY_PATH,
   }).autoBuild;
   const retries: ConvergenceDecision["retries"] = [];

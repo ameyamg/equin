@@ -31,6 +31,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { servedConfigDirSync } from "@plugins/config_v2/plugins/disk-read/core";
 
 interface Move {
   hier: string;
@@ -97,8 +98,9 @@ console.log(`${moves.length} slot(s) in the rename table.`);
 
 let total = 0;
 for (const worktree of readdirSync(configDir.path)) {
-  const rootDir = join(configDir.path, worktree);
-  if (!statSync(rootDir).isDirectory()) continue;
+  if (!statSync(join(configDir.path, worktree)).isDirectory()) continue;
+  // The user layer the namespace serves: its HEAD's generation.
+  const rootDir = servedConfigDirSync(configDir.file(worktree));
   assertSafe(rootDir, moves);
   const present = moves.filter((m) =>
     VARIANTS.some((v) =>

@@ -1,54 +1,29 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import {
-  asAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
   computeHash,
   defineConfigMigration,
   type ConfigDescriptor,
   type JsonValue,
-} from "@plugins/config_v2/core";
+} from "../../../core";
 import {
   APPLIED_CONFIG_MIGRATIONS_FILE,
   applyConfigMigrations,
-  configMigrationsPending,
 } from "./config-migrations";
-import { rewriteConfigFiles } from "./config-ledger";
+import { memoryConfigTree, rewriteConfigFiles } from "./config-tree";
 
-let ns: AppPath;
+let tree: ReturnType<typeof memoryConfigTree>;
 
 beforeEach(() => {
-  ns = asAppPath(join(mkdtempSync(join(tmpdir(), "config-migrations-")), "wt"));
-  mkdirSync(ns, { recursive: true });
-});
-
-afterEach(() => {
-  rmSync(dirname(ns), { recursive: true, force: true });
+  tree = memoryConfigTree();
 });
 
 /** Write a config file the way the canonical writers do: `// @hash` + JSON. */
 function put(rel: string, content: JsonValue, hash: string): void {
-  const file = join(ns, rel);
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(
-    file,
-    `// @hash ${hash}\n${JSON.stringify(content, null, 2)}\n`,
-  );
+  tree.write(rel, `// @hash ${hash}\n${JSON.stringify(content, null, 2)}\n`);
 }
 
 function get(rel: string): { hash: string; content: JsonValue } {
-  const raw = readFileSync(join(ns, rel), "utf8");
+  const raw = tree.read(rel)!;
   const m = /^\/\/ @hash ([a-f0-9]+)\n/.exec(raw)!;
   return {
     hash: m[1]!,
@@ -87,7 +62,7 @@ describe("applyConfigMigrations", () => {
     put("other/config.jsonc", { icon: "old" }, "abcdef012345");
 
     const applied = applyConfigMigrations({
-      userConfigDir: ns,
+      tree,
       configs: configs(),
     });
     expect(applied.map((a) => a.key)).toEqual(["a/b/config:rename-icon"]);
@@ -107,56 +82,32 @@ describe("applyConfigMigrations", () => {
 
   test("runs once per namespace", () => {
     put("a/b/config.jsonc", { icon: "old" }, "abcdef012345");
-    applyConfigMigrations({ userConfigDir: ns, configs: configs() });
+    applyConfigMigrations({ tree, configs: configs() });
     put("a/b/config.jsonc", { icon: "old" }, "abcdef012345");
     calls = 0;
-    expect(
-      applyConfigMigrations({ userConfigDir: ns, configs: configs() }),
-    ).toEqual([]);
+    expect(applyConfigMigrations({ tree, configs: configs() })).toEqual([]);
     expect(calls).toBe(0);
     expect(get("a/b/config.jsonc").content).toEqual({ icon: "old" });
   });
 
   test("a namespace with no saved config records every migration without running it", () => {
     calls = 0;
-    expect(
-      applyConfigMigrations({ userConfigDir: ns, configs: configs() }),
-    ).toEqual([]);
+    expect(applyConfigMigrations({ tree, configs: configs() })).toEqual([]);
     expect(calls).toBe(0);
-    expect(existsSync(join(ns, APPLIED_CONFIG_MIGRATIONS_FILE))).toBe(true);
+    expect(tree.read(APPLIED_CONFIG_MIGRATIONS_FILE)).not.toBeNull();
     put("a/b/config.jsonc", { icon: "old" }, "abcdef012345");
-    expect(
-      applyConfigMigrations({ userConfigDir: ns, configs: configs() }),
-    ).toEqual([]);
+    expect(applyConfigMigrations({ tree, configs: configs() })).toEqual([]);
   });
 
   test("leaves a file the migration does not change byte-for-byte", () => {
     const text = '// @hash abcdef012345\n{ "icon": "new" /* kept */ }\n';
-    mkdirSync(join(ns, "a/b"), { recursive: true });
-    writeFileSync(join(ns, "a/b/config.jsonc"), text);
+    tree.write("a/b/config.jsonc", text);
     const [applied] = applyConfigMigrations({
-      userConfigDir: ns,
+      tree,
       configs: configs(),
     });
     expect(applied?.rewritten).toEqual([]);
-    expect(readFileSync(join(ns, "a/b/config.jsonc"), "utf8")).toBe(text);
-  });
-});
-
-describe("configMigrationsPending", () => {
-  test("only while an unapplied migration would run on saved config", () => {
-    // fresh: recorded without running, so record-read stubs are fine
-    expect(
-      configMigrationsPending({ userConfigDir: ns, configs: configs() }),
-    ).toBe(false);
-    put("a/b/config.jsonc", { icon: "old" }, "abcdef012345");
-    expect(
-      configMigrationsPending({ userConfigDir: ns, configs: configs() }),
-    ).toBe(true);
-    applyConfigMigrations({ userConfigDir: ns, configs: configs() });
-    expect(
-      configMigrationsPending({ userConfigDir: ns, configs: configs() }),
-    ).toBe(false);
+    expect(tree.read("a/b/config.jsonc")).toBe(text);
   });
 });
 
@@ -171,7 +122,7 @@ describe("rewriteConfigFiles", () => {
       { version: 1, fromHash: "000000000000", toHash: oldHash },
       oldHash,
     );
-    rewriteConfigFiles(asAppPath(ns), {
+    rewriteConfigFiles(tree, {
       rewrite: (rel, text) =>
         rel.endsWith(".origin.jsonc") ? text.replace('"old"', '"new"') : text,
     });

@@ -82,10 +82,10 @@ function resolveEffective<F extends FieldsRecord>(
     userOverwrites,
   ]: (ConfigFileContent | null)[],
 ): ConfigValues<F> {
-  // The origin is the git-effective document — what `propagateConfigToUser`
-  // writes into the user layer — never the user origin already on disk. That
-  // file is only as fresh as the LAST propagation, and the build reads this
-  // before its own propagation stage: a field added to the descriptor since
+  // The origin is the git-effective document — what propagation writes into
+  // the user layer — never the user origin already on disk. That file is only
+  // as fresh as the LAST propagation (the served backend's generation derive),
+  // and the build reads this before its backend derives the next one: a field added to the descriptor since
   // then is absent from it and silently heals to its default. A user override
   // still wins only while its `// @hash` matches the git-effective document,
   // exactly as it will at runtime once this build has propagated. The user
@@ -121,7 +121,7 @@ function resolveEffective<F extends FieldsRecord>(
  * Precedence is NEVER reimplemented here: the runtime reads the USER layer via
  * `readTypedConfig(descriptor, userOrigin, userOverwrites)` (config_v2's
  * registry), and the git layer only reaches that user layer through
- * `propagateConfigToUser`. This mirrors exactly that chain AS OF THIS
+ * propagation (a backend's config generation derive). This mirrors exactly that chain AS OF THIS
  * CHECKOUT'S GIT LAYER: the git-effective document IS the origin (what
  * propagation will write), layered via the same pure primitives (`effective` +
  * `readTypedConfig`), so an already-propagated user origin left stale by a
@@ -130,8 +130,9 @@ function resolveEffective<F extends FieldsRecord>(
  * `hierarchyPath` is the config's owning-plugin path (`asPath(pluginId)`) —
  * the descriptor does not carry its plugin identity, so the caller supplies it.
  *
- * `userConfigDir` is the namespace's user-config directory, already resolved —
- * see {@link propagateConfigToUser} for why it is not a data root plus a name.
+ * `userConfigDir` is the namespace's served user-config directory, already
+ * resolved — `servedConfigDir(configDir.file(<ns>))`, the generation its HEAD
+ * names.
  */
 export async function readEffectiveConfigFromDisk<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,

@@ -9,7 +9,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { PLUGIN_MOVES_FILE } from "./ledger";
-import { restampMovedOverrides, snapshotConfigOrigins } from "./restamp-moved";
+import {
+  restampMovedOverridesSync,
+  snapshotConfigOriginsSync,
+} from "./restamp-moved";
 import {
   type AppPath,
   asAppPath,
@@ -42,9 +45,9 @@ const read = (root: AppPath, rel: string) =>
 
 /** Snapshot, "regenerate" `origin` to `next`, re-stamp. */
 function run(root: AppPath, next: string): string[] {
-  const prior = snapshotConfigOrigins(joinAppPath(root, "config"));
+  const prior = snapshotConfigOriginsSync(joinAppPath(root, "config"));
   writeFileSync(join(root, "config", "s/item.origin.jsonc"), next);
-  return restampMovedOverrides({ root, prior });
+  return restampMovedOverridesSync({ root, prior });
 }
 
 const OLD_ORIGIN = `// @hash aaa\n{ "items": ["b:x", "old:y"] }`;
@@ -53,7 +56,7 @@ const NEW_ORIGIN = `// @hash bbb\n{ "items": ["b:x", "zed:y"] }`;
 // The override, its keys already re-rooted by the mover.
 const OVERRIDE = `// @hash aaa\n// note\n{ "items": ["zed:y", "b:x"] }`;
 
-describe("restampMovedOverrides", () => {
+describe("restampMovedOverridesSync", () => {
   test("a pure move re-stamps the base override and every app scope", () => {
     const root = checkout({
       "config/s/item.origin.jsonc": OLD_ORIGIN,

@@ -40,7 +40,7 @@
   - Resources: `config-orphans.report` (push, notified)
 - Machine:
   - Uses:
-    - `config_v2.CONFIG_DIR`
+    - `config_v2.configGenerationDir`
     - `network/live.serveValue`
   - Register: `defineWarmup('config-orphans.stranded')`
 - Cross-plugin:

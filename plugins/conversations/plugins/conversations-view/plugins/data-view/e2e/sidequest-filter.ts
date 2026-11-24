@@ -27,6 +27,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { servedConfigDirSync } from "@plugins/config_v2/plugins/disk-read/core";
 import type { Page } from "playwright";
 import {
   arg,
@@ -62,7 +63,10 @@ const OUT = arg("out") ?? "/tmp/sidequest-filter";
  * override when there is one — it wins — else the propagated origin.
  */
 function runtimeConfig(rel: string): string {
-  const dir = resolve(configDir.file(targetNamespace()), rel);
+  const dir = resolve(
+    servedConfigDirSync(configDir.file(targetNamespace())),
+    rel,
+  );
   const override = `${dir}.jsonc`;
   return existsSync(override) ? override : `${dir}.origin.jsonc`;
 }

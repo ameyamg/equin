@@ -17378,7 +17378,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config-v2.values` (push, notified, whole: one config document's fields — its descriptor's declared schema)
   - Machine:
     - Uses: `network/live.serveValue`
-    - Exports (values): `CONFIG_DIR`
+    - Exports (values): `configGenerationDir`
     - Register: `defineFileWatcher('config_v2.config-files')`
   - Core:
     - Uses:
@@ -17389,8 +17389,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/object/config.isObjectFieldDef`
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `packages/list-bound.cappedList`
       - `packages/list-bound.wholeList`
       - `packages/list-bound.wholeRecord`
+      - `packages/string-hash.sha256Hex`
       - `primitives/rank.Rank`
     - Exports (types):
       - `CommittedFiles`
@@ -17401,10 +17403,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigFileContent`
       - `ConfigFileRef`
       - `ConfigGitLayerImpl`
+      - `ConfigHead`
       - `ConfigListVisitor`
       - `ConfigMergeRecord`
       - `ConfigMergeResult`
       - `ConfigMigration`
+      - `ConfigPluginMove`
       - `ConfigProxy`
       - `ConfigSource`
       - `ConfigStoreImpl`
@@ -17436,6 +17440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `OrphanReason`
       - `OrphanReport`
       - `OrphanRiskClass`
+      - `RegisteredConfig`
       - `ResolvedConfig`
       - `ResolvedLayer`
       - `RetiredField`
@@ -17448,16 +17453,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `committedDocument`
       - `committedFilesFromMap`
       - `computeHash`
+      - `CONFIG_GENERATION_LOCK_FILE`
+      - `CONFIG_GENERATION_RETIRED_FILE`
+      - `CONFIG_GENERATION_ROOT_ENTRIES`
+      - `CONFIG_GENS_DIR`
       - `CONFIG_HASH_RE`
+      - `CONFIG_HEAD_FILE`
       - `configConflict`
       - `configConflictLocations`
       - `configFileOwner`
       - `configFileRelPath`
+      - `configGenerationId`
       - `configGitValues`
+      - `configHeadSchema`
       - `configMergeRecordSchema`
       - `configModifiedCounts`
       - `configRawFile`
       - `configScopes`
+      - `configTextHash`
       - `configTiers`
       - `configV2ConflictEntrySchema`
       - `configV2ConflictLocationsSchema`
@@ -17489,6 +17502,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `mergeConflictFields`
       - `mergeRecordStatus`
       - `mergeReviewFields`
+      - `nextConfigHead`
       - `normalizeCollectionItems`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
@@ -17498,6 +17512,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `orphanRiskClassSchema`
       - `parseConfigFile`
       - `parseConfigFileRelPath`
+      - `parseConfigText`
       - `parseMergeRecord`
       - `parseOverrideFile`
       - `propagate`
@@ -17509,6 +17524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `removeDescriptorScope`
       - `resolveGitLayer`
       - `REVIEW_MARKER`
+      - `sameDocumentModuloOrder`
       - `sameFieldValue`
       - `scopeAppId`
       - `scopeSegment`
@@ -17518,18 +17534,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stringifyConfigValue`
       - `undeclaredFieldPaths`
       - `validationIssues`
+      - `withConfigTextHash`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 155 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 153 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×17
       - `conversations` ×14
       - `backup` ×12
       - `ui` ×11
-      - `config_v2` ×9
-      - `infra` ×7
+      - `config_v2` ×8
       - `tasks` ×7
       - `auth` ×6
+      - `infra` ×6
       - `framework` ×5
       - `build` ×3
       - `primitives` ×3
@@ -17710,6 +17727,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`disk-read`** — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides; async for a backend, readEffectiveConfigFromDiskSync for a CLI step).
       - Core:
         - Uses:
+          - `config_v2.CONFIG_GENS_DIR`
+          - `config_v2.CONFIG_HEAD_FILE`
+          - `config_v2.ConfigHead`
+          - `config_v2.configHeadSchema`
           - `config_v2.currentOrigin`
           - `config_v2.effective`
           - `config_v2.loadedProxy`
@@ -17718,20 +17739,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.readTypedConfig`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/timed-fs.existsSync`
           - `packages/timed-fs.readFile`
           - `packages/timed-fs.readFileSync`
         - Exports (values):
           - `readEffectiveConfigFromDisk`
           - `readEffectiveConfigFromDiskSync`
+          - `servedConfigDir`
+          - `servedConfigDirSync`
       - Cross-plugin:
         - Imported by:
+          - `apps/mail/threads`
           - `build/converge`
           - `build/serve-composition`
+          - `conversations/conversations-view/data-view`
+          - `conversations/workspace/worktree`
           - `framework/cli/build`
           - `framework/cli/deploy`
           - `infra/git/main-slots`
+          - `plugin-meta/relocate`
+          - `tasks/task-list`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/effective-on-disk.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `core/effective-on-disk.ts`, `core/served-dir.ts` (debt)
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
         - Slots:
@@ -17796,40 +17825,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/action-bar.ActionBar`
           - `shell/notifications.useToast`
           - `ui/icons.Icon`
-    - **`ledger`** — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the @hash chain.
-      - Core:
-        - Uses:
-          - `config_v2.APP_SCOPE_DIR`
-          - `config_v2.computeHash`
-          - `config_v2.CONFIG_HASH_RE`
-          - `config_v2.ConfigDescriptor`
-          - `config_v2.JsonValue`
-          - `infra/host-fs/user-path.AppPath`
-          - `infra/host-fs/user-path.joinAppPath`
-          - `packages/timed-fs.existsSync`
-          - `packages/timed-fs.readdirSync`
-          - `packages/timed-fs.readFileSync`
-        - Exports (types):
-          - `AppliedConfigMigration`
-          - `ConfigLedgerEntry`
-        - Exports (values):
-          - `APPLIED_CONFIG_MIGRATIONS_FILE`
-          - `applyConfigMigrations`
-          - `configMigrationsPending`
-          - `configTextHash`
-          - `parseConfigText`
-          - `rewriteConfigFiles`
-          - `runConfigLedger`
-          - `walkConfigFiles`
-          - `withConfigTextHash`
-      - Cross-plugin:
-        - Imported by:
-          - `framework/tooling/codegen`
-          - `plugin-meta/relocate`
-      - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `core/internal/config-ledger.ts` (debt)
-          - `blocking-fs/sync-named` — `core/internal/config-ledger.ts` (sanctioned)
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
       - Web:
         - Slots:
@@ -27110,7 +27105,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources: `config-orphans.report` (push, notified)
       - Machine:
         - Uses:
-          - `config_v2.CONFIG_DIR`
+          - `config_v2.configGenerationDir`
           - `network/live.serveValue`
         - Register: `defineWarmup('config-orphans.stranded')`
       - Cross-plugin:
@@ -32816,8 +32811,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
-          - `framework` ×30
+        - Imported by: 44 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+          - `framework` ×29
           - `infra` ×7
           - `apps` ×3
           - `plugin-meta` ×2
@@ -33003,13 +32998,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
               - `framework` ×12
               - `infra` ×8
               - `debug` ×4
               - `apps` ×2
-              - `build` ×2
               - `plugin-meta` ×2
+              - `build`
               - `database/admin`
               - `packages/source-digest/prune`
               - `primitives/css/layout-harness`
@@ -33537,8 +33532,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 99 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
-          - `plugin-meta` ×20
+        - Imported by: 100 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+          - `plugin-meta` ×21
           - `apps` ×15
           - `tasks` ×12
           - `framework` ×11
@@ -34100,8 +34095,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition` (1 debt)
               - `build/server-build-id` (2 debt)
               - `code-explorer` (5 debt)
-              - `config_v2/disk-read` (1 debt)
-              - `config_v2/ledger` (1 debt)
+              - `config_v2/disk-read` (2 debt)
               - `conversations` (3 debt)
               - `conversations/conversation-view/code` (2 debt)
               - `conversations/transcript-retention` (1 debt)
@@ -34142,7 +34136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (14 debt)
               - `framework/tooling/checks/type-check` (18 debt)
-              - `framework/tooling/codegen` (19 debt)
+              - `framework/tooling/codegen` (18 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
               - `framework/tooling/collected-dir/discovery` (1 debt)
               - `framework/tooling/format` (5 debt)
@@ -34181,7 +34175,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host/host-read-pool` (1 debt)
               - `infra/jobs` (2 debt)
               - `infra/jobs/supervised-job` (3 debt)
-              - `infra/launcher` (3 debt)
+              - `infra/launcher` (2 debt)
               - `infra/mcp/browser` (2 debt)
               - `infra/paths` (11 debt)
               - `infra/paths/data-root-layout` (2 debt)
@@ -34214,7 +34208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-refs` (1 debt)
               - `plugin-meta/plugin-tree` (2 debt)
               - `plugin-meta/plugin-tree/faceted` (2 debt)
-              - `plugin-meta/relocate` (3 debt)
+              - `plugin-meta/relocate` (2 debt)
               - `plugin-meta/token-usage` (1 debt)
               - `primitives/commit-list` (1 debt)
               - `primitives/css/layout-harness` (3 debt)
@@ -34610,9 +34604,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 176 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `config_v2` ×19
+            - Uses: 171 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
+              - `config_v2` ×15
               - `framework/plugin-id` ×13
               - `framework/tooling/checks/source-analysis` ×11
               - `network/live/resource-vocabulary` ×11
@@ -34626,11 +34620,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
-              - `infra/host-fs/user-path` ×4
               - `packages/shared-work` ×4
-              - `config_v2/ledger` ×3
               - `framework/tooling/boundaries` ×3
               - `framework/tooling/format` ×3
+              - `infra/host-fs/user-path` ×3
+              - `plugin-meta/relocate` ×3
               - `framework/list-catalog` ×2
               - `framework/server-core` ×2
               - `framework/tooling/collected-dir/discovery` ×2
@@ -34708,6 +34702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `colorTokenRefPath`
               - `committedRegistryBundle`
               - `computeEagerTier`
+              - `CONFIG_GENERATION_REL_PATH`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
               - `declareSlotsFromBarrels`
@@ -34727,6 +34722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `generateClaudeSettings`
               - `generateColorTokenRef`
               - `generateCompositionRegistry`
+              - `generateConfigGeneration`
               - `generateConfigOrigins`
               - `generateCustomUtilities`
               - `generateDataViews`
@@ -34755,7 +34751,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pluginReferenceMdPath`
               - `postWebManifests`
               - `preBarrelManifests`
-              - `propagateConfigToUser`
               - `readCompositionManifestsFromDisk`
               - `readDeclaredApps`
               - `readDefineApp`
@@ -34771,6 +34766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderCollectedDirRegistry`
               - `renderColorTokenRef`
               - `renderCompactDoc`
+              - `renderConfigGeneration`
               - `renderConfigOriginContent`
               - `renderCustomUtilities`
               - `renderDataViewsManifest`
@@ -34820,10 +34816,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/relocate`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
-              - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
               - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, the one list of locations a composition's build writes (read by the writer, the on-disk listing worktree reclaim uses, and the `.gitignore` patterns its composition-outputs-ignored check holds equal), and the dead outputs — per-composition files git sees, left at a location no build writes any more — that build and push delete.
@@ -39728,7 +39724,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempted by:
               - `build/server-build-id` (0 debt)
-              - `config_v2/ledger` (0 debt)
               - `database/migrations` (0 debt)
               - `debug/boot-events` (0 debt)
               - `debug/paging-probe` (0 debt)
@@ -39754,7 +39749,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/signal-origin` (0 debt)
               - `packages/single-flight` (0 debt)
               - `plugin-meta/barrel-import` (0 debt)
-              - `plugin-meta/relocate` (0 debt)
               - `plugin-meta/token-usage` (0 debt)
               - `reports/engine` (0 debt)
               - `reports/outbox` (0 debt)
@@ -39780,18 +39774,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 120 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 119 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×45
               - `framework` ×23
               - `apps` ×8
               - `debug` ×7
               - `packages` ×7
               - `plugin-meta` ×6
-              - `config_v2` ×3
               - `database` ×3
               - `release` ×3
               - `code-explorer` ×2
               - `companions` ×2
+              - `config_v2` ×2
               - `fields` ×2
               - `primitives` ×2
               - `backup/sources/project-memory`
@@ -40389,7 +40383,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LOOPBACK_BIND`
           - `pgbouncerConnection`
           - `pgbouncerService`
-          - `propagateReleaseConfig`
           - `readGatewayGeneration`
           - `readPid`
           - `releaseBackendSpec`
@@ -40442,7 +40435,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
           - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
           - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/release-swap.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/release-swap.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/boot.ts` (sanctioned)
           - `source-read-safety/no-text-source-read` — `check/internal/strip-comments.ts` (debt)
@@ -42082,13 +42075,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnToFile`
           - `watchChildKills`
       - Cross-plugin:
-        - Imported by: 114 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
-          - `framework` ×34
+        - Imported by: 112 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `infra` ×34
+          - `framework` ×33
           - `apps` ×10
           - `database` ×5
           - `debug` ×5
-          - `build` ×3
+          - `build` ×2
           - `code-explorer` ×2
           - `conversations` ×2
           - `installer` ×2
@@ -45464,11 +45457,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
           - `infra` ×13
           - `framework` ×7
           - `packages` ×4
           - `apps/chord/song-index`
+          - `config_v2`
           - `database`
           - `debug/browser-recordings/writer`
           - `integrations/youtube/audio-fetch`
@@ -45714,12 +45708,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `openOwnedFd`
           - `openOwnedFdSync`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
           - `infra` ×15
           - `framework` ×7
           - `packages` ×4
           - `database` ×2
           - `apps/chord/song-index`
+          - `config_v2`
           - `conversations/runtime-sdk`
           - `debug/browser-recordings/writer`
           - `installer`
@@ -46267,7 +46262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 54 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 55 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×16
           - `database` ×6
           - `network` ×5
@@ -46277,9 +46272,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×3
           - `ui` ×3
           - `companions` ×2
+          - `config_v2` ×2
           - `page` ×2
           - `plugin-meta` ×2
-          - `config_v2/auto-merge`
           - `conversations/prompt-snippets`
           - `map`
           - `primitives/dom/web-storage`
@@ -46414,7 +46409,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withChangedFilesWork`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 198 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 197 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
           - `framework` ×31
           - `apps` ×18
@@ -46426,9 +46421,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×5
           - `plugin-meta` ×5
           - `reports` ×4
-          - `config_v2` ×3
           - `integrations` ×3
           - `release` ×3
+          - `config_v2` ×2
           - `installer` ×2
           - `primitives` ×2
           - `apps-core/app-preload`
@@ -50877,6 +50872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/parse-utils.markerCallSpans`
           - `plugin-meta/parse-utils.maskSource`
           - `plugin-meta/parse-utils.matchBracket`
+          - `plugin-meta/relocate/reroot.reorderKeyRanges`
         - Exports (types):
           - `DotRef`
           - `DotRefSite`
@@ -50910,7 +50906,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanAsPluginIdRefs`
           - `scanCompositionManifestRefs`
           - `scanCompositionSourceRefs`
-          - `scanReorderItemRefs`
           - `scanRuntimeExceptionRefs`
       - Cross-plugin:
         - Imported by: `plugin-meta/relocate`
@@ -50922,6 +50917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
           - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
           - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).
+          - `scanReorderItemRefs` — The plugin-id half of every reorder override entry key (`"<pluginId>:<contribution id>"`) found in an `items` array of a config JSONC file.
     - **`plugin-tree`** — Watcher-kept plugin-tree accessors: the structure tree and the faceted tree, both held by the FacetedTreeSource host service (a worker holding the faceted index, which builds the structure first and hands it out ahead of the facets — neither is built in the backend), kept up to date by what changed (O(changes)), each with its own change signal.
       - Server:
         - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
@@ -51275,39 +51271,57 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-    - **`relocate`** — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
+    - **`relocate`** — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that a backend replays onto its namespace's saved user config when it derives a config generation (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
-        - Uses: 27 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
-          - `config_v2` ×8
-          - `config_v2/ledger` ×7
-          - `framework/plugin-id` ×4
-          - `infra/host-fs/user-path` ×3
-          - `packages/timed-fs` ×3
+        - Uses:
+          - `config_v2.APP_SCOPE_DIR`
+          - `config_v2.configTextHash`
+          - `config_v2.parseConfigText`
+          - `config_v2.sameDocumentModuloOrder`
+          - `config_v2.withConfigTextHash`
+          - `framework/plugin-id.asPluginId`
+          - `framework/plugin-id.PluginId`
           - `framework/tooling.noteRepoWrites`
-          - `plugin-meta/plugin-refs.scanReorderItemRefs`
-        - Exports (types):
-          - `AppliedMove`
-          - `PluginMove`
+          - `infra/host-fs/user-path.AppPath`
+          - `infra/host-fs/user-path.joinAppPath`
+          - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.readdirSync`
+          - `packages/timed-fs.readFileSync`
+          - `plugin-meta/relocate/reroot.rerootReorderKeys`
+        - Exports (types): `PluginMove`
         - Exports (values):
-          - `appendPluginMove`
-          - `APPLIED_MOVES_FILE`
-          - `applyPluginMoves`
-          - `movedPluginId`
-          - `namespacesHolding`
+          - `appendPluginMoveSync`
           - `parsePluginMoves`
           - `PLUGIN_MOVES_FILE`
           - `pluginMoveKey`
-          - `readPluginMoves`
-          - `restampMovedOverrides`
-          - `snapshotConfigOrigins`
+          - `readPluginMovesSync`
+          - `restampMovedOverridesSync`
+          - `snapshotConfigOriginsSync`
       - Cross-plugin:
-        - Imported by: `framework/cli/build`
+        - Imported by:
+          - `framework/cli/build`
+          - `framework/tooling/codegen`
       - Exemptions:
         - Exempts itself from:
           - `product-name:legacy-id` — `core/plugin-moves.json` (sanctioned)
           - `relocate:moved-plugins-unnamed` — `core/plugin-moves.json` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (debt)
-          - `blocking-fs/sync-named` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (debt)
+      - Plugins:
+        - **`reroot`** — A plugin id re-rooted through a move, as a leaf every reader of a move shares: movedPluginId (where an id lands after moving from → to) and, in a config file's text, the plugin-id half of every reorder entry key (`"<pluginId>:<id>"` in an `items` array, at any depth) located by range and re-rooted in place — what the mover, the plugin-refs locator and a backend deriving its config generation all read keys with.
+          - Core:
+            - Uses:
+              - `framework/plugin-id.asPluginId`
+              - `framework/plugin-id.PluginId`
+            - Exports (types): `ReorderKeyRange`
+            - Exports (values):
+              - `movedPluginId`
+              - `reorderKeyRanges`
+              - `rerootReorderKeys`
+          - Cross-plugin:
+            - Imported by:
+              - `config_v2`
+              - `plugin-meta/plugin-refs`
+              - `plugin-meta/relocate`
     - **`token-usage`** — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes resolved by Tailwind's own design system over app.css). Feeds the cross-refs facet's tokenUses, which the closure engine turns into hard edges.
       - Core:
         - Uses:
@@ -57067,7 +57081,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×12
@@ -57084,6 +57098,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-preload`
           - `backup`
           - `companions/browser-extension`
+          - `config_v2`
           - `packages/source-digest/prune`
           - `primitives/log-channels/memory-persistence`
           - `release`

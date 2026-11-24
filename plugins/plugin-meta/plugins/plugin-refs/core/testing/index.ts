@@ -3,3 +3,4 @@
 export { scanPathRefs } from "../ts-refs";
 export { scanCssRefs, scanMarkdownRefs } from "../relative-refs";
 export { mentionScanner } from "../mentions";
+export { scanReorderItemRefs } from "../config-refs";

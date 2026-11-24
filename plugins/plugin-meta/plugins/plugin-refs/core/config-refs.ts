@@ -5,9 +5,9 @@ import {
   type Node as JsonNode,
   type ParseError,
 } from "jsonc-parser";
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import { assertRange, lineIndex } from "./resolve";
+import { reorderKeyRanges } from "@plugins/plugin-meta/plugins/relocate/plugins/reroot/core";
 import type { DotRef } from "./types";
 
 function parseJsonc(file: string, text: string): JsonNode {
@@ -79,54 +79,20 @@ export function scanCompositionManifestRefs(
   return out;
 }
 
-// `${pluginId}:${id}` reorder entryKey; pluginId is the dot-id before the colon.
-const ENTRY_KEY_RE = /^[a-z0-9][a-z0-9.-]*:[a-z0-9][a-z0-9.-]*$/i;
-
-/** Every string element of any `items` array, at any depth (reorder overrides
- *  nest groups whose own `items` hold entry keys too). */
-function collectItemStrings(node: JsonNode, acc: JsonNode[]): void {
-  if (node.type === "property") {
-    const [key, value] = node.children ?? [];
-    if (key?.value === "items" && value?.type === "array") {
-      for (const el of value.children ?? []) {
-        if (el.type === "string") acc.push(el);
-        else collectItemStrings(el, acc);
-      }
-      return;
-    }
-    if (value) collectItemStrings(value, acc);
-    return;
-  }
-  for (const child of node.children ?? []) collectItemStrings(child, acc);
-}
-
 /**
  * The plugin-id half of every reorder override entry key
  * (`"<pluginId>:<contribution id>"`) found in an `items` array of a config
  * JSONC file.
  */
 export function scanReorderItemRefs(file: string, text: string): DotRef[] {
-  if (!text.includes('"items"')) return [];
-  const nodes: JsonNode[] = [];
-  collectItemStrings(parseJsonc(file, text), nodes);
   const lineOf = lineIndex(text);
-  const out: DotRef[] = [];
-  for (const node of nodes) {
-    const key = node.value as string;
-    if (!ENTRY_KEY_RE.test(key)) continue;
-    const id = key.slice(0, key.indexOf(":"));
-    const start = stringStart(node);
-    const range = { start, end: start + id.length };
-    assertRange(file, text, range, id);
-    out.push({
-      kind: "dot",
-      site: "reorder-items",
-      file,
-      range,
-      line: lineOf(start),
-      value: id,
-      id: asPluginId(id),
-    });
-  }
-  return out;
+  return reorderKeyRanges(file, text).map(({ id, start, end }) => ({
+    kind: "dot",
+    site: "reorder-items",
+    file,
+    range: { start, end },
+    line: lineOf(start),
+    value: id,
+    id,
+  }));
 }

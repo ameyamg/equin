@@ -79,12 +79,13 @@ double close in our own code loud at its source.
     - `openOwnedFd`
     - `openOwnedFdSync`
 - Cross-plugin:
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×15
     - `framework` ×7
     - `packages` ×4
     - `database` ×2
     - `apps/chord/song-index`
+    - `config_v2`
     - `conversations/runtime-sdk`
     - `debug/browser-recordings/writer`
     - `installer`

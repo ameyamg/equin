@@ -31,7 +31,9 @@
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { existsSync, rmSync } from "node:fs";
 import type { Page } from "playwright";
+import { join } from "node:path";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { servedConfigDirSync } from "@plugins/config_v2/plugins/disk-read/core";
 import {
   arg,
   boot,
@@ -98,7 +100,10 @@ const BOOT_TIMEOUT_MS = 120_000;
  */
 const STORE_PATH = "apps/mail/threads/mail-threads.jsonc";
 
-const USER_OVERRIDE = configDir.file(targetNamespace(), STORE_PATH);
+const USER_OVERRIDE = join(
+  servedConfigDirSync(configDir.file(targetNamespace())),
+  STORE_PATH,
+);
 
 /**
  * Wait until the SERVER resolves the edit, not merely until the file exists.

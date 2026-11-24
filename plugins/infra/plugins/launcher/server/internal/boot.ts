@@ -37,7 +37,6 @@ import {
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import { seedAssetMirrorCache } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/server";
-import { propagateOriginLayer } from "./config-propagate";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { getHealthReady } from "@plugins/infra/plugins/health/core";
@@ -59,7 +58,6 @@ import {
   pgbouncerPidFileUnder,
 } from "@plugins/database/plugins/pgbouncer/server";
 import { dbConfigDir } from "@plugins/database/data-dirs";
-import { userConfigRelativeToRoot } from "@plugins/config_v2/data-dirs";
 import {
   CENTRAL_ROUTES_FILENAME,
   GATEWAY_LOCK_FILENAME,
@@ -1138,65 +1136,4 @@ export function seedReleaseAssetMirror(opts: {
   log?: LogFn;
 }): void {
   seedAssetMirrorCache(opts);
-}
-
-/**
- * Propagate the release bundle's resolved config origins into the app-data dir
- * on EVERY boot, so a released app's config-backed defaults are the ones THIS
- * bundle was built from — not the ones some earlier bundle happened to install
- * first. A host's data dir outlives every deploy (that is what makes the DB and
- * the user's settings survive a ship), so anything installed "on first run" is
- * installed once, ever.
- *
- * `release.ts` vendored the propagated seed under
- * `<bundleRoot>/config-seed/config/<worktree>/…`; this syncs it onto the user
- * config layer under `<dataDir>`, the exact path config_v2's config-dir.ts
- * reads. What is and is not written — the build-owned origin layer only, and why
- * a directory-level copy silently served a stale app — is
- * {@link propagateOriginLayer}'s to state.
- *
- * The destination comes from config_v2's OWN declaration, via
- * `userConfigRelativeToRoot()` — the dir has to be named under a foreign root
- * (a fresh install's data dir, not this process's), which is the same problem
- * `assetMirrorRelativeToRoot()` solves. It was inlined as `config/<worktree>`
- * with a comment asking a human to keep it in lockstep with `config-dir.ts`,
- * and the layout migration is exactly the change that would have broken that
- * lockstep silently: the seed would land at the old path while the app read the
- * new one, and a released app would fall back to hardcoded schema defaults with
- * nothing to fail. Note `@plugins/config_v2/data-dirs` is safe to import here
- * where the config_v2 BARRELS are not: a `data-dirs` module reaches `paths/core`
- * and nothing else, while the barrels reach `fields/core` → React. The launcher
- * boots a released app with no repo around it, so its import closure is kept
- * deliberately small. Once a DOM-free `tools` tsconfig made that a compile
- * error; the repo builds one full-lib program now, so it is intent to hold to
- * (research/2026-09-18-global-type-check-one-program.md).
- *
- * The bundle's own `config-seed/config/` layout is the release CLI's staging
- * convention, unrelated to the data root, so it stays spelled out.
- */
-export async function propagateReleaseConfig(opts: {
-  bundleRoot: AppPath;
-  dataDir: AppPath;
-  worktreeName: string;
-  log?: LogFn;
-}): Promise<void> {
-  const src = joinAppPath(
-    opts.bundleRoot,
-    "config-seed",
-    "config",
-    opts.worktreeName,
-  );
-  const dest = joinAppPath(
-    opts.dataDir,
-    userConfigRelativeToRoot(),
-    opts.worktreeName,
-  );
-  if (!(await exists(src))) return; // dev / no seed baked → no-op
-
-  const { written, removed } = await propagateOriginLayer(src, dest);
-  if (written > 0 || removed > 0) {
-    opts.log?.(
-      `Propagated config origins → ${dest} (${written} written, ${removed} removed)`,
-    );
-  }
 }

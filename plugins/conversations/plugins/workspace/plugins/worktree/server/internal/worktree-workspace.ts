@@ -4,6 +4,7 @@ import type { WorkspaceImpl } from "@plugins/conversations/plugins/workspace/ser
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { databaseExists } from "@plugins/database/plugins/admin/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { servedConfigDir } from "@plugins/config_v2/plugins/disk-read/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
 import { latestSupervisedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
@@ -120,12 +121,14 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
 };
 
 /**
- * Seed a new worktree's user config layer with main's: copy main's subtree of
- * the config dir (`config_v2/data-dirs`) to the worktree's. Main with no config
- * dir yet has nothing to copy.
+ * Seed a new worktree's user config layer with main's: copy the generation
+ * main serves (`servedConfigDir` — its HEAD's) flat into the worktree's config
+ * dir. The worktree's backend derives its own generation from that at its
+ * first boot, whatever code the branch runs. Main with no config dir yet has
+ * nothing to copy.
  */
 async function forkConfigDir(targetWorktree: string): Promise<void> {
-  const sourceDir = configDir.file(MAIN_WORKTREE_NAME);
+  const sourceDir = await servedConfigDir(configDir.file(MAIN_WORKTREE_NAME));
   const targetDir = configDir.file(targetWorktree);
   try {
     await stat(sourceDir);

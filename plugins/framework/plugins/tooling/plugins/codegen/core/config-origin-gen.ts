@@ -2,27 +2,18 @@ import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import { unlinkSync, rmdirSync } from "fs";
 import {
   existsSync,
-  readFileSync,
   readdirSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { join, relative } from "path";
+import { relative } from "path";
 import { buildEnrichedTree } from "./enriched-tree";
-import { fileConfigProxy } from "./file-config-proxy";
 import {
   computeHash,
-  configFileRelPath,
-  propagateGitLayerDocument,
-  committedDocument,
-  readCommittedFilesSync,
   stringifyConfigValue,
-  APP_SCOPE_DIR,
-  appScopeId,
   configFileOwner,
-  type ConfigDocRef,
 } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
 import type { FieldDef } from "@plugins/fields/core";
@@ -38,11 +29,6 @@ import {
 import { mainBundle } from "./main-bundle";
 import { evaluateAllBarrels } from "./evaluated-barrels";
 import { writeGenerated } from "./write-generated";
-import {
-  applyConfigMigrations,
-  configMigrationsPending,
-  type AppliedConfigMigration,
-} from "@plugins/config_v2/plugins/ledger/core";
 import type { CodegenPass } from "./codegen-pass";
 
 interface DiscoveredConfig {
@@ -123,6 +109,22 @@ async function discoverConfigs(
   }
 
   return results;
+}
+
+/**
+ * Every declared config migration's ledger key (`<hierarchy path>/<config
+ * name>:<migration id>`, the key `applyConfigMigrations` records) — a
+ * migration's id is data, so the evaluated records answer it.
+ */
+export async function configMigrationKeys(
+  pass: CodegenPass,
+): Promise<string[]> {
+  return (await discoverConfigs(pass)).flatMap(
+    ({ hierarchyPath, descriptor }) =>
+      (descriptor.migrations ?? []).map(
+        (m) => `${hierarchyPath}/${descriptor.name}:${m.id}`,
+      ),
+  );
 }
 
 /** The barrels a server-side `ConfigV2.Register` may live in. */
@@ -624,140 +626,4 @@ export async function generateConfigOrigins(opts: {
     );
     for (const p of pruned) console.warn(`  config/${p}`);
   }
-}
-
-/**
- * Write the resolved git-layer config into one namespace's user config layer.
- *
- * Takes the user-config directory ALREADY RESOLVED, never a data root plus a
- * worktree name. The pair form is what this function used to take, and it meant
- * the location of the user config layer was spelled here — as
- * `join(dataRoot, "config", worktreeName)` — a second, silently-drifting
- * copy of a directory config_v2 declares (`state/config`) and reads through that
- * declaration. When the layout moved, the writer kept naming the old path while
- * the reader named the new one, with nothing to fail: on a fresh root the app
- * would simply see no propagated config and fall back to code defaults.
- *
- * Handing in the resolved directory removes the spelling rather than duplicating
- * it, and the derivation lands in callers that can reach the declaration:
- * `configDir.file(<namespace>)`. The one caller that is NOT writing into a data
- * root — `release` staging the resolved defaults into a bundle at
- * `<out>/config-seed/config/<composition>` — is exactly why this is a directory
- * and not a namespace: that path is the bundle's own layout, not the root's.
- */
-export async function propagateConfigToUser(opts: {
-  pass: CodegenPass;
-  userConfigDir: AppPath;
-}): Promise<{ migrations: AppliedConfigMigration[] }> {
-  // The checkout root and the namespace's user-config dir (or the release
-  // bundle's staged one): both the app's own.
-  const root = opts.pass.root;
-  const userConfigDir = opts.userConfigDir;
-  const configs = await discoverConfigs(opts.pass);
-
-  // Saved values follow a config's shape change BEFORE propagation compares
-  // them: replay every config migration this namespace has not applied yet.
-  // Returned, so the build can say what it rewrote.
-  // A migration's `apply` is code, and descriptors read from plugin records
-  // carry functions as stubs: when one is about to run, the barrels are
-  // imported live (only on the build that first meets a new migration).
-  const migrations = applyConfigMigrations({
-    userConfigDir,
-    configs: configMigrationsPending({ userConfigDir, configs })
-      ? await discoverConfigs(opts.pass, { live: true })
-      : configs,
-  });
-
-  // The checkout's committed layer, resolved by the same `committedDocument` a
-  // host's ConfigGitLayer answers with, so the desktop's propagated origins and
-  // its committed layer cannot disagree.
-  const committed = readCommittedFilesSync(joinAppPath(root, "config"), {
-    existsSync,
-    readFileSync,
-    readdirSync,
-  });
-
-  for (const { hierarchyPath, descriptor } of configs) {
-    // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.
-    // Each is a base-anchored DELTA (only the fields that differ for that app),
-    // resolved over the base-effective config by `committedDocument` and propagated
-    // as the user scoped origin, mirroring the base layer — so a committed scope
-    // reaches a fresh install. No scoped origin is ever committed (codegen has no
-    // scoped defaults; the base origin is the hash anchor for the scoped override).
-    const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
-    const gitLayer = committedDocument(storePath, committed);
-    if (gitLayer === undefined) continue;
-
-    // The one propagation (config_v2 core), shared with a memory store seeding
-    // itself from a bundled committed layer — the two cannot disagree.
-    const { conflicts } = propagateGitLayerDocument(
-      storePath,
-      gitLayer,
-      (ref) =>
-        fileConfigProxy(joinAppPath(userConfigDir, configFileRelPath(ref))),
-    );
-    for (const ref of conflicts) {
-      const where = join(
-        userConfigDir,
-        configFileRelPath({ ...ref, file: "override" }),
-      );
-      console.warn(
-        ref.scopeId === undefined
-          ? `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
-              `were based on a different upstream. Review ${where}`
-          : `[config-v2] conflict: user scoped override for "${descriptor.name}" ${ref.scopeId} at ${hierarchyPath} ` +
-              `was based on a different upstream. Review ${where}`,
-      );
-    }
-    // Sibling snapshot of the merge base, captured by propagate() when an
-    // in-sync override is about to go stale (see mergeConfigDocument /
-    // mergeConflict). A document of this propagation with no live conflict has
-    // any leftover ancestor snapshot orphaned (override reconciled or deleted
-    // out-of-band). Self-correcting cleanup so the file never lingers and
-    // can't seed a stale merge base on a future conflict.
-    const propagatedRefs: ConfigDocRef[] = [
-      { storePath },
-      ...Object.keys(gitLayer.scopes).map((appId) => ({
-        storePath,
-        scopeId: appScopeId(appId),
-      })),
-    ];
-    for (const ref of propagatedRefs) {
-      if (conflicts.some((c) => c.scopeId === ref.scopeId)) continue;
-      const ancestorPath = joinAppPath(
-        userConfigDir,
-        configFileRelPath({ ...ref, file: "ancestor" }),
-      );
-      if (existsSync(ancestorPath)) unlinkSync(ancestorPath);
-    }
-
-    const gitScopedAppIds = new Set(Object.keys(gitLayer.scopes));
-    // Reconcile: a user scoped origin with NO git backing is a scope that was
-    // removed from version control — revert it to base so git stays the source of
-    // truth (the base layer self-heals the same way via propagate). A runtime user
-    // fork (a scoped override with no git backing) is per-user state, not stale
-    // propagation, so it is preserved.
-    const userAppDir = joinAppPath(userConfigDir, hierarchyPath, APP_SCOPE_DIR);
-    if (!existsSync(userAppDir)) continue;
-    for (const appEntry of readdirSync(userAppDir, { withFileTypes: true })) {
-      if (!appEntry.isDirectory()) continue;
-      const appId = appEntry.name;
-      if (gitScopedAppIds.has(appId)) continue;
-      const appDir = joinAppPath(userAppDir, appId);
-      if (existsSync(joinAppPath(appDir, `${descriptor.name}.jsonc`))) continue; // runtime fork — keep
-      const stalePropagatedOrigin = joinAppPath(
-        appDir,
-        `${descriptor.name}.origin.jsonc`,
-      );
-      if (!existsSync(stalePropagatedOrigin)) continue;
-      unlinkSync(stalePropagatedOrigin);
-      try {
-        rmdirSync(appDir);
-      } catch (err) {
-        // Another descriptor still has files here, or concurrent cleanup — leave it.
-        if ((err as NodeJS.ErrnoException).code !== "ENOTEMPTY") throw err;
-      }
-    }
-  }
-  return { migrations };
 }

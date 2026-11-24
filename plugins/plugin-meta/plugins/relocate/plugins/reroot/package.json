@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-relocate-reroot",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A plugin id re-rooted through a move, as a leaf every reader of a move shares: movedPluginId (where an id lands after moving from → to) and, in a config file's text, the plugin-id half of every reorder entry key (`\"<pluginId>:<id>\"` in an `items` array, at any depth) located by range and re-rooted in place — what the mover, the plugin-refs locator and a backend deriving its config generation all read keys with."
+}

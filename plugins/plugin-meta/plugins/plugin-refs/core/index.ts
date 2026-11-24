@@ -25,10 +25,7 @@ export {
   scanCompositionSourceRefs,
   scanRuntimeExceptionRefs,
 } from "./ts-refs";
-export {
-  scanCompositionManifestRefs,
-  scanReorderItemRefs,
-} from "./config-refs";
+export { scanCompositionManifestRefs } from "./config-refs";
 export { maskMarkdown } from "./relative-refs";
 export {
   isWithinDir,

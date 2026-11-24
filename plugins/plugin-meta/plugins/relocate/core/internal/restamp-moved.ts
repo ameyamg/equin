@@ -1,6 +1,6 @@
 // Keeps the GIT layer's hash chain across a plugin move — the committed
-// `config/` overrides' twin of what `applyPluginMoves` does for a namespace's
-// saved settings.
+// `config/` overrides' twin of what a config generation derive's move replay
+// (config_v2#machine) does for a namespace's saved settings.
 //
 // A move re-roots reorder keys (`"<from>:<id>"` → `"<to>:<id>"`) in committed
 // overrides by hand (the mover's planner), but their origins are derived: the
@@ -32,23 +32,39 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import {
+  APP_SCOPE_DIR,
   configTextHash,
   parseConfigText,
-  walkConfigFiles,
+  sameDocumentModuloOrder,
   withConfigTextHash,
-} from "@plugins/config_v2/plugins/ledger/core";
-import { rewriteKeys } from "./apply-moves";
-import { readPluginMoves } from "./ledger";
-import { sameDocumentModuloOrder } from "./same-document";
+} from "@plugins/config_v2/core";
+import { rerootReorderKeys } from "@plugins/plugin-meta/plugins/relocate/plugins/reroot/core";
+import { readPluginMovesSync } from "./ledger";
+
+/** Every file under `dir` on disk, relative to it, forward-slash separated. */
+function walkConfigFilesSync(
+  dir: AppPath,
+  rel = "",
+  out: string[] = [],
+): string[] {
+  if (!existsSync(joinAppPath(dir, rel))) return out;
+  for (const e of readdirSync(joinAppPath(dir, rel), { withFileTypes: true })) {
+    const r = rel === "" ? e.name : `${rel}/${e.name}`;
+    if (e.isDirectory()) walkConfigFilesSync(dir, r, out);
+    else if (e.isFile()) out.push(r);
+  }
+  return out;
+}
 
 const ORIGIN_SUFFIX = ".origin.jsonc";
 
 /** Every committed origin under `configDir`, by `config/`-relative path → text. */
-export function snapshotConfigOrigins(configDir: AppPath): Map<string, string> {
+export function snapshotConfigOriginsSync(
+  configDir: AppPath,
+): Map<string, string> {
   const out = new Map<string, string>();
-  for (const rel of walkConfigFiles(configDir)) {
+  for (const rel of walkConfigFilesSync(configDir)) {
     if (rel.endsWith(ORIGIN_SUFFIX)) {
       out.set(rel, readFileSync(joinAppPath(configDir, rel), "utf8"));
     }
@@ -58,7 +74,7 @@ export function snapshotConfigOrigins(configDir: AppPath): Map<string, string> {
 
 /** The overrides anchored to an origin: its base `<name>.jsonc` and every
  *  `@app/<id>/<name>.jsonc` scope (a scope anchors to the BASE origin). */
-function overridesOf(configDir: AppPath, originRel: string): string[] {
+function overridesOfSync(configDir: AppPath, originRel: string): string[] {
   const dir = dirname(originRel);
   const name = basename(originRel, ORIGIN_SUFFIX);
   const at = (rel: string) => (dir === "." ? rel : `${dir}/${rel}`);
@@ -75,15 +91,15 @@ function overridesOf(configDir: AppPath, originRel: string): string[] {
 
 /**
  * Re-stamp every committed override whose origin changed under it by nothing
- * but a recorded plugin move. `prior` is `snapshotConfigOrigins` taken before
+ * but a recorded plugin move. `prior` is `snapshotConfigOriginsSync` taken before
  * codegen regenerated the origins; `root` is the checkout (its move ledger).
  * Returns the re-stamped overrides, `config/`-relative, sorted.
  */
-export function restampMovedOverrides(opts: {
+export function restampMovedOverridesSync(opts: {
   root: AppPath;
   prior: ReadonlyMap<string, string>;
 }): string[] {
-  const moves = readPluginMoves(opts.root);
+  const moves = readPluginMovesSync(opts.root);
   if (moves.length === 0) return [];
   const configDir = joinAppPath(opts.root, "config");
   const restamped: string[] = [];
@@ -97,7 +113,7 @@ export function restampMovedOverrides(opts: {
       continue;
 
     const rerooted = moves.reduce(
-      (text, move) => rewriteKeys(rel, text, move),
+      (text, move) => rerootReorderKeys(rel, text, move),
       before,
     );
     if (rerooted === before) continue;
@@ -109,7 +125,7 @@ export function restampMovedOverrides(opts: {
     )
       continue;
 
-    for (const override of overridesOf(configDir, rel)) {
+    for (const override of overridesOfSync(configDir, rel)) {
       const file = joinAppPath(configDir, override);
       const text = readFileSync(file, "utf8");
       if (configTextHash(text) !== oldHash) continue;

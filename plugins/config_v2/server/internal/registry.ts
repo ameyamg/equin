@@ -592,6 +592,7 @@ export async function initRegistry(): Promise<void> {
     const registered: {
       descriptor: ConfigDescriptor;
       storePath: string;
+      hierarchyPath: string;
     }[] = [];
 
     for (const contribution of contributions) {
@@ -612,7 +613,7 @@ export async function initRegistry(): Promise<void> {
       const hierarchyPath = asPath(asPluginId(pluginId));
       const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
       registerDescriptorPath(storePath, descriptor, hierarchyPath, pluginId);
-      registered.push({ descriptor, storePath });
+      registered.push({ descriptor, storePath, hierarchyPath });
     }
 
     // Each descriptor's documents are read on their own: its base entry, then
@@ -639,6 +640,11 @@ export async function initRegistry(): Promise<void> {
     // preloads them, and only the config nav reads them — so the first nav
     // open pays for them, not every boot.
     const store = ConfigStore.get();
+    // Before any document is read: the store makes ready the user layer THIS
+    // code reads — on the desktop, deriving its config generation (plugin
+    // moves, migrations with these live descriptors, propagation) when the
+    // running code's generation does not exist yet.
+    await store.open?.(registered);
     const reads = createSemaphore(INIT_CONCURRENCY);
     await Promise.all(
       registered.map(({ descriptor, storePath }) =>

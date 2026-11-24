@@ -8,7 +8,7 @@ import type {
   OrphanFileRole,
   OrphanReport,
 } from "@plugins/config_v2/core";
-import { CONFIG_DIR } from "@plugins/config_v2/machine";
+import { configGenerationDir } from "@plugins/config_v2/machine";
 import { getAllDescriptors } from "@plugins/config_v2/server";
 
 // A file is scoped when it sits under an `@app/<id>/` segment:
@@ -77,11 +77,11 @@ async function dirExists(dir: string): Promise<boolean> {
  *     so it is reported as `removed`. Still a hint, not proof; else `removed`.
  *
  * `configDir` and `descriptors` are parameters (defaulting to the real
- * `CONFIG_DIR` + live registry) so the audit is unit-testable against a temp dir
+ * `configGenerationDir()` + live registry) so the audit is unit-testable against a temp dir
  * and a fake live set without touching env or the registry.
  */
 export async function auditUserConfigOrphans(
-  configDir: string = CONFIG_DIR,
+  configDir: string = configGenerationDir(),
   descriptors: [string, ConfigDescriptor][] = getAllDescriptors(),
 ): Promise<OrphanReport> {
   if (!(await dirExists(configDir))) return { orphans: [] };

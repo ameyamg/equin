@@ -5,12 +5,8 @@ import {
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { pluginMentionsFold } from "@plugins/plugin-meta/plugins/plugin-refs/core";
-import {
-  movedPluginId,
-  parsePluginMoves,
-  PLUGIN_MOVES_FILE,
-  type PluginMove,
-} from "../core";
+import { movedPluginId } from "@plugins/plugin-meta/plugins/relocate/plugins/reroot/core";
+import { parsePluginMoves, PLUGIN_MOVES_FILE, type PluginMove } from "../core";
 
 const RULE = "relocate:moved-plugins-unnamed";
 const MAX_SHOWN = 50;

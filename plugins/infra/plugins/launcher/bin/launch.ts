@@ -127,7 +127,6 @@ async function main(): Promise<void> {
     teardownSelfContainedApp,
     writeReleaseDatabaseConfig,
     seedReleaseAssetMirror,
-    propagateReleaseConfig,
     resolveListenAddress,
     releaseBackendSpec,
     releaseServedDist,
@@ -212,18 +211,14 @@ async function main(): Promise<void> {
   );
 
   if (verb === "swap") {
-    // The per-release boot steps a running host still needs from this bundle,
-    // before its backend boots: the build-owned config layer and the
-    // pre-warmed asset mirror (copy-if-absent).
+    // The per-release boot step a running host still needs from this bundle,
+    // before its backend boots: the pre-warmed asset mirror (copy-if-absent).
+    // Config needs none — the backend derives its own config generation from
+    // the bundle's committed layer at boot (config_v2#machine), and the one it
+    // replaces keeps its own until the swap.
     seedReleaseAssetMirror({
       bundleRoot: asAppPath(bundleRoot),
       dataDir: asAppPath(readEnv("DIR")!),
-      log: console.log,
-    });
-    await propagateReleaseConfig({
-      bundleRoot: asAppPath(bundleRoot),
-      dataDir: asAppPath(readEnv("DIR")!),
-      worktreeName: name,
       log: console.log,
     });
     const outcome = await swapReleaseBackend({
@@ -273,19 +268,10 @@ async function main(): Promise<void> {
     log: console.log,
   });
 
-  // Propagate this bundle's resolved config origins into the writable data dir,
-  // on EVERY boot — the data dir outlives a deploy, so a once-only seed would
-  // serve the FIRST bundle's config forever. Only the build-owned origin layer
-  // is written; the user's own `.jsonc` overrides are left alone. worktreeName
-  // = composition = the backend's runtime namespace, so this lands exactly where
-  // config-dir.ts reads (EQUIN_DIR/config/<worktree>). Runs before the
-  // gateway spawns the backend, so CONFIG_DIR is current on first read.
-  await propagateReleaseConfig({
-    bundleRoot: asAppPath(bundleRoot),
-    dataDir: asAppPath(readEnv("DIR")!),
-    worktreeName: name,
-    log: console.log,
-  });
+  // No config step: the backend derives its config generation from this
+  // bundle's committed layer at its own boot (config_v2#machine) — origins,
+  // plugin moves and migrations alike — so a data dir that outlives every
+  // deploy always serves the config of the code that reads it.
 
   const { gateway } = await bootSelfContainedApp({
     name,
@@ -293,7 +279,7 @@ async function main(): Promise<void> {
     // built — this host has no Go toolchain and no source.
     gateway: gatewayReady,
     // For a release the app's namespace IS its composition id (`name`), which is
-    // also what `releaseIdentity` and `propagateReleaseConfig` above are keyed by.
+    // also what `releaseIdentity` above is keyed by.
     composition: name,
     // The backend this bundle runs, and what it reads of its own bundle
     // (`releaseBackendSpec`): the same spec a later release's swap posts.

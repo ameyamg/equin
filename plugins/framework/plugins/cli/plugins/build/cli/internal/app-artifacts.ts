@@ -12,6 +12,7 @@ import {
   buildBarrelFreeTree,
   buildRegistryGenContext,
   generateCompositionRegistry,
+  generateConfigGeneration,
   readCompositionManifestsFromDisk,
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
@@ -71,8 +72,8 @@ import {
   openRecordStore,
 } from "@plugins/plugin-meta/plugins/plugin-records/cli";
 import {
-  restampMovedOverrides,
-  snapshotConfigOrigins,
+  restampMovedOverridesSync,
+  snapshotConfigOriginsSync,
 } from "@plugins/plugin-meta/plugins/relocate/core";
 import {
   flattenManifest,
@@ -152,7 +153,8 @@ import {
  *   ----     build only: central routes manifest, central.json, waitForPg,
  *            waitForWorktreeDatabase, build_runs row mint
  *   stage 2  generateAppSources         (migrations + manifest-level codegen)
- *   ----     build only: propagateConfigToUser
+ *   ----     (no config propagation: the backend that reads a config
+ *            generation derives it at its own boot — config_v2#machine)
  *   stage 3  buildAndPublishWebDist     (heavy jobs on the grant, atomic publish)
  *
  * Out of scope — deploy concerns, deliberately left in each caller:
@@ -162,10 +164,9 @@ import {
  *   - the worktree-op liveness marker (`markWorktreeOpStart`).
  *   - the per-namespace deploy sequence (`./deploy-namespace.ts`): the
  *     `composition.json` provenance marker, the database, the spec, the restart.
- *   - `propagateConfigToUser` — same function, different sink per caller (build
- *     targets `~/.equin/state/config/<worktree>`, a release targets its own
- *     `config-seed`), so the sink IS the parameterization. Mirrors
- *     regen-pipeline.ts's own out-of-scope note.
+ *   - the user config layer: neither posture writes it. A backend derives its
+ *     own config generation at boot (config_v2#machine), from the committed
+ *     layer this pipeline generated.
  *   - `sweepDistLeftovers` — the caller sweeps its own dist dir right after
  *     `acquireArtifactLock`, before any staging dir is created.
  *   - build's step-log / profile / verdict writers. The module only *produces*
@@ -737,7 +738,7 @@ export async function generateAppSources(opts: {
   hooks.log("Generating plugins doc...");
   // The origins as committed, before codegen regenerates them: the base a
   // plugin move's re-stamp compares the regenerated ones against (4b'').
-  const priorOrigins = snapshotConfigOrigins(joinAppPath(root, "config"));
+  const priorOrigins = snapshotConfigOriginsSync(joinAppPath(root, "config"));
   try {
     await regenerateManifestCodegen({
       pass: opts.pass,
@@ -758,7 +759,7 @@ export async function generateAppSources(opts: {
   // regenerated origins' hashes are only known now. Re-stamp each override
   // whose origin changed by nothing but a recorded move, so neither the
   // re-mark below nor `config-origins-in-sync` reads a pure rename as stale.
-  for (const rel of restampMovedOverrides({ root, prior: priorOrigins })) {
+  for (const rel of restampMovedOverridesSync({ root, prior: priorOrigins })) {
     hooks.log(`[config-v2] re-stamped config/${rel} (plugin move)`);
   }
 
@@ -786,6 +787,11 @@ export async function generateAppSources(opts: {
       `[config-v2] re-marked stale override config/${rel} (marked @review)`,
     );
   }
+
+  // 4c. The config generation id once more: the move re-stamp and the seeder
+  // above write `config/` after the pipeline's own generation step, and the id
+  // hashes the committed tree the backend derives its user layer from.
+  await generateConfigGeneration({ pass: opts.pass });
 }
 
 /**

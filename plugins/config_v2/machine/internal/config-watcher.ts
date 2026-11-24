@@ -4,7 +4,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { notifyConfigDirChange } from "@plugins/config_v2/server";
-import { CONFIG_DIR } from "./config-dir";
+import { configGenerationDir } from "./config-dir";
 import type { Disposable } from "../../core";
 
 // No reconcile timer (the engine has none). One re-fired EVERY watched
@@ -82,10 +82,10 @@ export function configFilesWatcherArmed(): Promise<void> {
 
 export async function initConfigWatcher(): Promise<void> {
   try {
-    await mkdir(CONFIG_DIR, { recursive: true });
+    await mkdir(configGenerationDir(), { recursive: true });
 
     watcher = await configFilesWatcher.start({
-      dirs: [CONFIG_DIR],
+      dirs: [configGenerationDir()],
       onChange: (events) => {
         const paths = new Set(events.map((e) => e.path));
         for (const p of paths) {

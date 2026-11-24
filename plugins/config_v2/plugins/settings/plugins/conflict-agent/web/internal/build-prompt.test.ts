@@ -84,7 +84,7 @@ describe("hash conflicts", () => {
 describe("the conflicting paths", () => {
   test("names the override and the origin it went stale against", () => {
     const prompt = buildConflictPrompt(ctx());
-    const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>/conversations/preprompts`;
+    const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>/gens/<generation>/conversations/preprompts`;
 
     expect(prompt).toContain(`- my values: \`${base}/config.jsonc\``);
     expect(prompt).toContain(
@@ -100,7 +100,7 @@ describe("the conflicting paths", () => {
 
   test("splices the scope's own @app segment into the stored paths", () => {
     const prompt = buildConflictPrompt(ctx({ scopeId: "app:sonata" }));
-    const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>/conversations/preprompts`;
+    const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>/gens/<generation>/conversations/preprompts`;
 
     expect(prompt).toContain(
       `- my values: \`${base}/@app/sonata/config.jsonc\``,

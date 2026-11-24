@@ -281,7 +281,7 @@ per invocation:  preflight → resolve targets → lock → Postgres + DB fork
                  the verdict) → stage 1 (deps + every target's registry) →
                  stage 2 (migrations + codegen) → format → validation →
                  central → ONE verdict
-per target:      marker → build+publish dist → DB → propagate config → spec →
+per target:      marker → build+publish dist → DB → spec →
                  restart → health probe → receipt
 ```
 
@@ -344,7 +344,8 @@ The ordered pipeline both postures drive is
 (`prepareCompositionSources` → `generateAppSources` → `buildAndPublishWebDist`),
 `fastValidationJobs` and `acquireArtifactLock`, plus the
 explicit list of what stays *out* (cluster readiness, the run ledger, gateway
-HTTP, worktree-op markers, the provenance marker, `propagateConfigToUser`). It is split
+HTTP, worktree-op markers, the provenance marker; no posture writes the user
+config layer — the backend derives its config generation at boot). It is split
 into three functions rather than one because `build`'s dev-only steps interleave
 *between* them. Same shape, one level up, as codegen's `regen-pipeline.ts`.
 
@@ -478,8 +479,8 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `readMergeMarkers`
     - `resolveGitDir`
 - Cross-plugin:
-  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×30
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×29
     - `infra` ×7
     - `apps` ×3
     - `plugin-meta` ×2

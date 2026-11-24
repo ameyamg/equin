@@ -31,8 +31,8 @@ function asRecord(v: JsonValue | undefined): Record<string, JsonValue> {
 }
 
 /**
- * THE git-layer rule, spelled once: the build's propagation into a user layer
- * (`propagateConfigToUser`) and the committed layer a host reads
+ * THE git-layer rule, spelled once: propagation into a user layer (a desktop
+ * backend's generation derive, `propagateUserLayer`) and the committed layer a host reads
  * ({@link committedDocument}) both resolve through it, so the two cannot
  * disagree. `undefined` when the
  * git layer has no document at all (no origin, no override). A scope whose
@@ -186,7 +186,8 @@ export function readCommittedFilesSync(
 
 /**
  * Propagate one committed document into a user layer — THE propagation, run by
- * the desktop build (`propagateConfigToUser`, over files) and by a memory store
+ * a desktop backend's generation derive (`propagateUserLayer`, over its
+ * in-memory user layer) and by a memory store
  * seeding itself (over memory), so the two cannot disagree: the base becomes the
  * user origin (`propagate`, capturing the merge base into the ancestor at the
  * conflict transition), and each committed `@app/<id>` scope becomes that

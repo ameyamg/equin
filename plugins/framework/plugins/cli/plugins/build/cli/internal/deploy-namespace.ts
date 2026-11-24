@@ -21,10 +21,6 @@ import {
   type AdoptVerdict,
 } from "@plugins/build/plugins/restart-skip/core";
 import { realpath } from "@plugins/packages/plugins/timed-fs/core";
-import {
-  propagateConfigToUser,
-  type CodegenPass,
-} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { ensureDatabase } from "@plugins/database/plugins/admin/server";
 import { settleFailedServe, switchSpec } from "./spec-switch";
 import {
@@ -41,8 +37,6 @@ import {
   type CheckoutRef,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-import { configDir } from "@plugins/config_v2/data-dirs";
-import { applyPluginMoves } from "@plugins/plugin-meta/plugins/relocate/core";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { adaptiveTimeoutMs } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import {
@@ -71,7 +65,7 @@ import { namedBackendCommand } from "./named-backend";
  * `./equin build`, run once per `--composition` (and once, unnamed, for a
  * plain build).
  *
- *   marker (claim: `publishing`) → dist → database → config → (claim again)
+ *   marker (claim: `publishing`) → dist → database → (claim again)
  *   + spec → adopt, or
  *   restart → health probe (took over, then settled) → keep the dist and
  *   stamp the marker `served`, or put the previous one back
@@ -134,8 +128,6 @@ export interface DeployNamespaceOptions {
   target: BuildTarget;
   /** The checkout being built. */
   root: AppPath;
-  /** The build's codegen pass (stage 1's): config propagation reads its evaluation. */
-  pass: CodegenPass;
   /** Only ever the `.build.lock`'s home — see `BuildWebDistOptions.webDir`. */
   webDir: string;
   buildId: string;
@@ -734,46 +726,11 @@ export async function deployNamespace(
       );
     }
 
-    // Saved settings follow plugin moves BEFORE propagation reads them: replay
-    // the committed move ledger onto this namespace's user-layer config, so the
-    // dir is shaped like the code being deployed (see relocate's apply-moves).
-    await span(
-      "applyPluginMoves",
-      "build:codegen",
-      "apply plugin moves to user config",
-      async () => {
-        for (const a of applyPluginMoves({
-          root,
-          userConfigDir: configDir.file(ns),
-        })) {
-          console.log(
-            `Plugin move ${a.move.from} → ${a.move.to}: moved ${a.moved.length} saved config file(s), ` +
-              `rewrote ${a.rewritten.length}` +
-              (a.kept.length > 0
-                ? `; kept ${a.kept.length} at the old path (destination already had one): ${a.kept.join(", ")}`
-                : ""),
-          );
-        }
-      },
-    );
-
-    await span(
-      "propagateConfig",
-      "build:codegen",
-      "propagate config to user",
-      async () => {
-        console.log("Propagating config to user...");
-        const { migrations } = await propagateConfigToUser({
-          pass: opts.pass,
-          userConfigDir: configDir.file(ns),
-        });
-        for (const m of migrations) {
-          console.log(
-            `Config migration ${m.key}: rewrote ${m.rewritten.length} saved config file(s)`,
-          );
-        }
-      },
-    );
+    // No config step: the user layer is the serving backend's to derive. The
+    // backend this deploy starts derives its own config generation at boot
+    // (plugin moves, migrations, propagation, auto-merge — config_v2#machine)
+    // and promotes it once it serves; the backend it replaces keeps reading
+    // its own generation until then, and a failed deploy leaves it untouched.
 
     // SPEC LAST of the filesystem writes (mirrors `bootSelfContainedApp`): the
     // gateway discovers a namespace only once its DB and dist exist, so a

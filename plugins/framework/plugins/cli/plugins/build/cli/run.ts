@@ -1570,8 +1570,8 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 
       // Stage 2 — DB migrations + manifest-level codegen + the mandatory
       // config-override seed. Runs AFTER the DB interlude above (drizzle's
-      // generate is stateful) and BEFORE propagation below, which reads the
-      // freshly-seeded git layer. May terminate the process on a migration
+      // generate is stateful). Its last step writes the config generation id
+      // the deployed backend derives its user layer from. May terminate the process on a migration
       // prompt (exit 2) — unchanged. See ./internal/app-artifacts.ts.
       await generateAppSources({
         root,
@@ -1637,10 +1637,9 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         endSpan();
       }
 
-      // 4c. Config propagation is PER TARGET now — each namespace gets its own
-      //     `~/.equin/state/config/<namespace>/` — so it lives inside
-      //     `deployNamespace` rather than here. It still runs after the
-      //     freshly-seeded git layer above, because every target's deploy does.
+      // 4c. No config propagation: each namespace's backend derives its own
+      //     config generation at boot (config_v2#machine), from the committed
+      //     layer generated above.
 
       // 3c–5. Run validation (checks) and the frontend build in parallel, then
       // publish — the shared app-artifact pipeline's stage 3
@@ -1997,7 +1996,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           const deployed = await deployNamespace({
             target,
             root,
-            pass,
             webDir,
             buildId,
             commit: headAtStart,

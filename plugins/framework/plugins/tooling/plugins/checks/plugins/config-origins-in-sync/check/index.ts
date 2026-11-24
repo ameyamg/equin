@@ -5,6 +5,8 @@ import {
   loadConfigDescriptorsByOriginPath,
   formatGenerated,
   codegenPassOver,
+  CONFIG_GENERATION_REL_PATH,
+  renderConfigGeneration,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   computeHash,
@@ -110,6 +112,28 @@ const check: Check = {
     // The run's file set (tracked + untracked-not-ignored, minus files deleted
     // in the working tree) — what a commit of this tree holds under config/.
     const allConfigFiles = repo.under("config");
+
+    // The config generation id hashes the committed tree as it stands, so any
+    // change to `config/` (or to the move ledger, a migration, the merge
+    // engine) must ship with its regenerated id — or a backend would adopt
+    // the change without deriving the user layer it implies.
+    const generationFile = join(root, CONFIG_GENERATION_REL_PATH);
+    const expectedGeneration = await formatGenerated({
+      file: generationFile,
+      // The run's file set and blob ids — what the build hashes too.
+      content: await renderConfigGeneration({ pass, repo }),
+    });
+    if (
+      !repo.has(CONFIG_GENERATION_REL_PATH) ||
+      gitBlobId(expectedGeneration) !== repo.blobOf(CONFIG_GENERATION_REL_PATH)
+    ) {
+      return {
+        ok: false,
+        message: `${CONFIG_GENERATION_REL_PATH} is out of sync with config/, the plugin-move ledger or the config migrations`,
+        hint: "Run `./equin build` and commit the regenerated file.",
+      };
+    }
+
     if (allConfigFiles.length === 0) return { ok: true };
 
     // Orphan pass: any `*.origin.jsonc` present in the WORKING TREE that

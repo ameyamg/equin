@@ -18,7 +18,6 @@ export {
   awaitPgReady,
   bootSelfContainedApp,
   seedReleaseAssetMirror,
-  propagateReleaseConfig,
   teardownSelfContainedApp,
   gatewayPidFile,
 } from "./internal/boot";

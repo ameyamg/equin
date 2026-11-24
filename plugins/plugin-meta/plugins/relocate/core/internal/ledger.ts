@@ -1,7 +1,8 @@
 // The committed record of every plugin move. `plugin move` appends to it in the
-// same commit as the code it moves, and every `./equin build` replays the
-// entries its namespace has not seen onto that namespace's user-layer config
-// (`applyPluginMoves`). So saved settings follow the code that reads them, per
+// same commit as the code it moves. Codegen bakes it into config_v2's
+// generation module, and a backend deriving a config generation replays the
+// entries its namespace has not seen onto its saved user config
+// (config_v2#machine). So saved settings follow the code that reads them, per
 // checkout, with no step for anyone to remember.
 
 import { writeFileSync } from "node:fs";
@@ -43,7 +44,7 @@ export function parsePluginMoves(text: string): PluginMove[] {
 }
 
 /** The ledger as committed in the checkout at `root`, in the order moves were made. */
-export function readPluginMoves(root: AppPath): PluginMove[] {
+export function readPluginMovesSync(root: AppPath): PluginMove[] {
   const file = join(root, PLUGIN_MOVES_FILE);
   // The ledger ships with the plugin; a checkout without it predates it and
   // has no moves to replay.
@@ -52,29 +53,15 @@ export function readPluginMoves(root: AppPath): PluginMove[] {
 }
 
 /** Append one move to the ledger in the checkout at `root`. */
-export function appendPluginMove(
+export function appendPluginMoveSync(
   root: AppPath,
   move: { from: PluginId; to: PluginId },
 ): PluginMove {
   const entry: PluginMove = { at: new Date().toISOString(), ...move };
-  const all = [...readPluginMoves(root), entry];
+  const all = [...readPluginMovesSync(root), entry];
   writeFileSync(
     join(root, PLUGIN_MOVES_FILE),
     `${JSON.stringify(all, null, 2)}\n`,
   );
   return entry;
-}
-
-/**
- * Where `id` lands after moving `from` to `to`: `from` itself or one of its
- * descendants is re-rooted; anything else is null (not moved).
- */
-export function movedPluginId(
-  id: string,
-  from: PluginId,
-  to: PluginId,
-): PluginId | null {
-  if (id === from) return to;
-  if (id.startsWith(`${from}.`)) return asPluginId(to + id.slice(from.length));
-  return null;
 }

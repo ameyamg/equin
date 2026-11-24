@@ -1,6 +1,6 @@
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
 import type { ConfigFileContent } from "./config-proxy";
-import type { JsonValue } from "./types";
+import type { ConfigDescriptor, JsonValue } from "./types";
 import type { GitLayerDocument } from "./git-layer";
 import { APP_SCOPE_DIR, appScopeId } from "./scope-format";
 import type { Disposable } from "./types";
@@ -47,7 +47,22 @@ export interface ConfigFileRef extends ConfigDocRef {
  * the registry's only committed-layer read is whether a scope is committed
  * ({@link ConfigGitLayerImpl.document}).
  */
+/** A registered config, as the registry hands it to {@link ConfigStoreImpl.open}. */
+export interface RegisteredConfig {
+  /** The owning plugin's slash path — the store's directory for it. */
+  readonly hierarchyPath: string;
+  readonly descriptor: ConfigDescriptor;
+}
+
 export interface ConfigStoreImpl {
+  /**
+   * Make the store ready to be read, before the registry reads any document:
+   * handed every config this host registers (the live descriptors, migrations'
+   * code included). The desktop's file store derives the config generation the
+   * running code reads here (config_v2#machine); a store with nothing to
+   * prepare leaves it out.
+   */
+  open?(configs: readonly RegisteredConfig[]): Promise<void>;
   /**
    * One file's parsed content, or `null` when it is absent. Asynchronous: on
    * the desktop it is the disk, which a backend's thread never waits on.

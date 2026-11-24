@@ -15,7 +15,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { CONFIG_DIR } from "./config-dir";
+import { configGenerationDir } from "./config-dir";
 import { userFilePath } from "./file-store";
 import { readRawOrNull } from "./jsonc-proxy";
 
@@ -124,9 +124,9 @@ export const configRawFileServed = serveValue(configRawFile, {
       ]);
     return {
       override: overrideText,
-      overridePath: relative(CONFIG_DIR, override),
+      overridePath: relative(configGenerationDir(), override),
       origin: originText,
-      originPath: relative(CONFIG_DIR, origin),
+      originPath: relative(configGenerationDir(), origin),
       gitOverride,
       gitOverridePath: relative(REPO_ROOT, gitOverridePath),
       gitOrigin,

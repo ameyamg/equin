@@ -1,6 +1,6 @@
 # Config updates: automatic merge of the user layer, and config owned by the backend that reads it
 
-Task: task-1795524794-221nve. Status: phases 1 (merge engine), 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) 3 (developer review: per-field Keep / Use mine / Use new default, nav view, notice) and 4 (retired / renamed fields: `retiredFields`, migration `renames` / `removes`, `removed-renamed`, the `config-v2:fields-retired-declared` check) implemented; phases 5–6 planned.
+Task: task-1795524794-221nve. Status: phases 1 (merge engine), 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) 3 (developer review: per-field Keep / Use mine / Use new default, nav view, notice) and 4 (retired / renamed fields: `retiredFields`, migration `renames` / `removes`, `removed-renamed`, the `config-v2:fields-retired-declared` check) and 5 (config generations, deviations below) implemented; phase 6 planned.
 
 ## Context
 
@@ -276,6 +276,70 @@ written for the new code.
   ledger re-roots those) is not judged.
 - The review gains two outcomes: `renamed` (the old key; Use mine refused) and
   `carried` (the new key, whose `yours` is the carried value).
+
+### Phase 5 as built (deviations)
+
+- **The derive runs in memory, not on a `cp -c` clone.** A backend may not
+  block its thread on the disk (`blocking-fs`), and the ledgers (moves,
+  migrations) were synchronous over a directory. They now run over a
+  `ConfigTree`: the source generation is read async into memory, moves →
+  migrations → `propagateUserLayer` rewrite it there, and it is written async
+  to `gens/.derive-<id>-<pid>/` and renamed into place.
+  `propagateConfigToUser` (codegen) and its `./equin config-propagate` command
+  are gone.
+- **The engine moved into config_v2** (`machine/internal/user-layer/`): the
+  `config_v2/plugins/ledger` plugin is dissolved and relocate's
+  `applyPluginMoves` moved there, because config_v2 importing its own child or
+  relocate (both import config_v2) is a plugin cycle, and plugin-refs is build
+  tooling. The reorder-key grammar and `movedPluginId` are a new leaf,
+  `plugin-meta/relocate/reroot`, shared by relocate, plugin-refs and
+  config_v2. The move ledger reaches the backend through the generation
+  module (`CONFIG_PLUGIN_MOVES`, with each old id's "is a plugin again"),
+  which codegen writes — so a release backend has it too.
+- **The generation module is loaded by a literal `import()`**, not a static
+  import: it is generated after the build process has imported the barrels,
+  so a barrel reaching it statically would freeze a stale copy
+  (`pre-barrel-manifests-complete`). restart-skip follows literal dynamic
+  imports, so it still forces a restart. `CONFIG_DIR` became
+  `configGenerationDir()`, known once the store opened.
+- **Promote does not re-derive overlap writes: the lock spans derive →
+  promote instead.** A write to HEAD's generation takes the generation flock
+  around itself (the file store's `edit`), and the deriving backend holds the
+  flock from its derive until its promote (machine `onReady`, after
+  `markServerReady`). So the backend still serving either writes before the
+  clone (carried over) or waits, and is then refused (`ConfigGenerationRetired`)
+  — no stat diff, no second derive, no merge of a write made in the overlap.
+  The cost: during a config-changing restart, a config write on the old
+  backend waits for the new one's boot (bounded by the gateway's readiness
+  deadline: a backend it kills releases the flock), then fails loudly. Most
+  deploys don't change the generation and take no lock at all.
+- **The boot auto-merge sweep (phase 2) stays where it is**, in
+  `initRegistry` after the store's `open`: the new backend runs it on its own
+  generation before promoting it, which is what "validated against the schema
+  of the code that reads it" asks.
+- **`CONFIG_GENERATION`** (`config_v2/core/config-generation.generated.ts`)
+  hashes every committed `config/**/*.jsonc` (path + git blob id), the move ledger's
+  blob id, every migration key and `MERGE_ENGINE`. Written by the shared
+  pipeline's last `config/` step and again after the build's re-stamp / seed
+  steps; held by `config-origins-in-sync`. Imported by `config_v2#machine`
+  only (not the core barrel), so the web artifacts don't change with it.
+- **GC** keeps HEAD and the generation it replaced; main-slot lease pinning
+  is not implemented (a rollback to code whose generation was collected fails
+  its boot, loudly, as the plan's last row says).
+- **Code coming back** (its id in HEAD's `history`, the last 50 HEADs) is
+  derived again from HEAD — like a leftover from a deploy that never promoted
+  — unless HEAD's generation applied a migration or move key this code does
+  not declare: only then is its old generation reused (logged: writes since
+  are not carried), or, collected, the boot fails. The plan's "reuse and
+  report" for every rollback would have dropped every write made since on a
+  plain reverted config change.
+- **Worktree fork** copies main's served generation *flat* into the new
+  namespace dir — the pre-generation layout — so a worktree branched before
+  this change (whose code reads the flat dir) and one after (which derives its
+  generation from it) both work.
+- **Legacy writes during the first derive** (a pre-generation backend writes
+  the flat dir without the lock) are detected by stamp at promote and named in
+  an error line; they stay at `<ns>/`.
 
 ## Critical files
 

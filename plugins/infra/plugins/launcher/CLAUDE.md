@@ -148,24 +148,21 @@ the user's own settings survive a ship. So anything the launcher installs
 "on first run" is, in practice, installed **once, ever**, and the app then serves
 that forever no matter what later bundles contain.
 
-`propagateReleaseConfig` is the boot step where that distinction is drawn, and
-it is drawn per file, not per directory. config_v2's three-layer model already
-says who owns what:
+Config is the case where the answer moved out of the launcher: a release
+backend derives its own config generation at boot from the bundle's committed
+`config/` (`EQUIN_REPO_CONFIG_DIR`) — propagated origins, plugin moves and
+migrations, the user's overrides carried — exactly as a dev backend does
+(`config_v2/CLAUDE.md`, *Config generations*). The launcher installs no config,
+so a ship's new backend never rewrites the files the old one still serves, and
+a failed swap leaves them as they were.
 
-- `<name>.origin.jsonc` — build-owned. Rewritten from the bundle on **every**
-  boot, and deleted when the bundle no longer ships it.
-- `<name>.jsonc` — the user's own override. Never written, never deleted.
-- `<name>.ancestor.jsonc` — written only at the conflict transition, exactly as
-  `propagate()` does it, so the settings UI can still offer a three-way Merge.
-
-It was one `existsSync(dest)` over the whole config dir, which conflated the two
-layers. The failure is silent by nature, which is why it is worth a section: a
-per-app theme scope that never materializes reads as "no scope", and a reorder
-directive naming a contribution that no longer exists just falls back to load
-order. Nothing throws. The deployed app is simply a different app than the one
-that was built. Any future "install this from the bundle" step belongs beside
-this one, with the same question answered first: is this layer the build's or
-the user's?
+The failure such a step guards against is silent by nature, which is why it is
+worth a section: a per-app theme scope that never materializes reads as "no
+scope", and a reorder directive naming a contribution that no longer exists just
+falls back to load order. Nothing throws. The deployed app is simply a different
+app than the one that was built. Any future "install this from the bundle" step
+answers the same question first: is this layer the build's or the user's — and
+if the user's, is it the code reading it that should write it?
 
 ## A release host: one host generation, swapped backends
 
@@ -401,7 +398,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `LOOPBACK_BIND`
     - `pgbouncerConnection`
     - `pgbouncerService`
-    - `propagateReleaseConfig`
     - `readGatewayGeneration`
     - `readPid`
     - `releaseBackendSpec`
@@ -454,7 +450,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/release-swap.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/release-swap.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
     - `blocking-fs/no-sync-fs` — `server/internal/boot.ts` (sanctioned)
     - `source-read-safety/no-text-source-read` — `check/internal/strip-comments.ts` (debt)

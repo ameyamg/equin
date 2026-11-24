@@ -1,7 +1,10 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { readEffectiveConfigFromDiskSync } from "@plugins/config_v2/plugins/disk-read/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import {
+  readEffectiveConfigFromDiskSync,
+  servedConfigDirSync,
+} from "@plugins/config_v2/plugins/disk-read/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { mainSlotsConfig } from "../../shared/config";
@@ -19,7 +22,7 @@ export function readDrainReportAfterMs(root: AppPath = REPO_ROOT): number {
   return (
     readEffectiveConfigFromDiskSync(mainSlotsConfig, {
       root,
-      userConfigDir: configDir.file(MAIN_WORKTREE_NAME),
+      userConfigDir: servedConfigDirSync(configDir.file(MAIN_WORKTREE_NAME)),
       hierarchyPath: MAIN_SLOTS_HIERARCHY_PATH,
     }).drainReportAfterSec * 1000
   );

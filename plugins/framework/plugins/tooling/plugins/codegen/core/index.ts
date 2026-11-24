@@ -80,7 +80,6 @@ export {
 
 export {
   generateConfigOrigins,
-  propagateConfigToUser,
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
   resolveOriginAnnotations,
@@ -283,3 +282,8 @@ export {
   webListEntriesPath,
   webListsPath,
 } from "./list-catalog-gen";
+export {
+  CONFIG_GENERATION_REL_PATH,
+  generateConfigGeneration,
+  renderConfigGeneration,
+} from "./config-generation-gen";

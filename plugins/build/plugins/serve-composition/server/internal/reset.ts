@@ -14,13 +14,11 @@
 // is talking about, and the git layer the config is re-propagated from is the
 // same tree that composed it.
 //
-// Why config is RE-PROPAGATED, not just deleted: a bare `rm -rf` of the config
-// dir would fall back to *code* defaults, not a genuine first-launch. Re-running
-// propagateConfigToUser (as `./equin config-propagate`, in a child: it evaluates
-// every plugin barrel, build tooling that never runs in a serving backend)
-// restores the shipped *git-layer* defaults a serve build installs (the build
-// calls the same function), so the reset lands on the exact first-launch config,
-// not a code-default approximation.
+// Config is deleted, not re-propagated: the namespace's config dir goes whole
+// (every generation and its HEAD), and the backend cold-started below derives
+// a fresh generation from this checkout's committed layer at its boot — the
+// same derivation a first launch runs, so the reset lands on the exact
+// first-launch config, not a code-default approximation.
 //
 // OUT OF SCOPE — central secrets / auth tokens: they live in one global encrypted
 // store (~/.equin/state/secrets/) shared by every namespace by the
@@ -52,14 +50,12 @@ import {
 import { checkoutRef } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { servedConfigDir } from "@plugins/config_v2/plugins/disk-read/core";
 import {
   namespaceFor,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-import {
-  readCompositionManifests,
-  repropagateConfig,
-} from "./config-propagation";
+import { readCompositionManifests } from "./config-propagation";
 
 /** A refused reset — a guard rejected the target before any data was touched. */
 export class CompositionResetError extends Error {
@@ -113,7 +109,7 @@ export async function resetCompositionData(
   // options would let the guards disagree about what the manifest says.
   const values = await readCompositionManifests(
     root,
-    configDir.file(manifestNamespace),
+    await servedConfigDir(configDir.file(manifestNamespace)),
   );
 
   // Guard 3 — no collision with a real git worktree dir, git branch, or a
@@ -172,9 +168,9 @@ export async function resetCompositionData(
   // that failure for the restarted backend.
   await recreateDatabase(held);
 
-  // Wipe the config dir and re-propagate the git-layer first-launch defaults.
+  // Wipe the config dir — every generation and its HEAD. The cold start below
+  // derives the first-launch generation from the committed layer.
   await rm(configDir.file(ns), { recursive: true, force: true });
-  await repropagateConfig(root, configDir.file(ns));
 
   await startBackend(held);
 }

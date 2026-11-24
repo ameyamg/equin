@@ -1,11 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import {
-  scanReorderItemRefs,
-  type PluginRef,
-} from "@plugins/plugin-meta/plugins/plugin-refs/core";
+import type { PluginRef } from "@plugins/plugin-meta/plugins/plugin-refs/core";
 import {
   mentionScanner,
+  scanReorderItemRefs,
   scanCssRefs,
   scanMarkdownRefs,
   scanPathRefs,

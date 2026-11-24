@@ -394,10 +394,9 @@ configured") empty are both **closed** — verified end-to-end by cutting a Sona
 release and confirming the Cards/All/Longest/Composed tabs + toolbar render:
 
 1. **config_v2 defaults are vendored + reachable.** `release.ts` step 3.6 ships
-   the git-layer `config/` tree and a `propagateConfigToUser`-resolved
-   `config-seed/`; `launch.ts` points `EQUIN_REPO_CONFIG_DIR` at the former
-   and seeds the latter into `<data>/config/<worktree>` (copy-if-absent) on first
-   boot. So `config-v2.values` resolves the real defaults at runtime (verified: the
+   the git-layer `config/` tree; `launch.ts` points `EQUIN_REPO_CONFIG_DIR`
+   at it, and the backend derives its config generation from it at boot
+   (config_v2#machine) — origins, plugin moves and migrations. So `config-v2.values` resolves the real defaults at runtime (verified: the
    full value, e.g. the 4 Library views, reaches the browser over the WS sub-ack).
 2. **DataView renderers are in the composition closure.** A `<DataView>`'s
    view-type + per-field cell/editor/filter renderers are `DataViewSlots.*`

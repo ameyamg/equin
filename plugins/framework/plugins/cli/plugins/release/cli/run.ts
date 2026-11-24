@@ -29,10 +29,7 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { toolchainPin } from "@plugins/infra/plugins/paths/core";
-import {
-  loadRepoFiles,
-  loadRepoSnapshot,
-} from "@plugins/framework/plugins/tooling/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   asNamespace,
   namespaceUrl,
@@ -51,11 +48,7 @@ import { symbolBody } from "@plugins/ui/plugins/icons/machine";
 import type { SymbolName } from "@plugins/ui/plugins/icons/core";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/cli";
-import {
-  codegenPassOver,
-  propagateConfigToUser,
-  readDefineApp,
-} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { readDefineApp } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   compositionRegistryFileName,
   compositionRegistryRedirects,
@@ -119,7 +112,6 @@ import {
 //     parcel-watcher/watcher.node   vendored @parcel/watcher native addon (darwin:
 //                                  the sealed patched build; linux: the prebuild)
 //     config/                      raw git-layer config tree (EQUIN_REPO_CONFIG_DIR)
-//     config-seed/config/<comp>/   resolved config defaults, seeded into <data>/config on first run
 //     web/                         filtered Vite dist (served statically)
 //     RELEASE.json                 { composition, target, platform, builtAt, port, runId, commitSha, commitDirty, activationProtocol }
 //     dist/<comp>-<target>-<platform>   web target: self-extracting binary (the shippable)
@@ -1027,7 +1019,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // It is still SHELLED OUT TO rather than called in-process, and that is
   // the CORRECTNESS BOUNDARY, not an implementation detail: this module
   // statically imports plugin barrels (symbolBody,
-  // runAssetMirrorPrewarm, propagateConfigToUser, buildPluginTree), and ESM
+  // runAssetMirrorPrewarm, buildPluginTree), and ESM
   // imports are hoisted and evaluated before this action body runs — so by
   // now Bun's module cache has those barrels FROZEN. Stage 2's
   // `regenerateManifestCodegen` arms `setPreBarrelImportGuard` before the
@@ -1361,34 +1353,14 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
     log: console.log,
   });
 
-  // ── 3.6. Vendor config: raw git-layer tree (raw-diff/un-fork reads) +
-  //         resolved default seed (effective values). ────────────────────
-  // Nothing config-related was shipped before, so a released app dropped
-  // every config_v2 "default-for-everyone" value at runtime. release.ts runs
-  // in the full dev toolchain, so it reuses codegen's exact propagation.
+  // ── 3.6. Vendor config: the raw git-layer tree. ─────────────────────
+  // REPO_CONFIG_DIR at runtime: the committed layer the backend reads
+  // (raw-diff panel, per-app un-fork check) and derives its user layer from —
+  // a released backend derives its config generation at boot like any other
+  // (plugin moves, migrations, propagation; config_v2#machine), so nothing
+  // is pre-propagated into the bundle.
   console.log("\n[3.6] Vendoring config defaults...");
-
-  // (a) Raw git-layer tree → REPO_CONFIG_DIR at runtime (raw-diff panel +
-  //     per-app un-fork check, which read REPO_ROOT/config directly).
-  console.log("  • git-layer config tree");
   cpSync(join(root, "config"), join(out, "config"), { recursive: true });
-
-  // (b) Resolved default-for-everyone seed for the composition (effective
-  //     values). The destination is a BUNDLE path, not a data root — an
-  //     empty staging dir yields ONLY resolved origins (+ @app scoped
-  //     origins), no personal overrides/ancestors. This is the one caller
-  //     that does not write into `state/config`, which is why
-  //     propagateConfigToUser takes the resolved directory. `launcher`'s
-  //     `propagateReleaseConfig` reads this same `config-seed/config/<name>`
-  //     layout back on every boot, syncing the origin layer (and only the
-  //     origin layer) onto the host's data dir. discoverConfigs walks the full config/
-  //     tree — shipping origins for plugins absent from the composition is
-  //     harmless (the backend only reads registered descriptors).
-  console.log("  • resolved config defaults");
-  await propagateConfigToUser({
-    pass: codegenPassOver(await loadRepoSnapshot(root)),
-    userConfigDir: joinAppPath(out, "config-seed", "config", opts.composition),
-  });
 
   // ── 4. Tauri target: wrap the staged bundle in the desktop shell ─────
   // The staged tree (steps 1–3) is identical to the web bundle; the Tauri

@@ -176,7 +176,7 @@ its boot journal attribute that.
     - `withChangedFilesWork`
     - `withFsCallTally`
 - Cross-plugin:
-  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×59
     - `framework` ×31
     - `apps` ×18
@@ -188,9 +188,9 @@ its boot journal attribute that.
     - `database` ×5
     - `plugin-meta` ×5
     - `reports` ×4
-    - `config_v2` ×3
     - `integrations` ×3
     - `release` ×3
+    - `config_v2` ×2
     - `installer` ×2
     - `primitives` ×2
     - `apps-core/app-preload`

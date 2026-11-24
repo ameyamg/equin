@@ -5,12 +5,12 @@ import { assertMigrationKeys } from "./retired-fields";
  * A one-time rewrite of a config's SAVED values, for when the shape its fields
  * store changed (a renamed key, a value re-spelled). The user layer
  * (`~/.equin/state/config/<ns>/`) is not in git, so a commit can only
- * change it through code the build runs: each `./equin build` applies
- * every migration its namespace has not applied yet — to that config's origin,
- * override and ancestor documents, base and app scopes — right before
- * propagating the git config there, and records it (the shared config ledger,
- * `config_v2/plugins/ledger`; hash chains are kept so overrides stay in
- * force). The committed `config/` files are rewritten in the same diff as the
+ * change it through code the app runs: the backend deriving a namespace's
+ * config generation applies every migration it has not applied yet — to that
+ * config's origin, override and ancestor documents, base and app scopes —
+ * right before propagating the git config there, and records it (the shared
+ * config ledger, `config_v2/machine/internal/user-layer/`; hash chains are
+ * kept so overrides stay in force). The committed `config/` files are rewritten in the same diff as the
  * code, by hand.
  *
  * `apply` receives one whole document and returns it rewritten (return it

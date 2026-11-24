@@ -23,14 +23,15 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { CONFIG_DIR } from "./config-dir";
+import { configGenerationDir } from "./config-dir";
 import { configFilesWatcherArmed, watchFileChange } from "./config-watcher";
 import { configLedgerDocument, configLedgerKey } from "./config-ledger-key";
 import { readConfigFile, writeConfigFile, writeRawAtomic } from "./jsonc-proxy";
+import { thisGeneration } from "./this-generation";
 
 /** Where a user-layer file lives on this machine. */
 export function userFilePath(ref: ConfigFileRef): AppPath {
-  return joinAppPath(CONFIG_DIR, configFileRelPath(ref));
+  return joinAppPath(configGenerationDir(), configFileRelPath(ref));
 }
 
 /** Every file a document is made of, for the agent-write ledger. */
@@ -126,12 +127,15 @@ async function fileStamp(path: AppPath): Promise<string> {
 }
 
 /**
- * The desktop's user layer: the namespace's config dir
- * (`~/.equin/state/config/<namespace>/`), one JSONC file per document
- * file, watched by the config-files watcher, with every agent-origin write
- * ledgered.
+ * The desktop's user layer: this code's config generation
+ * (`~/.equin/state/config/<namespace>/gens/<id>/`, derived by `open` when
+ * new), one JSONC file per document file, watched by the config-files
+ * watcher, every write fenced against the next generation's promote and every
+ * agent-origin write ledgered.
  */
 export const fileConfigStore: ConfigStoreImpl = {
+  // This code's config generation: derived here when it is new (serve mode).
+  open: async (configs) => (await thisGeneration()).open(configs),
   read: (ref) => readConfigFile(userFilePath(ref), ref.file),
   write: (ref, content, hash) =>
     writeConfigFile(userFilePath(ref), content, hash),
@@ -141,7 +145,7 @@ export const fileConfigStore: ConfigStoreImpl = {
   // `@app` dir → [].
   async scopes(storePath) {
     const appDir = joinAppPath(
-      CONFIG_DIR,
+      configGenerationDir(),
       storePathParts(storePath).hier,
       APP_SCOPE_DIR,
     );
@@ -159,7 +163,7 @@ export const fileConfigStore: ConfigStoreImpl = {
   },
   async dropScope(storePath, scopeId) {
     const dir = joinAppPath(
-      CONFIG_DIR,
+      configGenerationDir(),
       storePathParts(storePath).hier,
       scopeSegment(scopeId),
     );
@@ -185,12 +189,16 @@ export const fileConfigStore: ConfigStoreImpl = {
   },
   armed: configFilesWatcherArmed,
   async edit(doc, writer, operation, mutate) {
-    const key = configLedgerKey(doc.storePath, doc.scopeId ?? "");
-    // A no-op for every writer but an agent; call immediately BEFORE the
-    // mutation, and refresh "what the agent left" once it has landed.
-    await configWriteLedger.record(writer, key, trioPaths(doc), operation);
-    const result = await mutate();
-    await configWriteLedger.noteComplete(writer, key);
-    return result;
+    // Fenced against the next generation's promote: refused once this
+    // generation is retired, never lost between a derive and its promote.
+    return (await thisGeneration()).withWrite(async () => {
+      const key = configLedgerKey(doc.storePath, doc.scopeId ?? "");
+      // A no-op for every writer but an agent; call immediately BEFORE the
+      // mutation, and refresh "what the agent left" once it has landed.
+      await configWriteLedger.record(writer, key, trioPaths(doc), operation);
+      const result = await mutate();
+      await configWriteLedger.noteComplete(writer, key);
+      return result;
+    });
   },
 };

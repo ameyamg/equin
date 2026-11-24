@@ -2007,9 +2007,6 @@
       "name": "@equin/plugin-config_v2-git-defaults-preview",
       "version": "0.0.1",
     },
-    "plugins/config_v2/plugins/ledger": {
-      "name": "@equin/plugin-config_v2-ledger",
-    },
     "plugins/config_v2/plugins/settings": {
       "name": "@equin/plugin-config_v2-settings",
     },
@@ -6283,6 +6280,10 @@
       "name": "@equin/plugin-plugin-meta-relocate",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/relocate/plugins/reroot": {
+      "name": "@equin/plugin-plugin-meta-relocate-reroot",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/token-usage": {
       "name": "@equin/plugin-plugin-meta-token-usage",
       "version": "0.0.1",
@@ -9431,8 +9432,6 @@
 
     "@equin/plugin-config_v2-git-defaults-preview": ["@equin/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
 
-    "@equin/plugin-config_v2-ledger": ["@equin/plugin-config_v2-ledger@workspace:plugins/config_v2/plugins/ledger"],
-
     "@equin/plugin-config_v2-settings": ["@equin/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 
     "@equin/plugin-config_v2-settings-conflict-agent": ["@equin/plugin-config_v2-settings-conflict-agent@workspace:plugins/config_v2/plugins/settings/plugins/conflict-agent"],
@@ -11466,6 +11465,8 @@
     "@equin/plugin-plugin-meta-plugin-view-sub-plugins": ["@equin/plugin-plugin-meta-plugin-view-sub-plugins@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins"],
 
     "@equin/plugin-plugin-meta-relocate": ["@equin/plugin-plugin-meta-relocate@workspace:plugins/plugin-meta/plugins/relocate"],
+
+    "@equin/plugin-plugin-meta-relocate-reroot": ["@equin/plugin-plugin-meta-relocate-reroot@workspace:plugins/plugin-meta/plugins/relocate/plugins/reroot"],
 
     "@equin/plugin-plugin-meta-token-usage": ["@equin/plugin-plugin-meta-token-usage@workspace:plugins/plugin-meta/plugins/token-usage"],
 

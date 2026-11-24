@@ -27,7 +27,7 @@ import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 import { asFsPath } from "@plugins/framework/plugins/plugin-id/core";
 import {
   PLUGIN_MOVES_FILE,
-  readPluginMoves,
+  readPluginMovesSync,
   type PluginMove,
 } from "@plugins/plugin-meta/plugins/relocate/core";
 
@@ -65,7 +65,7 @@ export async function findMovedPluginLeftovers(
   const leftovers: MoveLeftover[] = [];
   const seen = new Set<string>();
   // Latest move first, so a reused-then-moved-again address names its last move.
-  for (const move of [...readPluginMoves(root)].reverse()) {
+  for (const move of [...readPluginMovesSync(root)].reverse()) {
     const dir = movedFromDir(move);
     if (seen.has(dir)) continue;
     seen.add(dir);

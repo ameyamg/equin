@@ -126,6 +126,7 @@ export type {
   ConfigFileRef,
   ConfigGitLayerImpl,
   ConfigStoreImpl,
+  RegisteredConfig,
 } from "./internal/store";
 export {
   setConfigField,
@@ -159,3 +160,23 @@ export type {
   OrphanEntry,
   OrphanReport,
 } from "./internal/orphan-report";
+export {
+  CONFIG_GENERATION_LOCK_FILE,
+  CONFIG_GENERATION_RETIRED_FILE,
+  CONFIG_GENERATION_ROOT_ENTRIES,
+  CONFIG_GENS_DIR,
+  CONFIG_HEAD_FILE,
+  configGenerationId,
+  configHeadSchema,
+  nextConfigHead,
+} from "./internal/generation-layout";
+export type {
+  ConfigHead,
+  ConfigPluginMove,
+} from "./internal/generation-layout";
+export {
+  configTextHash,
+  parseConfigText,
+  withConfigTextHash,
+} from "./internal/config-text";
+export { sameDocumentModuloOrder } from "./internal/same-document";

@@ -6,6 +6,7 @@ import { generateStaticHosts } from "./static-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
 import { generateServerContributors } from "./list-catalog-gen";
 import { stampOverrideLegends } from "./override-legend-stamp";
+import { generateConfigGeneration } from "./config-generation-gen";
 import { generatePluginDocs } from "./docgen";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import {
@@ -287,6 +288,12 @@ export async function regenerateManifestCodegen({
     // normalizes a legend a runtime write or a hand edit dropped.
     await onStep("overrideLegends", "stamp config override legends", () =>
       stampOverrideLegends({ pass }),
+    );
+    // LAST of the steps writing `config/`: the generation id hashes the
+    // committed tree as they left it (a build re-runs it after its own
+    // config writes — the move re-stamp, the authored-override seeder).
+    await onStep("configGeneration", "config generation id", () =>
+      generateConfigGeneration({ pass }),
     );
   } finally {
     // Disarm so a guard never leaks into a later run / unrelated barrel import.

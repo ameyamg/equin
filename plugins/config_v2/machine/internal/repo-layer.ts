@@ -8,7 +8,12 @@ import {
   configFileRelPath,
   storePathParts,
 } from "../../core";
-import type { ConfigFileRef, ConfigGitLayerImpl } from "../../core";
+import type {
+  CommittedFiles,
+  ConfigFileRef,
+  ConfigGitLayerImpl,
+} from "../../core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { repoConfigDir } from "@plugins/infra/plugins/paths/server";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 
@@ -92,3 +97,46 @@ export const repoConfigLayer: ConfigGitLayerImpl = {
     });
   },
 };
+
+/** How many committed files are read at once when the whole layer is read. */
+const LAYER_READS = 32;
+
+/**
+ * The whole committed layer — every `.jsonc` under the checkout's `config/`
+ * (or a release's), keyed by its layer-relative path — read without holding
+ * the thread. What a config generation is derived from: propagation needs
+ * every registered config's document, and a plugin move's re-stamp asks any.
+ */
+export async function readCommittedLayer(): Promise<CommittedFiles> {
+  const dir = repoConfigDir();
+  const paths: string[] = [];
+  const walk = async (rel: string): Promise<void> => {
+    let entries;
+    try {
+      entries = await readdir(join(dir, rel), { withFileTypes: true });
+    } catch (err) {
+      // No committed layer at all (a tree without `config/`): nothing to read.
+      if (rel === "" && (err as NodeJS.ErrnoException).code === "ENOENT")
+        return;
+      throw err;
+    }
+    await Promise.all(
+      entries.map(async (e) => {
+        const child = rel === "" ? e.name : `${rel}/${e.name}`;
+        if (e.isDirectory()) await walk(child);
+        else if (e.isFile() && e.name.endsWith(".jsonc")) paths.push(child);
+      }),
+    );
+  };
+  await walk("");
+  const reads = createSemaphore(LAYER_READS);
+  const files = new Map<string, string>();
+  await Promise.all(
+    paths.map((rel) =>
+      reads.run(async () => {
+        files.set(rel, await readFile(join(dir, rel), "utf8"));
+      }),
+    ),
+  );
+  return committedFilesFromMap(files);
+}

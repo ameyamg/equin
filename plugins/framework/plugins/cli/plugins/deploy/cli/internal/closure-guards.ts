@@ -9,7 +9,6 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   classifyEdges,
   expandEntrySeeds,
@@ -27,7 +26,11 @@ import {
   manifestItemToManifest,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { readEffectiveConfigFromDisk } from "@plugins/config_v2/plugins/disk-read/core";
+import { configDir } from "@plugins/config_v2/data-dirs";
+import {
+  readEffectiveConfigFromDisk,
+  servedConfigDir,
+} from "@plugins/config_v2/plugins/disk-read/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { refuse, type DeployTarget } from "./target";
@@ -79,7 +82,9 @@ async function loadClosureContext(): Promise<ClosureContext> {
     // The CHECKOUT's namespace, minted from git. A CLI process has no runtime
     // namespace; reading one used to answer the main namespace from every worktree,
     // so a converge launched from a worktree read MAIN's compositions config.
-    userConfigDir: configDir.file(await checkoutNamespace(REPO_ROOT)),
+    userConfigDir: await servedConfigDir(
+      configDir.file(await checkoutNamespace(REPO_ROOT)),
+    ),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   const tree = await buildFacetedPluginTree(joinAppPath(REPO_ROOT, "plugins"), {

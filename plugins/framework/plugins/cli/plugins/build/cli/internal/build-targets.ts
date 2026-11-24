@@ -1,6 +1,10 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { readEffectiveConfigFromDiskSync } from "@plugins/config_v2/plugins/disk-read/core";
+import { configDir } from "@plugins/config_v2/data-dirs";
+import {
+  readEffectiveConfigFromDiskSync,
+  servedConfigDirSync,
+} from "@plugins/config_v2/plugins/disk-read/core";
 import {
   assertCompositionId,
   compositionsConfig,
@@ -17,7 +21,6 @@ import {
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
-import { configDir } from "@plugins/config_v2/data-dirs";
 
 /**
  * WHAT one `./equin build` invocation deploys — the one place that decides
@@ -86,7 +89,9 @@ export function readCheckoutCompositions(
 ): CompositionManifestItem[] {
   const values = readEffectiveConfigFromDiskSync(compositionsConfig, {
     root,
-    userConfigDir: configDir.file(namespaceFor(MAIN_COMPOSITION_ID, checkout)),
+    userConfigDir: servedConfigDirSync(
+      configDir.file(namespaceFor(MAIN_COMPOSITION_ID, checkout)),
+    ),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   return values.manifests;

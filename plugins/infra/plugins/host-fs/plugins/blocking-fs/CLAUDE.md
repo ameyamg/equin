@@ -123,7 +123,6 @@ task that removes it: `./equin exempt list --rule blocking-fs/no-sync-fs
 - Exemptions:
   - Exempted by:
     - `build/server-build-id` (0 debt)
-    - `config_v2/ledger` (0 debt)
     - `database/migrations` (0 debt)
     - `debug/boot-events` (0 debt)
     - `debug/paging-probe` (0 debt)
@@ -149,7 +148,6 @@ task that removes it: `./equin exempt list --rule blocking-fs/no-sync-fs
     - `packages/signal-origin` (0 debt)
     - `packages/single-flight` (0 debt)
     - `plugin-meta/barrel-import` (0 debt)
-    - `plugin-meta/relocate` (0 debt)
     - `plugin-meta/token-usage` (0 debt)
     - `reports/engine` (0 debt)
     - `reports/outbox` (0 debt)

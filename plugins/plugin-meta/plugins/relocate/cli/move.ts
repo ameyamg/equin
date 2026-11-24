@@ -1,5 +1,9 @@
 import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { rmdirSync } from "node:fs";
 import {
   existsSync,
@@ -9,9 +13,14 @@ import {
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { servedConfigDirSync } from "@plugins/config_v2/plugins/disk-read/core";
 import { isMainCheckoutOrSlot } from "@plugins/infra/plugins/paths/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  asPath,
+  asPluginId,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   getWorktreeRoot,
@@ -24,11 +33,10 @@ import {
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import {
   PLUGIN_MOVES_FILE,
-  appendPluginMove,
-  namespacesHolding,
+  appendPluginMoveSync,
   parsePluginMoves,
   pluginMoveKey,
-  readPluginMoves,
+  readPluginMovesSync,
 } from "../core";
 import {
   editFor,
@@ -140,7 +148,7 @@ function printPlan(plan: MovePlan, dryRun: boolean): void {
 
 /** Ledger entries the working tree has and HEAD does not: this diff's moves. */
 async function uncommittedMoves(root: string) {
-  const working = readPluginMoves(asAppPath(root));
+  const working = readPluginMovesSync(asAppPath(root));
   // A HEAD that predates the ledger has committed no move.
   const tracked =
     (await git(root, ["ls-tree", "HEAD", "--", PLUGIN_MOVES_FILE])).trim() !==
@@ -344,7 +352,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   // own next build, from the ledger entry committed alongside this move — so the
   // settings change exactly when the code that reads them does.
   if (!dryRun) {
-    const entry = appendPluginMove(root, { from: from.id, to: to.id });
+    const entry = appendPluginMoveSync(root, { from: from.id, to: to.id });
     // What the next move may find dirty because of this one: every moved file
     // at both paths, every rewrite, and the lockfile the next install rewrites
     // from the renamed workspaces.
@@ -360,11 +368,13 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
       ...(newUmbrella === null ? [] : newUmbrellaFiles(newUmbrella)),
     ]);
   }
-  const holding = namespacesHolding(configDir.path, from.id);
+  const holding = namespacesHoldingSync(configDir.path, from.id, (ns) =>
+    servedConfigDirSync(configDir.file(ns)),
+  );
   console.log(``);
   console.log(
     `${dryRun ? "Would record" : "Recorded"} ${from.id} → ${to.id} in ${PLUGIN_MOVES_FILE}. ` +
-      `Each namespace's next \`./equin build\` moves its saved settings from ` +
+      `Each namespace's backend, at its first boot on code with this move, moves its saved settings from ` +
       `${asPath(from.id)} to ${asPath(to.id)} and rewrites saved reorder keys` +
       (holding.length > 0
         ? ` — namespaces with settings there now: ${holding.join(", ")}.`
@@ -388,3 +398,18 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
 };
 
 export default run;
+
+/**
+ * Namespaces under `configRoot` whose served user layer (`servedDirOf`, the
+ * generation their HEAD names) still holds config at `from`'s slash path.
+ */
+function namespacesHoldingSync(
+  configRoot: AppPath,
+  from: PluginId,
+  servedDirOf: (ns: string) => AppPath,
+): string[] {
+  if (!existsSync(configRoot)) return [];
+  return readdirSync(configRoot)
+    .filter((ns) => existsSync(joinAppPath(servedDirOf(ns), asPath(from))))
+    .sort();
+}

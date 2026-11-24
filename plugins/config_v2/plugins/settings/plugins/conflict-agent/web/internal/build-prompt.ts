@@ -55,13 +55,14 @@ function scopedStorePath(conflict: ConfigConflictContext): string {
  */
 function pathsBlock(conflict: ConfigConflictContext): string {
   const stored = scopedStorePath(conflict);
-  const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>`;
+  const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>/gens/<generation>`;
   return [
+    `\`<generation>\` is the one named in \`${USER_CONFIG_DIR_DISPLAY}/<worktree>/HEAD\` (the config generation the app serves); with no HEAD there yet, the files sit in \`${USER_CONFIG_DIR_DISPLAY}/<worktree>/\` itself.`,
     "The two files that disagree — read both:",
     `- my values: \`${base}/${stored}\``,
     `- the new upstream default: \`${base}/${stored.replace(/\.jsonc$/, ".origin.jsonc")}\``,
     "",
-    `That upstream file is propagated by \`./equin build\` from the repo's \`config/${conflict.storePath}\`, which is the version-controlled default.`,
+    `That upstream file is propagated by the app's backend, when it boots on new code, from the repo's \`config/${conflict.storePath}\`, which is the version-controlled default.`,
     "My config layer is forked per worktree, so the copy in your own checkout is NOT the one I am looking at — editing it changes nothing for me.",
   ].join("\n");
 }
