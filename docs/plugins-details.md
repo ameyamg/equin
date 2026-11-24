@@ -53129,7 +53129,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `upstream`
               - `wish`
           - Exemptions:
-            - Exempts itself from: `line/no-raw-single-line-provider` — `exhibits/internal/text-exhibits.tsx`, `web/__tests__/single-line.test.tsx` (sanctioned)
+            - Exempts itself from: `line/no-raw-single-line-provider` — `exhibits/internal/text-exhibits.tsx` (sanctioned)
           - Core:
             - Exports (types):
               - `CssUtility`
