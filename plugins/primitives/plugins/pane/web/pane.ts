@@ -1326,7 +1326,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     const entries: MatchEntry[] = [];
     const accumulated: Record<string, string> = {};
     let routeStable = true;
-    for (const [idx, slot] of route.entries()) {
+    for (const slot of route) {
       const pane = registry.get(slot.paneId);
       if (!pane) {
         prevResolvedByUuid = new Map();
@@ -1336,15 +1336,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       // `fullParams` never carry them, the entry's `views` does.
       const own = withoutSurfaceViews(slot.params);
       const views = surfaceViewsOf(slot.params);
-      // A declared ancestor reordered to the right of this pane still
-      // addresses it: its params are this pane's too (under its own).
-      const reordered: Record<string, string> = {};
-      for (const id of pane.parentPaneIds) {
-        const at = anchorIndex(route, idx, id, (s) => s.paneId);
-        if (at > idx)
-          Object.assign(reordered, withoutSurfaceViews(route[at]!.params));
-      }
-      Object.assign(accumulated, reordered, own);
+      Object.assign(accumulated, own);
       const prev = prevResolvedByUuid.get(slot.uuid);
       const options = { ...pane.optionDefaults, ...slot.options };
       // A uuid is the pane INSTANCE, not its address: `useSetParams` rewrites an
@@ -1356,7 +1348,6 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         prev &&
         prev.pane === pane &&
         sameParams(prev.params, own) &&
-        sameParams(prev.fullParams, accumulated) &&
         sameParams(prev.views, views) &&
         sameOptions(prev.options, options)
       ) {
@@ -1506,25 +1497,15 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (typeof window === "undefined") return;
     const route = currentSlots();
     const idx = route.findIndex((s) => s.instanceId === instanceId);
-    if (idx < 0) return;
-    // A pane reordered to the head while it hangs off a pane right of it
-    // goes alone (with whatever only it addressed): what stands right of it
-    // is not its children.
-    const hangsRight = hangsOffRight(route, idx);
     // The route's head has nothing to close to — unless it is a companion,
     // which sits beside the app's index pane: closing it empties the route,
     // and the bare root shows that landing pane alone again.
-    if (idx === 0 && !internal.companion && !hangsRight) return;
+    if (idx < 0 || (idx === 0 && !internal.companion)) return;
     // ⌥-close keeps the others: only this pane goes (and whatever only it
-    // addressed), the panes right of it stay. A plain close takes the panes
-    // right of it, and whatever left of it was reordered off one of them.
-    const newRoute =
-      gesture.keepOthers || hangsRight
-        ? withoutSlot(route, idx)
-        : withoutOrphans(
-            route.slice(0, idx),
-            new Set(route.slice(idx).map((s) => s.paneId)),
-          );
+    // addressed), the panes right of it stay.
+    const newRoute = gesture.keepOthers
+      ? withoutSlot(route, idx)
+      : route.slice(0, idx);
     const replace = !internal.chrome.history;
     setRoute(newRoute, replace);
     // A closed instance is gone for good (an unmount is not): its view state
@@ -2374,19 +2355,7 @@ function withoutSlot(route: PaneSlot[], idx: number): PaneSlot[] {
     if (orphaned) removed.add(slot.paneId);
     else kept.push(slot);
   }
-  // A slot reordered left of the removed one may have hung off it.
-  return withoutOrphans(kept, removed);
-}
-
-/**
- * Does the slot at `idx` hang off a declared ancestor standing RIGHT of it —
- * a column the user dragged left of the one it was opened from?
- */
-function hangsOffRight(route: readonly PaneSlot[], idx: number): boolean {
-  const parents = registry.get(route[idx]!.paneId)?.parentPaneIds ?? [];
-  return parents.some(
-    (id) => anchorIndex(route, idx, id, (s) => s.paneId) > idx,
-  );
+  return kept;
 }
 
 /** Where an open lands. See {@link computeOpen}. */
@@ -2642,17 +2611,6 @@ function computeModeOpen(
       sameOptions(options, caller.options)
     )
       return unchanged;
-    // The caller's children go with its old address — those right of it by
-    // truncation, and those reordered LEFT of it (hanging off it) here.
-    const prefix = currentRoute
-      .slice(0, callerIndex)
-      .filter(
-        (s, i) =>
-          !(registry.get(s.paneId)?.parentPaneIds ?? []).some(
-            (id) =>
-              anchorIndex(currentRoute, i, id, (r) => r.paneId) === callerIndex,
-          ),
-      );
     // A target chained under the caller's own pane (a folder column swapped to
     // another folder with a file previewed in it): the column becomes the
     // caller's pane at its new address plus the target under it, and the
@@ -2664,13 +2622,22 @@ function computeModeOpen(
       const from = chain.findIndex((s) => s.paneId === caller.paneId);
       if (from >= 0) {
         return to([
-          ...prefix,
+          ...currentRoute.slice(0, callerIndex),
           ...chain.slice(from),
           createSlot(target.id, ownParams, options, hint),
         ]);
       }
     }
-    return to(relativeHead(prefix, target, params, ownParams, options, hint));
+    return to(
+      relativeHead(
+        currentRoute.slice(0, callerIndex),
+        target,
+        params,
+        ownParams,
+        options,
+        hint,
+      ),
+    );
   }
 
   if (opts.side === "left") {
@@ -2693,35 +2660,6 @@ function computeModeOpen(
         ),
         ...currentRoute.slice(callerIndex),
       ]);
-    }
-  }
-
-  // The target the caller opened, reordered LEFT of it, is replaced where it
-  // stands — the user's column order survives opening another one from the
-  // same caller (a folder previewing another file).
-  if (target.parentPaneIds.includes(caller.paneId)) {
-    const openedAt = currentRoute.findIndex(
-      (s, i) =>
-        i < callerIndex &&
-        s.paneId === target.id &&
-        anchorIndex(currentRoute, i, caller.paneId, (r) => r.paneId) ===
-          callerIndex,
-    );
-    if (
-      openedAt >= 0 &&
-      prefixHosts(currentRoute.slice(0, callerIndex + 1), target, params)
-    ) {
-      const opened = currentRoute[openedAt]!;
-      if (
-        sameAddress(ownParams, opened.params) &&
-        sameOptions(options, opened.options)
-      )
-        return unchanged;
-      return to(
-        currentRoute.map((s, i) =>
-          i === openedAt ? createSlot(target.id, ownParams, options, hint) : s,
-        ),
-      );
     }
   }
 
@@ -2787,64 +2725,6 @@ export function paneKeepSegment(uuid: string): string {
 }
 
 /**
- * The index of the slot of pane `ancestorId` that the slot at `idx` hangs off,
- * or -1 when there is none.
- *
- * An open builds the chain left to right, so that is the nearest instance
- * BEFORE `idx`. But the columns can be reordered (dragging a Miller column), and
- * a pane dragged left of the one it was opened from is still about it: for a
- * DECLARED ancestor with no instance before `idx`, the nearest one after it is
- * the one it hangs off. A pane that does not declare `ancestorId` hangs off
- * nothing to its right — two panes merely standing side by side are not related
- * by where they stand.
- */
-export function anchorIndex<S>(
-  route: readonly S[],
-  idx: number,
-  ancestorId: string,
-  paneIdOf: (slot: S) => string,
-): number {
-  for (let i = idx - 1; i >= 0; i--) {
-    if (paneIdOf(route[i]!) === ancestorId) return i;
-  }
-  const self = route[idx];
-  if (self === undefined) return -1;
-  const declared =
-    registry.get(paneIdOf(self))?.parentPaneIds.includes(ancestorId) ?? false;
-  if (!declared) return -1;
-  for (let i = idx + 1; i < route.length; i++) {
-    if (paneIdOf(route[i]!) === ancestorId) return i;
-  }
-  return -1;
-}
-
-/**
- * `kept` without the slots whose address is gone: a slot that DECLARES one of
- * `removedPaneIds` as an ancestor and no longer has an instance of it anywhere
- * in `kept` (left of it, or right of it in a reordered route).
- */
-function withoutOrphans(
-  kept: PaneSlot[],
-  removedPaneIds: ReadonlySet<string>,
-): PaneSlot[] {
-  const removed = new Set(removedPaneIds);
-  let route = kept;
-  // A slot dropped here takes whatever hung off it too.
-  for (;;) {
-    const next = route.filter((slot) => {
-      const parents = registry.get(slot.paneId)?.parentPaneIds ?? [];
-      return !parents.some(
-        (id) => removed.has(id) && !route.some((k) => k.paneId === id),
-      );
-    });
-    if (next.length === route.length) return route;
-    for (const slot of route)
-      if (!next.includes(slot)) removed.add(slot.paneId);
-    route = next;
-  }
-}
-
-/**
  * The first entry for `pane` AFTER the caller's own pane in the chain — what
  * the caller opened (`pane.useOpenedHere()`'s answer, for a pane known only at
  * runtime). `null` outside every surface (`match` absent): nothing opened there
@@ -2861,20 +2741,6 @@ export function openedHereEntry(
     selfInstanceId === undefined
       ? -1
       : match.panes.findIndex((e) => e.instanceId === selfInstanceId);
-  const self = match.panes[selfIndex];
-  // A pane that declares the caller's pane as an ancestor is the one opened
-  // here when it hangs off THIS instance — wherever it stands, so a column
-  // dragged left of the one that opened it is still found.
-  if (self !== undefined && pane.parentPaneIds.includes(self.pane.id)) {
-    const hangsHere = (i: number): boolean =>
-      match.panes[i]!.pane === pane &&
-      anchorIndex(match.panes, i, self.pane.id, (e) => e.pane.id) === selfIndex;
-    for (let i = selfIndex + 1; i < match.panes.length; i++)
-      if (hangsHere(i)) return match.panes[i]!;
-    for (let i = selfIndex - 1; i >= 0; i--)
-      if (hangsHere(i)) return match.panes[i]!;
-    return null;
-  }
   return match.panes.slice(selfIndex + 1).find((e) => e.pane === pane) ?? null;
 }
 
@@ -3597,18 +3463,10 @@ function makePaneObject(
     const selfIndex = match.panes.findIndex(
       (e) => e.instanceId === selfInstanceId,
     );
-    if (selfIndex < 0) return null;
-    if (match.panes[selfIndex]!.pane === internal) {
-      return toRouteEntry(match.panes[selfIndex]!);
-    }
-    // The one it hangs off — left of it, or right of it once reordered.
-    const at = anchorIndex(
-      match.panes,
-      selfIndex,
-      internal.id,
-      (e) => e.pane.id,
-    );
-    return at < 0 ? null : toRouteEntry(match.panes[at]!);
+    const entry = match.panes
+      .slice(0, selfIndex + 1)
+      .findLast((e) => e.pane === internal);
+    return entry ? toRouteEntry(entry) : null;
   }
 
   // Imperative methods on the PaneObject target the live store (the focused
@@ -3646,8 +3504,7 @@ function makePaneObject(
       if (idx < 0) return null;
       // A companion at the route's head is closable while the surface shows
       // a pane to its left (its app's index pane) — that is where it goes.
-      // So is a pane reordered to the head off one right of it.
-      if (idx === 0 && !hangsOffRight(route, 0)) {
+      if (idx === 0) {
         if (!internal.companion) return null;
         const shownAt =
           match?.panes.findIndex((e) => e.instanceId === instanceId) ?? -1;

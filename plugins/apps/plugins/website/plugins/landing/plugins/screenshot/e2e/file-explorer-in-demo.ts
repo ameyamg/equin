@@ -101,7 +101,7 @@ function sidebar(page: Page): Locator {
 
 /** The preview beside the listing: the file's own column, header included. */
 function preview(page: Page): Locator {
-  return embedRoot(page).locator('[data-pane-id="files-preview"]').first();
+  return embedRoot(page).locator('[data-pane-id="files-preview-path"]').first();
 }
 
 /** A row of the browser's tree, by its key: the entry's path (`~/…`). */

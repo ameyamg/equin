@@ -7,7 +7,6 @@ import {
   parentPath,
   pathChain,
 } from "./paths";
-import { decodeOpenParam, encodeOpenParam } from "./location";
 import { formatCount, formatModified, formatSize } from "./format";
 
 const HOME_ABS = "/h/me";
@@ -58,21 +57,6 @@ describe("paths", () => {
     ]);
     expect(pathChain("/usr/bin")).toEqual(["/", "/usr", "/usr/bin"]);
     expect(pathChain("/")).toEqual(["/"]);
-  });
-});
-
-describe("open param", () => {
-  test("a file of the folder is written relative to it", () => {
-    expect(encodeOpenParam("~/p", "~/p/a/README.md")).toBe("a/README.md");
-    expect(decodeOpenParam("~/p", "a/README.md")).toBe("~/p/a/README.md");
-    expect(encodeOpenParam("/", "/etc/hosts")).toBe("etc/hosts");
-    expect(decodeOpenParam("/", "etc/hosts")).toBe("/etc/hosts");
-  });
-
-  test("a file elsewhere keeps its full path", () => {
-    expect(encodeOpenParam("~/p", "~/q/x")).toBe("~/q/x");
-    expect(decodeOpenParam("~/p", "~/q/x")).toBe("~/q/x");
-    expect(decodeOpenParam("~/p", "/etc/hosts")).toBe("/etc/hosts");
   });
 });
 

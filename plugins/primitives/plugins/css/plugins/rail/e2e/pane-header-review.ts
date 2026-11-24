@@ -106,7 +106,7 @@ const SURFACES: readonly Surface[] = [
   },
   {
     name: "files-preview",
-    path: "/files/browse/%2Fusr%2Fshare%2Fdict/preview/README",
+    path: "/files/browse/%2Fusr%2Fshare%2Fdict/preview/%2Fusr%2Fshare%2Fdict%2FREADME",
   },
   // ── Desktop surface mode (the rest are solo, the boot mode) ─────────
   { name: "desktop-reports", path: "/desktop/debug/reports" },

@@ -48,6 +48,10 @@ export const taskDetailPane = Pane.define({
 - **`parent`** puts the ancestor's segment in the URL, types params as the
   **chained** set, and is the from-scratch ancestry.
   - It does NOT constrain where the pane can appear.
+  - It is NOT a runtime dependency: a pane reads its own params, never its
+    ancestor column's. A pane whose params only make sense relative to the
+    column left of it (a path relative to a folder) breaks as soon as the
+    columns are reordered or it stands alone — give it its whole address.
   - A pane with no real ancestor gets a parentless route — an invented parent
     adds a URL segment and a Miller column.
 - **`segment`**: own URL fragment, no leading slash.
@@ -174,21 +178,11 @@ so sidebar, toolbar and body read the same match.
   pane after the caller's own pane).
   - Use it for opener toggles; "last entry" heuristics are wrong.
   - `useRouteEntries()` only when the question is about the whole chain.
-  - For a pane that DECLARES the caller's pane as an ancestor, it is the
-    instance hanging off the caller, wherever it stands (see below).
 - `pane.useEnclosing()` — **which instance am I in or under?** (last entry for
   this pane at or before the caller's own pane). A satellite reading the pane
   it hangs off (`conversationPane.useEnclosing()?.params.convId`) uses this —
   `useRouteEntry()` reads the FIRST instance, so beside a second conversation
   column it named the first one's conversation.
-- **A reordered route keeps its addresses.** Dragging a Miller column left of
-  the pane it was opened from (a file preview left of its folder) does not cut
-  it off: a pane hangs off the nearest instance of each DECLARED ancestor
-  before it, else — reordered — the nearest one after it (`anchorIndex`).
-  `useEnclosing`, `useOpenedHere`, `fullParams`, close (the reordered child
-  closes alone, even from the head; closing its ancestor takes it) and a
-  right-push from the ancestor (replaces it where it stands) all read it. A
-  pane declaring no ancestor hangs off nothing right of it.
 - **Outside every surface** (global chrome: `Core.Root` action bar,
   `Apps.TabBarActions`, their popovers) the route-read hooks **throw** — `null`
   is only the in-surface "not in the route". Use `useTabs()` / `navigate()`
@@ -337,6 +331,9 @@ Modes:
     an ancestor**, then it falls through to a right-push (duplicates it on the
     right).
 - `"swap"` — replace the caller's slot (same pane type), truncating children.
+  A target whose route is chained under the caller's pane replaces the
+  caller's column with the caller's pane at its new address plus the target
+  (the panes left of it stay).
 - `"append"` — after the route's LAST pane, replacing it when it's the same
   pane type. The positional open for global chrome (no caller).
 
@@ -814,7 +811,7 @@ out of the way: **what it opens takes its column**.
   - Slots: `Pane.Register`
   - Slot contributors: 104 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×104
-  - Contributes: 137 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 135 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -875,8 +872,6 @@ out of the way: **what it opens takes its column**.
     - `exhibits.actions` "title" → `PaneTitleItem`
     - `explorerPane.Actions` "title" → `PaneTitleItem`
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
-    - `files-browser-at.actions` "title" → `PaneTitleItem`
-    - `files-computer-at.actions` "title" → `PaneTitleItem`
     - `filesHomePane.Actions` "title" → `PaneTitleItem`
     - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
     - `healthMonitorPane.Actions` "title" → `PaneTitleItem`

@@ -11,7 +11,6 @@ import {
   type PaneExpandTarget,
 } from "@plugins/primitives/plugins/pane/web";
 import {
-  PLAIN_GESTURE,
   type Activation,
   type LinkTarget,
 } from "@plugins/primitives/plugins/link-gesture/core";
@@ -30,9 +29,6 @@ import {
 import {
   baseName,
   filesConfig,
-  decodeOpenParam,
-  encodeOpenParam,
-  fullOpenParam,
   parentPath,
   type ExplorerLocation,
 } from "../core";
@@ -54,12 +50,15 @@ import { useHomeSystem } from "./internal/explorer-system";
 // Files is a Miller row: a folder column, and the file open in it as a
 // column of its own beside it —
 //
-//   /files/browse/<folder>[;fs=<system>][/preview/<open file>]
+//   /files/browse/<folder>[;fs=<system>][/preview/<open file>[;fs=<system>]]
 //
-// The folder is ONE encoded segment (`~%2FProjects`); the open file is
-// written relative to it when it is inside it (`README.md`), else in full.
-// `;fs` names the file system — absent, the computer's disk. Every location is
-// therefore a link, and back / forward are the browser history:
+// The folder and the open file are each ONE encoded segment holding a full
+// path (`~%2FProjects`, `~%2FProjects%2FREADME.md`); `;fs` names the file
+// system — absent, the computer's disk. Each column carries its WHOLE
+// address: the preview reads nothing from the folder column, so it works in
+// any column order (a reordered Miller row) and on its own
+// (`/files/preview/<file>`). Every location is therefore a link, and back /
+// forward are the browser history:
 //
 // - another folder is a new entry moving the folder column IN PLACE (an
 //   `inPlace` root open): the column, its header and the preview beside it
@@ -88,11 +87,18 @@ export const filesFolderPane = Pane.define({
   component: FilesFolder,
 });
 
-/** `…/preview/<open file>` — the file open in the folder, previewed beside it. */
+/**
+ * `…/preview/<file>[;fs=<system>]` — a file, previewed beside the folder it
+ * was opened from. Its address is its own (the full path, the system): the
+ * `parent` only builds the folder column beside it when Files opens a file
+ * from scratch — rendering never reads the folder.
+ */
 export const filesPreviewPane = Pane.define({
   route: defineRoute({
-    id: "files-preview",
-    segment: "preview/:open",
+    // Not "files-preview": that id held a path RELATIVE to the folder (`:open`),
+    // so a tab saved then would restore its slot without `path`.
+    id: "files-preview-path",
+    segment: "preview/:path;fs",
     parent: folderRoute,
   }),
   app: fileExplorerApp,
@@ -123,78 +129,12 @@ export const filesHomePane = Pane.define({
   component: FilesHome,
 });
 
-/**
- * `/files/<fs>/at/<folder>[/<open file>]` — the address a location had while
- * Files kept one folder pane per file system. Forwards to `/files/browse/…`,
- * REPLACING the history entry, so an old link still opens and Back skips the
- * address that only forwarded.
- */
-export const filesComputerAtLegacyPane = Pane.define({
-  route: defineRoute({
-    id: "files-computer-at",
-    segment: "computer/at/:dir/:open?",
-  }),
-  app: fileExplorerApp,
-  title: { useText: useFolderTitle },
-  useResolve: false,
-  component: FilesComputerAtLegacy,
-});
-
-export const filesBrowserAtLegacyPane = Pane.define({
-  route: defineRoute({
-    id: "files-browser-at",
-    segment: "browser/at/:dir/:open?",
-  }),
-  app: fileExplorerApp,
-  title: { useText: useFolderTitle },
-  useResolve: false,
-  component: FilesBrowserAtLegacy,
-});
-
-function FilesComputerAtLegacy(): ReactNode {
-  const params = filesComputerAtLegacyPane.useParams();
-  return (
-    <PaneChrome pane={filesComputerAtLegacyPane}>
-      <LocationForward location={locationOf("computer", params)} />
-    </PaneChrome>
-  );
-}
-
-function FilesBrowserAtLegacy(): ReactNode {
-  const params = filesBrowserAtLegacyPane.useParams();
-  return (
-    <PaneChrome pane={filesBrowserAtLegacyPane}>
-      <LocationForward location={locationOf("browser", params)} />
-    </PaneChrome>
-  );
-}
-
-function LocationForward({
-  location,
-}: {
-  location: ExplorerLocation;
-}): ReactNode {
-  const openPane = useOpenPane();
-  const { fs, dir, open } = location;
-  useEffect(() => {
-    locationTarget(openPane, { fs, dir, open }, { replace: true }).open(
-      PLAIN_GESTURE,
-    );
-  }, [openPane, fs, dir, open]);
-  return <Loading variant="rows" />;
-}
-
 function useFolderTitle(params: { dir: string }): string {
   return params.dir === HOME ? "Home" : baseName(params.dir);
 }
 
-function usePreviewTitle(params: { dir?: string; open: string }): string {
-  // No `dir` when the route holds the preview without its folder column.
-  return baseName(
-    params.dir === undefined
-      ? params.open
-      : decodeOpenParam(params.dir, params.open),
-  );
+function usePreviewTitle(params: { path: string }): string {
+  return baseName(params.path);
 }
 
 /** The folder pane's params: the folder, and its system unless the computer's disk. */
@@ -230,26 +170,7 @@ function locationTarget(
   const open = { mode: "root" as const, ...opts };
   return location.open === null
     ? openPane.to(filesFolderPane, folder, open)
-    : openPane.to(
-        filesPreviewPane,
-        { ...folder, open: encodeOpenParam(location.dir, location.open) },
-        open,
-      );
-}
-
-/** The location Files' route params name, in `fs` (`open` relative to `dir`). */
-function locationOf(
-  fs: BrowsableFileSystem,
-  params: { dir: string; open?: string },
-): ExplorerLocation {
-  return {
-    fs,
-    dir: params.dir,
-    open:
-      params.open === undefined
-        ? null
-        : decodeOpenParam(params.dir, params.open),
-  };
+    : openPane.to(filesPreviewPane, { ...folder, path: location.open }, open);
 }
 
 /**
@@ -525,11 +446,14 @@ function FilesFolderBrowser({
   fs: BrowsableFileSystem;
   dir: string;
 }): ReactNode {
-  const opened = filesPreviewPane.useOpenedHere();
-  const openParam = opened?.params.open;
+  // The file this column opened: the preview right of it, of this system.
+  const entry = filesPreviewPane.useOpenedHere();
+  const opened =
+    entry !== null && systemOf(entry.params.fs) === fs ? entry : null;
+  const openPath = opened?.params.path ?? null;
   const location = useMemo(
-    () => locationOf(fs, { dir, open: openParam }),
-    [fs, dir, openParam],
+    () => ({ fs, dir, open: openPath }),
+    [fs, dir, openPath],
   );
   const openPane = useOpenPane();
   // Another folder moves this column in place: its header and the preview
@@ -545,7 +469,7 @@ function FilesFolderBrowser({
     (open: string) =>
       openPane.to(
         filesPreviewPane,
-        { ...folderParams(fs, dir), open: encodeOpenParam(dir, open) },
+        { ...folderParams(fs, dir), path: open },
         { mode: "push" },
       ),
     [openPane, fs, dir],
@@ -573,83 +497,18 @@ function FilesFolderBrowser({
 }
 
 function FilesPreview(): ReactNode {
-  const { open } = filesPreviewPane.useParams();
-  const folder = filesFolderPane.useEnclosing();
-  // Files only opens it beside its folder (its declared parent), but a URL can
-  // still name it alone (`/files/preview/<file>` — typed, shared, cut short, an
-  // embed's place): a parsed route holds what the URL says.
-  if (folder === null) return <FilesPreviewWithoutFolder open={open} />;
-  const path = decodeOpenParam(folder.params.dir, open);
-  const fs = systemOf(folder.params.fs);
+  // Its whole address is its own: whichever column stands beside it (its
+  // folder, another one, none) has no say in what it shows.
+  const { path, fs: fsParam } = filesPreviewPane.useParams();
+  const fs = systemOf(fsParam);
   if (fs === null) {
     return (
       <PendingFilePreviewPane pane={filesPreviewPane} name={baseName(path)}>
-        <Placeholder>No file system is called “{folder.params.fs}”</Placeholder>
+        <Placeholder>No file system is called “{fsParam}”</Placeholder>
       </PendingFilePreviewPane>
     );
   }
   return <FilePreviewPane pane={filesPreviewPane} fs={fs} path={path} />;
-}
-
-/**
- * The preview in a route without its folder column. An `open` that is a full
- * path says which folder that is: it forwards there (the folder, the file
- * beside it), REPLACING the history entry. One written relative to a folder
- * the route doesn't name points at no file, and says so.
- */
-function FilesPreviewWithoutFolder({ open }: { open: string }): ReactNode {
-  const path = fullOpenParam(open);
-  // `~` and `/` are folders with nothing above them to preview them in.
-  const dir =
-    path === null || path === HOME || path === "/"
-      ? null
-      : parentPath(path, HOME);
-  if (path === null || dir === null) {
-    return (
-      <PendingFilePreviewPane pane={filesPreviewPane} name={baseName(open)}>
-        <Placeholder>
-          This link doesn’t say which folder “{baseName(open)}” is in. Open
-          Files and browse to it.
-        </Placeholder>
-      </PendingFilePreviewPane>
-    );
-  }
-  return (
-    <PendingFilePreviewPane pane={filesPreviewPane} name={baseName(path)}>
-      <FilesPreviewForward dir={dir} open={path} />
-    </PendingFilePreviewPane>
-  );
-}
-
-/**
- * Forwards to the file's folder in the home system, the one the bare `/files`
- * opens: `;fs` rides the folder's segment, so a route without it names none.
- */
-function FilesPreviewForward({
-  dir,
-  open,
-}: {
-  dir: string;
-  open: string;
-}): ReactNode {
-  const home = useHomeSystem();
-  switch (home.kind) {
-    case "pending":
-      return <Loading variant="rows" />;
-    case "failed":
-      return (
-        <ResourceErrorInline
-          variant="block"
-          subject="the file systems here"
-          error={home.error}
-          refetch={home.refetch}
-        />
-      );
-    case "none":
-      return <Placeholder>There are no files to browse here</Placeholder>;
-    case "ready":
-      return <LocationForward location={{ fs: home.fs, dir, open }} />;
-  }
 }
 
 /**
@@ -663,10 +522,14 @@ export function useExplorerLocation(): ExplorerLocation | null {
   if (folder === null) return null;
   const fs = systemOf(folder.params.fs);
   if (fs === null) return null;
-  return locationOf(fs, {
+  return {
+    fs,
     dir: folder.params.dir,
-    open: preview?.params.open,
-  });
+    open:
+      preview !== null && systemOf(preview.params.fs) === fs
+        ? preview.params.path
+        : null,
+  };
 }
 
 /**

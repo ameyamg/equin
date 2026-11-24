@@ -6,13 +6,7 @@ export {
   parentPath,
   pathChain,
 } from "./internal/paths";
-export {
-  decodeOpenParam,
-  encodeOpenParam,
-  fullOpenParam,
-  locationKey,
-  type ExplorerLocation,
-} from "./internal/location";
+export { locationKey, type ExplorerLocation } from "./internal/location";
 export {
   formatCount,
   formatModified,

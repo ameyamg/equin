@@ -28,10 +28,10 @@ const file = arg("file");
 if (!file) throw new Error("--file <host path> is required");
 const out = arg("out", "/tmp/media-verify");
 // The explorer's route: the folder as one encoded segment, then the file's
-// preview column.
+// preview column (the file's full path).
 const slash = file.lastIndexOf("/");
 const url = pathUrl(
-  `/files/browse/${encodeURIComponent(file.slice(0, slash))}/preview/${encodeURIComponent(file.slice(slash + 1))}`,
+  `/files/browse/${encodeURIComponent(file.slice(0, slash))}/preview/${encodeURIComponent(file)}`,
 );
 
 await withBrowser(async (h) => {

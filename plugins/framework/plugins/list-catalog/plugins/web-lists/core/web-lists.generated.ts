@@ -80,8 +80,6 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"apps.events.sources.source-detail.runs.event-source-run.actions","plugin":"apps.events.sources.source-detail.runs","key":"event-source-run.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.events.sources.source-detail.runs.item-actions","plugin":"apps.events.sources.source-detail.runs","key":"item-actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.events.sources.source-detail.runs.section","plugin":"apps.events.sources.source-detail.runs","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},
-  {"id":"apps.file-explorer.browser.files-browser-at.actions","plugin":"apps.file-explorer.browser","key":"files-browser-at.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
-  {"id":"apps.file-explorer.browser.files-computer-at.actions","plugin":"apps.file-explorer.browser","key":"files-computer-at.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.file-explorer.browser.files-home.actions","plugin":"apps.file-explorer.browser","key":"files-home.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.file-explorer.browser.folder-header","plugin":"apps.file-explorer.browser","key":"folder-header","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.file-explorer.browser.lens","plugin":"apps.file-explorer.browser","key":"lens","meta":{"kind":"slot","reorderable":false},"inMain":true},

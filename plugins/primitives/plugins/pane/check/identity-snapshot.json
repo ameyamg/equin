@@ -463,34 +463,22 @@
       "parent": null
     },
     {
-      "paneId": "files-browser-at",
-      "segment": "browser/at/:dir/:open?",
-      "appIndex": false,
-      "parent": null
-    },
-    {
-      "paneId": "files-computer-at",
-      "segment": "computer/at/:dir/:open?",
-      "appIndex": false,
-      "parent": null
-    },
-    {
       "paneId": "files-home",
       "segment": "",
       "appIndex": true,
       "parent": null
     },
     {
-      "paneId": "files-preview",
-      "segment": "preview/:open",
-      "appIndex": false,
-      "parent": "files-at"
-    },
-    {
       "paneId": "files-preview-beside",
       "segment": "preview-file/:path;fs",
       "appIndex": false,
       "parent": null
+    },
+    {
+      "paneId": "files-preview-path",
+      "segment": "preview/:path;fs",
+      "appIndex": false,
+      "parent": "files-at"
     },
     {
       "paneId": "folder-peek",

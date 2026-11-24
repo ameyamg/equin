@@ -1,5 +1,4 @@
 import type { BrowsableFileSystem } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
-import { isWithin, joinPath } from "./paths";
 
 /**
  * Where a file explorer is: the file system it browses, the folder it lists,
@@ -16,30 +15,4 @@ export interface ExplorerLocation {
 /** One string per location, for comparing two of them. */
 export function locationKey(location: ExplorerLocation): string {
   return `${location.fs}\u0000${location.dir}\u0000${location.open ?? ""}`;
-}
-
-/**
- * The open file as written in a URL: relative to the folder when it is inside
- * it (the usual case — a file of the listing), the full path otherwise.
- */
-export function encodeOpenParam(dir: string, open: string): string {
-  if (open !== dir && isWithin(open, dir)) {
-    return open.slice(dir === "/" ? 1 : dir.length + 1);
-  }
-  return open;
-}
-
-/** The inverse of {@link encodeOpenParam}: a full path stays, a relative one joins `dir`. */
-export function decodeOpenParam(dir: string, param: string): string {
-  return fullOpenParam(param) ?? joinPath(dir, param);
-}
-
-/**
- * The file an open param names on its own — its full path — or `null` when it
- * is written relative to a folder and so means nothing without one.
- */
-export function fullOpenParam(param: string): string | null {
-  return param.startsWith("/") || param === "~" || param.startsWith("~/")
-    ? param
-    : null;
 }

@@ -56,7 +56,8 @@ const MODIFIED_DIR =
 const MODIFIED_FILE = "file-browser.tsx";
 
 function filesAt(dir: string, open?: string): string {
-  const tail = open === undefined ? "" : `/preview/${encodeURIComponent(open)}`;
+  const tail =
+    open === undefined ? "" : `/preview/${encodeURIComponent(join(dir, open))}`;
   return pathUrl(`/files/browse/${encodeURIComponent(dir)}${tail}`);
 }
 
