@@ -36,8 +36,16 @@ export {
   hasConfigDocument,
   onDocumentChange,
   reloadConfigDocument,
+  readAutoMerge,
+  AutoMergeUndoRefused,
+  undoAutoMergeByPath,
+  stampAutoMergeByPath,
 } from "./internal/registry";
-export type { ConfigDocumentTuple, ConfigWriteOpts } from "./internal/registry";
+export type {
+  AutoMergeState,
+  ConfigDocumentTuple,
+  ConfigWriteOpts,
+} from "./internal/registry";
 export {
   configValuesServed,
   configRegistryReady,

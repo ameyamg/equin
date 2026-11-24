@@ -24,6 +24,7 @@ import {
   applyConfigMigrations,
   configMigrationsPending,
 } from "./config-migrations";
+import { rewriteConfigFiles } from "./config-ledger";
 
 let ns: AppPath;
 
@@ -156,5 +157,29 @@ describe("configMigrationsPending", () => {
     expect(
       configMigrationsPending({ userConfigDir: ns, configs: configs() }),
     ).toBe(false);
+  });
+});
+
+describe("rewriteConfigFiles", () => {
+  test("an automatic-merge record follows its origin's new hash, header and toHash", () => {
+    const origin = { icon: "old" };
+    const oldHash = computeHash(origin);
+    put("a/b/config.origin.jsonc", origin, oldHash);
+    put("a/b/config.jsonc", { icon: "old", x: 1 }, oldHash);
+    put(
+      "a/b/config.merge.jsonc",
+      { version: 1, fromHash: "000000000000", toHash: oldHash },
+      oldHash,
+    );
+    rewriteConfigFiles(asAppPath(ns), {
+      rewrite: (rel, text) =>
+        rel.endsWith(".origin.jsonc") ? text.replace('"old"', '"new"') : text,
+    });
+    const newHash = computeHash({ icon: "new" });
+    expect(get("a/b/config.jsonc").hash).toBe(newHash);
+    expect(get("a/b/config.merge.jsonc")).toEqual({
+      hash: newHash,
+      content: { version: 1, fromHash: "000000000000", toHash: newHash },
+    });
   });
 });

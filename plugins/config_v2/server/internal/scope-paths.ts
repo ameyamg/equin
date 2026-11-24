@@ -9,7 +9,7 @@ import type {
 export const BASE_SCOPE = "";
 
 /**
- * The three files of one document, as the refs the user-layer store
+ * The files of one document, as the refs the user-layer store
  * (`ConfigStore`) addresses them by. `scopeId` "" or undefined is the base
  * document. Shared by every reader and writer, so a computation and the
  * fingerprint it is memoized on can never name different files.
@@ -27,5 +27,6 @@ export function documentFiles(
     origin: ref("origin"),
     override: ref("override"),
     ancestor: ref("ancestor"),
+    merge: ref("merge"),
   };
 }

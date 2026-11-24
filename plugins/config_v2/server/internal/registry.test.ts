@@ -37,7 +37,10 @@ import {
   initRegistry,
   mergeConflictByPath,
   onDocumentChange,
+  readAutoMerge,
   reloadConfigDocument,
+  stampAutoMergeByPath,
+  undoAutoMergeByPath,
   resetConfigByPath,
   setConfig,
   setConfigByPath,
@@ -56,6 +59,13 @@ const alpha = defineConfig({
     title: textField({ label: "Title", default: "hello" }),
   },
 });
+const gamma = defineConfig({
+  name: "gamma",
+  fields: {
+    enabled: boolField({ label: "Enabled", default: true }),
+    title: textField({ label: "Title", default: "g" }),
+  },
+});
 const beta = defineConfig({
   name: "beta",
   fields: { title: textField({ label: "Title", default: "b" }) },
@@ -64,6 +74,7 @@ const beta = defineConfig({
 const PLUGIN = "registry-test";
 const ALPHA = `${PLUGIN}/alpha.jsonc`;
 const BETA = `${PLUGIN}/beta.jsonc`;
+const GAMMA = `${PLUGIN}/gamma.jsonc`;
 const writer = systemOrigin("registry-test");
 
 const memory = createMemoryConfigStore();
@@ -120,6 +131,7 @@ let offChanges: () => void = () => {};
 beforeAll(async () => {
   await seed(file(ALPHA, "origin"), ALPHA_ORIGIN);
   await seed(file(BETA, "origin"), { title: "b" });
+  await seed(file(GAMMA, "origin"), { enabled: true, title: "g" });
   // A committed scope the build propagated before boot: rehydrated by init.
   await seed(file(BETA, "origin", "app:mail"), { title: "mail" });
   collectContributions([
@@ -128,6 +140,7 @@ beforeAll(async () => {
       contributions: [
         ConfigV2.Register({ descriptor: alpha, pluginId: asPluginId(PLUGIN) }),
         ConfigV2.Register({ descriptor: beta, pluginId: asPluginId(PLUGIN) }),
+        ConfigV2.Register({ descriptor: gamma, pluginId: asPluginId(PLUGIN) }),
       ],
     },
   ]);
@@ -469,5 +482,158 @@ describe("reloadConfigDocument", () => {
       await reloadConfigDocument(ALPHA, "app:tmp");
       expect(hasConfigDocument(ALPHA, "app:tmp")).toBe(false);
       expect(await getConfigScopeIds(alpha)).not.toContain("app:tmp");
+    }));
+});
+
+describe("automatic merge at boot", () => {
+  const ANCESTOR = { enabled: true, title: "old" };
+  const NEW_ORIGIN = { enabled: true, title: "new" };
+  const PRE_MERGE = { enabled: false };
+
+  // An update moved gamma's origin under the user's (partial) override; the
+  // build captured the merge base. Then the backend restarts.
+  async function staleOverride(origin: JsonValue = NEW_ORIGIN): Promise<void> {
+    await seed(file(GAMMA, "origin"), origin);
+    await seed(file(GAMMA, "ancestor"), ANCESTOR);
+    await seed(file(GAMMA, "override"), PRE_MERGE, computeHash(ANCESTOR));
+  }
+  async function reboot(): Promise<void> {
+    shutdownRegistry();
+    await initRegistry();
+  }
+
+  test("a stale override that merges cleanly is applied, with a record", () =>
+    run(async () => {
+      await staleOverride();
+      await reboot();
+      expect(await read(file(GAMMA, "override"))).toEqual({
+        content: { enabled: false, title: "new" },
+        hash: computeHash(NEW_ORIGIN),
+      });
+      expect(await exists(file(GAMMA, "ancestor"))).toBe(false);
+      expect(getConfig(gamma)).toEqual({ enabled: false, title: "new" });
+      const state = await readAutoMerge(GAMMA);
+      expect(state?.status).toBe("current");
+      expect(state?.record).toMatchObject({
+        fromHash: computeHash(ANCESTOR),
+        toHash: computeHash(NEW_ORIGIN),
+        undo: {
+          override: { content: PRE_MERGE, hash: computeHash(ANCESTOR) },
+          ancestor: { content: ANCESTOR, hash: computeHash(ANCESTOR) },
+        },
+      });
+      expect(
+        edits.some(
+          (e) => e.operation === "auto-merge" && e.doc.storePath === GAMMA,
+        ),
+      ).toBe(true);
+    }));
+
+  test("Undo puts the normal conflict back and keeps the record as a tombstone", () =>
+    run(async () => {
+      await undoAutoMergeByPath(GAMMA, { writer });
+      expect(await read(file(GAMMA, "override"))).toEqual({
+        content: PRE_MERGE,
+        hash: computeHash(ANCESTOR),
+      });
+      expect((await read(file(GAMMA, "ancestor")))?.content).toEqual(ANCESTOR);
+      expect((await readAutoMerge(GAMMA))?.status).toBe("undone");
+      // In conflict: the new origin wins until the user reconciles.
+      expect(getConfig(gamma)).toEqual(NEW_ORIGIN);
+      expect(lastEdits(1)).toEqual(["undo-auto-merge"]);
+    }));
+
+  test("a restart does not merge again the update the user undid", () =>
+    run(async () => {
+      await reboot();
+      expect((await read(file(GAMMA, "override")))?.hash).toBe(
+        computeHash(ANCESTOR),
+      );
+      expect((await readAutoMerge(GAMMA))?.status).toBe("undone");
+      expect(getConfig(gamma)).toEqual(NEW_ORIGIN);
+      expect(undoAutoMergeByPath(GAMMA, { writer })).rejects.toThrow(
+        "no automatic merge to undo",
+      );
+    }));
+
+  test("a later update merges again over the tombstone", () =>
+    run(async () => {
+      await seed(file(GAMMA, "origin"), { enabled: true, title: "newer" });
+      await reboot();
+      expect(getConfig(gamma)).toEqual({ enabled: false, title: "newer" });
+      expect((await readAutoMerge(GAMMA))?.status).toBe("current");
+    }));
+
+  test("Undo is refused once the user edited the config since", () =>
+    run(async () => {
+      expect((await readAutoMerge(GAMMA))?.status).toBe("current");
+      await setConfig(gamma, "title", "mine", { writer });
+      expect((await readAutoMerge(GAMMA))?.status).toBe("edited");
+      expect(undoAutoMergeByPath(GAMMA, { writer })).rejects.toThrow(
+        "changed since",
+      );
+      expect(getConfig(gamma).title).toBe("mine");
+    }));
+
+  test("Undo is refused once a later update moved the origin past it", () =>
+    run(async () => {
+      await deleteOverrideByPath(GAMMA, { writer });
+      await staleOverride();
+      await reboot();
+      await seed(file(GAMMA, "origin"), { enabled: true, title: "newer" });
+      await reloadConfigDocument(GAMMA, "");
+      expect((await readAutoMerge(GAMMA))?.status).toBe("superseded");
+      expect(undoAutoMergeByPath(GAMMA, { writer })).rejects.toThrow(
+        "superseded",
+      );
+    }));
+
+  test("a merge it cannot decide stays a conflict and writes nothing", () =>
+    run(async () => {
+      await deleteOverrideByPath(GAMMA, { writer });
+      // The update dropped `title`, which the user changed: delete-modify.
+      await seed(file(GAMMA, "origin"), { enabled: true });
+      await seed(file(GAMMA, "ancestor"), ANCESTOR);
+      await seed(
+        file(GAMMA, "override"),
+        { enabled: true, title: "mine" },
+        computeHash(ANCESTOR),
+      );
+      await reboot();
+      expect((await read(file(GAMMA, "override")))?.hash).toBe(
+        computeHash(ANCESTOR),
+      );
+      expect(await exists(file(GAMMA, "ancestor"))).toBe(true);
+      expect(await exists(file(GAMMA, "merge"))).toBe(false);
+    }));
+
+  test("acknowledging stamps only the record it names, and moves the document's listeners", () =>
+    run(async () => {
+      await deleteOverrideByPath(GAMMA, { writer });
+      await staleOverride();
+      await reboot();
+      const id = (await readAutoMerge(GAMMA))!.record.id;
+      expect(
+        await stampAutoMergeByPath(GAMMA, "other", "acknowledgedAt", {
+          writer,
+        }),
+      ).toBe(false);
+      changes.length = 0;
+      expect(
+        await stampAutoMergeByPath(GAMMA, id, "acknowledgedAt", { writer }),
+      ).toBe(true);
+      expect((await readAutoMerge(GAMMA))?.record.acknowledgedAt).toBeDefined();
+      expect(changes).toContainEqual({ path: GAMMA });
+      // Stamping again is a no-op.
+      expect(
+        await stampAutoMergeByPath(GAMMA, id, "acknowledgedAt", { writer }),
+      ).toBe(false);
+    }));
+
+  test("deleting the override drops the record with it", () =>
+    run(async () => {
+      await deleteOverrideByPath(GAMMA, { writer });
+      expect(await exists(file(GAMMA, "merge"))).toBe(false);
+      expect(await readAutoMerge(GAMMA)).toBeNull();
     }));
 });

@@ -13,6 +13,7 @@ import { APP_SCOPE_DIR } from "./scope-format";
  * Handled suffixes (all end in `.jsonc`, so longest-first):
  *   - `.origin.jsonc`   — the code/git default snapshot
  *   - `.ancestor.jsonc` — the transient three-way-merge base (user layer only)
+ *   - `.merge.jsonc`    — the last automatic merge's record (user layer only)
  *   - `.jsonc`          — a user/git override
  *
  * Returns null for non-config files (e.g. `config/CLAUDE.md`). Paths are relative
@@ -35,6 +36,7 @@ export function configFileOwner(relPath: string): { hier: string; name: string }
   // to its base descriptor exactly like the origin it was captured from.
   if (bare.endsWith(".origin.jsonc")) return cut(bare, ".origin.jsonc");
   if (bare.endsWith(".ancestor.jsonc")) return cut(bare, ".ancestor.jsonc");
+  if (bare.endsWith(".merge.jsonc")) return cut(bare, ".merge.jsonc");
   if (bare.endsWith(".jsonc")) return cut(bare, ".jsonc");
   return null;
 }

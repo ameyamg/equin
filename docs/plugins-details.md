@@ -17324,11 +17324,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `host-service:config-v2.git-layer` "config-v2.git-layer"
     - Uses: `network/live.serveValue`
     - Exports (types):
+      - `AutoMergeState`
       - `ConfigDocumentTuple`
       - `ConfigWriteOpts`
       - `FieldStorageProvider`
     - Exports (values):
       - `acknowledgeConflictByPath`
+      - `AutoMergeUndoRefused`
       - `ConfigGitLayer`
       - `configRegistryReady`
       - `ConfigStore`
@@ -17351,12 +17353,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `notifyConfigDirChange`
       - `onConfigDirChange`
       - `onDocumentChange`
+      - `readAutoMerge`
       - `registerFieldStorageProvider`
       - `reloadConfigDocument`
       - `removeDescriptorScope`
       - `resetConfigByPath`
       - `setConfig`
       - `setConfigByPath`
+      - `stampAutoMergeByPath`
+      - `undoAutoMergeByPath`
       - `watchConfig`
     - Resources:
       - `config-v2.conflict-locations` (push, notified, whole: one entry per registered config descriptor in conflict (~250 at most), whole: the app scopes one descriptor conflicts in — a handful of apps)
@@ -17393,6 +17398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigFileRef`
       - `ConfigGitLayerImpl`
       - `ConfigListVisitor`
+      - `ConfigMergeRecord`
       - `ConfigMergeResult`
       - `ConfigMigration`
       - `ConfigProxy`
@@ -17415,6 +17421,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `JsonValue`
       - `MergeConflictReason`
       - `MergePath`
+      - `MergeRecordStatus`
       - `OriginDefaultsFrom`
       - `OrphanEntry`
       - `OrphanFile`
@@ -17427,6 +17434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `APP_SCOPE_DIR`
       - `appScopeId`
+      - `buildMergeRecord`
       - `codeConfigProxy`
       - `committedDocument`
       - `committedFilesFromMap`
@@ -17437,6 +17445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `configFileOwner`
       - `configFileRelPath`
       - `configGitValues`
+      - `configMergeRecordSchema`
       - `configModifiedCounts`
       - `configRawFile`
       - `configScopes`
@@ -17464,8 +17473,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hasReviewMarker`
       - `loadedProxy`
       - `mapConfigLists`
+      - `MERGE_ENGINE`
       - `mergeConfigDocument`
       - `mergeConflictFields`
+      - `mergeRecordStatus`
       - `normalizeCollectionItems`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
@@ -17475,6 +17486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `orphanRiskClassSchema`
       - `parseConfigFile`
       - `parseConfigFileRelPath`
+      - `parseMergeRecord`
       - `parseOverrideFile`
       - `propagate`
       - `propagateGitLayerDocument`
@@ -17494,13 +17506,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 154 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 155 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×17
       - `conversations` ×14
       - `backup` ×12
       - `ui` ×11
-      - `config_v2` ×8
+      - `config_v2` ×9
       - `infra` ×7
       - `tasks` ×7
       - `auth` ×6
@@ -17532,6 +17544,78 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
       - `proxyFiles` — Config files held in a map, each behind a synchronous read / write / exists proxy — what `propagate` and `propagateGitLayerDocument` write through.
   - Plugins:
+    - **`auto-merge`** — Config updates merged automatically, in the app: a line above a merged config in Settings → Config (updated with the new defaults, your changes kept, the fields the update removed, Undo, Dismiss) and the Undo of the update notification announcing them (config-auto-merge). Serves the automatic-merge records the config registry writes when an update's new defaults merge cleanly under a user override: config-v2.auto-merges (every document with one) and config-v2.auto-merge (one document's record and where it stands — current, superseded, edited since), moved with the registry's document fan-out; and POST /api/config-v2/auto-merge/undo (put the normal conflict back) and /ack (dismiss the note); and the config-auto-merge.notify warm-up, which writes ONE user notification (category updates, action config-auto-merge — Undo) for every merge record no notification announced yet, each then stamped notified.
+      - Web:
+        - Contributes:
+          - `ConfigDetailSlots.Banner` → `AutoMergeBanner`
+          - `Notifications.Action` "config-auto-merge"
+        - Uses:
+          - `config_v2/settings.ConfigDetailSlots`
+          - `infra/endpoints.useEndpointMutation`
+          - `network/live.useLive`
+          - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+          - `shell/notifications.Notifications`
+          - `shell/notifications.useToast`
+          - `ui/icons.Icon`
+      - Server:
+        - Contributes:
+          - `resource.declare` "config-v2.auto-merge"
+          - `resource.declare` "config-v2.auto-merges"
+        - Uses:
+          - `config_v2.AutoMergeState`
+          - `config_v2.AutoMergeUndoRefused`
+          - `config_v2.configRegistryReady`
+          - `config_v2.ConfigStore`
+          - `config_v2.getAllDescriptors`
+          - `config_v2.onDocumentChange`
+          - `config_v2.readAutoMerge`
+          - `config_v2.stampAutoMergeByPath`
+          - `config_v2.undoAutoMergeByPath`
+          - `infra/warmup.defineWarmup`
+          - `network/live.serveValue`
+          - `shell/notifications.recordNotification`
+        - Register: `defineWarmup('config-auto-merge.notify')`
+        - Resources:
+          - `config-v2.auto-merge` (push, notified)
+          - `config-v2.auto-merges` (push, notified, whole: one per config document merged automatically — at most one per registered descriptor and scope (~250), whole: the fields one config document's merge dropped — its fields)
+        - Routes:
+          - `POST /api/config-v2/auto-merge/undo`
+          - `POST /api/config-v2/auto-merge/ack`
+      - Core:
+        - Uses:
+          - `config_v2.configMergeRecordSchema`
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
+        - Exports (types):
+          - `AutoMergePayload`
+          - `AutoMergeStateView`
+          - `AutoMergeSummary`
+        - Exports (values):
+          - `acknowledgeAutoMerge`
+          - `AUTO_MERGE_ACTION_KIND`
+          - `AUTO_MERGE_NOTIFICATION_TYPE`
+          - `autoMergeDescription`
+          - `autoMergePayloadSchema`
+          - `autoMergeStateSchema`
+          - `autoMergeSummarySchema`
+          - `configAutoMerge`
+          - `configAutoMerges`
+          - `configDisplayName`
+          - `undoAutoMerge`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --info`
+          - `ui/tokens/density --space-md`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/shape --spacing`
     - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is persistent), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
       - Server:
         - Contributes: `host-service:config-v2.store` "config-v2.store"
@@ -17723,11 +17807,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `configNavPane.Actions`
           - `configDetailPane.Actions`
           - `ConfigDetailSlots.ConflictAction`
+          - `ConfigDetailSlots.Banner`
           - `ConfigNavSlots.Notice`
         - Slot contributors:
           - `configNavPane.Actions` ← `primitives.pane`
           - `configDetailPane.Actions` ← `primitives.pane`
           - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
+          - `ConfigDetailSlots.Banner` ← `config_v2.auto-merge`
           - `ConfigNavSlots.Notice` ← `debug.config-orphans`
         - Contributes:
           - `Pane.Register` "config-v2-detail"
@@ -17771,6 +17857,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigConflictField`
           - `ConfigConflictFieldStatus`
           - `ConfigConflictKind`
+          - `ConfigDocumentBannerProps`
         - Exports (values):
           - `configDetailPane`
           - `configDetailRoute`
@@ -17824,6 +17911,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/settings/config`
           - `apps/website/promo-film`
+          - `config_v2/auto-merge`
           - `config_v2/config-link`
           - `config_v2/settings/conflict-agent`
           - `debug/config-orphans`
@@ -37956,7 +38044,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 283 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 284 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×37
           - `infra` ×23
@@ -37971,10 +38059,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations` ×4
           - `apps-core` ×3
           - `build` ×3
+          - `config_v2` ×3
           - `network` ×3
           - `active-data` ×2
           - `companions` ×2
-          - `config_v2` ×2
           - `history` ×2
           - `screenshot` ×2
           - `shell` ×2
@@ -41530,26 +41618,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `systemOrigin`
           - `UNREVERTED_WRITE_HEADER`
       - Cross-plugin:
-        - Imported by:
+        - Imported by: 21 plugins — full list in [`plugins/infra/plugins/request-origin/REFERENCE.md`](../plugins/infra/plugins/request-origin/REFERENCE.md)
+          - `apps` ×6
+          - `infra` ×4
+          - `tasks` ×4
+          - `config_v2` ×3
           - `apps-core/app-usage`
-          - `apps/pages/agent-origin`
-          - `apps/prototypes/files`
-          - `apps/prototypes/files/snapshot-history`
-          - `apps/prototypes/fixtures`
-          - `apps/prototypes/thumbnails`
-          - `apps/website/promo-film/seed`
           - `auth/apple-signing`
-          - `config_v2`
-          - `config_v2/settings`
           - `framework/tooling/e2e-harness`
-          - `infra/endpoints`
-          - `infra/mcp/browser`
-          - `infra/paths/data-files/memory`
-          - `infra/request-origin/agent-write-ledger`
-          - `tasks`
-          - `tasks/automations`
-          - `tasks/sidequest-autopilot`
-          - `tasks/task-mandate/manage-grant`
           - `ui/theme-engine/saved-themes`
       - Plugins:
         - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a person edited since; GET /api/agent-writes and POST /api/agent-writes/revert aggregate every registered ledger for the e2e harness.
@@ -42250,13 +42326,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `apps` ×8
           - `tasks` ×8
           - `infra` ×6
           - `conversations` ×4
           - `debug` ×4
           - `apps-core/app-category`
+          - `config_v2/auto-merge`
           - `database/lock-watch`
           - `page/links`
           - `plugin-meta/plugin-tree`
@@ -44269,7 +44346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 369 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 370 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×95
           - `conversations` ×74
           - `debug` ×36
@@ -44285,12 +44362,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×4
           - `apps-core` ×3
           - `auth` ×3
+          - `config_v2` ×3
           - `plugin-meta` ×3
           - `reports` ×3
           - `ui` ×3
           - `backup` ×2
           - `companions` ×2
-          - `config_v2` ×2
           - `database` ×2
           - `hints` ×2
           - `history` ×2
@@ -44692,7 +44769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 323 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 324 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×87
               - `conversations` ×50
               - `debug` ×31
@@ -44707,11 +44784,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×4
               - `plugin-meta` ×4
               - `companions` ×3
+              - `config_v2` ×3
               - `framework` ×3
               - `integrations` ×3
               - `network` ×3
               - `review` ×3
-              - `config_v2` ×2
               - `hints` ×2
               - `reports` ×2
               - `shell` ×2
@@ -45534,7 +45611,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 141 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 142 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×32
           - `debug` ×21
           - `conversations` ×17
@@ -45549,12 +45626,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×3
           - `primitives` ×3
           - `code-explorer` ×2
+          - `config_v2` ×2
           - `reports` ×2
           - `apps-core/app-usage`
           - `auth`
           - `backup`
           - `companions/menu-bar`
-          - `config_v2`
           - `network/live`
           - `release`
           - `review/plugin-changes`
@@ -46155,7 +46232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 53 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 54 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×16
           - `database` ×6
           - `network` ×5
@@ -46167,6 +46244,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions` ×2
           - `page` ×2
           - `plugin-meta` ×2
+          - `config_v2/auto-merge`
           - `conversations/prompt-snippets`
           - `map`
           - `primitives/dom/web-storage`
@@ -52264,7 +52342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 190 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×52
               - `primitives` ×34
               - `conversations` ×28
@@ -52274,10 +52352,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×9
               - `infra` ×4
               - `shell` ×4
+              - `config_v2` ×3
               - `plugin-meta` ×3
               - `review` ×3
               - `build` ×2
-              - `config_v2` ×2
               - `hints` ×2
               - `active-data/go`
               - `apps-core/app-launcher`
@@ -52741,7 +52819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 152 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 153 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×37
               - `conversations` ×29
               - `primitives` ×21
@@ -52752,9 +52830,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×4
               - `review` ×4
               - `build` ×3
+              - `config_v2` ×3
               - `backup` ×2
               - `companions` ×2
-              - `config_v2` ×2
               - `infra` ×2
               - `shell` ×2
               - `active-data/show-me`
@@ -52968,7 +53046,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 462 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 463 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×81
               - `primitives` ×55
@@ -52986,12 +53064,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×4
               - `companions` ×4
               - `review` ×4
+              - `config_v2` ×3
               - `integrations` ×3
               - `reorder` ×3
               - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
-              - `config_v2` ×2
               - `framework` ×2
               - `layouts` ×2
               - `music` ×2
@@ -53206,7 +53284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×85
               - `primitives` ×48
@@ -53225,11 +53303,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×4
               - `apps-core` ×3
               - `companions` ×3
+              - `config_v2` ×3
               - `reorder` ×3
               - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
-              - `config_v2` ×2
               - `framework` ×2
               - `hints` ×2
               - `map` ×2
@@ -53538,7 +53616,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 484 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 485 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
               - `conversations` ×54
@@ -53552,10 +53630,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×7
               - `shell` ×6
               - `build` ×5
+              - `config_v2` ×5
               - `reorder` ×5
               - `review` ×5
               - `auth` ×4
-              - `config_v2` ×4
               - `integrations` ×4
               - `active-data` ×3
               - `companions` ×3
@@ -60829,8 +60907,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×309
+    - Contributes: 310 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×310
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -60854,8 +60932,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 308 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×308
+    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×309
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -63081,6 +63159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Notifications.Action`
         - Slot contributors:
           - `Notifications.Action` ← `build.build-fix`
+          - `Notifications.Action` ← `config_v2.auto-merge`
           - `Notifications.Action` ← `conversations.conversation-view.resume`
           - `Notifications.Action` ← `debug.reports`
           - `Notifications.Action` ← `shell.notifications`
@@ -63233,13 +63312,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/density` ×6
           - `ui/tokens/shape` ×2
-        - Imported by: 75 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×18
           - `apps` ×13
           - `tasks` ×9
           - `debug` ×5
+          - `config_v2` ×4
           - `build` ×3
-          - `config_v2` ×3
           - `infra` ×3
           - `page` ×3
           - `primitives` ×3
@@ -67564,7 +67643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 608 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 609 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×124
           - `primitives` ×54
@@ -67579,8 +67658,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×8
           - `auth` ×6
           - `companions` ×6
+          - `config_v2` ×6
           - `shell` ×6
-          - `config_v2` ×5
           - `build` ×4
           - `reports` ×4
           - `review` ×4
@@ -68909,7 +68988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 562 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 563 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×125
               - `conversations` ×96
               - `primitives` ×81
@@ -68933,11 +69012,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints` ×3
               - `backup` ×2
               - `code-explorer` ×2
+              - `config_v2` ×2
               - `integrations` ×2
               - `runs` ×2
               - `screenshot` ×2
               - `audience/developer-mark`
-              - `config_v2/settings`
               - `database/query-deadline`
               - `framework/web-core`
               - `layouts/miller`
@@ -69067,7 +69146,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 363 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 364 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×74
               - `primitives` ×73
               - `conversations` ×51
@@ -69084,11 +69163,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×4
               - `stats` ×4
               - `build` ×3
+              - `config_v2` ×3
               - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
               - `companions` ×2
-              - `config_v2` ×2
               - `framework` ×2
               - `map` ×2
               - `screenshot` ×2
@@ -69537,7 +69616,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 416 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 417 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×95
               - `apps` ×81
               - `primitives` ×62
@@ -69555,9 +69634,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×4
               - `shell` ×4
               - `build` ×3
+              - `config_v2` ×3
               - `active-data` ×2
               - `backup` ×2
-              - `config_v2` ×2
               - `screenshot` ×2
               - `audience/developer-mark`
               - `auth`

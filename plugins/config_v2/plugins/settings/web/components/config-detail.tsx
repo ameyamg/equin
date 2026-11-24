@@ -474,6 +474,14 @@ function ConfigDetailBody({
         <RawFileView storePath={registration.storePath} scopeId={scopeId} />
       ) : (
         <>
+          <ConfigDetailSlots.Banner.Render>
+            {(item) => (
+              <item.component
+                storePath={registration.storePath}
+                scopeId={scopeId}
+              />
+            )}
+          </ConfigDetailSlots.Banner.Render>
           {conflictEntry &&
             (conflictEntry.kind === "invalid" ? (
               <>

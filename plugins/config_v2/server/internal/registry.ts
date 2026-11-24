@@ -15,7 +15,11 @@ import {
   readTypedConfig,
   mergeConfigDocument,
   mergeConflictFields,
+  buildMergeRecord,
+  mergeRecordStatus,
+  parseMergeRecord,
 } from "../../core";
+import type { ConfigMergeRecord, MergeRecordStatus } from "../../core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { diffValue } from "@plugins/packages/plugins/value-patch/core";
@@ -633,9 +637,17 @@ export async function initRegistry(): Promise<void> {
     await Promise.all(
       registered.map(({ descriptor, storePath }) =>
         reads.run(async () => {
+          // Auto-merge a stale override BEFORE its entry is read, so the
+          // entry (and the boot snapshot) holds the merged document.
+          await withDocument(storePath, BASE_SCOPE, () =>
+            autoMergeDocumentNow(descriptor, { storePath }),
+          );
           await buildEntry(descriptor, storePath, BASE_SCOPE);
           for (const scopeId of await store.scopes(storePath)) {
             if (await scopeHasOwnConfigOnDisk(descriptor, scopeId)) {
+              await withDocument(storePath, scopeId, () =>
+                autoMergeDocumentNow(descriptor, { storePath, scopeId }),
+              );
               await ensureScopeEntry(descriptor, scopeId);
             }
           }
@@ -973,6 +985,7 @@ async function resetFieldFiles(
       await editEntry(opts, entry, `reset-field:${key}`, async () => {
         await store.remove(entry.files.override);
         await store.remove(entry.files.ancestor);
+        await store.remove(entry.files.merge);
         await refreshEntryNow(descriptor, entry);
       });
       return { kind: "removed" };
@@ -1145,8 +1158,10 @@ export async function deleteOverrideByPath(
       // disk (the origin itself fails the current schema). Deleting a
       // non-existent override is a no-op — defaults are already in effect.
       await store.remove(entry.files.override);
-      // The override is gone, so any captured merge base is moot — drop it.
+      // The override is gone, so any captured merge base — and the record of
+      // its last automatic merge, which Undo would restore — is moot.
       await store.remove(entry.files.ancestor);
+      await store.remove(entry.files.merge);
       await refreshEntryNow(descriptor, entry);
     }),
   );
@@ -1200,4 +1215,243 @@ export async function reloadConfigDocument(
       await ensureScopeEntryNow(descriptor, storePath, scopeId);
   });
   await notifyDescriptorScopeChange(storePath, scopeId);
+}
+
+// ── Automatic merge ─────────────────────────────────────────────────────────
+//
+// An update that moves a config's origin under a user override leaves the
+// override stale: the new defaults win until the user reconciles. When the
+// build captured the merge base (the ancestor) and `mergeConfigDocument`
+// decides everything — the result passing the descriptor's schema, the live
+// one this backend reads the document with — the registry applies the merge
+// itself and leaves a record (`<name>.merge.jsonc`, `ConfigMergeRecord`) of
+// what it read, what it decided and the exact pre-merge state, so Undo can put
+// the normal conflict back. Until config generations land, this runs at boot
+// (`initRegistry`) for every stale override with an ancestor. Design:
+// `research/2026-11-24-global-config-auto-merge.md` §2.
+
+/** Who applies an automatic merge, and stamps its record notified: the registry itself. */
+const AUTO_MERGE_WRITER = systemOrigin("config-v2.auto-merge");
+
+function isPlainDocument(value: JsonValue): value is Record<string, JsonValue> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Merge one document's stale override onto its new origin when it can be
+ * decided, writing the record, the merged override (under the new origin's
+ * hash) and removing the ancestor in one store edit. Returns whether it
+ * merged. A document it cannot decide stays a conflict, exactly as before —
+ * the banner's Keep / Accept / Merge own it.
+ *
+ * Runs in the document's lock, before the document's entry is read (boot).
+ */
+async function autoMergeDocumentNow(
+  descriptor: ConfigDescriptor,
+  doc: ConfigDocRef,
+): Promise<boolean> {
+  const files = documentFiles(doc);
+  const store = ConfigStore.get();
+  // No merge base, nothing to merge: one stat for every document in sync.
+  if ((await store.stamp(files.ancestor)) === "-") return false;
+  const [override, origin, ancestor] = await Promise.all([
+    store.read(files.override),
+    store.read(files.origin),
+    store.read(files.ancestor),
+  ]);
+  if (override === null || origin === null || ancestor === null) return false;
+  // Hand-written text that does not parse is the invalid banner's, never a
+  // merge input; an unstamped override is in sync by definition.
+  if (override.syntaxErrors !== undefined || override.hash === null)
+    return false;
+  if (!hasConflict(loadedProxy(origin), loadedProxy(override))) return false;
+  // A document that is not an object is broken, not mergeable: the conflict
+  // and invalid banners show it.
+  if (
+    !isPlainDocument(override.content) ||
+    !isPlainDocument(origin.content) ||
+    !isPlainDocument(ancestor.content)
+  )
+    return false;
+
+  const result = mergeConfigDocument({
+    descriptor,
+    base: ancestor.content,
+    yours: override.content,
+    theirs: origin.content,
+  });
+  if (result.status === "conflict") return false;
+
+  const toHash = computeHash(origin.content);
+  // The user undid the merge of this very update: it stays the conflict they
+  // asked for. A later update (another origin hash) merges again.
+  const previous = await store.read(files.merge);
+  if (previous !== null) {
+    const record = parseMergeRecord(
+      previous.content,
+      configFileRelPath(files.merge),
+    );
+    if (record.undoneAt !== undefined && record.toHash === toHash) return false;
+  }
+  const record = buildMergeRecord({
+    id: crypto.randomUUID(),
+    now: new Date(),
+    fromHash: override.hash,
+    toHash,
+    base: ancestor.content,
+    yours: override.content,
+    theirs: origin.content,
+    result: result.document,
+    decisions: result.decisions,
+    undo: {
+      override: { content: override.content, hash: override.hash },
+      ancestor: { content: ancestor.content, hash: ancestor.hash },
+    },
+  });
+  // The record first: a merge interrupted after it can still be undone, and
+  // one interrupted before it wrote nothing.
+  await store.edit(doc, AUTO_MERGE_WRITER, "auto-merge", async () => {
+    await store.write(files.merge, record as JsonValue, toHash);
+    await store.write(files.override, result.document as JsonValue, toHash);
+    await store.remove(files.ancestor);
+  });
+  console.info(
+    `[config-v2] auto-merged "${doc.storePath}"${doc.scopeId ? ` (${doc.scopeId})` : ""} onto the new defaults (${result.decisions.length} note(s)); Undo restores the conflict.`,
+  );
+  return true;
+}
+
+/** One document's merge record and where it stands, or null when it has none. */
+export interface AutoMergeState {
+  record: ConfigMergeRecord;
+  status: MergeRecordStatus;
+}
+
+/**
+ * The merge record of (`storePath`, `scopeId`) and where it stands against the
+ * document as it is now. Read straight off the store; a record that does not
+ * parse throws, naming the file.
+ */
+export async function readAutoMerge(
+  storePath: string,
+  scopeId?: string,
+): Promise<AutoMergeState | null> {
+  const files = documentFiles({ storePath, scopeId });
+  const store = ConfigStore.get();
+  const stored = await store.read(files.merge);
+  if (stored === null) return null;
+  const [origin, override] = await Promise.all([
+    store.read(files.origin),
+    store.read(files.override),
+  ]);
+  const record = parseMergeRecord(
+    stored.content,
+    configFileRelPath(files.merge),
+  );
+  return { record, status: mergeRecordStatus(record, origin, override) };
+}
+
+/**
+ * Undo the automatic merge of a document: write back the exact pre-merge
+ * override and ancestor — the document is a normal conflict again, its banner
+ * offering Keep / Accept / Merge — and stamp the record `undoneAt` (a
+ * tombstone the boot sweep honours for this update). Refused
+ * (`AutoMergeUndoRefused`) when there is nothing to undo, when the
+ * record is superseded (a later update moved the origin past it) or the user
+ * edited the document since (Undo would discard that edit).
+ */
+export class AutoMergeUndoRefused extends Error {
+  override name = "AutoMergeUndoRefused";
+}
+
+export async function undoAutoMergeByPath(
+  storePath: string,
+  opts: ConfigWriteOpts,
+): Promise<void> {
+  await withWriteTarget(storePath, opts, async (descriptor, entry) => {
+    const state = await readAutoMerge(storePath, entry.scopeId);
+    const where = `"${storePath}"${entry.scopeId ? ` (${entry.scopeId})` : ""}`;
+    if (state === null || state.status === "undone") {
+      throw new AutoMergeUndoRefused(
+        `[config-v2] ${where} has no automatic merge to undo.`,
+      );
+    }
+    if (state.status === "superseded") {
+      throw new AutoMergeUndoRefused(
+        `[config-v2] the automatic merge of ${where} is superseded: a later update changed its defaults again.`,
+      );
+    }
+    if (state.status === "edited") {
+      throw new AutoMergeUndoRefused(
+        `[config-v2] ${where} was changed since its automatic merge; undoing it would discard that change.`,
+      );
+    }
+    const { undo } = state.record;
+    const store = ConfigStore.get();
+    await editEntry(opts, entry, "undo-auto-merge", async () => {
+      await store.write(
+        entry.files.ancestor,
+        undo.ancestor.content as JsonValue,
+        undo.ancestor.hash,
+      );
+      await store.write(
+        entry.files.override,
+        undo.override.content as JsonValue,
+        undo.override.hash,
+      );
+      // Kept as a tombstone: the conflict just restored is exactly what the
+      // boot sweep merges, and it must not undo the user's Undo.
+      const undone: ConfigMergeRecord = {
+        ...state.record,
+        undoneAt: new Date().toISOString(),
+      };
+      await store.write(
+        entry.files.merge,
+        undone as JsonValue,
+        state.record.toHash,
+      );
+      await refreshEntryNow(descriptor, entry);
+    });
+  });
+}
+
+/**
+ * Stamp a document's merge record `acknowledgedAt` (the user dismissed it) or
+ * `notifiedAt` (the update notification announced it) — only while it is the
+ * record `recordId` names: a later merge replaced it, and that one is not
+ * acknowledged by a click on the old one. Returns whether it stamped.
+ *
+ * The record is not part of the document's values (`documentStamp` leaves it
+ * out), so the refresh would see nothing new: the fan-out is called directly,
+ * values unmoved, for the listeners of the record (`onDocumentChange`).
+ */
+export async function stampAutoMergeByPath(
+  storePath: string,
+  recordId: string,
+  field: "acknowledgedAt" | "notifiedAt",
+  opts: ConfigWriteOpts,
+): Promise<boolean> {
+  const stamped = await withWriteTarget(storePath, opts, async (_d, entry) => {
+    const store = ConfigStore.get();
+    const stored = await store.read(entry.files.merge);
+    if (stored === null) return false;
+    const record = parseMergeRecord(
+      stored.content,
+      configFileRelPath(entry.files.merge),
+    );
+    if (record.id !== recordId || record[field] !== undefined) return false;
+    const next: ConfigMergeRecord = {
+      ...record,
+      [field]: new Date().toISOString(),
+    };
+    await editEntry(opts, entry, `auto-merge-${field}`, () =>
+      store.write(entry.files.merge, next as JsonValue, stored.hash),
+    );
+    return true;
+  });
+  if (stamped)
+    await notifyDocument(storePath, opts.scopeId ?? BASE_SCOPE, {
+      valuesMoved: false,
+    });
+  return stamped;
 }

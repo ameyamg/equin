@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-config_v2-auto-merge",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Config updates merged automatically: the record of each merge, its Undo, and the one update notification announcing them."
+}

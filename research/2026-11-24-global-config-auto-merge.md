@@ -1,6 +1,6 @@
 # Config updates: automatic merge of the user layer, and config owned by the backend that reads it
 
-Task: task-1795524794-221nve. Status: phase 1 (merge engine) implemented; phases 2–6 planned.
+Task: task-1795524794-221nve. Status: phases 1 (merge engine) and 2 (record, boot auto-merge, Undo, notification — `config_v2/plugins/auto-merge`) implemented; phases 3–6 planned.
 
 ## Context
 

@@ -81,11 +81,13 @@ renderer, which only the running app has.
     - `configNavPane.Actions`
     - `configDetailPane.Actions`
     - `ConfigDetailSlots.ConflictAction`
+    - `ConfigDetailSlots.Banner`
     - `ConfigNavSlots.Notice`
   - Slot contributors:
     - `configNavPane.Actions` ← `primitives.pane`
     - `configDetailPane.Actions` ← `primitives.pane`
     - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
+    - `ConfigDetailSlots.Banner` ← `config_v2.auto-merge`
     - `ConfigNavSlots.Notice` ← `debug.config-orphans`
   - Contributes:
     - `Pane.Register` "config-v2-detail"
@@ -129,6 +131,7 @@ renderer, which only the running app has.
     - `ConfigConflictField`
     - `ConfigConflictFieldStatus`
     - `ConfigConflictKind`
+    - `ConfigDocumentBannerProps`
   - Exports (values):
     - `configDetailPane`
     - `configDetailRoute`
@@ -182,6 +185,7 @@ renderer, which only the running app has.
   - Imported by:
     - `apps/settings/config`
     - `apps/website/promo-film`
+    - `config_v2/auto-merge`
     - `config_v2/config-link`
     - `config_v2/settings/conflict-agent`
     - `debug/config-orphans`

@@ -139,7 +139,7 @@ A three-way merge needs the **base** — the origin the override was written aga
 
 The capture covers `@app/<id>` scopes too (`propagateGitLayerDocument` hands each scope its own ancestor), and the build deletes a document's ancestor once it is out of conflict.
 
-**`mergeConfigDocument({ descriptor, base, yours, theirs })`** (pure, `core/internal/merge/`) is THE merge — the Merge button (`mergeConflictByPath`), the banner's `trueConflictKeys` (`computeDescriptorConflict`, via `mergeConflictFields`) and, later, auto-merge all run it, so they cannot disagree. It returns `{ status: "merged" | "conflict", document, decisions, reasons?, issues? }`:
+**`mergeConfigDocument({ descriptor, base, yours, theirs })`** (pure, `core/internal/merge/`) is THE merge — the Merge button (`mergeConflictByPath`), the banner's `trueConflictKeys` (`computeDescriptorConflict`, via `mergeConflictFields`) and the boot auto-merge all run it, so they cannot disagree. It returns `{ status: "merged" | "conflict", document, decisions, reasons?, issues? }`:
 
 - **Completion first.** `yours` is `base ⊕ override` — a partial override (`{ "enabled": true }`) changed one key, it did not delete the others — and all three sides drop the `auto-` row ids `normalizeCollectionItems` seeds, so they don't read as a row deleted plus one added.
 - **Deep** (`deepMerge`, `deep-merge.ts`). Objects merge per key. Lists merge per row when every row has a unique key (`id` > `item` > `label` > the string itself); otherwise both sides changing one is a conflict (`unkeyed-list`). A row only one side added goes after its neighbour from that side. In a reorder tree's `items` the user's order wins; elsewhere both sides reordering differently is a conflict (`order`). The update removing something the user changed is a conflict (`delete-modify`).
@@ -147,6 +147,18 @@ The capture covers `@app/<id>` scopes too (`propagateGitLayerDocument` hands eac
 - **Schema gate.** The merged document must pass `descriptor.schema`, else it is a conflict with `issues`.
 
 `mergeConflictByPath` writes the merged document under the new hash and deletes the ancestor on `merged`; on `conflict` it writes nothing and returns the undecided top-level fields. Every terminal resolution (acknowledge-conflict, delete-override) also deletes the ancestor. `merge/corpus.test.ts` replays committed overrides restamped in `config/**` history (`merge-corpus.json`) and asserts none is left undecided, none gains a duplicate row or brings back a row either side deleted, and how many match the committed resolution. Design: [`research/2026-11-24-global-config-auto-merge.md`](../../research/2026-11-24-global-config-auto-merge.md).
+
+### Automatic merge (`<name>.merge.jsonc`)
+
+A user should never have to click Merge for an update that merges cleanly. At boot, `initRegistry` runs `autoMergeDocumentNow` on every document (base and each app scope) BEFORE reading it: a stale override with an ancestor whose `mergeConfigDocument` result is `merged` (the descriptor's live schema passing) is applied in one `auto-merge` store edit — the record first, then the merged override under the new origin's hash, then the ancestor removed. Anything it cannot decide stays the normal conflict. User layer only; committed `config/**` merges stay manual. (Phase 5, config generations, moves this from boot to the generation's derivation.)
+
+The record (`ConfigMergeRecord`, `core/internal/merge/merge-record.ts`; file kind `"merge"`, header = `toHash`) holds the inputs, the result, the decisions and the exact pre-merge override and ancestor. It is NOT part of `documentStamp`, so writing it alone moves no value, conflict or tier. `mergeRecordStatus` says where it stands: `undone`, `current`, `superseded` (the origin moved past `toHash`) or `edited` (the override no longer holds `result`). A plugin move's ledger rewrite re-stamps a record with its origin (header and `toHash`); a config migration supersedes it.
+
+- `undoAutoMergeByPath` writes the pre-merge files back (a normal conflict again) and stamps the record `undoneAt` — a tombstone, because the restored conflict is exactly the boot sweep's input: the sweep skips a document whose tombstone names the current origin (`toHash`), and a later update merges again over it. Refused (`AutoMergeUndoRefused`) unless `current`.
+- `stampAutoMergeByPath(path, recordId, "acknowledgedAt" | "notifiedAt")` stamps only the record it names, then runs the document fan-out (values unmoved) so record readers move.
+- Delete-override, a per-field reset that removes the override and Stop customizing remove the record with the ancestor. The agent-write ledger, the memory store, the orphan audit (`merge-record` role, noise) and `configFileOwner` all cover the file.
+
+The live values, endpoints, banner and update notification are [`plugins/auto-merge`](plugins/auto-merge/CLAUDE.md).
 
 **Every config file carries a `// @hash` header** — the anchor conflict detection compares against. Origins, ancestors and committed files are written only by the build and the registry, so one without it is corrupt: `parseConfigFile` throws (the file store's `read` of an origin / ancestor, the git layer), and `setConfig` throws rather than write an override when no origin has been propagated.
 
@@ -476,11 +488,13 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `host-service:config-v2.git-layer` "config-v2.git-layer"
   - Uses: `network/live.serveValue`
   - Exports (types):
+    - `AutoMergeState`
     - `ConfigDocumentTuple`
     - `ConfigWriteOpts`
     - `FieldStorageProvider`
   - Exports (values):
     - `acknowledgeConflictByPath`
+    - `AutoMergeUndoRefused`
     - `ConfigGitLayer`
     - `configRegistryReady`
     - `ConfigStore`
@@ -503,12 +517,15 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `notifyConfigDirChange`
     - `onConfigDirChange`
     - `onDocumentChange`
+    - `readAutoMerge`
     - `registerFieldStorageProvider`
     - `reloadConfigDocument`
     - `removeDescriptorScope`
     - `resetConfigByPath`
     - `setConfig`
     - `setConfigByPath`
+    - `stampAutoMergeByPath`
+    - `undoAutoMergeByPath`
     - `watchConfig`
   - Resources:
     - `config-v2.conflict-locations` (push, notified, whole: one entry per registered config descriptor in conflict (~250 at most), whole: the app scopes one descriptor conflicts in — a handful of apps)
@@ -545,6 +562,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `ConfigFileRef`
     - `ConfigGitLayerImpl`
     - `ConfigListVisitor`
+    - `ConfigMergeRecord`
     - `ConfigMergeResult`
     - `ConfigMigration`
     - `ConfigProxy`
@@ -567,6 +585,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `JsonValue`
     - `MergeConflictReason`
     - `MergePath`
+    - `MergeRecordStatus`
     - `OriginDefaultsFrom`
     - `OrphanEntry`
     - `OrphanFile`
@@ -579,6 +598,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Exports (values):
     - `APP_SCOPE_DIR`
     - `appScopeId`
+    - `buildMergeRecord`
     - `codeConfigProxy`
     - `committedDocument`
     - `committedFilesFromMap`
@@ -589,6 +609,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `configFileOwner`
     - `configFileRelPath`
     - `configGitValues`
+    - `configMergeRecordSchema`
     - `configModifiedCounts`
     - `configRawFile`
     - `configScopes`
@@ -616,8 +637,10 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `hasReviewMarker`
     - `loadedProxy`
     - `mapConfigLists`
+    - `MERGE_ENGINE`
     - `mergeConfigDocument`
     - `mergeConflictFields`
+    - `mergeRecordStatus`
     - `normalizeCollectionItems`
     - `orphanEntrySchema`
     - `orphanFileRoleSchema`
@@ -627,6 +650,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `orphanRiskClassSchema`
     - `parseConfigFile`
     - `parseConfigFileRelPath`
+    - `parseMergeRecord`
     - `parseOverrideFile`
     - `propagate`
     - `propagateGitLayerDocument`
@@ -646,13 +670,13 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 154 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 155 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×43
     - `debug` ×17
     - `conversations` ×14
     - `backup` ×12
     - `ui` ×11
-    - `config_v2` ×8
+    - `config_v2` ×9
     - `infra` ×7
     - `tasks` ×7
     - `auth` ×6
@@ -684,6 +708,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
     - `proxyFiles` — Config files held in a map, each behind a synchronous read / write / exists proxy — what `propagate` and `propagateGitLayerDocument` write through.
 - Sub-plugins:
+  - **`auto-merge`** — Config updates merged automatically, in the app: a line above a merged config in Settings → Config (updated with the new defaults, your changes kept, the fields the update removed, Undo, Dismiss)…
   - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is…
   - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never…
   - **`config-link`** [exempt] — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…

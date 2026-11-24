@@ -83,6 +83,17 @@ export {
   mergeConflictFields,
 } from "./internal/merge/merge-document";
 export type { ConfigMergeResult } from "./internal/merge/merge-document";
+export {
+  MERGE_ENGINE,
+  buildMergeRecord,
+  configMergeRecordSchema,
+  mergeRecordStatus,
+  parseMergeRecord,
+} from "./internal/merge/merge-record";
+export type {
+  ConfigMergeRecord,
+  MergeRecordStatus,
+} from "./internal/merge/merge-record";
 export type {
   FieldDecision,
   MergeConflictReason,

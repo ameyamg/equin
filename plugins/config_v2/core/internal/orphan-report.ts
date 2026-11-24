@@ -7,6 +7,7 @@ export const orphanFileRoleSchema = z.enum([
   "origin", // <hier>/<name>.origin.jsonc — a stale git/code default snapshot
   "override", // <hier>/<name>.jsonc — a real base user override (has data)
   "ancestor", // <hier>/<name>.ancestor.jsonc — a transient three-way-merge base
+  "merge-record", // <hier>/<name>.merge.jsonc — the last automatic merge's record
   "scoped-origin", // <hier>/@app/<id>/<name>.origin.jsonc — a scoped default snapshot
   "scoped-override", // <hier>/@app/<id>/<name>.jsonc — a real scoped user override (has data)
 ]);

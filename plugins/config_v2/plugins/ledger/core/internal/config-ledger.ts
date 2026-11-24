@@ -134,6 +134,8 @@ export function withConfigTextHash(text: string, hash: string): string {
   return text.replace(CONFIG_HASH_RE, `// @hash ${hash}\n`);
 }
 
+const MERGE_RECORD_SUFFIX = ".merge.jsonc";
+
 const isSnapshot = (f: string) =>
   f.endsWith(".origin.jsonc") || f.endsWith(".ancestor.jsonc");
 
@@ -142,7 +144,8 @@ const isSnapshot = (f: string) =>
  * (text in, text out; return it unchanged to leave a file alone), keeping the
  * hash chain: each rewritten snapshot gets the hash of its new content, and
  * each override whose header named a rewritten snapshot's old hash is
- * re-stamped with the new one. Returns the rewritten files, sorted.
+ * re-stamped with the new one (an automatic-merge record — header and
+ * `toHash` — too). Returns the rewritten files, sorted.
  */
 export function rewriteConfigFiles(
   dir: AppPath,
@@ -180,7 +183,20 @@ export function rewriteConfigFiles(
         out = withConfigTextHash(out, hash);
       }
     } else if (header !== undefined && rehash.has(header)) {
-      out = withConfigTextHash(out, rehash.get(header)!);
+      const hash = rehash.get(header)!;
+      out = withConfigTextHash(out, hash);
+      // An automatic-merge record names the origin it merged onto twice: in
+      // its header and as `toHash`, which its Undo is checked against.
+      if (f.endsWith(MERGE_RECORD_SUFFIX)) {
+        const record = parseConfigText(f, out);
+        if (
+          typeof record === "object" &&
+          record !== null &&
+          !Array.isArray(record) &&
+          record.toHash === header
+        )
+          out = `// @hash ${hash}\n${JSON.stringify({ ...record, toHash: hash }, null, 2)}\n`;
+      }
     }
     if (out !== text) next.set(f, out);
   }

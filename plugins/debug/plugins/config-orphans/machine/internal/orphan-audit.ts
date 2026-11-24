@@ -25,6 +25,7 @@ function fileRole(relPath: string): OrphanFileRole {
   if (relPath.endsWith(".origin.jsonc"))
     return scoped ? "scoped-origin" : "origin";
   if (relPath.endsWith(".ancestor.jsonc")) return "ancestor";
+  if (relPath.endsWith(".merge.jsonc")) return "merge-record";
   return scoped ? "scoped-override" : "override";
 }
 
@@ -69,7 +70,7 @@ async function dirExists(dir: string): Promise<boolean> {
  * files are unversioned so we never delete — we classify:
  *
  *   - riskClass: `stranded-data` if any file is a base/scoped OVERRIDE (real user
- *     data that silently stopped applying), else `noise` (origin/ancestor only).
+ *     data that silently stopped applying), else `noise` (origin/ancestor/merge record only).
  *   - reason: `relocated` (with `relocatedToHier`) when EXACTLY ONE live descriptor
  *     shares this name at a different hierarchy — an unambiguous move target. A name
  *     borne by many live descriptors (e.g. the default "config") can't be pinpointed,

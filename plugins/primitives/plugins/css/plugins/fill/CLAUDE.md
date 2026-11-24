@@ -80,7 +80,7 @@ primitive exists to name.
     - `Fill`
     - `fillClasses`
 - Cross-plugin:
-  - Imported by: 190 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 191 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×52
     - `primitives` ×34
     - `conversations` ×28
@@ -90,10 +90,10 @@ primitive exists to name.
     - `ui` ×9
     - `infra` ×4
     - `shell` ×4
+    - `config_v2` ×3
     - `plugin-meta` ×3
     - `review` ×3
     - `build` ×2
-    - `config_v2` ×2
     - `hints` ×2
     - `active-data/go`
     - `apps-core/app-launcher`

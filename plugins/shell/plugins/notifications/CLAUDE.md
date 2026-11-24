@@ -265,6 +265,7 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
   - Slots: `Notifications.Action`
   - Slot contributors:
     - `Notifications.Action` ← `build.build-fix`
+    - `Notifications.Action` ← `config_v2.auto-merge`
     - `Notifications.Action` ← `conversations.conversation-view.resume`
     - `Notifications.Action` ← `debug.reports`
     - `Notifications.Action` ← `shell.notifications`
@@ -417,13 +418,13 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
     - `ui/tokens/type-scale` ×8
     - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×2
-  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×18
     - `apps` ×13
     - `tasks` ×9
     - `debug` ×5
+    - `config_v2` ×4
     - `build` ×3
-    - `config_v2` ×3
     - `infra` ×3
     - `page` ×3
     - `primitives` ×3

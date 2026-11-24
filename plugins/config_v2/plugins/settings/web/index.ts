@@ -15,6 +15,7 @@ export type {
   ConfigConflictField,
   ConfigConflictFieldStatus,
   ConfigConflictKind,
+  ConfigDocumentBannerProps,
 } from "./slots";
 
 export default {
@@ -28,6 +29,7 @@ export default {
     "config-v2-nav": configNavPane,
     "config-v2-detail": configDetailPane,
     ConflictAction: ConfigDetailSlots.ConflictAction,
+    DetailBanner: ConfigDetailSlots.Banner,
     NavNotice: ConfigNavSlots.Notice,
   },
 } satisfies PluginDefinition;

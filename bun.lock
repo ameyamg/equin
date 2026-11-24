@@ -1982,6 +1982,10 @@
     "plugins/config_v2": {
       "name": "@equin/plugin-config_v2",
     },
+    "plugins/config_v2/plugins/auto-merge": {
+      "name": "@equin/plugin-config_v2-auto-merge",
+      "version": "0.0.1",
+    },
     "plugins/config_v2/plugins/browser-store": {
       "name": "@equin/plugin-config_v2-browser-store",
       "version": "0.0.1",
@@ -9408,6 +9412,8 @@
     "@equin/plugin-companions-panel": ["@equin/plugin-companions-panel@workspace:plugins/companions/plugins/panel"],
 
     "@equin/plugin-config_v2": ["@equin/plugin-config_v2@workspace:plugins/config_v2"],
+
+    "@equin/plugin-config_v2-auto-merge": ["@equin/plugin-config_v2-auto-merge@workspace:plugins/config_v2/plugins/auto-merge"],
 
     "@equin/plugin-config_v2-browser-store": ["@equin/plugin-config_v2-browser-store@workspace:plugins/config_v2/plugins/browser-store"],
 

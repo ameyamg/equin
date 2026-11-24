@@ -91,8 +91,10 @@ async function removeDescriptor(
     const gitBacked = await gitBacksScope(doc.storePath, scopeId);
     await store.edit(doc, writer, "remove-descriptor-scope", async () => {
       await store.remove(files.override);
-      // The override is gone, so its merge base is moot (as deleteOverride).
+      // The override is gone, so its merge base and the record of its last
+      // automatic merge are moot (as deleteOverride).
       await store.remove(files.ancestor);
+      await store.remove(files.merge);
       if (gitBacked) return;
       await store.remove(files.origin);
       // Another descriptor may still have files in the scope: dropScope

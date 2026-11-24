@@ -33,13 +33,14 @@ export function userFilePath(ref: ConfigFileRef): AppPath {
   return joinAppPath(CONFIG_DIR, configFileRelPath(ref));
 }
 
-/** The trio of files a document is made of, for the agent-write ledger. */
+/** Every file a document is made of, for the agent-write ledger. */
 function trioPaths(doc: ConfigDocRef): Record<ConfigDocumentFile, AppPath> {
   const path = (file: ConfigDocumentFile) => userFilePath({ ...doc, file });
   return {
     origin: path("origin"),
     override: path("override"),
     ancestor: path("ancestor"),
+    merge: path("merge"),
   };
 }
 
@@ -95,11 +96,12 @@ async function applyRestore(
 ): Promise<void> {
   const { storePath, scopeId } = configLedgerDocument(entry.key);
   // The same paths `trioPaths` recorded, rebuilt so they stay proven app-owned.
-  for (const file of ["origin", "override", "ancestor"] as const) {
-    await restoreFile(
-      userFilePath({ storePath, scopeId, file }),
-      entry.before[file],
-    );
+  for (const file of ["origin", "override", "ancestor", "merge"] as const) {
+    // An entry recorded before the merge record existed captured no `merge`:
+    // nothing of it to put back.
+    const snapshot = entry.before[file] as FileSnapshot | undefined;
+    if (snapshot === undefined) continue;
+    await restoreFile(userFilePath({ storePath, scopeId, file }), snapshot);
   }
   await reloadConfigDocument(storePath, scopeId);
 }

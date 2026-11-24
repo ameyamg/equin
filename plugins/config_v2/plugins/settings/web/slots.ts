@@ -54,7 +54,23 @@ export interface ConfigConflictContext {
   actionClassName: ClassName;
 }
 
+/** The document a detail banner is about: the descriptor's store path and the selected scope. */
+export interface ConfigDocumentBannerProps {
+  storePath: string;
+  /** undefined = the base scope. */
+  scopeId?: string;
+}
+
 export const ConfigDetailSlots = {
+  /**
+   * Lines about the document as a whole, above its conflict banners and its
+   * fields — pane chrome, outside `ControlPanelPane` (e.g. "updated with the
+   * new defaults · Undo"). A contribution renders nothing when it has nothing
+   * to say about this document.
+   */
+  Banner: defineRenderSlot<{
+    component: ComponentType<ConfigDocumentBannerProps>;
+  }>(),
   /**
    * Extra actions inside a conflict banner, rendered leftmost — the "get help"
    * end of the row, ahead of the decisive Merge / Accept / Reset resolutions.

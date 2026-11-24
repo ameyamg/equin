@@ -6,17 +6,21 @@ import { APP_SCOPE_DIR, appScopeId } from "./scope-format";
 import type { Disposable } from "./types";
 
 /**
- * The three files a config document is made of. The user layer keeps all
- * three; every write path touches some subset, and the agent-write ledger
- * always captures the whole trio:
+ * The files a config document is made of. The user layer keeps all of them;
+ * every write path touches some subset, and the agent-write ledger always
+ * captures every one:
  *
  * - `origin` — `<name>.origin.jsonc`, the git layer as the build propagated it
  *   (or, for a runtime fork, the snapshot the fork wrote);
  * - `override` — `<name>.jsonc`, the user's own document;
  * - `ancestor` — `<name>.ancestor.jsonc`, the three-way-merge base `propagate`
- *   captured at the conflict transition.
+ *   captured at the conflict transition;
+ * - `merge` — `<name>.merge.jsonc`, the record of the last automatic merge
+ *   (`ConfigMergeRecord`: its inputs, decisions and the exact pre-merge state
+ *   Undo restores). Not part of the document's values: `documentStamp` leaves
+ *   it out, so writing the record alone moves no value, conflict or tier.
  */
-export type ConfigDocumentFile = "origin" | "override" | "ancestor";
+export type ConfigDocumentFile = "origin" | "override" | "ancestor" | "merge";
 
 /** One config document: a descriptor's store path, in a scope (`undefined` or `""` is the base). */
 export interface ConfigDocRef {
@@ -119,10 +123,16 @@ const FILE_SUFFIX: Record<ConfigDocumentFile, string> = {
   origin: ".origin.jsonc",
   override: ".jsonc",
   ancestor: ".ancestor.jsonc",
+  merge: ".merge.jsonc",
 };
 
 // Longest suffix first: every file name ends in ".jsonc".
-const SUFFIX_ORDER: ConfigDocumentFile[] = ["origin", "ancestor", "override"];
+const SUFFIX_ORDER: ConfigDocumentFile[] = [
+  "origin",
+  "ancestor",
+  "merge",
+  "override",
+];
 
 /** A store path `<hier>/<name>.jsonc` split into its hierarchy and descriptor name. */
 export function storePathParts(storePath: string): {
@@ -148,7 +158,7 @@ export function scopeSegment(scopeId?: string): string {
 
 /**
  * Where a file of a config document sits under a layer's root —
- * `<hier>[/@app/<id>]/<name>{.origin,,.ancestor}.jsonc`. THE layout, shared by
+ * `<hier>[/@app/<id>]/<name>{.origin,,.ancestor,.merge}.jsonc`. THE layout, shared by
  * every store that keeps documents as files.
  */
 export function configFileRelPath(ref: ConfigFileRef): string {
