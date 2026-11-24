@@ -25,6 +25,7 @@ export const submitOutcomeReportTool = Mcp.tool({
 - **Problem** — what was wrong or missing, and why we care.
 - **Before → after** — the mental model before the change and after it.
 - **What changed** — the change itself, in plain words (files only where they help).
+- **Why it was possible** — when the task fixed a bug or a report: the API or design flaw that let it be written, and whether your change removes the class (**design** — the wrong thing can no longer be written), catches it (**guard** — a lint, check, assert or threshold; name the flaw it compensates for) or fixes this one case (**instance**). For a report that came back after an earlier fix, say why that fix did not hold.
 - **Caveats** — anything you ran into, left out, or are unsure about.
 
 If the work needs ONE decision from the user (a design choice, a risky change you did not push), put it in \`question\` with up to six short one-click \`answers\`; the user's choice arrives as your next message. Otherwise make the call yourself and leave \`question\` out.
@@ -36,7 +37,7 @@ Calling it again replaces the earlier report. Afterwards, follow your mandate's 
       .trim()
       .min(1)
       .describe(
-        "The report, in markdown: problem and why we care, before → after, what changed, caveats.",
+        "The report, in markdown: problem and why we care, before → after, what changed, why it was possible (for a fix: the flaw, and design / guard / instance), caveats.",
       ),
     question: z
       .string()

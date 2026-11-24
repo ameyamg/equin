@@ -133,7 +133,7 @@ describe("untrusted report sources", () => {
       t.db,
     );
 
-    const fenced = renderReportTask(visitor!).description;
+    const fenced = renderReportTask(visitor!, []).description;
     expect(fenced.startsWith("> **Untrusted content.**")).toBe(true);
     const open = fenced.indexOf("<<<UNTRUSTED-REPORT");
     const close = fenced.lastIndexOf("UNTRUSTED-REPORT>>>");
@@ -142,7 +142,7 @@ describe("untrusted report sources", () => {
     expect(at).toBeGreaterThan(open);
     expect(at).toBeLessThan(close);
 
-    expect(renderReportTask(own!).description).not.toContain(
+    expect(renderReportTask(own!, []).description).not.toContain(
       "UNTRUSTED-REPORT",
     );
   });
@@ -158,9 +158,9 @@ describe("untrusted report sources", () => {
       t.db,
     );
     const [awake] = await writeReport(values({ fingerprint: "w2" }), t.db);
-    expect(renderReportTask(woke!).description).toContain(
+    expect(renderReportTask(woke!, []).description).toContain(
       "**Machine wake:** Its occurrence came just after the machine woke from sleep (latest: 400ms after the machine woke from 4m 28s asleep",
     );
-    expect(renderReportTask(awake!).description).not.toContain("Machine wake");
+    expect(renderReportTask(awake!, []).description).not.toContain("Machine wake");
   });
 });

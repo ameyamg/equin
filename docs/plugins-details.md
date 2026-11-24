@@ -30957,6 +30957,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/duration/table`
           - `infra/claude-cli`
           - `reports`
+          - `reports/engine`
           - `runs`
       - Plugins:
         - **`config`** — Duration field type: the durationField factory for building field records.

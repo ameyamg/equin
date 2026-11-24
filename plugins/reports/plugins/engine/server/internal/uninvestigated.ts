@@ -11,6 +11,7 @@ import {
 import { db } from "@plugins/database/server";
 import { _reports, ReportKind, type ReportRow } from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
+import { formatFixHistory, type FixHistoryEntry } from "./fix-history";
 import {
   fenceUntrustedReport,
   afterWakeSummary,
@@ -107,9 +108,14 @@ export async function linkReportsToTask(
 
 /**
  * A report as its kind renders it for an investigating agent — the same
- * title and body Investigate files. Throws for a kind with no registered spec.
+ * title and body Investigate files — with its earlier fixes (`fixes`,
+ * `readFixHistory`), so a report that came back says so. Throws for a kind
+ * with no registered spec.
  */
-export function renderReportTask(row: ReportRow): {
+export function renderReportTask(
+  row: ReportRow,
+  fixes: readonly FixHistoryEntry[],
+): {
   title: string;
   description: string;
 } {
@@ -129,11 +135,16 @@ export function renderReportTask(row: ReportRow): {
   const body =
     `${description}\n\n**Activity:** ${activity}` +
     (wake === null ? "" : `\n\n**Machine wake:** ${wake}`);
+  // Main's own history, not the report's content: it stays outside the
+  // untrusted fence, and is an instruction when a fix came back.
+  const history = formatFixHistory(fixes);
+  const withHistory = (text: string) =>
+    history === null ? text : `${text}\n\n${history}`;
   // Strangers wrote an untrusted report's content: the agent reads it as
   // data, never instructions. (An untrusted kind builds its title from typed,
   // identifier-shaped fields only — it is not fenced.)
   if (isUntrustedReportSource(row.source)) {
-    return { title, description: fenceUntrustedReport(body) };
+    return { title, description: withHistory(fenceUntrustedReport(body)) };
   }
-  return { title, description: body };
+  return { title, description: withHistory(body) };
 }

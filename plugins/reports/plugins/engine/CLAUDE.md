@@ -261,6 +261,12 @@ its `recurred` state, not an error variant, keeps its toast up — and unlinks t
 old investigation task so the report is back on the worklist
 (`reportWorklist`: no task, not noise, open or regressed).
 
+The next investigation is not told it is new: `renderReportTask` appends a
+**Fixed before** section from the ledger (`server/internal/fix-history.ts` —
+each fix's commit, subject and conversation from main's log, when it went
+live, how long it held and the code that fired again) and, when a fix came
+back, asks the agent to explain why it did not hold and to fix one level up.
+
 ## The report history outlives the reports
 
 `reports` rows are swept after 7 days (an investigated one — `task_id` set — never; one

@@ -12,6 +12,8 @@ import {
 } from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
 import { renderReportTask } from "./uninvestigated";
+import { readFixHistory } from "./fix-history";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { reportIdKind } from "@plugins/reports/core";
 
 // Appended to every report-filed task. The agent that picks one up is about to
@@ -71,7 +73,10 @@ export async function investigateReport(
           );
         }
 
-        const { title, description } = renderReportTask(row);
+        const { title, description } = renderReportTask(
+          row,
+          await readFixHistory(row.id, REPO_ROOT),
+        );
         const result = await reportInvestigationSink.emit({
           // Reuse the linked task only while it owns the report.
           existingTaskId: (await reportHasLiveOwner(row.taskId))
