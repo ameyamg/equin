@@ -24,12 +24,15 @@ import { dbConfigDir } from "../../data-dirs";
  *
  * So the probe runs in a CHILD process with `EQUIN_DIR` pointed at an empty
  * temp dir — the same technique the plan's bare-host simulation uses. The probe
- * script is written INSIDE the repo tree so Bun resolves the `@plugins/*` alias
- * from the repo tsconfig exactly as it does for the module under test.
+ * script lives in a temp dir too: it imports the module under test by absolute
+ * path, and Bun resolves that module's own `@plugins/*` imports from the
+ * tsconfig nearest to IT. Never beside this file — main runs its tests inside
+ * the slot it serves from, and a dir made there is met by whatever walks that
+ * tree (report-1795554708-scgii6; `test-scratch-safety/no-source-tree-write`).
  */
 const CONFIG_MODULE = join(import.meta.dir, "config.ts");
 
-const probeDir = mkdtempSync(join(import.meta.dir, ".config-test-"));
+const probeDir = mkdtempSync(join(tmpdir(), "equin-config-probe-"));
 const emptyDataDir = mkdtempSync(join(tmpdir(), "equin-empty-"));
 
 afterAll(() => {

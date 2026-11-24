@@ -35535,6 +35535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/launcher` (1 debt)
                   - `network/live/resource-vocabulary` (1 debt)
                   - `page/editor` (1 debt)
+            - **`test-scratch-safety`** — test-scratch-safety lint rule: no-source-tree-write — a test (or a testing/ fixture) never creates, writes, moves or removes a path under its own checkout (import.meta.dir, __dirname, the repo root, process.cwd()); its scratch goes under os.tmpdir(), the run's own scratch root, because main runs its tests inside the slot it serves from
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
             - **`vitest-mock-safety`** — vitest-mock-safety lint rules: a vi.mock of a plugin barrel is partial (spreads importOriginal), and a hoisted vi.mock / vi.hoisted callback reads none of the file's imports — the two ways a jsdom suite rots silently between runs
             - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)

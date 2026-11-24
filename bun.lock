@@ -4530,6 +4530,10 @@
       "name": "@equin/plugin-framework-tooling-lint-source-read-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/test-scratch-safety": {
+      "name": "@equin/plugin-framework-tooling-lint-test-scratch-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety": {
       "name": "@equin/plugin-framework-tooling-lint-trigger-render-safety",
       "version": "0.0.1",
@@ -10663,6 +10667,8 @@
     "@equin/plugin-framework-tooling-lint-sink-safety": ["@equin/plugin-framework-tooling-lint-sink-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety"],
 
     "@equin/plugin-framework-tooling-lint-source-read-safety": ["@equin/plugin-framework-tooling-lint-source-read-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/source-read-safety"],
+
+    "@equin/plugin-framework-tooling-lint-test-scratch-safety": ["@equin/plugin-framework-tooling-lint-test-scratch-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/test-scratch-safety"],
 
     "@equin/plugin-framework-tooling-lint-trigger-render-safety": ["@equin/plugin-framework-tooling-lint-trigger-render-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety"],
 

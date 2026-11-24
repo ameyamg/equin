@@ -136,7 +136,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`generated-artifacts`** — The repo's generated artifacts as data: GENERATED_ARTIFACTS (each committed path pattern a build or migration generate writes, with the .gitattributes merge driver that resolves it)…
         - **`guards`** [exempt] [5 sub-plugins] — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`import-closure`** [exempt] — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module…
-        - **`lint`** [test helpers] [exempt] [38 sub-plugins] — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
+        - **`lint`** [test helpers] [exempt] [39 sub-plugins] — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** [1 sub-plugin] — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
         - **`test-layout`** [test helpers] [exempt] — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.

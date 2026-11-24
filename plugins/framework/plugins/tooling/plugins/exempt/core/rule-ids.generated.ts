@@ -228,6 +228,7 @@ export type ExemptableRuleId =
   | "surface/no-adhoc-surface"
   | "test-layout/bun-sync-settle-matchers"
   | "test-layout/no-registered-partial-fake"
+  | "test-scratch-safety/no-source-tree-write"
   | "text/no-adhoc-typography"
   | "text/no-clip-without-nowrap"
   | "theme-boundary/no-adhoc-theme-scope"

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-lint-test-scratch-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "test-scratch-safety lint rule: no-source-tree-write — a test (or a testing/ fixture) never creates, writes, moves or removes a path under its own checkout (import.meta.dir, __dirname, the repo root, process.cwd()); its scratch goes under os.tmpdir(), the run's own scratch root, because main runs its tests inside the slot it serves from"
+}
