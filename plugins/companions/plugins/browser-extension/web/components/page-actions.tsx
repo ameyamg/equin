@@ -11,10 +11,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
-import {
-  cn,
-  SingleLineProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   Avatar,
@@ -178,16 +176,18 @@ function PageActionRow({
       actionsAlwaysVisible
       title={state.kind === "failed" ? state.message : subtitle}
     >
-      {/* One line each: a destination is long (a deep app path), and the
-          host and the start of the path are what tell two rows apart. */}
-      <SingleLineProvider value={true}>
-        <Stack gap="none" className={yieldClass("x")}>
-          <Text as="div">{action.title}</Text>
-          <Text as="div" variant="caption" tone="muted">
+      {/* One line each (a Stack alone wraps): a destination is long (a deep
+          app path), and its host and path start tell two rows apart. */}
+      <Stack gap="none" className={yieldClass("x")}>
+        <Line>
+          <Text>{action.title}</Text>
+        </Line>
+        <Line>
+          <Text variant="caption" tone="muted">
             {subtitle}
           </Text>
-        </Stack>
-      </SingleLineProvider>
+        </Line>
+      </Stack>
     </Row>
   );
 }

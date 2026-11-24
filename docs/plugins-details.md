@@ -16820,18 +16820,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/panel` ×4
           - `primitives/slot-render` ×3
           - `primitives/avatar` ×2
-          - `primitives/css/ui-kit` ×2
           - `apps-core.Apps`
           - `infra/endpoints.useFetchEndpoint`
           - `network/live/live-state.foldResource`
           - `network/live.useLive`
           - `primitives/css/center.Center`
+          - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/spinner.Spinner`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/latest-ref.useLatestRef`
@@ -52327,7 +52328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×40
               - `primitives` ×20
               - `conversations` ×19
@@ -52343,6 +52344,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×2
               - `infra` ×2
               - `reorder` ×2
+              - `companions/browser-extension`
               - `hints/ask`
               - `integrations/youtube`
               - `map`
