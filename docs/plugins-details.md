@@ -38473,6 +38473,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-watch.ts` (debt)
+          - Test helpers:
+            - Server: `@plugins/infra/plugins/git/plugins/checkout-watch/server/testing`
+              - `fakeCheckoutWatch` — A checkout watch over fake directories, for testing what a reader's request hears: one linked worktree at `/wt` (git dir `/main/.git/worktrees/wt`, on `refs/heads/wt-branch` tracking `refs/remotes/origin/wt-branch`, nothing ignored), driven by the real hub — so `refs`, `onChange` and `onResync` are judged exactly as `acquireCheckoutWatch` judges them.
         - **`fsmonitor`** — The one owner of git's builtin fsmonitor daemons for checkouts: startCheckoutFsmonitor (core.fsmonitor in the checkout's own config.worktree — the main worktree's in its own file, included for its git dir only, since git worktree add copies config.worktree — then the daemon, in a process group of its own so a backend restart does not stop it), ensureCheckoutFsmonitor (the same, plus renewing the index's fsmonitor token when the running daemon did not issue it — a stale token makes every read a full scan, since no read of ours writes the index), stopCheckoutFsmonitor, and reconcileCheckoutFsmonitors (converge every checkout on on / off as its caller says, and signal daemons whose checkout is gone). A git read in a live checkout then costs what changed, not the checkout's ~25k files, however cold the machine's file cache is.
           - Server:
             - Uses:

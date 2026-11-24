@@ -14,6 +14,7 @@ import {
   withinTwoLevels,
 } from "./ignored";
 import { computeGitStatus } from "./status";
+import { gitStatusWatch } from "./status-watch";
 
 async function loadGitStatus({ root }: { root: string }): Promise<GitStatus> {
   await assertCheckoutRoot(root);
@@ -34,15 +35,7 @@ export const gitStatusServed = serveValue(fileExplorerGitStatus, {
   loader: loadGitStatus,
   whileSubscribed: async ({ root }, notify) => {
     await assertCheckoutRoot(root);
-    // `--branch` reads ahead/behind: the own branch and its upstream. The
-    // checkout watch already dropped the paths git ignores (a build writing
-    // `.cache/`, another worktree under `.claude/`), so every batch can move
-    // the status.
-    const release = await acquireCheckoutWatch(root, {
-      refs: { also: [], upstream: true },
-      onChange: () => notify(),
-    });
-    return release;
+    return acquireCheckoutWatch(root, gitStatusWatch(notify));
   },
 });
 
