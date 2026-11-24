@@ -174,11 +174,21 @@ so sidebar, toolbar and body read the same match.
   pane after the caller's own pane).
   - Use it for opener toggles; "last entry" heuristics are wrong.
   - `useRouteEntries()` only when the question is about the whole chain.
+  - For a pane that DECLARES the caller's pane as an ancestor, it is the
+    instance hanging off the caller, wherever it stands (see below).
 - `pane.useEnclosing()` — **which instance am I in or under?** (last entry for
   this pane at or before the caller's own pane). A satellite reading the pane
   it hangs off (`conversationPane.useEnclosing()?.params.convId`) uses this —
   `useRouteEntry()` reads the FIRST instance, so beside a second conversation
   column it named the first one's conversation.
+- **A reordered route keeps its addresses.** Dragging a Miller column left of
+  the pane it was opened from (a file preview left of its folder) does not cut
+  it off: a pane hangs off the nearest instance of each DECLARED ancestor
+  before it, else — reordered — the nearest one after it (`anchorIndex`).
+  `useEnclosing`, `useOpenedHere`, `fullParams`, close (the reordered child
+  closes alone, even from the head; closing its ancestor takes it) and a
+  right-push from the ancestor (replaces it where it stands) all read it. A
+  pane declaring no ancestor hangs off nothing right of it.
 - **Outside every surface** (global chrome: `Core.Root` action bar,
   `Apps.TabBarActions`, their popovers) the route-read hooks **throw** — `null`
   is only the in-surface "not in the route". Use `useTabs()` / `navigate()`

@@ -224,15 +224,16 @@ type OpenPaneFn = ReturnType<typeof useOpenPane>;
 function locationTarget(
   openPane: OpenPaneFn,
   location: ExplorerLocation,
-  opts: { replace?: boolean; inPlace?: boolean } = {},
+  opts: { replace?: boolean; inPlace?: boolean; mode?: "root" | "swap" } = {},
 ): LinkTarget {
   const folder = folderParams(location.fs, location.dir);
+  const open = { mode: "root" as const, ...opts };
   return location.open === null
-    ? openPane.to(filesFolderPane, folder, { mode: "root", ...opts })
+    ? openPane.to(filesFolderPane, folder, open)
     : openPane.to(
         filesPreviewPane,
         { ...folder, open: encodeOpenParam(location.dir, location.open) },
-        { mode: "root", ...opts },
+        open,
       );
 }
 
@@ -533,10 +534,11 @@ function FilesFolderBrowser({
   const openPane = useOpenPane();
   // Another folder moves this column in place: its header and the preview
   // beside it stay mounted (the same file previewed is not reloaded); only the
-  // listing, keyed by its folder, starts over.
+  // listing, keyed by its folder, starts over. A swap of THIS column: the
+  // columns left of it (another folder, its preview) stay.
   const go = useCallback(
     (next: ExplorerLocation) =>
-      locationTarget(openPane, next, { inPlace: true }),
+      locationTarget(openPane, next, { inPlace: true, mode: "swap" }),
     [openPane],
   );
   const openTarget = useCallback(

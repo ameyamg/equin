@@ -141,3 +141,54 @@ describe("back / forward", () => {
     expect(store.getRoute()[0]!.params).toEqual({ dir: "a/b" });
   });
 });
+
+// Two folder columns, each with its file: moving the SECOND one (its
+// breadcrumb, a folder row) is a swap of its own column — the first pair
+// stays. A root open rebuilt the whole route and lost the first pair.
+describe("an inPlace swap of a second folder column", () => {
+  function seedTwoPairs() {
+    store.restoreRoute([
+      { paneId: "ip-folder", params: { dir: "a" } },
+      { paneId: "ip-preview", params: { open: "f.md" } },
+      { paneId: "ip-folder", params: { dir: "b" } },
+      { paneId: "ip-preview", params: { open: "g.md" } },
+    ]);
+  }
+
+  function swapFrom(callerIndex: number, params: Record<string, string>) {
+    const target =
+      "open" in params ? previewPane._internal : folderPane._internal;
+    const route = store.getRoute();
+    const next = computeOpen(
+      route,
+      route[callerIndex]!.instanceId,
+      target,
+      params,
+      { mode: "swap", inPlace: true },
+    );
+    if (next.changed) store.setRoute(next.route, next.replace);
+  }
+
+  it("with a file open keeps the columns left of it, and its own instances", () => {
+    seedTwoPairs();
+    const before = ids();
+    swapFrom(2, { dir: "b/c", open: "h.md" });
+    expect(ids()).toEqual(before);
+    expect(store.getRoute().map((s) => s.params)).toEqual([
+      { dir: "a" },
+      { open: "f.md" },
+      { dir: "b/c" },
+      { open: "h.md" },
+    ]);
+  });
+
+  it("to a folder alone keeps the columns left of it", () => {
+    seedTwoPairs();
+    swapFrom(2, { dir: "c" });
+    expect(store.getRoute().map((s) => s.params)).toEqual([
+      { dir: "a" },
+      { open: "f.md" },
+      { dir: "c" },
+    ]);
+  });
+});
