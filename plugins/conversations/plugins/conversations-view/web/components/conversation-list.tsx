@@ -38,17 +38,22 @@ export function ConversationList() {
     return {
       open: (gesture) => {
         const result = loadRouteForConversation(id);
-        if (result.kind === "restored" && result.slots.length > 1) {
-          store.restoreRoute(result.slots);
-        } else {
+        // A saved layout the store refuses (a slot lacking a param its pane
+        // now requires) opens the conversation fresh instead.
+        if (
+          result.kind !== "restored" ||
+          result.slots.length <= 1 ||
+          !store.restoreRoute(result.slots).ok
+        ) {
           fresh.open(gesture);
         }
       },
       href: () => {
         const result = loadRouteForConversation(id);
-        return result.kind === "restored" && result.slots.length > 1
-          ? store.restoredRouteUrl(result.slots)
-          : fresh.href();
+        if (result.kind !== "restored" || result.slots.length <= 1)
+          return fresh.href();
+        const restored = store.restoredRouteUrl(result.slots);
+        return restored.ok ? restored.url : fresh.href();
       },
     };
   };

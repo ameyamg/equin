@@ -727,6 +727,14 @@ its pane is registered and it carries every required param of its segment
   (`getDeferredLoadState().deferredComplete` false) keeps the saved route: the
   pane may still register, and the registry sync re-runs then.
 - Tabs validates its persisted routes with the same function.
+- `store.restoreRoute(slots)` / `store.restoredRouteUrl(slots)` take untyped
+  slots (a persisted layout — the sidebar's per-conversation one), so they
+  check them too: a slot of a registered pane lacking a required param is
+  refused (`{ ok: false, reason: "missing-param", … }`, nothing changed) and
+  the caller shows something else (a fresh open). Every other way onto the
+  route is typed or parsed. `setRoute` builds the URL before it swaps the
+  route in, so a URL the writer refuses never leaves the store holding a
+  route no URL names (report-1795534089-iyie4i).
 
 ### The address bar is untrusted input
 
@@ -1091,6 +1099,7 @@ out of the way: **what it opens takes its column**.
     - `ImpliedParam`
     - `LocationChange`
     - `MatchEntry`
+    - `MissingParamRoute`
     - `OpenColumnsOpts`
     - `OpenPaneFn`
     - `PaneChromeConfig`
@@ -1123,7 +1132,9 @@ out of the way: **what it opens takes its column**.
     - `RelativeSpelling`
     - `ResolveHook`
     - `ResolveResult`
+    - `RestoredRouteHref`
     - `RestoredRouteValidity`
+    - `RestoreOutcome`
     - `RouteState`
     - `SerializedSlot`
     - `SetParamsOptions`

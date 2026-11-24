@@ -985,22 +985,57 @@ export function validRestoredRoute(
     const pane = registry.get(slot.paneId);
     if (!pane)
       return { ok: false, reason: "unregistered", paneId: slot.paneId };
-    const required = [
-      ...segmentRequiredParamNames(pane.segment),
-      ...pane.implied.filter((imp) => imp.required).map((imp) => imp.param),
-    ];
-    for (const param of required) {
-      if (typeof slot.params[param] !== "string") {
-        return {
-          ok: false,
-          reason: "missing-param",
-          paneId: slot.paneId,
-          param,
-        };
-      }
-    }
+    const missing = slotMissingParam(pane, slot.params);
+    if (missing) return missing;
   }
   return { ok: true };
+}
+
+/** A route `restoreRoute` refused: one of its slots lacks a param its pane requires. */
+export type MissingParamRoute = Extract<
+  RestoredRouteValidity,
+  { reason: "missing-param" }
+>;
+
+/**
+ * The first required param (a required `:name`, or a required implied one)
+ * `params` lacks for `pane`, or `undefined` when it carries them all.
+ */
+function slotMissingParam(
+  pane: PaneInternal,
+  params: Readonly<Record<string, string>>,
+): MissingParamRoute | undefined {
+  const required = [
+    ...segmentRequiredParamNames(pane.segment),
+    ...pane.implied.filter((imp) => imp.required).map((imp) => imp.param),
+  ];
+  for (const param of required) {
+    if (typeof params[param] !== "string") {
+      return { ok: false, reason: "missing-param", paneId: pane.id, param };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The first slot of `slots` whose REGISTERED pane it lacks a required param
+ * of — what `restoreRoute` refuses. A slot naming a pane not registered (yet)
+ * is not judged here: it may still register (the deferred tier), and the
+ * route fallback shows it loading, then not found.
+ */
+function routeMissingParam(
+  slots: ReadonlyArray<{
+    paneId: string;
+    params: Readonly<Record<string, string>>;
+  }>,
+): MissingParamRoute | undefined {
+  for (const slot of slots) {
+    const pane = registry.get(slot.paneId);
+    if (!pane) continue;
+    const missing = slotMissingParam(pane, slot.params);
+    if (missing) return missing;
+  }
+  return undefined;
 }
 
 /**
@@ -1133,6 +1168,17 @@ export type RouteState =
 const EMPTY: PaneSlot[] = [];
 const RESOLVED_EMPTY: RouteState = { kind: "resolved", slots: EMPTY };
 
+/**
+ * What `restoreRoute` did with saved slots: put them on screen, or refused
+ * them — a slot lacks a param its pane requires (a layout saved before the
+ * param became required), and nothing changed. The caller decides what to
+ * show instead (a fresh open, its URL re-read).
+ */
+export type RestoreOutcome = { ok: true } | MissingParamRoute;
+
+/** `restoredRouteUrl`'s answer: the URL, or the same refusal as `restoreRoute`. */
+export type RestoredRouteHref = { ok: true; url: string } | MissingParamRoute;
+
 export interface PaneStore {
   /** Current in-memory route slots (`[]` for a bare root OR an unresolved URL). */
   getRoute(): PaneSlot[];
@@ -1220,7 +1266,7 @@ export interface PaneStore {
       uuid?: string;
     }>,
     opts?: { index?: Record<string, string> },
-  ): void;
+  ): RestoreOutcome;
   /** Empty the route — the bare root, showing the index pane (with `index`). */
   clearRoute(opts?: { index?: Record<string, string> }): void;
   /** Resolve the current route to a `PaneMatch` (memo-friendly, per-store). */
@@ -1240,7 +1286,9 @@ export interface PaneStore {
    * screen — the href half of a restore that is a link (a sidebar entry that
    * brings back a conversation's saved layout).
    */
-  restoredRouteUrl(slots: Parameters<PaneStore["restoreRoute"]>[0]): string;
+  restoredRouteUrl(
+    slots: Parameters<PaneStore["restoreRoute"]>[0],
+  ): RestoredRouteHref;
   /**
    * Open a pane (non-positional). Used by `promote` and the open hooks.
    * `crossApp` is where a route headed by another app's pane goes instead
@@ -1325,12 +1373,17 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function restoredRouteUrl(
     slots: Parameters<PaneStore["restoreRoute"]>[0],
-  ): string {
-    return routeUrl(
-      slots.map((s) =>
-        createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
+  ): RestoredRouteHref {
+    const missing = routeMissingParam(slots);
+    if (missing) return missing;
+    return {
+      ok: true,
+      url: routeUrl(
+        slots.map((s) =>
+          createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
+        ),
       ),
-    );
+    };
   }
 
   function setRoute(
@@ -1338,6 +1391,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     replace = false,
     index: Record<string, string> = NO_PARAMS,
   ): void {
+    // The URL is built BEFORE the store changes: a route the writer refuses
+    // (a codec that cannot spell it) throws with the store still on the route
+    // it had, instead of leaving it holding one no URL can name.
+    const fullUrl = store.live ? routeUrl(route, index) : undefined;
     currentState = { kind: "resolved", slots: route };
     currentIndex = index;
     recordHistoryWrite(replace);
@@ -1346,14 +1403,17 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // set persists the address bar as the route's rawPath — the key a reload
     // matches to give panes back their instance ids) never pairs the new route
     // with the previous URL.
-    commitRoute(route, replace);
+    // Background stores update in-memory route + notify their own listeners
+    // only; they never touch the browser URL/history.
+    if (fullUrl !== undefined) commitRoute(route, replace, fullUrl);
     notifyRouteListeners();
   }
 
-  function commitRoute(route: PaneSlot[], replace: boolean): void {
-    // Background stores update in-memory route + notify their own listeners
-    // only; they never touch the browser URL/history.
-    if (!store.live) return;
+  function commitRoute(
+    route: PaneSlot[],
+    replace: boolean,
+    fullUrl: string,
+  ): void {
     // `hint` is deliberately NOT serialized: an optimistic mirror of server-owned
     // state must not outlive the navigation that created it, or it comes back as
     // stale data on the very paths (reload, back/forward) that have no opener to
@@ -1364,7 +1424,6 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       options: s.options,
       uuid: s.uuid,
     }));
-    const fullUrl = routeUrl(route, currentIndex);
     if (fullUrl === currentRoutePath() && replace) return;
     // Emit a push/replace INTENT through the installed history adapter — the
     // pane primitive never touches `window.history` itself. The default adapter
@@ -1400,8 +1459,13 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       uuid?: string;
     }>,
     restoreOpts?: { index?: Record<string, string> },
-  ): void {
-    if (typeof window === "undefined") return;
+  ): RestoreOutcome {
+    // Saved slots are untyped (a persisted layout, a test seed): a slot that
+    // lacks a param its pane requires would throw at the URL write — after the
+    // route was already swapped in. Refused here, before anything changes.
+    const missing = routeMissingParam(slots);
+    if (missing) return missing;
+    if (typeof window === "undefined") return { ok: true };
     // A restored slot keeps its uuid: it is the SAME pane instance coming back
     // (a reload, a background tab rebuilt from persistence), so whatever is
     // keyed by the instance (a Miller column's collapse, a pane's own saved
@@ -1409,8 +1473,9 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     const route: PaneSlot[] = slots.map((s) =>
       createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
     );
-    if (route.length === 0) return;
+    if (route.length === 0) return { ok: true };
     setRoute(route, false, nonEmptyIndex(restoreOpts?.index));
+    return { ok: true };
   }
 
   function clearRoute(clearOpts?: { index?: Record<string, string> }): void {

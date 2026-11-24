@@ -23719,6 +23719,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/web-storage.defineStore`
           - `primitives/pane.PaneOptions`
           - `primitives/pane.peekRoute`
+          - `primitives/pane.validRestoredRoute`
         - Exports (types): `RouteRestore`
         - Exports (values): `loadRouteForConversation`
       - Cross-plugin:
@@ -58269,6 +58270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ImpliedParam`
           - `LocationChange`
           - `MatchEntry`
+          - `MissingParamRoute`
           - `OpenColumnsOpts`
           - `OpenPaneFn`
           - `PaneChromeConfig`
@@ -58301,7 +58303,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RelativeSpelling`
           - `ResolveHook`
           - `ResolveResult`
+          - `RestoredRouteHref`
           - `RestoredRouteValidity`
+          - `RestoreOutcome`
           - `RouteState`
           - `SerializedSlot`
           - `SetParamsOptions`

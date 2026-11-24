@@ -7,7 +7,9 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
   createPaneStore,
+  impliedBy,
   Pane,
+  sameAs,
   setLiveStore,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
@@ -49,12 +51,22 @@ const filePaneDef = Pane.define({
   component: () => null,
 });
 
+// A conversation satellite whose `conv` became required (the Files column,
+// report-1795534089-iyie4i): a layout saved before carries no `conv`.
+const sidePaneDef = Pane.define({
+  route: defineRoute({ id: "conv-side", segment: "side;conv" }),
+  app: agentManagerApp,
+  component: () => null,
+  implied: { conv: impliedBy(conversationRoute, sameAs("convId")) },
+});
+
 const testPlugin = {
   id: "pane-restore-test-plugin",
   description: "pane-restore test fixture",
   contributions: [
     Pane.Register({ pane: conversationPaneDef }),
     Pane.Register({ pane: filePaneDef }),
+    Pane.Register({ pane: sidePaneDef }),
   ],
 } as unknown as LoadedPlugin;
 
@@ -146,5 +158,14 @@ describe("pane-restore storage", () => {
     } finally {
       stop();
     }
+  });
+
+  it("forgets a layout with a slot lacking a param its pane now requires", () => {
+    writeEntryUnchecked("conversations.pane-restore", "X", [
+      { paneId: "conversation", params: { convId: "X" } },
+      { paneId: "conv-side", params: {} },
+    ]);
+    expect(loadRouteForConversation("X")).toEqual({ kind: "none" });
+    expect(localStorage.getItem("s:conversations.pane-restore:X")).toBeNull();
   });
 });

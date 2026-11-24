@@ -3,6 +3,7 @@ import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   peekRoute,
+  validRestoredRoute,
   type PaneOptions,
 } from "@plugins/primitives/plugins/pane/web";
 
@@ -74,9 +75,16 @@ export function saveRouteForConversation(
 
 export function loadRouteForConversation(convId: string): RouteRestore {
   const read = paneRoutes.read(convId);
-  return read.kind === "value"
-    ? { kind: "restored", slots: read.value }
-    : { kind: "none" };
+  if (read.kind !== "value") return { kind: "none" };
+  // A saved layout is the verbatim route of the build that saved it: one with
+  // a slot lacking a param its pane now requires (a Files column saved before
+  // it carried its conversation) can never be put back — forget it.
+  const validity = validRestoredRoute(read.value);
+  if (!validity.ok && validity.reason === "missing-param") {
+    paneRoutes.remove(convId);
+    return { kind: "none" };
+  }
+  return { kind: "restored", slots: read.value };
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

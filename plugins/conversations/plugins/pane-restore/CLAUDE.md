@@ -10,6 +10,7 @@
     - `primitives/dom/web-storage.defineStore`
     - `primitives/pane.PaneOptions`
     - `primitives/pane.peekRoute`
+    - `primitives/pane.validRestoredRoute`
   - Exports (types): `RouteRestore`
   - Exports (values): `loadRouteForConversation`
 - Cross-plugin:

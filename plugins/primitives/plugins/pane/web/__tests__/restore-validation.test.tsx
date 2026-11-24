@@ -191,3 +191,45 @@ describe("back / forward onto a saved route", () => {
     expect(shape()).toEqual([{ paneId: "rv-later", params: { x: "1" } }]);
   });
 });
+
+describe("restoreRoute / restoredRouteUrl of saved slots", () => {
+  // A layout saved before a param became required (report-1795534089-iyie4i:
+  // a conversation's Files column saved without its `conv`) used to be put on
+  // screen, then throw at the URL write — leaving the store holding it.
+  type Saved = Array<{ paneId: string; params: Record<string, string> }>;
+  const stale: Saved = [
+    { paneId: "rv-conv", params: { convId: "A" } },
+    { paneId: "rv-summary", params: {} },
+  ];
+  const refusal = {
+    ok: false,
+    reason: "missing-param",
+    paneId: "rv-summary",
+    param: "conv",
+  };
+
+  it("refuses a slot lacking a required implied param, changing nothing", () => {
+    store.restoreRoute([{ paneId: "rv-conv", params: { convId: "B" } }]);
+    const url = window.location.pathname;
+    expect(store.restoreRoute(stale)).toEqual(refusal);
+    expect(shape()).toEqual([{ paneId: "rv-conv", params: { convId: "B" } }]);
+    expect(window.location.pathname).toBe(url);
+  });
+
+  it("refuses to spell its URL", () => {
+    expect(store.restoredRouteUrl(stale)).toEqual(refusal);
+  });
+
+  it("restores and spells a complete route", () => {
+    const whole: Saved = [
+      { paneId: "rv-conv", params: { convId: "A" } },
+      { paneId: "rv-summary", params: { conv: "A" } },
+    ];
+    expect(store.restoredRouteUrl(whole)).toEqual({
+      ok: true,
+      url: "/c/A/sum",
+    });
+    expect(store.restoreRoute(whole)).toEqual({ ok: true });
+    expect(shape()).toEqual(whole);
+  });
+});
