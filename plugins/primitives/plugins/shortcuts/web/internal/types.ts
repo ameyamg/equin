@@ -1,3 +1,5 @@
+import type { RefObject } from "react";
+
 export type ParsedCombo = {
   mod: boolean;
   ctrl: boolean;
@@ -38,4 +40,35 @@ export type ShortcutDescriptor = {
    * surface; unset = global, always eligible.
    */
   surfaceId?: string;
+  /**
+   * The part of the surface this shortcut belongs to — a list, a panel — for
+   * a key several mounted instances of one component bind on one surface (two
+   * lists stepping with j / k, two Submit bars on ⌘↵). Among the eligible
+   * regioned shortcuts matching a keystroke, the one whose region holds the
+   * key fires; the others never do. See {@link ShortcutRegion}.
+   */
+  region?: ShortcutRegion;
 };
+
+/**
+ * Where a regioned shortcut's key belongs (`ShortcutDescriptor.region`).
+ * Among the regioned shortcuts matching one keystroke, the manager keeps:
+ *
+ * 1. those whose `root` holds focus (contains the key event's target);
+ * 2. else, when `pointer` is set, those whose `root` is under the pointer;
+ * 3. else the one regioned shortcut, when it is alone on its key (nothing to
+ *    tell apart — the region is the surface's only one).
+ *
+ * A region nested in another one holding the key wins over it. Two regions
+ * left after that, or none, fire nothing: a key is never handed to a region
+ * by guess. A region whose root is not mounted holds no key.
+ */
+export interface ShortcutRegion {
+  root: RefObject<Element | null>;
+  /**
+   * Whether the pointer over `root` claims the key while no region holds
+   * focus. Off for a key whose wrong guess costs (⌘↵ sending answers): only
+   * focus decides it.
+   */
+  pointer: boolean;
+}

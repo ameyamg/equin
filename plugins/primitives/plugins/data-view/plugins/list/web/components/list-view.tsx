@@ -510,7 +510,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // j / k step the selection through the rows as drawn (`stepKeys`),
   // revealing the row stepped to under the list's root.
   const listRoot = useRef<HTMLElement | null>(null);
-  useStepKeys({
+  const stepRevealKey = useStepKeys({
     root: listRoot,
     enabled: options.stepKeys === true,
     sections,
@@ -874,6 +874,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
               getKey={(entry) => entry.key}
               keepMounted={activeId ? [activeId] : undefined}
               raisedKey={activeId ?? undefined}
+              // A j / k step onto a row the window has not mounted.
+              revealKey={stepRevealKey}
             >
               {(entry) => renderEntry(entry, group)}
             </VirtualRows>

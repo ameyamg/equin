@@ -103,8 +103,11 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   kept-state's `keptEntry`), so a draft survives navigation and reloads and
   the inbox, the tray and the page block agree. A pick, a note or "Got it"
   only DRAFTS.
-- **One Submit** — `SubmitBar` (web), sticky at the foot of a list, ⌘↵ on
-  its surface: "N of M answered" (M = Needs you + FYI), "x to send, y to
+- **One Submit** — `SubmitBar` (web), sticky at the foot of a list, ⌘↵ in
+  its `region` (the panel whose drafts it sends, by focus only — shortcuts'
+  regions: with two bars on one surface the one whose panel holds focus
+  sends, with focus in neither nothing is sent; a bar alone on its surface
+  takes ⌘↵ wherever focus is): "N of M answered" (M = Needs you + FYI), "x to send, y to
   keep" when some agent has finished, nothing while nothing is answered;
   `taskId` scopes it to one agent. A draft is cleared once the server took it
   (delivered or kept) and only while it still holds what was sent; a refused

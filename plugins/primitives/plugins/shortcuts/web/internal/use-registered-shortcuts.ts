@@ -24,6 +24,7 @@ function registrationKey(
       d.precedence ?? 0,
       d.enableInInputs === true,
       d.when !== undefined,
+      d.region === undefined ? null : d.region.pointer,
     ]),
   ]);
 }
@@ -68,6 +69,8 @@ export function useRegisteredShortcuts(
         ? {}
         : { enableInInputs: d.enableInInputs }),
       ...(surfaceId === undefined ? {} : { surfaceId }),
+      // The region's root is a ref: read at the keystroke, never captured.
+      ...(d.region === undefined ? {} : { region: d.region }),
       handler: () => current(i).handler(),
       ...(d.when === undefined
         ? {}

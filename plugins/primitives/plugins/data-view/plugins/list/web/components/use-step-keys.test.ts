@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DataViewSection } from "@plugins/primitives/plugins/data-view/core";
-import { stepOrder, stepTarget } from "./use-step-keys";
+import { stepOrder, stepPlan, stepTarget } from "./use-step-keys";
 
 const section = (
   key: string | null,
@@ -51,5 +51,41 @@ describe("stepTarget", () => {
     expect(stepTarget(order, undefined, 1)?.key).toBe("1");
     expect(stepTarget(order, undefined, -1)).toBeNull();
     expect(stepTarget(order, "gone", 1)?.key).toBe("1");
+  });
+});
+
+describe("stepPlan", () => {
+  const paging = (canGrow: boolean, growing = false) =>
+    ({ canGrow, growing, loadMore: () => {} }) as never;
+  const entry = (key: string, section: string | null, p?: unknown) => ({
+    key,
+    row: { id: key },
+    section,
+    ...(p === undefined ? {} : { paging: p as never }),
+  });
+  test("j on a section's last loaded row grows its read rather than skip to the next section", () => {
+    const more = paging(true);
+    const order = [
+      entry("1", "a", more),
+      entry("2", "a", more),
+      entry("3", "b"),
+    ];
+    expect(stepPlan(order, "1", 1)).toEqual({ kind: "row", target: order[1]! });
+    expect(stepPlan(order, "2", 1)).toEqual({ kind: "grow", paging: more });
+  });
+  test("j on the last row of the list grows it when its read has more", () => {
+    const more = paging(true);
+    const order = [entry("1", "a", more)];
+    expect(stepPlan(order, "1", 1)).toEqual({ kind: "grow", paging: more });
+  });
+  test("a read with nothing more, or k, steps as drawn", () => {
+    const done = paging(false);
+    const order = [entry("1", "a", done), entry("2", "b", paging(true))];
+    expect(stepPlan(order, "1", 1)).toEqual({ kind: "row", target: order[1]! });
+    expect(stepPlan(order, "2", -1)).toEqual({
+      kind: "row",
+      target: order[0]!,
+    });
+    expect(stepPlan([entry("1", null)], "1", 1)).toBeNull();
   });
 });

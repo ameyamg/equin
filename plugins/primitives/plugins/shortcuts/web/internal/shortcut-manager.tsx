@@ -5,6 +5,7 @@ import { getCachedCombo, matchesEvent } from "./parse-keys";
 import { comboIsCommand, targetClaimsKey } from "./target-claims-key";
 import { useDynamicShortcuts } from "./dynamic-registry";
 import { getFocusedSurfaceId } from "./focused-surface";
+import { regionWinners } from "./region";
 
 export function ShortcutManager() {
   const staticShortcuts = Shortcuts.Shortcut.useContributions();
@@ -26,8 +27,12 @@ export function ShortcutManager() {
         ids.push(s.id);
         byCombo.set(key, ids);
       }
+      const regioned = new Set(
+        shortcutsRef.current.filter((s) => s.region).map((s) => s.id),
+      );
       for (const [combo, ids] of byCombo) {
-        if (ids.length > 1) {
+        // Regioned twins (two lists' j / k) are told apart by their regions.
+        if (ids.length > 1 && !ids.every((id) => regioned.has(id))) {
           console.warn(
             `[shortcuts] Key combo "${combo}" registered by: ${ids.join(", ")}. ` +
               `Highest precedence wins; use "when" guards or distinct precedences to resolve.`,
@@ -44,6 +49,16 @@ export function ShortcutManager() {
     // no `key`, `code` or modifier fields — the DOM typings' keydown →
     // KeyboardEvent mapping lies for them. Such an event names no key, so it is
     // never a shortcut; narrowing here makes every read below sound.
+    // The element last under the pointer, for a region claiming its key by
+    // pointer (`ShortcutRegion.pointer`); `null` once the pointer left the page.
+    let pointerAt: Node | null = null;
+    function handlePointerOver(event: Event) {
+      pointerAt = event.target instanceof Node ? event.target : null;
+    }
+    function handlePointerOut(event: Event) {
+      if (event instanceof PointerEvent && event.relatedTarget === null)
+        pointerAt = null;
+    }
     function handleKeyDown(event: Event) {
       if (!(event instanceof KeyboardEvent)) return;
       const e = event;
@@ -54,9 +69,7 @@ export function ShortcutManager() {
       if (e.defaultPrevented) return;
       const active = shortcutsRef.current;
       const editable = targetClaimsKey(e);
-      let winner: (typeof active)[number] | null = null;
-      let winnerPrecedence = -Infinity;
-
+      const eligible: typeof active = [];
       for (const shortcut of active) {
         const parsed = getCachedCombo(shortcut.keys);
         if (!parsed) continue;
@@ -66,13 +79,33 @@ export function ShortcutManager() {
         // type, so they still fire; a shortcut may opt in via enableInInputs.
         if (editable && !comboIsCommand(parsed) && !shortcut.enableInInputs)
           continue;
-        if (shortcut.when && !shortcut.when(e)) continue;
         if (
           shortcut.surfaceId !== undefined &&
           shortcut.surfaceId !== getFocusedSurfaceId()
         )
           continue;
-
+        eligible.push(shortcut);
+      }
+      // Several instances binding one key on one surface: the one whose
+      // region holds the key (focus, else pointer) — never a guess.
+      const regioned = eligible.filter((s) => s.region !== undefined);
+      const contenders =
+        regioned.length === 0
+          ? eligible
+          : [
+              ...eligible.filter((s) => s.region === undefined),
+              ...regionWinners(regioned, {
+                focus: e.target instanceof Node ? e.target : null,
+                pointer: pointerAt,
+              }),
+            ];
+      let winner: (typeof active)[number] | null = null;
+      let winnerPrecedence = -Infinity;
+      for (const shortcut of contenders) {
+        // `when` runs on the region's owner only: a region that holds the key
+        // but has nothing to do with it (an empty Submit) never hands it to
+        // another region's twin.
+        if (shortcut.when && !shortcut.when(e)) continue;
         const precedence = shortcut.precedence ?? 0;
         if (precedence > winnerPrecedence) {
           winner = shortcut;
@@ -87,7 +120,13 @@ export function ShortcutManager() {
     }
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("pointerover", handlePointerOver, true);
+    document.addEventListener("pointerout", handlePointerOut, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("pointerover", handlePointerOver, true);
+      document.removeEventListener("pointerout", handlePointerOut, true);
+    };
   }, []);
 
   return null;

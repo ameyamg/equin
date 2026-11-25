@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useRef, useState, type ReactElement } from "react";
 import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
@@ -73,15 +73,20 @@ export const decisionDetailPane = Pane.define({
 function DecisionsBody(): ReactElement {
   const openPane = useOpenPane();
   const selectedId = decisionDetailPane.useRouteEntry()?.params.decisionId;
+  // The list and its Submit: where the bar's ⌘↵ belongs (a box of no
+  // layout — the pane lays out its children as before).
+  const region = useRef<HTMLDivElement | null>(null);
   return (
     <PaneChrome pane={decisionsPane}>
-      <DecisionsView
-        selectedId={selectedId}
-        linkTo={(decisionId) =>
-          openPane.to(decisionDetailPane, { decisionId }, { mode: "push" })
-        }
-      />
-      <SubmitBar />
+      <div ref={region} className="contents">
+        <DecisionsView
+          selectedId={selectedId}
+          linkTo={(decisionId) =>
+            openPane.to(decisionDetailPane, { decisionId }, { mode: "push" })
+          }
+        />
+        <SubmitBar region={region} />
+      </div>
     </PaneChrome>
   );
 }

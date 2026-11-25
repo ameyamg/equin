@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, RefObject } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { LiveWhereOf } from "@plugins/network/plugins/live/core";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -41,12 +41,25 @@ const closesOnly = (d: DecisionDraft): boolean => d.close && d.pick === null;
 
 /**
  * The one Submit for every drafted answer — sticky at the foot of a list of
- * decisions, ⌘↵ anywhere on its surface. "N of M answered" (M: what needs the
+ * decisions, ⌘↵ in its `region`. "N of M answered" (M: what needs the
  * user here — Needs you and FYI), and how many go to agents and how many are
  * only kept (their agent has finished); nothing while nothing is answered.
  * `taskId` scopes it to one agent's decisions (the conversation tray).
+ *
+ * ⌘↵ belongs to the bar's `region` — the panel whose drafts it sends — and
+ * only by focus (shortcuts' `ShortcutRegion`): with two bars on one surface
+ * (the inbox's and a task's, two page blocks) the one whose panel holds
+ * focus sends, and with focus in neither nothing is sent; a bar alone on its
+ * surface takes ⌘↵ wherever focus is.
  */
-export function SubmitBar({ taskId }: { taskId?: TaskId }): ReactElement {
+export function SubmitBar({
+  taskId,
+  region,
+}: {
+  taskId?: TaskId;
+  /** The panel this bar submits for: the list or panel it sits at the foot of. */
+  region: RefObject<Element | null>;
+}): ReactElement {
   const { drafts, submit, unavailable } = useDecisionDrafts();
   const draftIds = Object.keys(drafts).filter((id) => {
     const d = drafts[id];
@@ -134,6 +147,7 @@ export function SubmitBar({ taskId }: { taskId?: TaskId }): ReactElement {
       label: "Submit your answers",
       group: "Decisions",
       enableInInputs: true,
+      region: { root: region, pointer: false },
       when: () => count > 0,
       // The button shows its own failure; the key's goes to a toast.
       handler: () =>

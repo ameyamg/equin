@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement } from "react";
+import { useMemo, useRef, useState, type ReactElement } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
@@ -93,6 +93,8 @@ export function TaskDecisionsPanel({
 }): ReactElement | null {
   // Every tab's count for this task, one grouping (the SubmitBar's own read).
   const groups = useLive(decisionsList, { groupBy: "tab", where: { taskId } });
+  // The panel: where its Submit's ⌘↵ belongs.
+  const root = useRef<HTMLElement | null>(null);
   const collapsible = useCollapsible({
     defaultOpen: true,
     keep: `decisions.panel:${taskId}`,
@@ -120,6 +122,7 @@ export function TaskDecisionsPanel({
   return (
     <Text as="div" variant="caption">
       <Clip
+        ref={root}
         className="rounded-md border border-border bg-muted/30"
         data-testid="decisions-panel"
       >
@@ -153,7 +156,7 @@ export function TaskDecisionsPanel({
             {counts.closed > 0 ? (
               <ClosedDecisions taskId={taskId} count={counts.closed} />
             ) : null}
-            <SubmitBar taskId={taskId} />
+            <SubmitBar taskId={taskId} region={root} />
           </Scroll>
         </FoldMotion>
       </Clip>

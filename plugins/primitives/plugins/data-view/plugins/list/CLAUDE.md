@@ -258,8 +258,15 @@ conditional hook.
   drawn (a collapsed section's rows, and those under it, skipped; attached
   rows not stepped to) and reveal it in the list's nearest scroller
   (`use-step-keys.ts`). Needs a row activation (throws otherwise); none
-  selected, j takes the first row. One stepping list per surface. A windowed
-  section only reveals a row that is mounted. The Decisions inbox.
+  selected, j takes the first row. The keys belong to the list's root (a
+  shortcuts region, pointer included): with two stepping lists on one
+  surface the one holding focus — else under the pointer — steps, and
+  neither steps when the key lands in neither; a list alone on its surface
+  steps wherever the key lands. A windowed section reveals the row stepped
+  to through `VirtualRows.revealKey` (mounted or not); j past a declared
+  section's loaded rows grows its read instead of skipping to the next
+  section, and past a flat paged read's the revealed tail row pages it. The
+  Decisions inbox.
 - `frame?: "card"` — each entry (the row and its open detail) is one raised
   card, primary-tinted border while open, the detail on the page ground under
   a hairline, cards a `sm` step apart (padding inside the entry, so windowed

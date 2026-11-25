@@ -15,6 +15,19 @@ shortcut. Before matching, it yields the key to whoever already owns it:
 - **Another surface** — a shortcut registered with `useSurfaceShortcuts` is
   eligible only while its surface is the focused one.
 
+- **Another region** — a shortcut registered with a `region` (its root
+  element, `ShortcutRegion`) belongs to one part of its surface, for a key
+  several instances of one component bind there (two lists' j / k, two
+  Submit bars' ⌘↵). Among the regioned shortcuts matching a keystroke, the
+  one whose root holds focus (the key's target) fires; else, for a region
+  declaring `pointer`, the one under the pointer; else the one regioned
+  shortcut alone on its key. A region nested in another holding the key wins
+  over it. Two left, or none, fire nothing — a key is never handed to a
+  region by guess, so a ⌘↵ declaring focus only never sends another panel's
+  drafts (`internal/region.ts`). The region is decided before `when` runs:
+  the owner's `when` saying no (an empty Submit) fires nothing, never its
+  twin elsewhere.
+
 - **Precedence** — among the eligible shortcuts matching one keystroke, the
   highest `precedence` fires alone. A shortcut that must yield to every other
   binding of its key takes a negative one: a maximized demo's Esc to restore
@@ -90,6 +103,7 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `primitives/scope/surface-id.useSurfaceTabId`
   - Exports (types):
     - `ShortcutDescriptor`
+    - `ShortcutRegion`
     - `SurfaceSignal`
   - Exports (values):
     - `defineShortcut`
