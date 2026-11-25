@@ -125,23 +125,20 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `BrowserExtension.Section` "Header" → `CompanionHeader`
     - `BrowserExtension.Section` "Page actions" → `PageActionsSection`
     - `BrowserExtension.Section` "Footer" → `ExtensionFooter`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `companions/panel` ×4
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `companions/panel` ×5
     - `primitives/slot-render` ×3
-    - `primitives/avatar` ×2
     - `apps-core.Apps`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/line.Line`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useLatestRef`

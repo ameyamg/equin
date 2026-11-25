@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { PanelSection } from "@plugins/companions/plugins/panel/web";
+import { PanelSection, PanelTile } from "@plugins/companions/plugins/panel/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   renderAsContribution,
@@ -9,15 +9,9 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
-import {
-  Avatar,
-  AvatarPresentationProvider,
-} from "@plugins/primitives/plugins/avatar/web";
 import { usePageShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -158,17 +152,7 @@ function PageActionRow({
   const subtitle = actionSubtitle(action, url);
   return (
     <Row
-      icon={
-        <span className={cn("block size-7", rigidClass())}>
-          <AvatarPresentationProvider value="gradient-tile">
-            <Avatar
-              symbol={action.icon.symbol}
-              color={action.icon.color}
-              shape="squircle"
-            />
-          </AvatarPresentationProvider>
-        </span>
-      }
+      icon={<PanelTile symbol={action.icon.symbol} color={action.icon.color} />}
       {...(action.kind === "link"
         ? linkGestureProps(({ elsewhere }) => onRun(elsewhere))
         : { onClick: () => onRun(false) })}

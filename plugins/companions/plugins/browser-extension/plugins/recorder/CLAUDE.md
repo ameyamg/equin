@@ -38,13 +38,13 @@ prototype `proto-1794537939-tuvpg1` ("Record").
     - `ConfigV2.WebRegister` "recorder"
     - `BrowserExtension.Section` "Record" → `RecordSection`
     - `Apps.App` "Recorder relay" → `RecorderRelayPage`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
     - `companions/browser-extension` ×4
     - `infra/endpoints` ×3
+    - `companions/panel` ×2
     - `apps-core.Apps`
     - `apps/file-explorer/browser.useOpenInFiles`
-    - `companions/panel.PanelSection`
     - `config_v2.ConfigV2`
     - `primitives/css/center.Center`
     - `primitives/css/line.Line`
@@ -98,6 +98,8 @@ prototype `proto-1794537939-tuvpg1` ("Record").
     - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --pad-row-x`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --line-height-body`

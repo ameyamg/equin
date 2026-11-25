@@ -167,7 +167,7 @@ color palette.
     - `apps-core/app-launcher`
     - `apps/mail/reading-pane`
     - `code-explorer/commit-detail`
-    - `companions/browser-extension`
+    - `companions/panel`
     - `conversations/agents`
     - `conversations/conversation-category`
     - `conversations/conversation-ui/item`

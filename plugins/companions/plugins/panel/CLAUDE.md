@@ -33,22 +33,21 @@ pick which companions they appear in.
 
 ## Plugin reference
 
-- Description: The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
+- Description: The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere; PanelTile the one icon tile a row leads with (a glyph on a gradient squircle of one categorical colour), so tiles match too. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
 - Web:
   - Slots: `Companion.Status`
   - Slot contributors: `Companion.Status` ← `conversations.companion-status`
   - Contributes:
     - `ThemeEngine.Theme` "Companion (solid)"
     - `ThemeEngine.Theme` "Companion"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/spacing` ×3
+    - `primitives/avatar` ×2
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
@@ -69,6 +68,7 @@ pick which companions they appear in.
     - `CompanionHeader`
     - `CompanionPanel`
     - `PanelSection`
+    - `PanelTile`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --popover`

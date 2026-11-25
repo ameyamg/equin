@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PanelSection } from "@plugins/companions/plugins/panel/web";
+import { PanelSection, PanelTile } from "@plugins/companions/plugins/panel/web";
 import {
   useExtensionHost,
   type ExtensionHost,
@@ -229,9 +229,7 @@ function RecordRow({
         })();
   return (
     <div className="rec-row">
-      <span className="rec-tile">
-        <Icon icon={icons.tile} />
-      </span>
+      <PanelTile symbol={icons.tile} color="rose" />
       <div className="rec-main">
         <Line>
           <Text>Record this tab</Text>

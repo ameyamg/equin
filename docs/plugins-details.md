@@ -16937,23 +16937,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserExtension.Section` "Header" → `CompanionHeader`
           - `BrowserExtension.Section` "Page actions" → `PageActionsSection`
           - `BrowserExtension.Section` "Footer" → `ExtensionFooter`
-        - Uses: 31 symbols — full list in [`plugins/companions/plugins/browser-extension/REFERENCE.md`](../plugins/companions/plugins/browser-extension/REFERENCE.md)
-          - `companions/panel` ×4
+        - Uses: 28 symbols — full list in [`plugins/companions/plugins/browser-extension/REFERENCE.md`](../plugins/companions/plugins/browser-extension/REFERENCE.md)
+          - `companions/panel` ×5
           - `primitives/slot-render` ×3
-          - `primitives/avatar` ×2
           - `apps-core.Apps`
           - `infra/endpoints.useFetchEndpoint`
           - `network/live/live-state.foldResource`
           - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/line.Line`
-          - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/spinner.Spinner`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/latest-ref.useLatestRef`
@@ -17154,13 +17151,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "recorder"
               - `BrowserExtension.Section` "Record" → `RecordSection`
               - `Apps.App` "Recorder relay" → `RecorderRelayPage`
-            - Uses: 27 symbols — full list in [`plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md`](../plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md`](../plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md)
               - `primitives/css/ui-kit` ×5
               - `companions/browser-extension` ×4
               - `infra/endpoints` ×3
+              - `companions/panel` ×2
               - `apps-core.Apps`
               - `apps/file-explorer/browser.useOpenInFiles`
-              - `companions/panel.PanelSection`
               - `config_v2.ConfigV2`
               - `primitives/css/center.Center`
               - `primitives/css/line.Line`
@@ -17214,6 +17211,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-foreground`
               - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
+              - `ui/tokens/density --pad-row-x`
+              - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --line-height-body`
@@ -17370,22 +17369,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-draft-form.DraftPageProvider`
               - `tasks/task-draft-form.NO_DRAFT_PAGE`
               - `wish.WishField`
-    - **`panel`** — The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
+    - **`panel`** — The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere; PanelTile the one icon tile a row leads with (a glyph on a gradient squircle of one categorical colour), so tiles match too. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
       - Web:
         - Slots: `Companion.Status`
         - Slot contributors: `Companion.Status` ← `conversations.companion-status`
         - Contributes:
           - `ThemeEngine.Theme` "Companion (solid)"
           - `ThemeEngine.Theme` "Companion"
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/companions/plugins/panel/REFERENCE.md`](../plugins/companions/plugins/panel/REFERENCE.md)
+          - `primitives/css/spacing` ×3
+          - `primitives/avatar` ×2
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.insetClass`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
@@ -17406,6 +17404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompanionHeader`
           - `CompanionPanel`
           - `PanelSection`
+          - `PanelTile`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --popover`
@@ -51816,7 +51815,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `apps/mail/reading-pane`
           - `code-explorer/commit-detail`
-          - `companions/browser-extension`
+          - `companions/panel`
           - `conversations/agents`
           - `conversations/conversation-category`
           - `conversations/conversation-ui/item`
@@ -53083,7 +53082,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 154 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 153 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×37
               - `conversations` ×29
               - `primitives` ×21
@@ -53096,12 +53095,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×3
               - `config_v2` ×3
               - `backup` ×2
-              - `companions` ×2
               - `infra` ×2
               - `shell` ×2
               - `active-data/show-me`
               - `apps-core/phone-actions`
               - `auth`
+              - `companions/panel`
               - `hints/ask`
               - `reorder/node-types/header`
               - `search/find-in-surface`
@@ -53885,7 +53884,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 489 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 488 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
               - `conversations` ×54
@@ -53903,9 +53902,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder` ×5
               - `review` ×5
               - `auth` ×4
-              - `companions` ×4
               - `integrations` ×4
               - `active-data` ×3
+              - `companions` ×3
               - `framework` ×3
               - `backup` ×2
               - `hints` ×2
@@ -69734,7 +69733,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 367 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 368 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×74
               - `primitives` ×73
               - `conversations` ×51
@@ -69751,11 +69750,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×4
               - `stats` ×4
               - `build` ×3
+              - `companions` ×3
               - `config_v2` ×3
               - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
-              - `companions` ×2
               - `framework` ×2
               - `map` ×2
               - `screenshot` ×2
