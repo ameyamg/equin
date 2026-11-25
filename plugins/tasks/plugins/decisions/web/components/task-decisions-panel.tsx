@@ -297,6 +297,8 @@ const OPEN_LIST_OPTIONS = {
     ),
     detailOnActivate: true,
     frame: "fold",
+    // One decision open at a time: opening one folds the one read before.
+    detailExclusive: true,
     lines: 1,
   },
 } as const;
@@ -307,6 +309,8 @@ const CLOSED_LIST_OPTIONS = {
     ),
     detailOnActivate: true,
     frame: "fold",
+    // One decision open at a time: opening one folds the one read before.
+    detailExclusive: true,
     lines: 1,
   },
 } as const;

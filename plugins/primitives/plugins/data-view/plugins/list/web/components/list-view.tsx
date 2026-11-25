@@ -250,6 +250,9 @@ interface ListRowConfig {
   detail: ListViewOptions<unknown>["detail"];
   /** Activating the row toggles its detail (`ListViewOptions.detailOnActivate`). */
   detailOnActivate: boolean;
+  /** Opens or closes one row's detail — closing every other open one first
+   *  under `ListViewOptions.detailExclusive`. Stable identity. */
+  toggleDetail: (key: string, open: boolean) => void;
   /** The entry's box (`ListViewOptions.frame`). */
   frame: ListViewOptions<unknown>["frame"];
   /** What the row's leading disclosure folds (`TreeLeading` in `Row`'s
@@ -492,6 +495,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       "data-view list: `detailOnActivate` needs a `detail` to open",
     );
   }
+  const detailExclusive = options.detailExclusive === true;
+  if (detailExclusive && !detail) {
+    throw new Error(
+      "data-view list: `detailExclusive` needs a `detail` to open",
+    );
+  }
   const frame = options.frame;
   if (frame && options.rowChrome === "tree") {
     throw new Error(
@@ -507,6 +516,18 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     () => paintedSequence(sections),
     [sections],
   );
+  // One row's detail toggle. Exclusive: opening it closes every other drawn
+  // row whose detail is open, in the same batch (one write of the expand map).
+  const toggleDetail = useEventCallback((key: string, open: boolean) => {
+    const changes = [{ id: key, expanded: !open }];
+    if (!open && detailExclusive) {
+      for (const [id, isOpen] of Object.entries(props.expanded ?? {})) {
+        if (isOpen && id !== key && sequence.rowOf(id) !== undefined)
+          changes.push({ id, expanded: false });
+      }
+    }
+    setExpanded(changes);
+  });
   // j / k step the selection through the rows as drawn (`stepKeys`),
   // revealing the row stepped to under the list's root.
   const listRoot = useRef<HTMLElement | null>(null);
@@ -625,6 +646,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       labelClassName,
       detail,
       detailOnActivate,
+      toggleDetail,
       frame,
       // A row that IS its detail's disclosure draws no glyph for it.
       disclosure: anyAttached
@@ -660,6 +682,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     labelClassName,
     detail,
     detailOnActivate,
+    toggleDetail,
     frame,
     rowActivation,
     rowTone,
@@ -1557,11 +1580,11 @@ function listRowNode(
     disclosure === "attach" ? childCount > 0 : disclosure === "detail";
   const isOpen = disclosure === "attach" ? childrenOpen : open;
   const toggle = (): void =>
-    config.setExpanded([
-      disclosure === "attach"
-        ? { id: attachExpandKey(key), expanded: !childrenOpen }
-        : { id: key, expanded: !open },
-    ]);
+    disclosure === "attach"
+      ? config.setExpanded([
+          { id: attachExpandKey(key), expanded: !childrenOpen },
+        ])
+      : config.toggleDetail(key, open);
   // A list with both `attach` and `detail` leads with the attached rows; the
   // detail's toggle then stays a cluster action.
   const detailInCluster =
@@ -1576,7 +1599,7 @@ function listRowNode(
     );
   }
   const activation = config.detailOnActivate
-    ? () => config.setExpanded([{ id: key, expanded: !open }])
+    ? () => config.toggleDetail(key, open)
     : surfaceActivation;
   const rowNode = (
     <Row
@@ -1622,7 +1645,7 @@ function listRowNode(
               icon={open ? collapseIcon : expandIcon}
               label={open ? "Hide details" : "Show details"}
               aria-expanded={open}
-              onClick={() => config.setExpanded([{ id: key, expanded: !open }])}
+              onClick={() => config.toggleDetail(key, open)}
             />
             {itemActionNodes}
           </>

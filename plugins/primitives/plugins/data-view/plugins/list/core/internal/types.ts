@@ -87,6 +87,12 @@ export interface ListViewOptions<TRow> {
    */
   detailOnActivate?: boolean;
   /**
+   * At most one row's detail is open: opening one closes every other open
+   * detail of the list — for a list read one opened row at a time (a
+   * task's decisions, each answered in its own detail). Needs `detail`.
+   */
+  detailExclusive?: boolean;
+  /**
    * j / k step the selection to the next / previous row as drawn (sections
    * in order, a collapsed section's rows skipped): the surface's row
    * activation is run for that row, so the step does what a click on it
