@@ -181,6 +181,7 @@ hover.
     - `infra/namespace.namespaceUrl`
     - `primitives/pane.defineApp`
     - `primitives/pane/route-prefix.addressPathOf`
+    - `primitives/pane/route-prefix.isUnderAddressRoot`
     - `primitives/pane/route-prefix.routePathOf`
     - `ui/icons.symbol`
   - Exports (values):
@@ -198,6 +199,7 @@ hover.
     - `localSiteUrl`
     - `PUBLIC_SITE_ORIGIN`
     - `publicSitePageUrl`
+    - `publicSiteRoutePath`
     - `publicSiteUrl`
     - `websiteApp`
     - `websiteDestinationOf`

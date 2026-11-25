@@ -21,13 +21,13 @@
     - `apps/website/shell.isLocalAppUrl`
     - `apps/website/shell.isPublicSiteUrl`
     - `apps/website/shell.publicSitePageUrl`
+    - `apps/website/shell.publicSiteRoutePath`
     - `infra/launcher/gateway-port.pagePort`
     - `infra/namespace.MAIN_WORKTREE_NAME`
     - `infra/namespace.Namespace`
     - `infra/namespace.namespaceFromHost`
     - `infra/namespace.namespaceUrl`
     - `primitives/pane.readEmbedTail`
-    - `primitives/pane/route-prefix.routePathOf`
   - Exports (types):
     - `EquinAddress`
     - `EquinInstance`

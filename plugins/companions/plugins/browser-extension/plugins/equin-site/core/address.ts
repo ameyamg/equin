@@ -2,6 +2,7 @@ import {
   isLocalAppUrl,
   isPublicSiteUrl,
   publicSitePageUrl,
+  publicSiteRoutePath,
 } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { WEBSITE_BASE_PATH } from "@plugins/apps/plugins/website/plugins/crawlable/core";
 import {
@@ -9,7 +10,6 @@ import {
   demoPagePath,
 } from "@plugins/apps/plugins/website/plugins/live-demo/core";
 import { readEmbedTail } from "@plugins/primitives/plugins/pane/core";
-import { routePathOf } from "@plugins/primitives/plugins/pane/plugins/route-prefix/core";
 import {
   MAIN_WORKTREE_NAME,
   namespaceFromHost,
@@ -53,8 +53,8 @@ export function parseEquinAddress(url: URL): EquinAddress | null {
   const suffix = url.search + url.hash;
   if (isPublicSiteUrl(url)) {
     // The published site serves the website app at `/`: its route path is
-    // the address with the base path put back.
-    const view = viewOfSitePath(routePathOf(url.pathname, WEBSITE_BASE_PATH));
+    // read as the gateway reads it (an address, or the route's own spelling).
+    const view = viewOfSitePath(publicSiteRoutePath(url.pathname));
     return { instance: { kind: "public" }, view, suffix };
   }
   if (!isLocalAppUrl(url)) return null;

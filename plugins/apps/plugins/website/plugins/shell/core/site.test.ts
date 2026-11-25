@@ -7,6 +7,7 @@ import {
   localSiteUrl,
   PUBLIC_SITE_ORIGIN,
   publicSitePageUrl,
+  publicSiteRoutePath,
   publicSiteUrl,
   DISCORD_URL,
   ISSUES_URL,
@@ -24,6 +25,25 @@ describe("the site's two origins", () => {
     expect(localSiteUrl(new URL(`${PUBLIC_SITE_ORIGIN}/`), 8700)).toBe(
       `${local}/about`,
     );
+  });
+
+  test("a published path reads as the gateway reads it: an address, or the route's own spelling", () => {
+    // The gateway 301s `/about/…` on equin.ai to its address, so both spell
+    // the same page — never a doubled base path.
+    for (const [path, route] of [
+      ["/", "/about"],
+      ["/guide", "/about/guide"],
+      ["/demo/at/isle", "/about/demo/at/isle"],
+      ["/about", "/about"],
+      ["/about/guide", "/about/guide"],
+      ["/about/demo/at/isle", "/about/demo/at/isle"],
+      ["/;k=v", "/about;k=v"],
+      ["/aboutx", "/about/aboutx"],
+    ])
+      expect(publicSiteRoutePath(path!)).toBe(route!);
+    expect(
+      localSiteUrl(new URL(`${PUBLIC_SITE_ORIGIN}/about/guide?x=1`), 8700),
+    ).toBe(`${local}/about/guide?x=1`);
   });
 
   test("a local site page opens on equin.ai without the base path", () => {

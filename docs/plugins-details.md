@@ -14193,6 +14193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/namespace.namespaceUrl`
               - `primitives/pane.defineApp`
               - `primitives/pane/route-prefix.addressPathOf`
+              - `primitives/pane/route-prefix.isUnderAddressRoot`
               - `primitives/pane/route-prefix.routePathOf`
               - `ui/icons.symbol`
             - Exports (values):
@@ -14210,6 +14211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `localSiteUrl`
               - `PUBLIC_SITE_ORIGIN`
               - `publicSitePageUrl`
+              - `publicSiteRoutePath`
               - `publicSiteUrl`
               - `websiteApp`
               - `websiteDestinationOf`
@@ -17128,13 +17130,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/shell.isLocalAppUrl`
               - `apps/website/shell.isPublicSiteUrl`
               - `apps/website/shell.publicSitePageUrl`
+              - `apps/website/shell.publicSiteRoutePath`
               - `infra/launcher/gateway-port.pagePort`
               - `infra/namespace.MAIN_WORKTREE_NAME`
               - `infra/namespace.Namespace`
               - `infra/namespace.namespaceFromHost`
               - `infra/namespace.namespaceUrl`
               - `primitives/pane.readEmbedTail`
-              - `primitives/pane/route-prefix.routePathOf`
             - Exports (types):
               - `EquinAddress`
               - `EquinInstance`
@@ -58862,7 +58864,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/crawlable`
               - `apps/website/live-demo`
               - `apps/website/shell`
-              - `companions/browser-extension/equin-site`
               - `framework/web-core`
               - `primitives/dom/static-render`
               - `primitives/link-gesture`

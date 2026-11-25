@@ -13,6 +13,7 @@ export {
   localSiteUrl,
   PUBLIC_SITE_ORIGIN,
   publicSitePageUrl,
+  publicSiteRoutePath,
   publicSiteUrl,
   websiteDestinationOf,
 } from "./site";

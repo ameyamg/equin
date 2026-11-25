@@ -5,6 +5,7 @@ import {
 import { WEBSITE_BASE_PATH } from "@plugins/apps/plugins/website/plugins/crawlable/core";
 import {
   addressPathOf,
+  isUnderAddressRoot,
   routePathOf,
 } from "@plugins/primitives/plugins/pane/plugins/route-prefix/core";
 import {
@@ -126,13 +127,26 @@ export function isLocalAppUrl(url: URL): boolean {
 }
 
 /**
+ * The website route path a published page's `pathname` names, the way the
+ * gateway reads it (`gateway/proxy.go`, homeAtRoot): an address (`/guide`)
+ * gets the base path put back (`/about/guide`), and the route's own spelling
+ * (`/about/guide`, which the gateway 301s to its address) is already one —
+ * so a published URL never maps to a doubled base path.
+ */
+export function publicSiteRoutePath(pathname: string): string {
+  return isUnderAddressRoot(pathname, PUBLIC_SITE_ROOT)
+    ? pathname
+    : routePathOf(pathname, PUBLIC_SITE_ROOT);
+}
+
+/**
  * A published page, on the local instance whose gateway listens on `port`: the
- * base path put back.
+ * base path put back (see {@link publicSiteRoutePath}).
  */
 export function localSiteUrl(url: URL, port: number): string {
   if (!isPublicSiteUrl(url))
     throw new Error(`${url.href} is not a page of ${PUBLIC_SITE_ORIGIN}`);
-  return `${localAppUrl(port)}${routePathOf(url.pathname, PUBLIC_SITE_ROOT)}${url.search}${url.hash}`;
+  return `${localAppUrl(port)}${publicSiteRoutePath(url.pathname)}${url.search}${url.hash}`;
 }
 
 /**

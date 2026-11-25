@@ -73,6 +73,45 @@ describe("an equin page as instance × view", () => {
     ).toBe(`${MAIN}/about/guide`);
   });
 
+  test("open locally and back, from root, nested and route-spelled published pages", () => {
+    const local = (href: string) =>
+      fmt(moveInstance(parse(href), mainInstance(8700)));
+    const published = (href: string) =>
+      fmt(moveInstance(parse(href), { kind: "public" }));
+    for (const [pub, loc, back] of [
+      ["https://equin.ai/", `${MAIN}/about`, "https://equin.ai/"],
+      [
+        "https://equin.ai/guide",
+        `${MAIN}/about/guide`,
+        "https://equin.ai/guide",
+      ],
+      [
+        "https://equin.ai/a/b?q=1#h",
+        `${MAIN}/about/a/b?q=1#h`,
+        "https://equin.ai/a/b?q=1#h",
+      ],
+      // The route's own spelling, which the gateway 301s to its address.
+      ["https://equin.ai/about", `${MAIN}/about`, "https://equin.ai/"],
+      [
+        "https://equin.ai/about/guide",
+        `${MAIN}/about/guide`,
+        "https://equin.ai/guide",
+      ],
+      [
+        "https://equin.ai/about/demo/at/isle",
+        `${MAIN}/about/demo/at/isle`,
+        "https://equin.ai/demo/at/isle",
+      ],
+    ] as const) {
+      expect(local(pub)).toBe(loc);
+      expect(published(loc)).toBe(back);
+    }
+    expect(parse("https://equin.ai/about/demo/at/isle").view).toEqual({
+      kind: "demo",
+      place: "/isle",
+    });
+  });
+
   test("the app's own spelling of a place survives the demo round trip", () => {
     const href = `${WT}/sonata/song-x;lens=notation`;
     const demo = flipView(parse(href), 8700)!;
