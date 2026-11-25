@@ -326,35 +326,40 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `claudeBin` in launch.json is never carried over, so a relaunch from an
   options file written for the computer's own `claude` moves onto it. The
   computer's install is never run.
-- macOS permission prompts (`machine/internal/named-claude.ts`): with
-  disclaim-exec (packages/spawn-disclaim) claude is its own responsible
-  process, and a prompt names its executable file. Each start clones
-  claude (an APFS clone, packages/process-name) to `<agent dir>/bin/equin · <conv-id> · <title>` and the agent spawns that
-  (`namedClaudeBin` in launch.json), so a prompt says which agent asks. TCC
-  keys a bundle-less client by path, so each conversation's grants are its
-  own; the name is chosen at its first start and kept across relaunches
-  (read back from the previous launch.json), re-cloned from the current binary
-  when it changed.
-- **An agent's claude clone outlives its process** (`<agent dir>/bin/`). Each
-  fresh executable costs a macOS malware scan on its first exec — 3–4 s for
-  the 322 MB claude, ~1.7 s for bun (measured 2026-11-12; a second exec
-  0.03 s) — and a start that finds a current clone reuses it
-  (`cloneNamedBinary`). Clones used to be removed on exit, so every wake of a
-  hibernated conversation, rewind relaunch and account move paid the scans
-  inside the request (`resume-hibernated` at 6–13 s). The daily
-  `runtime-sdk.agent-dirs-reclaim` removes a kept clone an upgrade has
-  replaced (`pruneStaleClones`, never a running agent's), so a stopped agent
-  pins no old build; the whole folder goes with the workspace.
-- **A hibernated conversation's clone is warmed before it is woken**
-  (`machine/internal/warm-clones.ts`, `runtime-sdk.warm-claude-clones`: at
-  boot and hourly). A Claude Code upgrade makes every kept clone outdated, so
-  the first wake after one re-cloned and paid the scan inside
-  `resume-hibernated` (3.4–9.4 s on every wake after a version change,
-  2026-11-11 → 17; 0.3–1.1 s on the same version). The job re-clones each
-  hibernated conversation's outdated clone under its kept name and runs it
-  once (`--version`, darwinbg): the verdict covers the agent's later exec
-  through disclaim-exec (measured: 3.3 s, then 0.02 s). A conversation this
-  backend never started (no launch.json in its namespace) is skipped.
+- macOS permission prompts and the Activity Monitor name
+  (`machine/internal/named-launcher.ts`): each start copies the disclaim-exec
+  helper (packages/spawn-disclaim, 35 KB) to
+  `<agent dir>/bin/equin · <conv-id> · <title>` (`namedLauncher` in
+  launch.json) and the agent spawns
+  `disclaim-exec <that copy> --exec-named <claude> …`. The disclaim makes the
+  copy the responsible process; the copy names the process after its own file
+  and becomes the one bundled claude (same pid). So a prompt says which agent
+  asks, TCC keys the grants by the copy's path (each conversation's are its
+  own), and Activity Monitor lists the conversation; `ps` shows the name as
+  argv[0], `top` says `claude`. The name is chosen at the conversation's
+  first start and kept across relaunches (read back from the previous
+  launch.json).
+- **No per-conversation copy of claude** (until 2026-11-25 the named file was
+  an APFS clone of claude itself). macOS scans a new executable file on its
+  first exec, for a time that grows with the file: 3.3 s for the 344 MB
+  claude at every new conversation's first start and again after every
+  Claude Code upgrade (which a `warm-claude-clones` job pre-paid for
+  hibernated conversations), ~0.15 s for the launcher. Measured 2026-11-24
+  with the real claude: tccd logs `responsible_path` = the launcher and
+  `binary_path` = claude, and prompts for the launcher's path; the
+  LaunchServices display name set before the exec stays the pid's. The
+  bundled claude is scanned once per install, in the build
+  (claude-cli/sdk's `scanBundledClaudeNow`).
+- **The launcher outlives its process** (`<agent dir>/bin/`), so a later
+  start finds it current and already scanned (`cloneNamedBinary`). The daily
+  `runtime-sdk.agent-dirs-reclaim` removes what is not a current copy of the
+  helper (`pruneStaleClones`, never a running agent's): a launcher a helper
+  rebuild replaced, and the claude clones older starts left. The whole folder
+  goes with the workspace.
+- **The launcher is ad-hoc signed**, so TCC ties a grant to its exact bytes:
+  a rebuilt helper (its C source or the compiler changed) makes every
+  conversation ask again, as did the move from claude clones to launchers.
+  A Claude Code upgrade no longer touches the identity.
 - **The agent's bun is shared**: `equin · agent`, one clone per machine and Bun
   version (packages/process-name `cloneSharedBun`, beside the CLI verbs), so a
   new conversation's first start no longer scans a fresh bun (~1.7 s). The
@@ -362,16 +367,6 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   longer this backend's (`pruneStaleSharedBuns`) unless a running agent's
   launch.json names it, and the per-conversation bun clones older starts left
   in `bin/`.
-- **Why the claude clone is still per conversation** — the first start's
-  remaining ~3 s: its path is the conversation's macOS permission identity
-  (TCC keys a bundle-less client by path) and its Activity Monitor name, and
-  macOS keeps a scan's verdict per (path, file) — a pre-scanned clone renamed,
-  moved or hardlinked to a new path is scanned again; signature, notarization
-  and provenance change nothing; a symlink is not scanned but names the
-  process (and its TCC identity) after its target (process-name's CLAUDE.md
-  has the measurements). Removing it means giving up per-conversation grants
-  (one shared claude path), or exempting the parent from the scan (Developer
-  Tools), or a macOS that keys the verdict by cdhash.
 
 Gotchas the spike hit:
 
@@ -486,7 +481,6 @@ Gotchas the spike hit:
     - `defineJob('runtime-sdk.attempt-ended')`
     - `defineJob('runtime-sdk.auto-resume')`
     - `defineJob('runtime-sdk.agent-dirs-reclaim')`
-    - `defineJob('runtime-sdk.warm-claude-clones')`
     - `defineJob('runtime-sdk.orphan-agents')`
   - Routes:
     - `POST /api/claude-usage/refresh`

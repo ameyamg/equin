@@ -250,12 +250,13 @@ async function runningAgentBuns(
 }
 
 /**
- * A kept agent directory's outdated clones. An agent keeps its named claude
+ * A kept agent directory's outdated clones. An agent keeps its named launcher
  * past its exit: a fresh one costs a malware scan on its first exec, and the
- * next start reuses a current one. A clone an upgrade has since replaced is no
- * use to that start (it re-clones) and pins the old build's blocks, so it goes
- * here — unless the agent runs on it. So does a per-conversation bun clone an
- * older start made (the agent now runs the shared `equin · agent`).
+ * next start reuses a current one. A copy a helper rebuild has since replaced
+ * is no use to that start (it re-copies), so it goes here — unless the agent
+ * runs on it. So do the per-conversation claude and bun clones older starts
+ * made (the agent now runs the one bundled claude through its launcher, on
+ * the shared `equin · agent`), which pin an old build's blocks.
  */
 async function pruneStaleClones(
   roots: AgentDirRoots,

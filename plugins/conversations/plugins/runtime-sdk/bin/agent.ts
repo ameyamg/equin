@@ -54,7 +54,10 @@ import {
   claudeQuery,
   claudeSessionEnv,
 } from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
-import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
+import {
+  disclaimArgv,
+  execNamedArgv,
+} from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
   claudeCodeBlockMessage,
   statusOfInitialize,
@@ -490,10 +493,8 @@ const canUseTool: CanUseTool = async (
 let cli: ChildProcessByStdio<Writable, Readable, null> | null = null;
 const session = claudeQuery({
   env: sessionEnv,
-  // The conversation-named clone when the backend made one (so macOS
-  // names this agent in a permission prompt), else the Agent SDK's bundled
-  // Claude Code the backend resolved.
-  bin: options.namedClaudeBin ?? options.claudeBin,
+  // The Agent SDK's bundled Claude Code the backend resolved.
+  bin: options.claudeBin,
   prompt: inputStream(),
   options: {
     cwd: options.cwd,
@@ -545,17 +546,20 @@ const session = claudeQuery({
       ? { sessionId: options.sessionId }
       : {}),
     // Same argv, cwd, env and abort signal the SDK would spawn with — run
-    // through `disclaim-exec` when the backend resolved it, which execs the
-    // CLI in place (same pid, stdio and signals) as its own responsible
-    // process, so macOS names claude, not the gateway, in a permission
-    // prompt. Its stderr goes straight to ours (agent.log).
+    // through `disclaim-exec` when the backend resolved it, and through the
+    // conversation-named launcher when it made one: the disclaim makes the
+    // launcher the responsible process, and the launcher names the process
+    // after its own file and becomes the CLI — all in place (same pid, stdio
+    // and signals). So a macOS permission prompt and Activity Monitor name
+    // this conversation, not the gateway or a bare `claude`. Its stderr goes
+    // straight to ours (agent.log).
     spawnClaudeCodeProcess: ({ command, args, cwd, env, signal }) => {
-      const [bin, ...argv] = disclaimArgv(options.disclaimExec, [
-        command,
-        ...args,
-      ]);
+      const [bin, ...argv] = disclaimArgv(
+        options.disclaimExec,
+        execNamedArgv(options.namedLauncher, [command, ...args]),
+      );
       log(
-        `● spawning claude: ${bin === command ? command : `${bin} ${command}`}`,
+        `● spawning claude: ${[bin, ...argv.slice(0, argv.indexOf(command) + 1)].join(" ")}`,
       );
       cli = spawn(bin, argv, {
         cwd,
@@ -854,13 +858,11 @@ process.on("exit", () => {
 });
 
 /**
- * What the agent leaves only while it lives: its pid file. The named claude
- * and bun it runs on stay, for the conversation's next start: each is a file
- * macOS scans on its first exec (syspolicyd: ~3.2 s for the 322 MB claude,
- * ~1.2 s for bun, measured 2026-11-12), and a clone the next start finds
- * current is not re-made (`cloneNamedBinary`). Removed on exit, every wake of
- * a hibernated conversation, every rewind and account relaunch paid both
- * scans again. A clone an upgrade left behind is the reclaim job's
+ * What the agent leaves only while it lives: its pid file. The named launcher
+ * its claude runs through stays, for the conversation's next start: it is a
+ * file macOS scans on its first exec (syspolicyd, ~0.15 s for the helper's
+ * 35 KB), and a copy the next start finds current is not re-made
+ * (`cloneNamedBinary`). A copy a helper rebuild left behind is the reclaim job's
  * (`agent-dirs-reclaim.ts`, `pruneStaleClones`), as is the whole folder once
  * the conversation's workspace goes.
  */

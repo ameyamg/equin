@@ -66,10 +66,11 @@ export function agentOptionsPath(conversationId: string): AppPath {
 }
 
 /**
- * Where the agent's conversation-named claude clone lives (see
- * `named-claude.ts`): `<agent dir>/bin/`. Its bun is the machine-wide
- * `equin · agent` (`startAgentProcess`); a per-conversation bun clone an older
- * start left here is pruned by the daily reclaim once its agent stops.
+ * Where the agent's conversation-named launcher lives (see
+ * `named-launcher.ts`): `<agent dir>/bin/`. Its claude is the one bundled
+ * build and its bun the machine-wide `equin · agent` (`startAgentProcess`); a
+ * per-conversation claude or bun clone an older start left here is pruned by
+ * the daily reclaim once its agent stops.
  */
 export function agentBinDir(conversationId: string): AppPath {
   return joinAppPath(agentDir(conversationId), "bin");

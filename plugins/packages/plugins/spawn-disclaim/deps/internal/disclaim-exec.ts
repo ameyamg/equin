@@ -25,7 +25,7 @@ export const disclaimExec = defineDep({
   id: "disclaim-exec",
   owner: "packages/spawn-disclaim",
   description:
-    "The native helper an agent runs claude through, so macOS attributes claude's permission prompts to claude instead of the gateway",
+    "The native helper an agent runs claude through, so macOS attributes claude's permission prompts to the agent instead of the gateway — and, copied under the conversation's name, the tiny launcher that gives the agent's claude that name in permission prompts and Activity Monitor",
   sizeHint: "≈50 KB",
   source: build({
     inputs: ["plugins/packages/plugins/spawn-disclaim/native/**"],
@@ -57,6 +57,8 @@ export const disclaimExec = defineDep({
           "-std=c11",
           "-arch",
           arch,
+          "-framework",
+          "CoreFoundation",
           "-o",
           ctx.output,
           "plugins/packages/plugins/spawn-disclaim/native/disclaim-exec.c",

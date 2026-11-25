@@ -32,7 +32,7 @@ import {
 import { currentAgentRow } from "./agent-row-lease";
 import { liveAgentIds } from "./agent-processes";
 import { resolveDisclaimExec } from "./disclaim";
-import { namedClaudeBin } from "./named-claude";
+import { namedLauncher } from "./named-launcher";
 import { agentBackgroundShell } from "./background-shell";
 import { durableCheckoutRoot } from "@plugins/infra/plugins/git/plugins/main-slots/core";
 import {
@@ -114,13 +114,14 @@ export async function nextLaunchAccount(): Promise<string> {
 }
 
 /**
- * The named claude the conversation's previous start spawned, from the options
- * file it left — so a relaunch keeps the name (and its macOS grants).
+ * The named launcher the conversation's previous start ran claude through,
+ * from the options file it left — so a relaunch keeps the name (and its macOS
+ * grants).
  */
-async function previousNamedClaudeBin(id: string): Promise<string | null> {
+async function previousNamedLauncher(id: string): Promise<string | null> {
   const path = agentOptionsPath(id);
   if (!(await exists(path))) return null;
-  return (await readAgentOptions(id)).namedClaudeBin;
+  return (await readAgentOptions(id)).namedLauncher;
 }
 
 /** The options file the conversation's last start wrote. */
@@ -160,7 +161,7 @@ async function sizeOrZero(path: string): Promise<number> {
 /**
  * Start the agent process for `id` with `options`, written here as its
  * options file — with this start's own `claudeBin` (the Agent SDK's bundled
- * build), `disclaimExec` and named clone (whatever `options` carried from a
+ * build), `disclaimExec` and named launcher (whatever `options` carried from a
  * previous launch is replaced). Its stdout and stderr (the
  * human log, the SDK's and the CLI's warnings, a crash before the first event)
  * append to `agent.log`.
@@ -187,11 +188,10 @@ export async function startAgentProcess(
   await mkdir(agentScratchDir(id), { recursive: true, mode: 0o700 });
   const claudeBin = await bundledClaudeBin();
   const disclaimExec = await resolveDisclaimExec(id);
-  const namedClaude = await namedClaudeBin({
+  const launcher = await namedLauncher({
     conversationId: id,
-    claudeBin,
     disclaimExec,
-    previous: await previousNamedClaudeBin(id),
+    previous: await previousNamedLauncher(id),
   });
   // This backend's own bun, by path (the login shell's PATH is the account's),
   // named `equin · agent` — one clone per machine and Bun version, shared by
@@ -215,7 +215,7 @@ export async function startAgentProcess(
     guardsRoot: await durableCheckoutRoot(intent.guardsRoot),
     claudeBin,
     disclaimExec,
-    namedClaudeBin: namedClaude,
+    namedLauncher: launcher,
     namedBun,
     backgroundShell: await agentBackgroundShell(agentBinDir(id)),
     seqFloor: await appliedSeq(id),

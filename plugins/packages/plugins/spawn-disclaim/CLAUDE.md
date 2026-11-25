@@ -8,13 +8,23 @@ So every agent's prompt said "gateway", and one Allow covered every agent.
 Run through `disclaim-exec`, claude is responsible for itself and everything it
 starts. Design: `research/2026-10-24-global-macos-permissions.md` §4.
 
-The prompt names claude's executable FILE (it has no bundle) — for the native
-installer its version, `2.1.308` — and TCC keys a bundle-less client's
-decisions by that path too (measured 2026-10-24: an Allow given to a renamed
-hardlink of the binary did not reach the original path). So
-`conversations/runtime-sdk` spawns a per-conversation clone (an APFS clone, `packages/process-name`) named
-`<title> · <conv-id>` (`machine/internal/named-claude.ts`): the prompt says
-which agent asks, and each conversation's grants are its own.
+The prompt names the responsible process's executable FILE (claude has no
+bundle), and TCC keys a bundle-less client's decisions by that path too
+(measured 2026-10-24: an Allow given to a renamed hardlink of the binary did
+not reach the original path). So `conversations/runtime-sdk` runs claude
+through a COPY of this helper named for the conversation
+(`equin · <conv-id> · <title>`, `machine/internal/named-launcher.ts`):
+
+    disclaim-exec <named copy> --exec-named <claude> [args…]
+
+The disclaim makes the named copy the responsible process; the copy gives the
+process its own file name as its LaunchServices display name (what Activity
+Monitor lists) and becomes claude with a plain `execv`. TCC keeps charging the
+copy's path after that exec (measured 2026-11-24 with the real claude: tccd's
+`responsible_path` is the copy, `binary_path` claude, and the prompt is for the
+copy). So the prompt says which agent asks, each conversation's grants are its
+own, and the only per-conversation file macOS has to scan is 35 KB (~0.15 s)
+instead of a 344 MB clone of claude (~3.3 s).
 
 - `native/disclaim-exec.c` — `disclaim-exec <program> [args…]`:
   `posix_spawnattr_init` → `responsibility_spawnattrs_setdisclaim(&a, 1)` →
@@ -26,9 +36,19 @@ which agent asks, and each conversation's grants are its own.
   claude never starts, loudly. `--print-responsible [pid]` prints who is
   responsible for a pid (`responsibility_get_pid_responsible_for_pid`), for
   verification.
+- `<named copy> --exec-named <program> [args…]` (same source, second mode):
+  the display name through LaunchServices' private SPI (`_LSApplicationCheckIn`,
+  `_LSSetApplicationInformationItem` with `_kLSDisplayNameKey` — what Chromium
+  names its helpers with), looked up with `dlsym` at run time, then `execv`
+  with argv[0] kept (so `ps` shows the name). The registration is the pid's,
+  so it survives the exec; background-only, no Dock icon. A name that cannot
+  be set is one stderr line and the program still runs: the name is what a
+  list shows, not who is charged. `top` reads the kernel's name (`claude`).
 - `disclaimExec` (`deps/` barrel) — the compiled helper, a `build` dependency:
   identity = the `.c` hash + `cc --version` + target. macOS only (arm64 / x64,
   `cc -arch`), `admission: { none }` (one tiny compile), `bundle: { optional }`.
+- `execNamedArgv(named | null, argv)` (`core/`) — `[named, "--exec-named",
+  …argv]`, to wrap in `disclaimArgv`.
 - `disclaimArgv(helper | null, argv)` / `spawnDisclaimWanted()` (`core/`,
   import-free) — `[helper, …argv]` on macOS, `argv` unchanged with no helper,
   off macOS, or under `EQUIN_NO_SPAWN_DISCLAIM=1`.
@@ -44,7 +64,7 @@ start (`resolveDisclaimExec`: `readyNow`, else at most 5 s on the install, else
 a `SdkAgentDisclaimUnavailable` report and a launch without it — an agent never
 fails for this). The path rides in `launch.json` (`disclaimExec`, rewritten by
 every start), and `bin/agent.ts`'s `spawnClaudeCodeProcess` spawns
-`disclaimArgv(...)`. Backends themselves stay attributed to the gateway (right
+`disclaimArgv(helper, execNamedArgv(namedLauncher, …))`. Backends themselves stay attributed to the gateway (right
 for app-level grants), and non-interactive `claude -p` probes are not wrapped.
 
 ## Things that look wrong and are not
@@ -60,6 +80,9 @@ for app-level grants), and non-interactive `claude -p` probes are not wrapped.
   environment is an allowlist (`agent-launch`), so the variable never reaches
   it; the backend resolves `disclaimExec` to null instead. It reaches the
   backend through the gateway's `-child-env` (`launcher/core` runtime-env).
+- **The named copy is ad-hoc signed** (the linker's signature), so TCC ties a
+  grant to its exact bytes: a rebuild that changes them (this source, the
+  compiler) makes every conversation ask again. Keep changes here rare.
 - **Verify through a child.** A process whose responsible ancestor has exited
   reads as responsible for itself, so "the disclaimed process reports its own
   pid" proves nothing alone; the tests check that a disclaimed program's child
@@ -78,6 +101,7 @@ for app-level grants), and non-interactive `claude -p` probes are not wrapped.
   - Uses: `infra/launcher/env-names.readEnv`
   - Exports (values):
     - `disclaimArgv`
+    - `execNamedArgv`
     - `spawnDisclaimWanted`
 - Deps:
   - Uses:

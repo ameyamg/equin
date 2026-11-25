@@ -1,6 +1,6 @@
-// The file name of an agent's named claude (`named-claude.ts`) — what a macOS
-// permission prompt shows as the asking app, and what System Settings lists
-// under each privacy permission. Product name first, then the id, so every
+// The file name of an agent's named launcher (`named-launcher.ts`) — what a
+// macOS permission prompt shows as the asking app, what System Settings lists
+// under each privacy permission, and what Activity Monitor calls the process. Product name first, then the id, so every
 // agent sorts together under equin there instead of scattering by title.
 
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";

@@ -22,8 +22,10 @@ const SCAN_TIMEOUT_MS = 60_000;
  * instead, the restart finds a scanned file. Already scanned, this costs one
  * ~20 ms exec.
  *
- * Not an SDK read: the output is not read, only the exec matters (the same
- * warm-up runtime-sdk's `warm-claude-clones` does for per-conversation clones).
+ * Not an SDK read: the output is not read, only the exec matters. This is the
+ * only scan of claude an agent start depends on: every agent runs this one
+ * file, through a tiny conversation-named launcher (runtime-sdk's
+ * `named-launcher.ts`).
  * Off macOS there is no first-exec scan, so nothing runs.
  *
  * Throws when the bundled build is missing, is not the one installed in

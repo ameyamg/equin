@@ -24354,7 +24354,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('runtime-sdk.attempt-ended')`
           - `defineJob('runtime-sdk.auto-resume')`
           - `defineJob('runtime-sdk.agent-dirs-reclaim')`
-          - `defineJob('runtime-sdk.warm-claude-clones')`
           - `defineJob('runtime-sdk.orphan-agents')`
         - Routes:
           - `POST /api/claude-usage/refresh`
@@ -46416,6 +46415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `infra/launcher/env-names.readEnv`
         - Exports (values):
           - `disclaimArgv`
+          - `execNamedArgv`
           - `spawnDisclaimWanted`
       - Deps:
         - Uses:

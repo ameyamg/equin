@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { disclaimArgv, spawnDisclaimWanted } from "./disclaim-argv";
+import {
+  disclaimArgv,
+  execNamedArgv,
+  spawnDisclaimWanted,
+} from "./disclaim-argv";
 
 describe("spawnDisclaimWanted", () => {
   test("on macOS by default", () => {
@@ -46,5 +50,29 @@ describe("disclaimArgv", () => {
   test("an empty argv has no spelling", () => {
     // @ts-expect-error — argv names the program at least.
     expect(disclaimArgv(null, [], true)).toEqual([]);
+  });
+});
+
+describe("execNamedArgv", () => {
+  const argv: [string, ...string[]] = ["/usr/local/bin/claude", "--verbose"];
+
+  test("runs the program through the named copy", () => {
+    expect(execNamedArgv("/agent/bin/equin · conv-1", argv)).toEqual([
+      "/agent/bin/equin · conv-1",
+      "--exec-named",
+      ...argv,
+    ]);
+  });
+  test("unchanged without a named copy", () => {
+    expect(execNamedArgv(null, argv)).toEqual(argv);
+  });
+  test("disclaimed into the named copy, not the program", () => {
+    expect(
+      disclaimArgv(
+        "/cache/disclaim-exec",
+        execNamedArgv("/bin/named", argv),
+        true,
+      ),
+    ).toEqual(["/cache/disclaim-exec", "/bin/named", "--exec-named", ...argv]);
   });
 });

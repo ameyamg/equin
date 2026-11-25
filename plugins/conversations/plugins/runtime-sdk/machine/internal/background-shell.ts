@@ -11,8 +11,8 @@ import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 // (infra/git/main-slots) a later build checks out again once nothing holds it,
 // while the agent, started detached, keeps running commands for hours. A copy
 // is the agent's own and never moves under it; a plain copy is enough for a
-// shell script (no signature, no first-exec scan — unlike the claude clone,
-// `./named-claude.ts`).
+// shell script (no signature, no first-exec scan — unlike the named launcher,
+// `./named-launcher.ts`).
 //
 // Named by its content (`background-shell-<sha256 prefix>`), so a start finds
 // the copy current without comparing, a changed script gets a new name (a

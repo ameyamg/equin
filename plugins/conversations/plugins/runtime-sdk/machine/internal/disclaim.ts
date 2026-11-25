@@ -8,10 +8,12 @@ import { spawnDisclaimWanted } from "@plugins/packages/plugins/spawn-disclaim/co
 import { disclaimExec } from "@plugins/packages/plugins/spawn-disclaim/deps";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // The agent runs claude through `disclaim-exec` (packages/spawn-disclaim), so
-// macOS attributes claude's permission prompts to claude rather than to the
-// gateway launchd started. The helper is an on-demand build dependency:
+// macOS attributes claude's permission prompts to the agent rather than to the
+// gateway launchd started — and, copied under the conversation's name, the
+// launcher that names it (`named-launcher.ts`). The helper is an on-demand build dependency:
 // requested at boot, resolved at every agent start — never a reason for an
 // agent not to start.
 
@@ -20,6 +22,15 @@ import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
  * in awake time: a sleep in the wait is not an install too slow.
  */
 const INSTALL_WAIT_MS = 5_000;
+
+/**
+ * The helper's path when it is installed right now, else null — for a reader
+ * that must not wait or install (the reclaim's "is this launcher current").
+ */
+export async function installedDisclaimExec(): Promise<AppPath | null> {
+  const now = await readyNow(disclaimExec);
+  return now.kind === "ready" ? builtFile(now.ready) : null;
+}
 
 /** At boot (off the event loop: the install is the `deps.install` job). */
 export async function requestDisclaimHelper(): Promise<void> {
@@ -36,7 +47,7 @@ export async function requestDisclaimHelper(): Promise<void> {
  */
 export async function resolveDisclaimExec(
   conversationId: string,
-): Promise<string | null> {
+): Promise<AppPath | null> {
   if (!spawnDisclaimWanted()) return null;
   const now = await readyNow(disclaimExec);
   if (now.kind === "ready") return builtFile(now.ready);
@@ -65,7 +76,7 @@ export async function resolveDisclaimExec(
   await recordReport({
     kind: "crash",
     source: "server-caught",
-    message: `SDK agent ${conversationId}: launched without disclaim-exec (${after.kind === "failed" ? `its install failed: ${after.message}` : `still ${after.kind} after ${String(INSTALL_WAIT_MS / 1000)} s`}), so its macOS permission prompts name the gateway instead of claude`,
+    message: `SDK agent ${conversationId}: launched without disclaim-exec (${after.kind === "failed" ? `its install failed: ${after.message}` : `still ${after.kind} after ${String(INSTALL_WAIT_MS / 1000)} s`}), so its macOS permission prompts name the gateway instead of the conversation`,
     data: {
       errorType: "SdkAgentDisclaimUnavailable",
       label: "runtime-sdk.disclaim",

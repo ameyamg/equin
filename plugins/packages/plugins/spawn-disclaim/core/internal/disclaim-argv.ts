@@ -26,3 +26,19 @@ export function disclaimArgv(
 ): [string, ...string[]] {
   return helper !== null && wanted ? [helper, ...argv] : [...argv];
 }
+
+/**
+ * The argv that runs `argv` under `named`'s file name: `[named, "--exec-named",
+ * …argv]` — `named` being a copy of the helper under the name to show, which
+ * takes that name as the process's display name and then becomes `argv[0]`
+ * (same pid). Wrap the result in {@link disclaimArgv}: disclaimed INTO the
+ * named copy, the process is charged and named by that copy's path in macOS
+ * permission prompts, whatever program it has become. `argv` unchanged when
+ * there is no named copy.
+ */
+export function execNamedArgv(
+  named: string | null,
+  argv: readonly [string, ...string[]],
+): [string, ...string[]] {
+  return named !== null ? [named, "--exec-named", ...argv] : [...argv];
+}

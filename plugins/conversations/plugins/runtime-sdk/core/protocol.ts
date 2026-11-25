@@ -320,19 +320,25 @@ export const AgentLaunchOptionsSchema = z.preprocess(
     /**
      * The `disclaim-exec` helper (packages/spawn-disclaim) the agent runs
      * `claudeBin` through, so macOS attributes claude's permission prompts to
-     * claude, not the gateway; null runs it directly. Resolved by the backend at
+     * the agent, not the gateway; null runs it directly. Resolved by the backend at
      * every process start (`startAgentProcess`), never carried over from a
      * previous launch. Defaulted for an options file written before it existed.
      */
     disclaimExec: z.string().nullable().default(null),
     /**
-     * What the agent spawns in place of `claudeBin`: an APFS clone of it named for
-     * the conversation (`<title> · <id>`), so a macOS permission prompt says
-     * which agent asks — and keeps that agent's grants its own. Null spawns
-     * `claudeBin`. Set with `disclaimExec`, at every start; the name is kept
-     * from the conversation's first start (`machine/internal/named-claude.ts`).
+     * What the agent runs `claudeBin` through, after the disclaim: a copy of
+     * the helper named for the conversation (`equin · <id> · <title>`), which
+     * names the process after itself and becomes `claudeBin` — so a macOS
+     * permission prompt and Activity Monitor say which agent it is, and that
+     * agent's grants are its own. Null runs `claudeBin` under its own name.
+     * Set with `disclaimExec`, at every start; the name is kept from the
+     * conversation's first start (`machine/internal/named-launcher.ts`).
+     *
+     * Not the `namedClaudeBin` of options files before 2026-11-25 (a named
+     * copy of claude itself, spawned in its place): another key, so neither
+     * build can run the other's file the wrong way.
      */
-    namedClaudeBin: z.string().nullable().default(null),
+    namedLauncher: z.string().nullable().default(null),
     /**
      * The Bun this agent process runs on, the machine-wide `equin · agent`
      * clone of this Bun version (packages/process-name `cloneSharedBun`) so
@@ -405,7 +411,7 @@ export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
 export type AgentStartFields =
   | "claudeBin"
   | "disclaimExec"
-  | "namedClaudeBin"
+  | "namedLauncher"
   | "namedBun"
   | "backgroundShell"
   | "seqFloor";

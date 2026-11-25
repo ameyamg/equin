@@ -81,11 +81,16 @@ pool of pre-scanned clones renamed into place does not help, and every new
 executable path pays one scan.
 
 Per-instance names stay only where they are worth a scan: backends (long-lived,
-one per build) and the agent's claude, whose path is its macOS permission
+one per build) and the agent's claude, whose named file is its macOS permission
 identity (TCC keys a bundle-less client by path, so per-conversation grants
-need a per-conversation file). The agent's bun is the shared `equin · agent`:
-a per-conversation one cost every new conversation's first start ~1.7 s, and
-its claude already carries the conversation's name.
+need a per-conversation file). That file is not a clone of claude: the scan
+grows with the file (344 MB: ~3.3 s; 35 KB: ~0.15 s), so it is a tiny launcher
+that takes the name and becomes the one shared claude (packages/spawn-disclaim's
+`--exec-named`) — the other way to name a process, by its LaunchServices
+display name, for when the program is too big to copy per instance. The
+agent's bun is the shared `equin · agent`: a per-conversation one cost every
+new conversation's first start ~1.7 s, and its claude already carries the
+conversation's name.
 
 Who names what:
 
@@ -94,7 +99,7 @@ Who names what:
 | CLI op | `equin · build` (one machine-wide clone per verb) | the `./equin` script |
 | backend / central | `equin · server · att-…`, `equin · central` | `./equin build`, as the spec's `command` |
 | SDK agent wrapper | `equin · agent` (one machine-wide clone per Bun version) | `runtime-sdk`'s `startAgentProcess` |
-| the agent's claude | `equin · conv-… · <title>` | `runtime-sdk`'s `named-claude.ts` (its own scheme: a TCC grant is keyed by it) |
+| the agent's claude | `equin · conv-… · <title>` | `runtime-sdk`'s `named-launcher.ts`: a named copy of the disclaim-exec helper that becomes claude (a TCC grant is keyed by it; `top` still says `claude`) |
 
 Children a named process spawns through `process.execPath` inherit its name — a
 test worker reads as the `test` op that started it.

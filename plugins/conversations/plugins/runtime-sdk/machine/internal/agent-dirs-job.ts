@@ -11,10 +11,10 @@ import {
   sharedBunsNamed,
 } from "@plugins/packages/plugins/process-name/machine";
 import { processName } from "@plugins/packages/plugins/process-name/core";
-import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
+import { installedDisclaimExec } from "./disclaim";
 import {
   attemptsOfConversations,
   conversationIdsOfAttempts,
@@ -50,10 +50,15 @@ const facts: AgentDirFacts = {
     }
     return out;
   },
-  // What `startAgentProcess` clones into an agent's `bin/`: the Agent SDK's
-  // claude (its bun is the shared one below).
+  // What `startAgentProcess` copies into an agent's `bin/`: the disclaim-exec
+  // helper, as the conversation-named launcher (its claude and its bun are
+  // shared). A named copy of claude an older start left is therefore not
+  // current. With the helper not installed right now nothing can be judged, so
+  // everything is kept: the launcher's path is the conversation's macOS
+  // permission identity.
   async cloneIsCurrent(path) {
-    return isCurrentCloneOf(path, [await bundledClaudeBin()]);
+    const helper = await installedDisclaimExec();
+    return helper === null || isCurrentCloneOf(path, [helper]);
   },
   sharedAgentBuns: () => sharedBunsNamed(processName("agent")),
   // This backend's bun. A worktree backend on another Bun re-clones its own

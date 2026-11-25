@@ -7,6 +7,21 @@
 //       starts to <program> itself, not to whichever launchd job started this
 //       process tree. <program> is looked up on PATH (posix_spawnp).
 //
+//   <named copy> --exec-named <program> [args…]
+//       Run from a COPY of this file named for whoever the process works for
+//       (an agent's conversation). Gives the process that file name as its
+//       LaunchServices display name — what Activity Monitor lists — then
+//       becomes <program> with a plain execv, argv[0] kept (so `ps` shows the
+//       named path too). Run THROUGH the disclaim above
+//       (`disclaim-exec <named copy> --exec-named <program> …`), the named
+//       copy is the responsible process's path: TCC keeps charging it, and
+//       naming it in prompts, after the exec (measured 2026-11-24: tccd's
+//       `responsible_path` stays the copy, `binary_path` is <program>). The
+//       copy is tiny, so macOS's first-exec scan of it is ~0.15 s, where a
+//       named copy of a 344 MB <program> cost ~3.3 s.
+//       A display name that cannot be set is one stderr line, and <program>
+//       still runs: the name is what a list shows, not who is charged.
+//
 //   disclaim-exec --print-responsible [pid]
 //       Prints the pid responsible for <pid> (default: this process). For
 //       verification only.
@@ -16,6 +31,8 @@
 // Every failure is one line on stderr and exit 127: the program never ran, and
 // the caller (an agent launching claude) fails loudly.
 
+#include <CoreFoundation/CoreFoundation.h>
+#include <dlfcn.h>
 #include <errno.h>
 #include <spawn.h>
 #include <stdio.h>
@@ -58,9 +75,68 @@ static int print_responsible(int argc, char **argv) {
   return 0;
 }
 
+// The LaunchServices display name of this process: private SPI (the one
+// Chromium names its helper processes with), looked up at run time so a macOS
+// without it costs the name, not the launch. Returns why it could not be set.
+// The registration is the pid's: it survives the exec that follows.
+static const char *set_display_name(const char *name) {
+  void *ls = dlopen("/System/Library/Frameworks/CoreServices.framework/"
+                    "Frameworks/LaunchServices.framework/LaunchServices",
+                    RTLD_LAZY);
+  if (!ls) return "LaunchServices could not be loaded";
+  void (*connection_status)(uint64_t, void *) =
+      dlsym(ls, "_LSSetApplicationLaunchServicesServerConnectionStatus");
+  void (*check_in)(int, CFDictionaryRef) = dlsym(ls, "_LSApplicationCheckIn");
+  CFTypeRef (*current_asn)(void) = dlsym(ls, "_LSGetCurrentApplicationASN");
+  OSStatus (*set_item)(int, CFTypeRef, CFStringRef, CFTypeRef,
+                       CFDictionaryRef *) =
+      dlsym(ls, "_LSSetApplicationInformationItem");
+  CFStringRef *name_key = dlsym(ls, "_kLSDisplayNameKey");
+  if (!connection_status || !check_in || !current_asn || !set_item ||
+      !name_key) {
+    return "this macOS's LaunchServices lacks a symbol it needs";
+  }
+  connection_status(0, NULL);
+  // -2: the current session. Background-only: no Dock icon, no menu bar.
+  check_in(-2, CFBundleGetInfoDictionary(CFBundleGetMainBundle()));
+  CFTypeRef asn = current_asn();
+  if (!asn) return "LaunchServices gave this process no serial number";
+  CFStringRef value =
+      CFStringCreateWithCString(NULL, name, kCFStringEncodingUTF8);
+  if (!value) return "the name is not UTF-8";
+  if (set_item(-2, asn, *name_key, value, NULL) != 0) {
+    return "_LSSetApplicationInformationItem refused it";
+  }
+  return NULL;
+}
+
+static int exec_named(int argc, char **argv) {
+  if (argc < 3) {
+    fprintf(stderr, "usage: <named copy> --exec-named <program> [args…]\n");
+    _exit(127);
+  }
+  const char *slash = strrchr(argv[0], '/');
+  const char *why = set_display_name(slash ? slash + 1 : argv[0]);
+  if (why) {
+    fprintf(stderr, "disclaim-exec: display name not set (%s): Activity "
+                    "Monitor lists this process by its program's name\n", why);
+  }
+  // argv[0] stays this file's path: `ps` shows the name, and the program
+  // finds itself through the kernel's path, not argv[0].
+  char *program = argv[2];
+  argv[2] = argv[0];
+  execv(program, argv + 2);
+  fprintf(stderr, "disclaim-exec: cannot run %s: %s\n", program,
+          strerror(errno));
+  _exit(127);
+}
+
 int main(int argc, char **argv) {
   if (argc >= 2 && strcmp(argv[1], "--print-responsible") == 0) {
     return print_responsible(argc, argv);
+  }
+  if (argc >= 2 && strcmp(argv[1], "--exec-named") == 0) {
+    return exec_named(argc, argv);
   }
   if (argc < 2) {
     fprintf(stderr, "usage: disclaim-exec <program> [args…] | "
