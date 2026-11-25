@@ -69,6 +69,7 @@ const item = (
 ): FoldItem => ({
   occurredAt,
   input: {
+    timing: { clock: "attended" },
     operationKind: "loader",
     operation: "test-op",
     durationMs: 100,

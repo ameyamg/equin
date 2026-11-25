@@ -3,7 +3,6 @@ import type { SlowOpClientItem } from "../../shared/endpoints";
 import {
   toRecordInput,
   toRecordInputs,
-  withoutSleep,
 } from "./client-record-input";
 
 const item = (over: Partial<SlowOpClientItem> = {}): SlowOpClientItem => ({
@@ -28,6 +27,7 @@ describe("toRecordInput", () => {
         "trace-1",
       ),
     ).toEqual({
+      timing: { clock: "unplaced" },
       operationKind: "update",
       operation: "tasks",
       durationMs: 1200,
@@ -40,6 +40,14 @@ describe("toRecordInput", () => {
       transportColdStart: true,
       traceId: "trace-1",
     });
+  });
+
+  test("an item with an end instant is timed on the wall clock", () => {
+    // A browser times on the wall clock: the funnel takes the sleep and the
+    // dark wakes over [endedAt − duration, endedAt] off (`attend`).
+    expect(toRecordInput(item({ endedAt: 1_000_000 }), undefined).timing).toEqual(
+      { clock: "wall", endedAtMs: 1_000_000 },
+    );
   });
 
   test("no caller is null; clientBoot never reaches the recorder", () => {
@@ -89,51 +97,3 @@ describe("toRecordInputs", () => {
   });
 });
 
-describe("withoutSleep", () => {
-  const ended = item({
-    durationMs: 120_000,
-    ownMs: 120_000,
-    endedAt: 1_000_000,
-  });
-
-  test("asks about the item's own window", () => {
-    const asked: [number, number][] = [];
-    withoutSleep(ended, (a, b) => {
-      asked.push([a, b]);
-      return 0;
-    });
-    expect(asked).toEqual([[880_000, 1_000_000]]);
-  });
-
-  test("an item that was only asleep is dropped", () => {
-    expect(withoutSleep(ended, () => 119_500)).toBeNull();
-  });
-
-  test("still slow when awake: the nap is charged to its layer", () => {
-    expect(withoutSleep(ended, () => 100_000)).toEqual({
-      ...ended,
-      ownMs: 20_000,
-      waits: { sleep: 100_000 },
-    });
-  });
-
-  test("a nap the tab was already hidden through is not taken off twice", () => {
-    // The browser took 90 s of hidden time off; only the 10 s beyond it come off.
-    const hidden = {
-      ...ended,
-      ownMs: 30_000,
-      waits: { "page-hidden": 90_000 },
-    };
-    expect(withoutSleep(hidden, () => 100_000)).toEqual({
-      ...hidden,
-      ownMs: 20_000,
-      waits: { "page-hidden": 90_000, sleep: 100_000 },
-    });
-  });
-
-  test("cannot tell, or no end time: unchanged", () => {
-    expect(withoutSleep(ended, () => null)).toBe(ended);
-    const live = item();
-    expect(withoutSleep(live, () => 5000)).toBe(live);
-  });
-});

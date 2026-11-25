@@ -18,7 +18,13 @@ import {
   createShedBuffer,
   type ShedSummary,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
+import {
+  awakeSpanStart,
+  darkWakeDuring,
+  sleptDuring,
+} from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import type { SlowOpMarker } from "../../core";
+import { attend, type UnattendedClock } from "./attend";
 import { foldSlowOpBatch, type FoldedBatch, type FoldItem } from "./fold-batch";
 import type { RecordSlowOpInput } from "./input";
 import { buildCallerUpsert, buildOpUpsert } from "./merge-sql";
@@ -26,6 +32,24 @@ import { incidentsFor } from "./report-groups";
 import { slowOpCallersProducer, slowOpsProducer } from "./producer";
 
 export type { RecordSlowOpInput } from "./input";
+
+// This machine's sleeps and dark wakes, as this process saw them.
+const machineUnattended: UnattendedClock = {
+  sleptDuring,
+  darkWakeDuring,
+  awakeSpanStart,
+};
+
+/**
+ * An input judged on attended time (`attend` over this machine's clock), for a
+ * producer that judges before it captures evidence: an op that was only slow
+ * while nobody could wait on it — asleep, in a dark wake — then captures no
+ * trace and claims nothing. Its result is `attended`, so the funnel takes
+ * nothing off twice.
+ */
+export function attendInput(input: RecordSlowOpInput): RecordSlowOpInput {
+  return attend(input, machineUnattended);
+}
 
 // A slim overlay marker per recorded slow op, dual-written to a durable log
 // channel. Mirrors the health sampler's `defineLogSink({ id: "health" })` — each
@@ -118,9 +142,11 @@ export async function recordSlowOpBatch(
   // own independent shed gate inside captureTrace, so first-N traces still land
   // even when this row write is shed (and vice versa).
   const admitted: FoldItem[] = [];
-  for (const input of inputs) {
+  for (const given of inputs) {
     // THE own-time rule, once for every producer: an op whose own time is
-    // under its bar was not slow itself, however long it took on the wall.
+    // under its bar was not slow itself, however long it took on the wall —
+    // judged on attended time (`attend`: machine sleep and dark wakes off).
+    const input = attendInput(given);
     if (input.ownMs < input.thresholdMs) continue;
     const occurredAt = (input.occurredAt ??= new Date());
     if (!slowOpShed.admit(input).persist) continue;

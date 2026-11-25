@@ -3,9 +3,8 @@ import { clientBootClass } from "@plugins/debug/plugins/trace/plugins/client-boo
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { submitClientSlowOp } from "../../shared/endpoints";
-import { recordSlowOpBatch } from "./record-slow-op";
-import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
-import { toRecordInputs, withoutSleep } from "./client-record-input";
+import { attendInput, recordSlowOpBatch } from "./record-slow-op";
+import { toRecordInput, toRecordInputs } from "./client-record-input";
 
 // Signals the browser queue had to discard under its own cap before this batch
 // went out. A drop is real data loss, so it is recorded rather than swallowed:
@@ -39,11 +38,12 @@ export const handleClientSlowOp = implement(
       );
     }
 
-    // A nap the item's window spans is not its slowness: taken off first, so
-    // an item that was only asleep captures no trace and files nothing.
-    const items = body.items.flatMap((item) => {
-      const awake = withoutSleep(item, sleptDuring);
-      return awake === null ? [] : [awake];
+    // A nap or a dark wake the item's window spans is not its slowness: an
+    // item slow only while nobody could wait on it captures no trace. The
+    // funnel takes that time off (`attend`); this is the same judgment, first.
+    const items = body.items.filter((item) => {
+      const attended = attendInput(toRecordInput(item, undefined));
+      return attended.ownMs >= attended.thresholdMs;
     });
     if (items.length === 0) return { ok: true };
     const inputs = toRecordInputs(items, (item, batchCount) => {

@@ -58,6 +58,7 @@ Key mechanics:
     - `debug/trace/boot.bootClass`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
+    - `infra/host/machine-sleep.awakeSpanStart`
     - `infra/jobs.defineJob`
   - Exports (values): `getGatewayBootReport`
   - Register: `defineJob('debug.boot-monitor')`

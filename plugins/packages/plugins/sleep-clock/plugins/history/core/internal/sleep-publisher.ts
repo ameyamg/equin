@@ -20,6 +20,16 @@ export type SleepClockReading =
        * still place it.
        */
       sleepAtMs: number | null;
+      /** The wall instant (epoch ms) this reading was taken at. */
+      atMs: number;
+      /**
+       * Whether the machine was in a DARK wake at `atMs` — awake for
+       * maintenance (Power Nap, a lid-shut Mac's network upkeep: no graphics
+       * capability), not for a person; null when it cannot tell. The process
+       * runs in a dark wake, so the awake clock counts it; what a person waits
+       * on does not happen there.
+       */
+      darkWake: boolean | null;
     }
   /** This platform offers no such clocks here — NOT "it did not sleep". */
   | { supported: false };
@@ -162,6 +172,26 @@ export function wakeWithin(
   return latest;
 }
 
+/**
+ * The time `[startMs, endMs]` spent in a dark wake: covered by `darks` and by
+ * none of `sleeps` (a dark stretch is placed from its wake, so a sleep it
+ * overlaps — several naps read as one, see `sleepBetween` — is sleep, never
+ * counted twice).
+ */
+export function darkOverlapMs(
+  sleeps: readonly SleepInterval[],
+  darks: readonly SleepInterval[],
+  startMs: number,
+  endMs: number,
+): number {
+  if (darks.length === 0) return 0;
+  return Math.max(
+    0,
+    overlapMs([...sleeps, ...darks], startMs, endMs) -
+      overlapMs(sleeps, startMs, endMs),
+  );
+}
+
 /** What {@link SleepPublisher.wakeBefore} answers. */
 export type WakeBefore =
   /** The platform cannot tell — NOT "the machine did not wake". */
@@ -180,6 +210,14 @@ export interface SleepPublisher {
    * counts. `null` where the platform cannot tell (never "did not sleep").
    */
   sleptDuring(startMs: number, endMs: number): number | null;
+  /**
+   * ms of `[startMs, endMs]` (epoch ms) the machine spent in a DARK wake —
+   * awake for maintenance, not for a person — from the readings this process
+   * took (reading the clock first). Disjoint from `sleptDuring`: the two add
+   * up to the time no person could have been waiting. `null` where the
+   * platform cannot tell (never "it was fully awake").
+   */
+  darkWakeDuring(startMs: number, endMs: number): number | null;
   /**
    * The wall-clock instant (epoch ms) `awakeMs` of AWAKE time before `endMs`,
    * stepping over the sleeps this process has seen — reading the clock first,
@@ -212,28 +250,86 @@ export function createSleepPublisher(
   let last: { value: SleepNow } | null = null;
   const listeners = new Set<() => void>();
   const sleeps: SleepInterval[] = [];
+  // Dark-wake stretches, each from where a reading first saw it dark to the
+  // last reading that still did (or to the sleep that ended it). `openDark`
+  // is the current wake's stretch while the latest reading saw it dark: every
+  // reading extends it. Placed only from readings, so a dark wake this process
+  // took none in counts as awake — the judged thing's disfavour, never its
+  // favour.
+  const darks: SleepInterval[] = [];
+  let openDark: { wakeAtMs: number; stretch: SleepInterval } | null = null;
+  // The latest reading that could tell: which wake, when, and whether dark.
+  let seen: { wakeAtMs: number | null; atMs: number } | null = null;
+  // Whether any reading could tell a dark wake from a full one.
+  let darkKnown = false;
   const place = (s: SleepInterval | null): void => {
     if (s === null) return;
     sleeps.push(s);
     if (sleeps.length > SLEEP_RING_CAP) sleeps.shift();
+    // A sleep ends the dark wake before it: the stretch reaches the sleep's
+    // start (exact for one nap; for several read as one, the stretch stays
+    // where its readings put it — shorter, never longer).
+    if (openDark !== null && s.startMs > openDark.stretch.startMs) {
+      openDark.stretch.endMs = Math.max(openDark.stretch.endMs, s.startMs);
+      openDark = null;
+    }
+  };
+  const noteWake = (reading: SleepClockReading): void => {
+    if (!reading.supported || reading.darkWake === null) return;
+    darkKnown = true;
+    const { wakeAtMs, atMs } = reading;
+    const prev = seen;
+    seen = { wakeAtMs, atMs };
+    if (!reading.darkWake || wakeAtMs === null) {
+      // Fully awake: the current wake's stretch ends at its last dark reading.
+      openDark = null;
+      return;
+    }
+    if (openDark !== null && openDark.wakeAtMs === wakeAtMs) {
+      openDark.stretch.endMs = Math.max(openDark.stretch.endMs, atMs);
+      return;
+    }
+    // Where this dark stretch began, as far as the readings can tell:
+    // - a reading of this same wake saw it full (a full wake turned dark with
+    //   no new wake — the graphics-off step of a sleep entry): after that one;
+    // - the first reading this process took: here — what came before is not
+    //   known, and is never counted as dark;
+    // - otherwise the machine woke since the last reading: from that wake.
+    const startMs =
+      prev === null
+        ? atMs
+        : prev.wakeAtMs === wakeAtMs
+          ? prev.atMs
+          : wakeAtMs;
+    const stretch = { startMs, endMs: Math.max(startMs, atMs) };
+    openDark = { wakeAtMs, stretch };
+    darks.push(stretch);
+    if (darks.length > SLEEP_RING_CAP) darks.shift();
   };
   // The first reading has no previous one to diff: the clock's own last sleep
   // is the one sleep it can place (the one this process started after).
   const first = (reading: SleepClockReading): SleepNow => {
     place(lastSleepOf(reading));
+    noteWake(reading);
     last = { value: toSleepNow(reading) };
     return last.value;
   };
+  // While the current wake is dark, every query reads: the wake may have
+  // turned full (a lid opened) with no sleep to move the clocks' offset.
   const refresh = (): void => {
-    if (last === null || mayHaveSlept()) publish();
+    if (last === null || openDark !== null || mayHaveSlept()) publish();
   };
   const publish = (): void => {
     const reading = read();
     if (last === null) first(reading);
     else {
       const next = toSleepNow(reading);
-      if (!sleepNowChanged(last.value, next)) return;
+      if (!sleepNowChanged(last.value, next)) {
+        noteWake(reading);
+        return;
+      }
       place(sleepBetween(last.value, next));
+      noteWake(reading);
       last = { value: next };
     }
     for (const fn of listeners) fn();
@@ -247,6 +343,11 @@ export function createSleepPublisher(
       refresh();
       if (last?.value === null) return null;
       return overlapMs(sleeps, startMs, endMs);
+    },
+    darkWakeDuring(startMs, endMs) {
+      refresh();
+      if (last?.value === null || !darkKnown) return null;
+      return darkOverlapMs(sleeps, darks, startMs, endMs);
     },
     awakeSpanStart(endMs, awakeMs) {
       refresh();

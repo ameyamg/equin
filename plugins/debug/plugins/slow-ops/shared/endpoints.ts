@@ -25,6 +25,13 @@ export const WAIT_KIND = "wait";
 // and takes the nap off its own time.
 export const SLEEP_LAYER = "sleep";
 
+// The layer an op's time in a DARK wake is charged to: a lid-shut Mac's
+// maintenance wakes (Power Nap — seconds every ~15 min, network on keep-alive
+// only) run the process, so the awake clock counts them, but no person is
+// there to wait. Read from the machine's power capabilities (machine-sleep's
+// `darkWakeDuring`), for every op kind, by the funnel (`attend`).
+export const DARK_WAKE_LAYER = "dark-wake";
+
 // The layer a client span's main-thread stalls are charged to: the page was
 // frozen (a long animation frame ≥ page-pauses' STALL_MIN_MS), which
 // main-thread-stall files as its own `main-thread` slow-op.

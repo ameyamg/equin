@@ -7,6 +7,7 @@ const item = (
   ownMs: number,
   over: Partial<RecordSlowOpInput> = {},
 ): RecordSlowOpInput => ({
+  timing: { clock: "attended" },
   operationKind: "update",
   operation,
   durationMs: ownMs + 100,

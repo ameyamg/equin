@@ -2,6 +2,7 @@ import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
 import {
   awakeSpanStart as historyAwakeSpanStart,
   currentSleepReading as historyCurrentReading,
+  darkWakeDuring as historyDarkWakeDuring,
   installSleepClock,
   onSleepReadingChanged as historyOnChanged,
   publishSleepReading as historyPublish,
@@ -49,6 +50,18 @@ export function onSleepReadingChanged(fn: () => void): () => void {
  */
 export function sleptDuring(startMs: number, endMs: number): number | null {
   return historySleptDuring(startMs, endMs);
+}
+
+/**
+ * ms of `[startMs, endMs]` (epoch ms) the machine spent in a DARK wake — awake
+ * for maintenance (a lid-shut Mac's Power Nap), not for a person — disjoint
+ * from {@link sleptDuring}. For judging what a person waited on (slow-ops):
+ * the awake clock runs through a dark wake, so a span that crossed several of
+ * them adds their seconds up. Never for a watchdog — work runs there. `null`
+ * where the platform cannot tell.
+ */
+export function darkWakeDuring(startMs: number, endMs: number): number | null {
+  return historyDarkWakeDuring(startMs, endMs);
 }
 
 /**

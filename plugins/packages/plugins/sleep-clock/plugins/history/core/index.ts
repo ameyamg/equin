@@ -2,6 +2,7 @@ export {
   awakeMsSince,
   awakeSpanStart,
   currentSleepReading,
+  darkWakeDuring,
   installSleepClock,
   onSleepReadingChanged,
   publishSleepReading,

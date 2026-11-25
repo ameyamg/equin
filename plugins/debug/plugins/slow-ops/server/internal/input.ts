@@ -15,7 +15,29 @@ export type SlowOpSource = Extract<
   "server-slow-op" | "client-slow-op" | "server-boot-monitor"
 >;
 
+/**
+ * Which clock an op's `durationMs` was measured on, and where it ended — what
+ * the funnel needs to take the time no person could have waited (machine
+ * sleep, dark wakes) off its own time (`attend`). REQUIRED, so a new producer
+ * cannot leave it out:
+ *
+ * - `awake` — a clock that pauses through sleep (a backend's
+ *   `performance.now()`): only its dark-wake time comes off.
+ * - `wall` — the wall clock (a browser's timings): its sleep and its dark-wake
+ *   time come off, beyond what the tab was already hidden for.
+ * - `attended` — `attend` already judged it (a producer that judges before
+ *   capturing evidence); the funnel does not take anything off twice.
+ * - `unplaced` — no end instant is known (an older tab's item): judged as
+ *   measured, never in its favour.
+ */
+export type SlowOpTiming =
+  | { clock: "awake" | "wall"; endedAtMs: number }
+  | { clock: "attended" }
+  | { clock: "unplaced" };
+
 export interface RecordSlowOpInput {
+  // See `SlowOpTiming`.
+  timing: SlowOpTiming;
   operationKind: string;
   operation: string;
   durationMs: number;

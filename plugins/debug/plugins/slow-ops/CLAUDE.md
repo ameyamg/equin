@@ -104,7 +104,7 @@ all or it is charged to the op that owns it:
 | An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per transport — the page's own and each scoped pipeline's (`transportId`) — as `wait notifications-transport` (`transportSlowOp`), measured from that pipeline's first socket (`transportStartedAtMs`), never from the page's start. |
 | Main-thread stalls ≥ 1 s (`main-thread-stall`) | `judgePagePauses` at the queue's flush, once page-pauses' `stallsKnownThrough(window end)` resolved — the stall's entry reaches the page late, after the frame; judged before it, one 1.1 s stall was filed again as four updates' and two settles' own time (main, 2026-11-15) | main-thread-stall, which files the frozen page as its own `main-thread` op. |
 | A hidden or frozen tab (`page-hidden`) | The same | Nobody. Only the hidden part is taken off — a throttled tab measures the browser — and the visible rest is still judged, so a slow op spanning a brief tab switch is still reported. |
-| Machine sleep (`sleep`) | `withoutSleep` in the client handler, over the item's `endedAt` window (machine-sleep's `sleptDuring`) | Nobody. Only the sleep beyond the item's `page-hidden` time comes off (a nap usually hides the tab, and the two cannot be placed against each other server-side), so one nap is never taken off twice. A server span needs none: Bun's `performance.now()` stops while the machine sleeps (measured 2026-10-30). |
+| Machine sleep (`sleep`) and dark wakes (`dark-wake`) | `attend` (`server/internal/attend.ts`), in the funnel for every input — and first, before any evidence, by the server hooks and the client handler (its result is `timing: attended`, so nothing comes off twice). Every input declares `timing` (required): the clock its duration is on and where it ended. A `wall` clock (a browser) loses the sleep and dark-wake time over its window (machine-sleep's `sleptDuring` / `darkWakeDuring`); an `awake` clock (a backend's `performance.now()`, which stops while the machine sleeps — measured 2026-10-30) only its dark-wake time, over the wall window its duration steps over (`awakeSpanStart`) | Nobody. A dark wake is a lid-shut Mac's maintenance wake (Power Nap: seconds every ~15 min, network on keep-alive only, no graphics capability): the process runs, so the awake clock counts it, but no person waits on it. Only what was not already off comes off — beyond the item's `page-hidden` time on a wall clock, beyond its excluded waits and child ops on the awake clock — so one second is never taken off twice. Before (2026-11-21 → 11-25), report-1795262994-kykxrk filed `wait spawn:gh took 30 s` 14 times, each inside a dark wake (pmset log): a `gh api` call stuck on the keep-alive-only network accumulated 30 s of awake time over several naps' dark wakes, so its own awake-clock deadline killed it — 36 of the week's ~770 sampled slow-op occurrences followed a wake. |
 | A `turn-echo`'s `compaction` (a `/compact` turn taken → its line written: Claude Code writes that line after the compaction it ran) | `EXCLUDED_PHASES` / `ownMsOf`, owner `agent-work` | Nobody: model work the turn asked for, not the echo. Every 39–86 s `turn-echo` sample of report-1794916751-fib0co (6 of 6, 2026-11-16 → 11-21) was one, to an idle agent, its echo under 1 s. The phase only exists for a line that IS a compaction event, so a plain line written or delivered late is still judged in full. |
 
 Why: the 2026-10-29 audit of main found reports blaming ops for time they
@@ -418,9 +418,10 @@ bar).
     - `change-producer` "slow_ops"
     - `fork-data-exclusion` "slow_op_callers"
     - `fork-data-exclusion` "slow_ops"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×4
     - `infra/entities` ×3
+    - `infra/host/machine-sleep` ×3
     - `config_v2` ×2
     - `infra/host/contention` ×2
     - `infra/host/duress/shed` ×2
@@ -430,7 +431,6 @@ bar).
     - `debug/trace/client-boot.clientBootClass`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
-    - `infra/host/machine-sleep.sleptDuring`
     - `infra/retention.defineRetention`
     - `network/live/change-feed.defineChangeProducer`
     - `network/live.serveCollection`

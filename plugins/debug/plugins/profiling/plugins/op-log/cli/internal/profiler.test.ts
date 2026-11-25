@@ -108,6 +108,8 @@ describe("createOpProfiler — sleep stamps", () => {
       asleepMs: 1_000.4,
       wakeAtMs: null,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     };
     setSystemTime(new Date(T));
     try {
@@ -127,6 +129,8 @@ describe("createOpProfiler — sleep stamps", () => {
         asleepMs: 1_000.4 + SLEPT,
         wakeAtMs: T + HOUR,
         sleepAtMs: null,
+        atMs: 0,
+        darkWake: null,
       };
       p.markGranted(); // closes the wait
       setSystemTime(new Date(T + HOUR + 21_000));

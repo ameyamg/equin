@@ -72,6 +72,91 @@ function libSystem(): LibSystem {
   return lib;
 }
 
+// IOKit's power root domain publishes the machine's current power
+// capabilities as "System Capabilities" (IOPMPrivate.h's
+// kIOPMSystemCapability* bits). A full wake has graphics; a dark wake — the
+// maintenance / Power Nap wakes a lid-shut or idle Mac runs every ~15 min for
+// a few seconds, network on TCP keep-alive only — has CPU (and network) but no
+// graphics. Read the same lazy way, through bun:ffi.
+const SYSTEM_CAPABILITY_GRAPHICS = 0x2;
+const K_CF_STRING_ENCODING_UTF8 = 0x08000100;
+const K_CF_NUMBER_SINT32_TYPE = 3;
+
+interface PowerRoot {
+  /** The root domain's "System Capabilities", or null when it cannot be read. */
+  capabilities(): number | null;
+}
+
+let powerRoot: PowerRoot | null = null;
+
+function openPowerRoot(): PowerRoot {
+  const iokit = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", {
+    IOServiceMatching: { args: ["ptr"], returns: "ptr" },
+    IOServiceGetMatchingService: { args: ["u32", "ptr"], returns: "u32" },
+    IORegistryEntryCreateCFProperty: {
+      args: ["u32", "ptr", "ptr", "u32"],
+      returns: "ptr",
+    },
+  });
+  const cf = dlopen(
+    "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation",
+    {
+      CFStringCreateWithCString: {
+        args: ["ptr", "ptr", "u32"],
+        returns: "ptr",
+      },
+      CFNumberGetValue: { args: ["ptr", "i32", "ptr"], returns: "bool" },
+      CFRelease: { args: ["ptr"], returns: "void" },
+    },
+  );
+  // The C strings are held in locals across each call: a Buffer only reached
+  // through `ptr()` could be collected before the call reads it.
+  const rootName = Buffer.from("IOPMrootDomain\0", "utf8");
+  const keyName = Buffer.from("System Capabilities\0", "utf8");
+  // IOServiceGetMatchingService consumes the matching dictionary. Port 0 is
+  // kIOMainPortDefault. The service and the key are held for the process's
+  // life: one of each, read on every sleep-clock reading.
+  const service = iokit.symbols.IOServiceGetMatchingService(
+    0,
+    iokit.symbols.IOServiceMatching(ptr(rootName)),
+  );
+  const key = cf.symbols.CFStringCreateWithCString(
+    null,
+    ptr(keyName),
+    K_CF_STRING_ENCODING_UTF8,
+  );
+  const out = new Int32Array(1);
+  return {
+    capabilities() {
+      if (service === 0 || key === null) return null;
+      const num = iokit.symbols.IORegistryEntryCreateCFProperty(
+        service,
+        key,
+        null,
+        0,
+      );
+      if (num === null) return null;
+      const ok = cf.symbols.CFNumberGetValue(
+        num,
+        K_CF_NUMBER_SINT32_TYPE,
+        ptr(out),
+      );
+      cf.symbols.CFRelease(num);
+      return ok ? out[0]! : null;
+    },
+  };
+}
+
+/**
+ * Whether the machine is in a DARK wake right now: awake for maintenance
+ * (no graphics capability), not for a person — `null` when it cannot tell.
+ * ~10 µs.
+ */
+function readDarkWake(): boolean | null {
+  const caps = (powerRoot ??= openPowerRoot()).capabilities();
+  return caps === null ? null : (caps & SYSTEM_CAPABILITY_GRAPHICS) === 0;
+}
+
 function readNs(id: number): bigint {
   return libSystem().clockNs(id);
 }
@@ -134,6 +219,9 @@ export function readSleepClock(): SleepClockReading {
     asleepMs: ns > 0n ? Number(ns) / 1e6 : 0,
     wakeAtMs: readTimevalMs("kern.waketime"),
     sleepAtMs: readTimevalMs("kern.sleeptime"),
+    // The wall instant of this reading: where a dark wake seen now is placed.
+    atMs: Date.now(),
+    darkWake: readDarkWake(),
   };
 }
 
@@ -146,8 +234,9 @@ export function readSleepClock(): SleepClockReading {
  * clocks at once with {@link clockStampNow}.
  */
 function sleepStampNow(): SleepStamp | null {
-  const r = readSleepClock();
-  return r.supported ? { boot: r.boot, asleepMs: r.asleepMs } : null;
+  if (process.platform !== "darwin") return null;
+  const ns = asleepNs();
+  return { boot: readBootSession(), asleepMs: ns > 0n ? Number(ns) / 1e6 : 0 };
 }
 
 /**

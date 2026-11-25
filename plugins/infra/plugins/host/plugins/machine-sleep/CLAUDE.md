@@ -16,7 +16,8 @@ The machine's sleep clock as a live value, so a browser can tell a nap from work
   never pushes). In practice it pushes once per wake. `currentSleepReading()` /
   `onSleepReadingChanged()` are what the machine half serves from. Over the
   sleeps it has placed: `sleptDuring(start, end)` (slow-ops, the stuck-turn
-  bound, a pre-stamp boot line), `awakeSpanStart`
+  bound, a pre-stamp boot line), `darkWakeDuring(start, end)` (slow-ops: the
+  maintenance wakes no person waited through), `awakeSpanStart`
   (the job sweeper's grace) and `wakeBefore(at, within)` — the sleep whose wake
   came just before an instant (the reports engine stamps it on an occurrence). A process
   knows the sleeps it lived through, plus the one before its first reading:
@@ -50,12 +51,13 @@ reaches the browser within one tick.
 
 ## Plugin reference
 
-- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — stampOfWallInstant(wallMs, now) — the ClockStamp of a past wall instant nothing stamped (a row's created_at), from those sleeps — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
+- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — darkWakeDuring(start, end) — the time inside it the machine was in a dark (maintenance) wake, awake for no person — stampOfWallInstant(wallMs, now) — the ClockStamp of a past wall instant nothing stamped (a row's created_at), from those sleeps — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
 - Server:
   - Contributes: `resource.declare` "machine.sleep"
   - Exports (values):
     - `awakeSpanStart`
     - `currentSleepReading`
+    - `darkWakeDuring`
     - `onSleepReadingChanged`
     - `publishSleepReading`
     - `sleptDuring`
@@ -83,6 +85,7 @@ reaches the browser within one tick.
     - `conversations`
     - `conversations/conversation-view/op-status`
     - `database/lock-watch`
+    - `debug/boot-monitor`
     - `debug/boot-watchdog`
     - `debug/health-monitor`
     - `debug/profiling/ops`

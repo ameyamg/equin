@@ -22,7 +22,11 @@ by the host:
   `sleptDuring` answers `null`, `awakeMsSince` the wall span — never shorter
   than the truth.
 
-API (one process-wide history): `sleptDuring(start, end)`, `awakeMsSince(wallMs)`
+API (one process-wide history): `sleptDuring(start, end)`, `darkWakeDuring(start, end)`
+(the time in it the machine was in a dark wake — placed from the readings that
+saw one, from its wake to the sleep that ended it or its last dark reading; a
+query reads the clock while the current wake is dark, since a lid opening moves
+no clock — disjoint from `sleptDuring`), `awakeMsSince(wallMs)`
 (the awake age of a past wall instant nothing could stamp, e.g. a change's
 `changedAt`), `stampOfWallInstant`, `awakeSpanStart`, `wakeBefore`, and the
 set-if-changed reading `publishSleepReading` / `currentSleepReading` /
@@ -54,6 +58,7 @@ Which tool for an age (a stamp, an awake timer, this history):
     - `awakeMsSince`
     - `awakeSpanStart`
     - `currentSleepReading`
+    - `darkWakeDuring`
     - `installSleepClock`
     - `onSleepReadingChanged`
     - `publishSleepReading`

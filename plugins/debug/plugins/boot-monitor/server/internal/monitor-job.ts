@@ -4,6 +4,8 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { recordSlowOp } from "@plugins/debug/plugins/slow-ops/server";
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import { awakeSpanStart } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import type { BootSection } from "@plugins/debug/plugins/trace/plugins/boot/core";
 import { bootClass } from "@plugins/debug/plugins/trace/plugins/boot/server";
 import { bootMonitorConfig } from "../../core";
@@ -19,6 +21,15 @@ import { getGatewayBootReport } from "./gateway-report";
 // boot re-mints, collapsing onto its stable slow_ops row (`count` = number of
 // slow boots for this worktree).
 let minted = false;
+
+// The wall instant the process became ready, `timeToReadyMs` into its life on
+// the awake clock: now, less the awake time since, stepping over the sleeps
+// this process saw (the wall-clock subtraction where it cannot tell).
+function readyAtMs(timeToReadyMs: number): number {
+  const sinceReadyMs = performance.now() - timeToReadyMs;
+  const nowMs = wallNow("sleep-detection");
+  return awakeSpanStart(nowMs, sinceReadyMs) ?? nowMs - sinceReadyMs;
+}
 
 // Cheap per-worktree scheduled time-to-ready monitor. Runs every minute in EACH
 // worktree's own backend (perWorktree) because getProfilingData() is per-process
@@ -101,6 +112,10 @@ export const bootMonitorJob = defineJob({
       [bootClass.supply(section)],
     );
     await recordSlowOp({
+      // Time to ready is on the process's awake clock (`performance.now()`
+      // from its start); it ended `performance.now() − timeToReadyMs` of
+      // awake time ago, placed on the wall clock over the sleeps since.
+      timing: { clock: "awake", endedAtMs: readyAtMs(timeToReadyMs) },
       operationKind: "boot",
       operation: "server-ready",
       durationMs: timeToReadyMs,

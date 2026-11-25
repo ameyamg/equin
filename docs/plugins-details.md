@@ -26932,6 +26932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/boot.bootClass`
           - `debug/trace/engine.captureTrace`
           - `infra/endpoints.implement`
+          - `infra/host/machine-sleep.awakeSpanStart`
           - `infra/jobs.defineJob`
         - Exports (values): `getGatewayBootReport`
         - Register: `defineJob('debug.boot-monitor')`
@@ -29455,9 +29456,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-producer` "slow_ops"
           - `fork-data-exclusion` "slow_op_callers"
           - `fork-data-exclusion` "slow_ops"
-        - Uses: 27 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `infra/jobs` ×4
           - `infra/entities` ×3
+          - `infra/host/machine-sleep` ×3
           - `config_v2` ×2
           - `infra/host/contention` ×2
           - `infra/host/duress/shed` ×2
@@ -29467,7 +29469,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/client-boot.clientBootClass`
           - `debug/trace/engine.captureTrace`
           - `infra/endpoints.implement`
-          - `infra/host/machine-sleep.sleptDuring`
           - `infra/retention.defineRetention`
           - `network/live/change-feed.defineChangeProducer`
           - `network/live.serveCollection`
@@ -39779,12 +39780,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FS_LATENCY_MONITOR_PLATFORM_REASON`
                   - `FS_LATENCY_MONITOR_PLATFORMS`
                   - `START_MONITOR_COMMAND`
-        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — stampOfWallInstant(wallMs, now) — the ClockStamp of a past wall instant nothing stamped (a row's created_at), from those sleeps — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
+        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — darkWakeDuring(start, end) — the time inside it the machine was in a dark (maintenance) wake, awake for no person — stampOfWallInstant(wallMs, now) — the ClockStamp of a past wall instant nothing stamped (a row's created_at), from those sleeps — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
             - Exports (values):
               - `awakeSpanStart`
               - `currentSleepReading`
+              - `darkWakeDuring`
               - `onSleepReadingChanged`
               - `publishSleepReading`
               - `sleptDuring`
@@ -39812,6 +39814,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations`
               - `conversations/conversation-view/op-status`
               - `database/lock-watch`
+              - `debug/boot-monitor`
               - `debug/boot-watchdog`
               - `debug/health-monitor`
               - `debug/profiling/ops`
@@ -45650,9 +45653,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×24
-          - `debug` ×13
+          - `debug` ×14
           - `framework` ×13
           - `apps` ×10
           - `conversations` ×5
@@ -46335,6 +46338,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `awakeMsSince`
               - `awakeSpanStart`
               - `currentSleepReading`
+              - `darkWakeDuring`
               - `installSleepClock`
               - `onSleepReadingChanged`
               - `publishSleepReading`

@@ -1,8 +1,4 @@
-import {
-  HIDDEN_LAYER,
-  SLEEP_LAYER,
-  type SlowOpClientItem,
-} from "../../shared/endpoints";
+import type { SlowOpClientItem } from "../../shared/endpoints";
 import type { RecordSlowOpInput } from "./input";
 
 /**
@@ -16,6 +12,14 @@ export function toRecordInput(
   traceId: string | undefined,
 ): RecordSlowOpInput {
   return {
+    // A browser times on the wall clock, which runs through a nap: the funnel
+    // takes the sleep and dark wakes over the item's window off its own time
+    // (`attend`). The window ends at `endedAt` (stamped by the queue on every
+    // windowed item); an older tab's item without one is judged as measured.
+    timing:
+      item.endedAt !== undefined
+        ? { clock: "wall", endedAtMs: item.endedAt }
+        : { clock: "unplaced" },
     operationKind: item.operationKind,
     operation: item.operation,
     durationMs: item.durationMs,
@@ -35,39 +39,6 @@ export function toRecordInput(
     ...(item.endedAt !== undefined
       ? { occurredAt: new Date(Math.min(item.endedAt, Date.now())) }
       : {}),
-  };
-}
-
-/**
- * Take the machine's sleep off a client item: a browser times on the wall
- * clock, which runs through a nap. The window is the item's last `durationMs`
- * before its `endedAt` (stamped by the queue on every windowed item); the
- * overlap is charged to the `sleep` layer and off its own time → the item, or
- * null when it is no longer over its bar. `sleptMs` null (cannot tell) or 0
- * leaves it unchanged; so does an item with no `endedAt`.
- *
- * A nap usually hides the tab too (a closed lid), and the browser already took
- * its `page-hidden` time off. The two cannot be placed against each other here,
- * so only the sleep beyond the hidden time comes off: the excluded total is
- * the larger of the two — never the same nap twice.
- */
-export function withoutSleep(
-  item: SlowOpClientItem,
-  sleptMs: (startMs: number, endMs: number) => number | null,
-): SlowOpClientItem | null {
-  if (item.endedAt === undefined) return item;
-  const slept = sleptMs(item.endedAt - item.durationMs, item.endedAt);
-  if (slept === null || slept <= 0) return item;
-  const beyondHidden = Math.round(slept) - (item.waits?.[HIDDEN_LAYER] ?? 0);
-  const ownMs = Math.max(
-    0,
-    (item.ownMs ?? item.durationMs) - Math.max(0, beyondHidden),
-  );
-  if (ownMs <= item.thresholdMs) return null;
-  return {
-    ...item,
-    ownMs,
-    waits: { ...item.waits, [SLEEP_LAYER]: Math.round(slept) },
   };
 }
 

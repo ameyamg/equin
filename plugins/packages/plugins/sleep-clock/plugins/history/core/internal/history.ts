@@ -99,6 +99,17 @@ export function sleptDuring(startMs: number, endMs: number): number | null {
 }
 
 /**
+ * ms the machine spent in a DARK wake inside `[startMs, endMs]` (epoch ms) —
+ * awake for maintenance, not for a person — disjoint from `sleptDuring`.
+ * Reads the clock first. `null` where it cannot tell. For a judgment of what a
+ * person waited on (slow-ops), never for a watchdog: work runs in a dark wake,
+ * so a deadline on it keeps counting there.
+ */
+export function darkWakeDuring(startMs: number, endMs: number): number | null {
+  return publisher === null ? null : publisher.darkWakeDuring(startMs, endMs);
+}
+
+/**
  * The AWAKE time since a past wall instant nothing could stamp (a Postgres
  * commit's `clock_timestamp()`, a change's `changedAt`), as of now: the wall
  * span less the sleep this process saw inside it. Where the sleep cannot be

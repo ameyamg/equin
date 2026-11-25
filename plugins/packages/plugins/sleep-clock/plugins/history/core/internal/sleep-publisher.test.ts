@@ -32,6 +32,8 @@ describe("createSleepPublisher", () => {
       asleepMs: 1000,
       wakeAtMs: 5,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     h.p.publish();
     expect(h.notified()).toBe(1);
@@ -44,6 +46,8 @@ describe("createSleepPublisher", () => {
       asleepMs: 1000.0004,
       wakeAtMs: 5,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     h.p.publish();
     h.p.publish();
@@ -57,6 +61,8 @@ describe("createSleepPublisher", () => {
       asleepMs: 61_000,
       wakeAtMs: 90_000,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     h.p.publish();
     expect(h.notified()).toBe(2);
@@ -83,6 +89,8 @@ describe("createSleepPublisher", () => {
       asleepMs: 0,
       wakeAtMs: 1,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     let other = 0;
     const stop = h.p.subscribe(() => other++);
@@ -95,6 +103,8 @@ describe("createSleepPublisher", () => {
       asleepMs: 5_000,
       wakeAtMs: 2,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     h.p.publish();
     expect(other).toBe(1);
@@ -125,6 +135,8 @@ describe("sleptDuring", () => {
       asleepMs: 0,
       wakeAtMs: null,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     h.p.publish();
     // 60 s of sleep, ended by the wake at t=100 000.
@@ -134,6 +146,8 @@ describe("sleptDuring", () => {
       asleepMs: 60_000,
       wakeAtMs: 100_000,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     expect(h.p.sleptDuring(0, 200_000)).toBe(60_000);
     expect(h.p.sleptDuring(90_000, 200_000)).toBe(10_000);
@@ -204,6 +218,8 @@ describe("awakeSpanStart", () => {
       asleepMs: 0,
       wakeAtMs: null,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     h.p.publish();
     h.set({
@@ -212,6 +228,8 @@ describe("awakeSpanStart", () => {
       asleepMs: 60_000,
       wakeAtMs: 100_000,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     expect(h.p.awakeSpanStart(110_000, 30_000)).toBe(20_000);
     expect(harness({ supported: false }).p.awakeSpanStart(1, 1)).toBeNull();
@@ -238,6 +256,8 @@ describe("wakeBefore", () => {
       asleepMs: 0,
       wakeAtMs: null,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     h.p.publish();
     h.set({
@@ -246,6 +266,8 @@ describe("wakeBefore", () => {
       asleepMs: 268_000,
       wakeAtMs: 300_000,
       sleepAtMs: null,
+      atMs: 0,
+      darkWake: null,
     });
     expect(h.p.wakeBefore(300_500, 30_000)).toEqual({
       supported: true,
@@ -270,6 +292,8 @@ describe("a process started after a wake", () => {
     boot: BOOT,
     asleepMs: 2_000_000,
     sleepAtMs: 1_000_000,
+    atMs: 0,
+    darkWake: null,
     wakeAtMs: 1_961_000,
   };
 
@@ -318,6 +342,8 @@ describe("the query gate", () => {
           asleepMs: 0,
           wakeAtMs: null,
           sleepAtMs: null,
+          atMs: 0,
+          darkWake: null,
         };
       },
       () => gate,
@@ -331,5 +357,95 @@ describe("the query gate", () => {
     expect(reads).toBe(2);
     p.publish(); // a publish always reads
     expect(reads).toBe(3);
+  });
+});
+
+describe("dark wakes", () => {
+  // A lid-shut Mac: naps of ~10 min, each ended by a dark wake of a few
+  // seconds (the 2026-11-25 power log: 09:52:18 → 09:52:20, 10:02:46 → 10:02:54).
+  const reading = (
+    asleepMs: number,
+    wakeAtMs: number | null,
+    atMs: number,
+    darkWake: boolean | null,
+  ): SleepClockReading => ({
+    supported: true,
+    boot: BOOT,
+    asleepMs,
+    wakeAtMs,
+    sleepAtMs: null,
+    atMs,
+    darkWake,
+  });
+
+  function lidShut() {
+    let r = reading(0, null, 1_000_000, false);
+    const p = createSleepPublisher(() => r);
+    return { p, set: (next: SleepClockReading) => (r = next) };
+  }
+
+  test("a span across naps and dark wakes: the naps are sleep, the dark wakes dark", () => {
+    const { p, set } = lidShut();
+    p.publish();
+    // Awake until 1_010_000, asleep 600 s, dark wake at 1_610_000 read twice.
+    set(reading(600_000, 1_610_000, 1_610_500, true));
+    p.publish();
+    set(reading(600_000, 1_610_000, 1_613_000, true));
+    p.publish();
+    // Asleep again from 1_614_000 for 300 s; dark wake at 1_914_000.
+    set(reading(900_000, 1_914_000, 1_914_400, true));
+    p.publish();
+    // The first dark stretch runs from its wake to the sleep that ended it.
+    expect(p.darkWakeDuring(1_610_000, 1_614_000)).toBe(4_000);
+    // A query reads while the wake is dark: the open stretch reaches it.
+    set(reading(900_000, 1_914_000, 1_918_000, true));
+    expect(p.darkWakeDuring(1_000_000, 1_918_000)).toBe(8_000);
+    expect(p.sleptDuring(1_000_000, 1_918_000)).toBe(900_000);
+  });
+
+  test("a dark wake that turns full stops at its last dark reading", () => {
+    const { p, set } = lidShut();
+    p.publish();
+    set(reading(600_000, 1_610_000, 1_612_000, true));
+    p.publish();
+    // The lid opens: same wake, full capabilities.
+    set(reading(600_000, 1_610_000, 1_620_000, false));
+    expect(p.darkWakeDuring(1_600_000, 1_700_000)).toBe(2_000);
+    // A later sleep does not reopen it.
+    set(reading(700_000, 1_800_000, 1_800_100, false));
+    p.publish();
+    expect(p.darkWakeDuring(1_600_000, 1_900_000)).toBe(2_000);
+  });
+
+  test("a full wake that turns dark is dark only from its last full reading", () => {
+    const { p, set } = lidShut();
+    p.publish();
+    set(reading(600_000, 1_610_000, 1_611_000, false));
+    p.publish();
+    // Hours later, same wake: the graphics went off (a sleep entry's first step).
+    set(reading(600_000, 1_610_000, 9_000_000, false));
+    p.publish();
+    set(reading(600_000, 1_610_000, 9_002_000, true));
+    expect(p.darkWakeDuring(1_610_000, 9_002_000)).toBe(2_000);
+  });
+
+  test("a process's first reading in a dark wake counts nothing before it", () => {
+    const p = createSleepPublisher(() => reading(600_000, 1_610_000, 1_615_000, true));
+    expect(p.darkWakeDuring(1_000_000, 1_615_000)).toBe(0);
+  });
+
+  test("a full wake is no dark time", () => {
+    const { p, set } = lidShut();
+    p.publish();
+    set(reading(600_000, 1_610_000, 1_610_500, false));
+    p.publish();
+    expect(p.darkWakeDuring(1_000_000, 1_700_000)).toBe(0);
+  });
+
+  test("cannot tell: null, never 'fully awake'", () => {
+    const p = createSleepPublisher(() => reading(0, null, 1_000_000, null));
+    expect(p.darkWakeDuring(0, 2_000_000)).toBeNull();
+    const off = createSleepPublisher(() => ({ supported: false }));
+    expect(off.darkWakeDuring(0, 2_000_000)).toBeNull();
   });
 });

@@ -36,6 +36,12 @@ const r = readSleepClock();
 - `boot` — `kern.bootsessionuuid`, read once per process.
 - `wakeAtMs` — `kern.waketime` (epoch ms) of the most recent wake, `null` if 0 or
   unreadable. It places only the LAST sleep on the wall clock.
+- `darkWake` — whether the machine is in a DARK wake right now (IOKit's
+  `IOPMrootDomain` "System Capabilities" without the graphics bit: a maintenance
+  / Power Nap wake, awake for no person), `null` if unreadable; `atMs` the wall
+  instant of the reading. The history places dark stretches from these
+  (`darkWakeDuring`), for judging what a person waited on (slow-ops) — never a
+  watchdog: work runs in a dark wake, so its deadline keeps counting there.
 
 `createSleepMeter()` is the relative form, built on `readSleepClock()`.
 `clockStampNow()` is the reading as a stamp stores it (`sleep-clock/stamp`'s

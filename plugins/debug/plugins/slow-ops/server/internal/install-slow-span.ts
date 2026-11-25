@@ -6,7 +6,7 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { CHILD_OPS_LAYER, WAIT_KIND } from "../../shared/endpoints";
-import { recordSlowOp } from "./record-slow-op";
+import { attendInput, recordSlowOp } from "./record-slow-op";
 import {
   perfFloorMs,
   resolveSlowThreshold,
@@ -54,9 +54,6 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
       // that op's, judged on its own span.
       const ownMs = slowSpanMs(span);
       if (ownMs < threshold) return;
-      // This span is the slow op: every span enclosing it (and a delivery that
-      // waited on it) is judged without it, so it is filed once — here.
-      claim();
       // The row's layers — the time it was judged without, never hidden: the
       // gate waits, its child ops' executions, and each filed op this span
       // contained, named by the op.
@@ -65,7 +62,27 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         ...(span.childMs > 0 && { [CHILD_OPS_LAYER]: span.childMs }),
         ...span.claims,
       };
-      const waits = Object.keys(layers).length > 0 ? layers : undefined;
+      // Judged on attended time before anything is captured: a span slow only
+      // across dark wakes (a lid-shut Mac's maintenance naps) is not slow, and
+      // claims nothing — what encloses it is judged with it, as any op under
+      // its bar.
+      const input = attendInput({
+        timing: { clock: "awake", endedAtMs: Date.now() },
+        operationKind: span.kind,
+        operation: span.label,
+        durationMs: span.durationMs,
+        ownMs,
+        thresholdMs: threshold,
+        source: "server-slow-op",
+        caller: span.parent,
+        waits: Object.keys(layers).length > 0 ? layers : undefined,
+        detail: span.detail,
+      });
+      if (input.ownMs < threshold) return;
+      const waits = input.waits;
+      // This span is the slow op: every span enclosing it (and a delivery that
+      // waited on it) is judged without it, so it is filed once — here.
+      claim();
       // 1. Evidence FIRST, synchronously: captureTrace's admission + the sync
       // coherent-instant capture must run before any await so the flight window
       // (open spans, gate occupancy) describes THIS trip's instant. Admission is
@@ -97,18 +114,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
       // swallowed. `span.parent` carries the caller attribution this refactor
       // exists to capture.
       // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: recordSlowOp persists via its own background-lane/suppressed path; must stay profiler-invisible
-      void recordSlowOp({
-        operationKind: span.kind,
-        operation: span.label,
-        durationMs: span.durationMs,
-        ownMs,
-        thresholdMs: threshold,
-        source: "server-slow-op",
-        caller: span.parent,
-        waits,
-        detail: span.detail,
-        traceId: trace?.id,
-      });
+      void recordSlowOp({ ...input, traceId: trace?.id });
     },
     { thresholdMs: floor },
   );
@@ -139,6 +145,28 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
       if (!isReaderWait(wait)) return false;
       const threshold = resolveWaitThreshold(wait, thresholds);
       if (wait.ms < threshold) return false;
+      // Judged on attended time first: a wait slow only across dark wakes
+      // (a `gh` call stuck on a lid-shut Mac's keep-alive-only network through
+      // six maintenance naps, 30 s of them in all) is returned unfiled, like
+      // any wait under its bar.
+      const attended = attendInput({
+        // One wait ended now. A summed one (an entry's residue, a gate's busy
+        // stretch) is many waits spread over a span it does not name: judged
+        // as measured, never on a window it did not have.
+        timing:
+          wait.waits === undefined
+            ? { clock: "awake", endedAtMs: Date.now() }
+            : { clock: "unplaced" },
+        operationKind: WAIT_KIND,
+        operation: wait.layer,
+        durationMs: wait.ms,
+        ownMs: wait.ms,
+        thresholdMs: threshold,
+        source: "server-slow-op",
+        caller: wait.caller,
+        holders: wait.holders,
+      });
+      if (attended.ownMs < threshold) return false;
       // One wait its waiter described (`beginDescribedWait`): which instance
       // of the layer it was — a git child's checkout kind and whether its
       // fsmonitor answered — and what it measured. A summed wait has none.
@@ -177,18 +205,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         },
       });
       // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: recordSlowOp persists via its own background-lane/suppressed path; must stay profiler-invisible
-      void recordSlowOp({
-        operationKind: WAIT_KIND,
-        operation: wait.layer,
-        durationMs: wait.ms,
-        ownMs: wait.ms,
-        thresholdMs: threshold,
-        source: "server-slow-op",
-        caller: wait.caller,
-        detail,
-        holders: wait.holders,
-        traceId: trace?.id,
-      });
+      void recordSlowOp({ ...attended, detail, traceId: trace?.id });
       return true;
     },
     { thresholdMs: Math.min(thresholds.loaderMs, thresholds.updateMs) },
