@@ -108,6 +108,8 @@ Ask why it was possible at all. A targeted fix at one call site leaves the rest 
 - **A retry on a failing op**: find out why it fails. A retry turns a deterministic bug into a flaky one.
 - **A cache over a slow path**: find out why the path is slow first. A cache is fine as a complement once the path is sound, never as the thing that hides the slowness.
 - **Raising a limit, cap or timeout because it got hit**: find out why the work outgrew the bound.
+- **A guard around an API that stays easy to misuse** (a lint, check, assert, per-op threshold or report exception): the next caller writes the same bug in a spelling the guard doesn't match. Change the API.
+- **A second fix for a report already fixed**: first say why the earlier fix didn't hold (the report's task lists its earlier fixes). The answer is usually one level up — the gate, the primitive, the default — not the next instance.
 - These are examples, not an exhaustive list. The rule: any fix that makes a symptom disappear without explaining its cause is suspect.
 - A deadline or retry is still right as a *bound* around something you don't control (a network peer, a third-party API), never as the fix for your own code.
 
@@ -119,7 +121,7 @@ Take the **highest rung** that can express the constraint, even if it churns cal
 4. **Loud runtime failure** — an assert at the boundary.
 5. **Documentation** — the weakest. Never when a rung above fits.
 
-The rungs rank enforcement strength, not the space of fixes. First invent the fix that makes the whole class of mistake impossible, then take its strongest form.
+**Rung 1 is the fix; rungs 2–5 are guards.** A guard keeps the API and catches its misuse: a workaround for an API that lets the mistake be written. Use one only when the API is right and the rule can't be designed away, or as a stopgap with a task for the redesign. Every guard says which, in its message or comment: `Compensates for: <the API flaw> (task-…)`, or `No flaw: <why the API can't express it>`. A guard shaped like the incident (it bans the spelling you just hit while the next one compiles) counts only as documentation.
 
 **Don't memorize gotchas.** Hit a footgun? Surface it or `add_task` it, to be fixed on this ladder — no memory file.
 

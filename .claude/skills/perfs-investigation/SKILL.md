@@ -37,3 +37,14 @@ Start from the whole event: Debug → Reports and the Timeline (`get_timeline`),
 
 The rules are examples; the philosophy is what matters: a fix that makes the symptom
 disappear without explaining its cause is a workaround hiding a deeper issue.
+
+## Guards and recurrences
+
+- **A guard is a workaround.** A lint, check, assert, raised threshold or report exception
+  doesn't fix the API that let the bug be written; it only catches it. Name the flaw it
+  compensates for, and prefer changing the API.
+- **A wait report names who waited, not who held.** Fix the holder or the gate's rule, never
+  one waiter: the next waiter fires the same report.
+- **A report that came back starts with "why didn't the fix hold?"** Its task lists the
+  earlier fixes. The answer is usually one level up (the gate, the primitive, the default).
+  Check each layer the cause leaks through: one primitive rarely covers them all.
