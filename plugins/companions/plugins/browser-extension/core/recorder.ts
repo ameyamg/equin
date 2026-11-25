@@ -59,9 +59,47 @@ export const SavedRecordingSchema = z.object({
 });
 export type SavedRecording = z.infer<typeof SavedRecordingSchema>;
 
+/**
+ * Why a recording stopped. Anything but `user` stopped it on its own, and the
+ * panel says so — a recording that ended early is never shown as a plain save.
+ */
+export const StopCauseSchema = z.enum([
+  /** Stop in the panel, or ⌥⇧R. */
+  "user",
+  /** The window's size changed mid-recording (one size per video). */
+  "window-resized",
+  /** Chrome ended the tab's capture (the tab closed, …). */
+  "capture-ended",
+]);
+export type StopCause = z.infer<typeof StopCauseSchema>;
+
+/** Why it stopped, in words: completes "It stopped because …". */
+export function stopCauseText(cause: StopCause): string {
+  switch (cause) {
+    case "user":
+      return "you stopped it";
+    case "window-resized":
+      return "the window was resized while recording (a video keeps one size)";
+    case "capture-ended":
+      return "Chrome ended the tab's capture (the tab closed, or went to a page Chrome does not capture)";
+  }
+}
+
+/** The failure of a recording that stopped before any video was recorded:
+ *  never finished as a file, and the reason it stopped is the message. */
+export function emptyRecordingText(cause: StopCause): string {
+  return `Nothing was recorded: it stopped before its first second, because ${stopCauseText(cause)}.`;
+}
+
 /** What the last recording came to, shown until the next one starts. */
 export const LastRecordingSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("saved"), recording: SavedRecordingSchema }),
+  z.object({
+    kind: z.literal("saved"),
+    recording: SavedRecordingSchema,
+    /** Why it stopped; `null` from a shell older than the field (the page
+     *  can be newer than the shell), which did not say. */
+    stoppedBy: StopCauseSchema.nullable().default(null),
+  }),
   z.object({ kind: z.literal("failed"), error: z.string() }),
 ]);
 export type LastRecording = z.infer<typeof LastRecordingSchema>;
@@ -161,6 +199,8 @@ export const OffscreenCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("offscreen.resume") }),
   z.object({
     type: z.literal("offscreen.stop"),
+    /** Why it stops: the failure's words if nothing was recorded. */
+    stoppedBy: StopCauseSchema,
     durationMs: z.number().nonnegative(),
     pointer: PointerTrackSchema.nullable(),
   }),

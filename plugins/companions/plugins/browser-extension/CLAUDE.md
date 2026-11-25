@@ -55,7 +55,14 @@ both ends) and `core/viewport.ts` (pure, tested); what the panel shows is
   (1280 × 720, or 540 × 960 for 9:16; As is keeps it), the old bounds kept
   to put back; count down in the page; take a `tabCapture` stream id; start the
   offscreen recorder; badge REC. Stop / Discard / Pause / a manual resize (it
-  stops: one size per video) / the tab closing.
+  stops: one size per video) / the tab closing. Every stop carries its
+  `StopCause` (`core/recorder.ts`): the saved state keeps it, so the panel
+  says when a recording stopped on its own, and a stop before the first chunk
+  is a failure naming the cause, never a finish of nothing. The resize rule
+  reads the window's size when its step runs, never the event's snapshot: the
+  start's own un-maximize and resize queue events behind it.
+  `plugins/recorder/e2e/session-probe.ts --headed` runs the whole session
+  (resize, countdown, real `tabCapture`, upload) from a maximized window.
 - **`offscreen.ts`** (reason USER_MEDIA) records the stream, scaled by Chrome
   to the preset's video size (asserted from the track's settings), tab audio
   and the mic mixed into one track, H.264/AAC MP4 in 1 s chunks (no fallback
@@ -209,6 +216,7 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `ShellState`
     - `SizeRefusal`
     - `SizeResult`
+    - `StopCause`
     - `TabFit`
     - `TabMeasure`
     - `WindowBounds`
@@ -257,6 +265,8 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `SavedRecordingSchema`
     - `ShellStateSchema`
     - `sizeRefusalText`
+    - `StopCauseSchema`
+    - `stopCauseText`
     - `TabFitSchema`
     - `windowBoundsFor`
 - Cross-plugin:

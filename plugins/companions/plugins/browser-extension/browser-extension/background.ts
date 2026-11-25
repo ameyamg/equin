@@ -31,6 +31,7 @@ import {
   type RecorderOptions,
   type RecorderState,
   type SavedRecording,
+  type StopCause,
   type WorkerCommand,
   type WorkerReply,
 } from "../core/recorder";
@@ -382,7 +383,7 @@ function isGoneTab(err: unknown): boolean {
   );
 }
 
-async function stop(): Promise<void> {
+async function stop(stoppedBy: StopCause): Promise<void> {
   const state = await readRecorderState();
   if (state.kind !== "recording") throw new Error("Nothing is recording.");
   const session = await readSession();
@@ -393,6 +394,7 @@ async function stop(): Promise<void> {
     if (session.content && !session.pointer) await finishContent(session.tabId);
     const saved = await toOffscreen({
       type: "offscreen.stop",
+      stoppedBy,
       durationMs: recordedMs(state, wallNow("human-time")),
       pointer,
     });
@@ -400,7 +402,10 @@ async function stop(): Promise<void> {
     await writeSession(null);
     await closeOffscreen();
     await restoreWindow(session);
-    await setState({ kind: "idle", last: { kind: "saved", recording: saved } });
+    await setState({
+      kind: "idle",
+      last: { kind: "saved", recording: saved, stoppedBy },
+    });
   } catch (err) {
     await fail(err);
   }
@@ -469,7 +474,7 @@ async function command(cmd: WorkerCommand): Promise<void> {
     case "recorder.start":
       return start(cmd.tabId, cmd.options);
     case "recorder.stop":
-      return stop();
+      return stop("user");
     case "recorder.pause":
       return pause(true);
     case "recorder.resume":
@@ -511,7 +516,7 @@ onMessageAsync(
       if (state.kind !== "recording") return;
       if (event.reason === "error")
         await fail(new Error(event.error ?? "The recording failed."));
-      else await stop();
+      else await stop("capture-ended");
     });
     return null;
   },
@@ -524,7 +529,7 @@ permitted("commands").onCommand.addListener((name, tab) => {
 
 async function toggle(tabId: number | undefined): Promise<void> {
   const state = await readRecorderState();
-  if (state.kind === "recording") return stop();
+  if (state.kind === "recording") return stop("user");
   if (state.kind !== "idle") return;
   if (tabId === undefined) throw new Error("There is no tab to record.");
   await start(tabId, await readRecorderOptions());
@@ -532,16 +537,24 @@ async function toggle(tabId: number | undefined): Promise<void> {
 
 // A manual resize mid-recording would change the video's size: stop instead
 // (a recording of one size, never a variable one).
-chrome.windows.onBoundsChanged.addListener((win) => {
+//
+// The event only says the bounds changed; what decides is the window's size
+// NOW, read when the step runs. The event's own window is a snapshot from
+// when it fired — and the start's own resize (un-maximize, size, correct)
+// fires events that queue behind the start and run once it is recording:
+// judged by their snapshot, they stopped every recording from a maximized
+// window as the countdown ended (2026-11-25, `e2e/session-probe.ts`).
+chrome.windows.onBoundsChanged.addListener((changed) => {
   void serial(async () => {
     const state = await readRecorderState();
     if (state.kind !== "recording") return;
     const session = await readSession();
-    if (session === null || session.windowId !== win.id) return;
+    if (session === null || session.windowId !== changed.id) return;
     const at = session.recordedSize;
-    if (at === null || (win.width === at.width && win.height === at.height))
-      return;
-    await stop();
+    if (at === null) return;
+    const win = await chrome.windows.get(session.windowId);
+    if (win.width === at.width && win.height === at.height) return;
+    await stop("window-resized");
   });
 });
 

@@ -78,6 +78,8 @@ export {
   RelayRequestSchema,
   RelayResponseSchema,
   SavedRecordingSchema,
+  StopCauseSchema,
+  stopCauseText,
   TabFitSchema,
   type LastRecording,
   type MicPermission,
@@ -90,5 +92,6 @@ export {
   type RelayRequest,
   type RelayResponse,
   type SavedRecording,
+  type StopCause,
   type TabFit,
 } from "./recorder";

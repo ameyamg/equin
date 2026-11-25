@@ -15,6 +15,7 @@
  */
 import { BRIDGE_PORT, BridgeHelloSchema } from "../core/bridge";
 import {
+  emptyRecordingText,
   OffscreenCommandSchema,
   RECORDER_RELAY_PATH,
   RelayCreatedSchema,
@@ -26,6 +27,7 @@ import {
   type PointerTrack,
   type RelayRequest,
   type SavedRecording,
+  type StopCause,
 } from "../core/recorder";
 import { chrome, errorText, messageType, onMessageAsync } from "./chrome-api";
 
@@ -373,6 +375,7 @@ function thumbnail(s: Session): string | null {
 }
 
 async function stop(
+  stoppedBy: StopCause,
   durationMs: number,
   pointer: PointerTrack | null,
 ): Promise<SavedRecording> {
@@ -382,6 +385,14 @@ async function stop(
   const thumb = thumbnail(s);
   await wind(s);
   if (s.failed !== null) throw s.failed;
+  // Stopped before the recorder handed over a single chunk: there is no
+  // video, and the failure is why it stopped — never a finish of nothing.
+  if (s.seq === 0) {
+    await (
+      await openRelay()
+    )({ op: "discard", recordingId: s.recordingId });
+    throw new Error(emptyRecordingText(stoppedBy));
+  }
   const finished = RelayFinishedSchema.parse(
     await keepingWorkerAwake(
       (async () =>
@@ -434,7 +445,10 @@ onMessageAsync(
         recording().recorder.resume();
         return { ok: true, saved: null };
       case "offscreen.stop":
-        return { ok: true, saved: await stop(cmd.durationMs, cmd.pointer) };
+        return {
+          ok: true,
+          saved: await stop(cmd.stoppedBy, cmd.durationMs, cmd.pointer),
+        };
       case "offscreen.discard":
         await discard();
         return { ok: true, saved: null };

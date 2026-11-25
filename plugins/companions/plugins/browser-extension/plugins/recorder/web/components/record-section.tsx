@@ -10,6 +10,7 @@ import {
   recordedMs,
   recordPreset,
   sizeRefusalText,
+  stopCauseText,
   type RecorderOptions,
   type RecorderSnapshot,
   type RecorderState,
@@ -151,6 +152,14 @@ function Body({
               run={run}
             />
           )}
+          {state.last?.kind === "saved" &&
+            state.last.stoppedBy !== null &&
+            state.last.stoppedBy !== "user" && (
+              <Note
+                tone="error"
+                text={`It stopped on its own: ${stopCauseText(state.last.stoppedBy)}.`}
+              />
+            )}
           {state.last?.kind === "failed" && (
             <Note tone="error" text={state.last.error} />
           )}

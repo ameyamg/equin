@@ -17021,6 +17021,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ShellState`
           - `SizeRefusal`
           - `SizeResult`
+          - `StopCause`
           - `TabFit`
           - `TabMeasure`
           - `WindowBounds`
@@ -17069,6 +17070,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SavedRecordingSchema`
           - `ShellStateSchema`
           - `sizeRefusalText`
+          - `StopCauseSchema`
+          - `stopCauseText`
           - `TabFitSchema`
           - `windowBoundsFor`
       - Cross-plugin:
