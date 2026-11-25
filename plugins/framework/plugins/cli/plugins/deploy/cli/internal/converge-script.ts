@@ -437,6 +437,83 @@ export const EDGE_ACCESS_LOG_KEEP_DAYS = 14;
 export const HSTS_MAX_AGE_SEC = 365 * 24 * 60 * 60;
 
 /**
+ * How long Cloudflare's edge keeps a page's HTML (and every other response the
+ * origin marks `no-cache`: the unhashed root files) before asking the origin
+ * again, behind a `cloudflare` edge. Every ship purges it
+ * ({@link edgeDocumentCacheTag}), so this bounds only what changes WITHOUT a
+ * ship — the head the running backend renders (the theme's CSS) — and a purge
+ * that failed loudly. Before it, every page view crossed to the origin
+ * (Germany): Europe's first byte went 116 → ~200 ms, the rest of the world's
+ * share over 1.5 s from ~3% to ~16% (2026-11-23/24).
+ */
+export const EDGE_DOCUMENT_MAX_AGE_SEC = 10 * 60;
+
+/**
+ * How long past {@link EDGE_DOCUMENT_MAX_AGE_SEC} the edge may still answer
+ * with its copy while it refetches in the background, so a quiet edge (most of
+ * the world sees a few loads a day) answers from cache rather than from
+ * Germany. Short of a day on purpose: a copy older than every address the
+ * origin keeps (web-artifacts' `served-addresses`, a day) could name modules
+ * that are gone.
+ */
+export const EDGE_DOCUMENT_STALE_SEC = 60 * 60;
+
+/**
+ * The `Cache-Tag` every edge-cached document of one deployment carries, and
+ * the tag converge and ship purge after their scripts — one spelling for
+ * both, so the cache and its purge cannot drift apart. Per composition, so
+ * purging one composition never drops another's pages from the same zone (two
+ * deployments of ONE composition in a zone share it, and purge each other —
+ * more than needed, never less).
+ */
+export function edgeDocumentCacheTag(compositionId: string): string {
+  return `equin-documents-${compositionId}`;
+}
+
+/**
+ * The request paths whose answers are never edge-cached as documents: the
+ * API and its sockets are live (and the API's own headers say so), the
+ * gateway's control API is refused above.
+ */
+const EDGE_LIVE_PATHS = ["/api/*", "/ws/*", GATEWAY_API_PREFIX + "*"] as const;
+
+/**
+ * The site block's edge cache for documents, `cloudflare` edge only (empty
+ * for `direct`: no CDN, nothing to purge). It adds
+ * `Cloudflare-CDN-Cache-Control` — read by Cloudflare alone, never forwarded
+ * to the browser, which still sees the origin's `no-cache` and revalidates
+ * with the edge — and the deployment's `Cache-Tag` (also stripped by
+ * Cloudflare) to the answers the origin marks `no-cache`: content that
+ * changes only with a release (the HTML shell, the unhashed root files).
+ * Only 200 and its revalidation 304, so an error page is never kept; never on
+ * {@link EDGE_LIVE_PATHS}.
+ *
+ * Nothing in those answers is per visitor: the gateway serves the same bytes
+ * for one path (the shell, the theme's head, the page's snapshot — keyed by
+ * path and build), sets no cookie and reads none, and Cloudflare's cache key
+ * already holds the host and the query string.
+ *
+ * Gated on the edge, like the purge in ship: a site block that caches HTML
+ * at the edge exists only where ship purges it.
+ */
+function edgeDocumentCacheLines(
+  edge: DeploymentEdge,
+  compositionId: string,
+): string {
+  if (edge === "direct") return "";
+  return `\t@edge_documents not path ${EDGE_LIVE_PATHS.join(" ")}
+\theader @edge_documents {
+\t\tCloudflare-CDN-Cache-Control "max-age=${EDGE_DOCUMENT_MAX_AGE_SEC}, stale-while-revalidate=${EDGE_DOCUMENT_STALE_SEC}"
+\t\tCache-Tag "${edgeDocumentCacheTag(compositionId)}"
+\t\tmatch {
+\t\t\tstatus 200 304
+\t\t\theader Cache-Control no-cache
+\t\t}
+\t}
+`;
+}
+
+/**
  * Where Cloudflare publishes the address ranges its proxies connect from. Read
  * ON THE BOX at every converge of a `cloudflare` edge (`CLOUDFLARE_RANGES_SH`),
  * so the trust list and the firewall follow Cloudflare rather than a copy in
@@ -588,6 +665,7 @@ export function caddySite(
   loopbackPort: number,
   accessLogPath: string,
   edge: DeploymentEdge,
+  compositionId: string,
 ): string {
   // No `header_up Host`: each install runs its OWN gateway with
   // `-default-namespace <composition>`, and the gateway's `parseWorktree`
@@ -604,7 +682,9 @@ export function caddySite(
   // The `immutable` year is safe for `/assets/*` ONLY: vite content-hashes those
   // filenames, so a changed file is a changed URL. Everything else (the HTML
   // shell, the unhashed root icons) is deliberately left revalidating — caching
-  // index.html for a year would pin visitors to a stale build forever.
+  // index.html for a year would pin visitors to a stale build forever. Behind
+  // Cloudflare the edge (never the browser) keeps those for minutes, purged on
+  // every ship ({@link edgeDocumentCacheLines}).
   //
   // `Strict-Transport-Security` on every response ({@link HSTS_MAX_AGE_SEC}):
   // Caddy serves only HTTPS (it redirects `http://` after answering the ACME
@@ -654,7 +734,7 @@ export function caddySite(
 \trespond ${GATEWAY_API_PREFIX}* 404
 \theader Strict-Transport-Security "max-age=${HSTS_MAX_AGE_SEC}"
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
-\treverse_proxy ${listenAddress(loopbackPort)} {
+${edgeDocumentCacheLines(edge, compositionId)}\treverse_proxy ${listenAddress(loopbackPort)} {
 ${forwardedForLine(edge)}\t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
 \t\tlb_try_interval 250ms
 \t\tstream_close_delay ${EDGE_STREAM_CLOSE_DELAY_HOURS}h
@@ -871,7 +951,7 @@ fi
 
 install -d -m 755 "$CADDY_SITES"
 cat > "$(staged "$SITE")" <<'CADDY_SITE_EOF'
-${caddySite(hostnames, loopbackPort, install.edgeAccessLogPath, edge)}CADDY_SITE_EOF
+${caddySite(hostnames, loopbackPort, install.edgeAccessLogPath, edge, install.compositionId)}CADDY_SITE_EOF
 # 0644: the caddy unit runs as User=caddy and must be able to READ its own site.
 if put "$SITE" 644 -; then
   caddy_changed=1

@@ -18,6 +18,11 @@ import { bundleRefusalMessage } from "@plugins/release/plugins/bundles/core";
 import { resolveBundle } from "@plugins/release/plugins/bundles/server";
 import { activateScript } from "./internal/activate-script";
 import {
+  purgeAfterRun,
+  refuseOnPurgeFailures,
+  resolveEdgePurge,
+} from "./internal/edge-purge";
+import {
   ACTIVATE_MS,
   SSH_SHORT_MS,
   UPLOAD_MS,
@@ -89,6 +94,10 @@ const run: CliAction<[string], { server: string; release?: string }> = async (
     );
   }
 
+  // Resolved before the upload: a cloudflare edge keeps the HTML, so a ship
+  // that could not purge it afterwards must not start.
+  const edgePurge = await resolveEdgePurge(target);
+
   // `scp` does not create the remote parent dir, and making the upload
   // primitive silently do two things would hide that from every caller.
   await remote(target, ["mkdir", "-p", dir], {
@@ -110,6 +119,11 @@ const run: CliAction<[string], { server: string; release?: string }> = async (
   }
 
   console.log("  • activating (flip + restart + health gate)");
+  // A purge failure is collected and reported once the activation's own
+  // verdict is out: a failed gate exits with its log, a passed one refuses
+  // below. The purge itself runs on both paths — a passed gate serves new
+  // pages, a failed one served them and swapped back.
+  const purgeFailures: string[] = [];
   await runScript(target, {
     script: activateScript({
       install,
@@ -120,7 +134,10 @@ const run: CliAction<[string], { server: string; release?: string }> = async (
     remoteName: `equin-activate-${composition}.sh`,
     timeoutMs: ACTIVATE_MS,
     what: "activate",
+    afterRun:
+      edgePurge === null ? undefined : purgeAfterRun(edgePurge, purgeFailures),
   });
+  refuseOnPurgeFailures(purgeFailures);
 
   console.log(
     `\n[done] ${server.name} is serving "${composition}" ${bundle.runId}.`,

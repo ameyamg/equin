@@ -22,6 +22,7 @@ cli/internal/target.ts          `(composition, --server)` → everything both ve
 cli/internal/closure-guards.ts  converge's pre-mutation refusals
 cli/internal/converge-script.ts the generated host state (+ its test)
 cli/internal/secret-env.ts      the approved deploy secrets, fetched and rendered for stdin
+cli/internal/edge-purge.ts      a cloudflare edge's token + zones, resolved before any mutation; ship's purge
 cli/internal/activate-script.ts the generated activation (extract, swap or host restart) + health gate (+ its test)
 cli/internal/restart-script.ts  the generated restart + the same health gate (+ its test)
 ```
@@ -88,7 +89,9 @@ keeps every address a tab used within a day (web-artifacts'
 per request (protocol, status, size, full duration, client) to the install's
 `edgeAccessLogPath` (`/var/log/caddy/<composition>.access.log`), rotated past
 100 MB, 30 gzipped rolls, 14 days at most (`caddySite`). It is the box's only
-record of what a visitor's browser asked for and when it cancelled; Caddy's
+record of what a visitor's browser asked for and when it cancelled (behind
+Cloudflare, of what reached the box: a page or module answered from the
+edge's cache never does); Caddy's
 journal keeps only the responses it could not finish. Converge creates the file
 caddy-owned before `caddy validate` (root) can create it root-owned, which
 fails the reload with "permission denied".
@@ -125,22 +128,50 @@ What converge cannot do — the Cloudflare zone — is a checklist, in order:
    HTTPS" off**: Caddy redirects to HTTPS itself after answering the ACME
    challenge, and Cloudflare redirecting first breaks HTTP-01 renewal.
    WebSockets on (the default).
-3. **No Cache Rules.** The cache policy is the code's, not the dashboard's:
-   Cloudflare follows the origin's `Cache-Control` (the shell `no-cache`,
-   `/api/*` `no-store`, `/artifacts/*`, `/assets/*` and the asset mirror's
-   files — the site's film included — immutable, a missing `/artifacts/*`
-   `no-store`). A dashboard rule would be a second, unreviewed copy of that
-   policy. Video is the exception a source decides: a mirrored video carries
-   `CDN-Cache-Control: no-store` unless its asset-mirror source declares
-   `videoAtCdn: "stored"` (`infra/asset-mirror`) — only the website's film
-   does, since Cloudflare's CDN terms frown on a zone whose bytes are mostly
-   video. If video ever dominates, the route is R2 / Stream.
+3. **One Cache Rule, policy-free; set the Cloudflare token.** The cache
+   policy is the code's, not the dashboard's. Cloudflare never caches HTML on
+   its own, whatever the origin says, so one rule only hands the decision to
+   the origin: Caching → Cache Rules → Create rule, name `origin decides`,
+   *Custom filter expression* → edit expression:
+   `(not starts_with(http.request.uri.path, "/api/") and not starts_with(http.request.uri.path, "/ws/"))`,
+   then **Eligible for cache**, Edge TTL **Use cache-control header if
+   present, bypass cache if not**, nothing else. From there the origin
+   decides everything: the shell and the unhashed root files are `no-cache`
+   to the browser and, behind this edge, kept at the edge for
+   `EDGE_DOCUMENT_MAX_AGE_SEC` (10 min, `stale-while-revalidate`
+   `EDGE_DOCUMENT_STALE_SEC`) by the site block's
+   `Cloudflare-CDN-Cache-Control`, tagged `Cache-Tag:
+   equin-documents-<composition>` (both read and stripped by Cloudflare;
+   200/304 only, never `/api/*`, `/ws/*`); `/api/*` `no-store`;
+   `/artifacts/*`, `/assets/*` and the asset mirror's files — the site's film
+   included — immutable; a missing `/artifacts/*` `no-store`. Video is the
+   exception a source decides: a mirrored video carries `CDN-Cache-Control:
+   no-store` unless its asset-mirror source declares `videoAtCdn: "stored"`
+   (`infra/asset-mirror`) — only the website's film does, since Cloudflare's
+   CDN terms frown on a zone whose bytes are mostly video. If video ever
+   dominates, the route is R2 / Stream.
+
+   **Every ship and converge purges the HTML** (`edge-purge.ts`): after the
+   script — a passed or failed gate alike, since a failed one served pages
+   and swapped back; a converge may change the env or restart — it purges the
+   composition's tag in every zone of its hostnames, so a visitor reads the
+   new pages from then on. A session lost before the script ended (timeout,
+   disconnect) says so: the host may still change after that purge, and the
+   same deploy run again purges after it. The token is the Cloudflare account in
+   Settings → Accounts (`auth/cloudflare`: a Custom Token with `Zone · Zone ·
+   Read` and `Zone · Cache Purge · Purge` on the site's zone). Converge and
+   ship both **refuse** a `cloudflare` edge, before touching the host, while
+   it is missing, reads no zone for a hostname, or may not purge one (probed
+   with a tag nothing carries) — a site caching HTML that no deploy can purge
+   cannot be produced. A purge that fails after the script fails the run,
+   saying the edge may serve the previous pages for at most 10 min.
 4. Proxy the records (orange), then set the deployment's edge to
    `cloudflare` and converge. Between the two, visitors briefly read as
    Cloudflare addresses, so keep it to minutes.
 5. Check it: `./equin deploy check-edge <hostname> [--uncached <path…>]`
-   asks the live site, twice per URL, whether the shell and API are never
-   stored at the edge, a content-addressed module is (`HIT`), a missing module
+   asks the live site, twice per URL, whether the shell is stored at the edge
+   (`HIT`) yet `no-cache` to the browser, the API is never stored, a
+   content-addressed module is (`HIT`), a missing module
    is not pinned, and each `--uncached` path (none today) is never stored. Public requests
    only; it also passes with no CDN in front, on the origin's headers alone.
 6. Rollback is the reverse order: grey records, then `direct` and converge.

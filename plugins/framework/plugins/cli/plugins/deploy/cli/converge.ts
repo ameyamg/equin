@@ -24,6 +24,11 @@ import {
 import { convergeScript } from "./internal/converge-script";
 import { approvedSecretEnv, secretEnvStdin } from "./internal/secret-env";
 import {
+  purgeAfterRun,
+  refuseOnPurgeFailures,
+  resolveEdgePurge,
+} from "./internal/edge-purge";
+import {
   CONVERGE_MS,
   refuse,
   resolveTarget,
@@ -97,6 +102,18 @@ const run: CliAction<[string], { server: string }> = async (
     }`,
   );
 
+  // A cloudflare edge's site block lets Cloudflare keep the HTML, which is
+  // only safe where every ship can purge it: no usable token, no converge.
+  const edgePurge = await resolveEdgePurge(target);
+  const purgeFailures: string[] = [];
+  if (edgePurge !== null) {
+    console.log(
+      `  Edge cache: HTML tagged ${edgePurge.tag}, purged after every converge and ship in ${edgePurge.zones
+        .map((z) => z.name)
+        .join(", ")}`,
+    );
+  }
+
   await runScript(target, {
     script: convergeScript({
       install,
@@ -112,7 +129,12 @@ const run: CliAction<[string], { server: string }> = async (
     what: "converge",
     // Values travel ONLY here: the SSH session's stdin.
     stdin: secretEnvStdin(secrets),
+    // A converge can change what the site renders (its env, its restart), so
+    // the edge's copies go too.
+    afterRun:
+      edgePurge === null ? undefined : purgeAfterRun(edgePurge, purgeFailures),
   });
+  refuseOnPurgeFailures(purgeFailures);
 
   console.log(`\n[done] ${server.name} is converged for "${composition}".`);
   console.log(

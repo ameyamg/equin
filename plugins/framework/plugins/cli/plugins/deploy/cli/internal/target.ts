@@ -383,6 +383,15 @@ export async function runScript(
      * (converge's approved env): never in argv, never in the uploaded script.
      */
     stdin?: string;
+    /**
+     * Runs once the SSH session has ended, whatever it answered — before a
+     * failure exits. For what must follow the script on both paths: the edge
+     * purge, since a failed gate has still served (and reverted) pages.
+     * `seenToEnd` is false when the session was lost (timeout, disconnect)
+     * rather than the script exiting: the script may still be running on the
+     * host, so what follows it is not yet final.
+     */
+    afterRun?: (outcome: { seenToEnd: boolean }) => Promise<void>;
   },
 ): Promise<void> {
   const localPath = join(tmpdir(), opts.remoteName);
@@ -409,6 +418,11 @@ export async function runScript(
   // Both scripts send ALL their progress to stderr (`exec 1>&2`), because
   // `sshRun`'s FAILURE result carries stderr only — on stdout the record of
   // what ran would be dropped on exactly the path where it matters most.
+  if (opts.afterRun !== undefined) {
+    await opts.afterRun({
+      seenToEnd: result.ok || result.kind === "command-failed",
+    });
+  }
   if (result.ok) {
     if (result.stderr !== "") console.log(result.stderr.trimEnd());
     return;

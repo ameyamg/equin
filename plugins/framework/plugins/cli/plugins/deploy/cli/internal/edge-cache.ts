@@ -3,7 +3,8 @@
  * the pure half of `./equin deploy check-edge`.
  *
  * The cache policy lives in code (the origin's `Cache-Control`, the generated
- * Caddy site block's `Cloudflare-CDN-Cache-Control`), never in a CDN dashboard.
+ * Caddy site block's `Cloudflare-CDN-Cache-Control` and `Cache-Tag`, which
+ * ship purges), never in a CDN dashboard.
  * This is how a drift on either side shows: a dashboard rule someone added, a
  * header a refactor dropped. Each probe fetches its URL twice; the second
  * answer is the one a CDN would have kept.
@@ -13,6 +14,11 @@
 export type CacheExpectation =
   /** Stored at the edge: the second request is a hit (Cloudflare `HIT`). */
   | "edge-cached"
+  /**
+   * Stored at the edge (purged on every ship), while the browser is told to
+   * revalidate (`no-cache`): the HTML shell, which names the current build.
+   */
+  | "edge-cached-revalidated"
   /** Never stored at the edge: the second request is not a hit. */
   | "never-edge-cached";
 
@@ -62,9 +68,9 @@ export function edgeProbes(opts: {
   return [
     {
       path: "/",
-      expect: "never-edge-cached",
+      expect: "edge-cached-revalidated",
       status: 200,
-      why: "the HTML shell names the current build; a cached copy pins visitors to an old one",
+      why: "the HTML shell is served from the edge (ship purges it), but a browser must ask again each visit — it names the current build",
     },
     {
       path: "/api/health",
@@ -99,8 +105,8 @@ export type ProbeVerdict =
 
 /**
  * Judge one probe from its two answers. On a `direct` edge there is no CDN, so
- * only the origin's half is checked (the status, and an edge-cached URL being
- * immutable); behind Cloudflare its `cf-cache-status` on the SECOND request is
+ * only the origin's half is checked (the status, an edge-cached URL being
+ * immutable, the shell being `no-cache`); behind Cloudflare its `cf-cache-status` on the SECOND request is
  * the verdict — `HIT` stored, anything else (`MISS` twice, `BYPASS`,
  * `DYNAMIC`, `EXPIRED`) not.
  */
@@ -116,6 +122,15 @@ export function judgeProbe(
     };
   }
   const cacheControl = second.headers["cache-control"] ?? "(none)";
+  if (
+    probe.expect === "edge-cached-revalidated" &&
+    !cacheControl.split(",").some((d) => d.trim() === "no-cache")
+  ) {
+    return {
+      ok: false,
+      detail: `the browser is told Cache-Control ${cacheControl}, expected no-cache — a browser copy would outlive the purge`,
+    };
+  }
   if (answeringEdge(second) === "direct") {
     if (probe.expect === "edge-cached" && !cacheControl.includes("immutable")) {
       return {
@@ -130,7 +145,7 @@ export function judgeProbe(
   }
   const cfStatus = second.headers["cf-cache-status"] ?? "(none)";
   const hit = cfStatus === "HIT";
-  if (probe.expect === "edge-cached" && !hit) {
+  if (probe.expect !== "never-edge-cached" && !hit) {
     return {
       ok: false,
       detail: `second request was ${cfStatus}, expected HIT (origin Cache-Control ${cacheControl})`,

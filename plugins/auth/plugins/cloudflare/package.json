@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-auth-cloudflare",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Cloudflare API token credential for the auth registry: the token deploys purge a cloudflare edge's cache with."
+}

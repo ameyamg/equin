@@ -32,6 +32,12 @@ const artifact: EdgeProbe = {
 };
 const shell: EdgeProbe = {
   path: "/",
+  expect: "edge-cached-revalidated",
+  status: 200,
+  why: "",
+};
+const api: EdgeProbe = {
+  path: "/api/health",
   expect: "never-edge-cached",
   status: 200,
   why: "",
@@ -59,7 +65,7 @@ describe("edgeProbes", () => {
       extraUncached: ["/api/asset-mirror/website-media/film.mp4"],
     });
     expect(probes.map((p) => [p.path, p.expect, p.status])).toEqual([
-      ["/", "never-edge-cached", 200],
+      ["/", "edge-cached-revalidated", 200],
       ["/api/health", "never-edge-cached", 200],
       ["/artifacts/chunk.0a/index.js", "edge-cached", 200],
       ["/artifacts/missing.1/index.js", "never-edge-cached", 404],
@@ -83,11 +89,35 @@ describe("judgeProbe behind Cloudflare", () => {
     expect(verdict.detail).toContain("expected HIT");
   });
 
-  test("the shell must not be a HIT", () => {
-    expect(judgeProbe(shell, cf(200, "DYNAMIC"), cf(200, "DYNAMIC")).ok).toBe(
+  test("the shell is a HIT, and the browser still revalidates", () => {
+    expect(
+      judgeProbe(shell, cf(200, "MISS", "no-cache"), cf(200, "HIT", "no-cache"))
+        .ok,
+    ).toBe(true);
+    const dynamic = judgeProbe(
+      shell,
+      cf(200, "DYNAMIC", "no-cache"),
+      cf(200, "DYNAMIC", "no-cache"),
+    );
+    expect(dynamic.ok).toBe(false);
+    expect(dynamic.detail).toContain("expected HIT");
+  });
+
+  test("a shell the browser may keep fails even when the edge has it", () => {
+    const verdict = judgeProbe(
+      shell,
+      cf(200, "MISS", "max-age=600"),
+      cf(200, "HIT", "max-age=600"),
+    );
+    expect(verdict.ok).toBe(false);
+    expect(verdict.detail).toContain("expected no-cache");
+  });
+
+  test("the API must not be a HIT", () => {
+    expect(judgeProbe(api, cf(200, "DYNAMIC"), cf(200, "DYNAMIC")).ok).toBe(
       true,
     );
-    expect(judgeProbe(shell, cf(200, "MISS"), cf(200, "HIT")).ok).toBe(false);
+    expect(judgeProbe(api, cf(200, "MISS"), cf(200, "HIT")).ok).toBe(false);
   });
 
   test("a wrong status fails before the cache is read", () => {
@@ -112,8 +142,13 @@ describe("judgeProbe with no CDN in front", () => {
   });
 
   test("a never-cached URL passes on its status alone", () => {
+    expect(judgeProbe(api, direct(200), direct(200)).ok).toBe(true);
+  });
+
+  test("the shell must tell the browser no-cache", () => {
     expect(
       judgeProbe(shell, direct(200, "no-cache"), direct(200, "no-cache")).ok,
     ).toBe(true);
+    expect(judgeProbe(shell, direct(200), direct(200)).ok).toBe(false);
   });
 });

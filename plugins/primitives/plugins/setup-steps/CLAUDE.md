@@ -49,6 +49,7 @@
     - `apps/deploy/ssh-setup/hetzner`
     - `auth`
     - `auth/apple-signing/setup-wizard`
+    - `auth/cloudflare`
     - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
     - `conversations/runtime-sdk`

@@ -41,6 +41,9 @@ import {
   CLOUDFLARE_MIN_RANGES,
   CLOUDFLARE_RANGES_SH,
   caddyGlobalOptionsSh,
+  EDGE_DOCUMENT_MAX_AGE_SEC,
+  EDGE_DOCUMENT_STALE_SEC,
+  edgeDocumentCacheTag,
 } from "./converge-script";
 import type { DeploymentEdge } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 
@@ -84,6 +87,7 @@ describe("caddySite", () => {
         9100,
         "/var/log/caddy/website.access.log",
         "direct",
+        "website",
       ),
     ).toBe(
       `equin.dev, www.equin.dev {
@@ -116,13 +120,25 @@ describe("caddySite", () => {
 
   test("refuses the gateway's control API publicly", () => {
     expect(
-      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log", "direct"),
+      caddySite(
+        ["a.example"],
+        9100,
+        "/var/log/caddy/a.access.log",
+        "direct",
+        "a",
+      ),
     ).toContain(`respond ${GATEWAY_API_PREFIX}* 404`);
   });
 
   test("the refused path is the prefix hostOnly() guards", () => {
     expect(
-      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log", "direct"),
+      caddySite(
+        ["a.example"],
+        9100,
+        "/var/log/caddy/a.access.log",
+        "direct",
+        "a",
+      ),
     ).toContain(`respond ${HOST_ONLY_PREFIX}* 404`);
   });
 });
@@ -133,7 +149,29 @@ describe("caddySite behind Cloudflare", () => {
     9100,
     "/var/log/caddy/website.access.log",
     "cloudflare",
+    "website",
   );
+  const edgeCacheLines = `\t@edge_documents not path /api/* /ws/* /gateway/*
+\theader @edge_documents {
+\t\tCloudflare-CDN-Cache-Control "max-age=${EDGE_DOCUMENT_MAX_AGE_SEC}, stale-while-revalidate=${EDGE_DOCUMENT_STALE_SEC}"
+\t\tCache-Tag "equin-documents-website"
+\t\tmatch {
+\t\t\tstatus 200 304
+\t\t\theader Cache-Control no-cache
+\t\t}
+\t}
+`;
+
+  test("keeps what the origin revalidates at the edge, tagged for ship's purge", () => {
+    expect(site).toContain(edgeCacheLines);
+    expect(site).toContain(`Cache-Tag "${edgeDocumentCacheTag("website")}"`);
+  });
+
+  test("the edge copy outlives no address the origin keeps", () => {
+    expect(EDGE_DOCUMENT_MAX_AGE_SEC + EDGE_DOCUMENT_STALE_SEC).toBeLessThan(
+      24 * 60 * 60,
+    );
+  });
 
   test("forwards the visitor as the one X-Forwarded-For hop", () => {
     expect(site).toContain(
@@ -141,17 +179,32 @@ describe("caddySite behind Cloudflare", () => {
     );
   });
 
-  test("differs from the direct block by that line only", () => {
+  test("differs from the direct block by that line and the edge cache only", () => {
     expect(
-      site.replace("\t\theader_up X-Forwarded-For {client_ip}\n", ""),
+      site
+        .replace("\t\theader_up X-Forwarded-For {client_ip}\n", "")
+        .replace(edgeCacheLines, ""),
     ).toBe(
       caddySite(
         ["equin.ai"],
         9100,
         "/var/log/caddy/website.access.log",
         "direct",
+        "website",
       ),
     );
+  });
+
+  test("a direct edge caches no document at a CDN", () => {
+    expect(
+      caddySite(
+        ["equin.ai"],
+        9100,
+        "/var/log/caddy/w.log",
+        "direct",
+        "website",
+      ),
+    ).not.toContain("CDN-Cache-Control");
   });
 });
 

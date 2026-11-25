@@ -122,6 +122,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `accountsPane.Actions`
     - `accountPane.Actions`
   - Slot contributors:
+    - `Auth.Provider` ← `auth.cloudflare`
     - `Auth.Provider` ← `auth.google`
     - `Auth.Provider` ← `auth.google-maps.setup-wizard`
     - `Auth.Provider` ← `auth.hooktheory`
@@ -322,6 +323,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Imported by:
     - `apps/settings/accounts`
     - `auth/apple-signing/setup-wizard`
+    - `auth/cloudflare`
     - `auth/google`
     - `auth/google-maps`
     - `auth/google-maps/setup-wizard`
@@ -331,6 +333,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `backup/runs-arm`
     - `backup/targets/google-drive`
     - `companions/browser-extension/accounts-row`
+    - `framework/cli/deploy`
     - `integrations/gmail`
     - `integrations/google-maps`
     - `integrations/google-maps/usage`
@@ -343,6 +346,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `react-compiler:no-silent-skips` — `web/components/account-detail.tsx`, `web/components/accounts-pane.tsx`, `web/components/connect-button.tsx`, `web/components/grant-access-button.tsx`, `web/components/oauth-client-setup.tsx`, `web/components/scope-grant-notice.tsx` (debt)
 - Sub-plugins:
   - **`apple-signing`** [exempt] [1 sub-plugin] — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload +…
+  - **`cloudflare`** — Cloudflare Accounts row: create a Custom Token (zone read + cache purge) and paste it, inline in its Accounts pane; central accepts it only once Cloudflare reports it active. Cloudflare API-token…
   - **`google`** [exempt] [1 sub-plugin] — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental…
   - **`google-maps`** [exempt] [1 sub-plugin] — Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
   - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared sign-in form, inline in its Accounts pane. Hooktheory (TheoryTab) username/password provider. The…

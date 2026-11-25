@@ -15,6 +15,7 @@ export interface CollectedEntry {
 
 export const centralEntries: CollectedEntry[] = [
   { pluginPath: "auth", id: "auth", loader: () => import("@plugins/auth/central"), dependsOn: ["infra/plugins/background/plugins/timer", "infra/plugins/endpoints", "infra/plugins/secrets", "network/plugins/live"], core: () => import("@plugins/auth/core") },
+  { pluginPath: "auth/plugins/cloudflare", id: "auth.cloudflare", loader: () => import("@plugins/auth/plugins/cloudflare/central"), dependsOn: ["auth"], core: () => import("@plugins/auth/plugins/cloudflare/core") },
   { pluginPath: "auth/plugins/google-maps", id: "auth.google-maps", loader: () => import("@plugins/auth/plugins/google-maps/central"), dependsOn: ["auth"], core: () => import("@plugins/auth/plugins/google-maps/core") },
   { pluginPath: "auth/plugins/google", id: "auth.google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"], core: null },
   { pluginPath: "auth/plugins/hooktheory", id: "auth.hooktheory", loader: () => import("@plugins/auth/plugins/hooktheory/central"), dependsOn: ["auth"], core: () => import("@plugins/auth/plugins/hooktheory/core") },

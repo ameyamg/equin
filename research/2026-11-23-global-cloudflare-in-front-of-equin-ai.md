@@ -20,8 +20,10 @@ silently breaks here:
 2. **TLS renewal.** TLS-ALPN stops working once CF terminates TLS, and HTTP-01
    only keeps working if port 80 stays open to CF and CF does not redirect the
    challenge to HTTPS first.
-3. **Caching.** The HTML shell must stay `no-cache`; `/api/*` is `no-store`; only
-   content-addressed paths may be cached.
+3. **Caching.** The HTML shell must stay `no-cache` *to the browser*; `/api/*`
+   is `no-store`. Content-addressed paths are cached for good; the shell is
+   cached at the edge only, for minutes, and purged on every ship (changed
+   2026-11-25 — see *Change after measurement* below).
 4. **Origin bypass.** ufw allows 80/443 from anywhere, so the CDN (and a trusted
    `CF-Connecting-IP`) can be bypassed / spoofed unless the origin admits CF only.
 
@@ -101,6 +103,42 @@ equin.ai's bytes are not mostly video, so the CDN-terms risk is negligible
 (R2 / Stream is the route if that changes). `./equin
 deploy check-edge` verifies the live answers, so drift on either side shows.
 
+**Change after measurement (2026-11-25, user decision D22 = A): the HTML is
+edge-cached, purged on every ship.** The rule above kept the shell `DYNAMIC`
+at Cloudflare, so every page view went visitor → edge → Germany, often over
+a fresh edge→origin connection — slower than the direct box it replaced.
+Visitor first-byte medians, Nov 20–22 (direct) → Nov 23–24 (Cloudflare,
+`DYNAMIC` HTML): Europe 116 → ~200 ms (server wait 35–40 → 110–130 ms), North
+America 357–397 → 419–524 ms, rest of the world's share over 1.5 s 1.7–4.2% →
+14.5–16.7%; a cold first byte from Paris 90–150 ms against ~22 ms direct
+(task-1795143634-3rjo91). The rule existed because a stored shell names an old
+build; a purge on every activation removes that reason, so:
+
+- The browser still gets `Cache-Control: no-cache` (it revalidates, now
+  against the edge). Cloudflare alone reads `Cloudflare-CDN-Cache-Control:
+  max-age=600, stale-while-revalidate=3600` and `Cache-Tag:
+  equin-documents-<composition>`, which the generated site block adds to
+  200/304 answers the origin marks `no-cache`, outside `/api/*` and `/ws/*`,
+  on a `cloudflare` edge only.
+- `deploy ship` and `deploy converge` purge that tag after their scripts (a passed or failed gate alike),
+  through the Cloudflare account in Settings → Accounts (`auth/cloudflare`,
+  token: Zone Read + Cache Purge). Converge and ship refuse a `cloudflare`
+  edge without a token that reads each hostname's zone, so the cache cannot
+  exist without its purge.
+- The TTL bounds only what changes without a ship (the theme's head the
+  backend renders) and a failed purge; max-age + stale stays well inside the
+  day web-artifacts keeps every served address.
+- Nothing in the shell is per visitor: same bytes per path and build (head,
+  framing policy, snapshot keyed by path), no cookie set or read, the cache
+  key holds host and query. Cloudflare's email obfuscation rewrites the body
+  after the cache, per response.
+- Cloudflare never caches HTML by itself, so the zone gets ONE cache rule
+  that carries no policy: everything outside `/api/*` and `/ws/*` eligible,
+  edge TTL from the origin's headers, bypass when absent
+  (`framework/cli/deploy` CLAUDE.md, checklist step 3).
+- `deploy check-edge` now expects `/` to be a `HIT` that is `no-cache` to
+  the browser.
+
 ## Rollout order (each step reversible)
 
 1. **Code lands with `edge: "direct"`** for equin.ai. This is a no-op converge: Caddyfile, firewall and TLS are byte-identical, which a test asserts.
@@ -130,7 +168,7 @@ deploy check-edge` verifies the live answers, so drift on either side shows.
 
 - `./equin test plugins/framework/plugins/cli/plugins/deploy` and the gateway Go tests. `./equin check`.
 - After step 4, on the live site:
-  - `curl -sI https://equin.ai` shows `cf-ray`, `cache-control: no-cache` and `cf-cache-status: DYNAMIC`.
+  - `curl -sI https://equin.ai` shows `cf-ray`, `cache-control: no-cache` and, from the second request on, `cf-cache-status: HIT` (DYNAMIC before 2026-11-25).
   - `curl -sI https://equin.ai/artifacts/<some hashed file>` twice: the second returns `cf-cache-status: HIT`.
   - `curl -sI https://equin.ai/api/…` returns `BYPASS`/`DYNAMIC` with `no-store`.
   - `curl --resolve equin.ai:443:<origin IP> https://equin.ai` from a non-CF machine fails (firewall).

@@ -1,6 +1,7 @@
 /**
  * `./equin deploy check-edge <hostname> [--uncached <path>…]` — ask the live
- * site whether its caches do what the code says: the shell and the API never
+ * site whether its caches do what the code says: the shell stored at the edge
+ * yet revalidated by the browser, the API never
  * stored at the edge, a content-addressed module stored, a missing module not
  * pinned, and every `--uncached` path (the site's film) never stored.
  *

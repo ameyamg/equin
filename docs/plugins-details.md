@@ -15170,6 +15170,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `accountsPane.Actions`
       - `accountPane.Actions`
     - Slot contributors:
+      - `Auth.Provider` ← `auth.cloudflare`
       - `Auth.Provider` ← `auth.google`
       - `Auth.Provider` ← `auth.google-maps.setup-wizard`
       - `Auth.Provider` ← `auth.hooktheory`
@@ -15370,6 +15371,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `apps/settings/accounts`
       - `auth/apple-signing/setup-wizard`
+      - `auth/cloudflare`
       - `auth/google`
       - `auth/google-maps`
       - `auth/google-maps/setup-wizard`
@@ -15379,6 +15381,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup/runs-arm`
       - `backup/targets/google-drive`
       - `companions/browser-extension/accounts-row`
+      - `framework/cli/deploy`
       - `integrations/gmail`
       - `integrations/google-maps`
       - `integrations/google-maps/usage`
@@ -15453,6 +15456,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-caption`
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/apple-setup.tsx` (debt)
+    - **`cloudflare`** — Cloudflare Accounts row: create a Custom Token (zone read + cache purge) and paste it, inline in its Accounts pane; central accepts it only once Cloudflare reports it active. Cloudflare API-token provider. The token is stored in the central auth token store (encrypted, shared across worktrees) and accepted only once Cloudflare reports it active.
+      - Web:
+        - Contributes: `Auth.Provider` "Cloudflare"
+        - Uses:
+          - `auth.Auth`
+          - `auth.useAccountStatus`
+          - `infra/endpoints.getEndpointErrorMessage`
+          - `infra/endpoints.useFetchEndpoint`
+          - `network/live/live-state.foldResource`
+          - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/setup-steps.Step`
+          - `primitives/setup-steps.StepDone`
+          - `primitives/setup-steps.StepLink`
+          - `primitives/setup-steps.StepNote`
+          - `primitives/setup-steps.Steps`
+      - Central:
+        - Uses: `auth.registerAuthProvider`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --destructive`
+        - Imported by: `framework/cli/deploy`
+      - Core:
+        - Exports (values):
+          - `CLOUDFLARE_PROVIDER_ID`
+          - `CLOUDFLARE_TOKEN_PERMISSIONS`
+          - `CLOUDFLARE_TOKEN_VERIFY_URL`
+          - `CLOUDFLARE_TOKENS_URL`
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Web:
         - Contributes:
@@ -38280,7 +38313,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 286 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 287 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×37
           - `infra` ×23
@@ -38289,8 +38322,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×19
           - `primitives` ×15
           - `ui` ×8
+          - `auth` ×6
           - `reports` ×6
-          - `auth` ×5
           - `framework` ×4
           - `integrations` ×4
           - `apps-core` ×3
@@ -42932,6 +42965,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
+    - **`cloudflare`** — Stateless Cloudflare API client: listZones(token) (the zones a token can read), zoneOfHostname(zones, hostname) (the zone a hostname belongs to) and purgeCacheTags(token, zone, tags) (drop what the edge cached under a Cache-Tag), every answer's v4 envelope zod-parsed and a refusal thrown in Cloudflare's own words. Takes the token per call.
+      - Cross-plugin:
+        - Imported by: `framework/cli/deploy`
+      - Server:
+        - Exports (types): `CloudflareZone`
+        - Exports (values):
+          - `CLOUDFLARE_API_BASE`
+          - `CloudflareApiError`
+          - `listZones`
+          - `purgeCacheTags`
+          - `zoneOfHostname`
     - **`github-events`** — GitHub events in the browser: the health report's GitHub events row (on the publisher's main only — absent elsewhere): connected once GitHub pinged every watched repo's forwarder, pulsing while one connects, attention while one reconnects or gave up (naming why) or while forwarding is not set up (with the command that sets it up); and the github-run-failed report kind's Debug → Reports summary line. GitHub events, every host's half: the GitHubEvents.Watch contribution (repo, workflow file, releases?, remedy? — an open set each repo's owner contributes, read through githubWatches / watchedRepos / watchFor), the github_runs table (one row per run attempt of a watched workflow: status, conclusion, head, failed jobs and steps, reported_at) and github_releases (one per release of a watched repo: draft, asset names), served as the github-events.runs / github-events.releases live windows and swept after 180 days / 2 years, and the github-run-failed report kind (fingerprint repo + workflow + head; its task names the failed jobs and steps, the run, `gh run view <id> --log-failed`, and the watch's own remedy).
       - Web:
         - Contributes:
@@ -45016,7 +45060,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 328 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 329 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×87
               - `conversations` ×50
               - `debug` ×31
@@ -45028,7 +45072,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×9
               - `active-data` ×5
               - `apps-core` ×5
-              - `auth` ×4
+              - `auth` ×5
               - `plugin-meta` ×4
               - `companions` ×3
               - `config_v2` ×3
@@ -53341,7 +53385,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 468 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 469 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×81
               - `primitives` ×55
@@ -53354,10 +53398,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×8
               - `apps-core` ×7
               - `stats` ×7
+              - `auth` ×5
               - `build` ×5
               - `companions` ×5
               - `shell` ×5
-              - `auth` ×4
               - `review` ×4
               - `config_v2` ×3
               - `integrations` ×3
@@ -53581,7 +53625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 447 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 448 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×85
               - `primitives` ×48
@@ -53593,8 +53637,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×11
               - `infra` ×9
               - `stats` ×7
+              - `auth` ×5
               - `build` ×5
-              - `auth` ×4
               - `companions` ×4
               - `integrations` ×4
               - `review` ×4
@@ -53913,7 +53957,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 488 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 489 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
               - `conversations` ×54
@@ -53926,11 +53970,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×10
               - `infra` ×7
               - `shell` ×6
+              - `auth` ×5
               - `build` ×5
               - `config_v2` ×5
               - `reorder` ×5
               - `review` ×5
-              - `auth` ×4
               - `integrations` ×4
               - `active-data` ×3
               - `companions` ×3
@@ -56895,15 +56939,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×38
           - `primitives` ×27
           - `conversations` ×13
           - `fields` ×11
           - `page` ×9
+          - `auth` ×5
           - `tasks` ×5
           - `ui` ×5
-          - `auth` ×4
           - `debug` ×3
           - `apps-core` ×2
           - `infra` ×2
@@ -59685,6 +59729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/ssh-setup/hetzner`
           - `auth`
           - `auth/apple-signing/setup-wizard`
+          - `auth/cloudflare`
           - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
           - `conversations/runtime-sdk`
@@ -68385,7 +68430,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 614 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 615 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×124
           - `primitives` ×54
@@ -68399,7 +68444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core` ×8
           - `companions` ×8
           - `infra` ×8
-          - `auth` ×6
+          - `auth` ×7
           - `config_v2` ×6
           - `shell` ×6
           - `build` ×4
@@ -69731,7 +69776,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 567 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 568 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×125
               - `conversations` ×96
               - `primitives` ×81
@@ -69748,9 +69793,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×6
               - `reorder` ×6
               - `shell` ×6
+              - `auth` ×5
               - `infra` ×5
               - `review` ×5
-              - `auth` ×4
               - `companions` ×4
               - `hints` ×3
               - `backup` ×2

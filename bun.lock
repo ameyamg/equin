@@ -1755,6 +1755,10 @@
       "name": "@equin/plugin-auth-apple-signing-setup-wizard",
       "version": "0.0.1",
     },
+    "plugins/auth/plugins/cloudflare": {
+      "name": "@equin/plugin-auth-cloudflare",
+      "version": "0.0.1",
+    },
     "plugins/auth/plugins/google": {
       "name": "@equin/plugin-auth-google",
       "version": "0.0.1",
@@ -5239,6 +5243,10 @@
     },
     "plugins/integrations": {
       "name": "@equin/plugin-integrations",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/cloudflare": {
+      "name": "@equin/plugin-integrations-cloudflare",
       "version": "0.0.1",
     },
     "plugins/integrations/plugins/github-events": {
@@ -9340,6 +9348,8 @@
 
     "@equin/plugin-auth-apple-signing-setup-wizard": ["@equin/plugin-auth-apple-signing-setup-wizard@workspace:plugins/auth/plugins/apple-signing/plugins/setup-wizard"],
 
+    "@equin/plugin-auth-cloudflare": ["@equin/plugin-auth-cloudflare@workspace:plugins/auth/plugins/cloudflare"],
+
     "@equin/plugin-auth-google": ["@equin/plugin-auth-google@workspace:plugins/auth/plugins/google"],
 
     "@equin/plugin-auth-google-maps": ["@equin/plugin-auth-google-maps@workspace:plugins/auth/plugins/google-maps"],
@@ -11013,6 +11023,8 @@
     "@equin/plugin-installer-window": ["@equin/plugin-installer-window@workspace:plugins/installer/plugins/window"],
 
     "@equin/plugin-integrations": ["@equin/plugin-integrations@workspace:plugins/integrations"],
+
+    "@equin/plugin-integrations-cloudflare": ["@equin/plugin-integrations-cloudflare@workspace:plugins/integrations/plugins/cloudflare"],
 
     "@equin/plugin-integrations-github-events": ["@equin/plugin-integrations-github-events@workspace:plugins/integrations/plugins/github-events"],
 
