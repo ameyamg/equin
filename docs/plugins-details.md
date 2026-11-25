@@ -973,11 +973,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `apps/browser/start-page`
-        - **`page-pane`** — Web pages in a side pane, in the Browser's own rendering: the web-page pane (web/:url;page) shows one page of the engine's Chromium beside the pane that linked to it, under the browser's toolbar (nav controls, omnibox, actions; the tab strip only once the page opened a popup), its remote page keyed in the URL so a reload re-attaches it, and Expand hands that very page to the Browser app's tabs. useWebPageLink(url) is the link that opens it — plain click opens the pane, ⌘/middle-click leaves the site to a new browser tab.
+        - **`page-pane`** — Web pages in a side pane, in the Browser's own rendering: the web-page pane (web/:url;page) shows one page of the engine's Chromium beside the pane that linked to it, under the browser's toolbar (nav controls, omnibox, actions; the tab strip only once the page opened a popup), its remote page keyed in the URL so a reload re-attaches it, and Expand hands that very page to the Browser app's tabs. useWebPageLink(url) is the link that opens it — plain click opens the pane, ⌘/middle-click leaves the site to a new browser tab — and it is the transcript's web-link opener (MarkdownExtensions.WebLink).
           - Web:
             - Slots: `webPagePane.Actions`
             - Slot contributors: `webPagePane.Actions` ← `primitives.pane`
-            - Contributes: `Pane.Register` "web-page"
+            - Contributes:
+              - `Pane.Register` "web-page"
+              - `MarkdownExtensions.WebLink` → `BrowserWebLink`
             - Uses:
               - `apps-core/tabs.useAppLink`
               - `apps/browser/shell.Browser`
@@ -986,10 +988,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/shell.singlePageTabs`
               - `apps/browser/shell.useAddBrowserTab`
               - `apps/browser/shell.useBrowserTabs`
+              - `conversations/conversation-view/markdown-extensions.MarkdownExtensions`
               - `primitives/css/clip.Clip`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.cn`
+              - `primitives/link-gesture.activationProps`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -999,7 +1003,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useWebPageLink`
               - `webPagePane`
           - Cross-plugin:
-            - Imported by: `conversations/conversation-view/markdown-extensions`
+            - Uses tokens: `ui/tokens/color-palette --primary-text`
         - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in) over the browser's one tab set, saved in localStorage so tabs and their remote pages come back after a reload and stay in sync between surfaces, defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
           - Web:
             - Slots:
@@ -22659,8 +22663,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launch-prompts-button.tsx` (debt)
           - Shared:
             - Exports (values): `launchPromptsConfig`
-        - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, web links (a plain click opens the site in the Browser's web-page side pane beside the conversation; ⌘/middle-click opens it in a new browser tab), inline code enhancements, and image proxying.
+        - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, web links (drawn by the MarkdownExtensions.WebLink contribution — the Browser's, opening its web-page side pane, where the Browser ships — else a plain link opening the site in a new browser tab), inline code enhancements, and image proxying.
           - Web:
+            - Slots: `MarkdownExtensions.WebLink`
+            - Slot contributors: `MarkdownExtensions.WebLink` ← `apps.browser.page-pane`
             - Contributes:
               - `MarkdownEnhancerSlot`
               - `MarkdownEnhancerSlot`
@@ -22672,11 +22678,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/file-links` ×3
               - `primitives/overlay/image-viewer` ×2
               - `primitives/text-editor/paste-images` ×2
-              - `apps/browser/page-pane.useWebPageLink`
               - `conversations/conversation-view/code/file-pane.filePeekPane`
               - `primitives/css/link-chip.LinkChip`
               - `primitives/link-gesture.activationProps`
               - `primitives/pane.useOpenPane`
+              - `primitives/slot-render.defineDispatchSlot`
+            - Exports (types): `WebLinkProps`
+            - Exports (values): `MarkdownExtensions`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --info`
@@ -22690,6 +22698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-caption`
+            - Imported by: `apps/browser/page-pane`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Web:
             - Contributes: `conversationPane.Actions` "model" → `ModelBadge`
@@ -57314,10 +57323,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×22
           - `primitives` ×19
-          - `apps` ×13
+          - `apps` ×14
           - `tasks` ×8
           - `page` ×4
           - `apps-core` ×3
@@ -59972,10 +59981,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 104 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×35
           - `primitives` ×15
-          - `conversations` ×13
+          - `conversations` ×14
           - `apps-core` ×6
           - `ui` ×5
           - `shell` ×4
@@ -70002,8 +70011,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 568 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×125
+            - Tokens used by: 569 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×126
               - `conversations` ×96
               - `primitives` ×81
               - `debug` ×42

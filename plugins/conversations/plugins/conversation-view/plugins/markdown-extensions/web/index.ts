@@ -5,10 +5,15 @@ import { FileLinksEnhancer } from "./internal/file-links-enhancer";
 import { FileLinksInlineWalker } from "./internal/file-links-inline-walker";
 import { CodeEnhancer } from "./internal/code-enhancer";
 import { ImgEnhancer } from "./internal/img-enhancer";
+import { MarkdownExtensions } from "./slots";
+
+export { MarkdownExtensions } from "./slots";
+export type { WebLinkProps } from "./slots";
 
 export default {
   description:
-    "Conversation-scoped markdown enhancers: file-links, web links (a plain click opens the site in the Browser's web-page side pane beside the conversation; ⌘/middle-click opens it in a new browser tab), inline code enhancements, and image proxying.",
+    "Conversation-scoped markdown enhancers: file-links, web links (drawn by the MarkdownExtensions.WebLink contribution — the Browser's, opening its web-page side pane, where the Browser ships — else a plain link opening the site in a new browser tab), inline code enhancements, and image proxying.",
+  slots: MarkdownExtensions,
   contributions: [
     MarkdownEnhancerSlot({
       id: "file-links",

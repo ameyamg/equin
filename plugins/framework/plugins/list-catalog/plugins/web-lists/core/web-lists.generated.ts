@@ -261,6 +261,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"conversations.conversation-view.jsonl-viewer.tool-call.workflow.workflow-node.actions","plugin":"conversations.conversation-view.jsonl-viewer.tool-call.workflow","key":"workflow-node.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"conversations.conversation-view.jsonl-viewer.transcript-end","plugin":"conversations.conversation-view.jsonl-viewer","key":"transcript-end","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"conversations.conversation-view.jsonl-viewer.transcript-stats.item","plugin":"conversations.conversation-view.jsonl-viewer.transcript-stats","key":"item","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"conversations.conversation-view.markdown-extensions.web-link","plugin":"conversations.conversation-view.markdown-extensions","key":"web-link","meta":{"kind":"dispatch","reorderable":false},"inMain":true},
   {"id":"conversations.conversation-view.op-status.queue-actions","plugin":"conversations.conversation-view.op-status","key":"queue-actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"conversations.conversation-view.open-app.app-preview.actions","plugin":"conversations.conversation-view.open-app","key":"app-preview.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"conversations.conversation-view.prompt-bar","plugin":"conversations.conversation-view","key":"prompt-bar","meta":{"kind":"render","reorderable":true},"inMain":true},
