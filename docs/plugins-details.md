@@ -678,14 +678,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
-        - **`prototypes-nav`** — Prototypes entry point in the agent manager: a conversation-toolbar button that toggles the Prototypes gallery as a column beside the conversation (⌘/middle-click for a new browser tab).
-          - Web:
-            - Contributes: `Conversation.ActionBar` → `PrototypesGalleryButton`
-            - Uses:
-              - `apps/prototypes/gallery.prototypesGalleryColumnPane`
-              - `conversations/conversation-view/action-bar.Conversation`
-              - `primitives/icon-button.IconButton`
-              - `primitives/link-gesture.linkProps`
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
           - Web:
             - Contributes:
@@ -9686,9 +9678,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --accent`
               - `ui/tokens/color-palette --primary-text`
-            - Imported by:
-              - `apps/agent-manager/prototypes-nav`
-              - `apps/prototypes/present`
+            - Imported by: `apps/prototypes/present`
         - **`icons`** — Contributes the prototypes icon family (prototypesIcons) to Icons.Family, so a scope whose iconFamily is prototypes — the Prototypes theme's — draws its glyphs.
           - Web:
             - Contributes: `Icons.Family` "Prototypes"
@@ -9789,7 +9779,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-popover`
               - `ui/tokens/shadow --shadow-xl`
             - Imported by:
-              - `apps/agent-manager/prototypes-nav`
               - `apps/prototypes`
               - `apps/prototypes/canvas`
               - `apps/prototypes/files`
@@ -14984,8 +14973,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/static-render`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included) and whether it shows apps side by side (useSurfaceShowsAppsSideBySide: leaving it closes its app), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
-        - Uses: 53 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×23
+        - Uses: 55 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×25
           - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
@@ -19550,7 +19539,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `Conversation.ActionBar`
             - Slot contributors:
               - `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`
-              - `Conversation.ActionBar` ← `apps.agent-manager.prototypes-nav`
               - `Conversation.ActionBar` ← `conversations.conversation-view.artifacts`
               - `Conversation.ActionBar` ← `conversations.conversation-view.commits-graph`
               - `Conversation.ActionBar` ← `conversations.conversation-view.explorer`
@@ -19570,7 +19558,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/agent-manager/pages-nav`
-              - `apps/agent-manager/prototypes-nav`
               - `conversations/conversation-view`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/commits-graph`
@@ -56825,8 +56812,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×48
+        - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×47
           - `primitives` ×23
           - `conversations` ×21
           - `tasks` ×9
@@ -57222,10 +57209,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×22
           - `primitives` ×19
-          - `apps` ×14
+          - `apps` ×13
           - `tasks` ×8
           - `page` ×4
           - `apps-core` ×3
@@ -58820,6 +58807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paneThemeScope`
           - `parseUrl`
           - `peekBasePath`
+          - `peekNavigatorColumn`
           - `peekRoute`
           - `peekRoutePattern`
           - `relativeTo`

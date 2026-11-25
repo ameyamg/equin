@@ -257,10 +257,6 @@
       "name": "@equin/plugin-apps-agent-manager-pages-nav",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/agent-manager/plugins/prototypes-nav": {
-      "name": "@equin/plugin-apps-agent-manager-prototypes-nav",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/agent-manager/plugins/shell": {
       "name": "@equin/plugin-apps-agent-manager-shell",
       "version": "0.0.1",
@@ -8583,8 +8579,6 @@
     "@equin/plugin-apps-agent-manager-isle-building": ["@equin/plugin-apps-agent-manager-isle-building@workspace:plugins/apps/plugins/agent-manager/plugins/isle-building"],
 
     "@equin/plugin-apps-agent-manager-pages-nav": ["@equin/plugin-apps-agent-manager-pages-nav@workspace:plugins/apps/plugins/agent-manager/plugins/pages-nav"],
-
-    "@equin/plugin-apps-agent-manager-prototypes-nav": ["@equin/plugin-apps-agent-manager-prototypes-nav@workspace:plugins/apps/plugins/agent-manager/plugins/prototypes-nav"],
 
     "@equin/plugin-apps-agent-manager-shell": ["@equin/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
 

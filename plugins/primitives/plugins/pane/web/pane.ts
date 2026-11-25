@@ -2226,6 +2226,27 @@ export function peekRoute(): PaneSlot[] {
   return liveStoreSink.peek().getRoute();
 }
 
+/**
+ * The app's navigator column (its one `opensInPlace` pane) as an
+ * addressable column — what "open this app beside what I am looking at"
+ * opens (the app launcher's ⌥-click, `apps-core/tabs`' `useActivateApp`).
+ * `null` when the app declares none, or its navigator needs params (it could
+ * not be opened from nowhere). An app opts in by declaring one; nothing names
+ * it. Sampled now, from the registry the pane sync keeps: call it from a
+ * click handler, never during render.
+ */
+export function peekNavigatorColumn(appId: string): AnyPane | null {
+  const navigator = navigatorColumns.get(appId);
+  if (!navigator) return null;
+  if (segmentRequiredParamNames(navigator.segment).length > 0) return null;
+  const pane = paneObjectByInternal.get(navigator);
+  if (!pane)
+    throw new Error(
+      `Navigator column "${navigator.id}" has no pane object: every registered pane is made by Pane.define.`,
+    );
+  return pane;
+}
+
 export function reorderRoute(fromIndex: number, toIndex: number): void {
   liveStoreSink.peek().reorderRoute(fromIndex, toIndex);
 }

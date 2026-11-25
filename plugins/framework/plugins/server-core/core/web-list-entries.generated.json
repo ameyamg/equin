@@ -739,7 +739,6 @@
   {"list":"conversations.conversation-view.above-prompt-input","plugin":"conversations.conversation-view.turn-summary","fact":{"component":{"$code":true},"id":"turn-summary","requires":[]}},
   {"list":"conversations.conversation-view.above-prompt-input","plugin":"tasks.decisions.tray","fact":{"component":{"$code":true},"id":"decisions","requires":[]}},
   {"list":"conversations.conversation-view.action-bar.action-bar","plugin":"apps.agent-manager.pages-nav","fact":{"component":{"$code":true},"id":"pages","requires":[]}},
-  {"list":"conversations.conversation-view.action-bar.action-bar","plugin":"apps.agent-manager.prototypes-nav","fact":{"component":{"$code":true},"id":"prototypes","requires":[]}},
   {"list":"conversations.conversation-view.action-bar.action-bar","plugin":"conversations.conversation-view.artifacts","fact":{"component":{"$code":true},"id":"artifacts","requires":[]}},
   {"list":"conversations.conversation-view.action-bar.action-bar","plugin":"conversations.conversation-view.commits-graph","fact":{"component":{"$code":true},"id":"commits-graph","requires":["git"]}},
   {"list":"conversations.conversation-view.action-bar.action-bar","plugin":"conversations.conversation-view.explorer","fact":{"component":{"$code":true},"id":"explorer","requires":["git"]}},

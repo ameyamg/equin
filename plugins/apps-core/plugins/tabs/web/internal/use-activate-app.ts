@@ -1,6 +1,13 @@
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
-import { useAppNavBoundary } from "@plugins/primitives/plugins/pane/web";
-import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  peekNavigatorColumn,
+  useAppNavBoundary,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
+import type {
+  Activation,
+  LinkTarget,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { useHomeApp, type ActiveApp } from "@plugins/apps-core/web";
 import { useTabs } from "./use-tabs";
 
@@ -22,6 +29,13 @@ import { useTabs } from "./use-tabs";
  * switcher is drawn in (`useTabs()` — inside an `AppEmbed`, the embed's own);
  * inside an `AppNavBoundary` (an in-process app embed) a tab app's switch is
  * the boundary's, so a switcher drawn in an embed never swaps the host's tab.
+ *
+ * ⌥/Alt-click (`gesture.keepOthers`, "keep the others") on a tab app opens it
+ * BESIDE what is on screen instead of in its place: the app's navigator column
+ * (its one `opensInPlace` pane — the pages tree, the prototype gallery) is
+ * inserted as a Miller column after the caller's pane (the last one, from
+ * chrome outside every pane). An app opts in by declaring its navigator
+ * column; one with none switches as a plain click does.
  */
 export function useActivateApp(): (
   entry: Pick<ActiveApp, "id" | "surfaceMode" | "app">,
@@ -31,6 +45,23 @@ export function useActivateApp(): (
   const ownTabId = useSurfaceTabId();
   const boundary = useAppNavBoundary();
   const home = useHomeApp();
+  const openPane = useOpenPane();
+  // A tab app's switch, unless ⌥ asks for it beside what is on screen and the
+  // app has a navigator column to open there. Looked up at click time: the
+  // pane registry fills as the deferred tier loads.
+  const besideOr = (
+    entry: Pick<ActiveApp, "app">,
+    switchApp: () => void,
+  ): LinkTarget => ({
+    open: (gesture) => {
+      const column = gesture.keepOthers
+        ? peekNavigatorColumn(entry.app.id)
+        : null;
+      if (column === null) switchApp();
+      else openPane.to(column, {}, { mode: "push" }).open(gesture);
+    },
+    href: () => entry.app.basePath,
+  });
   return (entry) => {
     const tabId = ownTabId ?? focusedTabId;
     // A surface-mode app switches this page's surface to its mode; its URL is
@@ -58,18 +89,13 @@ export function useActivateApp(): (
     // Inside an embed a tab app's pick is the boundary's: checked before
     // anything that would drive the host's tabs.
     if (boundary !== null)
-      return {
-        open: () => boundary(entry.app.basePath),
-        href: () => entry.app.basePath,
-      };
-    return {
-      open: () =>
-        tabId === undefined
-          ? // An empty surface (the desktop, every window closed) has no tab
-            // to swap: the pick opens one.
-            openTab(entry.id)
-          : replaceTabApp(tabId, entry.id),
-      href: () => entry.app.basePath,
-    };
+      return besideOr(entry, () => boundary(entry.app.basePath));
+    return besideOr(entry, () =>
+      tabId === undefined
+        ? // An empty surface (the desktop, every window closed) has no tab
+          // to swap: the pick opens one.
+          openTab(entry.id)
+        : replaceTabApp(tabId, entry.id),
+    );
   };
 }

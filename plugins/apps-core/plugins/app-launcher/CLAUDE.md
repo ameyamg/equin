@@ -28,7 +28,12 @@ never draw their own header (the shell places it; see
   keys. No toolbar band: a hosted frame draws the grid, then a footer line with
   "All apps" (= the icon's click) and the hover-revealed options trigger
   (search). Its own view config, `apps-core.launcher`. A pick goes through
-  `useActivateApp` (tabs), the one activation the rail and Home share.
+  `useActivateApp` (tabs), the one activation the rail and Home share — so
+  ⌥-clicking a tile opens that app's navigator column BESIDE what is on screen
+  (the pages tree, the prototype gallery) instead of switching to it, wherever
+  an app is picked. An app opts in by declaring one `opensInPlace` pane
+  ([`pane`](../../../primitives/plugins/pane/CLAUDE.md), "Navigator columns");
+  nothing here names it.
 - **Back to where you came from** — when the user came from an app made for
   opening others, the popover's first line is "Back to <app>"
   (`internal/return-target.ts`). The way back is a stack, most recent first:

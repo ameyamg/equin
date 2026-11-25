@@ -37,6 +37,7 @@ export {
   paneOwnerFor,
   parseUrl,
   peekRoute,
+  peekNavigatorColumn,
   reorderRoute,
   restoreRoute,
   clearRoute,

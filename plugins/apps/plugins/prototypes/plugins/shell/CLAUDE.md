@@ -56,7 +56,6 @@ documented with the mockup variable it is.
     - `ui/tokens/shadow --shadow-popover`
     - `ui/tokens/shadow --shadow-xl`
   - Imported by:
-    - `apps/agent-manager/prototypes-nav`
     - `apps/prototypes`
     - `apps/prototypes/canvas`
     - `apps/prototypes/files`

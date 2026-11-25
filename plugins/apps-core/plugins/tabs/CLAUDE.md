@@ -84,6 +84,11 @@ one.
 use. A new *in-app* tab is never a modifier on a click: it is an explicit menu
 entry calling `navigate(url, { newTab: true })`.
 
+An app pick (`useActivateApp`) reads ⌥ the way a pane link does — keep the
+others: a tab app's ⌥-click opens its navigator column (pane `CLAUDE.md`,
+"Navigator columns") beside what is on screen instead of switching to the app,
+and an app with no navigator column switches as a plain click does.
+
 **Inside React, read them through the hooks**: `useNavigate()`,
 `useAppLink()`, `useAppLinkProps()`. They answer through the nearest
 `AppNavBoundary` (an in-process `<AppEmbed>`) and fall back to the free
@@ -269,8 +274,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included) and whether it shows apps side by side (useSurfaceShowsAppsSideBySide: leaving it closes its app), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
 - Web:
-  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×23
+  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×25
     - `apps-core` ×9
     - `primitives/scope/app-instance` ×5
     - `primitives/embed` ×3

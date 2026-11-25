@@ -1,4 +1,4 @@
-// @hash 993f1e954356
+// @hash 5e5ff89278c4
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -33,7 +33,6 @@
     "conversations.conversation-view.open-app:open-app",
     "conversations.conversation-view.explorer:explorer",
     "apps.agent-manager.pages-nav:pages",
-    "apps.agent-manager.prototypes-nav:prototypes",
     "conversations.conversation-view.artifacts:artifacts",
     "conversations.conversation-view.commits-graph:commits-graph",
     "review:review",

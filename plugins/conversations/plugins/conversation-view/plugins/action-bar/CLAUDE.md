@@ -9,7 +9,6 @@
   - Slots: `Conversation.ActionBar`
   - Slot contributors:
     - `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`
-    - `Conversation.ActionBar` ← `apps.agent-manager.prototypes-nav`
     - `Conversation.ActionBar` ← `conversations.conversation-view.artifacts`
     - `Conversation.ActionBar` ← `conversations.conversation-view.commits-graph`
     - `Conversation.ActionBar` ← `conversations.conversation-view.explorer`
@@ -29,7 +28,6 @@
 - Cross-plugin:
   - Imported by:
     - `apps/agent-manager/pages-nav`
-    - `apps/agent-manager/prototypes-nav`
     - `conversations/conversation-view`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/commits-graph`

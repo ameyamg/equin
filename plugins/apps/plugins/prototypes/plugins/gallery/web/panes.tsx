@@ -36,8 +36,9 @@ function PrototypesGalleryBody() {
 }
 
 /**
- * The same gallery as a Miller column beside another surface — the agent
- * manager's Prototypes button opens it next to the conversation. A pane of its
+ * The same gallery as a Miller column beside another surface — the app's
+ * navigator column, which ⌥-clicking Prototypes in an app launcher opens next to
+ * what is on screen (a conversation, a page). A pane of its
  * own because the gallery root is the app's index pane: it has no URL part of
  * its own, so as a column the URL would not name it (gone on reload). Its own
  * segment (`prototypes`) makes the column addressable; a card's canvas takes

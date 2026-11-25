@@ -908,6 +908,12 @@ out of the way: **what it opens takes its column**.
   navigator column in the route, leads its header with the same **Back** a
   full-pane child shows (`useReturnToNavigator`), swapping the navigator back.
   No app hand-builds its own back button.
+- It is also how the app opens **beside** another: ⌥-clicking the app in any
+  app switcher (`apps-core/tabs`' `useActivateApp` — the launcher grid, the
+  rail, Home) inserts it as a column after the caller, read at click time
+  with `peekNavigatorColumn(appId)` (`null`: none declared, or it needs
+  params — the pick then switches apps as a plain click does). So an app gets
+  "open beside" by declaring its navigator column, and no button per app.
 
 ## Not yet implemented (deferred)
 
@@ -1184,6 +1190,7 @@ out of the way: **what it opens takes its column**.
     - `paneThemeScope`
     - `parseUrl`
     - `peekBasePath`
+    - `peekNavigatorColumn`
     - `peekRoute`
     - `peekRoutePattern`
     - `relativeTo`
