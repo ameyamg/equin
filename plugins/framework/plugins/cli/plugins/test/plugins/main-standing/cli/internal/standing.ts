@@ -112,7 +112,7 @@ export async function mergeBaseDigests(
   });
   if (r.exitCode !== 0)
     throw new Error(
-      `main standing: git merge-base HEAD main failed (exit ${r.exitCode}): ${r.stderr.trim()}`,
+      `main standing: git merge-base HEAD main failed (${r.ended}): ${r.stderr.trim()}`,
     );
   const snap = await commitSnapshot(root, r.stdout.trim());
   const atBase = new Set(testFilesOf(snap));

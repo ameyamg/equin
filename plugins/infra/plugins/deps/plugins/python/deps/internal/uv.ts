@@ -40,7 +40,7 @@ export async function uvVersion(root: string): Promise<string> {
   const version = /^uv (\S+)/.exec(result.stdout.trim())?.[1];
   if (result.exitCode !== 0 || version === undefined) {
     throw new Error(
-      `\`uv --version\` did not report a version (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ` +
+      `\`uv --version\` did not report a version (${result.ended}): ` +
         `${`${result.stdout}\n${result.stderr}`.trim().split("\n")[0]}`,
     );
   }

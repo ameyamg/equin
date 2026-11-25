@@ -86,7 +86,7 @@ async function branchContainsMain(): Promise<boolean> {
   const result = await spawnCaptured(cmd, { timeoutMs: GIT_TIMEOUT_MS });
   if (result.exitCode === 0) return true;
   if (result.exitCode === 1) return false;
-  console.error(`Command failed (exit ${result.exitCode}): ${cmd.join(" ")}`);
+  console.error(`Command failed (${result.ended}): ${cmd.join(" ")}`);
   if (result.stderr.trim()) console.error(result.stderr.trim());
   process.exit(1);
 }

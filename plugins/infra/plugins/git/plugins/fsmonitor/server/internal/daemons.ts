@@ -100,9 +100,7 @@ export async function listRunningDaemons(
     ...(signal ? { signal } : {}),
   });
   if (ps.timedOut || ps.exitCode !== 0) {
-    throw new Error(
-      `[fsmonitor] ps failed (${ps.timedOut ? "timed out" : `exit ${ps.exitCode}`}): ${ps.stderr.trim()}`,
-    );
+    throw new Error(`[fsmonitor] ps failed (${ps.ended}): ${ps.stderr.trim()}`);
   }
   return parseRunningDaemons(ps.stdout);
 }
@@ -130,7 +128,7 @@ export async function listFsmonitorDaemons(
   // between the two reads): that pid simply has no socket below.
   if (lsof.timedOut || (lsof.exitCode !== 0 && lsof.exitCode !== 1)) {
     throw new Error(
-      `[fsmonitor] lsof failed (${lsof.timedOut ? "timed out" : `exit ${lsof.exitCode}`}): ${lsof.stderr.trim()}`,
+      `[fsmonitor] lsof failed (${lsof.ended}): ${lsof.stderr.trim()}`,
     );
   }
   const sockets = parseDaemonSockets(lsof.stdout);

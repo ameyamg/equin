@@ -307,6 +307,6 @@ async function git(dir: string, ...args: string[]): Promise<void> {
   );
   if (result.exitCode !== 0)
     throw new Error(
-      `[promo-film seed] git ${args.join(" ")} in ${dir} failed (exit ${result.exitCode}): ${result.stderr.trim() || result.stdout.trim()}`,
+      `[promo-film seed] git ${args.join(" ")} in ${dir} failed (${result.ended}): ${result.stderr.trim() || result.stdout.trim()}`,
     );
 }

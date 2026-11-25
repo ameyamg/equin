@@ -173,7 +173,7 @@ async function runningExecutables(): Promise<string[]> {
   });
   if (result.timedOut || result.exitCode !== 0) {
     throw new Error(
-      `\`${argv.join(" ")}\` ${result.timedOut ? `did not finish within ${LSOF_TIMEOUT_MS / 1000}s` : `failed (exit ${result.exitCode}): ${result.stderr.trim() || "(no output)"}`} — cannot tell which old equin.app bundles are still running`,
+      `\`${argv.join(" ")}\` ${result.timedOut ? `did not finish within ${LSOF_TIMEOUT_MS / 1000}s` : `failed (${result.ended}): ${result.stderr.trim() || "(no output)"}`} — cannot tell which old equin.app bundles are still running`,
     );
   }
   return result.stdout

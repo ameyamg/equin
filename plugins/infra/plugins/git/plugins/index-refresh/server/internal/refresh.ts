@@ -54,7 +54,7 @@ async function git(
   });
   if (r.timedOut || r.exitCode !== 0) {
     throw new Error(
-      `${argv.join(" ")} ${r.timedOut ? `did not finish within ${REFRESH_TIMEOUT_MS} ms` : `failed (exit ${r.exitCode})`}: ` +
+      `${argv.join(" ")} ${r.timedOut ? `did not finish within ${REFRESH_TIMEOUT_MS} ms` : `failed (${r.ended})`}: ` +
         `${r.stderr.trim() || "<no stderr>"}`,
     );
   }

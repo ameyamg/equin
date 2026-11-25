@@ -222,7 +222,7 @@ export async function remoteUrl(
   }
   if (result.exitCode === 2) return null;
   throw new Error(
-    `git remote get-url ${remote} failed (exit ${result.exitCode})` +
+    `git remote get-url ${remote} failed (${result.ended})` +
       (result.stderr.trim() ? `\n${result.stderr.trim()}` : ""),
   );
 }

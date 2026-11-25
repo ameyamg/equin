@@ -86,7 +86,7 @@ export async function cargoCrates(root: AppPath): Promise<Crate[]> {
   );
   if (result.exitCode !== 0) {
     throw new Error(
-      `git ls-files failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ls-files failed (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   return result.stdout
@@ -236,7 +236,7 @@ async function cargo(
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `\`${argv.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}):\n${result.stdout.trim()}`,
+      `\`${argv.join(" ")}\` failed (${result.ended}):\n${result.stdout.trim()}`,
     );
   }
   return result.stdout;
@@ -513,7 +513,7 @@ async function analyzeCrate(
                 .split("\n")
                 .find((l) => l.startsWith("error:"))
                 ?.replace(/^error:\s*/, "") ??
-              `exit ${result.exitCode}: ${result.stdout.trim()}`,
+              `${result.ended}: ${result.stdout.trim()}`,
           },
     );
   }

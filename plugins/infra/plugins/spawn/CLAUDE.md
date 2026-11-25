@@ -164,6 +164,10 @@ spawns that are meant to outlive a call, each sanctioned by an exemption.
   cost of a run — wall clock on a shared host varies 2.5x for the identical work.
   `timedOut` is `true` iff OUR deadline fired and we killed the child (never
   inferred from `signalCode` — anyone can SIGTERM a child).
+  `ended` says how the child ended (`exit 1` / killed by this call's own
+  deadline, with awake time and CPU / killed by a signal from outside); `ranMs`
+  is its awake run time. **A failure message uses `(${r.ended})`, never
+  `(exit ${r.exitCode})`**: both kinds of kill read `exit 143`.
 - **`spawnExpectOk(argv, opts)`** — the same, but THROWS `SpawnFailedError`
   (carrying argv/exitCode/signalCode/timedOut/stdout/stderr) on non-zero exit, so a
   failed command can never be read as empty success. Built from the spawn
@@ -336,6 +340,7 @@ presence only — **no re-exports**; import from `core/`.
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/deadline.armAwakeDeadline`
+    - `packages/deadline.awakeClock`
     - `packages/flock.holdParentLifeline`
     - `packages/owned-fd.openOwnedFd`
     - `packages/owned-fd.OwnedFd`

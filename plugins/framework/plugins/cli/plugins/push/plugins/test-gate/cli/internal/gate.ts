@@ -51,7 +51,7 @@ async function git(root: AppPath, args: string[]): Promise<string> {
   });
   if (r.exitCode !== 0)
     throw new Error(
-      `test gate: git ${args.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim()}`,
+      `test gate: git ${args.join(" ")} failed (${r.ended}): ${r.stderr.trim()}`,
     );
   return r.stdout.trim();
 }

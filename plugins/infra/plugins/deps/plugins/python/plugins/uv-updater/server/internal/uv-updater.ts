@@ -80,7 +80,7 @@ export async function uvProjects(root: AppPath): Promise<UvProject[]> {
   );
   if (result.exitCode !== 0) {
     throw new Error(
-      `git ls-files failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ls-files failed (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   return result.stdout
@@ -211,7 +211,7 @@ async function cpythonDownloads(root: AppPath): Promise<CpythonDownload[]> {
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `\`${argv.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim()}`,
+      `\`${argv.join(" ")}\` failed (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   return parseCpythonDownloads(result.stdout);
@@ -240,7 +240,7 @@ async function uvLock(
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `\`${argv.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}):\n${result.stdout.trim()}`,
+      `\`${argv.join(" ")}\` failed (${result.ended}):\n${result.stdout.trim()}`,
     );
   }
   return result.stdout;

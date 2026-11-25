@@ -83,7 +83,7 @@ async function isAncestor(
   if (result.exitCode === 0) return true;
   if (result.exitCode === 1) return false;
   throw new Error(
-    `git merge-base --is-ancestor ${ancestor} ${head} failed (exit ${result.exitCode}, signal ${result.signalCode ?? "-"}): ${result.stderr.trim()}`,
+    `git merge-base --is-ancestor ${ancestor} ${head} failed (${result.ended}): ${result.stderr.trim()}`,
   );
 }
 

@@ -354,7 +354,7 @@ async function commitChanges(
   if (diff.exitCode === 0) return false;
   if (diff.exitCode !== 1) {
     throw new Error(
-      `git diff --cached failed (exit ${diff.exitCode}): ${diff.stderr.trim()}`,
+      `git diff --cached failed (${diff.ended}): ${diff.stderr.trim()}`,
     );
   }
   await commit(git, message, { allowEmpty: false });

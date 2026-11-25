@@ -35,7 +35,7 @@ async function isDirty(cwd: string): Promise<boolean> {
     timeoutMs: GIT_TIMEOUT_MS,
   });
   if (result.exitCode !== 0) {
-    console.error(`git status failed (exit ${result.exitCode})`);
+    console.error(`git status failed (${result.ended})`);
     if (result.stderr.trim()) console.error(result.stderr.trim());
     process.exit(1);
   }

@@ -302,7 +302,7 @@ async function assertCheckoutAt(root: AppPath, sha: string): Promise<void> {
   if (r.timedOut || r.exitCode !== 0 || head !== sha) {
     throw new Error(
       `release checkout ${root} is not at ${sha} ` +
-        `(rev-parse HEAD: ${r.timedOut ? "timed out" : `exit ${r.exitCode}`}, ` +
+        `(rev-parse HEAD: ${r.ended}, ` +
         `"${head}", ${r.stderr.trim() || "<no stderr>"})`,
     );
   }
@@ -327,7 +327,7 @@ async function trustMiseConfig(root: AppPath): Promise<void> {
   if (r.timedOut || r.exitCode !== 0) {
     console.warn(
       `  mise trust ${root}/mise.toml did not succeed ` +
-        `(${r.timedOut ? "timed out" : `exit ${r.exitCode}`}): ${r.stderr.trim() || "<no stderr>"}`,
+        `(${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
 }
@@ -387,7 +387,7 @@ async function pruneWorktrees(repoRoot: string, root: string): Promise<void> {
   if (r.timedOut || r.exitCode !== 0) {
     console.warn(
       `  git worktree prune after removing ${root} did not succeed ` +
-        `(${r.timedOut ? "timed out" : `exit ${r.exitCode}`}): ${r.stderr.trim() || "<no stderr>"}`,
+        `(${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
 }

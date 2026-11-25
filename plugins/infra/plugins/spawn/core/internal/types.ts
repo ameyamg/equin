@@ -249,6 +249,15 @@ export interface SpawnResult {
   stdoutBytes: Uint8Array<ArrayBuffer>;
   stderrBytes: Uint8Array<ArrayBuffer>;
   resourceUsage: ChildResourceUsage;
+  /**
+   * How the child ended, in words (`describeSpawnEnd`): `exit 1`, a kill by
+   * this call's own deadline (with its awake time and CPU), or a signal sent
+   * from outside. The one spelling a failure message uses — never
+   * `(exit ${exitCode})`, which reads both kinds of kill as `exit 143`.
+   */
+  ended: string;
+  /** Awake time from spawn to reap, in ms (a machine sleep does not count). */
+  ranMs: number;
 }
 
 /** The live child handle `spawnPassthrough` exposes for signal forwarding. */

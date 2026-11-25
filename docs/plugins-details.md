@@ -42282,6 +42282,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.asAppPath`
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/deadline.armAwakeDeadline`
+          - `packages/deadline.awakeClock`
           - `packages/flock.holdParentLifeline`
           - `packages/owned-fd.openOwnedFd`
           - `packages/owned-fd.OwnedFd`

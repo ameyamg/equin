@@ -134,7 +134,7 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   const r = await gitRaw(cwd, args);
   if (r.exitCode !== 0) {
     throw new HarnessError(
-      `git ${args.join(" ")} failed in ${cwd} (exit ${r.exitCode}):\n${r.stderr}`,
+      `git ${args.join(" ")} failed in ${cwd} (${r.ended}):\n${r.stderr}`,
     );
   }
   return r.stdout.trim();
@@ -160,11 +160,11 @@ async function cli(
   );
   writeFileSync(
     log,
-    `$ (cd ${cwd} && ./equin ${args.join(" ")})\nexit ${r.exitCode}${r.timedOut ? " (TIMED OUT)" : ""}\n\n--- stdout\n${r.stdout}\n--- stderr\n${r.stderr}`,
+    `$ (cd ${cwd} && ./equin ${args.join(" ")})\n${r.ended}\n\n--- stdout\n${r.stdout}\n--- stderr\n${r.stderr}`,
   );
   const secs = ((Date.now() - started) / 1000).toFixed(0);
   console.log(
-    `    $ ./equin ${args.join(" ")}  → exit ${r.exitCode} (${secs}s, ${log})`,
+    `    $ ./equin ${args.join(" ")}  → ${r.ended} (${secs}s, ${log})`,
   );
   if (r.timedOut) throw new HarnessError(`./equin ${args.join(" ")} timed out`);
   return r;

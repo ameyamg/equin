@@ -456,6 +456,6 @@ async function gitVersion(root: string): Promise<string> {
     timeoutMs: 60_000,
   });
   if (result.exitCode !== 0)
-    throw new Error(`git --version failed (exit ${result.exitCode})`);
+    throw new Error(`git --version failed (${result.ended})`);
   return result.stdout.trim();
 }

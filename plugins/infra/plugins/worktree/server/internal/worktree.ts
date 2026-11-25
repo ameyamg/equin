@@ -243,7 +243,7 @@ async function commonGitDir(
   }
   if (r.exitCode !== 0) {
     throw new Error(
-      `git rev-parse --git-common-dir failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+      `git rev-parse --git-common-dir failed (${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
   return r.stdout.trim();
@@ -592,7 +592,7 @@ async function deleteTrashEntry(path: string): Promise<void> {
   if (r.timedOut || r.exitCode !== 0) {
     console.warn(
       `[worktree] deleting trashed checkout ${path} did not finish ` +
-        `(${r.timedOut ? `timed out after ${TRASH_RM_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
+        `(${r.ended}): ` +
         `${r.stderr.trim() || "<no stderr>"} — the next emptyWorktreeTrash retries it`,
     );
   }
@@ -699,7 +699,7 @@ async function attemptBranchExists(
   if (r.exitCode === 0) return true;
   if (r.exitCode === 1) return false;
   throw new Error(
-    `git show-ref for ${attemptBranchRef(id)} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+    `git show-ref for ${attemptBranchRef(id)} failed (${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
   );
 }
 
@@ -775,7 +775,7 @@ async function discardPartialCheckout(
   if (pruned.timedOut || pruned.exitCode !== 0) {
     console.warn(
       `[worktree] prune after a discarded partial checkout for ${label} did not succeed ` +
-        `(${pruned.timedOut ? "timed out" : `exit ${pruned.exitCode}`}): ` +
+        `(${pruned.ended}): ` +
         `${pruned.stderr.trim() || "<no stderr>"}`,
     );
   }
@@ -806,7 +806,7 @@ async function gitOk(
   }
   if (r.exitCode !== 0) {
     throw new Error(
-      `${argv.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+      `${argv.join(" ")} failed (${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
   return r.stdout.trim();
@@ -1201,7 +1201,7 @@ async function runCheckoutWrite(
   }
   if (r.exitCode !== 0) {
     throw new Error(
-      `writing the checkout for ${label} failed (exit ${r.exitCode}): ${argv.join(" ")}: ${r.stderr.trim() || "<no stderr>"}`,
+      `writing the checkout for ${label} failed (${r.ended}): ${argv.join(" ")}: ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
 }
@@ -1309,7 +1309,7 @@ async function switchToAttemptBranch(
   // checks out again.
   if (r.exitCode !== 0) {
     throw new Error(
-      `git switch to ${branch} in the claimed spare ${wtPath} failed (exit ${r.exitCode}): ` +
+      `git switch to ${branch} in the claimed spare ${wtPath} failed (${r.ended}): ` +
         `${r.stderr.trim() || "<no stderr>"}`,
     );
   }
@@ -1850,7 +1850,7 @@ export async function removeWorktree(
     if (pruned.timedOut || pruned.exitCode !== 0) {
       console.warn(
         `[worktree] 'worktree prune' after removing ${wtPath} did not succeed ` +
-          `(${pruned.timedOut ? `timed out after ${PRUNE_TIMEOUT_MS} ms` : `exit ${pruned.exitCode}`}): ` +
+          `(${pruned.ended}): ` +
           `${pruned.stderr.trim() || "<no stderr>"}`,
       );
     }

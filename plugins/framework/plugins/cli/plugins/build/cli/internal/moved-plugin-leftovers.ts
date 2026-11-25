@@ -45,7 +45,7 @@ async function gitFiles(root: AppPath, args: string[]): Promise<string[]> {
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `git ls-files ${args.join(" ")} failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ls-files ${args.join(" ")} failed (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   return result.stdout.split("\0").filter((p) => p.length > 0);

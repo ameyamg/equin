@@ -84,7 +84,7 @@ async function fetchTags(repo: string): Promise<string[]> {
   );
   if (result.exitCode !== 0)
     throw new Error(
-      `git ls-remote --tags ${repo} failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ls-remote --tags ${repo} failed (${result.ended}): ${result.stderr.trim()}`,
     );
   return result.stdout
     .split("\n")
@@ -112,7 +112,7 @@ async function fetchTagDate(repo: string, tag: string): Promise<string> {
       });
       if (r.exitCode !== 0)
         throw new Error(
-          `git ${argv.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim()}`,
+          `git ${argv.join(" ")} failed (${r.ended}): ${r.stderr.trim()}`,
         );
       return r.stdout.trim();
     };
@@ -215,7 +215,7 @@ async function bunInstall(
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `bun install failed (exit ${result.exitCode}):\n${result.stdout.trim().split("\n").slice(-30).join("\n")}`,
+      `bun install failed (${result.ended}):\n${result.stdout.trim().split("\n").slice(-30).join("\n")}`,
     );
   }
 }
@@ -235,7 +235,7 @@ async function regenGenerated(
   );
   if (regen.exitCode !== 0)
     throw new Error(
-      `regen-generated failed (exit ${regen.exitCode}):\n${regen.stdout.trim().split("\n").slice(-30).join("\n")}`,
+      `regen-generated failed (${regen.ended}):\n${regen.stdout.trim().split("\n").slice(-30).join("\n")}`,
     );
 }
 

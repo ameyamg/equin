@@ -98,7 +98,7 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   });
   if (r.exitCode !== 0)
     throw new FixtureError(
-      `git ${args.join(" ")} failed in ${cwd} (exit ${r.exitCode}):\n${r.stderr}`,
+      `git ${args.join(" ")} failed in ${cwd} (${r.ended}):\n${r.stderr}`,
     );
   return r.stdout.trim();
 }
@@ -118,11 +118,11 @@ async function cli(
   const log = join(logDir, `${args.join("_")}.log`);
   writeFileSync(
     log,
-    `exit ${r.exitCode}${r.timedOut ? " (TIMED OUT)" : ""}\n--- stdout\n${r.stdout}\n--- stderr\n${r.stderr}`,
+    `${r.ended}\n--- stdout\n${r.stdout}\n--- stderr\n${r.stderr}`,
   );
   const secs = ((Date.now() - started) / 1000).toFixed(0);
   console.log(
-    `    $ ./${CLI_NAME} ${args.join(" ")} → exit ${r.exitCode} (${secs}s, ${log})`,
+    `    $ ./${CLI_NAME} ${args.join(" ")} → ${r.ended} (${secs}s, ${log})`,
   );
   if (r.timedOut)
     throw new FixtureError(`./${CLI_NAME} ${args.join(" ")} timed out`);
@@ -247,7 +247,7 @@ async function journey(
 
   console.log("\nPush from the worktree:");
   const pushed = await cli(wt, ["push"], PUSH_TIMEOUT_MS, logDir);
-  check("the push succeeds", pushed.exitCode === 0, `exit ${pushed.exitCode}`);
+  check("the push succeeds", pushed.exitCode === 0, pushed.ended);
   check(
     "the land phase ran the rebased code (main's marker printed)",
     output(pushed).includes(marker),

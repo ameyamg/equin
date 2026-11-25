@@ -32,7 +32,7 @@ async function git(root: string, args: string[]): Promise<string> {
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `git ${args.join(" ")} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ${args.join(" ")} failed in ${root} (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   return result.stdout;
@@ -234,7 +234,7 @@ async function readBlobs(
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `git cat-file --batch failed in ${root} (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim()}`,
+      `git cat-file --batch failed in ${root} (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   const buf = result.stdoutBytes;

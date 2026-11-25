@@ -35,7 +35,7 @@ export async function gitConfigGet(
   if (result.exitCode === 0) return result.stdout.trim();
   if (result.exitCode === 1) return null;
   throw new Error(
-    `git config --get ${key} failed (exit ${result.exitCode})` +
+    `git config --get ${key} failed (${result.ended})` +
       (result.stderr.trim() ? `\n${result.stderr.trim()}` : ""),
   );
 }
@@ -63,7 +63,7 @@ export async function gitConfigUnset(key: string, cwd: string): Promise<void> {
   );
   if (result.exitCode === 0 || result.exitCode === 5) return;
   throw new Error(
-    `git config --unset ${key} failed (exit ${result.exitCode})` +
+    `git config --unset ${key} failed (${result.ended})` +
       (result.stderr.trim() ? `\n${result.stderr.trim()}` : ""),
   );
 }

@@ -102,7 +102,7 @@ for (const j of jobs) {
     const wallS = (performance.now() - startedAt) / 1000;
     const u = run.resourceUsage;
     console.log(
-      `job ${j} (${job.sources.length} sources) ${spec}: exit ${run.exitCode}, ${peakFootprintText(u.peakFootprint)}, ` +
+      `job ${j} (${job.sources.length} sources) ${spec}: ${run.ended}, ${peakFootprintText(u.peakFootprint)}, ` +
         `cpu ${sec(u.cpuTimeMicros)}s (sys ${sec(u.cpuSystemMicros)}), wall ${wallS.toFixed(1)}s`,
     );
     if (run.exitCode !== 0) console.log(run.stderr.trim().slice(-2000));

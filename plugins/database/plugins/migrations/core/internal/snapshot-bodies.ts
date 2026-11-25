@@ -108,7 +108,7 @@ async function readBlobs(
     throw new Error(`${argv.join(" ")} timed out (${specs.length} object(s))`);
   if (r.exitCode !== 0)
     throw new Error(
-      `${argv.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim()}`,
+      `${argv.join(" ")} failed (${r.ended}): ${r.stderr.trim()}`,
     );
   const buf = r.stdoutBytes;
   const decoder = new TextDecoder();

@@ -134,7 +134,7 @@ async function anyScopeEmail(root: string): Promise<string | null> {
   if (result.exitCode === 0) return result.stdout.trim();
   if (result.exitCode === 1) return null;
   throw new Error(
-    `git config --get user.email failed (exit ${result.exitCode})` +
+    `git config --get user.email failed (${result.ended})` +
       (result.stderr.trim() ? `\n${result.stderr.trim()}` : ""),
   );
 }

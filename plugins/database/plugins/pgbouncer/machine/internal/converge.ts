@@ -92,7 +92,7 @@ async function isPgbouncer(pid: number): Promise<boolean> {
   if (ps.exitCode === 1) return false;
   if (ps.exitCode !== 0) {
     throw new Error(
-      `pgbouncer: \`ps -p ${pid}\` failed (exit ${ps.exitCode}): ${ps.stderr}`,
+      `pgbouncer: \`ps -p ${pid}\` failed (${ps.ended}): ${ps.stderr}`,
     );
   }
   return ps.stdout.trim().endsWith("pgbouncer");

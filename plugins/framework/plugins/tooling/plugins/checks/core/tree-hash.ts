@@ -410,7 +410,7 @@ export async function readTreeObjects(
   });
   if (result.exitCode !== 0)
     throw new Error(
-      `readTreeObjects: git cat-file --batch failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `readTreeObjects: git cat-file --batch failed (${result.ended}): ${result.stderr.trim()}`,
     );
   const buf = result.stdoutBytes;
   const decoder = new TextDecoder();

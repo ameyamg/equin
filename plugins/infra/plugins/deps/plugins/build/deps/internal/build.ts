@@ -192,7 +192,7 @@ async function toolVersion(tool: BuildTool, root: string): Promise<string> {
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `\`${argv.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim() || "(no output)"}`,
+      `\`${argv.join(" ")}\` failed (${result.ended}): ${result.stderr.trim() || "(no output)"}`,
     );
   }
   return result.stdout.trim();
@@ -226,7 +226,7 @@ async function hashInputs(
       );
       if (result.exitCode !== 0) {
         throw new Error(
-          `git ls-files ${glob} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+          `git ls-files ${glob} failed in ${root} (${result.ended}): ${result.stderr.trim()}`,
         );
       }
       const matched = result.stdout.split("\0").filter((p) => p !== "");

@@ -44,7 +44,7 @@ export const GIT_TIMEOUT_MS = 300_000;
 export async function run(cmd: string[], cwd?: string): Promise<string> {
   const result = await spawnCaptured(cmd, { cwd, timeoutMs: GIT_TIMEOUT_MS });
   if (result.exitCode !== 0) {
-    console.error(`Command failed (exit ${result.exitCode}): ${cmd.join(" ")}`);
+    console.error(`Command failed (${result.ended}): ${cmd.join(" ")}`);
     if (result.stderr.trim()) console.error(result.stderr.trim());
     process.exit(1);
   }
@@ -213,9 +213,7 @@ export async function publishMain(
     process.exit(1);
   }
   if (ancestry.exitCode !== 0) {
-    console.error(
-      `Command failed (exit ${ancestry.exitCode}): ${cmd.join(" ")}`,
-    );
+    console.error(`Command failed (${ancestry.ended}): ${cmd.join(" ")}`);
     if (ancestry.stderr.trim()) console.error(ancestry.stderr.trim());
     process.exit(1);
   }

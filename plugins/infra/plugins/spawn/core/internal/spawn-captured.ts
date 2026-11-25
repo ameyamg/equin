@@ -12,7 +12,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
-import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
+import {
+  armAwakeDeadline,
+  awakeClock,
+} from "@plugins/packages/plugins/deadline/core";
+import { describeSpawnEnd } from "./spawn-end";
 import { ChildKilledError } from "./child-killed";
 import { noteChildEnded } from "./kill-watch";
 import { childEnv } from "./child-env";
@@ -48,18 +52,17 @@ export class SpawnFailedError extends Error {
     readonly argv: string[],
     ended: Pick<
       SpawnResult,
-      "exitCode" | "signalCode" | "timedOut" | "stdout" | "stderr"
+      "exitCode" | "signalCode" | "timedOut" | "stdout" | "stderr" | "ended"
     >,
   ) {
     const { exitCode, signalCode, timedOut, stdout, stderr } = ended;
-    const how = signalCode ? `signal ${signalCode}` : `exit ${exitCode}`;
     const detail = stderr.trim() || stdout.trim();
     const killed =
       signalCode !== null && !timedOut
         ? new ChildKilledError(`\`${argv.join(" ")}\``, signalCode, detail)
         : undefined;
     super(
-      `Command failed (${how}${timedOut ? ", timed out" : ""}): ${argv.join(" ")}${detail ? `\n${detail}` : ""}`,
+      `Command failed (${ended.ended}): ${argv.join(" ")}${detail ? `\n${detail}` : ""}`,
       killed === undefined ? undefined : { cause: killed },
     );
     this.name = "SpawnFailedError";
@@ -87,6 +90,8 @@ function makeResult(
   stdoutBytes: Uint8Array<ArrayBuffer>,
   stderrBytes: Uint8Array<ArrayBuffer>,
   resourceUsage: ChildResourceUsage,
+  ranMs: number,
+  timeoutMs: number | undefined,
 ): SpawnResult {
   let stdoutText: string | undefined;
   let stderrText: string | undefined;
@@ -97,6 +102,15 @@ function makeResult(
     stdoutBytes,
     stderrBytes,
     resourceUsage,
+    ranMs,
+    ended: describeSpawnEnd({
+      exitCode,
+      signalCode,
+      timedOut,
+      timeoutMs,
+      ranMs,
+      cpuTimeMicros: resourceUsage.cpuTimeMicros,
+    }),
     get stdout() {
       return (stdoutText ??= decoder.decode(stdoutBytes));
     },
@@ -213,6 +227,7 @@ async function spawnCapturedNow(
     let errFd: OwnedFd | undefined;
     let proc: ReturnType<typeof Bun.spawn>;
     let exitCode: number;
+    let ranMs = 0;
     let timedOut = false;
     let aborted = false;
     let cancelDeadline: (() => void) | undefined;
@@ -259,6 +274,7 @@ async function spawnCapturedNow(
         }),
       );
       proc = child;
+      const spawnedAt = awakeClock();
       // Every signal this call sends goes to the child's group when it leads
       // one — the exit reaper's `SIGTERM` included, so a parent that dies
       // mid-call takes the tree down with the child.
@@ -323,6 +339,7 @@ async function spawnCapturedNow(
         signal.addEventListener("abort", onAbort, { once: true });
       }
       exitCode = await child.exited;
+      ranMs = awakeClock() - spawnedAt;
       // A CHILD THAT SUCCEEDED DID NOT TIME OUT, whatever our timer believed.
       // The timer only ever proves that the deadline elapsed without us having
       // OBSERVED an exit; it cannot prove the child was still running, because
@@ -383,6 +400,8 @@ async function spawnCapturedNow(
       stdoutBytes,
       stderrBytes,
       await readResourceUsage(proc, peak),
+      ranMs,
+      opts.timeoutMs,
     );
   } finally {
     await rm(dir, { recursive: true, force: true });

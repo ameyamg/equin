@@ -174,9 +174,7 @@ export async function trashHostPaths(
     } else if (/permission|not permitted|Code=513/i.test(run.stderr)) {
       results.push({ kind: "denied", path });
     } else {
-      throw new Error(
-        `trash ${path}: exit ${run.exitCode}${run.timedOut ? " (timed out)" : ""}: ${run.stderr.trim()}`,
-      );
+      throw new Error(`trash ${path}: ${run.ended}: ${run.stderr.trim()}`);
     }
   }
   return { results };

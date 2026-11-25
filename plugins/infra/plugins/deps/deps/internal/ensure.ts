@@ -291,7 +291,7 @@ async function install(args: {
     }
     if (result.exitCode !== 0) {
       throw new Error(
-        `\`${argv.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}):\n` +
+        `\`${argv.join(" ")}\` failed (${result.ended}):\n` +
           (await logTail(paths.log, 30)).join("\n"),
       );
     }

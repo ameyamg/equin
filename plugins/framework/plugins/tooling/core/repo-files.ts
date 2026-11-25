@@ -61,7 +61,7 @@ async function git(
     // Loud, never `[]`. An absorbed failure here would tell every caller the
     // repo is empty, turning each file rule into a vacuous PASS.
     throw new Error(
-      `git ${args.join(" ")} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ${args.join(" ")} failed in ${root} (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   return result.stdout;

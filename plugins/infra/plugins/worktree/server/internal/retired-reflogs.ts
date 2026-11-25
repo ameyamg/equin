@@ -55,7 +55,7 @@ async function gitLines(repoRoot: AppPath, args: string[]): Promise<string[]> {
   }
   if (r.exitCode !== 0) {
     throw new Error(
-      `${argv.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+      `${argv.join(" ")} failed (${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
   return r.stdout.split("\n").filter((l) => l !== "");
@@ -122,7 +122,7 @@ export async function dropRetiredBranchReflogsIn(
     }
     if (r.exitCode !== 0) {
       throw new Error(
-        `git reflog drop (${retired.length - i} retired reflogs left) failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+        `git reflog drop (${retired.length - i} retired reflogs left) failed (${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
       );
     }
   }

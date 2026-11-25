@@ -472,7 +472,7 @@ export async function deletePath(
   if (r.timedOut || r.exitCode !== 0) {
     console.warn(
       `[worktree] deleting pooled ${pool.what} ${path} did not finish ` +
-        `(${r.timedOut ? `timed out after ${POOL_RM_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
+        `(${r.ended}): ` +
         `${r.stderr.trim() || "<no stderr>"} — the next sweep retries it`,
     );
   }

@@ -37,10 +37,10 @@ const GIT_SCAN_TIMEOUT_MS = 120_000;
 export class GitScanError extends Error {
   constructor(
     readonly argv: readonly string[],
-    readonly result: Pick<SpawnResult, "exitCode" | "stderr">,
+    readonly result: Pick<SpawnResult, "exitCode" | "stderr" | "ended">,
     detail?: string,
   ) {
-    const why = `exit ${result.exitCode}`;
+    const why = result.ended;
     const stderr = result.stderr.trim();
     super(
       [

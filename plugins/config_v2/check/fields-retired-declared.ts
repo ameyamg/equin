@@ -37,7 +37,7 @@ async function filesAt(
   });
   if (result.timedOut || result.exitCode !== 0) {
     throw new Error(
-      `git cat-file --batch failed in ${root} (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim()}`,
+      `git cat-file --batch failed in ${root} (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   const bytes = result.stdoutBytes;

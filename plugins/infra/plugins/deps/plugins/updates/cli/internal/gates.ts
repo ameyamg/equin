@@ -149,11 +149,7 @@ export async function runSmoke(
   });
   const ok = result.exitCode === 0;
   const tail = result.stdout.trim().split("\n").slice(-20).join("\n");
-  console.log(
-    ok
-      ? "  ok"
-      : `  FAILED (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""})\n${tail}`,
-  );
+  console.log(ok ? "  ok" : `  FAILED (${result.ended})\n${tail}`);
   return { gate: `smoke: ${smoke.name}`, failures: ok ? [] : [smoke.name] };
 }
 

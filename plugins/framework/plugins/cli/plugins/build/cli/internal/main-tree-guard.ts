@@ -113,7 +113,7 @@ async function git(root: string, args: string[]): Promise<string> {
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `git ${args.join(" ")} failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ${args.join(" ")} failed (${result.ended}): ${result.stderr.trim()}`,
     );
   }
   return result.stdout;

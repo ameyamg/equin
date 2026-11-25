@@ -155,7 +155,7 @@ async function probeTools(
         : null;
     if (got === null) {
       mismatches.push(
-        `\`${spec.versionArgv.join(" ")}\`${where} did not report a version (exit ${probe.exitCode}${probe.timedOut ? ", timed out" : ""}): ${said.split("\n")[0]}`,
+        `\`${spec.versionArgv.join(" ")}\`${where} did not report a version (${probe.ended}): ${said.split("\n")[0]}`,
       );
     } else if (got !== want) {
       mismatches.push(

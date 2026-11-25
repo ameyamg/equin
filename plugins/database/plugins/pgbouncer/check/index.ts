@@ -69,7 +69,7 @@ const unixSocketBuffer: Check = {
     if (probe.exitCode !== 0 || !last.startsWith("{"))
       return {
         ok: false,
-        message: `the socket-buffer probe failed (exit ${probe.exitCode}): ${probe.stderr.trim() || last}`,
+        message: `the socket-buffer probe failed (${probe.ended}): ${probe.stderr.trim() || last}`,
       };
     const { reads, bytes } = JSON.parse(last) as {
       reads: number;

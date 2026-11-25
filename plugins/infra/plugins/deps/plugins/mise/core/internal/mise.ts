@@ -27,7 +27,7 @@ export async function mise(
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `\`mise ${args.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}):\n` +
+      `\`mise ${args.join(" ")}\` failed (${result.ended}):\n` +
         `${result.stdout}\n${result.stderr}`.trim(),
     );
   }

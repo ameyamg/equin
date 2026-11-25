@@ -1023,7 +1023,7 @@ async function restorePublishedTip(
   const base = await git(["merge-base", "HEAD", LOCAL_MAIN_REF]);
   if (base.exitCode !== 0)
     throw new Error(
-      `git merge-base HEAD ${LOCAL_MAIN_REF} failed (exit ${base.exitCode}): ${base.stderr.trim()}`,
+      `git merge-base HEAD ${LOCAL_MAIN_REF} failed (${base.ended}): ${base.stderr.trim()}`,
     );
   const sha = base.stdout.trim();
   const rel = `${MIGRATIONS_DATA_DIR}/meta/${SCHEMA_SNAPSHOT_FILE}`;

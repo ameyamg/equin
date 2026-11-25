@@ -69,7 +69,7 @@ export async function checkStaleness(
   }
   if (result.exitCode !== 0) {
     throw new Error(
-      `staleness check failed (exit ${result.exitCode}): ${argv.join(" ")}\n${result.stderr.trim()}`,
+      `staleness check failed (${result.ended}): ${argv.join(" ")}\n${result.stderr.trim()}`,
     );
   }
   const changed = result.stdout
@@ -99,6 +99,6 @@ async function hasObject(sha: string, root: string): Promise<boolean> {
   if (result.exitCode === 0) return true;
   if (result.exitCode === 1 && result.stderr.trim() === "") return false;
   throw new Error(
-    `staleness check failed (exit ${result.exitCode}): ${argv.join(" ")}\n${result.stderr.trim()}`,
+    `staleness check failed (${result.ended}): ${argv.join(" ")}\n${result.stderr.trim()}`,
   );
 }

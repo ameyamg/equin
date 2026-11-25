@@ -126,7 +126,7 @@ const check: Check = {
         ok: false,
         inconclusive: true,
         message:
-          `The fd double-close probe could not run (exit ${probe.exitCode}${probe.timedOut ? ", timed out" : ""}).` +
+          `The fd double-close probe could not run (${probe.ended}).` +
           (said ? `\n${said}` : ""),
         hint: `Run it by hand to see why: \`./equin run ${PROBE}\` from the check plugin's directory.`,
       };

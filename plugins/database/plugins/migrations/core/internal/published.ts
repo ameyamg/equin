@@ -125,7 +125,7 @@ export async function publishedMigrationTreesSignature(
   );
   if (result.timedOut || result.exitCode !== 0)
     throw new Error(
-      `git cat-file --batch-check failed in ${root} (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim()}`,
+      `git cat-file --batch-check failed in ${root} (${result.ended}): ${result.stderr.trim()}`,
     );
   const lines = result.stdout.split("\n").filter(Boolean);
   if (lines.length !== refs.length)
@@ -242,7 +242,7 @@ export async function publishedMergeBases(
     if (result.exitCode === 1 && result.stdout.trim() === "") continue;
     if (result.exitCode !== 0) {
       throw new Error(
-        `git merge-base HEAD ${ref} failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+        `git merge-base HEAD ${ref} failed (${result.ended}): ${result.stderr.trim()}`,
       );
     }
     const base = result.stdout.trim();

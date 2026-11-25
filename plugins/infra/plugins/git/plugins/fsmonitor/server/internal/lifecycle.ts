@@ -46,7 +46,7 @@ async function git(
 
 function failed(wtPath: string, args: string[], r: SpawnResult): Error {
   return new Error(
-    `[fsmonitor] git -C ${wtPath} ${args.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+    `[fsmonitor] git -C ${wtPath} ${args.join(" ")} failed (${r.ended}): ${r.stderr.trim() || "<no stderr>"}`,
   );
 }
 
