@@ -1,4 +1,7 @@
-import type { ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   DataViewSwitcher,
   defineDataView,
@@ -14,7 +17,10 @@ import {
 } from "@plugins/tasks/plugins/decisions/core";
 import {
   decisionPresentation,
+  isAnswerable,
   NewMark,
+  useDecisionDrafts,
+  type DecisionDraft,
 } from "@plugins/tasks/plugins/decisions/web";
 import { DecisionsSources, type DecisionsHostProps } from "../slots";
 
@@ -56,12 +62,24 @@ const EMPTY: Record<DecisionTab, string> = {
  * four tabs, each grouped by the agent waiting on it (the authored views).
  */
 export function DecisionsView(hostProps: DecisionsHostProps): ReactElement {
+  // Every tab's count, one grouping of the derived tab (as the sidebar's).
+  const groups = useLive(decisionsList, { groupBy: "tab" });
+  // Each tab's count once known; none while loading or failed (the sidebar
+  // entry says a failed read).
+  const counts = foldResource(groups, {
+    loading: () => null,
+    error: () => null,
+    ready: (data) => new Map(data.map((g) => [g.value as string, g.count])),
+  });
+  const sourceCounts = (sourceId: string): number | undefined =>
+    counts === null ? undefined : (counts.get(sourceId) ?? 0);
   return (
     <DataViewSwitcher
       storageKey={DECISIONS_VIEW}
       sources={DecisionsSources}
       hostProps={hostProps}
       defaultView="needs"
+      sourceCounts={sourceCounts}
     />
   );
 }
@@ -71,10 +89,15 @@ function sourceComponent(tab: DecisionTab) {
     hostProps,
     render,
   }: DataViewSourceProps<DecisionsHostProps>) {
+    const { drafts } = useDecisionDrafts();
+    const fields = useMemo(
+      () => [...extraFields, draftField(drafts)],
+      [drafts],
+    );
     return render<DecisionRow>({
       source: SCOPES[tab],
       overrides,
-      extraFields,
+      extraFields: fields,
       recipe: "inbox",
       place: PLACE,
       selectedRowId: hostProps.selectedId,
@@ -93,6 +116,7 @@ export const ClosedSource = sourceComponent("closed");
 const PLACE = {
   pill: "lead",
   isNew: "afterTitle",
+  draft: "line2",
   label: "line2",
   outcome: "line2",
   openedAt: "edge",
@@ -104,9 +128,11 @@ const PLACE = {
 const overrides = fieldOverrides(decisionsList, {
   question: { primary: true },
   taskTitle: { visible: false },
+  // The grouping: the agent waiting on it, by its task (two agents sharing a
+  // title are two groups), labelled by the task's title.
+  taskId: { visible: false },
   tab: { visible: false },
   state: { visible: false },
-  taskId: { visible: false },
   fromDecisionId: { visible: false },
   updatedAt: { visible: false },
   closedAt: { visible: false },
@@ -121,6 +147,25 @@ type Pill = "decision" | "action" | "fyi" | "other" | "sent" | "closed";
 const pillOf = (r: DecisionRow): Pill =>
   r.tab === "sent" && r.state !== "other" ? "sent" : r.state;
 
+// The pills with one label each. An `other` decision's pill is its own word
+// (`stateLabel`), so it has no option: its row draws its own dot (`cell`).
+const PILL_OPTIONS = (
+  [
+    ["decision", "decision"],
+    ["action", "action"],
+    ["fyi", "fyi"],
+    ["sent", "decision"],
+    ["closed", "closed"],
+  ] as const
+).map(([value, state]) => {
+  const p = decisionPresentation({
+    state,
+    stateLabel: null,
+    unconsumedAnswers: value === "sent" ? 1 : 0,
+  });
+  return { value, label: p.label, variant: p.variant };
+});
+
 // The state pill as the row's leading dot — computed from the state and the
 // thread (an answer not acted on reads Sent), so it is drawn only.
 const extraFields: FieldDef<DecisionRow>[] = [
@@ -129,25 +174,44 @@ const extraFields: FieldDef<DecisionRow>[] = [
     label: "State",
     type: "enum",
     value: pillOf,
-    options: (
-      [
-        ["decision", "decision"],
-        ["action", "action"],
-        ["fyi", "fyi"],
-        ["other", "other"],
-        ["sent", "decision"],
-        ["closed", "closed"],
-      ] as const
-    ).map(([value, state]) => {
-      const p = decisionPresentation({
-        state,
-        stateLabel: value === "other" ? "Other" : null,
-        unconsumedAnswers: value === "sent" ? 1 : 0,
-      });
-      return { value, label: p.label, variant: p.variant };
-    }),
+    options: PILL_OPTIONS,
+    cell: (r) => {
+      const label = decisionPresentation(r).label;
+      return (
+        <span title={label} aria-label={label}>
+          <StatusDot colorClass="bg-muted-foreground" />
+        </span>
+      );
+    },
     sortable: false,
     filterable: false,
     groupable: false,
   },
 ];
+
+/** What a row's draft says, in words: "Your answer: A + note", "Your question", "Got it". */
+function draftWords(
+  r: DecisionRow,
+  d: DecisionDraft | undefined,
+): string | null {
+  if (d === undefined || !isAnswerable(r)) return null;
+  const note = d.note.trim() !== "";
+  if (d.pick !== null) return `Your answer: ${d.pick}${note ? " + note" : ""}`;
+  if (d.close) return r.state === "fyi" ? "Got it" : "Close without answering";
+  return note ? "Your question" : null;
+}
+
+// The drafted answer on its row (line 2), so what Submit will send is seen in the list.
+function draftField(
+  drafts: Readonly<Record<string, DecisionDraft>>,
+): FieldDef<DecisionRow> {
+  return {
+    id: "draft",
+    label: "Your answer",
+    type: "text",
+    value: (r) => draftWords(r, drafts[r.id]),
+    sortable: false,
+    filterable: false,
+    groupable: false,
+  };
+}

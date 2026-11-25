@@ -559,14 +559,14 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `isE2eScriptPath`
     - `MANUAL_REASONS`
 - Cross-plugin:
-  - Imported by: 208 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 209 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×64
     - `primitives` ×30
     - `conversations` ×26
     - `page` ×26
     - `debug` ×10
     - `apps-core` ×6
-    - `tasks` ×5
+    - `tasks` ×6
     - `framework` ×4
     - `active-data` ×3
     - `companions` ×3

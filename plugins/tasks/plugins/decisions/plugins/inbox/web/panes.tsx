@@ -24,8 +24,12 @@ import {
 } from "@plugins/tasks/plugins/decisions/core";
 import {
   DecisionCard,
+  isAnswerable,
+  SubmitBar,
+  useDecisionDrafts,
   useMarkDecisionSeen,
 } from "@plugins/tasks/plugins/decisions/web";
+import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { decisionDetailRoute, decisionsRoute } from "../core";
 import { DecisionsView } from "./components/decisions-view";
 
@@ -77,6 +81,7 @@ function DecisionsBody(): ReactElement {
           openPane.to(decisionDetailPane, { decisionId }, { mode: "push" })
         }
       />
+      <SubmitBar />
     </PaneChrome>
   );
 }
@@ -111,6 +116,21 @@ function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
   const [seenBefore] = useState(decision.seenAt);
   useMarkDecisionSeen(decision);
   const openPane = useOpenPane();
+  const draft = useDecisionDrafts().part(decision.id);
+  const answerable = isAnswerable(decision);
+  // 1–9 pick the open decision's options (a second press unpicks); typing in
+  // the note keeps its digits.
+  useSurfaceShortcuts(
+    decision.options.slice(0, 9).map((o, i) => ({
+      id: `decisions.pick-${i + 1}`,
+      keys: String(i + 1),
+      label: `Pick option ${o.key}`,
+      group: "Decisions",
+      when: () => answerable,
+      handler: () =>
+        draft.set((d) => ({ ...d, pick: d.pick === o.key ? null : o.key })),
+    })),
+  );
   return (
     <Stack gap="md" className="rail-lg">
       <Button
@@ -126,7 +146,7 @@ function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
       >
         {decision.taskTitle}
       </Button>
-      <DecisionCard decision={decision} seenBefore={seenBefore} />
+      <DecisionCard decision={decision} seenBefore={seenBefore} draft={draft} />
     </Stack>
   );
 }

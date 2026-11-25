@@ -1,5 +1,6 @@
 export {
   isTransient,
+  keptEntry,
   keptField,
   keptItem,
   keptPart,

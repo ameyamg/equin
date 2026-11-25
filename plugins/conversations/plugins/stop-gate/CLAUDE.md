@@ -97,6 +97,7 @@ This plugin names no contributor.
   - Imported by:
     - `conversations/runtime-sdk`
     - `conversations/self-compact`
+    - `tasks/decisions`
     - `tasks/orchestration/watch`
     - `tasks/outcome-report`
 - Exemptions:

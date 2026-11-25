@@ -65,6 +65,7 @@ tab switch. The text-input primitives — ui-kit `Input` / `Textarea`,
 | `keptField(binding, "text")` — one string field of a kept object | kept: typing writes into the object entry | the object's field |
 | `keptField(keptItem(cards, (c) => c.id === id), "text")` — a string part handed down by a host (`cards: KeptPart<Card[]>`, from `keptPart(binding)` / `keptField(binding, "cards")`) | kept: typing writes into the one entry the part was projected from | the part's |
 | `field.keep` of a `useEditableField` | kept by the field: pending text is work until the save is acked | the field's |
+| `keptField(keptEntry(drafts, id, { empty, isEmpty }), "note")` — one entry of a kept record (`drafts: Record<id, Draft>`, a batch of per-item drafts in one entry) | kept: shows the entry or `empty`; a write lands under its key, an entry `isEmpty` leaves the record | the entry's |
 | `transient("<why>")` | throwaway by design — a secret, a value committed on every change | the caller's own |
 
 ```tsx
@@ -77,7 +78,7 @@ const title = useEditableField({ value, onSave, keep: { field: "task.title", sub
 
 A host hands a leaf its piece of a kept value as a `KeptPart<T>` — never as
 a `value` / `onChange` pair. Parts are minted only by projecting a binding
-(`keptPart`, `keptField`, `keptItem`, composable), so plain `useState` has no
+(`keptPart`, `keptField`, `keptItem`, `keptEntry`, composable), so plain `useState` has no
 spelling as kept text: there is no `keptText(value, setValue)`. The one part
 not projected from a binding is `useEditableField`'s `keep`, which keeps its
 pending text in its own work store.
@@ -256,7 +257,7 @@ processes, writes). What is left is work held in ordinary component state, and
     - `writeDraft`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --input`
-  - Imported by: 131 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 132 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×38
     - `primitives` ×27
     - `conversations` ×13
@@ -264,8 +265,8 @@ processes, writes). What is left is work held in ordinary component state, and
     - `page` ×9
     - `ui` ×5
     - `auth` ×4
+    - `tasks` ×4
     - `debug` ×3
-    - `tasks` ×3
     - `apps-core` ×2
     - `infra` ×2
     - `screenshot` ×2
@@ -297,6 +298,7 @@ processes, writes). What is left is work held in ordinary component state, and
     - `Transient`
   - Exports (values):
     - `isTransient`
+    - `keptEntry`
     - `keptField`
     - `keptItem`
     - `keptPart`

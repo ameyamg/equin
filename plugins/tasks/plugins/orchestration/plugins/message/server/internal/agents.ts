@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
@@ -116,6 +116,47 @@ function toAgent(
 }
 
 /**
+ * The ONE definition of a task's agent: its LATEST conversation working under
+ * the task's mandate — never a side chat beside it (one stating its own
+ * mandate — tasks-core's `conversations.mandate_ref`). A subquery over
+ * `attempts` and `conversations` only, for a LATERAL join on `taskId`.
+ */
+function latestAgentConversationSql(taskId: SQL): SQL {
+  return sql`(
+            SELECT c.id, c.status::text AS status, c.waiting_for,
+                   c.hibernated_at IS NOT NULL AS hibernated,
+                   c.status_unverified_since IS NOT NULL AS unverified
+              FROM ${_attempts} a
+              JOIN ${_conversations} c ON c.attempt_id = a.id
+             WHERE a.task_id = ${taskId} AND c.mandate_ref IS NULL
+             ORDER BY c.created_at DESC, c.id DESC
+             LIMIT 1
+          )`;
+}
+
+const AgentConversationRow = z.object({
+  id: z.string(),
+  status: ConversationStatusSchema,
+});
+
+/**
+ * `taskId`'s agent conversation and how it stands (`agentOf`'s, without the
+ * task): `null` when no agent ran on it. Reads `attempts` and
+ * `conversations` only.
+ */
+export async function latestAgentConversation(
+  exec: DbExecutor,
+  taskId: string,
+): Promise<z.infer<typeof AgentConversationRow> | null> {
+  const rows = await executeRows(exec, {
+    label: "message latest agent conversation",
+    query: sql`SELECT l.id, l.status FROM ${latestAgentConversationSql(sql`${taskId}::text`)} l`,
+    row: AgentConversationRow,
+  });
+  return rows[0] ?? null;
+}
+
+/**
  * The agent `ref` names, anywhere — a task id, or a conversation id standing
  * for its task: the task and its LATEST conversation working under the
  * task's mandate — never a side chat beside it (the one a message reaches, as
@@ -141,16 +182,7 @@ export async function agentOf(
           FROM target
           JOIN ${_tasks} t ON t.id = target.id
           JOIN ${tasksView} tv ON tv.id = target.id
-          LEFT JOIN LATERAL (
-            SELECT c.id, c.status::text AS status, c.waiting_for,
-                   c.hibernated_at IS NOT NULL AS hibernated,
-                   c.status_unverified_since IS NOT NULL AS unverified
-              FROM ${_attempts} a
-              JOIN ${_conversations} c ON c.attempt_id = a.id
-             WHERE a.task_id = target.id AND c.mandate_ref IS NULL
-             ORDER BY c.created_at DESC, c.id DESC
-             LIMIT 1
-          ) l ON true`,
+          LEFT JOIN LATERAL ${latestAgentConversationSql(sql`target.id`)} l ON true`,
     row: Row,
   });
   const r = rows[0];

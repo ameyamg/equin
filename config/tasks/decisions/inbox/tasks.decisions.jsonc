@@ -2,12 +2,12 @@
 // The Decisions inbox (plugins/tasks/plugins/decisions/plugins/inbox): one view
 // per tab, each bound to its source (the decisions.list window scoped by the
 // derived tab). Every tab is grouped by the agent waiting on the decision
-// (its task's title), newest first; Closed by when it closed.
+// (its task, labelled by its title — two agents sharing a title are two groups), newest first; Closed by when it closed.
 {
   "views": [
-    { "id": "needs", "name": "Needs you", "icon": "inbox", "source": "needs", "view": { "type": "list", "groupBy": { "fieldId": "taskTitle", "groupingId": "value" }, "sort": [{ "fieldId": "openedAt", "direction": "desc" }] } },
-    { "id": "sent", "name": "Sent", "icon": "send", "source": "sent", "view": { "type": "list", "groupBy": { "fieldId": "taskTitle", "groupingId": "value" }, "sort": [{ "fieldId": "openedAt", "direction": "desc" }] } },
-    { "id": "fyi", "name": "FYI", "icon": "info", "source": "fyi", "view": { "type": "list", "groupBy": { "fieldId": "taskTitle", "groupingId": "value" }, "sort": [{ "fieldId": "openedAt", "direction": "desc" }] } },
-    { "id": "closed", "name": "Closed", "icon": "check-circle", "source": "closed", "view": { "type": "list", "groupBy": { "fieldId": "taskTitle", "groupingId": "value" }, "sort": [{ "fieldId": "closedAt", "direction": "desc" }] } }
+    { "id": "needs", "name": "Needs you", "icon": "inbox", "source": "needs", "view": { "type": "list", "groupBy": { "fieldId": "taskId", "groupingId": "value" }, "sort": [{ "fieldId": "openedAt", "direction": "desc" }] } },
+    { "id": "sent", "name": "Sent", "icon": "send", "source": "sent", "view": { "type": "list", "groupBy": { "fieldId": "taskId", "groupingId": "value" }, "sort": [{ "fieldId": "openedAt", "direction": "desc" }] } },
+    { "id": "fyi", "name": "FYI", "icon": "info", "source": "fyi", "view": { "type": "list", "groupBy": { "fieldId": "taskId", "groupingId": "value" }, "sort": [{ "fieldId": "openedAt", "direction": "desc" }] } },
+    { "id": "closed", "name": "Closed", "icon": "check-circle", "source": "closed", "view": { "type": "list", "groupBy": { "fieldId": "taskId", "groupingId": "value" }, "sort": [{ "fieldId": "closedAt", "direction": "desc" }] } }
   ]
 }

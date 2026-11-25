@@ -1,5 +1,6 @@
 import type { LiveRowsCollection } from "@plugins/network/plugins/live/core";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { z } from "zod";
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -105,3 +106,16 @@ export const decisionExchanges = liveCollection("decisions.exchanges", {
 /** One exchange of a decision's thread. */
 export type DecisionExchangeRow =
   typeof decisionExchanges extends LiveRowsCollection<infer R> ? R : never;
+
+/**
+ * Whether a task's agent has finished — its latest conversation under the
+ * task's mandate is closed (`done`): an answer to one of its decisions is
+ * kept on the record, never sent (it is not reopened). `false` while it runs,
+ * is stopped (resumed on delivery) or never ran. The same reading delivery
+ * takes (message's `latestAgentConversation`).
+ */
+export const decisionAgentFinished = liveValue("decisions.agent-finished", {
+  schema: z.boolean(),
+  params: ["taskId"],
+  needsMachine: { feature: "Reading whether an agent has finished" },
+});

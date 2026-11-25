@@ -68,6 +68,14 @@ interface DataViewSwitcherBaseProps<THostProps> {
   /** How the surface's view edits behave (`DataViewProps.viewEdits`): under
    *  `{ mode: "draft" }` an edit goes to the view's per-tab working copy. */
   viewEdits?: DataViewViewEdits;
+  /**
+   * How many rows each source holds — a count the host reads itself (the
+   * server's grouping of the column its sources are scoped by), since only
+   * the active source mounts. Each view chip draws its source's count while
+   * the view adds no filter of its own; `undefined` draws none (not known
+   * yet). Not under `viewEdits` drafts, whose chips count in-memory rows.
+   */
+  sourceCounts?: (sourceId: string) => number | undefined;
 }
 
 /**
@@ -176,6 +184,7 @@ function DataViewSwitcherHost<THostProps>(hostProps: {
     toolbar,
     searchPlaceholder,
     aside,
+    sourceCounts,
   } = hostProps.props;
 
   return (
@@ -188,6 +197,7 @@ function DataViewSwitcherHost<THostProps>(hostProps: {
       toolbar={toolbar}
       searchPlaceholder={searchPlaceholder}
       aside={aside}
+      {...(sourceCounts === undefined ? {} : { sourceCounts })}
       subItems={(instance) =>
         sourceContribs?.find((c) => c.id === instance.instance.source)
           ?.subItems ?? null

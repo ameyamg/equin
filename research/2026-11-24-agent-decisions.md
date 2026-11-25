@@ -294,6 +294,40 @@ keeps refused drafts and shows each reason on its row.
 - **FYI "Got it"** closes it client-side through the same endpoint as a
   `recorded` "seen" with outcome "Seen", nothing delivered.
 
+### As landed (phase 3)
+
+Where the code differs from the above:
+
+- **Delivery is the desktop's half** — `decisions/machine`: the endpoint is
+  `needsMachine` (it types into agents through `conversations`, which a
+  browser host does not boot), served by `implementMachine`; a client without
+  the computer is told so on the SubmitBar.
+- **A finished agent is read as its own value**, `decisions.agent-finished`
+  (`{ taskId } → boolean`, machine): the task's latest conversation under its
+  mandate is `done` — the reading `deliverEventTurn` takes (orchestration/
+  message's `latestAgentConversation`, one SQL fragment shared with
+  `agentOf`). The card and the SubmitBar read it per drafted task.
+- **Drafts** are `{ pick, note, close, refused }` per decision in one record
+  entry, each card's draft a kept part of it (kept-state's new `keptEntry`).
+  Not `submitKept`: a batch clears only the drafts the server took (and only
+  while unchanged), keeping each refused one with its reason.
+- **`close`** is the one "settle it without telling the agent" answer: "Got
+  it" on an FYI (outcome "Seen"; a note with it kept as `recorded`), and
+  "Close without answering" on a finished agent's decision; refused
+  (`close-not-allowed`) on a live agent's decision or action.
+- **Idempotency**: the turn id is derived from `submissionId` + task + what it says, so a
+  retried Submit is a duplicate turn the ledger ignores (its exchanges were
+  written with the first). Response: `delivered[]` carries `conversationId`
+  too; `refused[]` carries `message`; reasons are `ANSWER_REFUSALS`.
+- **Gates**: the `decisions.owed` stop gate (a question waiting for a reply,
+  an answer not acted on) and the `decisions.unsettled` exit_clean
+  precondition (those, plus a `decision` / `action` still waiting on the
+  user).
+- **Inbox**: groups by `taskId` (labelled by the task's title through the
+  field's live options), each tab chip counts its tab (data-view's new
+  `DataViewSwitcher` `sourceCounts`), rows say their drafted answer, 1–9 pick
+  on the open decision. j/k are not bound yet.
+
 ## 6. Live surfaces and the plugin split
 
 Reads, all `network/live`:
@@ -303,8 +337,8 @@ Reads, all `network/live`:
   `taskTitle` + `pendingQuestions` + `unconsumedAnswers` + `latestAgentAt` +
   `isNew`), filterable on `tab` / `taskId` / `fromDecisionId` / `state`,
   `limit` 100 / `maxLimit` 500, `count: true`. The task's latest conversation
-  and its status (the finished-agent path) are **not** on the row yet: phase 3
-  adds them, joining conversations/agents' `task_latest_conversation` rollup.
+  and its status are **not** on the row: a window cannot join a rollup
+  (`all`-only), so phase 3 reads them as their own value, `decisions.agent-finished` (§5, *As landed*).
   - Sidebar count: a `useLive` grouping of `tab` (one subscription, every tab's count).
   - Per-agent counts: a grouping of `taskId` where `tab = needs`.
 - **`decisionExchanges`** — a scoped set by `decisionId` (`all: { by,

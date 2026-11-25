@@ -242,6 +242,13 @@ export function DataViewShellFrame(props: {
   viewShortcuts?: true;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
+  /**
+   * How many rows a SOURCE holds (`DataViewSwitcherProps.sourceCounts`): each
+   * view chip of the plain switcher draws its source's count while the view
+   * adds no filter of its own (a narrowed view's rows are not its source's).
+   * Absent ⇒ no counts.
+   */
+  sourceCounts?: (sourceId: string) => number | undefined;
   /** Which sub-items an instance's rows have (a hierarchy, or rows that
    *  attach): its view settings offer Sub-items. Absent ⇒ none have any. */
   subItems?: (
@@ -291,6 +298,7 @@ export function DataViewShellFrame(props: {
     switcherForm = "strip",
     viewShortcuts,
     pinnedView,
+    sourceCounts,
     subItems,
     unavailable,
     children,
@@ -478,9 +486,20 @@ export function DataViewShellFrame(props: {
 
   // The switcher needs only model inputs, so the shell builds both of its forms
   // once per surface and the toolbar places one of them as an opaque node.
+  // A view's count is its source's, while the view narrows nothing itself.
+  const countFor =
+    sourceCounts === undefined
+      ? undefined
+      : (viewId: string): number | undefined => {
+          const row = instances.find((r) => r.instance.id === viewId);
+          if (row?.instance.source === undefined) return undefined;
+          if (viewModel.stateFor(viewId).filter != null) return undefined;
+          return sourceCounts(row.instance.source);
+        };
   const switcherInputs = {
     instances,
     activeId: activeViewId,
+    ...(countFor === undefined ? {} : { countFor }),
     onSelect: viewModel.setActiveView,
     actions: viewModel.actions,
     hostSettings:

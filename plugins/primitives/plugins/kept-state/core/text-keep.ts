@@ -172,6 +172,37 @@ export function keptItem<E>(
   );
 }
 
+/**
+ * One entry of a kept record as a part, by key (`drafts[decisionId]`): it
+ * shows the entry, or `empty` while the record holds none, and setting it
+ * writes the entry back into the record — so one kept entry holds a whole
+ * set of per-item drafts (a batch answered with one Submit). An entry set to
+ * a value `isEmpty` says holds nothing is removed from the record instead of
+ * stored, so the record names only the items that hold work.
+ */
+export function keptEntry<E>(
+  source: KeptSource<Readonly<Record<string, E>>>,
+  key: string,
+  options: { empty: E; isEmpty?: (entry: E) => boolean },
+): KeptPart<E> {
+  const { empty, isEmpty } = options;
+  const { value, set } = keptPart(source);
+  return mintPart(value[key] ?? empty, (action) =>
+    set((prev) => {
+      const next =
+        typeof action === "function"
+          ? (action as (p: E) => E)(prev[key] ?? empty)
+          : action;
+      if (isEmpty?.(next) === true) {
+        if (!(key in prev)) return prev;
+        const { [key]: _dropped, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [key]: next };
+    }),
+  );
+}
+
 /** True for `transient(…)`. */
 export function isTransient(keep: unknown): keep is Transient {
   return (

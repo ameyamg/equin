@@ -16,13 +16,15 @@ import { NeedsYouCount } from "./components/needs-count";
 import { useDecisionPane, useDecisionReferent } from "./internal/presenter";
 import { decisionDetailPane, decisionsPane } from "./panes";
 import { DecisionsSources } from "./slots";
+import { decisionTaskPresentation } from "./internal/task-options";
 
 export { decisionDetailPane, decisionsPane } from "./panes";
 
 export default {
   description:
-    "The Decisions inbox in the agent manager, read-only: the Decisions sidebar entry with the count of decisions that need the user (a grouping of the derived tab), the decisions pane — one view bar over the Needs you / Sent / FYI / Closed tabs (DecisionsSources, each the decisions.list window scoped by tab), grouped by the agent waiting on it, each row the state dot, question, new mark and label — and the decision detail beside it (the agent, then DecisionCard; opening it marks it seen). A `dec-…` id in a transcript is a chip opening that pane.",
+    "The Decisions inbox in the agent manager: the Decisions sidebar entry with the count of decisions that need the user (a grouping of the derived tab), the decisions pane — one view bar over the Needs you / Sent / FYI / Closed tabs (DecisionsSources, each the decisions.list window scoped by tab, each tab chip counting its tab), grouped by the agent waiting on it (its task, labelled by the task's title), each row the state dot, question, new mark, label and the drafted answer, with the SubmitBar at its foot — and the decision detail beside it (the agent, then DecisionCard answered in place, 1–9 picking an option; opening it marks it seen). A `dec-…` id in a transcript is a chip opening that pane.",
   contributions: [
+    decisionTaskPresentation,
     Pane.Register({ pane: decisionsPane }),
     Pane.Register({ pane: decisionDetailPane }),
     Shell.Sidebar({

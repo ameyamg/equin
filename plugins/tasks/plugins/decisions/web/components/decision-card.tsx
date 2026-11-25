@@ -12,9 +12,16 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Textarea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  keptField,
+  type KeptPart,
+} from "@plugins/primitives/plugins/kept-state/core";
+import {
+  decisionAgentFinished,
   decisionExchanges,
   decisionsList,
   type DecisionExchangeRow,
@@ -23,6 +30,7 @@ import {
 } from "../../core";
 import { NewMark } from "./decision-state";
 import { decisionPresentation } from "../internal/presentation";
+import { isAnswerable, type DecisionDraft } from "../internal/drafts";
 
 /**
  * One decision in full — what every surface (the inbox's detail, later the
@@ -30,13 +38,18 @@ import { decisionPresentation } from "../internal/presentation";
  * mark, lineage and time; the question; the outcome (or "Split into …") once
  * closed; the markdown body; the options, one sentence each, the recommended
  * one marked; and its thread — the latest exchange shown, the earlier ones
- * folded. Read-only: answering is the SubmitBar's (phase 3).
+ * folded. Given its `draft`, it is answered in place: the options pick (and
+ * unpick), a note goes with the pick or asks a question, an FYI takes "Got
+ * it" — all drafts until the SubmitBar sends them.
  */
 export function DecisionCard({
   decision,
   seenBefore,
+  draft,
 }: {
   decision: DecisionRow;
+  /** The decision's drafted answer (`useDecisionDrafts().part(id)`); absent: read-only. */
+  draft?: KeptPart<DecisionDraft>;
   /**
    * What the new marks compare against: when the user last saw it BEFORE this
    * showing. A surface that marks the decision seen on open passes the
@@ -74,13 +87,19 @@ export function DecisionCard({
           <Markdown>{decision.body}</Markdown>
         ) : null}
         {decision.options.length > 0 ? (
-          <Options options={decision.options} />
+          <Options
+            options={decision.options}
+            draft={draft !== undefined && isAnswerable(decision) ? draft : null}
+          />
         ) : null}
         <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
         {decision.state !== "closed" && decision.unconsumedAnswers > 0 ? (
           <Text variant="caption" tone="muted">
             {`Sent to ${decision.taskTitle}. Waiting for it to act on your answer.`}
           </Text>
+        ) : null}
+        {draft !== undefined && isAnswerable(decision) ? (
+          <Answer decision={decision} draft={draft} />
         ) : null}
       </Stack>
     </Card>
@@ -135,27 +154,150 @@ function Outcome({ decision }: { decision: DecisionRow }): ReactElement | null {
   );
 }
 
-/** The options, one sentence each; the recommended one says so, quietly. */
+/**
+ * The options, one sentence each; the recommended one says so, quietly. With
+ * a draft each is a pick (a second press unpicks it), the chosen one marked
+ * "Your pick".
+ */
 function Options({
   options,
+  draft,
 }: {
   options: readonly DecisionOption[];
+  draft: KeptPart<DecisionDraft> | null;
 }): ReactElement {
   return (
     <Stack gap="xs">
-      {options.map((o) => (
-        <Stack key={o.key} direction="row" gap="sm" align="start">
-          <Badge mono>{o.key}</Badge>
-          <Fill>
-            <Text>{o.text}</Text>
-          </Fill>
-          {o.recommended ? (
+      {/* eslint-disable-next-line data-view/no-adhoc-row-list -- a decision's options are a choice control (one pick), not a list of records */}
+      {options.map((o, i) => {
+        const picked = draft !== null && draft.value.pick === o.key;
+        const mark = picked ? (
+          <Text variant="caption">Your pick</Text>
+        ) : o.recommended ? (
+          <Text variant="caption" tone="muted">
+            Recommended
+          </Text>
+        ) : null;
+        if (draft === null)
+          return (
+            <Stack key={o.key} direction="row" gap="sm" align="start">
+              <Badge mono>{o.key}</Badge>
+              <Fill>
+                <Text>{o.text}</Text>
+              </Fill>
+              {mark}
+            </Stack>
+          );
+        return (
+          <Row
+            key={o.key}
+            selected={picked}
+            aria-pressed={picked}
+            aria-label={
+              i < 9 ? `Pick ${o.key} (key ${i + 1})` : `Pick ${o.key}`
+            }
+            icon={
+              <Badge mono variant={picked ? "primary" : "muted"}>
+                {o.key}
+              </Badge>
+            }
+            onClick={() =>
+              draft.set((d) => ({ ...d, pick: picked ? null : o.key }))
+            }
+          >
+            <Stack direction="row" gap="sm" align="start">
+              <Fill>
+                <Text>{o.text}</Text>
+              </Fill>
+              {mark}
+            </Stack>
+          </Row>
+        );
+      })}
+    </Stack>
+  );
+}
+
+/**
+ * The answer box: the note (with a pick, or a question without one), "Got
+ * it" on an FYI, "Close" on a finished agent's decision, and what the last
+ * Submit said when it did not take it. A finished agent is said up front: its
+ * answer is kept here, never sent.
+ */
+function Answer({
+  decision,
+  draft,
+}: {
+  decision: DecisionRow;
+  draft: KeptPart<DecisionDraft>;
+}): ReactElement {
+  const agent = useLive(decisionAgentFinished, { taskId: decision.taskId });
+  // Said once known; a failed read says so instead.
+  const agentLine = foldResource(agent, {
+    loading: (): ReactElement | null => null,
+    error: (error) => (
+      <Text variant="caption" tone="destructive">
+        {`Could not read whether its agent has finished: ${error.message}`}
+      </Text>
+    ),
+    unavailable: (message) => (
+      <Text variant="caption" tone="muted">
+        {message}
+      </Text>
+    ),
+    ready: (done) =>
+      done ? (
+        <Text variant="caption" tone="muted">
+          {`${decision.taskTitle} has finished — your answer will be kept here, not sent.`}
+        </Text>
+      ) : null,
+  });
+  const finished = foldResource(agent, {
+    loading: () => false,
+    error: () => false,
+    unavailable: () => false,
+    ready: (done) => done,
+  });
+  const d = draft.value;
+  const canClose = decision.state === "fyi" || finished;
+  return (
+    <Stack gap="xs">
+      {agentLine}
+      <Textarea
+        keep={keptField(draft, "note")}
+        rows={2}
+        fitContent
+        placeholder={
+          decision.state === "fyi"
+            ? "Ask about this…"
+            : "Add a note, or ask a question…"
+        }
+        aria-label="Your note"
+      />
+      {canClose || d.close ? (
+        <Stack direction="row" gap="sm" align="center">
+          <Button
+            variant={d.close ? "secondary" : "ghost"}
+            aria-pressed={d.close}
+            className={selfClass("start")}
+            onClick={() => draft.set((p) => ({ ...p, close: !p.close }))}
+          >
+            {decision.state === "fyi" ? "Got it" : "Close without answering"}
+          </Button>
+          {d.close ? (
             <Text variant="caption" tone="muted">
-              Recommended
+              {d.note.trim() === ""
+                ? "Closes it on Submit, without telling the agent."
+                : "Closes it on Submit; your note is kept here, not sent to the agent."}
             </Text>
           ) : null}
         </Stack>
-      ))}
+      ) : null}
+      {d.refused !== null ? (
+        <Text variant="caption" tone="destructive">
+          {`Not taken: ${d.refused}`}
+        </Text>
+      ) : null}
     </Stack>
   );
 }

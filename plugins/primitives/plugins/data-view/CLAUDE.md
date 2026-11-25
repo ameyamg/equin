@@ -264,6 +264,11 @@ Chrome adapts from the active instance's fields.
   any source mounts. Everything dynamic stays in the bundle; code-only `viewOptions`
   re-merge as `{ ...bundle.viewOptions[type], ...instance.options }`.
 - **Only the active source mounts**; switching remounts the body (`key={source.id}`).
+- **Tab counts — `sourceCounts?: (sourceId) => number | undefined`.** Only the
+  active source mounts, so a count per tab is the host's own read (the Decisions
+  inbox: one server grouping of the column its sources are scoped by). Each
+  plain switcher chip draws its source's count while the view adds no filter of
+  its own; `undefined` draws none. Drafted surfaces count in memory instead.
 - **Unknown `source`** → row kept in config, skipped (like an orphan type).
 - **Instance ids must be unique ACROSS sources** — `normalizeRows` would suffix a
   duplicate, orphaning its `data_view_row_order` rows.

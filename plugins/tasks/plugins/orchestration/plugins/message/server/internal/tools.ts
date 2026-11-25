@@ -7,11 +7,6 @@ import {
   grantOf,
   mandateOf,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
-import {
-  ResumeBlockedError,
-  resumeConversation,
-  submitTurn,
-} from "@plugins/conversations/server";
 import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/message/plugins/capability/core";
 import {
   agentOf,
@@ -20,35 +15,17 @@ import {
   SETTLED_SHOWN,
   treeAgents,
 } from "./agents";
+import { resumeAgent, typeEventTurn } from "./deliver";
 import { renderOutcome, sendAgentMessage, type MessagePorts } from "./send";
 
 /** The ports a send from `fromConversationId` runs on. */
 function productionPorts(fromConversationId: string): MessagePorts {
   return {
-    async resume(conversationId) {
-      try {
-        await resumeConversation(conversationId);
-        return { ok: true };
-      } catch (err) {
-        if (err instanceof ResumeBlockedError)
-          return { ok: false, message: err.message };
-        throw err;
-      }
-    },
+    resume: resumeAgent,
     async submit(conversationId, text) {
-      const out = await submitTurn(conversationId, {
-        kind: "event",
-        text,
-        typedText: text,
-      });
-      if (out.kind === "not-found")
-        throw new Error(`message: conversation ${conversationId} not found`);
-      // `sendAgentMessage` resumed a stopped target before this: only a target
-      // that stopped again in between is still one.
-      if (out.kind === "stopped")
-        throw new Error(
-          `message: conversation ${conversationId} is ${out.status}`,
-        );
+      // `sendAgentMessage` resumed a stopped target before this: only a
+      // target that stopped again in between throws.
+      await typeEventTurn(conversationId, { text });
     },
     async mayReopen(taskId) {
       if ((await grantOf(messageTree, fromConversationId)) === null)

@@ -2,9 +2,7 @@
 
 The Decisions inbox in the agent manager — where the user sees every decision
 an agent opened (`tasks/decisions`). Design:
-[`research/2026-11-24-agent-decisions.md`](../../../../../../research/2026-11-24-agent-decisions.md) §6, phase 2.
-
-Read-only for now: answering (drafts, the SubmitBar, delivery) is phase 3.
+[`research/2026-11-24-agent-decisions.md`](../../../../../../research/2026-11-24-agent-decisions.md) §6, phases 2–3.
 
 - **Sidebar**: a `Shell.Sidebar` entry, its `trail` the count of decisions in
   Needs you — one `useLive(decisionsList, { groupBy: "tab" })`. The only
@@ -13,10 +11,19 @@ Read-only for now: answering (drafts, the SubmitBar, delivery) is phase 3.
   `DecisionsSources`, one source per tab — the `decisions.list` window scoped
   by `where: { tab }`. Its views are authored in
   `config/tasks/decisions/inbox/tasks.decisions.jsonc` (list, grouped by the
-  agent — `taskTitle` — newest first).
+  agent — its task, `taskId`, labelled by the task's title through the
+  field's live options (`internal/task-options.ts`), so two agents sharing a
+  title are two groups — newest first). Each tab chip counts its tab (the
+  switcher's `sourceCounts`, one grouping of `tab`). A row leads with its
+  state dot (an `other` decision's dot names its own state label) and says
+  its drafted answer on line 2 ("Your answer: A + note", "Your question",
+  "Got it").
+- **Answering**: the `SubmitBar` (`decisions/web`) sits sticky at the foot
+  of the list — one Submit (⌘↵) for every drafted answer.
 - **`decisionDetailPane`** (`decision/:decisionId`): the decision beside the
   list — a link to its agent's task, then `DecisionCard` (from
-  `decisions/web`). Opening it marks it seen (`useMarkDecisionSeen`, the
+  `decisions/web`) answered in place through the shared drafts; 1–9 pick
+  its options (a second press unpicks). Opening it marks it seen (`useMarkDecisionSeen`, the
   `seen` endpoint), which clears the new dot until the agent writes again.
 - **`dec-…` chip**: a decision id in a transcript renders as a chip opening
   the detail pane (`idChip` here, `idChipServer` in `server/`).
@@ -25,7 +32,7 @@ Read-only for now: answering (drafts, the SubmitBar, delivery) is phase 3.
 
 ## Plugin reference
 
-- Description: The Decisions inbox in the agent manager, read-only: the Decisions sidebar entry with the count of decisions that need the user (a grouping of the derived tab), the decisions pane — one view bar over the Needs you / Sent / FYI / Closed tabs (DecisionsSources, each the decisions.list window scoped by tab), grouped by the agent waiting on it, each row the state dot, question, new mark and label — and the decision detail beside it (the agent, then DecisionCard; opening it marks it seen). A `dec-…` id in a transcript is a chip opening that pane. The decision id chip's server half (idChipServer): resolves a `dec-…` to its label and question for the id registry and for model-read text.
+- Description: The Decisions inbox in the agent manager: the Decisions sidebar entry with the count of decisions that need the user (a grouping of the derived tab), the decisions pane — one view bar over the Needs you / Sent / FYI / Closed tabs (DecisionsSources, each the decisions.list window scoped by tab, each tab chip counting its tab), grouped by the agent waiting on it (its task, labelled by the task's title), each row the state dot, question, new mark, label and the drafted answer, with the SubmitBar at its foot — and the decision detail beside it (the agent, then DecisionCard answered in place, 1–9 picking an option; opening it marks it seen). A `dec-…` id in a transcript is a chip opening that pane. The decision id chip's server half (idChipServer): resolves a `dec-…` to its label and question for the id registry and for model-read text.
 - Web:
   - Slots:
     - `decisionsPane.Actions`
@@ -36,6 +43,7 @@ Read-only for now: answering (drafts, the SubmitBar, delivery) is phase 3.
     - `decisionDetailPane.Actions` ← `primitives.pane`
     - `sources` ← `tasks.decisions.inbox`
   - Contributes:
+    - `FieldPresentation.Register` "collection:decisions.list"
     - `Pane.Register` "decision-detail"
     - `Pane.Register` "decisions"
     - `Shell.Sidebar` "Decisions"
@@ -45,19 +53,21 @@ Read-only for now: answering (drafts, the SubmitBar, delivery) is phase 3.
     - `sources` "Closed" → `DecisionsSource`
     - `IdKinds.Presenter` "dec"
     - `InlineChip.Tag` "dec" → `GenericIdChip`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/decisions` ×8
     - `primitives/data-view` ×7
     - `primitives/pane` ×7
-    - `tasks/decisions` ×4
+    - `network/live` ×5
+    - `network/live/live-state` ×3
     - `active-data/id-chip` ×2
-    - `network/live/live-state` ×2
-    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/app-shell.opensPane`
+    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
+    - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell.Shell`
     - `tasks/task-detail.taskDetailPane`
   - Exports (values):
@@ -78,6 +88,8 @@ Read-only for now: answering (drafts, the SubmitBar, delivery) is phase 3.
     - `decisionDetailRoute`
     - `decisionsRoute`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/density --space-lg`
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-lg`
 
 <!-- AUTOGENERATED:END -->

@@ -32,6 +32,13 @@ conversation id. Plan: `research/2026-10-30-tasks-message-agents.md`.
   only the `SETTLED_SHOWN` (10) started last are listed — the rest are one
   `+N older settled agents` line; `all: true` lists every one. The caller's
   own line is never hidden.
+- **`deliverEventTurn(taskId, turn)`** (server barrel) — the one path an event
+  turn takes into a task's agent, for any plugin that answers one: its latest
+  conversation (`agentOf`), resumed first when `gone`, never reopened when
+  `done` (`finished`: nothing typed), a blocked resume a refusal. `turn.id`
+  makes a retried send a no-op, `turn.onRecorded(tx)` commits the caller's
+  rows with the ledger's. `message_agent` types through the same
+  `resumeAgent` / `typeEventTurn` (`server/internal/deliver.ts`).
 - The answer comes back the way the target already reports (its reports and
   flags, as watch events, to a supervisor) — the tool does not wait.
 
@@ -39,7 +46,7 @@ conversation id. Plan: `research/2026-10-30-tasks-message-agents.md`.
 
 ## Plugin reference
 
-- Description: Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow.
+- Description: Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow. deliverEventTurn(taskId, turn) is the one path an event turn takes into a task's agent — its latest conversation, resumed first when stopped, never reopened when closed — for any plugin that answers an agent.
 - Server:
   - Contributes: `mandateCapability` "message.tree"
   - Uses:
@@ -58,11 +65,19 @@ conversation id. Plan: `research/2026-10-30-tasks-message-agents.md`.
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.tasksView`
+  - Exports (types):
+    - `EventDelivery`
+    - `EventTurn`
+  - Exports (values):
+    - `deliverEventTurn`
+    - `latestAgentConversation`
   - Register:
     - `mcpTool('list_agents')`
     - `mcpTool('message_agent')`
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
+    - `tasks/decisions`
 - Core:
   - Exports (types):
     - `AgentLine`

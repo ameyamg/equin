@@ -20,6 +20,25 @@ export type {
 } from "./internal/fields";
 export { DECISION_TAB_OPTIONS, DECISION_TABS } from "./internal/tab";
 export type { DecisionTab } from "./internal/tab";
-export { decisionExchanges, decisionsList } from "./internal/live";
+export {
+  decisionAgentFinished,
+  decisionExchanges,
+  decisionsList,
+} from "./internal/live";
 export type { DecisionExchangeRow, DecisionRow } from "./internal/live";
 export { markDecisionSeenEndpoint } from "./internal/endpoints";
+export {
+  ANSWER_NOTE_MAX,
+  ANSWER_REFUSALS,
+  ANSWERS_PER_SUBMIT_MAX,
+  DecisionAnswerSchema,
+  submitDecisionAnswersEndpoint,
+  SubmitAnswersBodySchema,
+  SubmitAnswersResponseSchema,
+} from "./internal/answers";
+export type {
+  AnswerRefusalReason,
+  DecisionAnswer,
+  SubmitAnswersBody,
+  SubmitAnswersResponse,
+} from "./internal/answers";

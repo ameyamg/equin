@@ -1076,6 +1076,7 @@ export const hostReads: readonly {
   { key: "conversations.usage.cost-by-hour", needsMachine: true },
   { key: "data-view-custom-values.v2", needsMachine: false },
   { key: "data-view-row-order.v2", needsMachine: false },
+  { key: "decisions.agent-finished", needsMachine: true },
   { key: "decisions.exchanges", needsMachine: false },
   { key: "decisions.list", needsMachine: false },
   { key: "deps.states", needsMachine: true },

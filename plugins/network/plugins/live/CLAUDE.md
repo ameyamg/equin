@@ -1550,8 +1550,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Slots:
     - `FieldPresentation.Register`
     - `ClientFields.Resolve`
-  - Slot contributors: 47 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×43
+  - Slot contributors: 48 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×44
     - `ClientFields.Resolve` ×4
   - Uses:
     - `network/live/live-state.PagedResourceResult`

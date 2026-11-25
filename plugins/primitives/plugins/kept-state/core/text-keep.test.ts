@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   isTransient,
+  keptEntry,
   keptField,
   keptItem,
   keptPart,
@@ -134,5 +135,24 @@ describe("text keep", () => {
   test("a list nothing matches is refused", () => {
     const s = binding(["a"]);
     expect(() => keptItem(s.b(), (x) => x === "b")).toThrow();
+  });
+
+  test("an entry of a kept record shows its value or the empty one, and writes back by key", () => {
+    type D = { pick: string | null; note: string };
+    const empty: D = { pick: null, note: "" };
+    const isEmpty = (d: D) => d.pick === null && d.note === "";
+    const s = binding<Record<string, D>>({ a: { pick: "A", note: "" } });
+    expect(keptEntry(s.b(), "b", { empty, isEmpty }).value).toEqual(empty);
+    keptField(keptEntry(s.b(), "b", { empty, isEmpty }), "note").set("why?");
+    expect(s.get()).toEqual({
+      a: { pick: "A", note: "" },
+      b: { pick: null, note: "why?" },
+    });
+    // Emptied: the key leaves the record.
+    keptEntry(s.b(), "a", { empty, isEmpty }).set((d) => ({
+      ...d,
+      pick: null,
+    }));
+    expect(s.get()).toEqual({ b: { pick: null, note: "why?" } });
   });
 });
