@@ -1,5 +1,15 @@
 import { wallNow } from "@plugins/packages/plugins/deadline/core";
-import { and, count, desc, eq, inArray, isNull, max, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  max,
+  min,
+  sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -96,21 +106,34 @@ async function lastMessageAt(
   return row?.at ?? null;
 }
 
-/** When `roleId`'s gathered events go out, from its last message and its gap. */
+async function firstPendingAt(
+  roleId: string,
+  exec: DbExecutor,
+): Promise<Date | null> {
+  const [row] = await exec
+    .select({ at: min(_supervisorEventPending.firstAt) })
+    .from(_supervisorEventPending)
+    .where(eq(_supervisorEventPending.roleId, roleId));
+  return row?.at ?? null;
+}
+
+/** When `roleId`'s gathered events go out: after its gap and its gathering window. */
 async function dueAt(roleId: string, exec: DbExecutor): Promise<Date> {
   const { gapMinutes } = await settingsOf(roleId, exec);
-  return nextMessageAt(
-    await lastMessageAt(roleId, exec),
-    gapMinutes * 60_000,
-    new Date(),
-  );
+  return nextMessageAt({
+    lastMessageAt: await lastMessageAt(roleId, exec),
+    gapMs: gapMinutes * 60_000,
+    firstPendingAt: await firstPendingAt(roleId, exec),
+    now: new Date(),
+  });
 }
 
 /**
  * Send `event` to the role its stream is routed to: gathered with the role's
- * other events of this quiet period, then sent by the role's flush job — at
- * once when the role's last message is older than its gap, else when the gap
- * ends. A stream routed nowhere, or a kind its route filters out, is ignored.
+ * other events of this quiet period, then sent by the role's flush job — a
+ * short gathering window after the first waiting event when the role's last
+ * message is older than its gap (so a burst goes as one message), else when
+ * the gap ends. A stream routed nowhere, or a kind its route filters out, is ignored.
  *
  * Only gathers: delivery (which can fail) is always the flush job's, one per
  * role. So a failing delivery cannot feed itself — its message is kept as

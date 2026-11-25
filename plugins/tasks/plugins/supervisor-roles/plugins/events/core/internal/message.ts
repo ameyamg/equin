@@ -1,21 +1,38 @@
 import { MESSAGE_LINES_SHOWN, type EventLine } from "./entities";
 
 /**
- * When a role's gathered events go out. The first event after a quiet period
- * goes at once; a message starts a quiet period of `gapMs`, and what lands in
- * it waits for its end.
- *
- * `lastMessageAt` is the role's last message (any outcome), null when it has
- * none. Answers `now` when it may go now, else the end of the quiet period.
+ * How long the first event after a quiet period waits for the rest of its
+ * burst: a crash filing several reports at once goes out as one message, not
+ * as its first report followed by the rest a whole gap later.
  */
-export function nextMessageAt(
-  lastMessageAt: Date | null,
-  gapMs: number,
-  now: Date,
-): Date {
-  if (lastMessageAt === null) return now;
-  const end = new Date(lastMessageAt.getTime() + gapMs);
-  return end.getTime() <= now.getTime() ? now : end;
+export const GATHER_WINDOW_MS = 5_000;
+
+/**
+ * When a role's gathered events go out: the later of the end of the quiet
+ * period its last message started (`lastMessageAt` + `gapMs`; any outcome)
+ * and the end of the gathering window its first waiting event opened
+ * (`firstPendingAt` + {@link GATHER_WINDOW_MS}) — never before `now`.
+ *
+ * Derived from stored instants only, so every event of a burst and the flush
+ * that sends them compute the same time. `lastMessageAt` is null when the
+ * role has no message yet, `firstPendingAt` when nothing is waiting.
+ */
+export function nextMessageAt({
+  lastMessageAt,
+  gapMs,
+  firstPendingAt,
+  now,
+}: {
+  lastMessageAt: Date | null;
+  gapMs: number;
+  firstPendingAt: Date | null;
+  now: Date;
+}): Date {
+  const ends = [now.getTime()];
+  if (lastMessageAt !== null) ends.push(lastMessageAt.getTime() + gapMs);
+  if (firstPendingAt !== null)
+    ends.push(firstPendingAt.getTime() + GATHER_WINDOW_MS);
+  return new Date(Math.max(...ends));
 }
 
 /** One summarized line: `×3 crash · Uncaught TypeError … (rep-…)`. */

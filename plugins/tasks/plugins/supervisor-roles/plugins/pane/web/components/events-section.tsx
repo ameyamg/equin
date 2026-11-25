@@ -150,6 +150,10 @@ export function EventsSection({
         routes={d.routes}
         gapMinutes={settings?.gapMinutes ?? DEFAULT_GAP_MINUTES}
         idle={settings?.idle ?? DEFAULT_IDLE_POLICY}
+        firstPendingAt={d.pending.reduce<Date | null>((a, p) => {
+          const at = new Date(p.firstAt);
+          return a === null || at < a ? at : a;
+        }, null)}
         pending={d.pending.map((p) => ({
           streamId: p.streamId,
           kind: p.kind,
@@ -175,6 +179,7 @@ function EventsBody({
   routes,
   gapMinutes,
   idle,
+  firstPendingAt,
   pending,
   messages,
 }: {
@@ -183,6 +188,7 @@ function EventsBody({
   routes: readonly EventRoute[];
   gapMinutes: number;
   idle: IdlePolicy;
+  firstPendingAt: Date | null;
   pending: EventLine[];
   messages: MessageRow[];
 }): ReactElement {
@@ -201,7 +207,12 @@ function EventsBody({
 
   const waiting = pending.reduce((n, l) => n + l.count, 0);
   const last = messages[0]?.at ?? null;
-  const next = nextMessageAt(last, gapMinutes * 60_000, new Date());
+  const next = nextMessageAt({
+    lastMessageAt: last,
+    gapMs: gapMinutes * 60_000,
+    firstPendingAt,
+    now: new Date(),
+  });
   const rows = useMemo<MessageRow[]>(
     () =>
       waiting === 0

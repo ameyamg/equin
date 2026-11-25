@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { MESSAGE_LINES_SHOWN } from "./entities";
 import {
+  GATHER_WINDOW_MS,
   nextMessageAt,
   renderEventLine,
   renderEventMessage,
@@ -11,20 +12,61 @@ const MIN = 60_000;
 const now = new Date("2026-11-14T13:45:00Z");
 
 describe("nextMessageAt", () => {
-  test("the first message goes at once", () => {
-    expect(nextMessageAt(null, 10 * MIN, now)).toEqual(now);
+  const at = (iso: string) => new Date(`2026-11-14T${iso}Z`);
+  const gapMs = 10 * MIN;
+
+  test("the first event after a quiet period waits out the gathering window", () => {
+    expect(
+      nextMessageAt({ lastMessageAt: null, gapMs, firstPendingAt: now, now }),
+    ).toEqual(new Date(now.getTime() + GATHER_WINDOW_MS));
+    expect(
+      nextMessageAt({
+        lastMessageAt: at("13:30:00"),
+        gapMs,
+        firstPendingAt: now,
+        now,
+      }),
+    ).toEqual(new Date(now.getTime() + GATHER_WINDOW_MS));
+  });
+
+  test("a later event of the burst keeps the window its first one opened", () => {
+    const first = new Date(now.getTime() - 3_000);
+    expect(
+      nextMessageAt({ lastMessageAt: null, gapMs, firstPendingAt: first, now }),
+    ).toEqual(new Date(first.getTime() + GATHER_WINDOW_MS));
+  });
+
+  test("once the window is over, it goes at once", () => {
+    expect(
+      nextMessageAt({
+        lastMessageAt: null,
+        gapMs,
+        firstPendingAt: at("13:44:00"),
+        now,
+      }),
+    ).toEqual(now);
   });
 
   test("inside the quiet period, it waits for the period's end", () => {
-    const last = new Date("2026-11-14T13:40:00Z");
-    expect(nextMessageAt(last, 10 * MIN, now)).toEqual(
-      new Date("2026-11-14T13:50:00Z"),
-    );
+    expect(
+      nextMessageAt({
+        lastMessageAt: at("13:40:00"),
+        gapMs,
+        firstPendingAt: at("13:41:00"),
+        now,
+      }),
+    ).toEqual(at("13:50:00"));
   });
 
-  test("once the quiet period is over, it goes at once again", () => {
-    const last = new Date("2026-11-14T13:30:00Z");
-    expect(nextMessageAt(last, 10 * MIN, now)).toEqual(now);
+  test("nothing waiting and no quiet period: now", () => {
+    expect(
+      nextMessageAt({
+        lastMessageAt: at("13:30:00"),
+        gapMs,
+        firstPendingAt: null,
+        now,
+      }),
+    ).toEqual(now);
   });
 });
 
