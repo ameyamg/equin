@@ -1,6 +1,6 @@
 {
-  "id": "7c1ae086-83db-45dd-9be6-1c951ddf7cf9",
-  "prevId": "5546ba5a-181d-4fb6-ba98-aee172c42a22",
+  "id": "6924fb60-929c-40f7-bf51-180f9081887e",
+  "prevId": "7c1ae086-83db-45dd-9be6-1c951ddf7cf9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8168,18 +8168,6 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": true
-        },
-        "last_assistant_uuid": {
-          "name": "last_assistant_uuid",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rewind_anchor_uuid": {
-          "name": "rewind_anchor_uuid",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "turn_ids": {
           "name": "turn_ids",

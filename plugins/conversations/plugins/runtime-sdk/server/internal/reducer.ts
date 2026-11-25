@@ -57,13 +57,6 @@ export interface AgentProjection {
   /** The latest turn the agent took, and whether the agent has answered it yet. */
   lastPromptUuid: string | null;
   turnReplied: boolean;
-  /** The last top-level assistant message. */
-  lastAssistantUuid: string | null;
-  /**
-   * Where a rewind of the latest turn resumes: the last assistant message
-   * BEFORE it (null when the turn was the session's first).
-   */
-  rewindAnchorUuid: string | null;
   /** The Claude account the agent process runs on (`started`); null before one says. */
   account: string | null;
   /**
@@ -104,8 +97,6 @@ export const EMPTY_PROJECTION: AgentProjection = {
   openToolUseId: null,
   lastPromptUuid: null,
   turnReplied: false,
-  lastAssistantUuid: null,
-  rewindAnchorUuid: null,
   account: null,
   turnIds: false,
   cliReady: false,
@@ -328,7 +319,6 @@ export function reduceEvents(
           case "turn_started":
             s.working = true;
             s.statusAt = at;
-            s.rewindAnchorUuid = s.lastAssistantUuid;
             s.lastPromptUuid = p.promptUuid;
             s.turnReplied = false;
             s.turnError = null;
@@ -485,7 +475,6 @@ export function reduceEvents(
           msg.parent_tool_use_id == null &&
           typeof msg.uuid === "string"
         ) {
-          s.lastAssistantUuid = msg.uuid;
           s.turnReplied = true;
           // The CLI's own notice that a model request failed (a sub-agent's
           // is its own: the parent carries on). It stops the turn only if the

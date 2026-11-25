@@ -168,7 +168,7 @@ describe("reduceEvents", () => {
     expect(hit.state.stoppedAt).not.toBeNull();
   });
 
-  test("projects session, busy/idle and the rewind anchor", () => {
+  test("projects session, busy/idle and the latest prompt", () => {
     const { state, effects } = reduceEvents(EMPTY_PROJECTION, stream);
     expect(state).toMatchObject({
       cursorSeq: 6,
@@ -177,8 +177,6 @@ describe("reduceEvents", () => {
       agentPid: 42,
       lastPromptUuid: "p-b",
       turnReplied: false,
-      lastAssistantUuid: "a-1",
-      rewindAnchorUuid: "a-1",
     });
     expect(effects.filter((e) => e.kind === "prompt-submitted")).toHaveLength(
       2,
@@ -193,7 +191,6 @@ describe("reduceEvents", () => {
     ]);
     expect(state.working).toBe(false);
     expect(state.turnReplied).toBe(true);
-    expect(state.rewindAnchorUuid).toBe("a-1");
   });
 
   test("a sub-agent's assistant message is not the turn's reply", () => {

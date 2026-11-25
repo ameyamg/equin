@@ -38,6 +38,7 @@ import {
   waitForProjection,
 } from "./consumer";
 import { agentEventsExist } from "./paths";
+import { rewindAnchorUuid } from "./rewind-anchor";
 import type { AgentProjection } from "../../server/internal/reducer";
 import {
   ProjectionTimeoutError,
@@ -689,9 +690,14 @@ export const sdkRuntime: ConversationRuntime = {
         `SDK agent ${id}: cannot take the stopped turn back — no session id yet`,
       );
     }
-    const relaunch = rewindRelaunchOptions(await readAgentOptions(id), {
+    const previous = await readAgentOptions(id);
+    const relaunch = rewindRelaunchOptions(previous, {
       sessionId: settled.sessionId,
-      anchorUuid: settled.rewindAnchorUuid,
+      anchorUuid: await rewindAnchorUuid(
+        previous.cwd,
+        settled.sessionId,
+        settled.lastPromptUuid,
+      ),
       promptUuid: settled.lastPromptUuid,
     });
     await stopAgent(id);

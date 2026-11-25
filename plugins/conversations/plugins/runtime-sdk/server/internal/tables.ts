@@ -44,8 +44,6 @@ const sdkAgentShape = defineExtensionShape({
     openToolUseId: nullable(textField()),
     lastPromptUuid: nullable(textField()),
     turnReplied: boolField(),
-    lastAssistantUuid: nullable(textField()),
-    rewindAnchorUuid: nullable(textField()),
     turnIds: boolField(),
     cliReady: boolField(),
     turnError: nullable(textField()),
