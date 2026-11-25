@@ -218,6 +218,27 @@ task — decided once, before anything is written:
 The trailers reach the rebase `--exec` as one single-quoted shell string
 (`trailerAmendCommand`), since a reason is free text.
 
+## Fix claims: `--fixes-report` and its `--fix-level`
+
+`--fixes-report <id>` stamps `Fixes-report: <id>[, <id>…]` on every landed
+commit (validated against main's reports by `reports/engine/cli`; the fix
+ledger reads it). It REQUIRES one `--fix-level <level>` — how far the fix stops
+the next occurrence of the same kind of bug, the "Fix the cause" ladder of the
+root CLAUDE.md, highest rung first:
+
+1. `designed-away` — the API no longer has a way to write the mistake;
+2. `refused-before-landing` — a type error, lint rule or check rejects it;
+3. `caught-at-runtime` — a loud assert fails when it happens;
+4. `documented` — only written down;
+5. `one-off` — only this occurrence is fixed.
+
+Stamped as `Fix-level: <level>` beside it (`FIX_LEVELS` / `FIX_LEVEL_TRAILER`
+in `reports/core`). A fix push without a level, a level outside the set, a
+level on a push naming no fix, and a `Fix-level:` line in `-m` are all refused
+before anything is written. Stats → Responsiveness trend reads it back: the
+share of fix pushes per level per week, 1–2 as the structural share.
+`--report-fixed-by` declares no level (the scoreboard does not count it).
+
 ## Fatal signals
 
 A push owns no deploy receipt, so the fatal-signal tap armed here is its only

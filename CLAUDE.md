@@ -32,7 +32,7 @@ How the vision unfolds: [`docs/vision.md`](docs/vision.md).
 4. Your build is served at `http://<worktree>.localhost:<port>` (`./equin url` prints the real port). Always write the `http://` so it's clickable.
 5. `./equin push -m "…"` once the user approves.
    - `push` first runs the tests your change affects and refuses a change that newly breaks one.
-   - A push fixing a report: `--fixes-report <report-id>` (repeatable).
+   - A push fixing a report: `--fixes-report <report-id>` (repeatable) plus one `--fix-level`: when the next occurrence of that kind of bug is stopped — `designed-away` (the API has no way to write it), `refused-before-landing` (type error, lint, check), `caught-at-runtime` (loud assert), `documented`, or `one-off`. The "Fix the cause" ladder below; take the highest rung the fix actually reaches.
 
 Without write access to the remote, `push` lands on local `main`. Main's auto-build watches it ([`git/remotes`](plugins/infra/plugins/git/plugins/remotes/CLAUDE.md)).
 
@@ -149,7 +149,7 @@ Take the **highest rung** that can express the constraint, even if it churns cal
 - `*.test.ts(x)` beside its source = pure logic; `web/__tests__/` = jsdom/React.
 - Own tests import by relative path. Reusable helpers go in `<runtime>/testing/index.ts`.
 - bun:test rejections: `expect(p).rejects.toThrow()` **without** `await`. Under vitest, `await` it.
-- **A test failing on main is never filed as a task.** `./equin test` says per file whether it already fails on main and names main's `test-failing` report. Fix it only if it's in your way, with `--fixes-report <id>` ([`failing-report`](plugins/debug/plugins/tests/plugins/failing-report/CLAUDE.md)).
+- **A test failing on main is never filed as a task.** `./equin test` says per file whether it already fails on main and names main's `test-failing` report. Fix it only if it's in your way, with `--fixes-report <id> --fix-level <level>` ([`failing-report`](plugins/debug/plugins/tests/plugins/failing-report/CLAUDE.md)).
 - jsdom: pinned clock, `en-US`, `UTC`. Details: [`test-layout`](plugins/framework/plugins/tooling/plugins/test-layout/CLAUDE.md).
 
 ### Driving the app

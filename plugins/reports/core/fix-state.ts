@@ -35,6 +35,66 @@ export const REPORT_FIX_STATE_LABELS = {
 export const FIXES_REPORT_TRAILER = "Fixes-report";
 
 /**
+ * How far a fix stops the NEXT occurrence of the same kind of bug, in the
+ * order of the root CLAUDE.md "Fix the cause" ladder (highest rung first).
+ * Named for what the fix achieves, not the tool it used:
+ *
+ * - `designed-away` — the API no longer has a way to write the mistake;
+ * - `refused-before-landing` — a type error, lint rule or check rejects it;
+ * - `caught-at-runtime` — a loud assert fails when it happens;
+ * - `documented` — only written down;
+ * - `one-off` — only this occurrence is fixed.
+ *
+ * A closed set, one per push: `./equin push --fixes-report` requires
+ * `--fix-level <level>` and stamps it as {@link FIX_LEVEL_TRAILER}.
+ */
+export const FIX_LEVELS = [
+  "designed-away",
+  "refused-before-landing",
+  "caught-at-runtime",
+  "documented",
+  "one-off",
+] as const;
+export type FixLevel = (typeof FIX_LEVELS)[number];
+
+/** Each level as a reader sees it. */
+export const FIX_LEVEL_LABELS = {
+  "designed-away": "Designed away",
+  "refused-before-landing": "Refused before landing",
+  "caught-at-runtime": "Caught at runtime",
+  documented: "Documented",
+  "one-off": "One-off",
+} as const satisfies Record<FixLevel, string>;
+
+/** What each level means, for help text and the scoreboard's legend. */
+export const FIX_LEVEL_MEANINGS = {
+  "designed-away": "the API no longer has a way to write the mistake",
+  "refused-before-landing": "a type error, lint rule or check rejects it",
+  "caught-at-runtime": "a loud assert fails when it happens",
+  documented: "only written down",
+  "one-off": "only this occurrence is fixed",
+} as const satisfies Record<FixLevel, string>;
+
+/** The levels that stop the next occurrence before it can land: structural. */
+export const STRUCTURAL_FIX_LEVELS = [
+  "designed-away",
+  "refused-before-landing",
+] as const satisfies readonly FixLevel[];
+
+/** `value` as a fix level, or null when it is not one. */
+export function fixLevelOf(value: string): FixLevel | null {
+  const v = value.trim();
+  return (FIX_LEVELS as readonly string[]).includes(v) ? (v as FixLevel) : null;
+}
+
+/**
+ * The trailer a `Fixes-report` push declares its {@link FixLevel} with —
+ * stamped beside it on every commit of the push by `./equin push
+ * --fix-level`, its one writer; the scoreboard reads it back.
+ */
+export const FIX_LEVEL_TRAILER = "Fix-level";
+
+/**
  * The trailer a push claims an EARLIER commit on main fixed a report with —
  * the fix that landed without naming it, which history cannot be rewritten to
  * name. Its values are `<report id>@<full sha>` ({@link fixedByClaim}); the

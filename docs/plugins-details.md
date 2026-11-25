@@ -61728,6 +61728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `packages/list-bound.wholeRecord`
       - `primitives/pane.defineRoute`
     - Exports (types):
+      - `FixLevel`
       - `Report`
       - `ReportActivity`
       - `ReportActivityInput`
@@ -61749,8 +61750,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `CLIENT_REPORT_SOURCES`
       - `fenceUntrustedReport`
       - `fitReportBody`
+      - `FIX_LEVEL_LABELS`
+      - `FIX_LEVEL_MEANINGS`
+      - `FIX_LEVEL_TRAILER`
+      - `FIX_LEVELS`
       - `fixedByClaim`
       - `FIXES_REPORT_TRAILER`
+      - `fixLevelOf`
       - `fixStandingOf`
       - `formatAfterWake`
       - `formatRecentCount`
@@ -61781,6 +61787,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
       - `skewProofOf`
+      - `STRUCTURAL_FIX_LEVELS`
       - `submitReport`
       - `trimText`
       - `UNTRUSTED_REPORT_SOURCES`
@@ -62113,6 +62120,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `FixedReports`
         - Exports (values):
           - `fixesReportTrailer`
+          - `fixLevelTrailer`
           - `resolveFixedReports`
     - **`failed-action`** — The tab's own answer when a user's action crashes: an error thrown while the browser is still dispatching a trusted click, key or submit (so, by that input's own handler) raises a "That didn't work" toast in that tab at once, on every occurrence — a repeat replaces the toast on screen instead of stacking. The crash is still filed by the crash collector; its de-duplicated report and bell row are untouched.
       - Web:
@@ -64315,7 +64323,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-caption`
-    - **`scoreboard`** — Stats → Responsiveness trend: is the app getting faster or slower, and is it converging? A one-line verdict, then 35 days of p50 / p95 of what the user feels (your tabs apart from automated ones), memory pressure and restarts, report volume per restart, and weekly new causes, fixes that came back and fixes that landed a guard. Also its own pane (/agents/responsiveness-trend) a supervisor can link to.
+    - **`scoreboard`** — Stats → Responsiveness trend: is the app getting faster or slower, and is it converging? A one-line verdict, then 35 days of p50 / p95 of what the user feels (your tabs apart from automated ones), memory pressure and restarts, report volume per restart, and weekly new causes, fixes that came back, and the share of fix pushes per declared fix level (structural: designed away or refused before landing). Also its own pane (/agents/responsiveness-trend) a supervisor can link to.
       - Web:
         - Slots: `scoreboardPane.Actions`
         - Slot contributors: `scoreboardPane.Actions` ← `primitives.pane`
@@ -64343,7 +64351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `scoreboardPane`
       - Server:
         - Contributes: `resource.declare` "stats.scoreboard"
-        - Resources: `stats.scoreboard` (invalidate, snapshot, capped: MAX_DAYS, capped: MAX_WEEKS, capped: SCOREBOARD_METRICS.length * LATENCY_CLIENT_KINDS.length, capped: SCOREBOARD_KINDS_MAX)
+        - Resources: `stats.scoreboard` (invalidate, snapshot, capped: MAX_DAYS, capped: MAX_WEEKS, capped: SCOREBOARD_METRICS.length * LATENCY_CLIENT_KINDS.length, capped: SCOREBOARD_KINDS_MAX, capped: FIX_LEVELS.length)
       - Machine:
         - Uses: `network/live.serveValue`
       - Core:
@@ -64352,6 +64360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/latency-ledger.LATENCY_METRICS`
           - `network/live.liveValue`
           - `packages/list-bound.cappedList`
+          - `reports.FIX_LEVELS`
         - Exports (types):
           - `Scoreboard`
           - `ScoreboardDay`
@@ -64382,6 +64391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`

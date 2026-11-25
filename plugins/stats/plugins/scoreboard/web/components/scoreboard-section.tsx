@@ -28,6 +28,13 @@ import {
 } from "@plugins/stats/plugins/commits/web";
 import { METRIC_LABELS } from "@plugins/debug/plugins/latency-ledger/core";
 import {
+  FIX_LEVELS,
+  FIX_LEVEL_LABELS,
+  FIX_LEVEL_MEANINGS,
+  STRUCTURAL_FIX_LEVELS,
+  type FixLevel,
+} from "@plugins/reports/core";
+import {
   SCOREBOARD_DAYS,
   SCOREBOARD_METRICS,
   responsivenessScoreboard,
@@ -418,11 +425,18 @@ function ReportVolume({ sb }: { sb: Scoreboard }) {
 // ─── Converging? ────────────────────────────────────────────────────────────
 
 const count = (v: number | null) => (v === null ? "–" : String(v));
+const pct = (n: number, of: number) => `${Math.round((n / of) * 100)}%`;
+const declaredOf = (w: Scoreboard["weeks"][number]) =>
+  w.levels.reduce((n, l) => n + l.pushes, 0);
+const isStructural = (level: FixLevel) =>
+  (STRUCTURAL_FIX_LEVELS as readonly FixLevel[]).includes(level);
 
 function Converging({ sb }: { sb: Scoreboard }) {
   const rows: {
     label: string;
     what: string;
+    /** A breakdown of the row above it. */
+    indent?: boolean;
     value: (w: Scoreboard["weeks"][number]) => string;
   }[] = [
     {
@@ -444,12 +458,40 @@ function Converging({ sb }: { sb: Scoreboard }) {
           : `${w.regressed}${w.fixesLanded > 0 ? ` (${Math.round((w.regressed / w.fixesLanded) * 100)}%)` : ""}`,
     },
     {
-      label: "Fix pushes landing a guard",
-      what: "Pushes naming a report they fix whose commits also changed a lint rule or a check. A type-level guard or a runtime assert leaves no trace in the paths, so this is a floor.",
-      value: (w) =>
-        w.fixPushes === 0
+      label: "Fix pushes",
+      what: "Pushes to main naming a report they fix (--fixes-report).",
+      value: (w) => String(w.fixPushes),
+    },
+    {
+      label: "…structural",
+      what: `Of the fix pushes that declared a level (--fix-level), those that stop the next occurrence before it can land: ${STRUCTURAL_FIX_LEVELS.map((l) => FIX_LEVEL_LABELS[l].toLowerCase()).join(" or ")}.`,
+      value: (w) => {
+        const declared = declaredOf(w);
+        const structural = w.levels
+          .filter((l) => isStructural(l.level))
+          .reduce((n, l) => n + l.pushes, 0);
+        return declared === 0
           ? "–"
-          : `${w.guardPushes} / ${w.fixPushes} (${Math.round((w.guardPushes / w.fixPushes) * 100)}%)`,
+          : `${structural} / ${declared} (${pct(structural, declared)})`;
+      },
+    },
+    ...FIX_LEVELS.map((level) => ({
+      label: FIX_LEVEL_LABELS[level],
+      indent: true,
+      what: `Share of the declared fix pushes at this level: ${FIX_LEVEL_MEANINGS[level]}.`,
+      value: (w: Scoreboard["weeks"][number]) => {
+        const declared = declaredOf(w);
+        const n = w.levels.find((l) => l.level === level)?.pushes ?? 0;
+        return declared === 0 ? "–" : `${n} (${pct(n, declared)})`;
+      },
+    })),
+    {
+      label: "Undeclared, landing a guard (floor)",
+      what: "Fix pushes from before --fix-level existed: those whose commits also changed a lint rule or a check. A type-level guard or a runtime assert leaves no trace in the paths, so this is only a floor on their structural share.",
+      value: (w) =>
+        w.undeclaredPushes === 0
+          ? "–"
+          : `${w.undeclaredGuardPushes} / ${w.undeclaredPushes} (${pct(w.undeclaredGuardPushes, w.undeclaredPushes)})`,
     },
   ];
   return (
@@ -458,9 +500,11 @@ function Converging({ sb }: { sb: Scoreboard }) {
         Is it converging?
       </Text>
       <Text as="p" variant="caption" className="text-muted-foreground">
-        Fewer new causes, fewer fixes coming back and more fixes that land a
-        guard mean problems are being removed as a class rather than patched one
-        at a time. The first and current weeks are partial.
+        Fewer new causes, fewer fixes coming back and a larger structural share
+        mean problems are being removed as a class rather than patched one at a
+        time. A fix push declares when the next occurrence of its kind of bug is
+        stopped (--fix-level); pushes from before that are read from their paths
+        instead, as a floor. The first and current weeks are partial.
         {sb.convergenceKnownFrom === null
           ? " New causes and fixes are counted from today on."
           : ` New causes and fixes are counted from the week of ${sb.convergenceKnownFrom}; before it, report rows were already swept (–).`}
@@ -485,7 +529,15 @@ function Converging({ sb }: { sb: Scoreboard }) {
                 className="border-b border-border/50"
                 title={r.what}
               >
-                <td className="px-sm py-xs text-foreground">{r.label}</td>
+                <td
+                  className={
+                    r.indent
+                      ? "py-xs pr-sm pl-xl text-muted-foreground"
+                      : "px-sm py-xs text-foreground"
+                  }
+                >
+                  {r.label}
+                </td>
                 {sb.weeks.map((w) => (
                   <td
                     key={w.week}

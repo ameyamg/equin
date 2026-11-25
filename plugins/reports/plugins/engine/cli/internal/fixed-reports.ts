@@ -8,12 +8,16 @@ import {
 } from "@plugins/primitives/plugins/commit-list/server";
 import {
   FIXES_REPORT_TRAILER,
+  FIX_LEVELS,
+  FIX_LEVEL_MEANINGS,
+  FIX_LEVEL_TRAILER,
   REPORT_FIXED_BY_TRAILER,
+  fixLevelOf,
   reportIdKind,
 } from "@plugins/reports/core";
 
 /**
- * What `--fixes-report` / `--report-fixed-by` resolved to: the trailers to
+ * What `--fixes-report` (with its `--fix-level`) / `--report-fixed-by` resolved to: the trailers to
  * stamp and the reports each flag named (`fixes`: this push is the fix;
  * `fixedBy`: an earlier commit is), or why not.
  */
@@ -29,6 +33,50 @@ export type FixedReports =
  */
 export function fixesReportTrailer(ids: readonly string[]): string | null {
   return ids.length === 0 ? null : `${FIXES_REPORT_TRAILER}=${ids.join(", ")}`;
+}
+
+/**
+ * The `Fix-level` trailer a push naming `ids` with `--fixes-report` must
+ * carry (null when it names none), or why not. A fix push declares exactly one
+ * level from the closed set — when the next occurrence of the same kind of bug
+ * is stopped — and a level on a push that names no fix means nothing, so both
+ * a missing level and a stray one are refused.
+ */
+export function fixLevelTrailer(
+  ids: readonly string[],
+  level: string | undefined,
+): { ok: true; trailer: string | null } | { ok: false; message: string } {
+  const levels = FIX_LEVELS.map(
+    (l, i) => `  ${i + 1}. ${l} — ${FIX_LEVEL_MEANINGS[l]}`,
+  ).join("\n");
+  if (ids.length === 0) {
+    if (level === undefined) return { ok: true, trailer: null };
+    return {
+      ok: false,
+      message: `--fix-level ${level}: this push names no report with --fixes-report, so it declares no fix.`,
+    };
+  }
+  if (level === undefined) {
+    return {
+      ok: false,
+      message: [
+        `--fixes-report ${ids.join(", ")}: say how far this fix stops the next occurrence of the same kind of bug, with --fix-level <level>:`,
+        levels,
+        `(The "Fix the cause" ladder in CLAUDE.md: take the highest rung the fix actually reaches.)`,
+      ].join("\n"),
+    };
+  }
+  const parsed = fixLevelOf(level);
+  if (parsed === null) {
+    return {
+      ok: false,
+      message: [
+        `--fix-level "${level}" is not a fix level. One of:`,
+        levels,
+      ].join("\n"),
+    };
+  }
+  return { ok: true, trailer: `${FIX_LEVEL_TRAILER}=${parsed}` };
 }
 
 /**
@@ -54,6 +102,10 @@ export function reportFixedByTrailer(
  *   code main has not run, nor this push's own — that is `--fixes-report`),
  *   and is stamped in full.
  *
+ * A `--fixes-report` push must declare its `level` (`--fix-level`, see
+ * {@link fixLevelTrailer}); a `--report-fixed-by` claim declares none (the
+ * scoreboard does not count it: its fix landed before it was named).
+ *
  * Every id must be one of MAIN's reports — the fix ledger records only main's.
  * Refuses a malformed id or sha, an unknown report, a report named by both
  * flags, a `--report-fixed-by` report that already has a fix (not `open`),
@@ -62,21 +114,29 @@ export function reportFixedByTrailer(
 export async function resolveFixedReports(input: {
   ids: readonly string[];
   fixedBy: readonly string[];
+  /** `--fix-level`: required with `ids`, refused without. */
+  level: string | undefined;
   message: string | undefined;
   repoRoot: string;
 }): Promise<FixedReports> {
-  for (const trailer of [FIXES_REPORT_TRAILER, REPORT_FIXED_BY_TRAILER]) {
+  for (const trailer of [
+    FIXES_REPORT_TRAILER,
+    REPORT_FIXED_BY_TRAILER,
+    FIX_LEVEL_TRAILER,
+  ]) {
     if (
       input.message !== undefined &&
       new RegExp(`^${trailer}:`, "im").test(input.message)
     ) {
       return {
         ok: false,
-        message: `Name a fixed report with --fixes-report <id> or --report-fixed-by <id>@<sha>, not a "${trailer}:" line in -m.`,
+        message: `Name a fixed report with --fixes-report <id> --fix-level <level> or --report-fixed-by <id>@<sha>, not a "${trailer}:" line in -m.`,
       };
     }
   }
   const ids = [...new Set(input.ids.map((id) => id.trim()))];
+  const level = fixLevelTrailer(ids, input.level);
+  if (!level.ok) return level;
   const pairs: { reportId: string; rev: string }[] = [];
   for (const raw of new Set(input.fixedBy.map((v) => v.trim()))) {
     const at = raw.lastIndexOf("@");
@@ -166,9 +226,11 @@ export async function resolveFixedReports(input: {
   }
   return {
     ok: true,
-    trailers: [fixesReportTrailer(ids), reportFixedByTrailer(claims)].filter(
-      (t): t is string => t !== null,
-    ),
+    trailers: [
+      fixesReportTrailer(ids),
+      level.trailer,
+      reportFixedByTrailer(claims),
+    ].filter((t): t is string => t !== null),
     fixes: ids,
     fixedBy: claims.map((c) => c.reportId),
   };

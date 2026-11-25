@@ -5,6 +5,7 @@ import {
   LATENCY_CLIENT_KINDS,
   LATENCY_METRICS,
 } from "@plugins/debug/plugins/latency-ledger/core";
+import { FIX_LEVELS } from "@plugins/reports/core";
 
 /** How far back the scoreboard reads: the latency ledger's minute retention. */
 export const SCOREBOARD_DAYS = 35;
@@ -82,8 +83,23 @@ const WeekSchema = z.object({
   regressed: z.number().nullable(),
   /** Pushes to main naming a report they fix (`Fixes-report:`), from git. */
   fixPushes: z.number(),
-  /** Of those, the ones whose commits also changed a lint rule or a check. */
-  guardPushes: z.number(),
+  /**
+   * The fix pushes that declared their level (`Fix-level:`, required by
+   * `./equin push --fixes-report` since it existed), per level in
+   * `FIX_LEVELS` order — every level listed, zeros included.
+   */
+  levels: cappedList(
+    z.object({ level: z.enum(FIX_LEVELS), pushes: z.number() }),
+    { max: FIX_LEVELS.length },
+  ),
+  /** Fix pushes from before the level was declared: no `Fix-level:`. */
+  undeclaredPushes: z.number(),
+  /**
+   * Of the undeclared ones, those whose commits also changed a lint rule or a
+   * check — a FLOOR on their structural fixes (a type-level guard or a
+   * runtime assert leaves no trace in the paths).
+   */
+  undeclaredGuardPushes: z.number(),
 });
 export type ScoreboardWeek = z.infer<typeof WeekSchema>;
 

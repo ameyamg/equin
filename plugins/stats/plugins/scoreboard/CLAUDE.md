@@ -12,7 +12,7 @@ last 7 whole days against the 7 before.
 | What you feel | p50 / p95 per day and per week of updates (server → screen), navigations, clicks and keypresses, page loads and server thread lag — **your tabs apart from automated ones** | latency-ledger's day rollups (`loadDailyLatency`) |
 | Pressure | memory-pressure minutes per day, server restarts per day | the ledger's host days; this backend's boot log (`readBootStartsSince`) |
 | Reports per restart | report occurrences per kind divided by restarts, so a push-heavy day does not read as a regression | reports engine's report history (`loadReportTrend`) |
-| Is it converging? | per week: new causes (first-seen fingerprints), fixes landed and how many of those came back since (a cohort), fix pushes that landed a guard; and per report kind, came back / landed per week ("do fixes hold?") | report history; main's git log |
+| Is it converging? | per week: new causes (first-seen fingerprints), fixes landed and how many of those came back since (a cohort), fix pushes, their structural share and their share per fix level (older, undeclared ones: those that landed a guard, a floor); and per report kind, came back / landed per week ("do fixes hold?") | report history; main's git log |
 
 ## What each number honestly is
 
@@ -27,12 +27,18 @@ last 7 whole days against the 7 before.
   began (that day is partial; `hourly` kept only 24 hours). New causes and fix
   counts are known from 7 days before it (the oldest report rows alive then);
   an earlier week reads `–`, never an undercount as a number.
-- **"Landed a guard" is a floor, counted per push.** `--fixes-report` stamps
-  every commit of a push, so a push is one fix; it landed a guard when its
-  commits also changed a file under a `lint/` or `check/` folder (tests aside).
-  A type-level guard or a loud runtime assert leaves no trace in the paths, so
-  those count as one-off here; a later `Report-fixed-by:` claim is not counted.
-  Recording the kind of fix at push time would make this exact.
+- **Fix levels are declared, counted per push.** `--fixes-report` stamps
+  every commit of a push, so a push is one fix, and it requires one
+  `--fix-level` (`Fix-level:` trailer, `FIX_LEVELS` in `reports/core`): when
+  the next occurrence of the same kind of bug is stopped — designed away,
+  refused before landing, caught at runtime, documented, one-off. Each level's
+  share is over the pushes that declared one; **structural** is the first two.
+  A later `Report-fixed-by:` claim is not counted.
+- **Pushes from before the level existed are a floor.** They declare none, so
+  they are read from their paths: one landed a guard when its commits also
+  changed a file under a `lint/` or `check/` folder (tests aside). A type-level
+  guard or a loud runtime assert leaves no trace there, so their structural
+  share is at least that, never exactly it.
 - **Restarts** are this backend's boots (main's, on main), from its boot log;
   a day before (or on) the first day the log covers reads `–`.
 - **Days are UTC days.**
@@ -48,7 +54,7 @@ unavailable; `web/` draws the card and the pane.
 
 ## Plugin reference
 
-- Description: Stats → Responsiveness trend: is the app getting faster or slower, and is it converging? A one-line verdict, then 35 days of p50 / p95 of what the user feels (your tabs apart from automated ones), memory pressure and restarts, report volume per restart, and weekly new causes, fixes that came back and fixes that landed a guard. Also its own pane (/agents/responsiveness-trend) a supervisor can link to.
+- Description: Stats → Responsiveness trend: is the app getting faster or slower, and is it converging? A one-line verdict, then 35 days of p50 / p95 of what the user feels (your tabs apart from automated ones), memory pressure and restarts, report volume per restart, and weekly new causes, fixes that came back, and the share of fix pushes per declared fix level (structural: designed away or refused before landing). Also its own pane (/agents/responsiveness-trend) a supervisor can link to.
 - Web:
   - Slots: `scoreboardPane.Actions`
   - Slot contributors: `scoreboardPane.Actions` ← `primitives.pane`
@@ -76,7 +82,7 @@ unavailable; `web/` draws the card and the pane.
   - Exports (values): `scoreboardPane`
 - Server:
   - Contributes: `resource.declare` "stats.scoreboard"
-  - Resources: `stats.scoreboard` (invalidate, snapshot, capped: MAX_DAYS, capped: MAX_WEEKS, capped: SCOREBOARD_METRICS.length * LATENCY_CLIENT_KINDS.length, capped: SCOREBOARD_KINDS_MAX)
+  - Resources: `stats.scoreboard` (invalidate, snapshot, capped: MAX_DAYS, capped: MAX_WEEKS, capped: SCOREBOARD_METRICS.length * LATENCY_CLIENT_KINDS.length, capped: SCOREBOARD_KINDS_MAX, capped: FIX_LEVELS.length)
 - Machine:
   - Uses: `network/live.serveValue`
 - Core:
@@ -85,6 +91,7 @@ unavailable; `web/` draws the card and the pane.
     - `debug/latency-ledger.LATENCY_METRICS`
     - `network/live.liveValue`
     - `packages/list-bound.cappedList`
+    - `reports.FIX_LEVELS`
   - Exports (types):
     - `Scoreboard`
     - `ScoreboardDay`
@@ -115,6 +122,7 @@ unavailable; `web/` draws the card and the pane.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`

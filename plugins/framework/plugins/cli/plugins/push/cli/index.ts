@@ -17,6 +17,7 @@ export default defineCliCommand<
     fromMain?: boolean;
     unattributed?: string;
     fixesReport?: string[];
+    fixLevel?: string;
     reportFixedBy?: string[];
   }
 >({
@@ -36,7 +37,15 @@ export default defineCliCommand<
       description:
         "The report(s) this push fixes (report-…, one of main's — Debug → Reports). Stamps a Fixes-report trailer; " +
         "main records the fix when the push lands, marks it Fixed once main runs it, and Regressed if it fires again from code that has it. " +
-        "The only way to name a fix: a Fixes-report: line in -m is refused.",
+        "The only way to name a fix: a Fixes-report: line in -m is refused. Requires --fix-level.",
+    },
+    {
+      flags: "--fix-level <level>",
+      description:
+        "Required with --fixes-report, one per push: when the next occurrence of the same kind of bug is stopped " +
+        "(designed-away: the API no longer has a way to write the mistake; refused-before-landing: a type error, lint rule or check rejects it; " +
+        "caught-at-runtime: a loud assert fails when it happens; documented: only written down; one-off: only this occurrence is fixed). " +
+        "Stamps a Fix-level trailer the Responsiveness trend scoreboard reads.",
     },
     {
       flags: "--report-fixed-by <id@sha...>",

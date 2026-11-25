@@ -13,19 +13,38 @@ describe("isGuardPath", () => {
 describe("parseFixLog", () => {
   test("one fix per push, a guard when any of its commits added one", () => {
     const out = [
-      "@@aaa 1795000000 push-1",
+      "@@aaa\t1795000000\tpush-1\t",
       "",
       "src/a/server/a.ts",
-      "@@bbb 1795000100 push-1",
+      "@@bbb\t1795000100\tpush-1\t",
       "",
       "src/a/lint/rule.ts",
-      "@@ccc 1795000200 ",
+      "@@ccc\t1795000200\t\t",
       "",
       "src/b/web/b.tsx",
     ].join("\n");
     const fixes = parseFixLog(out);
     expect(fixes).toHaveLength(2);
-    expect(fixes[0]).toEqual({ at: 1795000100_000, guard: true });
-    expect(fixes[1]).toEqual({ at: 1795000200_000, guard: false });
+    expect(fixes[0]).toEqual({ at: 1795000100_000, level: null, guard: true });
+    expect(fixes[1]).toEqual({ at: 1795000200_000, level: null, guard: false });
+  });
+
+  test("reads the push's declared level", () => {
+    const out = [
+      "@@aaa\t1795000000\tpush-1\tdesigned-away",
+      "",
+      "src/a/server/a.ts",
+      "@@bbb\t1795000100\tpush-2\tone-off",
+    ].join("\n");
+    expect(parseFixLog(out)).toEqual([
+      { at: 1795000000_000, level: "designed-away", guard: false },
+      { at: 1795000100_000, level: "one-off", guard: false },
+    ]);
+  });
+
+  test("throws on a level outside the closed set", () => {
+    expect(() => parseFixLog("@@aaa\t1795000000\tpush-1\tlint")).toThrow(
+      /not a fix level/,
+    );
   });
 });

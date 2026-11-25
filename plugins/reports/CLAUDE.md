@@ -177,6 +177,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
   - Exports (types):
+    - `FixLevel`
     - `Report`
     - `ReportActivity`
     - `ReportActivityInput`
@@ -198,8 +199,13 @@ before it) beside the total, worded by `formatReportActivity`
     - `CLIENT_REPORT_SOURCES`
     - `fenceUntrustedReport`
     - `fitReportBody`
+    - `FIX_LEVEL_LABELS`
+    - `FIX_LEVEL_MEANINGS`
+    - `FIX_LEVEL_TRAILER`
+    - `FIX_LEVELS`
     - `fixedByClaim`
     - `FIXES_REPORT_TRAILER`
+    - `fixLevelOf`
     - `fixStandingOf`
     - `formatAfterWake`
     - `formatRecentCount`
@@ -230,6 +236,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
     - `skewProofOf`
+    - `STRUCTURAL_FIX_LEVELS`
     - `submitReport`
     - `trimText`
     - `UNTRUSTED_REPORT_SOURCES`

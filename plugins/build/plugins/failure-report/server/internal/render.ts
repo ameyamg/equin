@@ -45,7 +45,7 @@ export function renderBuildFailedTask(
       `(\`select * from build_runs where id = '${d.runId}'\` via \`query_db\` on main). ` +
       "Reproduce from a worktree on main's commit with `./equin build`.",
     "",
-    "Find the root cause and fix it. A fix that lands with `./equin push --fixes-report <this report's id>` " +
+    "Find the root cause and fix it. A fix that lands with `./equin push --fixes-report <this report's id> --fix-level <level>` " +
       "is marked Fixed once main builds it, and Regressed if this failure comes back.",
     "",
     `**Occurrences:** ${row.count}`,

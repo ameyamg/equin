@@ -39,7 +39,7 @@ export function renderTestFailingTask(
     `1. Reproduce from a worktree: \`./equin test ${d.path}\`.`,
     "2. Find the change that broke it in the range above, and fix the code or " +
       "the test — whichever is wrong. Never skip or delete the test to make it pass.",
-    "3. Push with `--fixes-report <this report's id>`, so a later failure of " +
+    "3. Push with `--fixes-report <this report's id> --fix-level <level>`, so a later failure of " +
       "this file on code containing the fix marks the report Regressed.",
     "",
   ];

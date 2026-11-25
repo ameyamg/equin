@@ -25,6 +25,7 @@ import {
   type ScoreboardWeek,
 } from "../../core";
 import { readFixCommits, type FixCommit } from "./fix-commits";
+import { FIX_LEVELS } from "@plugins/reports/core";
 
 const DAY_MS = 86_400_000;
 const dayOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
@@ -228,7 +229,13 @@ function buildWeeks(
             .reduce((n, f) => n + f.regressed, 0)
         : null,
       fixPushes: commits.length,
-      guardPushes: commits.filter((c) => c.guard).length,
+      levels: FIX_LEVELS.map((level) => ({
+        level,
+        pushes: commits.filter((c) => c.level === level).length,
+      })),
+      undeclaredPushes: commits.filter((c) => c.level === null).length,
+      undeclaredGuardPushes: commits.filter((c) => c.level === null && c.guard)
+        .length,
     };
   });
 }

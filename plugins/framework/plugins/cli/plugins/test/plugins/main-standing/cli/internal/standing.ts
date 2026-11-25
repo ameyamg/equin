@@ -171,7 +171,7 @@ export function standingLines(result: StandingResult): string[] {
       "Do NOT file a task about a failure already failing on main: each one has (or gets) exactly one",
       "report on main, routed to the supervisor of the Broken tests stream, and this run is already",
       "recorded as evidence. Fix it only if it is in",
-      `your way, and land the fix with \`./${CLI_NAME} push --fixes-report <report id>\`.`,
+      `your way, and land the fix with \`./${CLI_NAME} push --fixes-report <report id> --fix-level <level>\`.`,
     );
   return lines;
 }

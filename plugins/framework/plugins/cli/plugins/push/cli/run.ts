@@ -388,6 +388,7 @@ const pushAction: CliAction<
     fromMain?: boolean;
     unattributed?: string;
     fixesReport?: string[];
+    fixLevel?: string;
     reportFixedBy?: string[];
   }
 > = async (opts) => {
@@ -441,6 +442,7 @@ const pushAction: CliAction<
   const fixed = await resolveFixedReports({
     ids: opts.fixesReport ?? [],
     fixedBy: opts.reportFixedBy ?? [],
+    level: opts.fixLevel,
     message: opts.message,
     repoRoot: root0,
   });

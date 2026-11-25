@@ -46,6 +46,12 @@ export { fitReportBody, trimText, REPORT_SIZE_LIMITS } from "./fit";
 export type { ReportSizeLimits } from "./fit";
 export {
   FIXES_REPORT_TRAILER,
+  FIX_LEVELS,
+  FIX_LEVEL_LABELS,
+  FIX_LEVEL_MEANINGS,
+  FIX_LEVEL_TRAILER,
+  STRUCTURAL_FIX_LEVELS,
+  fixLevelOf,
   REPORT_FIXED_BY_TRAILER,
   REPORT_FIX_STATES,
   fixedByClaim,
@@ -54,6 +60,7 @@ export {
   regresses,
 } from "./fix-state";
 export type {
+  FixLevel,
   ReportFixFacts,
   ReportFixStanding,
   ReportFixState,

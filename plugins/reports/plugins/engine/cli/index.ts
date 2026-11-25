@@ -2,6 +2,7 @@
 // --fixes-report` asks of main's reports before it stamps the trailer.
 export {
   fixesReportTrailer,
+  fixLevelTrailer,
   resolveFixedReports,
 } from "./internal/fixed-reports";
 export type { FixedReports } from "./internal/fixed-reports";
