@@ -23069,6 +23069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - DB schema:
               - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables-events.ts`
               - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
+            - Exports (values): `requestCleanExit`
             - Register:
               - `defineTriggerEvent('conversation.flagRaised')`
               - `defineJob('push_and_exit.exit_clean_finalize')`
@@ -23106,6 +23107,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --success-solid-foreground`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-control-strong`
+            - Imported by: `tasks/supervisor-roles/sessions/handoff`
           - Exemptions:
             - Exempts itself from:
               - `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
@@ -24061,9 +24063,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/categorical --categorical-5`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
-        - Imported by: 33 plugins — full list in [`plugins/conversations/plugins/model-provider/REFERENCE.md`](../plugins/conversations/plugins/model-provider/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/conversations/plugins/model-provider/REFERENCE.md`](../plugins/conversations/plugins/model-provider/REFERENCE.md)
           - `conversations` ×15
-          - `tasks` ×9
+          - `tasks` ×10
           - `apps` ×3
           - `debug` ×2
           - `hints/ask`
@@ -24097,6 +24099,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks`
               - `tasks/auto-start/launch-option`
               - `tasks/supervisor-roles/sessions`
+              - `tasks/supervisor-roles/sessions/handoff`
               - `tasks/task-triage`
           - Machine:
             - Register:
@@ -26504,17 +26507,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×7
           - `infra` ×6
           - `fields` ×5
           - `conversations` ×3
           - `debug` ×2
           - `network` ×2
+          - `tasks` ×2
           - `database/table-mirror/replica`
           - `ids`
           - `search/engine`
-          - `tasks/orchestration/watch`
           - `ui/theme-engine/saved-themes`
           - `upstream`
       - Server:
@@ -38676,9 +38679,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 46 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `conversations` ×13
-          - `tasks` ×12
+          - `tasks` ×13
           - `apps` ×7
           - `infra` ×5
           - `page` ×4
@@ -40368,12 +40371,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 93 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 94 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
           - `conversations` ×18
           - `infra` ×16
           - `debug` ×13
-          - `tasks` ×11
+          - `tasks` ×12
           - `database` ×4
           - `page` ×3
           - `build`
@@ -41131,8 +41134,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
-          - `tasks` ×8
+        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+          - `tasks` ×9
           - `debug` ×6
           - `conversations` ×5
           - `apps` ×4
@@ -65765,6 +65768,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles`
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/sessions`
+              - `tasks/supervisor-roles/sessions/handoff`
               - `tasks/task-mandate/manage-grant`
           - Plugins:
             - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn (a side chat opened beside the agent running the task keeps its own mandate and is only told nothing changed for it; on conversation.runHandedOver, a side chat that takes over running its task once that agent closed gets the same refresh) — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none. The delivery is sendSectionNotice, which the owner of any other state a section renders (e.g. the supervisor roles list) calls with its own lead and its own section.
@@ -66385,6 +66389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/supervisor-roles/events`
           - `tasks/supervisor-roles/pane`
           - `tasks/supervisor-roles/sessions`
+          - `tasks/supervisor-roles/sessions/handoff`
           - `tasks/supervisor-roles/spend`
         - Endpoint callers:
           - `events`
@@ -66626,24 +66631,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `tasks/supervisor-roles/spend`
               - `tasks/task-header`
-        - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role).
+        - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role). Hand-offs (the handoff tool is the handoff child's): supervisor_session_handoffs holds a session's note for the next one (recordHandoff), taken by the role's next launch whichever path launches it — the role's prompt then the note as its brief, the ended session's open tasks moved under the new root — and the supervisor-roles.handoff-launch job launches that session once the ending root settles.
           - Server:
-            - Uses: 32 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
-              - `tasks/supervisor-roles` ×12
-              - `tasks/tasks-core` ×10
+            - Contributes: `trigger` "supervisor-roles.handoff-launch"
+            - Uses: 37 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
+              - `tasks/supervisor-roles` ×13
+              - `tasks/tasks-core` ×11
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2
               - `conversations/model-provider/catalog.getModelCatalog`
+              - `database/sql-column.parsedText`
               - `database.db`
+              - `infra/events.Trigger`
+              - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
               - `tasks/orchestration/watch.watchTask`
               - `tasks/task-track.getTaskTrack`
               - `tasks.armTaskAutoStart`
-            - Exports (values): `openRoleSession`
+            - DB schema: `plugins/tasks/plugins/supervisor-roles/plugins/sessions/server/internal/tables.ts`
+            - Exports (values):
+              - `openRoleSession`
+              - `recordHandoff`
             - Register:
               - `mcpTool('backlog')`
               - `mcpTool('adopt_task')`
               - `mcpTool('route_task')`
+              - `defineJob('supervisor-roles.handoff-launch')`
             - Routes:
               - `POST /api/supervisor-roles/:id/sessions`
               - `POST /api/supervisor-roles/:id/backlog/:taskId/adopt`
@@ -66673,6 +66686,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/pane`
+              - `tasks/supervisor-roles/sessions/handoff`
+          - Plugins:
+            - **`handoff`** — The handoff MCP tool of a supervisor role session (gated on the role capability): closes the session through exit_clean's path (push-and-exit's requestCleanExit — refused while an exit precondition fails) and records a note for the role's next session, which sessions' launch takes into its brief after the role's prompt.
+              - Server:
+                - Uses:
+                  - `conversations/conversation-view/push-and-exit.requestCleanExit`
+                  - `conversations/model-provider/catalog.getModelCatalog`
+                  - `infra/mcp.Mcp`
+                  - `tasks/orchestration/mandate.granted`
+                  - `tasks/supervisor-roles.roleOfConversation`
+                  - `tasks/supervisor-roles/sessions.recordHandoff`
+                  - `tasks/tasks-core.getConversation`
+                - Register: `mcpTool('handoff')`
         - **`spend`** — The supervisors spend breakdown, web half: the Spent this week glance atop the Supervisors list (the total, the categories as a thin bar and a legend; a segment or an entry opens its category) and the breakdown pane (/agents/supervisors/spend/<path>): one level at a time, the title its path, the total counting to each level's, the bar zooming into the picked part, the rows (a DataView) cross-fading, Esc going up; a conversation's row opens it in a new pane. Each account counts from its own weekly reset (an API-key account, or one with no usage reading, over the last 7 days); usage counted under no account, from the earliest of them. The supervisors spend breakdown, server half: serves supervisors.spend — this week's Claude spend (each account over its own window, the browser's) as one drill tree: Supervisors (a role's sessions and workers), Ad hoc, Background (automations, background calls and system conversations such as triage), You (Claude Code sessions outside equin included) and Unknown (usage counted under no account, from the earliest window), each level its five biggest parts and a rest. One aggregate over the spend ledger joined to the conversation → attempt → task → mandate root → role / automation, recomputed on every ledger write.
           - Web:
             - Slots:
@@ -68376,9 +68402,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 134 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 135 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×53
-          - `tasks` ×45
+          - `tasks` ×46
           - `debug` ×6
           - `active-data` ×5
           - `apps` ×3

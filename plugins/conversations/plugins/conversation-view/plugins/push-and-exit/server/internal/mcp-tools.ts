@@ -2,14 +2,10 @@ import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { db } from "@plugins/database/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import {
-  getConversation,
-  updateConversation,
-} from "@plugins/tasks/plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { flagRaise } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
-import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
-import { exitCleanRefusals } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/exit-precondition/server";
+import { requestCleanExit } from "./clean-exit";
 import { _conversationFlags } from "./tables";
 import {
   conversationFlagIdKind,
@@ -52,7 +48,7 @@ Call it when the user asks you to wrap up (the push-and-exit prompt or an explic
 It is refused — nothing changes, the conversation stays open — while something must be settled first (sidequests you filed still waiting, for one); the refusal says what to do, then call it again.`,
   inputSchema: {},
   async handler(_args, { conversationId }) {
-    const refusals = await exitCleanRefusals(conversationId);
+    const refusals = await requestCleanExit(conversationId);
     if (refusals.length > 0)
       return {
         content: [
@@ -62,8 +58,6 @@ It is refused — nothing changes, the conversation stays open — while somethi
           },
         ],
       };
-    await updateConversation(conversationId, { closeRequested: true });
-    await exitCleanFinalizeJob.enqueue({ conversationId });
     return {
       content: [
         {

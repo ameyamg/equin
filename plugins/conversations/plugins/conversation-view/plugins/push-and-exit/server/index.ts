@@ -10,6 +10,8 @@ import { startPushAndExit } from "../shared/endpoints";
 import { pushAndExitConfig } from "../shared/config";
 import { conversationFlagRaised } from "./internal/tables-events";
 
+export { requestCleanExit } from "./internal/clean-exit";
+
 export default {
   contributions: [
     IdKinds.Kind({ kind: conversationFlagIdKind }),

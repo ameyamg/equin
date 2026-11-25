@@ -1,6 +1,6 @@
 {
-  "id": "b377d3ba-1111-4a85-bdb2-9709a6cd8dc2",
-  "prevId": "cfc82e23-6c1c-4940-99dd-a09c08b59bc4",
+  "id": "736bab8f-0538-4108-9e7e-4dbd006f1ac6",
+  "prevId": "b377d3ba-1111-4a85-bdb2-9709a6cd8dc2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17404,6 +17404,119 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.supervisor_session_handoffs": {
+      "name": "supervisor_session_handoffs",
+      "schema": "",
+      "columns": {
+        "from_task_id": {
+          "name": "from_task_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "handoff": {
+          "name": "handoff",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_task_id": {
+          "name": "to_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "supervisor_session_handoffs_pending_idx": {
+          "name": "supervisor_session_handoffs_pending_idx",
+          "columns": [
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"supervisor_session_handoffs\".\"consumed_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "supervisor_session_handoffs_from_task_id_tasks_id_fk": {
+          "name": "supervisor_session_handoffs_from_task_id_tasks_id_fk",
+          "tableFrom": "supervisor_session_handoffs",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "from_task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "supervisor_session_handoffs_role_id_supervisor_roles_id_fk": {
+          "name": "supervisor_session_handoffs_role_id_supervisor_roles_id_fk",
+          "tableFrom": "supervisor_session_handoffs",
+          "tableTo": "supervisor_roles",
+          "columnsFrom": [
+            "role_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "supervisor_session_handoffs_to_task_id_tasks_id_fk": {
+          "name": "supervisor_session_handoffs_to_task_id_tasks_id_fk",
+          "tableFrom": "supervisor_session_handoffs",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "to_task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},

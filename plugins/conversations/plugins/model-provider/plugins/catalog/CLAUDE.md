@@ -41,6 +41,7 @@ The host-global model catalog — which model versions this machine knows, which
     - `tasks`
     - `tasks/auto-start/launch-option`
     - `tasks/supervisor-roles/sessions`
+    - `tasks/supervisor-roles/sessions/handoff`
     - `tasks/task-triage`
 - Machine:
   - Register:

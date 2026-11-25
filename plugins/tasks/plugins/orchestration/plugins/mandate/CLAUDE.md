@@ -139,6 +139,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `tasks/supervisor-roles`
     - `tasks/supervisor-roles/events`
     - `tasks/supervisor-roles/sessions`
+    - `tasks/supervisor-roles/sessions/handoff`
     - `tasks/task-mandate/manage-grant`
 - Sub-plugins:
   - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at…

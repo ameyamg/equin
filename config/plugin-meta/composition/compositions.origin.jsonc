@@ -1,4 +1,4 @@
-// @hash a7d5fde5d6b4
+// @hash 6d67d58b1eb2
 {
   "manifests": [
     {
@@ -232,6 +232,7 @@
         "!tasks.outcome-report.**",
         "!tasks.task-triage",
         "!tasks.supervisor-roles.spend",
+        "!tasks.supervisor-roles.sessions.handoff",
         "!conversations.conversation-view.jsonl-viewer.tool-call.task-triage",
         "conversations.conversation-view.push-and-exit.capabilities",
         "conversations.conversation-view.push-and-exit.flag-categories",

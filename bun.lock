@@ -7872,6 +7872,10 @@
       "name": "@equin/plugin-tasks-supervisor-roles-sessions",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/supervisor-roles/plugins/sessions/plugins/handoff": {
+      "name": "@equin/plugin-tasks-supervisor-roles-sessions-handoff",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/supervisor-roles/plugins/spend": {
       "name": "@equin/plugin-tasks-supervisor-roles-spend",
       "version": "0.0.1",
@@ -12255,6 +12259,8 @@
     "@equin/plugin-tasks-supervisor-roles-pane": ["@equin/plugin-tasks-supervisor-roles-pane@workspace:plugins/tasks/plugins/supervisor-roles/plugins/pane"],
 
     "@equin/plugin-tasks-supervisor-roles-sessions": ["@equin/plugin-tasks-supervisor-roles-sessions@workspace:plugins/tasks/plugins/supervisor-roles/plugins/sessions"],
+
+    "@equin/plugin-tasks-supervisor-roles-sessions-handoff": ["@equin/plugin-tasks-supervisor-roles-sessions-handoff@workspace:plugins/tasks/plugins/supervisor-roles/plugins/sessions/plugins/handoff"],
 
     "@equin/plugin-tasks-supervisor-roles-spend": ["@equin/plugin-tasks-supervisor-roles-spend@workspace:plugins/tasks/plugins/supervisor-roles/plugins/spend"],
 

@@ -623,6 +623,9 @@ export const compositionsConfig = defineConfig({
               // spend (and its Background category names automations, which
               // leave above).
               "!tasks.supervisor-roles.spend",
+              // A supervisor's `handoff` tool closes its session through
+              // exit_clean's path (push-and-exit), which leaves above.
+              "!tasks.supervisor-roles.sessions.handoff",
               // The task_submit_triage tool call's renderer draws its verdict
               // with the Triage card's labels (task-triage/core), so it leaves
               // with it.

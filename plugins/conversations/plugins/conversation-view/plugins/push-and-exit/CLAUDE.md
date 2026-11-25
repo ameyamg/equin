@@ -60,6 +60,7 @@
   - DB schema:
     - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables-events.ts`
     - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
+  - Exports (values): `requestCleanExit`
   - Register:
     - `defineTriggerEvent('conversation.flagRaised')`
     - `defineJob('push_and_exit.exit_clean_finalize')`
@@ -97,6 +98,7 @@
     - `ui/tokens/color-palette --success-solid-foreground`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-control-strong`
+  - Imported by: `tasks/supervisor-roles/sessions/handoff`
 - Exemptions:
   - Exempts itself from:
     - `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
