@@ -14,17 +14,26 @@ const LEAD =
  * every live agent the section speaks to (one whose mandate may file into a
  * backlog), or spoke to at its spawn, is sent it again through the same path
  * as a mandate change (`sendSectionNotice`).
+ *
+ * Settled on one key for the whole listing: a role's description is saved as
+ * it is typed, and each save emits a listing change, so a notice per event
+ * would wake every running agent once per keystroke ("", "B", "Bu", …). The
+ * burst folds into one run once edits stop for `quietMs` (the jobs queue's
+ * settle window), and that run renders the section from the roles as they
+ * are THEN — the event carries no text — so only the settled listing goes out.
  */
 export const onListingChangedJob = defineJob({
   name: "supervisor-roles.listing-notice",
   description:
-    "When the listed supervisor roles change (a listed role created, deleted, renamed or re-described; a role listed or unlisted), sends each live agent whose mandate may file into a backlog the Supervisor roles system-prompt section, rendered again, as an informational turn.",
+    "When the listed supervisor roles change (a listed role created, deleted, renamed or re-described; a role listed or unlisted), sends each live agent whose mandate may file into a backlog the Supervisor roles system-prompt section, rendered again, as an informational turn — once the edits have settled (no change for 5 s), never per keystroke.",
   hold: "instant",
   input: z.object({}),
-  dedup: "none",
+  dedup: {
+    key: () => "listing",
+    settle: { quietMs: 5_000, maxWaitMs: 60_000 },
+  },
   event: z.object({ roleId: z.string() }).passthrough(),
-  run: async ({ event }) => {
-    if (!event) return;
+  run: async () => {
     const live = await listActiveConversations();
     await Promise.all(
       live.map((c) =>

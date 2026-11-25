@@ -107,7 +107,11 @@ tools — are `plugins/sessions`.
   `supervisorRoles.listingChanged` on its transaction, and the
   desktop's `supervisor-roles.listing-notice` job (`machine/`) re-sends the section to every live
   agent it speaks to, through the mandate change notice's path
-  (change-notice's `sendSectionNotice`). An unknown role id is answered with
+  (change-notice's `sendSectionNotice`). The job is settled on one key for
+  the whole listing (5 s quiet, 60 s ceiling): a description is saved per
+  keystroke, so a notice per event woke every running agent once per
+  keystroke; now a burst is one notice, rendered from the roles as they are
+  when it runs. An unknown role id is answered with
   the listed roles as they are now (`add_task`, `edit_task`'s hand-off,
   `route_task` — `unknownRoleMessage`). `supervisor-prompt` section: for the conversation at the ROOT of
   a mandate that is a kind of `supervisor` (`mandateIsKindOf` over the

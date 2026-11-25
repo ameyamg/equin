@@ -40468,6 +40468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Server: `@plugins/infra/plugins/jobs/plugins/in-process/server/testing`
               - `createInProcessQueue` — The in-process job queue: rows run in this process when they are due, for a host without the desktop's graphile queue (the browser composition, the portable boot test).
+              - `memoryRowStore` — Rows kept in a plain map — a store that outlives one queue but not the process: what a test hands two queues in turn to stand for a reload. `tx` is ignored (no database), so a rollback is not modelled here.
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"
