@@ -21343,6 +21343,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/user-image`
                   - `conversations/conversation-view/jsonl-viewer/user-text`
                   - `conversations/conversation-view/rewind`
+                  - `tasks/decisions`
             - **`steady-reveal`** — Steady reveal for text an agent is still writing: useSteadyReveal drains a growing text at an even pace over the bursts it arrives in, its newest words fading in through a soft tail painted with the CSS Custom Highlight API, in the foreground or muted tone. Shared by the streaming reply and the streaming thought.
               - Web:
                 - Uses: `primitives/dom/render-mode.useMediaQuery`
@@ -59519,6 +59520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/icons`
           - `primitives/tree`
           - `shell/health-report`
+          - `tasks/decisions`
     - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).
       - Plugins:
         - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the instance-scoped id that storage entries are keyed by.
@@ -65248,7 +65250,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "dec"
           - `IdKinds.Kind` "dex"
-        - Uses: 46 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+        - Uses: 49 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
           - `primitives/data-view` ×4
           - `network/live` ×3
           - `primitives/collapsible` ×3
@@ -65259,8 +65261,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text` ×2
           - `primitives/css/ui-kit` ×2
           - `primitives/kept-state` ×2
+          - `primitives/row-actions` ×2
           - `primitives/shortcuts` ×2
           - `apps-core/tabs.useSurfaceShown`
+          - `conversations/conversation-view/jsonl-viewer/row-actions.rowAction`
           - `ids.IdKinds`
           - `infra/endpoints.useEndpointMutation`
           - `primitives/css/badge.Badge`

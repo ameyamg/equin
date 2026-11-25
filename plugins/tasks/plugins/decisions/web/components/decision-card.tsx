@@ -20,6 +20,11 @@ import {
   UserMessageCard,
   UserMessageText,
 } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
+import { rowAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import {
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import {
   keptField,
   type KeptPart,
@@ -464,11 +469,26 @@ function userSide(
 }
 
 /**
+ * When one side of an exchange was written, drawn the way a transcript turn
+ * draws it: the transcript's own time action, floated at the end of the
+ * side's first line and revealed only while the side is hovered — so the
+ * side reads as a conversation turn, its text wrapping around the time.
+ */
+function SideTime({ at }: { at: Date }): ReactElement {
+  return (
+    <RowActions pin={null} float>
+      {rowAction({ kind: "time", at: at.toISOString() })}
+    </RowActions>
+  );
+}
+
+/**
  * One exchange, drawn the way a conversation is: the user's side in the
- * transcript's user-turn card (who, when, their pick or kind of note, the
- * note), then the agent's reply or note below it, outside the card, under its
- * own "Agent" line and time — marked new when the user has not seen it — so
- * which words are whose reads at a glance.
+ * transcript's user-turn card (their pick or kind of note, the note), then
+ * the agent's reply or note below it, outside the card — marked new when the
+ * user has not seen it. No "You" / "Agent" labels: the card says whose words
+ * are whose, as in the transcript. Each side's time shows on hover at its
+ * right, as a transcript turn's does.
  */
 function Exchange({
   exchange: e,
@@ -491,38 +511,34 @@ function Exchange({
   return (
     <Stack gap="sm">
       {user !== null ? (
-        <UserMessageCard>
-          <Stack gap="xs">
-            <Stack direction="row" gap="sm" align="center">
-              <Text variant="caption" tone="muted">
-                You
-              </Text>
-              <Text variant="caption" tone="muted">
-                <RelativeTime date={e.createdAt} />
-              </Text>
-            </Stack>
-            <Text variant="label">{user.head}</Text>
-            {user.note !== null && user.note !== "" ? (
-              <UserMessageText text={user.note} />
-            ) : null}
-          </Stack>
-        </UserMessageCard>
+        <div className={rowActionsAnchor}>
+          <UserMessageCard>
+            <div className="flow-root">
+              <SideTime at={e.createdAt} />
+              <Stack gap="xs">
+                <Text variant="label">{user.head}</Text>
+                {user.note !== null && user.note !== "" ? (
+                  <UserMessageText text={user.note} />
+                ) : null}
+              </Stack>
+            </div>
+          </UserMessageCard>
+        </div>
       ) : null}
       {agent !== null ? (
-        <Stack gap="xs">
-          <Stack direction="row" gap="sm" align="center">
-            <Text variant="caption" tone="muted">
-              {user === null ? "Agent update" : "Agent"}
-            </Text>
-            {e.agentAt !== null ? (
-              <Text variant="caption" tone="muted">
-                <RelativeTime date={e.agentAt} />
-              </Text>
+        <div className={rowActionsAnchor}>
+          <div className="flow-root">
+            {/* At rest the new dot holds the line's end; the hover time
+                floats in beside it. */}
+            {unseen ? (
+              <RowActions pin={null} float alwaysVisible>
+                <NewMark />
+              </RowActions>
             ) : null}
-            {unseen ? <NewMark /> : null}
-          </Stack>
-          {agent}
-        </Stack>
+            {e.agentAt !== null ? <SideTime at={e.agentAt} /> : null}
+            {agent}
+          </div>
+        </div>
       ) : null}
     </Stack>
   );
