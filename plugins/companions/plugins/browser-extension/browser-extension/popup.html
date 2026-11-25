@@ -6,6 +6,9 @@
          shell's own digest (what the page compares with the served one). -->
     <meta name="equin-origin" content="{{ORIGIN}}" />
     <meta name="equin-shell-digest" content="{{SHELL_DIGEST}}" />
+    <!-- The manifest this popup was built with (its version_name): a popup
+         running under another one is a stale load, reloaded by the page. -->
+    <meta name="equin-manifest-version" content="{{MANIFEST_VERSION}}" />
     <title>equin</title>
     <style>
       /* Chrome draws the popup's frame and corners; the page inside paints

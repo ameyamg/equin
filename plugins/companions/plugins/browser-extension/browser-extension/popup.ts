@@ -25,7 +25,7 @@ import {
   type TabFit,
   type WorkerCommand,
 } from "../core/recorder";
-import { chrome, errorText, type ChromeTab } from "./chrome-api";
+import { chrome, errorText, hasApis, type ChromeTab } from "./chrome-api";
 import { measureTab } from "./measure";
 import {
   OPTIONS_KEY,
@@ -50,12 +50,48 @@ function meta(name: string): string {
 }
 
 const origin = meta("equin-origin");
-const shellDigest = meta("equin-shell-digest");
 
 const frame = document.createElement("iframe");
 frame.src = `${origin}/home/browser-extension?embed=1`;
 frame.title = "equin";
 document.body.append(frame);
+
+// The bridge first, before anything else this script does: it is how the
+// page reaches the shell at all — and how it asks a stale shell to reload —
+// so nothing a newer build adds below may stand between the page and it.
+// (2026-11-25: a top-level chrome.storage call threw under the older
+// manifest Chrome still held, before this listener, and the popover stayed
+// blank with no way to update itself.)
+// The page says hello once it listens (a reload says it again); each hello
+// from our own frame, at the equin origin, gets a fresh port.
+window.addEventListener("message", (event) => {
+  const target = frame.contentWindow;
+  if (target === null || event.source !== target || event.origin !== origin)
+    return;
+  if (!BridgeHelloSchema.safeParse(event.data).success) return;
+  const channel = new MessageChannel();
+  channel.port1.onmessage = (m) => void serve(channel.port1, m.data);
+  target.postMessage(BRIDGE_PORT, origin, [channel.port2]);
+});
+
+/**
+ * Whether Chrome runs the manifest on disk. An unpacked extension reads its
+ * popup's files from disk on every open, its manifest only when (re)loaded: a
+ * build that changed the manifest (a permission, the service worker) runs
+ * under the old one until Chrome reloads the extension.
+ */
+const manifestCurrent =
+  chrome.runtime.getManifest().version_name === meta("equin-manifest-version");
+
+/**
+ * The shell that is actually running: its files' digest while Chrome runs the
+ * manifest they were built with; under an older manifest, not that shell —
+ * so the page, seeing it differ from the served one, asks Chrome to reload
+ * the extension (`web/internal/shell-update.tsx`), its usual self-update.
+ */
+const shellDigest = manifestCurrent
+  ? meta("equin-shell-digest")
+  : `${meta("equin-shell-digest")}+stale-manifest`;
 
 /**
  * The tab the popup is about. Opened from the toolbar the popup is no tab, so
@@ -84,7 +120,8 @@ const hostInfo: ExtensionHostInfo = {
     navigate: true,
     openTab: true,
     close: true,
-    record: true,
+    // Only where the loaded manifest grants what the recorder uses.
+    record: hasApis("storage", "scripting", "tabCapture", "offscreen"),
   },
 };
 
@@ -145,7 +182,7 @@ function pushRecorder(): void {
   });
 }
 
-chrome.storage.onChanged.addListener((changes) => {
+chrome.storage?.onChanged.addListener((changes) => {
   if (STATE_KEY in changes || OPTIONS_KEY in changes) pushRecorder();
 });
 
@@ -230,15 +267,3 @@ async function serve(port: MessagePort, data: unknown): Promise<void> {
   }
   port.postMessage(response);
 }
-
-// The page says hello once it listens (a reload says it again); each hello
-// from our own frame, at the equin origin, gets a fresh port.
-window.addEventListener("message", (event) => {
-  const target = frame.contentWindow;
-  if (target === null || event.source !== target || event.origin !== origin)
-    return;
-  if (!BridgeHelloSchema.safeParse(event.data).success) return;
-  const channel = new MessageChannel();
-  channel.port1.onmessage = (m) => void serve(channel.port1, m.data);
-  target.postMessage(BRIDGE_PORT, origin, [channel.port2]);
-});

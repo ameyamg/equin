@@ -123,20 +123,37 @@ async function shellFiles(
   }
 
   // The key is the core's, so the id Chrome derives is the one the page trusts.
+  // version_name names this manifest (a hash of it), and the popup carries the
+  // same name: a popup running under another manifest — Chrome reads the
+  // popup's files on every open but the manifest only on a (re)load — knows
+  // it is a stale load and has the page reload it.
   const manifest = JSON.parse(
     await readFile(join(sources, "manifest.json"), "utf8"),
   ) as Record<string, unknown>;
+  const keyed = { ...manifest, key: EXTENSION_PUBLIC_KEY };
+  const manifestVersion = createSha256()
+    .update(JSON.stringify(keyed))
+    .hex()
+    .slice(0, 12);
   files.set(
     "manifest.json",
     Buffer.from(
-      `${JSON.stringify({ ...manifest, key: EXTENSION_PUBLIC_KEY }, null, 2)}\n`,
+      `${JSON.stringify({ ...keyed, version_name: manifestVersion }, null, 2)}\n`,
     ),
   );
 
   const html = await readFile(join(sources, "popup.html"), "utf8");
-  if (!html.includes("{{ORIGIN}}") || !html.includes("{{SHELL_DIGEST}}"))
-    throw new Error("popup.html lost its {{ORIGIN}} / {{SHELL_DIGEST}} slots");
-  files.set("popup.html", Buffer.from(html.replace("{{ORIGIN}}", origin)));
+  for (const slot of ["{{ORIGIN}}", "{{SHELL_DIGEST}}", "{{MANIFEST_VERSION}}"])
+    if (!html.includes(slot))
+      throw new Error(`popup.html lost its ${slot} slot`);
+  files.set(
+    "popup.html",
+    Buffer.from(
+      html
+        .replace("{{ORIGIN}}", origin)
+        .replace("{{MANIFEST_VERSION}}", manifestVersion),
+    ),
+  );
   // The offscreen recorder frames the relay page at the same origin.
   const offscreen = await readFile(join(sources, "offscreen.html"), "utf8");
   if (!offscreen.includes("{{ORIGIN}}"))

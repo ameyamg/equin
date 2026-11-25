@@ -45,6 +45,7 @@ import {
 import {
   chrome,
   errorText,
+  permitted,
   messageType,
   onMessageAsync,
   type ChromeWindow,
@@ -114,13 +115,15 @@ async function paintBadge(state: RecorderState): Promise<void> {
 }
 
 async function readSession(): Promise<Session | null> {
-  const raw = (await chrome.storage.session.get(SESSION_KEY))[SESSION_KEY];
+  const raw = (await permitted("storage").session.get(SESSION_KEY))[
+    SESSION_KEY
+  ];
   return raw === undefined ? null : SessionSchema.parse(raw);
 }
 
 async function writeSession(session: Session | null): Promise<void> {
-  if (session === null) await chrome.storage.session.remove(SESSION_KEY);
-  else await chrome.storage.session.set({ [SESSION_KEY]: session });
+  if (session === null) await permitted("storage").session.remove(SESSION_KEY);
+  else await permitted("storage").session.set({ [SESSION_KEY]: session });
 }
 
 // ── Messages to the other contexts ──────────────────────────────────────────
@@ -162,7 +165,7 @@ async function hasOffscreen(): Promise<boolean> {
 
 async function ensureOffscreen(): Promise<void> {
   if (await hasOffscreen()) return;
-  await chrome.offscreen.createDocument({
+  await permitted("offscreen").createDocument({
     url: "offscreen.html",
     reasons: ["USER_MEDIA"],
     justification: "Records the tab you asked to record.",
@@ -170,7 +173,7 @@ async function ensureOffscreen(): Promise<void> {
 }
 
 async function closeOffscreen(): Promise<void> {
-  if (await hasOffscreen()) await chrome.offscreen.closeDocument();
+  if (await hasOffscreen()) await permitted("offscreen").closeDocument();
 }
 
 // ── The window ──────────────────────────────────────────────────────────────
@@ -301,13 +304,13 @@ async function begin(tabId: number, options: RecorderOptions): Promise<void> {
   if (!output.ok) throw new Error(sizeRefusalText(output.reason));
 
   if (session.content)
-    await chrome.scripting.executeScript({
+    await permitted("scripting").executeScript({
       target: { tabId },
       files: ["content.js"],
     });
   if (options.countdown) await toContent(tabId, { type: "content.countdown" });
 
-  const streamId = await chrome.tabCapture.getMediaStreamId({
+  const streamId = await permitted("tabCapture").getMediaStreamId({
     targetTabId: tabId,
   });
   await ensureOffscreen();
@@ -514,7 +517,7 @@ onMessageAsync(
   },
 );
 
-chrome.commands.onCommand.addListener((name, tab) => {
+permitted("commands").onCommand.addListener((name, tab) => {
   if (name !== "toggle-recording") return;
   void serial(() => toggle(tab?.id).catch(fail));
 });
@@ -551,7 +554,7 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
     if (state.kind !== "recording") return;
     const session = await readSession();
     if (session === null || session.tabId !== tabId || !session.pointer) return;
-    await chrome.scripting.executeScript({
+    await permitted("scripting").executeScript({
       target: { tabId },
       files: ["content.js"],
     });

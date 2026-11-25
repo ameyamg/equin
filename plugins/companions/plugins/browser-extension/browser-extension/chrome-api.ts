@@ -47,6 +47,16 @@ export interface StorageChange {
   newValue?: unknown;
 }
 
+/**
+ * The APIs a manifest permission gates. Optional, because the popup's files
+ * are read from disk on every open but the manifest only when Chrome
+ * (re)loads the extension: a popup can run under an older manifest that did
+ * not ask for them, and then they are `undefined`. Reach them through
+ * {@link permitted}, never as `chrome.<api>`.
+ */
+export type GatedApi =
+  "storage" | "scripting" | "tabCapture" | "offscreen" | "commands";
+
 export interface ChromeApi {
   tabs: {
     getCurrent(): Promise<ChromeTab | undefined>;
@@ -78,7 +88,7 @@ export interface ChromeApi {
     ): Promise<ChromeWindow>;
     onBoundsChanged: ChromeEvent<(window: ChromeWindow) => void>;
   };
-  scripting: {
+  scripting?: {
     executeScript<A extends unknown[], R>(injection: {
       target: { tabId: number };
       func?: (...args: A) => R | Promise<R>;
@@ -86,10 +96,10 @@ export interface ChromeApi {
       files?: string[];
     }): Promise<{ result?: Awaited<R> }[]>;
   };
-  tabCapture: {
+  tabCapture?: {
     getMediaStreamId(opts: { targetTabId: number }): Promise<string>;
   };
-  offscreen: {
+  offscreen?: {
     createDocument(opts: {
       url: string;
       reasons: string[];
@@ -104,10 +114,10 @@ export interface ChromeApi {
     setBadgeTextColor?(opts: { color: string }): Promise<void>;
     setTitle(opts: { title: string }): Promise<void>;
   };
-  commands: {
+  commands?: {
     onCommand: ChromeEvent<(command: string, tab?: ChromeTab) => void>;
   };
-  storage: {
+  storage?: {
     session: StorageArea;
     local: StorageArea;
     onChanged: ChromeEvent<
@@ -116,6 +126,7 @@ export interface ChromeApi {
   };
   runtime: {
     reload(): void;
+    getManifest(): { version_name?: string };
     getURL(path: string): string;
     getContexts?(filter: { contextTypes: string[] }): Promise<unknown[]>;
     sendMessage(message: unknown): Promise<unknown>;
@@ -130,6 +141,26 @@ export interface ChromeApi {
 }
 
 export const chrome = (globalThis as unknown as { chrome: ChromeApi }).chrome;
+
+/** Whether the loaded manifest grants every one of `apis`. */
+export function hasApis(...apis: GatedApi[]): boolean {
+  return apis.every((api) => chrome[api] !== undefined);
+}
+
+/**
+ * A permission-gated API, or a throw naming the permission the loaded
+ * manifest lacks (an extension Chrome has not reloaded since the build).
+ */
+export function permitted<A extends GatedApi>(
+  api: A,
+): NonNullable<ChromeApi[A]> {
+  const value = chrome[api];
+  if (value === undefined)
+    throw new Error(
+      `The extension runs without the "${api}" permission: reload it (chrome://extensions).`,
+    );
+  return value as NonNullable<ChromeApi[A]>;
+}
 
 /**
  * Serve `runtime.onMessage` with an async handler: the answer is sent when it

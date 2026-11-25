@@ -5,7 +5,7 @@
  * page's viewport, its device pixel ratio and the display's work area.
  */
 import type { TabMeasure } from "../core/viewport";
-import { chrome } from "./chrome-api";
+import { chrome, permitted } from "./chrome-api";
 
 /** How long a page may take to report a resize Chrome already applied: a
  *  bound around Chrome's own layout, which we do not control. */
@@ -28,7 +28,7 @@ export async function measureTab(
   settleTo?: { width: number; height: number },
 ): Promise<TabMeasure> {
   const tab = await chrome.tabs.get(tabId);
-  const [injected] = await chrome.scripting.executeScript({
+  const [injected] = await permitted("scripting").executeScript({
     target: { tabId },
     args: [settleTo ?? null, SETTLE_MS] as [
       { width: number; height: number } | null,
