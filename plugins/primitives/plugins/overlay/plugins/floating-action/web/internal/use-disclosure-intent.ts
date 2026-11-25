@@ -1,6 +1,7 @@
 import {
   type FocusEvent,
   type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type RefObject,
   useCallback,
   useEffect,
@@ -22,7 +23,7 @@ const REACH_MARGIN = 24;
 export interface DisclosureIntentProps {
   tabIndex: 0;
   "aria-expanded": boolean;
-  onPointerDown: () => void;
+  onPointerDown: (e: ReactPointerEvent) => void;
   onFocus: (e: FocusEvent) => void;
   onBlur: (e: FocusEvent) => void;
   onKeyDown: (e: KeyboardEvent) => void;
@@ -64,10 +65,15 @@ export interface DisclosureIntent {
  *                outside the control ends a focus open exactly as it ends a
  *                hover open. Keyboard focus reopens it on the next focus
  *                event (a Tab).
- *   - latch    — a pointer-press while fully closed (the touch path, where
- *                there is no hover) pins it open until Esc or an outside press.
- *                Presses while already open are left to bubble to the content,
- *                so tapping an item inside never toggles the panel shut.
+ *   - latch    — a TOUCH press while fully closed (there is no hover to open
+ *                it) pins it open until Esc or an outside press. A mouse or pen
+ *                press on a closed control is a hover instead — the pointer is
+ *                on it, it just entered nothing (the control was collapsed
+ *                under it: dropped after a drag, closed by Esc) — so leaving
+ *                closes it as any hover does; latching it pinned the panel open
+ *                after the pointer left. Presses while already open are left to
+ *                bubble to the content, so tapping an item inside never toggles
+ *                the panel shut.
  *
  *   - held     — a popup opened from inside the panel (a popover, menu, select)
  *                is still open. That popup is drawn outside the panel's box,
@@ -208,12 +214,22 @@ export function useDisclosureIntent(
     };
   }, [hovered, focused, rootRef, nearPanel, cancelClose, scheduleClose]);
 
-  const onPointerDown = useCallback(() => {
-    // Touch has no hover: the first press on a closed control opens it. While
-    // already open, leave the press alone so it reaches the content.
-    if (suppressedRef.current) return;
-    setLatched((latchedNow) => (open ? latchedNow : true));
-  }, [open, suppressedRef]);
+  const onPointerDown = useCallback(
+    (e: ReactPointerEvent) => {
+      // While already open, leave the press alone so it reaches the content.
+      if (suppressedRef.current || open) return;
+      // Touch has no hover: the first press on a closed control pins it open.
+      // A mouse / pen press is the pointer being on it — a hover, ended by
+      // leaving like any other.
+      if (e.pointerType === "touch") {
+        setLatched(true);
+      } else {
+        cancelClose();
+        setHovered(true);
+      }
+    },
+    [open, suppressedRef, cancelClose],
+  );
 
   const onFocus = useCallback(
     (e: FocusEvent) => {

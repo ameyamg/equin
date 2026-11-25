@@ -87,4 +87,20 @@ describe("FloatingAction reveal", () => {
     expect(wrapper.hasAttribute("data-revealed")).toBe(true);
     expect(inert()).toBe(false);
   });
+  it("reveals once the morph settles after a transition cancelled while open", async () => {
+    const morph = pendingMorph();
+    const { wrapper, inert } = setup();
+    fireEvent.pointerEnter(wrapper);
+    // An item re-rendered mid-morph: its transition is cancelled, the panel
+    // stays open, and nothing else runs any more.
+    vi.mocked(Element.prototype.getAnimations).mockReturnValue([]);
+    await act(async () => {
+      morph.reject(new DOMException("cancelled", "AbortError"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(wrapper.hasAttribute("data-open")).toBe(true);
+    expect(wrapper.hasAttribute("data-revealed")).toBe(true);
+    expect(inert()).toBe(false);
+  });
 });

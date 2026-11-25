@@ -447,7 +447,8 @@ function panelFrame(panel: HTMLElement): { width: number; height: number } {
  * the `open` render started is already running. Nothing animating (reduced
  * motion, no size change) reveals at once. Closing un-reveals immediately;
  * a close mid-morph cancels the transitions, whose `finished` rejects with an
- * AbortError — that run is simply stale.
+ * AbortError — that run is simply stale. A transition cancelled while still
+ * open is not a close: the subtree is re-read and what still runs awaited.
  *
  * Exposed as `data-revealed` on the wrapper: the moment the content takes
  * clicks, which a script driving the control waits for (`data-open` is set
@@ -467,18 +468,31 @@ function useRevealed(
     // content (the reveal strip's max-width, FadeIn's opacity). Transitions
     // only — an item's endless keyframe animation (a pulsing ring, a spinner)
     // never finishes and must not hold the content inert.
-    const morph = panel
-      .getAnimations({ subtree: true })
-      .filter((a) => a instanceof CSSTransition);
-    void Promise.all(morph.map((a) => a.finished)).then(
-      () => {
-        if (!stale) setRevealed(true);
-      },
-      (err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        throw err;
-      },
-    );
+    //
+    // A transition cancelled while the panel stays open (retargeted, or its
+    // element unmounted — an item re-rendering mid-morph) is not a close: the
+    // subtree is read again and whatever still runs is awaited. Giving up on
+    // it left the panel open with its content inert for good — every button
+    // dead until something closed it.
+    const settle = (): void => {
+      const morph = panel
+        .getAnimations({ subtree: true })
+        .filter((a) => a instanceof CSSTransition);
+      void Promise.allSettled(morph.map((a) => a.finished)).then((results) => {
+        if (stale) return;
+        let cancelled = false;
+        for (const r of results) {
+          if (r.status === "fulfilled") continue;
+          const err: unknown = r.reason;
+          if (!(err instanceof DOMException && err.name === "AbortError"))
+            throw err;
+          cancelled = true;
+        }
+        if (cancelled) settle();
+        else setRevealed(true);
+      });
+    };
+    settle();
     return () => {
       stale = true;
     };

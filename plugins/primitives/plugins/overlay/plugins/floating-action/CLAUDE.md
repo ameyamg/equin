@@ -102,7 +102,10 @@ click even moves the pointer outside the control, which closes it). So the
 content stays `inert` until it is **revealed**: open AND every CSS transition
 the morph started in the panel's subtree has finished (their `finished`
 promises; nothing animating reveals at once; a close cancels them and never
-reveals). The wrapper carries `data-revealed` then — what an e2e script waits
+reveals). A transition cancelled while the panel stays open (retargeted, or its
+element unmounted mid-morph) is not a close: the subtree is read again and what
+still runs is awaited — giving up there left the bar open with every button
+dead. The wrapper carries `data-revealed` then — what an e2e script waits
 for before clicking an item, never `data-open`.
 
 A popover requested from the panel before it is revealed (programmatically —
@@ -125,6 +128,12 @@ pointer came back out. A box with no area (not laid out, as
 in jsdom) reaches nothing, so only DOM containment counts there.
 
 ## Hover is the DOM box, focus is the keyboard
+
+A press on a closed control opens it. With a mouse or pen that is a hover —
+the pointer is on it, the control just collapsed under it (dropped after a
+drag, closed by Esc), so no enter fired — and leaving closes it. Only a touch
+press, which has no hover, latches it open until Esc or an outside press: a
+latched mouse press kept the bar open after the pointer left.
 
 Hover is read from native `pointerenter` / `pointerleave` on the wrapper, plus
 a document `pointermove` containment check while hovered — never React's
