@@ -4,6 +4,8 @@ import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
 import { StopGate } from "@plugins/conversations/plugins/stop-gate/server";
 import { ExitClean } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/exit-precondition/server";
 import { latestAgentConversation } from "@plugins/tasks/plugins/orchestration/plugins/message/server";
+import { grantOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
 import {
   decisionsAwaitingUser,
   owedDecisions,
@@ -14,6 +16,10 @@ import {
  * The task `conversationId` is the agent of — the one answers are typed into
  * (its task's latest conversation under the task's mandate) — or `null` for
  * any other conversation (a side chat, an older one), which owes nothing.
+ * An agent not granted `decisions.open` owes nothing either (`mayDecide`):
+ * it has no `update_decision` to settle a decision with (its task may hold
+ * some from before its mandate stopped granting them), so the gates would
+ * hold it on something it cannot do.
  */
 async function agentTaskOf(conversationId: string) {
   const conversation = await getConversation(conversationId);
@@ -21,6 +27,11 @@ async function agentTaskOf(conversationId: string) {
   const taskId = taskIdKind.key(conversation.taskId);
   const agent = await latestAgentConversation(db, taskId);
   return agent?.id === conversationId ? taskId : null;
+}
+
+/** Whether the agent holds the decision tools — asked only once it would be held (a mandate resolution is the dearer read). */
+async function mayDecide(conversationId: string): Promise<boolean> {
+  return (await grantOf(decisionsOpen, conversationId)) === true;
 }
 
 /**
@@ -35,7 +46,7 @@ export const decisionsStopGate = StopGate({
     const taskId = await agentTaskOf(conversationId);
     if (taskId === null) return { kind: "allow" };
     const message = owedMessage(await owedDecisions(db, taskId));
-    return message === null
+    return message === null || !(await mayDecide(conversationId))
       ? { kind: "allow" }
       : { kind: "block", reason: message };
   },
@@ -53,9 +64,11 @@ export const decisionsExitGate = ExitClean.Precondition({
     const taskId = await agentTaskOf(conversationId);
     if (taskId === null) return null;
     const owed = owedMessage(await owedDecisions(db, taskId));
+    const waiting =
+      owed === null ? await decisionsAwaitingUser(db, taskId) : [];
+    if (owed === null && waiting.length === 0) return null;
+    if (!(await mayDecide(conversationId))) return null;
     if (owed !== null) return { message: owed };
-    const waiting = await decisionsAwaitingUser(db, taskId);
-    if (waiting.length === 0) return null;
     const labels =
       waiting.length > 10
         ? `${waiting.slice(0, 10).join(", ")} and more`

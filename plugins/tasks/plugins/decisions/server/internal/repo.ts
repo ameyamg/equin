@@ -63,7 +63,11 @@ export type DecisionRefusalReason =
   | "outcome-without-close"
   | "closed-edit"
   | "no-pending-question"
-  | "nothing-to-update";
+  | "nothing-to-update"
+  | "edit-invalid"
+  | "edit-no-match"
+  | "edit-ambiguous"
+  | "edit-conflict";
 
 export interface DecisionRefusal {
   ok: false;
@@ -298,9 +302,30 @@ function checkStateLabel(
   return null;
 }
 
+/**
+ * One targeted edit of a decision's text — `old_string` replaced by
+ * `new_string`, the way `Edit` replaces a string in a file: it must occur
+ * exactly once in the field unless `replace_all`.
+ */
+export interface TextEdit {
+  field: "question" | "body" | "option";
+  /** The option's key, with `field: "option"` only (its text is edited). */
+  option?: string;
+  old_string: string;
+  new_string: string;
+  replace_all?: boolean;
+}
+
+/** The longest a question, a body and an option's text may be (the tools' schemas say the same). */
+export const QUESTION_MAX = 300;
+export const BODY_MAX = 20_000;
+export const OPTION_TEXT_MAX = 240;
+
 export interface UpdateDecisionInput {
   /** An id or a label of the caller's task. */
   decision: string;
+  /** Targeted edits of the question, the body and the options' text, applied in order, all or none. */
+  edits?: readonly TextEdit[];
   question?: string;
   body?: string;
   options?: readonly OptionInput[];
@@ -317,6 +342,7 @@ export interface UpdateDecisionInput {
 
 /** The fields that edit the decision itself — refused on a closed one unless the call reopens it. */
 const EDIT_FIELDS = [
+  "edits",
   "question",
   "body",
   "options",
@@ -356,7 +382,10 @@ export async function updateDecision(
   input: UpdateDecisionInput,
   opts: { dryRun?: boolean } = {},
 ): Promise<UpdateDecisionResult> {
-  const edits = EDIT_FIELDS.filter((k) => input[k] !== undefined);
+  // An empty `edits` edits nothing: it is not an edit of the decision.
+  const edits = EDIT_FIELDS.filter((k) =>
+    k === "edits" ? (input.edits?.length ?? 0) > 0 : input[k] !== undefined,
+  );
   if (
     edits.length === 0 &&
     input.reply === undefined &&
@@ -364,7 +393,7 @@ export async function updateDecision(
   )
     return refuse(
       "nothing-to-update",
-      "Nothing to update: pass a field to change, `reply`, or `update`.",
+      "Nothing to update: pass `edits` or a field to change, `reply`, or `update`.",
     );
   const row = await resolve(exec, caller, input.decision, { forUpdate: true });
   if (row === null)
@@ -386,6 +415,8 @@ export async function updateDecision(
       "closed-edit",
       `${row.label} is closed: its question, options and outcome stay as decided. Add a note with \`update\`, or reopen it by setting a non-closed \`state\` in the same call. Refused: ${edits.join(", ")}.`,
     );
+  const text = applyTextEdits(row, input);
+  if ("ok" in text) return text;
   const state = input.state ?? row.state;
   const closing = !wasClosed && state === "closed";
   if (closing && (input.outcome === undefined || input.outcome.trim() === ""))
@@ -416,8 +447,8 @@ export async function updateDecision(
     );
   }
   let options: DecisionOption[] | undefined;
-  if (input.options !== undefined) {
-    const checked = checkOptions(input.options);
+  if (text.options !== undefined) {
+    const checked = checkOptions(text.options);
     if (!Array.isArray(checked)) return checked;
     options = checked;
   }
@@ -484,8 +515,8 @@ export async function updateDecision(
     await exec
       .update(_decisions)
       .set({
-        ...(input.question !== undefined ? { question: input.question } : {}),
-        ...(input.body !== undefined ? { body: input.body } : {}),
+        ...(text.question !== undefined ? { question: text.question } : {}),
+        ...(text.body !== undefined ? { body: text.body } : {}),
         ...(options !== undefined ? { options } : {}),
         label,
         state,
@@ -533,6 +564,152 @@ export async function updateDecision(
     transition: closing ? "closed" : reopening ? "reopened" : null,
     consumed: { answers: consumed.length, question: questionId !== null },
   };
+}
+
+/** The text a call leaves a decision with: a field it does not change is absent. */
+interface EditedText {
+  question?: string;
+  body?: string;
+  options?: readonly OptionInput[];
+}
+
+/** Where `needle` occurs in `hay`, up to two (enough to tell none, one and several apart). */
+function occurrences(hay: string, needle: string): number {
+  const first = hay.indexOf(needle);
+  if (first === -1) return 0;
+  return hay.indexOf(needle, first + needle.length) === -1 ? 1 : 2;
+}
+
+/**
+ * The question, body and options a call leaves: its whole-field values, then
+ * its `edits` applied in order over the current text — all or none. A field
+ * both replaced whole and edited in one call is refused (which would win is
+ * not what the caller meant to say).
+ */
+function applyTextEdits(
+  row: DecisionRecord,
+  input: UpdateDecisionInput,
+): EditedText | DecisionRefusal {
+  const out: EditedText = {
+    ...(input.question !== undefined ? { question: input.question } : {}),
+    ...(input.body !== undefined ? { body: input.body } : {}),
+    ...(input.options !== undefined ? { options: input.options } : {}),
+  };
+  const edits = input.edits ?? [];
+  if (edits.length === 0) return out;
+  let question = row.question;
+  let body = row.body;
+  const options: OptionInput[] = row.options.map((o) => ({ ...o }));
+  for (const [i, e] of edits.entries()) {
+    const where =
+      e.field === "option" ? `option ${e.option ?? "?"}` : `the ${e.field}`;
+    const n = `Edit ${i + 1} (${where})`;
+    const whole = e.field === "option" ? input.options : input[e.field];
+    if (whole !== undefined)
+      return refuse(
+        "edit-conflict",
+        `${n}: this call also replaces ${e.field === "option" ? "`options`" : `\`${e.field}\``} whole. Pass either the whole field or edits of it, not both.`,
+      );
+    if (e.field === "option" && e.option === undefined)
+      return refuse(
+        "edit-invalid",
+        `${n}: an option edit names the option's key in \`option\`.`,
+      );
+    if (e.field !== "option" && e.option !== undefined)
+      return refuse(
+        "edit-invalid",
+        `${n}: \`option\` names an option's key, with \`field: "option"\` only.`,
+      );
+    if (e.old_string === "")
+      return refuse(
+        "edit-invalid",
+        `${n}: \`old_string\` is empty; quote the text to replace.`,
+      );
+    if (e.old_string === e.new_string)
+      return refuse(
+        "edit-invalid",
+        `${n}: \`old_string\` and \`new_string\` are the same; nothing would change.`,
+      );
+    const opt =
+      e.field === "option" ? options.find((o) => o.key === e.option) : null;
+    if (opt === undefined)
+      return refuse(
+        "edit-no-match",
+        `${n}: ${row.label} has no option ${e.option}; its options are ${options.map((o) => o.key).join(", ") || "none"}. To add or remove options, pass \`options\` whole.`,
+      );
+    const current =
+      e.field === "question" ? question : e.field === "body" ? body : opt!.text;
+    const found = occurrences(current, e.old_string);
+    if (found === 0)
+      return refuse(
+        "edit-no-match",
+        `${n}: \`old_string\` is not in ${where}${i > 0 ? " (as the earlier edits of this call left it)" : ""}. Match its text exactly — \`read_decision\` shows it (the body without its \`> \` quote marks).`,
+      );
+    if (found > 1 && e.replace_all !== true)
+      return refuse(
+        "edit-ambiguous",
+        `${n}: \`old_string\` occurs more than once in ${where}. Quote more of the text around it to make it unique, or pass \`replace_all: true\`.`,
+      );
+    // Bounded before it is built: a replace_all of a short string with a long
+    // one must not grow a string far past what the field may hold.
+    const parts = e.replace_all === true ? current.split(e.old_string) : null;
+    const count = parts === null ? 1 : parts.length - 1;
+    const max =
+      e.field === "question"
+        ? QUESTION_MAX
+        : e.field === "body"
+          ? BODY_MAX
+          : OPTION_TEXT_MAX;
+    const length =
+      current.length + count * (e.new_string.length - e.old_string.length);
+    if (length > max)
+      return refuse(
+        "edit-invalid",
+        `${n}: it would leave ${where} ${length} characters long, past ${max}.`,
+      );
+    const next =
+      parts === null
+        ? current.replace(e.old_string, () => e.new_string)
+        : parts.join(e.new_string);
+    if (e.field === "question") question = next;
+    else if (e.field === "body") body = next;
+    else opt!.text = next;
+  }
+  if (edits.some((e) => e.field === "question")) {
+    if (question.trim() === "" || question.length > QUESTION_MAX)
+      return refuse(
+        "edit-invalid",
+        `The edits leave the question ${question.trim() === "" ? "empty" : `${question.length} characters long, past ${QUESTION_MAX}`}.`,
+      );
+    out.question = question;
+  }
+  if (edits.some((e) => e.field === "body")) {
+    if (body.length > BODY_MAX)
+      return refuse(
+        "edit-invalid",
+        `The edits leave the body ${body.length} characters long, past ${BODY_MAX}.`,
+      );
+    out.body = body;
+  }
+  if (edits.some((e) => e.field === "option")) {
+    for (const o of options)
+      if (o.text.trim() === "" || o.text.length > OPTION_TEXT_MAX)
+        return refuse(
+          "edit-invalid",
+          `The edits leave option ${o.key} ${o.text.trim() === "" ? "empty" : `${o.text.length} characters long, past ${OPTION_TEXT_MAX}`}.`,
+        );
+    out.options = options;
+  }
+  return out;
+}
+
+/** A decision of the caller's task named by its label, or `null`. */
+export async function decisionIdByLabel(
+  exec: DbExecutor,
+  taskId: TaskId,
+  label: string,
+): Promise<DecisionId | null> {
+  return (await byLabel(exec, taskId, label.trim()))?.id ?? null;
 }
 
 const ListedSchema = z.object({

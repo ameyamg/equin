@@ -13,8 +13,8 @@ The named mandates for the code that creates a root task
   `defaultAfter: none`, since the root stays in progress all session and a task
   waiting on it could never launch), `watch.children`, `message.tree`,
   `flag.raise`, `context.compact`. Root only: `push.policy: on-request`,
-  `exit.clean: on-request`, `watch.tree`, `tasks.manage` (start and retrack the
-  tasks it owns — its tree's — the supervisor only, never its workers;
+  `exit.clean: on-request`, `watch.tree`, `decisions.open` (open and edit decisions — the
+  supervisor's alone), `tasks.manage` (start and retrack the tasks it owns — its tree's — the supervisor only, never its workers;
   editing and dropping need only ownership: every agent manages what it filed,
   `tasks/server`'s `task-ownership.ts`). Below the root (the workers):
   `report.required`, `exit.clean: when-done` (close once reported).

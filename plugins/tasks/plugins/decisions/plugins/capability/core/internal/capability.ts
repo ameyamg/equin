@@ -3,9 +3,10 @@ import { defineCapability } from "@plugins/tasks/plugins/orchestration/plugins/m
 
 /**
  * May the agent ask the user for a decision: `open_decision`,
- * `update_decision` and `list_decisions` (tasks/decisions). Granted to
- * interactive and supervisor agents only — an automation's agent has no user
- * waiting on it. `true` only.
+ * `update_decision` and `list_decisions` (tasks/decisions). Granted to a
+ * supervisor's root only: a worker raises what needs the user to its
+ * supervisor, and an interactive or automated agent's user is the one it
+ * talks to (or none). `true` only.
  */
 export const decisionsOpen = defineCapability<true>({
   id: "decisions.open",

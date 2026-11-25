@@ -5,7 +5,7 @@
 // config/ tree, the plugin-move ledger, every config migration and the merge
 // engine; its user layer is `<namespace>/gens/<id>/` — and the move ledger its
 // derive replays (config_v2#machine).
-export const CONFIG_GENERATION = "f0514aae779dd6ea";
+export const CONFIG_GENERATION = "bc439ff3ffdc64da";
 
 export const CONFIG_PLUGIN_MOVES: readonly {
   key: string;

@@ -56,9 +56,12 @@ task="task-…"/>`, which draws the same panel as the tray.
   (§7). Edits are kept in the decision's own version history.
 - **A finished agent is not reopened** by an answer (§5).
 - **Drafts are browser-only** (kept-state).
-- **Only interactive and supervisor agents** may open decisions.
+- **Only a supervisor's root** may open decisions (2026-11-25; first
+  interactive agents and the whole supervisor tree did).
 - **No bell:** the sidebar count is the only attention signal.
-- **A worker's decision goes straight to the user**, not to its supervisor.
+- **A worker raises what needs the user to its supervisor** (its report, a
+  flag), which opens the decision (2026-11-25; first a worker's went straight
+  to the user).
 - **"Got it" closes an FYI silently** — nothing is delivered.
 - **An agent may not finish cleanly** (an `exitCleanPrecondition`, like
   `tasks.open-sidequests`) while its decisions still need the user or hold an
@@ -113,8 +116,8 @@ Defined with `Mcp.tool` (`plugins/infra/plugins/mcp/server`), registered from
 `decisions/server`. The caller is `McpToolCallContext.conversationId` →
 `getConversation` (`tasks-core/server`) → `taskId`. Visibility: `when:
 granted(decisionsOpen)`, the `decisions.open` capability, granted by the
-interactive preset and the supervisor preset's whole tree (root and workers)
-only (`tasks/mandate-presets`). A decision
+supervisor preset's root only (`tasks/mandate-presets`; a supervisor role's
+mandate inherits it). A decision
 is addressed by id **or** by its label within the caller's task (`"D22"`).
 
 ```ts

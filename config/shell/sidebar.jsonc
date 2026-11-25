@@ -50,8 +50,8 @@
   "items": [
     "apps.agent-manager.welcome:new-conversation",
     "tasks.task-detail:tasks",
-    "tasks.decisions.inbox:decisions",
     "tasks.supervisor-roles.pane:supervisors",
+    "tasks.decisions.inbox:decisions",
     {
       "type": "header",
       "id": "more",

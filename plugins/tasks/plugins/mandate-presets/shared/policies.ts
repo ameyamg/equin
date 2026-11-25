@@ -37,7 +37,6 @@ export function interactivePolicy(): MandatePolicy {
     pushPolicy.grant("on-request"),
     exitClean.grant("on-request"),
     flagRaise.grant(true),
-    decisionsOpen.grant(true),
   ]);
 }
 
@@ -69,8 +68,6 @@ export function supervisorPolicy(
       messageTree.grant(true),
       flagRaise.grant(true),
       contextCompact.grant(true),
-      // A worker's decision goes straight to the user, not to its supervisor.
-      decisionsOpen.grant(true),
       ...(extra.whole ?? []),
     ],
     {
@@ -82,6 +79,9 @@ export function supervisorPolicy(
         exitClean.grant("on-request"),
         watchTree.grant(true),
         tasksManage.grant(true),
+        // Decisions are the supervisor's: a worker raises what needs the
+        // user to its supervisor (its report, a flag), which opens them.
+        decisionsOpen.grant(true),
         ...(extra.root ?? []),
       ],
       below: [

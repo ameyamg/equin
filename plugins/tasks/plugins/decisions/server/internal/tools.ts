@@ -20,8 +20,12 @@ import { readDecisionInFull } from "./full-read";
 import { decisionLines } from "./full-render";
 import { renderDecisionList } from "./render";
 import {
+  BODY_MAX,
   countClosed,
+  decisionIdByLabel,
   listTaskDecisions,
+  OPTION_TEXT_MAX,
+  QUESTION_MAX,
   openDecision,
   updateDecision,
   type DecisionCaller,
@@ -39,7 +43,7 @@ const OptionInputSchema = z.object({
   text: z
     .string()
     .min(1)
-    .max(240)
+    .max(OPTION_TEXT_MAX)
     .describe("ONE sentence (no newline): put the detail in `body`."),
   recommended: z
     .boolean()
@@ -55,11 +59,11 @@ const optionsSchema = z
 const questionSchema = z
   .string()
   .min(1)
-  .max(300)
+  .max(QUESTION_MAX)
   .describe("The question, in one line — what the user must settle.");
 const bodySchema = z
   .string()
-  .max(20_000)
+  .max(BODY_MAX)
   .describe(
     "Context in markdown: why it matters, what you found, your take. No fixed sections.",
   );
@@ -68,6 +72,31 @@ const stateLabelSchema = z
   .min(1)
   .max(40)
   .describe('Your word for an `other` state ("Watching"); only with `other`.');
+const TextEditSchema = z.object({
+  field: z
+    .enum(["question", "body", "option"])
+    .describe("Which text: the question, the body, or one option's text."),
+  option: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('The option\'s key ("A"), with `field: "option"` only.'),
+  old_string: z
+    .string()
+    .min(1)
+    .describe(
+      "The exact text to replace, as it stands now — unique in the field unless `replace_all`.",
+    ),
+  new_string: z
+    .string()
+    .max(BODY_MAX)
+    .describe("The text to put in its place."),
+  replace_all: z
+    .boolean()
+    .optional()
+    .describe("Replace every occurrence of `old_string` in the field."),
+});
+
 const labelSchema = z
   .string()
   .min(1)
@@ -93,7 +122,7 @@ const refusalText = (r: DecisionRefusal) =>
 export const openDecisionTool = Mcp.tool({
   name: "open_decision",
   when: granted(decisionsOpen),
-  description: `Ask the user for a decision — instead of writing "D<n>" items by hand into a page. The decision belongs to your task; the user sees every decision that needs them in the Decisions inbox, and their answer comes back to you as an event turn naming it. Keep it current with \`update_decision\` (close it with its outcome once acted on).
+  description: `Open a decision: something only the user can settle, recorded where they answer it. The decision belongs to your task; the user sees every decision that needs them in the Decisions inbox, and their answer comes back to you as an event turn naming it. Keep its text current with \`update_decision\` as your understanding changes, and close it with its outcome once acted on.
 
 States: \`decision\` (pick an option or say what instead), \`action\` (something only the user can do), \`fyi\` (nothing to decide, they should know), \`other\` (your own word, \`stateLabel\`).`,
   inputSchema: {
@@ -128,12 +157,14 @@ States: \`decision\` (pick an option or say what instead), \`action\` (something
 export const updateDecisionTool = Mcp.tool({
   name: "update_decision",
   when: granted(decisionsOpen),
-  description: `Keep one of your task's decisions current. A patch: a field you leave out stays as it is.
+  description: `Edit one of your task's decisions: keep its question, body and options saying what is true now. A patch: what you leave out stays as it is.
 
-- Close it once acted on: \`state: "closed"\` with \`outcome\` (what was decided).
+**Edit its text** the way \`Edit\` edits a file — read it first with \`read_decision\` (its body is shown as \`> \`-quoted lines; match the text without the \`> \`), then pass \`edits\`: each replaces \`old_string\` with \`new_string\` in one field (\`question\`, \`body\`, or one option's text with \`option: "<key>"\`). \`old_string\` must occur exactly once in that field unless \`replace_all\`. Edits apply in order, all or none.
+- Rewrite a field whole: \`question\`, \`body\`, \`options\` (the whole list — how you add, remove or reorder options, or move \`recommended\`). A field is either rewritten or edited in one call, not both.
+- Change where it stands: \`state\` (\`stateLabel\` with \`other\`), \`label\`.
+- Close it once acted on: \`state: "closed"\` with \`outcome\` (what was decided). A closed decision keeps its text; set a non-closed \`state\` in the same call to reopen and edit it.
 - Answer the user's question on it: \`reply\` (fills their oldest unanswered one).
-- Add a note to its thread: \`update\` ("being implemented: task-…", "pushed a1b2c3", "live since 14:10") — on an open or a closed decision.
-- A closed decision stays a record: only \`update\` and \`reply\` are accepted on it, unless the same call sets a non-closed \`state\`, which reopens it.
+- Add a note to its thread: \`update\` ("pushed a1b2c3") — for events, not for changing what it says. Accepted on a closed decision too.
 
 Any update counts as acting on the answers the user sent it.`,
   inputSchema: {
@@ -141,6 +172,12 @@ Any update counts as acting on the answers the user sent it.`,
       .string()
       .min(1)
       .describe('Its id, or its label within your task ("D22").'),
+    edits: z
+      .array(TextEditSchema)
+      .min(1)
+      .max(50)
+      .optional()
+      .describe("Targeted edits of its text, applied in order."),
     question: questionSchema.optional(),
     body: bodySchema.optional(),
     options: optionsSchema.optional(),
@@ -186,6 +223,7 @@ Any update counts as acting on the answers the user sent it.`,
     const out = await db.transaction((tx) => updateDecision(tx, caller, input));
     if (!out.ok) return text(refusalText(out));
     const edited =
+      (input.edits?.length ?? 0) > 0 ||
       input.question !== undefined ||
       input.body !== undefined ||
       input.options !== undefined ||
@@ -212,7 +250,7 @@ export const listDecisionsTool = Mcp.tool({
   name: "list_decisions",
   when: granted(decisionsOpen),
   description:
-    "List your task's decisions: one line each — label, where it stands, the question, and what the user last sent on it. Open ones only unless `all: true`. Read-only.",
+    "List your task's decisions: one line each — label, id, where it stands, the question, and what the user last sent on it. Open ones only unless `all: true`. `read_decision` shows one in full. Read-only.",
   inputSchema: {
     all: z
       .boolean()
@@ -233,19 +271,34 @@ export const listDecisionsTool = Mcp.tool({
 export const readDecisionTool = Mcp.tool({
   name: "read_decision",
   description:
-    "Read one decision in full — any task's: its question, where it stands, its whole body, its options and its thread, as `<decision>` lines. A page's `<task-decisions>` block shows each decision as an excerpt naming its id; pass that id here. Read-only.",
+    "Read one decision in full — any task's: its question, where it stands, its whole body (as `> `-quoted lines), its options and its thread, as `<decision>` lines. Read a decision of yours before editing it with `update_decision`; a page's `<task-decisions>` block shows each decision as an excerpt naming its id. Read-only.",
   inputSchema: {
-    decision: z.string().min(1).describe('The decision\'s id ("dec-…").'),
+    decision: z
+      .string()
+      .min(1)
+      .describe(
+        'The decision\'s id ("dec-…"), or its label within your task ("D22").',
+      ),
   },
-  async handler({ decision }) {
-    if (!decisionIdKind.is(decision))
-      return text(
-        `${decision} is not a decision id: pass the \`dec-…\` id a \`<decision id="…">\` line shows.`,
-      );
-    const read = await readDecisionInFull(decision);
+  async handler({ decision }, { conversationId }) {
+    const ref = decision.trim();
+    let id = decisionIdKind.is(ref) ? ref : null;
+    if (id === null) {
+      const caller = await callerOf(conversationId);
+      if (typeof caller === "string")
+        return text(
+          `${ref} is not a decision id, and a label names a decision of your own task — but: ${caller} Pass the \`dec-…\` id a \`<decision id="…">\` line shows.`,
+        );
+      id = await decisionIdByLabel(db, caller.taskId, ref);
+      if (id === null)
+        return text(
+          `${ref} names no decision of your task: pass one of its labels, or a decision's \`dec-…\` id.`,
+        );
+    }
+    const read = await readDecisionInFull(decisionIdKind.key(id));
     if (read === null)
       return text(
-        `${decision} names no decision: pass the id a \`<decision id="dec-…">\` line shows.`,
+        `${ref} names no decision: pass the id a \`<decision id="dec-…">\` line shows.`,
       );
     return text(decisionLines(read).join("\n"));
   },

@@ -87,11 +87,13 @@ describe("supervisorPolicy(extra)", () => {
 });
 
 describe("decisions.open in the presets", () => {
-  test("an interactive agent and every conversation of a supervisor tree may ask the user for decisions", () => {
-    expect(interactivePolicy()[decisionsOpen.id]).toBe(true);
-    // Whole tree: a worker's decision goes straight to the user.
-    expect(
-      (supervisorPolicy() as Record<string, unknown>)[decisionsOpen.id],
-    ).toBe(true);
+  test("only a supervisor's root may ask the user for decisions", () => {
+    expect(interactivePolicy()).not.toHaveProperty(decisionsOpen.id);
+    const policy = supervisorPolicy() as Record<string, unknown>;
+    expect(policy).not.toHaveProperty(decisionsOpen.id);
+    expect(policy[scopeKey("root")]).toMatchObject({
+      [decisionsOpen.id]: true,
+    });
+    expect(policy[scopeKey("below")]).not.toHaveProperty(decisionsOpen.id);
   });
 });

@@ -450,6 +450,217 @@ describe("decisions: update rules", () => {
     });
   });
 
+  test("edits replace exact text in the question, body and options, in order, all or none", async () => {
+    await worktreeDbScenario(async (tx) => {
+      const c = await caller(tx);
+      const d = await open(tx, c, {
+        body: "We found the homepage slow.\n\nCaching saves 2 s. Caching costs a purge.",
+      });
+      const row = async () => {
+        const [r] = await tx
+          .select()
+          .from(_decisions)
+          .where(eq(_decisions.id, d.id));
+        if (r === undefined) throw new Error("gone");
+        return r;
+      };
+      const ok = await updateDecision(tx, c, {
+        decision: d.label,
+        edits: [
+          {
+            field: "question",
+            old_string: "homepage",
+            new_string: "home page",
+          },
+          { field: "body", old_string: "slow", new_string: "slow (3 s)" },
+          // Applied over the edit before it.
+          {
+            field: "body",
+            old_string: "slow (3 s)",
+            new_string: "slow (3.2 s)",
+          },
+          {
+            field: "body",
+            old_string: "Caching",
+            new_string: "A cache",
+            replace_all: true,
+          },
+          {
+            field: "option",
+            option: "B",
+            old_string: "not.",
+            new_string: "not cache it.",
+          },
+        ],
+      });
+      expect(ok.ok).toBe(true);
+      const r = await row();
+      expect([r.question, r.body, r.options]).toEqual([
+        "Cache the home page?",
+        "We found the homepage slow (3.2 s).\n\nA cache saves 2 s. A cache costs a purge.",
+        [
+          { key: "A", text: "Cache it.", recommended: true },
+          { key: "B", text: "Do not cache it.", recommended: false },
+        ],
+      ]);
+      const refusals: [Parameters<typeof updateDecision>[2], string][] = [
+        // Not there.
+        [
+          {
+            decision: d.label,
+            edits: [{ field: "body", old_string: "nowhere", new_string: "x" }],
+          },
+          "edit-no-match",
+        ],
+        // Twice, without replace_all.
+        [
+          {
+            decision: d.label,
+            edits: [{ field: "body", old_string: "A cache", new_string: "x" }],
+          },
+          "edit-ambiguous",
+        ],
+        [
+          {
+            decision: d.label,
+            edits: [
+              {
+                field: "option",
+                option: "Z",
+                old_string: "a",
+                new_string: "b",
+              },
+            ],
+          },
+          "edit-no-match",
+        ],
+        [
+          {
+            decision: d.label,
+            edits: [{ field: "option", old_string: "a", new_string: "b" }],
+          },
+          "edit-invalid",
+        ],
+        [
+          {
+            decision: d.label,
+            edits: [
+              { field: "body", option: "A", old_string: "a", new_string: "b" },
+            ],
+          },
+          "edit-invalid",
+        ],
+        [
+          {
+            decision: d.label,
+            edits: [{ field: "body", old_string: "slow", new_string: "slow" }],
+          },
+          "edit-invalid",
+        ],
+        [
+          {
+            decision: d.label,
+            edits: [
+              {
+                field: "question",
+                old_string: "Cache the home page?",
+                new_string: " ",
+              },
+            ],
+          },
+          "edit-invalid",
+        ],
+        [
+          {
+            decision: d.label,
+            edits: [
+              {
+                field: "option",
+                option: "A",
+                old_string: "it.",
+                new_string: "it.\nAnd more.",
+              },
+            ],
+          },
+          "options-invalid",
+        ],
+        [
+          {
+            decision: d.label,
+            body: "whole",
+            edits: [{ field: "body", old_string: "slow", new_string: "x" }],
+          },
+          "edit-conflict",
+        ],
+        // The first edit would apply; the second refuses, so neither is written.
+        [
+          {
+            decision: d.label,
+            edits: [
+              { field: "question", old_string: "Cache", new_string: "Keep" },
+              { field: "body", old_string: "nowhere", new_string: "x" },
+            ],
+          },
+          "edit-no-match",
+        ],
+      ];
+      for (const [input, reason] of refusals) {
+        const out = await updateDecision(tx, c, input);
+        expect([JSON.stringify(input.edits), !out.ok && out.reason]).toEqual([
+          JSON.stringify(input.edits),
+          reason,
+        ]);
+      }
+      expect((await row()).question).toBe("Cache the home page?");
+      // A replacement is literal: no \`$&\` / \`$1\` patterns.
+      const literal = await updateDecision(tx, c, {
+        decision: d.label,
+        edits: [
+          { field: "question", old_string: "home page", new_string: "$& $1" },
+        ],
+      });
+      expect(literal.ok).toBe(true);
+      expect((await row()).question).toBe("Cache the $& $1?");
+      // Growth past the field is refused before the text is built.
+      const grown = await updateDecision(tx, c, {
+        decision: d.label,
+        edits: [
+          {
+            field: "body",
+            old_string: " ",
+            new_string: "x".repeat(5_000),
+            replace_all: true,
+          },
+        ],
+      });
+      expect(!grown.ok && grown.reason).toBe("edit-invalid");
+      const empty = await updateDecision(tx, c, {
+        decision: d.label,
+        edits: [],
+      });
+      expect(!empty.ok && empty.reason).toBe("nothing-to-update");
+      // A closed decision keeps its text, as for a whole-field edit.
+      await updateDecision(tx, c, {
+        decision: d.label,
+        state: "closed",
+        outcome: "A",
+      });
+      const closed = await updateDecision(tx, c, {
+        decision: d.label,
+        edits: [{ field: "body", old_string: "slow", new_string: "fast" }],
+      });
+      expect(!closed.ok && closed.reason).toBe("closed-edit");
+      // …unless the same call reopens it.
+      const reopened = await updateDecision(tx, c, {
+        decision: d.label,
+        state: "decision",
+        edits: [{ field: "body", old_string: "slow", new_string: "fast" }],
+      });
+      expect(reopened.ok && reopened.transition).toBe("reopened");
+      expect((await row()).body).toContain("homepage fast");
+    });
+  });
+
   test("an `other` keeps its label until the state moves off it", async () => {
     await worktreeDbScenario(async (tx) => {
       const c = await caller(tx);
