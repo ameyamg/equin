@@ -1,4 +1,4 @@
-// @hash 508f5b01245d
+// @hash 5491b5197cc6
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -37,6 +37,7 @@
     "page.text:text",
     "page.to-do:to-do",
     "page.toggle:toggle",
-    "page.video:video"
+    "page.video:video",
+    "tasks.decisions.page-block:task-decisions"
   ]
 }

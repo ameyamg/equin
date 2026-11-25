@@ -4,8 +4,9 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   PAGE_BLOCK_TYPE,
   liveBlocks,
-  resolveBlockAnnotations,
+  resolveBlockReadFacts,
   serializePageContent,
+  type BlockReader,
   type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
 import { serializeForestToMarkdown } from "@plugins/page/plugins/editor/core";
@@ -122,7 +123,8 @@ export async function loadBlockScope(
  * apply would be a diff against a document nobody ever saw.
  *
  * The annotations — the values of a tag's `markdown.tag.annotated` attributes,
- * which live outside the block's `data` — are resolved against the ROWS THIS
+ * which live outside the block's `data` — and the projections (the same, plus a
+ * `body: "derived"` tag's lines, as `reader` reads them) are resolved against the ROWS THIS
  * FUNCTION WAS HANDED, i.e. after any `redact` the caller applied. That is the
  * whole reason the resolve happens here rather than at either entry point: a
  * hidden card is not in `rows`, so it costs no provider query and its linked
@@ -135,10 +137,14 @@ export async function loadBlockScope(
 async function serializeRoot(
   rows: readonly StoredBlock[],
   rootId: string,
+  reader: BlockReader | undefined,
 ): Promise<string> {
-  const annotations = await resolveBlockAnnotations(rows);
   return serializeForestToMarkdown(
-    markdownNodesOfRows(rows, rootId, annotations),
+    markdownNodesOfRows(
+      rows,
+      rootId,
+      await resolveBlockReadFacts(rows, reader),
+    ),
     serverMarkdownContext(),
   );
 }
@@ -179,6 +185,15 @@ export interface ReadBlockOptions {
    */
   meta?: boolean;
   /**
+   * Who the document is for — handed to every `Editor.BlockProjection`, so a
+   * block may read differently to different readers (`<task-decisions>`: in
+   * full to another agent, a stub to the agent whose decisions they are).
+   * A caller serializing for a reader passes it on EVERY read it diffs
+   * against (an edit's baseline included), so an untouched block round-trips
+   * byte-identically. Absent: a read on nobody's behalf.
+   */
+  reader?: BlockReader;
+  /**
    * The database the rows are read from — the process's own by default. A
    * DB-backed suite passes its throwaway here, as it does to the editor's
    * `serializePageContent`.
@@ -208,6 +223,7 @@ export async function readBlockAsMarkdown(
   const markdown = await serializeRoot(
     opts?.redact ? opts.redact(rows) : rows,
     blockId,
+    opts?.reader,
   );
   const document =
     blockId === pageId ? withTitleBanner(markdown, title) : markdown;
@@ -234,7 +250,7 @@ export async function readPageAsMarkdown(pageId: string): Promise<string> {
   // Unconditionally banner-ed, where {@link readBlockAsMarkdown} tests its id:
   // this entry point has already ASSERTED that the root is a page.
   return withTitleBanner(
-    await serializeRoot(snapshot.blocks, pageId),
+    await serializeRoot(snapshot.blocks, pageId, undefined),
     snapshot.page.title,
   );
 }

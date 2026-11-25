@@ -21,6 +21,12 @@ import {
 } from "./internal/tools";
 
 export { _decisionExchanges, _decisions } from "./internal/tables";
+export { existingTaskIds, readTaskDecisionsInFull } from "./internal/full-read";
+export type {
+  FullDecision,
+  FullExchange,
+  TaskDecisionsRead,
+} from "./internal/full-read";
 
 export default {
   description:

@@ -2448,3 +2448,123 @@ describe("round-trip property (fuzzed forest)", () => {
     }
   });
 });
+
+// `body: "derived"` is `annotated` for a BODY: lines a reader-side projection
+// supplies (`Editor.BlockProjection` — `<task-decisions>`' decisions), emitted
+// inside the tag and discarded on parse, so a block round-trips through the
+// same reader's read unchanged whatever its body said.
+describe("derived bodies (a read-only projection inside the tag)", () => {
+  const derived = (
+    data: unknown,
+    derivedBody: readonly string[] | undefined,
+    annotations?: Record<string, string>,
+  ): MarkdownNode => ({
+    type: "task-decisions",
+    data,
+    ...(annotations === undefined ? {} : { annotations }),
+    ...(derivedBody === undefined ? {} : { derivedBody }),
+    expanded: true,
+    children: [],
+  });
+  const data = { taskId: "task-1795560312-xbwyem" };
+
+  test("the body is emitted inside the tag, and parse discards it", () => {
+    const md = serializeForestToMarkdown(
+      [
+        derived(
+          data,
+          [
+            '<decision id="dec-1" label="D1" question="Ship it?">',
+            "> A `</agent-inline>` inside a quote is inert",
+            "- A: yes (recommended)",
+            "</decision>",
+          ],
+          { title: "Phase 5" },
+        ),
+      ],
+      mdCtx,
+    );
+    expect(md).toBe(
+      [
+        // Annotations go before the type's own attributes (`id` aside).
+        '<task-decisions title="Phase 5" task="task-1795560312-xbwyem">',
+        '  <decision id="dec-1" label="D1" question="Ship it?">',
+        "  > A `</agent-inline>` inside a quote is inert",
+        "  - A: yes (recommended)",
+        "  </decision>",
+        "</task-decisions>",
+      ].join("\n"),
+    );
+    const bare = [
+      { type: "task-decisions", data, expanded: true, children: [] },
+    ];
+    expect(parse(md)).toEqual(bare);
+    // …byte-for-byte what the stub and the clipboard form parse to.
+    expect(
+      parse(
+        '<task-decisions task="task-1795560312-xbwyem" own="2 open, 0 closed"/>',
+      ),
+    ).toEqual(bare);
+    expect(serialize([node("task-decisions", data)])).toBe(
+      '<task-decisions task="task-1795560312-xbwyem"/>',
+    );
+  });
+
+  test("a derived body survives inside an enclosing card", () => {
+    const md = serializeForestToMarkdown(
+      [
+        {
+          type: "agent-note",
+          data: {},
+          expanded: true,
+          children: [
+            derived(data, ['<decision id="dec-1">', "</decision>"]),
+            node("text", { text: runs("after") }),
+          ],
+        },
+      ],
+      mdCtx,
+    );
+    expect(parse(md)).toEqual([
+      {
+        type: "agent-note",
+        data: {},
+        expanded: true,
+        children: [
+          { type: "task-decisions", data, expanded: true, children: [] },
+          node("text", { text: runs("after") }),
+        ],
+      },
+    ]);
+  });
+
+  test("a line that would change the document around it is a LOUD failure", () => {
+    for (const line of [
+      "",
+      "</agent-inline>",
+      "```ts",
+      '<task-decisions task="x"/>',
+      // The parser reads a lone `\r` as a line break.
+      "> a\r</agent-inline>",
+    ]) {
+      expect(() =>
+        serializeForestToMarkdown([derived(data, [line])], mdCtx),
+      ).toThrow(/inert to every scanner/);
+    }
+  });
+
+  test("a derived body on any other kind of block is a LOUD failure", () => {
+    expect(() =>
+      serializeForestToMarkdown(
+        [{ ...node("todo", {}), derivedBody: ["x"] }],
+        mdCtx,
+      ),
+    ).toThrow(/derived body/);
+    expect(() =>
+      serializeForestToMarkdown(
+        [{ ...node("text", { text: runs("x") }), derivedBody: ["x"] }],
+        mdCtx,
+      ),
+    ).toThrow(/derived body/);
+  });
+});

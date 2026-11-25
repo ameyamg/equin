@@ -104,16 +104,24 @@ export function documentOrderRows(
  * TODO changes what the card SAYS without changing what it IS, and the card
  * keeps its row id through the next apply with no rank rewritten. An annotation
  * that reached the key would make every status change look like a new block.
+ *
+ * `bodies` is the same thing for a `body: "derived"` tag: the read-only lines
+ * a reader-side projection supplied (`Editor.BlockProjection`), stamped as
+ * `MarkdownNode.derivedBody` under the same no-key-when-absent rule.
  */
 export function markdownNodesOfRows(
   rows: readonly StoredRow[],
   rootId: string,
-  annotations?: ReadonlyMap<string, Record<string, string>>,
+  facts?: {
+    annotations?: ReadonlyMap<string, Record<string, string>>;
+    bodies?: ReadonlyMap<string, readonly string[]>;
+  },
 ): MarkdownNode[] {
   const byParent = childrenByParent(rows);
   const build = (parentId: string | null): MarkdownNode[] =>
     (byParent.get(parentId) ?? []).map((row) => {
-      const annotated = annotations?.get(row.id);
+      const annotated = facts?.annotations?.get(row.id);
+      const body = facts?.bodies?.get(row.id);
       return {
         id: row.id,
         type: row.type,
@@ -121,6 +129,7 @@ export function markdownNodesOfRows(
         expanded: row.expanded,
         children: isShell(row) ? [] : build(row.id),
         ...(annotated === undefined ? {} : { annotations: annotated }),
+        ...(body === undefined ? {} : { derivedBody: body }),
       };
     });
   return build(rootId);

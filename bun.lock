@@ -7768,6 +7768,10 @@
       "name": "@equin/plugin-tasks-decisions-item-count",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/decisions/plugins/page-block": {
+      "name": "@equin/plugin-tasks-decisions-page-block",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/decisions/plugins/tray": {
       "name": "@equin/plugin-tasks-decisions-tray",
       "version": "0.0.1",
@@ -12187,6 +12191,8 @@
     "@equin/plugin-tasks-decisions-inbox": ["@equin/plugin-tasks-decisions-inbox@workspace:plugins/tasks/plugins/decisions/plugins/inbox"],
 
     "@equin/plugin-tasks-decisions-item-count": ["@equin/plugin-tasks-decisions-item-count@workspace:plugins/tasks/plugins/decisions/plugins/item-count"],
+
+    "@equin/plugin-tasks-decisions-page-block": ["@equin/plugin-tasks-decisions-page-block@workspace:plugins/tasks/plugins/decisions/plugins/page-block"],
 
     "@equin/plugin-tasks-decisions-tray": ["@equin/plugin-tasks-decisions-tray@workspace:plugins/tasks/plugins/decisions/plugins/tray"],
 

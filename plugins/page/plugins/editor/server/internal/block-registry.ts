@@ -100,7 +100,142 @@ export const Editor = {
       rows: readonly { id: string; type: string; data: unknown }[],
     ): Promise<ReadonlyMap<string, Record<string, string>>>;
   }>("page.block-annotation"),
+
+  /**
+   * A block's markdown as it reads to ONE reader: read-only attribute values
+   * and a read-only BODY (`markdown.tag.body: "derived"`) projected from facts
+   * outside the page, which may differ by who reads — the `<task-decisions>`
+   * block reads in full to another agent and as a one-line stub to the agent
+   * whose own decisions they are.
+   *
+   * The {@link Editor.BlockAnnotation} twin with two additions: the `reader`
+   * (absent for a read made on nobody's behalf — instructions delivery, a
+   * TODO's prompt — which reads as any other reader would), and a body. The
+   * attribute names must be declared in the tag's `annotated`, as for an
+   * annotation, and a name two suppliers claim on one block is a loud error.
+   * Both halves are discarded on parse, so a block round-trips through the
+   * same reader's read unchanged.
+   *
+   * `type` names the one block type it projects: the read hands it only those
+   * rows, and does no work for a page that holds none.
+   */
+  BlockProjection: defineServerContribution<{
+    type: string;
+    project(
+      rows: readonly { id: string; type: string; data: unknown }[],
+      reader: BlockReader | undefined,
+    ): Promise<ReadonlyMap<string, BlockProjected>>;
+  }>("page.block-projection", { docLabel: (p) => p.type }),
+
+  /**
+   * Refuses a block whose `data` NAMES something that does not exist — an
+   * existence check no zod schema can make, run by a markdown apply over the
+   * blocks it would create or re-point, before anything is written (so a
+   * document may keep, move or delete such a block, never mint a dangling one).
+   * `check` answers, per payload in order, a refusal message or `null`.
+   */
+  BlockReferenceCheck: defineServerContribution<{
+    type: string;
+    check(datas: readonly unknown[]): Promise<readonly (string | null)[]>;
+  }>("page.block-reference-check", { docLabel: (c) => c.type }),
 };
+
+/** Who a markdown read is made for: the conversation reading it. */
+export interface BlockReader {
+  conversationId: string;
+}
+
+/** What a {@link Editor.BlockProjection} says about one block, for one reader. */
+export interface BlockProjected {
+  /** Values for the tag's `annotated` attributes. */
+  attrs?: Record<string, string>;
+  /** The lines of a `body: "derived"` tag. */
+  body?: readonly string[];
+}
+
+/** Everything a read stamps onto its nodes from outside the blocks' data. */
+export interface BlockReadFacts {
+  annotations: ReadonlyMap<string, Record<string, string>>;
+  bodies: ReadonlyMap<string, readonly string[]>;
+}
+
+/**
+ * The {@link Editor.BlockAnnotation} answers and the
+ * {@link Editor.BlockProjection} answers for `rows` as read by `reader`, merged
+ * — what a markdown read stamps onto its nodes. One attribute claimed twice on
+ * one block (by two annotators, or an annotator and a projection) throws,
+ * naming both owners; so do two projections of one type.
+ */
+export async function resolveBlockReadFacts(
+  rows: readonly { id: string; type: string; data: unknown }[],
+  reader: BlockReader | undefined,
+): Promise<BlockReadFacts> {
+  const projections = Editor.BlockProjection.getContributions();
+  const byType = new Map<string, (typeof projections)[number]>();
+  for (const p of projections) {
+    const previous = byType.get(p.type);
+    if (previous !== undefined) {
+      throw new Error(
+        `Two Editor.BlockProjection contributions project block type "${p.type}": ` +
+          `${previous._pluginId ?? "<unknown>"} and ${p._pluginId ?? "<unknown>"}.`,
+      );
+    }
+    byType.set(p.type, p);
+  }
+  const [annotated, projected] = await Promise.all([
+    resolveBlockAnnotationAnswers(rows),
+    Promise.all(
+      [...byType.values()].map(async (p) => {
+        const mine = rows.filter((r) => r.type === p.type);
+        return {
+          owner: p._pluginId ?? "<unknown>",
+          byBlock:
+            mine.length === 0
+              ? new Map<string, BlockProjected>()
+              : await p.project(mine, reader),
+        };
+      }),
+    ),
+  ]);
+  const bodies = new Map<string, readonly string[]>();
+  const attrAnswers = [...annotated];
+  for (const { owner, byBlock } of projected) {
+    const attrs = new Map<string, Record<string, string>>();
+    for (const [blockId, { attrs: a, body }] of byBlock) {
+      if (a !== undefined) attrs.set(blockId, a);
+      if (body !== undefined) bodies.set(blockId, body);
+    }
+    attrAnswers.push({ owner, byBlock: attrs });
+  }
+  return { annotations: mergeAttributeAnswers(attrAnswers), bodies };
+}
+
+/**
+ * `Editor.BlockReferenceCheck`'s refusals for `blocks`: one message per block
+ * whose data names nothing, `[]` when every block is sound (or no check is
+ * registered for its type).
+ */
+export async function blockReferenceRefusals(
+  blocks: readonly { id: string; type: string; data: unknown }[],
+): Promise<string[]> {
+  const checks = Editor.BlockReferenceCheck.getContributions();
+  const out: string[] = [];
+  for (const c of checks) {
+    const mine = blocks.filter((b) => b.type === c.type);
+    if (mine.length === 0) continue;
+    const answers = await c.check(mine.map((b) => b.data));
+    if (answers.length !== mine.length) {
+      throw new Error(
+        `Editor.BlockReferenceCheck for "${c.type}" answered ${answers.length} verdicts ` +
+          `for ${mine.length} blocks — one per payload, in order.`,
+      );
+    }
+    answers.forEach((why, i) => {
+      if (why !== null) out.push(`block ${mine[i]!.id} (${c.type}): ${why}`);
+    });
+  }
+  return out;
+}
 
 /**
  * Resolve the block handle for a `type`, or `undefined` if no plugin contributed one.
@@ -270,10 +405,27 @@ export function blockTextServerNodes(): Klass<LexicalNode>[] {
   return [...byType.values()];
 }
 
+interface AttributeAnswer {
+  owner: string;
+  byBlock: ReadonlyMap<string, Record<string, string>>;
+}
+
+function resolveBlockAnnotationAnswers(
+  rows: readonly { id: string; type: string; data: unknown }[],
+): Promise<AttributeAnswer[]> {
+  return Promise.all(
+    Editor.BlockAnnotation.getContributions().map(async (p) => ({
+      owner: p._pluginId ?? "<unknown>",
+      byBlock: await p.resolve(rows),
+    })),
+  );
+}
+
 /**
- * Every registered provider's answer for `rows`, merged into one block id →
- * attribute record map — what a markdown read stamps onto its nodes as
- * `MarkdownNode.annotations`.
+ * Every attribute supplier's answer for `rows` (the annotation providers', and
+ * the projections' attributes), merged into one block id → attribute record
+ * map — what a markdown read stamps onto its nodes as
+ * `MarkdownNode.annotations` (through {@link resolveBlockReadFacts}).
  *
  * Read at call time, never memoized, for the same reason `blockTextProtectedSpans`
  * is: a snapshot taken before `collectContributions` would silently degrade to
@@ -285,19 +437,10 @@ export function blockTextServerNodes(): Klass<LexicalNode>[] {
  * order, and the two owners would each believe they own it. So it throws,
  * naming both.
  */
-export async function resolveBlockAnnotations(
-  rows: readonly { id: string; type: string; data: unknown }[],
-): Promise<ReadonlyMap<string, Record<string, string>>> {
-  const providers = Editor.BlockAnnotation.getContributions();
+function mergeAttributeAnswers(
+  answers: readonly AttributeAnswer[],
+): ReadonlyMap<string, Record<string, string>> {
   const merged = new Map<string, Record<string, string>>();
-  if (providers.length === 0) return merged;
-
-  const answers = await Promise.all(
-    providers.map(async (p) => ({
-      owner: p._pluginId ?? "<unknown>",
-      byBlock: await p.resolve(rows),
-    })),
-  );
 
   /** `blockId → attribute → the plugin that already claimed it`. */
   const claimedBy = new Map<string, Map<string, string>>();
@@ -312,7 +455,7 @@ export async function resolveBlockAnnotations(
         const previous = claims.get(name);
         if (previous !== undefined) {
           throw new Error(
-            `Two Editor.BlockAnnotation providers claim the \`${name}\` attribute of block ` +
+            `Two suppliers (Editor.BlockAnnotation / Editor.BlockProjection) claim the \`${name}\` attribute of block ` +
               `${blockId}: ${previous} and ${owner}. An externally-owned attribute must have ` +
               "exactly one owner.",
           );

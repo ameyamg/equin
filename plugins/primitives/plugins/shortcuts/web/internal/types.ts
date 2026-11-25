@@ -54,7 +54,10 @@ export type ShortcutDescriptor = {
  * Where a regioned shortcut's key belongs (`ShortcutDescriptor.region`).
  * Among the regioned shortcuts matching one keystroke, the manager keeps:
  *
- * 1. those whose `root` holds focus (contains the key event's target);
+ * 1. those whose `root` holds focus (contains the key event's target — or,
+ *    when that target is a container around the last press, the pressed
+ *    element: the body after a click on unfocusable text, a page block's
+ *    caret host around the block pressed in);
  * 2. else, when `pointer` is set, those whose `root` is under the pointer;
  * 3. else the one regioned shortcut, when it is alone on its key (nothing to
  *    tell apart — the region is the surface's only one).

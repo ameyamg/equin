@@ -19,7 +19,9 @@ shortcut. Before matching, it yields the key to whoever already owns it:
   element, `ShortcutRegion`) belongs to one part of its surface, for a key
   several instances of one component bind there (two lists' j / k, two
   Submit bars' ⌘↵). Among the regioned shortcuts matching a keystroke, the
-  one whose root holds focus (the key's target) fires; else, for a region
+  one whose root holds focus (the key's target — or the last-pressed element
+  when the target is a container around it: the body after a click on
+  unfocusable text, a page block's caret host) fires; else, for a region
   declaring `pointer`, the one under the pointer; else the one regioned
   shortcut alone on its key. A region nested in another holding the key wins
   over it. Two left, or none, fire nothing — a key is never handed to a

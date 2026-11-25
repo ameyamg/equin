@@ -55,6 +55,14 @@ export function ShortcutManager() {
     function handlePointerOver(event: Event) {
       pointerAt = event.target instanceof Node ? event.target : null;
     }
+    // The element last pressed: where focus really is when the focused
+    // element is a container around it — the body after a click on
+    // unfocusable text, or a page block's caret host, which takes focus for
+    // the block it draws. A region inside that container holds the key.
+    let pressedAt: Node | null = null;
+    function handlePointerDown(event: Event) {
+      pressedAt = event.target instanceof Node ? event.target : null;
+    }
     function handlePointerOut(event: Event) {
       if (event instanceof PointerEvent && event.relatedTarget === null)
         pointerAt = null;
@@ -95,7 +103,7 @@ export function ShortcutManager() {
           : [
               ...eligible.filter((s) => s.region === undefined),
               ...regionWinners(regioned, {
-                focus: e.target instanceof Node ? e.target : null,
+                focus: focusPlace(e.target, pressedAt),
                 pointer: pointerAt,
               }),
             ];
@@ -121,13 +129,35 @@ export function ShortcutManager() {
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("pointerover", handlePointerOver, true);
+    window.addEventListener("pointerdown", handlePointerDown, true);
     document.addEventListener("pointerout", handlePointerOut, true);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointerover", handlePointerOver, true);
+      window.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("pointerout", handlePointerOut, true);
     };
   }, []);
 
   return null;
+}
+
+/**
+ * Where focus is, for the region test: the key's target — or, when that
+ * target is a container around the last press (the body, a caret host that
+ * took focus for the block pressed in), the pressed element, which says
+ * where in the container the user is. A press outside the target says
+ * nothing about it.
+ */
+function focusPlace(
+  target: EventTarget | null,
+  pressedAt: Node | null,
+): Node | null {
+  if (!(target instanceof Node)) return null;
+  return pressedAt !== null &&
+    pressedAt !== target &&
+    pressedAt.isConnected &&
+    target.contains(pressedAt)
+    ? pressedAt
+    : target;
 }

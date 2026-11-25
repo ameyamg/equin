@@ -122,7 +122,13 @@ export {
   blockTextProtectedSpans,
   blockTextServerExtensions,
   blockTextServerNodes,
-  resolveBlockAnnotations,
+  blockReferenceRefusals,
+  resolveBlockReadFacts,
+} from "./internal/block-registry";
+export type {
+  BlockProjected,
+  BlockReadFacts,
+  BlockReader,
 } from "./internal/block-registry";
 
 export default {

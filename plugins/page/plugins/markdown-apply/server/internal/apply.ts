@@ -1,11 +1,15 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   applyPageBlockPatch,
+  blockReferenceRefusals,
   PAGE_BLOCK_TYPE,
   serializePageContent,
   type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
-import { parseMarkdownToForest } from "@plugins/page/plugins/editor/core";
+import {
+  dataEqual,
+  parseMarkdownToForest,
+} from "@plugins/page/plugins/editor/core";
 import { writeBlockTexts } from "@plugins/page/plugins/block-text-write/server";
 import {
   documentOrderRows,
@@ -427,6 +431,35 @@ async function applyToScope(scope: {
   assertAcceptable?.(plan, { rows, pageRow });
 
   const { patch, textEdits, stats } = plan;
+
+  // A block whose data NAMES something (a task, say) may be kept, moved or
+  // deleted by a document, never minted — or re-pointed — at something that
+  // is not there. Asked of the payloads this write would newly put on a row:
+  // every create's, and every update's whose data differs from the stored
+  // row's (a survivor's update restates its data verbatim). Before the first
+  // write, like the verdict above.
+  const storedData = new Map(rows.map((r) => [r.id, r]));
+  const named = [
+    ...patch.creates.map((b) => ({ id: b.id, type: b.type, data: b.data })),
+    ...patch.updates.flatMap((u) => {
+      const stored = storedData.get(u.id);
+      const type = u.changes.type ?? stored?.type ?? u.ofType;
+      return u.changes.data !== undefined &&
+        (stored === undefined ||
+          stored.type !== type ||
+          !dataEqual(stored.data, u.changes.data))
+        ? [{ id: u.id, type, data: u.changes.data }]
+        : [];
+    }),
+  ];
+  const refusals = await blockReferenceRefusals(named);
+  if (refusals.length > 0) {
+    throw new HttpError(
+      400,
+      `markdown apply refused for block ${rootId} on page ${pageId}: ` +
+        `${refusals.join("; ")}`,
+    );
+  }
 
   // --- 1. Structure, atomically --------------------------------------------
   const { blocks } = await applyPageBlockPatch(pageId, patch);

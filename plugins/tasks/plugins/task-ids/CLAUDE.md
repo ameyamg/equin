@@ -54,6 +54,7 @@ recognition against real mints.
     - `tasks/decisions`
     - `tasks/decisions/inbox`
     - `tasks/decisions/item-count`
+    - `tasks/decisions/page-block`
     - `tasks/decisions/tray`
     - `tasks/tasks-core`
 

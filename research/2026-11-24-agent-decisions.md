@@ -348,6 +348,33 @@ Where the code differs from the above:
   inline run, where the chip's flex gap never applies; `ChipMarks` now parts
   the count and the dirty dot with a literal space.
 
+### As landed (phase 5)
+
+- **The editor additions**, generic (agent-access names no block type):
+  `BlockTag.body: "derived"` (a read-only body, discarded on parse; its lines
+  asserted inert at serialize — no blank line, fence opener or registered tag
+  line — so a projection cannot close an enclosing card),
+  `MarkdownNode.derivedBody`, `ReadBlockOptions.reader: { conversationId }`,
+  `Editor.BlockProjection({ type, project(rows, reader) → id → { attrs, body } })`
+  merged with the annotations by `resolveBlockReadFacts` (a double claim
+  throws). agent-access passes the reader on `read_page` and on `edit_page`'s /
+  `write_agent_note`'s own reads.
+- **"Parse refuses a dangling task"** is split in two: parse checks the
+  attribute is a task id (sync, pure); existence is
+  `Editor.BlockReferenceCheck`, run by markdown-apply over the blocks an apply
+  creates or re-points, before anything is written (400). Only the markdown
+  path is checked; the slash-menu picker offers real tasks only.
+- **The tag reads** `<task-decisions title="…" task="task-…">` — annotated
+  attributes go before a type's own. The owner's stub is
+  `<task-decisions title="…" own="4 open, 3 closed" task="…"/>`; a gone task
+  `missing="task deleted"`. In full, each decision is a `<decision …>` line,
+  its body quoted (`> `, line endings normalised), options `<option …/>`, its thread `<exchange …/>`.
+- **Shortcuts are scoped to their region** (the Follow ups task
+  task-1795567631-5jfjvf, done here): a `ShortcutRegion` in
+  `primitives/shortcuts` scopes every surface shortcut registered inside it;
+  the panel and the inbox are regions, so two panels on a page never answer
+  each other's ⌘↵.
+
 ## 6. Live surfaces and the plugin split
 
 Reads, all `network/live`:

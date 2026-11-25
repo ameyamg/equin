@@ -123,6 +123,14 @@ export interface MarkdownNode {
    * a loud failure at serialize, never a silent drop.
    */
   annotations?: Readonly<Record<string, string>>;
+  /**
+   * The body of a `body: "derived"` tag — lines a reader-side projection
+   * supplied (`Editor.BlockProjection`), emitted inside the tag and DISCARDED
+   * on parse, the body twin of {@link annotations}. Same optionality story: a
+   * forest carrying none (the clipboard) emits the self-closing form. A node
+   * carrying one for any other kind of tag is a loud failure at serialize.
+   */
+  derivedBody?: readonly string[];
   children: MarkdownNode[];
 }
 
@@ -208,9 +216,17 @@ export interface MdParseCtx {
  *   block.
  * - `"none"` — always self-closing. A body on PARSE is a loud rejection, never a
  *   silent drop.
+ * - `"derived"` — a READ-ONLY body: lines a reader-side projection supplies
+ *   ({@link MarkdownNode.derivedBody}), facts that live outside the block (a
+ *   task's decisions), emitted inside the tag and DISCARDED on parse, exactly
+ *   as {@link BlockTag.annotated} attribute values are. Self-closing when none
+ *   was supplied. The block's own children are consumed, as for `"none"`. The
+ *   lines must be inert to every scanner of the document (no blank line, no
+ *   fence opener, no line opening or closing a registered tag) — asserted at
+ *   serialize, so a projection cannot close an enclosing card.
  */
 export type BlockTagBody =
-  "children" | "children-when-expanded" | "text" | "none";
+  "children" | "children-when-expanded" | "text" | "none" | "derived";
 
 /**
  * A tag-delimited markdown region for one block type: `<name attrs>…</name>`.
@@ -1798,6 +1814,17 @@ function tagToken(
       children: [],
     };
   }
+  if (tag.body === "derived") {
+    // The body is a projection of facts held elsewhere, handed out read-only:
+    // DISCARDED, like an annotated attribute's value — a pure parser can
+    // neither tell an edited line from the one it emitted nor write its owner.
+    return {
+      indent,
+      type: tag.handle.type,
+      data: tag.dataOf(attrs, null, parseCtx),
+      children: [],
+    };
+  }
   return {
     indent,
     type: tag.handle.type,
@@ -2085,6 +2112,62 @@ function assertNoLineAnnotations(node: MarkdownNode): void {
   );
 }
 
+/** What a derived body's lines must not look like, read off the registry. */
+interface DerivedBodyGuard {
+  tagNames: ReadonlySet<string>;
+  fenceOpens: readonly string[];
+}
+
+/**
+ * A `body: "derived"` node's lines, each asserted INERT: the body is discarded
+ * on parse, but every scanner over the document still reads it on the way —
+ * the enclosing card's close-tag scan, the fence tracker, the blank-line rule
+ * — so a line that closed a registered tag, opened a fence or read as an
+ * empty paragraph would change what the REST of the document means. The
+ * projection owns its spelling (quote free text, say), so a violation is its
+ * bug, and loud.
+ */
+function derivedBodyLines(
+  node: MarkdownNode,
+  tag: ResolvedTag,
+  guardOf: () => DerivedBodyGuard,
+): readonly string[] {
+  const lines = node.derivedBody ?? [];
+  if (lines.length === 0) return lines;
+  const guard = guardOf();
+  for (const line of lines) {
+    const content = line.trim();
+    const tagName = /^<\/?([A-Za-z][\w-]*)/.exec(content)?.[1];
+    const why =
+      content === ""
+        ? "is blank (a blank line beside a tag is a spacer to the editing tools)"
+        : /[\r\n]/.test(line)
+          ? "holds a line terminator"
+          : guard.fenceOpens.some((open) => content.startsWith(open))
+            ? "opens a fence, which would swallow the lines after it"
+            : tagName !== undefined && guard.tagNames.has(tagName)
+              ? `opens or closes the registered <${tagName}> tag`
+              : null;
+    if (why !== null) {
+      throw new Error(
+        `markdown: the derived body of a "${node.type}" node (<${tag.name}>) has a line that ` +
+          `${why}: ${JSON.stringify(line)}. A derived body must be inert to every scanner of ` +
+          "the document — its projection must spell such text another way (quote it).",
+      );
+    }
+  }
+  return lines;
+}
+
+/** A derived body has one place to go: a `body: "derived"` tag. */
+function assertNoDerivedBody(node: MarkdownNode): void {
+  if (node.derivedBody === undefined) return;
+  throw new Error(
+    `markdown: a "${node.type}" node was given a derived body, but its markdown is not a ` +
+      '`body: "derived"` tag, so there is nowhere to emit it. Only such a tag can carry one.',
+  );
+}
+
 /** One sibling list, rendered: its lines, and whether the last one is a tag's. */
 interface RenderedList {
   lines: string[];
@@ -2170,6 +2253,13 @@ export function serializeForestToMarkdown(
   // `serverMarkdownContext()` mints a fresh array per call, so a WeakMap keyed
   // on it would only ever grow.
   const claimers = claimersOf(ctx.handles);
+  // Built only when a node carries a derived body (most documents carry none).
+  let guard: DerivedBodyGuard | null = null;
+  const derivedGuard = (): DerivedBodyGuard =>
+    (guard ??= {
+      tagNames: new Set(tagParsersOf(ctx.handles).keys()),
+      fenceOpens: claimers.fences.map((f) => f.fence.open),
+    });
   const md = (text: RichText | string): string =>
     serializeInlineMarkdown(runsOf(text), ctx.protectedSpans, ctx.softBreaks);
   const mdLine = (text: RichText | string): string =>
@@ -2210,6 +2300,7 @@ export function serializeForestToMarkdown(
       // Flat line(s): the walk owns the children, exactly as it always has.
       if (resolved === null || resolved.kind === "lines") {
         assertNoLineAnnotations(n);
+        assertNoDerivedBody(n);
         const line =
           resolved === null ? "" : resolved.serialize(data, serializeCtx);
         const children = renderList(n.children);
@@ -2257,6 +2348,7 @@ export function serializeForestToMarkdown(
       const tag = resolved.tag;
       const prefix = openTagPrefix(tag.name, tagAttrs(tag, data, serializeCtx));
       if (tag.body === "text") {
+        assertNoDerivedBody(n);
         // The block's OWN text between the tags; children still nest below, as
         // for any text block.
         const text = md(h!.text!(data));
@@ -2271,6 +2363,26 @@ export function serializeForestToMarkdown(
         });
         continue;
       }
+
+      if (tag.body === "derived") {
+        const bodyLines = derivedBodyLines(n, tag, derivedGuard);
+        segments.push({
+          head:
+            bodyLines.length === 0
+              ? [`${prefix}/>`]
+              : [
+                  `${prefix}>`,
+                  ...indentLines([...bodyLines]),
+                  `</${tag.name}>`,
+                ],
+          pinnedHead: null,
+          headIsTag: true,
+          children: EMPTY_LIST,
+          hasChildren: false,
+        });
+        continue;
+      }
+      assertNoDerivedBody(n);
 
       // A tag CONSUMES its children — emitting them inside, or (collapsed /
       // pointer) deliberately not at all. Either way the walk must not re-emit

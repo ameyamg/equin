@@ -533,6 +533,15 @@ vocabulary. `read_page` states them first in the `<page-meta>` header
   title opening with `[Something]` is refused with that pointer
   (`BRACKET_STATUS_PREFIX`). `write_agent_note` does not touch tags.
 
+## Every read is made for its reader
+
+`read_page`, and `edit_page`'s and `write_agent_note`'s own reads, pass
+`ReadBlockOptions.reader: { conversationId }`, so a block contributing an
+`Editor.BlockProjection` reads as it reads to THIS agent (`<task-decisions>`:
+in full to another agent, a stub to its owner) — and since `edit_page`'s
+baseline is that same read, an untouched projected block round-trips through
+the edit unchanged. This plugin still names no block type.
+
 ## Stated bounds
 
 - **Absence is visible.** A read shows a gap where a private card was — no

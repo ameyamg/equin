@@ -473,11 +473,22 @@ handed to the walk, never to the emitted markdown.
 
 A tag may declare `markdown.tag.annotated` attributes whose values live outside
 the block's `data` (see `page/editor`'s CLAUDE.md). `serializeRoot` resolves them
-with `resolveBlockAnnotations` over **the rows it was handed**, i.e. post-`redact`
+with `resolveBlockReadFacts` over **the rows it was handed**, i.e. post-`redact`
 — so a hidden card costs no provider query and its linked task can never surface
 in a document that does not show the card. `markdownNodesOfRows(rows, rootId,
-annotations)` stamps a node only where the map has an entry (no `annotations`
+{ annotations, bodies })` stamps a node only where the map has an entry (no `annotations`
 KEY otherwise, the structural-identity rule `ref` follows).
+
+The same read resolves the **projections** (`Editor.BlockProjection`, see
+`page/editor`'s CLAUDE.md) for `ReadBlockOptions.reader`: attributes and a
+derived body per reader, stamped as `MarkdownNode.derivedBody`. Parse discards
+both, so the baseline a caller reads for the same reader subtracts them.
+
+**References are checked before the write.** After `assertAcceptable`,
+`applyToScope` hands every block the plan would create, or whose data it would
+change, to `blockReferenceRefusals` (`Editor.BlockReferenceCheck`): a refusal
+is a 400 with nothing written — so a document may keep, move or delete a block
+naming a task, never mint one at a task that is not there.
 
 **The planner is deliberately untouched.** A void card's alignment key is
 `type ␀ stableJson(data)` and an annotation is by definition not in `data`, so
@@ -497,12 +508,14 @@ annotation in the key would make every status change look like a new block.
     - `infra/endpoints.HttpError`
     - `page/block-text-write.writeBlockTexts`
     - `page/editor.applyPageBlockPatch`
+    - `page/editor.BlockReader`
+    - `page/editor.blockReferenceRefusals`
     - `page/editor.blockTextProtectedSpans`
     - `page/editor.Editor`
     - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.readPageEditedAt`
-    - `page/editor.resolveBlockAnnotations`
+    - `page/editor.resolveBlockReadFacts`
     - `page/editor.serializePageContent`
     - `page/editor.StoredBlock`
     - `page/links.loadBacklinkSources`

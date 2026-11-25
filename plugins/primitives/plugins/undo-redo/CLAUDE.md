@@ -261,6 +261,7 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
     - `page/prototype`
     - `page/tags`
     - `primitives/text-editor`
+    - `tasks/decisions/page-block`
 - Exemptions:
   - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-undo-redo-shortcuts.ts` (debt)
 

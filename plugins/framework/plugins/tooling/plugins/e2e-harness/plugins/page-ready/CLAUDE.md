@@ -43,12 +43,12 @@ may import no `e2e` barrel — hence a `core/` of its own).
     - `waitForNotBusy`
     - `waitForScreenReady`
 - Cross-plugin:
-  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×25
     - `conversations` ×11
     - `primitives` ×11
     - `page` ×8
-    - `tasks` ×5
+    - `tasks` ×6
     - `debug` ×2
     - `apps-core/app-launcher`
     - `build`

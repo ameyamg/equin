@@ -343,6 +343,8 @@ async function readPage(
   const markdown = await readBlockAsMarkdown(blockId, {
     redact: redactHumanAudience,
     meta: true,
+    // A block may read differently to its reader (`Editor.BlockProjection`).
+    ...(conversationId === null ? {} : { reader: { conversationId } }),
   });
   // The instructions covering this page that the conversation has not
   // received yet go AHEAD of the page, and now count as received.
@@ -381,7 +383,10 @@ async function writeAgentNote(
   const spaced = agentWrittenText(
     content,
     content.includes("`")
-      ? await readBlockAsMarkdown(blockId, { redact: redactHumanAudience })
+      ? await readBlockAsMarkdown(blockId, {
+          redact: redactHumanAudience,
+          reader: { conversationId },
+        })
       : "",
   );
   const report = await applyMarkdownToBlock(blockId, spaced, {
@@ -445,8 +450,10 @@ async function editPage(
   const markdown = await readBlockAsMarkdown(blockId, {
     redact: redactHumanAudience,
     // The document the agent matched old_string against is read_page's, and
-    // that one opens with the header.
+    // that one opens with the header — and reads as it read to this agent, so
+    // a block projected for its reader is the baseline the edit subtracts.
     meta: true,
+    reader: { conversationId },
   });
 
   // A blank line the agent put beside a tag — `</human>\n\n<agent-inline>` —

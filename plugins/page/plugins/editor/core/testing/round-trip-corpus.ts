@@ -348,6 +348,20 @@ export function roundTripCorpus(
       }),
       children: false,
     },
+    // `<task-decisions task="task-…"/>`: `body: "derived"` — what it shows is
+    // the task's decisions, a projection supplied per reader and discarded on
+    // parse — so no children, and a clipboard forest carries no body at all.
+    // `""` is the block still asking which task it shows.
+    {
+      type: "task-decisions",
+      data: (r) => ({
+        taskId:
+          r() < 0.2
+            ? ""
+            : `task-${1790000000 + Math.floor(r() * 9999999)}-abc${100 + Math.floor(r() * 899)}`,
+      }),
+      children: false,
+    },
     // `<map/>`: empty data (what it shows is derived from the page's places on
     // render), and `body: "none"` like `page-link`, so no children.
     { type: "map", data: () => ({}), children: false },

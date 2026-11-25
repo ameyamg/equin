@@ -133,4 +133,26 @@ describe("shortcut regions", () => {
     fireEvent.keyDown(getByTestId("outer-field"), submit);
     expect(fired.mock.calls).toEqual([["inner"], ["outer"]]);
   });
+
+  it("focus on a container around the press (a caret host): the region pressed in", () => {
+    const fired = vi.fn();
+    const { getByTestId } = render(
+      <WithShortcuts>
+        <div data-testid="host-a" tabIndex={-1}>
+          <Panel name="a" keys="mod+enter" pointer={false} onFire={fired}>
+            <span data-testid="a-text">text</span>
+          </Panel>
+        </div>
+        <div data-testid="host-b" tabIndex={-1}>
+          <Panel name="b" keys="mod+enter" pointer={false} onFire={fired} />
+        </div>
+      </WithShortcuts>,
+    );
+    fireEvent.pointerDown(getByTestId("a-text"));
+    fireEvent.keyDown(getByTestId("host-a"), submit);
+    expect(fired.mock.calls).toEqual([["a"]]);
+    // A focused container that does not hold the press says nothing.
+    fireEvent.keyDown(getByTestId("host-b"), submit);
+    expect(fired.mock.calls).toEqual([["a"]]);
+  });
 });

@@ -1,4 +1,4 @@
-// @hash 508f5b01245d
+// @hash 5491b5197cc6
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -65,7 +65,9 @@
       "page.annotations.human-notes:context",
       "page.annotations.todo:todo",
       "page.annotations.agent-notes:agent-note",
-      "page.annotations.private-notes:private-note"
+      "page.annotations.private-notes:private-note",
+      // An agent's decisions, embedded live: what the agents ask of you.
+      "tasks.decisions.page-block:task-decisions"
     ]}
   ]
 }
