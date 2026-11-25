@@ -28,7 +28,9 @@ export function ConversationList() {
 
   // A row is a link: a plain click brings back the conversation's saved
   // layout (or opens it fresh), and a middle- / ⌘-click opens THAT SAME layout
-  // in a new browser tab.
+  // in a new browser tab. An ⌥-click keeps what is on screen: the conversation
+  // alone opens as a new column after the last one — a saved layout is a whole
+  // route, so restoring it would replace the others.
   const linkTo = (id: string): LinkTarget => {
     const fresh = openPane.to(
       conversationPane,
@@ -37,6 +39,10 @@ export function ConversationList() {
     );
     return {
       open: (gesture) => {
+        if (gesture.keepOthers) {
+          fresh.open(gesture);
+          return;
+        }
         const result = loadRouteForConversation(id);
         // A saved layout the store refuses (a slot lacking a param its pane
         // now requires) opens the conversation fresh instead.
