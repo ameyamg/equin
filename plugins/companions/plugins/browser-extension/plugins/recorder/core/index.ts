@@ -6,4 +6,9 @@ export {
   discardTabRecording,
   finishTabRecording,
 } from "./endpoints";
-export { numberedName, recordingBaseName } from "./file-name";
+export {
+  numberedName,
+  pointerTrackPathOf,
+  recordingBaseName,
+  recordingFileNames,
+} from "./file-name";

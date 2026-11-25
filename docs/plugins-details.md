@@ -17236,9 +17236,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `discardTabRecording`
               - `finishTabRecording`
               - `numberedName`
+              - `pointerTrackPathOf`
               - `recorderConfig`
               - `recorderRelayApp`
               - `recordingBaseName`
+              - `recordingFileNames`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`

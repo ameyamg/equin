@@ -91,9 +91,11 @@ prototype `proto-1794537939-tuvpg1` ("Record").
     - `discardTabRecording`
     - `finishTabRecording`
     - `numberedName`
+    - `pointerTrackPathOf`
     - `recorderConfig`
     - `recorderRelayApp`
     - `recordingBaseName`
+    - `recordingFileNames`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

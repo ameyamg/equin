@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { link, mkdir, open, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, rm, writeFile } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
@@ -23,11 +23,11 @@ import {
   createTabRecording,
   discardTabRecording,
   finishTabRecording,
-  numberedName,
   recorderConfig,
   recordingBaseName,
 } from "../../core";
 import { chunkDecision, type ChunkCursor } from "./chunk-order";
+import { saveFreePair } from "./save-pair";
 
 /**
  * The recordings being uploaded, by id. In memory: a recording lives as long
@@ -118,6 +118,11 @@ export const handleFinish = implementMachine(
     const upload = uploadOf(id);
     if (upload.nextSeq === 0)
       throw new HttpError(409, "the recording has no chunk");
+    // Claimed at once: a second finish (or a chunk, or a discard) of this id
+    // answers 404 instead of remuxing and saving the same partial again. A
+    // finish that fails from here leaves the partial in the folder, as a
+    // restart does.
+    uploads.delete(id);
     const handle = await open(upload.partial, "r+");
     try {
       await handle.sync();
@@ -145,16 +150,14 @@ export const handleFinish = implementMachine(
       ],
       { timeoutMs: REMUX_TIMEOUT_MS },
     );
-    const name = await linkFree(remuxed, upload.folder, upload.base);
+    const name = await saveFreePair(
+      remuxed,
+      body.pointer === null ? null : `${JSON.stringify(body.pointer)}\n`,
+      upload.folder,
+      upload.base,
+    );
     await rm(remuxed);
     await rm(upload.partial);
-    uploads.delete(id ?? "");
-    if (body.pointer !== null)
-      await writeFile(
-        join(upload.folder, `${name.slice(0, -".mp4".length)}.pointer.json`),
-        `${JSON.stringify(body.pointer)}\n`,
-        { flag: "wx" },
-      );
     const path = join(upload.folder, name);
     return {
       path,
@@ -173,24 +176,6 @@ export const handleDiscard = implementMachine(
     await rm(upload.partial, { force: true });
   },
 );
-
-/** Link `file` into `folder` under the first free `<base>[ (n)].mp4`: a link
- *  never overwrites, so two recordings in one minute both survive. */
-async function linkFree(
-  file: string,
-  folder: string,
-  base: string,
-): Promise<string> {
-  for (let n = 1; ; n++) {
-    const name = `${numberedName(base, n)}.mp4`;
-    try {
-      await link(file, join(folder, name));
-      return name;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-    }
-  }
-}
 
 /**
  * The installed ffmpeg. A request path never installs: it asks the

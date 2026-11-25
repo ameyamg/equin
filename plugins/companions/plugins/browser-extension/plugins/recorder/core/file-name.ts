@@ -21,3 +21,21 @@ export function recordingBaseName(title: string, at: Date): string {
 export function numberedName(base: string, n: number): string {
   return n === 1 ? base : `${base} (${n})`;
 }
+
+/**
+ * The files one recording is saved as, named as one unit from one stem: the
+ * video and its pointer track beside it. A stem is free only while both are.
+ */
+export function recordingFileNames(stem: string): {
+  video: string;
+  pointer: string;
+} {
+  return { video: `${stem}.mp4`, pointer: `${stem}.pointer.json` };
+}
+
+/** The pointer track's path beside a saved video's (`<stem>.mp4`). */
+export function pointerTrackPathOf(videoPath: string): string {
+  if (!videoPath.endsWith(".mp4"))
+    throw new Error(`not a recording's video: ${videoPath}`);
+  return recordingFileNames(videoPath.slice(0, -".mp4".length)).pointer;
+}
