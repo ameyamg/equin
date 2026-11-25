@@ -65,6 +65,9 @@ only into that song, by the first reset of ready content in the mount — not
 with play-on-load armed, and not past a seek intent naming another beat than
 the one the record was opened at (a reload re-arming the same deep link keeps
 where the user was; a new link wins). The tempo is per place, not per song.
+`opening` says which it was (`pending` until the first reset of ready content,
+then `fresh` or `resumed`): a host that plays what it opens (the mini player)
+plays only a `fresh` one, so a reload never starts a paused song again.
 Writes are never per frame: a seek, a pause and a loop edit write the exact
 place; while playing, once per bar entered.
 
@@ -171,6 +174,7 @@ A wrapper declares the contexts it provides as relay tokens (`relays`, from
     - `LoopOptions`
     - `LoopRange`
     - `SessionContent`
+    - `SessionOpening`
     - `SessionValue`
     - `TimelineState`
     - `TimelineStore`

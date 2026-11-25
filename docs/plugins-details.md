@@ -12527,6 +12527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LoopOptions`
               - `LoopRange`
               - `SessionContent`
+              - `SessionOpening`
               - `SessionValue`
               - `TimelineState`
               - `TimelineStore`

@@ -273,6 +273,9 @@ export type SessionContent =
   | { kind: "empty" | "pending" | "failed"; contentKey: object }
   | { kind: "ready"; contentKey: object; score: Score };
 
+/** See {@link SessionValue.opening}. */
+export type SessionOpening = "pending" | "fresh" | "resumed";
+
 export interface SessionValue {
   /**
    * The score being played (empty unless the content is `ready`), with the
@@ -295,6 +298,15 @@ export interface SessionValue {
    */
   timelineBeats: readonly [start: number, end: number];
   isPlaying: boolean;
+  /**
+   * How this mount came to show its song, decided by the first reset of ready
+   * content: `fresh` — an open (nothing kept for this song at this place);
+   * `resumed` — a reload or a remount gave back the kept playhead, paused;
+   * `pending` until then. A host that plays what it opens plays only a `fresh`
+   * one: "play when opened" is never "play on every reload" (a process never
+   * resumes on its own; see `kept-transport.ts`).
+   */
+  opening: SessionOpening;
   /** Playback tempo multiplier (1 = authored tempo). */
   tempoScale: number;
   /**
@@ -532,6 +544,7 @@ export function PlaybackSession({
     null,
   );
   const keptPlaceRef = useLatestRef(keptPlace);
+  const [opening, setOpening] = useState<SessionOpening>("pending");
   const keepAsRef = useLatestRef(keepAs);
   // The playback timeline every follower reads (the cursor below, the audio
   // schedulers). The session is its only writer.
@@ -1003,6 +1016,7 @@ export function PlaybackSession({
       contentReady && restorePendingRef.current && !playOnLoadRef.current
         ? keptPlaceRef.current
         : null;
+    const firstReady = contentReady && restorePendingRef.current;
     if (contentReady) restorePendingRef.current = false;
     const restore =
       kept !== null &&
@@ -1012,6 +1026,7 @@ export function PlaybackSession({
           Math.abs(kept.openedAt - requestedBeat) < SAME_BEAT_EPS))
         ? kept
         : null;
+    if (firstReady) setOpening(restore !== null ? "resumed" : "fresh");
     const start =
       restore !== null ? fit(restore.beat) : (requestedBeat ?? origin);
     openedAtRef.current = restore !== null ? restore.openedAt : requestedBeat;
@@ -1544,6 +1559,7 @@ export function PlaybackSession({
       score,
       timelineBeats,
       isPlaying,
+      opening,
       tempoScale,
       timeline: timelineStore,
       driven: driver !== null,
@@ -1576,6 +1592,7 @@ export function PlaybackSession({
       score,
       timelineBeats,
       isPlaying,
+      opening,
       tempoScale,
       timelineStore,
       driver,

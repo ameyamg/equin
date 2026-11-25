@@ -140,7 +140,10 @@ function mountIn(tab: string) {
 describe("playback session: the kept playhead", () => {
   it("a remount resumes the same song paused at its playhead, loop and tempo", () => {
     const first = mountIn("tab-resume");
+    expect(first.session().opening).toBe("pending");
     first.load("library:a");
+    // Nothing kept for this song here: an open, which a host may play.
+    expect(first.session().opening).toBe("fresh");
     act(() => first.session().seekTo(9));
     act(() => first.session().setLoop({ start: 8, end: 16, enabled: true }));
     act(() => first.session().setTempoScale(0.5));
@@ -155,6 +158,8 @@ describe("playback session: the kept playhead", () => {
     expect(again.beat()).toBe(9);
     expect(again.session().loop).toEqual({ start: 8, end: 16, enabled: true });
     expect(again.session().isPlaying).toBe(false);
+    // A resume: a host that plays what it opens must not start it again.
+    expect(again.session().opening).toBe("resumed");
 
     // Given back once: the next load is a new song, parked at its lead-in.
     again.load("library:a");
@@ -171,6 +176,7 @@ describe("playback session: the kept playhead", () => {
     const otherSong = mountIn("tab-other");
     otherSong.load("library:b");
     expect(otherSong.beat()).toBe(-4);
+    expect(otherSong.session().opening).toBe("fresh");
     otherSong.leave();
 
     const otherPlace = mountIn("tab-elsewhere");

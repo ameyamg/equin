@@ -92,7 +92,7 @@ function MiniPlayerBody({
   header: ReactNode;
 }) {
   const loadDocument = useLoadDocument();
-  const { play } = useSession();
+  const { play, opening } = useSession();
   const { drawn } = usePlayerView();
   // One load per player: the scope is keyed per song, and a re-render (a
   // caller building `identity` inline, a hydration re-read) must not reload it.
@@ -106,15 +106,17 @@ function MiniPlayerBody({
   // Opening a song plays it — once there is something to see play, never
   // under the loading state (the transport would read as playing over an
   // empty body, and the song's lead-in would run out behind it). Once: a
-  // display re-drawing does not restart it (the scope is keyed per song). A
+  // display re-drawing does not restart it (the scope is keyed per song).
+  // Only a FRESH open: a reload or a remount (`resumed`) gives the kept
+  // playhead back paused, and must not start the song again by itself. A
   // layout effect, so the reveal and the playing transport paint in the same
   // frame — a passive one lands after whatever work the reveal starts.
   const playedRef = useRef(false);
   useLayoutEffect(() => {
-    if (!drawn || playedRef.current) return;
+    if (!drawn || opening === "pending" || playedRef.current) return;
     playedRef.current = true;
-    play();
-  }, [drawn, play]);
+    if (opening === "fresh") play();
+  }, [drawn, opening, play]);
 
   const { content } = useSongDocument();
   if (content.kind === "failed") {

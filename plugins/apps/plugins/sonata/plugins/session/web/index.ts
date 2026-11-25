@@ -9,6 +9,7 @@ export {
   sessionRelays,
   type SessionContent,
   type SessionValue,
+  type SessionOpening,
   type TransportClock,
   type TransportDriver,
   type DriverState,
