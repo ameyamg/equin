@@ -156,7 +156,7 @@ const STOPPED_MESSAGES: Record<StopReason, string> = {
 
 /**
  * How many interrupted boots (`HostRefusal` `interrupted`: the page was
- * suspended mid-upgrade) one start follows before it fails: a page is
+ * suspended mid-upgrade, or the browser closed the storage's connection) one start follows before it fails: a page is
  * suspended again only by a navigation, so a few is already improbable.
  */
 const MAX_BOOT_INTERRUPTIONS = 3;
@@ -296,12 +296,13 @@ function startScopeServer(
           case "interrupted":
             // The browser suspended this page (back/forward cache, a
             // background tab) while the host was booting and cut its
-            // IndexedDB work short (an upgrade, a transaction); the page runs
-            // again now. That worker retires (its boot threw), so
+            // IndexedDB work short (an upgrade, a transaction), or closed
+            // the storage's connection under it; the page runs again now. That worker retires (its boot threw), so
             // start a fresh one past its generation — as after a retirement
-            // — rather than asking a closing worker again. Bounded: WebKit
-            // raises it only for a suspended page, so one that keeps
-            // arriving is something else, and fails loudly.
+            // — rather than asking a closing worker again. Bounded: the browser
+            // does it to a suspended page or one whose storage process it
+            // reclaimed, so one that keeps arriving is something else, and
+            // fails loudly.
             interruptions += 1;
             if (interruptions > MAX_BOOT_INTERRUPTIONS) {
               throw new Error(
@@ -309,7 +310,7 @@ function startScopeServer(
               );
             }
             console.info(
-              `[demo-scope] ${scenario.id}: the host's boot was interrupted while this page was suspended — starting it again`,
+              `[demo-scope] ${scenario.id}: the browser cut the host's boot short (a suspended page, or its storage connection closed) — starting it again`,
             );
             generations.advance(connected.generation);
             continue;

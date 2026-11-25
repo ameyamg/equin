@@ -15,7 +15,7 @@ import {
   type ServedHost,
 } from "@plugins/framework/plugins/browser-server/core";
 import { isSuspensionAbort } from "@plugins/primitives/plugins/dom/plugins/indexed-db-failure/core";
-import { BootInterruptedError } from "./errors";
+import { BootInterruptedError, isClosedByBrowser } from "./errors";
 import { declareHostStorage } from "./host-storage";
 import {
   openHostStorage,
@@ -129,8 +129,18 @@ export function serveBrowserHost(opts: {
       };
     } catch (err) {
       // A host that cannot boot holds the storage for nothing: release it,
-      // so another tab (or a fixed build) can open it.
-      await storage.close();
+      // so another tab (or a fixed build) can open it. A close that fails
+      // too (a write the same cause cut short) must not hide why the boot
+      // ended: it is thrown with the boot's error as its cause, which the
+      // classifiers below read through.
+      try {
+        await storage.close();
+      } catch (closeErr) {
+        throw new Error(
+          `[host-storage] the boot failed, and closing its storage then failed too: ${closeErr instanceof Error ? closeErr.message : String(closeErr)}`,
+          { cause: err },
+        );
+      }
       throw err;
     }
   };
@@ -151,10 +161,13 @@ export function serveBrowserHost(opts: {
       try {
         return await openAndBoot();
       } catch (err) {
-        // The browser suspended the page mid-boot and cut its IndexedDB work
-        // short (an upgrade, a transaction): not a fault — the page boots a
-        // fresh worker.
-        if (isSuspensionAbort(err)) throw new BootInterruptedError(err);
+        // The browser cut the boot's IndexedDB work short — it suspended the
+        // page mid-boot (an upgrade, a transaction aborted), or closed the
+        // storage's connection under it: not a fault — the page boots a
+        // fresh worker, which opens a connection of its own.
+        if (isSuspensionAbort(err) || isClosedByBrowser(err)) {
+          throw new BootInterruptedError(err);
+        }
         throw err;
       }
     },

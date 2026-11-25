@@ -109,7 +109,10 @@ export type HostRefusal =
    * aborts the IndexedDB work (an upgrade creating a database, a transaction
    * in progress) of a page — or the worker serving it — suspended in the
    * back/forward cache or as a background tab, when it blocks another
-   * context on the same database (`primitives/dom/indexed-db-failure`'s `isSuspensionAbort`).
+   * context on the same database (`primitives/dom/indexed-db-failure`'s `isSuspensionAbort`);
+   * or the browser closed the storage's IndexedDB connection under the boot
+   * (WebKit's storage process gone under a backgrounded page — host-storage's
+   * `ConnectionClosedByBrowserError`).
    * Nothing failed: the page starts the host again, on a fresh worker, once
    * it runs again.
    */

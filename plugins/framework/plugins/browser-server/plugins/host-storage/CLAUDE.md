@@ -146,6 +146,17 @@ serveBrowserHost({
   past its generation (`demo/scope`). What it left is what a fresh open
   handles: no database, a lifecycle record still `seeding` (wiped), or a
   booted storage short of the cut write (as after a tab closed mid-write).
+  The browser may also CLOSE the stores' connection under the worker
+  (the spec's "forcibly close"): WebKit does when the storage process serving
+  it goes away (iOS reclaims it from a backgrounded page) or a versionchange
+  reaches a suspended page; any engine may when the site's data is cleared.
+  The connection is close-pending at once, so the next `transaction()` throws
+  `InvalidStateError` "The database connection is closing"
+  (report-1795442130-96l08u, at open and in a store's first write during
+  boot). `idb.ts`'s `idbConnect` is the only way `open.ts` holds a
+  connection: one that throws so without having been closed here throws
+  `ConnectionClosedByBrowserError`, which `serveBrowserHost` declines as
+  `interrupted` too — the fresh worker opens a connection of its own.
   Not reproducible in Playwright's WebKit, which neither keeps pages in the
   back/forward cache nor suspends processes.
   `hostDataStored` (the page's gate) never creates the database: an open

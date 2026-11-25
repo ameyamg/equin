@@ -55,7 +55,7 @@ import {
   type Lifecycle,
 } from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
 import { reportDataProgress } from "@plugins/framework/plugins/browser-server/core";
-import { idbDone, idbOpen, idbRequest } from "./idb";
+import { idbConnect, idbDone, idbRequest } from "./idb";
 import { StorageNewerThanCodeError } from "./errors";
 import type {
   DatabaseStart,
@@ -189,7 +189,7 @@ async function openPersistent(
 ): Promise<OpenedHostStorage> {
   const prefix = storagePrefix(name);
   const storesName = storesDbName(name);
-  let db = await idbOpen(storesName, [ENTRIES_STORE, META_STORE]);
+  let db = await idbConnect(storesName, [ENTRIES_STORE, META_STORE]);
 
   const readLifecycle = async (): Promise<Lifecycle | undefined> =>
     (await idbRequest(
@@ -199,7 +199,7 @@ async function openPersistent(
   const wipeStored = async (): Promise<void> => {
     db.close();
     await deleteStorageDatabases(name);
-    db = await idbOpen(storesName, [ENTRIES_STORE, META_STORE]);
+    db = await idbConnect(storesName, [ENTRIES_STORE, META_STORE]);
   };
   const loadSnapshot = (ref: HostSnapshotRef): Promise<HostSnapshot> =>
     loadCheckedSnapshot(name, migrations, ref);
