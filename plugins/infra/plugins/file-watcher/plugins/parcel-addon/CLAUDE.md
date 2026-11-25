@@ -105,6 +105,14 @@ plugin ships the fixed build.
     rounds 2–5 of five rename-overs reported nothing). Now each rewrite
     reports the path (a `delete` and a `create` may land in successive
     batches);
+  - **every removal re-diffs its folder** at the end of the batch (once per
+    folder, skipped when the batch diffed it already or the folder went
+    too). The two passes only cover both events in ONE batch; kevent
+    sometimes splits them, the folder's `NOTE_WRITE` first: that diff found
+    the old file still in the tree, the delete then dropped the path, and the
+    new file went unwatched and unreported until the folder next changed
+    (seconds to minutes). Busy backend thread: ~1 rewrite in 10k before, 0
+    after;
   - a watcher has a **depth** (`opts.depth`, `Watcher::mMaxDepth`: 1 is the
     dir's own entries, absent no limit), part of its identity like its
     ignore. `isIgnored` drops what is deeper; `readTree` never descends into

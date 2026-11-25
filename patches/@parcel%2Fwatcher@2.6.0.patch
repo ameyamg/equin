@@ -413,7 +413,7 @@ index 057b61b83385793a2f13c7adc8c2e983bef67538..9f3f89517fcfcba15e1c36ad127b61ab
    return runner->queue();
  }
 diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
-index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843691a7f1a 100644
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab56b80b9e9 100644
 --- a/src/kqueue/KqueueBackend.cc
 +++ b/src/kqueue/KqueueBackend.cc
 @@ -1,4 +1,5 @@
@@ -422,7 +422,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
  #include <poll.h>
  #include <unistd.h>
  #include <libgen.h>
-@@ -58,13 +59,39 @@ void KqueueBackend::start() {
+@@ -58,13 +59,51 @@ void KqueueBackend::start() {
  
      // Track all of the watchers that are touched so we can notify them at the end of the events.
      std::unordered_set<WatcherRef> watchers;
@@ -431,6 +431,18 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
 +    // once the batch is handled: closing one mid-batch would let a watchDir below
 +    // reuse its number while a later event of this batch still names the old file.
 +    std::unordered_set<int> closing;
++    // equin: the folders this batch diffed, and the folders of entries it saw
++    // removed (descriptor → folder path). A removal is not the end of a path:
++    // an atomic rewrite (write a sibling, rename it over the file) reports the
++    // folder's NOTE_WRITE and the old file's NOTE_DELETE, and kevent may hand
++    // them over in SUCCESSIVE batches, the folder's first. Its diff then found
++    // the path still in the tree (the old file), and the delete that followed
++    // dropped it — leaving the new file unwatched and unreported until another
++    // entry of the folder changed (seconds to minutes: main's 45 s
++    // `git-watcher.refs` sample, 2026-11-25). So every removal re-diffs its
++    // folder once the batch is handled, unless the batch diffed it already.
++    std::unordered_set<int> diffed;
++    std::unordered_map<int, std::string> rediff;
 +    bool stopping = false;
 +
 +    // equin: the batch is handled under the backend's mutex, which `subscribe`
@@ -464,7 +476,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
        }
  
        auto it = mFdToEntry.find(fd);
-@@ -75,21 +102,49 @@ void KqueueBackend::start() {
+@@ -75,21 +114,62 @@ void KqueueBackend::start() {
  
        DirEntry *entry = it->second;
  
@@ -496,6 +508,18 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
 +        for (auto it = subs.begin(); it != subs.end(); it++) {
 +          trees.push_back((*it)->tree);
 +        }
++        // The folder holding the path, in each tree that held it: re-diffed
++        // below (see `rediff`). A watch's root has no folder in its tree.
++        size_t slash = path.find_last_of(DIR_SEP);
++        if (slash != std::string::npos) {
++          std::string folder = slash == 0 ? path.substr(0, 1) : path.substr(0, slash);
++          for (auto it = trees.begin(); it != trees.end(); it++) {
++            DirEntry *parent = (*it)->find(folder);
++            if (parent && parent->isDir && parent->state) {
++              rediff.emplace((int)(size_t)parent->state, folder);
++            }
++          }
++        }
 +        for (auto it = trees.begin(); it != trees.end(); it++) {
 +          (*it)->remove(path);
 +          forgetSubscriptions(path, *it); // frees the subscriptions `subs` points at
@@ -506,6 +530,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
          // If a write occurred on a directory, we have to diff the contents of that
          // directory to determine what file was added/deleted.
 -        compareDir(fd, entry->path, watchers);
++        diffed.insert(fd);
 +        compareDir(fd, entry->path, watchers, closing);
        } else {
 -        std::vector<KqueueSubscription *> subs = findSubscriptions(entry->path);
@@ -523,10 +548,25 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
              struct stat st;
              lstat(sub->path.c_str(), &st);
              if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
-@@ -100,6 +155,17 @@ void KqueueBackend::start() {
+@@ -100,6 +180,32 @@ void KqueueBackend::start() {
          }
        }
      }
++    }
++
++    // A removal's folder, not diffed by this batch: a file renamed over the
++    // removed path is found now, not at the folder's next change. A folder
++    // that went in this batch (its descriptor closing) has nothing to diff.
++    if (!stopping) {
++      for (auto it = rediff.begin(); it != rediff.end(); it++) {
++        int fd = it->first;
++        if (diffed.count(fd) || closing.count(fd) || mFdToEntry.find(fd) == mFdToEntry.end()) {
++          continue;
++        }
++        diffed.insert(fd);
++        std::string folder = it->second;
++        compareDir(fd, folder, watchers, closing);
++      }
 +    }
 +
 +    // Closing a descriptor also removes its kqueue registration.
@@ -541,7 +581,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
  
      for (auto it = watchers.begin(); it != watchers.end(); it++) {
        (*it)->notify();
-@@ -112,31 +178,119 @@ done:
+@@ -112,31 +218,119 @@ done:
    mEndedSignal.notify();
  }
  
@@ -629,7 +669,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
 +      // Gone since the listing: not in the tree, so a re-creation is a create.
 +      gone.push_back(it->second.path);
 +      continue;
-+    }
+     }
 +    // Nothing of a failed subscription stays behind. Upstream left the
 +    // entries it had watched so far in the backend — their descriptors held,
 +    // their tree alive and diffed for the life of the process.
@@ -651,7 +691,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
 +        close(fd);
 +      }
 +      forgetSubscriptions(entry->first, tree);
-     }
++    }
 +    tree->remove(*it);
    }
  }
@@ -670,7 +710,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
    }
  
    KqueueSubscription sub = {
-@@ -146,9 +300,29 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
+@@ -146,9 +340,29 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
    };
  
    if (!entry->state) {
@@ -701,7 +741,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
      }
  
      struct kevent event;
-@@ -163,8 +337,10 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
+@@ -163,8 +377,10 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
      );
  
      if (kevent(mKqueue, &event, 1, NULL, 0, 0)) {
@@ -713,7 +753,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
      }
  
      entry->state = (void *)(size_t)fd;
-@@ -173,38 +349,114 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
+@@ -173,38 +389,114 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
  
    sub.fd = (int)(size_t)entry->state;
    mSubscriptions.emplace(path, sub);
@@ -838,7 +878,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
  
    std::unordered_set<std::shared_ptr<DirTree>> trees;
    for (auto it = subs.begin(); it != subs.end(); it++) {
-@@ -213,41 +465,114 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -213,41 +505,114 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
  
    std::unordered_set<std::string> entries;
    struct dirent *entry;
@@ -944,8 +984,8 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
 +      for (auto i = created.begin(); i != created.end(); i++) {
 +        (*i)->watcher->mEvents.create(fullpath);
 +        watchers.emplace((*i)->watcher);
-       }
-     }
++      }
++    }
 +
 +    if (!vanished(statErr)) {
 +      entries.emplace(fullpath);
@@ -960,8 +1000,8 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
 +    if (!vanished(err)) {
 +      for (auto it = subs.begin(); it != subs.end(); it++) {
 +        diffFailed(*it, "readdir", err, watchers);
-+      }
-+    }
+       }
+     }
 +    #if __APPLE__
 +      closedir(dir);
 +    #else
@@ -971,7 +1011,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
    }
  
    for (auto it = trees.begin(); it != trees.end(); it++) {
-@@ -270,8 +595,17 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -270,8 +635,17 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
            }
          }
  
@@ -991,7 +1031,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843
          entry = tree->entries.erase(entry);
        } else {
          entry++;
-@@ -284,17 +618,61 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -284,17 +658,61 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
    #else
      fdclosedir(dir);
    #endif

@@ -712,6 +712,62 @@ describe.skipIf(process.platform !== "darwin")(
       expect(watchErrors).toEqual([]);
     });
 
+    test("every atomic rewrite of a followed file is heard, whichever batches its folder's write and its delete land in", async () => {
+      // An atomic rewrite (write a sibling, rename it over the file) fires the
+      // folder's NOTE_WRITE and the old file's NOTE_DELETE; kevent sometimes
+      // hands them over in successive batches, the folder's first. The patch
+      // before diffed the folder (the old file still in the tree: nothing new),
+      // then the delete dropped the path, and the new file went unwatched and
+      // unreported until another entry of the folder changed — main's 45 s
+      // `git-watcher.refs` notice (2026-11-25). The split cannot be forced
+      // from user space, and it needs a busy backend thread, so this rewrites
+      // 64 folders at once: the patch before missed 2–4 of these 32k rewrites
+      // in each of 3 runs (8 folders at once: 0 in 16k); after, 0 in 192k.
+      const FOLDERS = 64;
+      const REWRITES = 500;
+      let missed = 0;
+      const subs: parcel.AsyncSubscription[] = [];
+      try {
+        await Promise.all(
+          Array.from({ length: FOLDERS }, async (_, f) => {
+            const dir = tempDir(`rewrite-${f}`);
+            const file = join(dir, "main");
+            writeFileSync(file, "0");
+            let heard = false;
+            const { sub, events } = await subscribe(dir, {
+              ignore: [onlyNames(["main"])],
+            });
+            subs.push(sub);
+            for (let i = 0; i < REWRITES; i++) {
+              heard = false;
+              events.length = 0;
+              writeFileSync(`${file}.lock`, String(i));
+              renameSync(`${file}.lock`, file);
+              const start = Date.now();
+              // A miss waits for the folder's next change, so a generous bound only
+              // keeps a loaded host from failing a fixed build.
+              while (!heard && Date.now() - start < 2_000) {
+                heard = events.some(
+                  (e) => e.path === file && e.type !== "delete",
+                );
+                if (!heard) await new Promise((r) => setTimeout(r, 1));
+              }
+              if (heard) continue;
+              missed += 1;
+              // Make the folder change so the next round starts watched.
+              writeFileSync(join(dir, "nudge"), "");
+              unlinkSync(join(dir, "nudge"));
+              await new Promise((r) => setTimeout(r, 20));
+            }
+          }),
+        );
+      } finally {
+        for (const sub of subs) await sub.unsubscribe();
+      }
+      expect(missed).toBe(0);
+      expect(watchErrors).toEqual([]);
+    }, 120_000);
+
     test("re-opening a follow while its directory keeps changing never fails", async () => {
       const dir = tempDir("churn");
       // The runs dir's size on main: every diff of it is a long readdir.
