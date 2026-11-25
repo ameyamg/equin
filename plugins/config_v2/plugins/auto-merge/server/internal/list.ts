@@ -41,6 +41,9 @@ const memo = new Map<
   { stamp: string; summary: AutoMergeSummary | null }
 >();
 
+const memoKey = (path: string, scopeId: string | undefined): string =>
+  `${path}\0${scopeId ?? ""}`;
+
 async function documentSummary(
   path: string,
   scopeId: string | undefined,
@@ -51,7 +54,7 @@ async function documentSummary(
     ...(scopeId ? { scopeId } : {}),
     file,
   });
-  const key = `${path}\0${scopeId ?? ""}`;
+  const key = memoKey(path, scopeId);
   const mergeStamp = await store.stamp(ref("merge"));
   if (mergeStamp === "-") {
     memo.delete(key);
@@ -71,17 +74,27 @@ async function documentSummary(
 }
 
 /**
- * Every registered document with a merge record — base and each app scope the
- * store holds. A document without one costs one stamp.
+ * Every registered document with a merge record — base and each app scope.
+ * The store lists the documents holding one (one listing of the layer), so a
+ * load costs the few records' stamps, never a probe per registered descriptor
+ * and scope.
  */
 export async function listAutoMerges(): Promise<AutoMergeSummary[]> {
-  const store = ConfigStore.get();
+  // getAllDescriptors, not a per-path lookup: it refuses a partial start,
+  // where a record of a config this process did not register would vanish.
+  const registered = new Set(getAllDescriptors().map(([path]) => path));
   const out: AutoMergeSummary[] = [];
-  for (const [path] of getAllDescriptors()) {
-    for (const scopeId of [undefined, ...(await store.scopes(path))]) {
-      const summary = await documentSummary(path, scopeId);
-      if (summary !== null) out.push(summary);
-    }
+  const listed = new Set<string>();
+  for (const { storePath, scopeId } of await ConfigStore.get().documentsWith(
+    "merge",
+  )) {
+    // A record left under a config no longer registered is the orphan
+    // audit's (noise), not a merge to show.
+    if (!registered.has(storePath)) continue;
+    listed.add(memoKey(storePath, scopeId));
+    const summary = await documentSummary(storePath, scopeId);
+    if (summary !== null) out.push(summary);
   }
+  for (const key of memo.keys()) if (!listed.has(key)) memo.delete(key);
   return out.sort((a, b) => b.mergedAt.localeCompare(a.mergedAt));
 }

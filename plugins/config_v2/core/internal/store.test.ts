@@ -33,6 +33,21 @@ describe("createMemoryConfigStore", () => {
     expect(await store.read(ref)).toBeNull();
   });
 
+  test("documentsWith lists every document holding a file of that kind", async () => {
+    const store = createMemoryConfigStore();
+    await store.write({ ...base, file: "origin" }, {}, "h");
+    await store.write({ ...base, file: "merge" }, {}, "h");
+    await store.write({ ...scoped, file: "merge" }, {}, "h");
+    await store.write(
+      { storePath: "c/config.jsonc", file: "override" },
+      {},
+      "h",
+    );
+    expect(await store.documentsWith("merge")).toEqual([base, scoped]);
+    await store.remove({ ...base, file: "merge" });
+    expect(await store.documentsWith("merge")).toEqual([scoped]);
+  });
+
   test("scopes lists the scopes holding a document under the hierarchy", async () => {
     const store = createMemoryConfigStore();
     await store.write({ ...scoped, file: "origin" }, {}, "h");

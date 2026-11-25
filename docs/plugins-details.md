@@ -17574,7 +17574,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config-v2.values` (push, notified, whole: one config document's fields — its descriptor's declared schema)
   - Machine:
     - Uses: `network/live.serveValue`
-    - Exports (values): `configGenerationDir`
+    - Exports (values):
+      - `configGenerationDir`
+      - `listConfigFiles`
     - Register:
       - `defineFileWatcher('config_v2.config-files')`
       - `defineFileWatcher('config_v2.generation-arrival')`
@@ -27393,6 +27395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses:
           - `config_v2.configGenerationDir`
+          - `config_v2.listConfigFiles`
           - `network/live.serveValue`
         - Register: `defineWarmup('config-orphans.stranded')`
       - Cross-plugin:

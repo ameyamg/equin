@@ -91,6 +91,13 @@ export interface ConfigStoreImpl {
    * through the document's own files).
    */
   scopes(storePath: string): Promise<string[]>;
+  /**
+   * Every document (any storePath, base or scope) holding a `file` of this
+   * kind — registered or not; callers filter. One listing of the whole layer,
+   * so a reader after the few documents that hold, say, a merge record pays
+   * for what the layer holds, never a probe per registered descriptor.
+   */
+  documentsWith(file: ConfigDocumentFile): Promise<ConfigDocRef[]>;
   /** Drop a scope's container once it holds nothing more (a no-op while it still does). */
   dropScope(storePath: string, scopeId: string): Promise<void>;
   /**

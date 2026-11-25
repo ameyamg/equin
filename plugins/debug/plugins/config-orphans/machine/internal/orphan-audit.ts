@@ -1,4 +1,4 @@
-import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { configFileOwner, APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import type {
@@ -8,7 +8,10 @@ import type {
   OrphanFileRole,
   OrphanReport,
 } from "@plugins/config_v2/core";
-import { configGenerationDir } from "@plugins/config_v2/machine";
+import {
+  configGenerationDir,
+  listConfigFiles,
+} from "@plugins/config_v2/machine";
 import { getAllDescriptors } from "@plugins/config_v2/server";
 
 // A file is scoped when it sits under an `@app/<id>/` segment:
@@ -27,40 +30,6 @@ function fileRole(relPath: string): OrphanFileRole {
   if (relPath.endsWith(".ancestor.jsonc")) return "ancestor";
   if (relPath.endsWith(".merge.jsonc")) return "merge-record";
   return scoped ? "scoped-override" : "override";
-}
-
-// Recursively collect every `.jsonc` file under `dir`, returning paths relative to
-// `baseDir` (forward-slash separated). Kept local so the server never imports
-// codegen's build-time `walkJsoncFiles` (no server → build-tooling edge).
-// Async: its reader is a live-value loader re-run on every config write, which
-// must never block the event loop for a walk of the whole config dir.
-async function walkJsoncFiles(
-  dir: string,
-  baseDir: string,
-  out: string[],
-): Promise<void> {
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) await walkJsoncFiles(full, baseDir, out);
-    else if (entry.isFile() && entry.name.endsWith(".jsonc"))
-      out.push(
-        full
-          .slice(baseDir.length + 1)
-          .split("\\")
-          .join("/"),
-      );
-  }
-}
-
-// A user-layer config dir not created yet holds nothing, so nothing orphaned.
-async function dirExists(dir: string): Promise<boolean> {
-  try {
-    await stat(dir);
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw err;
-  }
 }
 
 /**
@@ -84,8 +53,6 @@ export async function auditUserConfigOrphans(
   configDir: string = configGenerationDir(),
   descriptors: [string, ConfigDescriptor][] = getAllDescriptors(),
 ): Promise<OrphanReport> {
-  if (!(await dirExists(configDir))) return { orphans: [] };
-
   // Live descriptors grouped by hierarchy → the names that keep files alive, plus
   // a name → hierarchies index for the relocated heuristic.
   const liveByHier = new Map<string, Set<string>>();
@@ -101,8 +68,9 @@ export async function auditUserConfigOrphans(
     hiers.add(owner.hier);
   }
 
-  const onDisk: string[] = [];
-  await walkJsoncFiles(configDir, configDir, onDisk);
+  // One listing of the whole dir (a missing dir — none created yet — holds
+  // nothing, so nothing orphaned).
+  const onDisk = await listConfigFiles(configDir);
 
   // Group orphaned files by their base descriptor key.
   const groups = new Map<

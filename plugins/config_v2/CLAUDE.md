@@ -615,7 +615,9 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `config-v2.values` (push, notified, whole: one config document's fields — its descriptor's declared schema)
 - Machine:
   - Uses: `network/live.serveValue`
-  - Exports (values): `configGenerationDir`
+  - Exports (values):
+    - `configGenerationDir`
+    - `listConfigFiles`
   - Register:
     - `defineFileWatcher('config_v2.config-files')`
     - `defineFileWatcher('config_v2.generation-arrival')`

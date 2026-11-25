@@ -41,6 +41,7 @@
 - Machine:
   - Uses:
     - `config_v2.configGenerationDir`
+    - `config_v2.listConfigFiles`
     - `network/live.serveValue`
   - Register: `defineWarmup('config-orphans.stranded')`
 - Cross-plugin:

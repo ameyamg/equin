@@ -4,6 +4,7 @@ import {
   APP_SCOPE_DIR,
   appScopeId,
   configFileRelPath,
+  parseConfigFileRelPath,
   scopeSegment,
   storePathParts,
 } from "../../core";
@@ -24,6 +25,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { configGenerationDir } from "./config-dir";
+import { listConfigFiles } from "./list-files";
 import { configFilesWatcherArmed, watchFileChange } from "./config-watcher";
 import { configLedgerDocument, configLedgerKey } from "./config-ledger-key";
 import { readConfigFile, writeConfigFile, writeRawAtomic } from "./jsonc-proxy";
@@ -162,6 +164,19 @@ export const fileConfigStore: ConfigStoreImpl = {
     return entries
       .filter((e) => e.isDirectory())
       .map((e) => appScopeId(e.name));
+  },
+  async documentsWith(file) {
+    const out: ConfigDocRef[] = [];
+    for (const rel of await listConfigFiles(configGenerationDir())) {
+      const ref = parseConfigFileRelPath(rel);
+      if (ref.file !== file) continue;
+      out.push(
+        ref.scopeId === undefined
+          ? { storePath: ref.storePath }
+          : { storePath: ref.storePath, scopeId: ref.scopeId },
+      );
+    }
+    return out;
   },
   async dropScope(storePath, scopeId) {
     const dir = joinAppPath(

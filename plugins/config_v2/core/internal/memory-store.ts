@@ -79,6 +79,7 @@ export function createMemoryConfigStore(opts?: {
   const docs = {
     get: (key: string) => docsMap().get(key),
     has: (key: string) => docsMap().has(key),
+    keys: () => docsMap().keys(),
     /** Store a new version of `key` (its version numbered after every stored one). */
     write(key: string, content: JsonValue, hash: string | null): void {
       const map = docsMap();
@@ -159,6 +160,21 @@ export function createMemoryConfigStore(opts?: {
     async scopes(storePath) {
       await seed(storePath);
       return docs.scopesOf(storePathParts(storePath).hier);
+    },
+    // Nothing to seed: a file other than a propagated origin is written by
+    // the registry, which seeds its storePath first.
+    async documentsWith(file) {
+      const out: ConfigDocRef[] = [];
+      for (const key of docs.keys()) {
+        const [storePath, scopeId, f] = key.split("\0");
+        if (f !== file) continue;
+        out.push(
+          scopeId
+            ? { storePath: storePath!, scopeId }
+            : { storePath: storePath! },
+        );
+      }
+      return out;
     },
     async dropScope(storePath) {
       await seed(storePath);

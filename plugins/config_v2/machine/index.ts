@@ -14,6 +14,7 @@ import {
 } from "./internal/this-generation";
 
 export { configGenerationDir } from "./internal/config-dir";
+export { listConfigFiles } from "./internal/list-files";
 
 export default {
   description:
