@@ -73,7 +73,7 @@ describe("EditableViewSwitcher — counts and dirty dots", () => {
       activeId: "all",
       countFor: (id) => (id === "all" ? 29 : undefined),
     });
-    expect(viewChip("All files").textContent).toBe("All files29");
+    expect(viewChip("All files").textContent).toBe("All files 29");
     expect(viewChip("Code").textContent).toBe("Code");
   });
 
