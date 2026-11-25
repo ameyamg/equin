@@ -631,7 +631,9 @@ No third "nowhere" value. A type with no registration (`unknown`) falls into
   `defaultPrevented` (an inner control wanting arrows prevents default, e.g. the
   place block's suggestion list).
   An origin guard here would trap the caret inside inner controls.
-- **Backspace/Delete/Enter/Space are origin-guarded**.
+- **Backspace/Delete/Enter/Space are origin-guarded**, and a MODIFIED Enter /
+  Space is never the box's: ⌘↵ is a command (a decisions panel's Submit,
+  inside a `<task-decisions>` block), not "a paragraph below".
 
 `useCaretEscape(editor, blockId)` is the ↑/↓ escape plus the Tab ladder, for
 `"renderer"` blocks whose caret target is not a text control (sub-page's `Row`);

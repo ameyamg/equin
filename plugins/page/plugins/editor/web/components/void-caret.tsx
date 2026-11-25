@@ -550,6 +550,10 @@ export function BlockCaretHost({
     }
     // The text block's Tab ladder, resolved for this block (`useVoidTab`).
     if (onTab(e)) return;
+    // A modified Enter / Space is a command, never the box's own meaning: ⌘↵
+    // is a shortcut's (a decisions panel's Submit, inside the box), and taking
+    // it would seed a paragraph and swallow it.
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     const activate = activateRef.current;
     if (e.key === "Enter") {
       e.preventDefault();

@@ -5,7 +5,7 @@
  *     open decision, and a blank page holding a `<task-decisions>` block per
  *     task (through the write boundary);
  *  2. the page draws both panels, each listing only its own task's decision;
- *  3. a pick in each panel drafts both; ⌘↵ with focus in panel A sends only
+ *  3. a pick in each panel drafts both; ⌘↵ after a click in panel A sends only
  *     A's answer — A's decision leaves Needs you, B's draft stays (the
  *     shortcut is the panel's region's, not the tab's);
  *  4. the sidebar row of B's conversation carries its decisions chip
@@ -178,10 +178,9 @@ try {
     r.ok("a pick in each panel drafts both", drafted.ok, "");
     await snap(page, OUT, "page");
 
-    // Focus in panel A (its picked option), then ⌘↵.
-    await panelOf(page, A)
-      .getByRole("button", { name: /^Pick A/ })
-      .focus();
+    // A click on panel A's text (unfocusable: focus lands on the block's
+    // caret host, AROUND the panel), then ⌘↵ — the press says which panel.
+    await panelOf(page, A).getByText("1 of 1 answered").click();
     await page.keyboard.press("ControlOrMeta+Enter");
     const sent = await waitFor(
       async () => {

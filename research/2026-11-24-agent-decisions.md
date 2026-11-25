@@ -369,11 +369,13 @@ Where the code differs from the above:
   `<task-decisions title="…" own="4 open, 3 closed" task="…"/>`; a gone task
   `missing="task deleted"`. In full, each decision is a `<decision …>` line,
   its body quoted (`> `, line endings normalised), options `<option …/>`, its thread `<exchange …/>`.
-- **Shortcuts are scoped to their region** (the Follow ups task
-  task-1795567631-5jfjvf, done here): a `ShortcutRegion` in
-  `primitives/shortcuts` scopes every surface shortcut registered inside it;
-  the panel and the inbox are regions, so two panels on a page never answer
-  each other's ⌘↵.
+- **Shortcuts are scoped to their region**: the Follow ups task
+  task-1795567631-5jfjvf landed shortcut regions on main
+  (`ShortcutDescriptor.region`, the SubmitBar's ⌘↵ focus-only, each
+  TaskDecisionsPanel its own root), so two panels on a page never send each
+  other's drafts. Phase 5 added one rule: when the focused element is a
+  container around the last press (a page block's caret host, or the body),
+  the pressed element is where focus is.
 
 ## 6. Live surfaces and the plugin split
 
