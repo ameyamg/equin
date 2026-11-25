@@ -19,6 +19,7 @@
     - `apps/website/promo-film/seed`
     - `conversations/agents`
     - `conversations/conversation-preprompt`
+    - `conversations/prompt-snippets`
     - `fields/avatar/config`
     - `fields/icon/config`
     - `page/callout`

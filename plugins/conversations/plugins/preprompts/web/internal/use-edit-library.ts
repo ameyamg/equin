@@ -8,9 +8,9 @@ import { prepromptsConfig } from "../../shared/config";
 /**
  * Edit the preprompt library in place — the shared snippet editor over the
  * `preprompts` config list, so a picker can add, rename, rewrite and delete
- * preprompts without a trip to Settings. Fields the editor does not show (the
- * icon, inherit) start at their defaults on a new preprompt and are kept on an
- * edit.
+ * preprompts without a trip to Settings — the icon included (the editor's
+ * picker). Fields the editor does not show (inherit) start at their defaults
+ * on a new preprompt and are kept on an edit.
  */
 export function useEditPrepromptLibrary(opts?: {
   /** Called with a new preprompt's id once it is stored (the picker selects it). */
@@ -25,11 +25,12 @@ export function useEditPrepromptLibrary(opts?: {
   return useSnippetListEdit({
     items: preprompts,
     onChange: (next) => setConfig("preprompts", next),
-    // Everything but the name and prompt seeded from its field's default, as
+    // Everything but the name, prompt and icon seeded from its field's default, as
     // Settings' Add seeds a row.
+    newIcon: itemFields.icon.defaultValue,
     create: (d) => ({
       ...d,
-      icon: itemFields.icon.defaultValue,
+      icon: d.icon ?? itemFields.icon.defaultValue,
       inherit: itemFields.inherit.defaultValue,
     }),
     onAdded: onAdded && ((item) => onAdded(item.id)),

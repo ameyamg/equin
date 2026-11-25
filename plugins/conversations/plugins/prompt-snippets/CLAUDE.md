@@ -7,6 +7,8 @@
 - Description: Named prompt snippets ({ title, prompt }) edited in place inside the popup that lists them: SnippetEditor (a name and a prompt, Add / Save / Delete / Cancel, holding its popup open) and useSnippetListEdit (which editor is open, and the list rewritten from what it hands back). Shared by the prompt templates panel and the preprompt picker.
 - Web:
   - Uses:
+    - `primitives/avatar.Avatar`
+    - `primitives/avatar.AvatarPicker`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
@@ -14,6 +16,7 @@
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/kept-state.defineKept`
     - `primitives/kept-state.useKept`
+    - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/overlay/popup-open.useReportPopupOpen`
   - Exports (types):
     - `OpenSnippetEditor`

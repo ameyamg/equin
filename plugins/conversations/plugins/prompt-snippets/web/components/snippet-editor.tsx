@@ -1,4 +1,10 @@
 import { useEffect, useRef } from "react";
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
+import { Avatar, AvatarPicker } from "@plugins/primitives/plugins/avatar/web";
+import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
+
 import { z } from "zod";
 import { keptField } from "@plugins/primitives/plugins/kept-state/core";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
@@ -15,10 +21,18 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
+const addIcon = symbol("add");
+
 /** A snippet's editable content: what the editor reads and hands back. */
 export interface SnippetDraft {
   title: string;
   prompt: string;
+  /**
+   * The snippet's icon, for a list whose snippets carry one (preprompts) —
+   * present ⇒ the editor shows its picker beside the name. Absent for a list
+   * without icons (prompt templates).
+   */
+  icon?: AvatarSpec;
 }
 
 /**
@@ -34,9 +48,19 @@ const snippetDraft = defineKept({
   owner: "prompt-snippets.editor",
   label: "Snippet drafts",
   tier: "work",
-  stamp: "m456q5fkmr",
+  stamp: "1ts1kf09nmy",
+  migrate: { m456q5fkmr: (old) => old },
   cap: "64 KB",
-  schema: z.object({ title: z.string(), prompt: z.string() }),
+  schema: z.object({
+    title: z.string(),
+    prompt: z.string(),
+    icon: z
+      .object({
+        icon: SavedSymbolNameSchema.nullable(),
+        color: z.string().nullable(),
+      })
+      .optional(),
+  }),
 });
 
 export interface SnippetEditorProps {
@@ -86,8 +110,15 @@ export function SnippetEditor({
   const draft = useKept(snippetDraft, initial, {
     subject: `${noun}|${subject}|${hash53(JSON.stringify(initial))}`,
   });
-  const [{ title, prompt }, , discard] = draft;
+  const [{ title, prompt, icon }, setDraft, discard] = draft;
   const rootRef = useRef<HTMLElement>(null);
+  // Whether a popup opened from inside the editor (the icon picker) is open:
+  // it is portalled outside the editor's box, so a press in it must not read
+  // as a press outside, nor its Escape as the editor's.
+  const nestedOpenRef = useRef(false);
+  function setNestedOpen(open: boolean) {
+    nestedOpenRef.current = open;
+  }
   const promptRef = useRef<HTMLTextAreaElement>(null);
   useReportPopupOpen(true);
 
@@ -96,6 +127,7 @@ export function SnippetEditor({
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
       const root = rootRef.current;
+      if (nestedOpenRef.current) return;
       if (root && e.target instanceof Node && !root.contains(e.target)) {
         // Kept: a stray press must not lose a long prompt — it comes back
         // when the editor reopens.
@@ -110,7 +142,14 @@ export function SnippetEditor({
   const canSave = title.trim() !== "" && prompt.trim() !== "";
   function save() {
     if (!canSave) return;
-    if (onSave({ title: title.trim(), prompt: prompt.trim() })) discard();
+    if (
+      onSave({
+        title: title.trim(),
+        prompt: prompt.trim(),
+        ...(icon !== undefined && { icon }),
+      })
+    )
+      discard();
   }
   function cancel() {
     discard();
@@ -118,72 +157,113 @@ export function SnippetEditor({
   }
 
   return (
-    <Stack
-      ref={rootRef}
-      gap="xs"
-      className="py-xs"
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === "Escape") {
-          e.preventDefault();
-          cancel();
-        }
-      }}
-    >
-      <Input
-        autoFocus
-        placeholder="Name"
-        aria-label={`${noun} name`}
-        keep={keptField(draft, "title")}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter") return;
-          e.preventDefault();
-          // Enter on the name saves when the prompt is already there (a
-          // prefilled draft, or the snippet being edited), and otherwise
-          // moves on.
-          if (canSave) save();
-          else focusElement(promptRef.current, { reveal: true });
-        }}
-      />
-      <Textarea
-        ref={promptRef}
-        fitContent
-        placeholder="Prompt"
-        aria-label={`${noun} prompt`}
-        keep={keptField(draft, "prompt")}
-        className="min-h-18 max-h-40"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault();
-            save();
-          }
-        }}
-      />
-      {/* Delete at the start, the commit pair at the end: the destructive
-          action sits apart from the one Enter takes. */}
-      <Stack direction="row" gap="xs" align="center" justify="between">
-        {onDelete ? (
-          <Button
-            variant="ghost"
-            className="text-destructive"
-            onClick={() => {
-              if (onDelete()) discard();
+    <PopupOpenScope>
+      {(nestedOpen) => (
+        <Stack
+          ref={rootRef}
+          gap="xs"
+          className="py-xs"
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            // Escape in the open icon picker closes the picker, not the editor.
+            if (e.key === "Escape" && !nestedOpen) {
+              e.preventDefault();
+              cancel();
+            }
+          }}
+        >
+          <OnOpenChange open={nestedOpen} onChange={setNestedOpen} />
+          <Stack direction="row" gap="xs" align="center">
+            {icon !== undefined && (
+              <AvatarPicker
+                value={icon}
+                onChange={(next) =>
+                  setDraft((d) => ({
+                    ...d,
+                    icon: { icon: next.icon, color: next.color },
+                  }))
+                }
+                triggerLabel={`${noun} icon`}
+              >
+                {/* No icon yet: a neutral + disc, so the trigger still reads as one. */}
+                {icon.icon == null && icon.color == null ? (
+                  <Avatar symbol={addIcon} colorless />
+                ) : (
+                  <Avatar icon={icon.icon} color={icon.color} />
+                )}
+              </AvatarPicker>
+            )}
+            <Input
+              autoFocus
+              placeholder="Name"
+              aria-label={`${noun} name`}
+              keep={keptField(draft, "title")}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                // Enter on the name saves when the prompt is already there (a
+                // prefilled draft, or the snippet being edited), and otherwise
+                // moves on.
+                if (canSave) save();
+                else focusElement(promptRef.current, { reveal: true });
+              }}
+            />
+          </Stack>
+          <Textarea
+            ref={promptRef}
+            fitContent
+            placeholder="Prompt"
+            aria-label={`${noun} prompt`}
+            keep={keptField(draft, "prompt")}
+            className="min-h-18 max-h-40"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                save();
+              }
             }}
-          >
-            Delete
-          </Button>
-        ) : (
-          <span />
-        )}
-        <Stack direction="row" gap="xs" align="center">
-          <Button variant="ghost" onClick={cancel}>
-            Cancel
-          </Button>
-          <Button disabled={!canSave} onClick={save}>
-            {mode === "new" ? "Add" : "Save"}
-          </Button>
+          />
+          {/* Delete at the start, the commit pair at the end: the destructive
+          action sits apart from the one Enter takes. */}
+          <Stack direction="row" gap="xs" align="center" justify="between">
+            {onDelete ? (
+              <Button
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => {
+                  if (onDelete()) discard();
+                }}
+              >
+                Delete
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Stack direction="row" gap="xs" align="center">
+              <Button variant="ghost" onClick={cancel}>
+                Cancel
+              </Button>
+              <Button disabled={!canSave} onClick={save}>
+                {mode === "new" ? "Add" : "Save"}
+              </Button>
+            </Stack>
+          </Stack>
         </Stack>
-      </Stack>
-    </Stack>
+      )}
+    </PopupOpenScope>
   );
+}
+
+/** Hands the scope's nested-popup state to the editor's outside-press listener. */
+function OnOpenChange({
+  open,
+  onChange,
+}: {
+  open: boolean;
+  onChange: (open: boolean) => void;
+}) {
+  useEffect(() => {
+    onChange(open);
+  }, [open, onChange]);
+  return null;
 }

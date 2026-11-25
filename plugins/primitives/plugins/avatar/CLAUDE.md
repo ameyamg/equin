@@ -171,6 +171,7 @@ color palette.
     - `conversations/conversation-category`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
+    - `conversations/prompt-snippets`
     - `conversations/runtime-sdk`
     - `fields/avatar/config`
     - `fields/avatar/table`

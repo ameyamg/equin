@@ -24106,6 +24106,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`prompt-snippets`** — Named prompt snippets ({ title, prompt }) edited in place inside the popup that lists them: SnippetEditor (a name and a prompt, Add / Save / Delete / Cancel, holding its popup open) and useSnippetListEdit (which editor is open, and the list rewritten from what it hands back). Shared by the prompt templates panel and the preprompt picker.
       - Web:
         - Uses:
+          - `primitives/avatar.Avatar`
+          - `primitives/avatar.AvatarPicker`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.Input`
@@ -24113,6 +24115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/kept-state.defineKept`
           - `primitives/kept-state.useKept`
+          - `primitives/overlay/popup-open.PopupOpenScope`
           - `primitives/overlay/popup-open.useReportPopupOpen`
         - Exports (types):
           - `OpenSnippetEditor`
@@ -51914,6 +51917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-category`
           - `conversations/conversation-ui/item`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
+          - `conversations/prompt-snippets`
           - `conversations/runtime-sdk`
           - `fields/avatar/config`
           - `fields/avatar/table`
@@ -68448,9 +68452,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 615 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 616 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
-          - `conversations` ×124
+          - `conversations` ×125
           - `primitives` ×54
           - `page` ×52
           - `fields` ×41
@@ -68701,6 +68705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/promo-film/seed`
               - `conversations/agents`
               - `conversations/conversation-preprompt`
+              - `conversations/prompt-snippets`
               - `fields/avatar/config`
               - `fields/icon/config`
               - `page/callout`

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
 import type {
   SnippetDraft,
   SnippetEditorProps,
@@ -9,6 +10,8 @@ export interface Snippet {
   id: string;
   title: string;
   prompt: string;
+  /** Set on every item of a list whose snippets carry an icon. */
+  icon?: AvatarSpec;
 }
 
 /** Which snippet editor is open, if any. */
@@ -30,6 +33,11 @@ export interface SnippetListEditOptions<T extends Snippet> {
    * carry beyond a name and a prompt, and their defaults.
    */
   create: (d: SnippetDraft & { id: string }) => T;
+  /**
+   * The icon a new snippet starts with, for a list whose snippets carry one —
+   * set, the editor shows its icon picker (on an edit, the item's own icon does).
+   */
+  newIcon?: AvatarSpec;
   /** Called once a new item is stored (a picker selects it). */
   onAdded?: (item: T) => void;
   /** Called once an item is deleted (a picker drops it if it was selected). */
@@ -65,6 +73,7 @@ export function useSnippetListEdit<T extends Snippet>({
   items,
   onChange,
   create,
+  newIcon,
   onAdded,
   onRemoved,
 }: SnippetListEditOptions<T>): SnippetListEdit {
@@ -86,7 +95,11 @@ export function useSnippetListEdit<T extends Snippet>({
       props: {
         mode: "new",
         subject: "new",
-        initial: { title: "", prompt: editing.prompt },
+        initial: {
+          title: "",
+          prompt: editing.prompt,
+          ...(newIcon !== undefined && { icon: newIcon }),
+        },
         onSave: (d) => {
           const item = create({ id: crypto.randomUUID(), ...d });
           if (!onChange([...items, item])) return false;
@@ -107,7 +120,11 @@ export function useSnippetListEdit<T extends Snippet>({
         props: {
           mode: "edit",
           subject: id,
-          initial: { title: current.title, prompt: current.prompt },
+          initial: {
+            title: current.title,
+            prompt: current.prompt,
+            ...(current.icon !== undefined && { icon: current.icon }),
+          },
           onSave: (d) => {
             if (!onChange(items.map((t) => (t.id === id ? { ...t, ...d } : t))))
               return false;
