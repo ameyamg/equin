@@ -542,6 +542,19 @@ in full to another agent, a stub to its owner) — and since `edit_page`'s
 baseline is that same read, an untouched projected block round-trips through
 the edit unchanged. This plugin still names no block type.
 
+## Read-only text an edit changed is said aloud (`read_only_ignored`)
+
+A tag's `annotated` attribute values and a `body: "derived"` (`<task-decisions>`'s
+decisions) are discarded on parse, so an edit to them writes nothing. `edit_page`
+reports it rather than returning a normal result: the engine compares the read-only
+pieces of the edited document against its baseline's (`ApplyReport.readOnlyIgnored`)
+and the result carries `read_only_ignored`, the same shape as `page_meta_ignored`.
+**Reported, not refused**: the rest of the edit is still written, and an edit made
+only of such a change writes nothing anyway — refusing would add a failure mode
+without protecting anything. Which text is read-only comes from the tag's
+declaration; no tag is named here. `write_agent_note` reports none (it has no
+baseline: its document is composed, not edited).
+
 ## Stated bounds
 
 - **Absence is visible.** A read shows a gap where a private card was — no

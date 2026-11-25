@@ -226,6 +226,8 @@ export type {
   MarkdownNode,
   MdSerializeCtx,
   MdParseCtx,
+  ReadOnlySink,
+  ReadOnlyTagText,
   TagLine,
 } from "./markdown";
 

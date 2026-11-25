@@ -182,6 +182,7 @@ describe.if(IN_CHILD)("<task-decisions> through the page tools", () => {
       expect(result.created).toBe(0);
       expect(result.deleted).toBe(0);
       expect(result.text_edited).toBe(1);
+      expect(result.read_only_ignored).toBeUndefined();
       const td = (
         await db.execute<{ data: unknown }>(
           sql`SELECT data FROM page_blocks WHERE id = 'TD' AND deleted_at IS NULL`,
@@ -190,6 +191,66 @@ describe.if(IN_CHILD)("<task-decisions> through the page tools", () => {
       expect(td?.data).toEqual({ taskId: OWNER_TASK });
       expect(await textOf(conversationId)).toContain(line);
     }
+  });
+
+  const editAs = async (
+    conversationId: string,
+    old_string: string,
+    new_string: string,
+  ) =>
+    JSON.parse(
+      (
+        await pageTools.edit(
+          { block_id: "PAGE", old_string, new_string, replace_all: false },
+          { conversationId },
+        )
+      ).content[0]!.text,
+    );
+  const decisionOptions = async () =>
+    (
+      await db.execute<{ options: unknown }>(
+        sql`SELECT options FROM decisions WHERE id = ${DEC}`,
+      )
+    ).rows[0]?.options;
+
+  test("an edit inside the derived body says it was ignored, and writes nothing there", async () => {
+    const result = await editAs(
+      OTHER,
+      '<option key="A" text="Yes." recommended="true"/>',
+      '<option key="A" text="No." recommended="true"/>',
+    );
+    expect(result.read_only_ignored).toContain(
+      "the body of <task-decisions> is read-only",
+    );
+    expect(result.created + result.deleted + result.text_edited).toBe(0);
+    expect(await decisionOptions()).toEqual([
+      { key: "A", text: "Yes.", recommended: true },
+    ]);
+    expect(await textOf(OTHER)).toContain(
+      '<option key="A" text="Yes." recommended="true"/>',
+    );
+  });
+
+  test("an edit to an annotated attribute says it was ignored, beside a real write", async () => {
+    // The block's line and the status line under it, as this reader reads them.
+    const pair = (await textOf(OWNER)).match(
+      /<task-decisions title="Phase 5"[^\n]*\n\s*Status: reviewed\./,
+    )![0];
+    const result = await editAs(
+      OWNER,
+      pair,
+      pair
+        .replace('title="Phase 5"', 'title="Renamed"')
+        .replace("reviewed", "shipped"),
+    );
+    expect(result.read_only_ignored).toContain(
+      'the title="…" attribute of <task-decisions> is read-only',
+    );
+    expect(result.text_edited).toBe(1);
+    const own = await textOf(OWNER);
+    expect(own).toContain('title="Phase 5"');
+    expect(own).toContain("Status: shipped.");
+    await editAs(OWNER, "Status: shipped.", "Status: reviewed.");
   });
 
   test("a document minting one at a task that does not exist is refused, nothing written", async () => {

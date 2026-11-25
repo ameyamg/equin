@@ -186,6 +186,33 @@ function applySummary(
     // (see `inertEmptyParagraphs`): said aloud, so an agent whose spacer did
     // not appear knows why rather than retrying it.
     ...inertNote(report.inert),
+    ...readOnlyNote(report.readOnlyIgnored),
+  };
+}
+
+/**
+ * The `applySummary` field for read-only text the edit changed (an annotated
+ * attribute's value, a derived body's lines): said aloud, as
+ * `page_meta_ignored` is, so an agent does not believe it wrote what the parse
+ * discarded. Which text is read-only is the tag's own declaration — no tag is
+ * named here.
+ */
+function readOnlyNote(ignored: ApplyReport["readOnlyIgnored"]): object {
+  if (ignored.length === 0) return {};
+  const parts = new Set<string>();
+  for (const { tag, attr } of ignored) {
+    parts.add(
+      attr === null
+        ? `the body of <${tag}>`
+        : `the ${attr}="…" attribute of <${tag}>`,
+    );
+  }
+  return {
+    read_only_ignored:
+      `${[...parts].join(", ")} ${parts.size === 1 ? "is" : "are"} read-only: ` +
+      `${parts.size === 1 ? "it states" : "they state"} facts held outside the page, ` +
+      `so your change to ${parts.size === 1 ? "it" : "them"} was not written ` +
+      `(the rest of the edit was). Change those facts through their own tools.`,
   };
 }
 

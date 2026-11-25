@@ -9,6 +9,7 @@ import {
 import {
   dataEqual,
   parseMarkdownToForest,
+  type ReadOnlyTagText,
 } from "@plugins/page/plugins/editor/core";
 import { writeBlockTexts } from "@plugins/page/plugins/block-text-write/server";
 import {
@@ -242,6 +243,66 @@ export interface ApplyReport {
    * deleted. `{ stored: 0, incoming: 0 }` when no `inert` was given.
    */
   inert: { stored: number; incoming: number };
+  /**
+   * Read-only text the edited document CHANGED, which no apply writes: each
+   * tag whose `annotated` attribute values or `body: "derived"` lines (both
+   * declared on the tag, read off the handles by the parse) are not ones the
+   * {@link ApplyBlockOptions.baseline} carried. Compared as a multiset of
+   * pieces (one attribute value, one body), so a block kept, moved or deleted
+   * reports nothing, and an edited or invented value reports that piece. `[]` when no baseline was given — a composed document has no read to
+   * have changed.
+   *
+   * Reported, not refused, the way `<page-meta>`'s ignored fields are: the
+   * rest of the edit is still the caller's to make, and the parse already
+   * proves the read-only text cannot reach a row.
+   */
+  readOnlyIgnored: ReadOnlyIgnored[];
+}
+
+/**
+ * One piece of read-only text an edit changed: an annotated attribute of a
+ * tag (`attr` its name), or a derived body (`attr: null`).
+ */
+export interface ReadOnlyIgnored {
+  tag: string;
+  attr: string | null;
+}
+
+/**
+ * The pieces of read-only text in `edited` that `baseline` does not hold,
+ * counting duplicates (two identical blocks in the read admit two in the
+ * edit). Per piece, not per tag, so an edited option line reports the body
+ * alone and not the attributes beside it.
+ */
+function readOnlyChanges(
+  edited: readonly ReadOnlyTagText[],
+  baseline: readonly ReadOnlyTagText[],
+): ReadOnlyIgnored[] {
+  const piecesOf = (t: ReadOnlyTagText) => [
+    ...Object.entries(t.attrs).map(([attr, value]) => ({
+      piece: { tag: t.tag, attr },
+      key: JSON.stringify([t.tag, attr, value]),
+    })),
+    ...(t.body === null
+      ? []
+      : [
+          {
+            piece: { tag: t.tag, attr: null },
+            key: JSON.stringify([t.tag, null, t.body]),
+          },
+        ]),
+  ];
+  const remaining = new Map<string, number>();
+  for (const { key } of baseline.flatMap(piecesOf)) {
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  const changed: ReadOnlyIgnored[] = [];
+  for (const { piece, key } of edited.flatMap(piecesOf)) {
+    const left = remaining.get(key) ?? 0;
+    if (left === 0) changed.push(piece);
+    else remaining.set(key, left - 1);
+  }
+  return changed;
 }
 
 /** One scoped apply: the two channels, over rows a caller has already read. */
@@ -310,13 +371,17 @@ async function applyToScope(scope: {
       rootId === pageId
         ? stripPageTitleBanner(split.rest, pageTitleBanner(title, ctx))
         : split.rest;
-    const parsed = parseMarkdownToForest(document, ctx);
+    const readOnly: ReadOnlyTagText[] = [];
+    const parsed = parseMarkdownToForest(document, ctx, (t) => {
+      readOnly.push(t);
+    });
     const { forest, dropped } =
       inertBlocks === undefined
         ? { forest: parsed, dropped: 0 }
         : dropInertNodes(parsed, inertBlocks.node);
     return {
       dropped,
+      readOnly,
       result: planMarkdownApply({
         rootId,
         pageId,
@@ -350,8 +415,11 @@ async function applyToScope(scope: {
   // anything the caller asked for — see `core/subtract-noise.ts`.
   let plan = result.plan;
   let absorbedWrites = 0;
+  let readOnlyIgnored: ReadOnlyIgnored[] = [];
   if (baseline !== undefined) {
-    const identity = planOf(baseline).result;
+    const baselinePlan = planOf(baseline);
+    readOnlyIgnored = readOnlyChanges(edited.readOnly, baselinePlan.readOnly);
+    const identity = baselinePlan.result;
     if (!identity.ok) {
       // The document a read produced cannot be applied back onto the rows it was
       // read from. Nothing the caller did can cause this, so it is a bug in the
@@ -507,6 +575,7 @@ async function applyToScope(scope: {
             ).length,
       incoming: inertIncoming,
     },
+    readOnlyIgnored,
   };
 }
 

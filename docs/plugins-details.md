@@ -47972,6 +47972,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageSource`
           - `PagesTreeFields`
           - `PagesTreeRow`
+          - `ReadOnlySink`
+          - `ReadOnlyTagText`
           - `RichText`
           - `RowData`
           - `SerializedBlock`
@@ -48771,6 +48773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BlockScope`
           - `BlockScopePageRow`
           - `ReadBlockOptions`
+          - `ReadOnlyIgnored`
         - Exports (values):
           - `applyMarkdownToBlock`
           - `applyMarkdownToPage`

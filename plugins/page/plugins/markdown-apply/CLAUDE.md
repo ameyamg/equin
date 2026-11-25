@@ -526,6 +526,7 @@ annotation in the key would make every status change look like a new block.
     - `BlockScope`
     - `BlockScopePageRow`
     - `ReadBlockOptions`
+    - `ReadOnlyIgnored`
   - Exports (values):
     - `applyMarkdownToBlock`
     - `applyMarkdownToPage`

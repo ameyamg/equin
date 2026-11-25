@@ -1525,9 +1525,33 @@ function dedent(line: string, indent: number): string {
   return line.slice(i);
 }
 
+/**
+ * What a parse DISCARDED from one tag: the values of its
+ * {@link BlockTag.annotated} attributes and the lines of its `body: "derived"`
+ * — text the document carries that states facts held elsewhere, read-only by
+ * declaration. Only a tag that carried any is reported.
+ */
+export interface ReadOnlyTagText {
+  /** The tag name as written (`task-decisions`, `page`, …). */
+  tag: string;
+  /** Each annotated attribute the line carried, with the value it carried. */
+  attrs: Readonly<Record<string, string>>;
+  /** A derived body's lines (dedented), or `null` when the tag had none. */
+  body: readonly string[] | null;
+}
+
+/**
+ * Receives every {@link ReadOnlyTagText} a parse discards, so a caller holding
+ * two documents (an edit and the read it was made against) can tell whether an
+ * edit changed text that no parse writes — see `markdown-apply`'s
+ * `ApplyReport.readOnlyIgnored`.
+ */
+export type ReadOnlySink = (text: ReadOnlyTagText) => void;
+
 export function parseMarkdownToForest(
   text: string,
   ctx: MarkdownContext,
+  readOnly?: ReadOnlySink,
 ): SerializedBlock[] {
   const { handles } = ctx;
   const parseCtx = parseCtxFor(ctx);
@@ -1600,6 +1624,7 @@ export function parseMarkdownToForest(
         fences,
         parseCtx,
         ctx,
+        readOnly,
       );
       if (claimed) {
         flushBlanks(indent);
@@ -1793,6 +1818,7 @@ function tagToken(
   bodyLines: string[],
   parseCtx: MdParseCtx,
   ctx: MarkdownContext,
+  readOnly: ReadOnlySink | undefined,
 ): FlatToken {
   if (tag.body === "none") {
     // LOUD, never a silent drop: `<page id="x">…</page>` names a page whose
@@ -1829,7 +1855,7 @@ function tagToken(
     indent,
     type: tag.handle.type,
     data: tag.dataOf(attrs, null, parseCtx),
-    children: parseMarkdownToForest(bodyLines.join("\n"), ctx),
+    children: parseMarkdownToForest(bodyLines.join("\n"), ctx, readOnly),
   };
 }
 
@@ -1848,6 +1874,7 @@ function claimTag(
   fences: { open: string; close: string }[],
   parseCtx: MdParseCtx,
   ctx: MarkdownContext,
+  readOnly: ReadOnlySink | undefined,
 ): { token: FlatToken; next: number } | null {
   const open = matchOpenTag(content);
   if (!open) return null;
@@ -1884,13 +1911,30 @@ function claimTag(
   // row they describe lives in another table, and a pure parser can neither tell
   // an edited value from the one it was handed nor write the owner. See
   // {@link BlockTag.annotated}.
-  for (const name of tag.annotated) delete open.attrs[name];
+  // They are still REPORTED (with a derived body's lines, below) to a caller
+  // that asks, so an edit that changed them can be told it wrote nothing.
+  const annotatedValues: Record<string, string> = {};
+  for (const name of tag.annotated) {
+    const value = open.attrs[name];
+    if (value !== undefined) annotatedValues[name] = value;
+    delete open.attrs[name];
+  }
+  const noteReadOnly = (bodyLines: readonly string[] | null): void => {
+    if (readOnly === undefined) return;
+    const body =
+      tag.body === "derived" && bodyLines !== null && bodyLines.length > 0
+        ? bodyLines
+        : null;
+    if (body === null && Object.keys(annotatedValues).length === 0) return;
+    readOnly({ tag: open.name, attrs: annotatedValues, body });
+  };
 
   const withRef = (token: FlatToken): FlatToken =>
     ref === undefined ? token : { ...token, ref };
 
   if (open.selfClosing) {
     if (rest.trim() !== "") return null;
+    noteReadOnly(null);
     return {
       token: withRef({
         indent,
@@ -1905,8 +1949,11 @@ function claimTag(
   // Single-line form: `<name …>body</name>` — how a `"text"` body is emitted.
   if (rest.endsWith(close)) {
     const inner = rest.slice(0, rest.length - close.length);
+    noteReadOnly([inner]);
     return {
-      token: withRef(tagToken(tag, indent, open.attrs, [inner], parseCtx, ctx)),
+      token: withRef(
+        tagToken(tag, indent, open.attrs, [inner], parseCtx, ctx, readOnly),
+      ),
       next: start + 1,
     };
   }
@@ -1944,9 +1991,11 @@ function claimTag(
   // Unterminated: the document ended inside the tag. Decline the claim rather
   // than swallowing the rest of the document into a block it never closed.
   if (depth !== 0) return null;
+  const bodyLines = dedentBlock(body);
+  noteReadOnly(bodyLines);
   return {
     token: withRef(
-      tagToken(tag, indent, open.attrs, dedentBlock(body), parseCtx, ctx),
+      tagToken(tag, indent, open.attrs, bodyLines, parseCtx, ctx, readOnly),
     ),
     next: j + 1,
   };

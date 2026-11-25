@@ -119,7 +119,9 @@ the blocks it touches, so an edited attribute is simply ignored. To change what
 such an attribute reports, act on the thing it describes. A few tags carry a
 read-only BODY the same way — lines between the open and close tag projected
 from elsewhere (and possibly different for each reader): hand it back
-unchanged, as any edit inside it is ignored.
+unchanged, as any edit inside it is ignored. An \`edit_page\` that changed such
+an attribute or body says so: its result carries \`read_only_ignored\`, naming
+what was not written.
 
 **Content may be missing, with nothing marking where.** Cards the page's author
 addressed to themselves (\`/private\`) are removed from this output entirely,

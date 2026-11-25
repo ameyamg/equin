@@ -2284,7 +2284,11 @@ status, which live in another table) in both directions; the CALLER supplies val
 - **Serialize** emits `id`, then annotations in declaration order, then the type's attrs;
   an absent value omits the attribute.
 - **Parse** deletes every reserved name before `dataOf`.
-- **Values are DISCARDED on parse ⇒ READ-ONLY.**
+- **Values are DISCARDED on parse ⇒ READ-ONLY.** Discarded, not lost silently: a
+  caller passing `parseMarkdownToForest`'s `ReadOnlySink` hears every discarded
+  value (and every derived body's lines), which is how `markdown-apply` reports an
+  edit that changed them (`ApplyReport.readOnlyIgnored`, compared per piece
+  against the baseline) and `edit_page` says `read_only_ignored`.
 - Loud: a reserved name colliding with a derived-projection field / `data` / `id`
   throws at resolution (a tag with its own `attrs` may reserve a field — `page` reserves
   `title`); a type's `attrs` emitting a reserved name throws; an undeclared annotation
@@ -2702,6 +2706,8 @@ mint a dangling one.
     - `PageSource`
     - `PagesTreeFields`
     - `PagesTreeRow`
+    - `ReadOnlySink`
+    - `ReadOnlyTagText`
     - `RichText`
     - `RowData`
     - `SerializedBlock`
