@@ -40104,6 +40104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`jobs`** — Durable background jobs primitive: plugins declare jobs via defineJob and enqueue via job.enqueue, onto the host's job queue (JobQueue — graphile-worker on the desktop).
       - Server:
         - Contributes:
+          - `db-trigger` "jobs.wait-trigger"
           - `resource.declare` "dead-jobs"
           - `resource.declare` "dead-jobs:groups"
           - `resource.declare` "dead-jobs:rows"
@@ -40125,6 +40126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
           - `database/connection.createDbPool`
           - `database/connection.withQueryDeadline`
+          - `database/db-triggers.DbTrigger`
           - `database/db-triggers.defineDbTriggers`
           - `database/db-triggers.installDbTriggers`
           - `database/sql-column.parsedJson`

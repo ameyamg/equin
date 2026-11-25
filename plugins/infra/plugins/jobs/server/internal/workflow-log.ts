@@ -89,9 +89,8 @@ export async function pendingWaits(
  * Delete one workflow run's step and wait logs. Takes the executor so the
  * caller decides which database and which transaction this lands in.
  *
- * Trigger rows outlive this cleanup — oneShot rows are deleted by the events
- * dispatcher after their target succeeds; an orphan from a never-fired trigger
- * is harmless (it fires → `jobs.resume` finds no wait row → returns).
+ * A wait still pending here takes its one-shot event trigger with it
+ * (`wait-trigger.ts`); an ended wait's went when it ended.
  */
 export async function deleteWorkflowLog(
   exec: EnqueueTx,

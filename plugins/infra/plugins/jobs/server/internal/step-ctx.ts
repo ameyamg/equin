@@ -4,6 +4,7 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { resolveWaitTimeoutMs } from "./constants";
 import { JobQueue } from "./queue";
 import { RESUME_KEYS, type ResumeInput } from "./resume-contract";
+import type { EnqueueTx } from "./registry";
 import { _jobSteps, _jobWaits } from "./tables";
 
 // Globally-shared brand. `Symbol.for` returns the same Symbol across module
@@ -112,15 +113,29 @@ export interface WaitForOptions<T> {
 // install-jobs-hooks.ts`). We avoid a static `import` from events to keep
 // the plugin graph acyclic (events already imports jobs).
 export interface DurableHooks {
-  registerTrigger: (spec: {
-    event: EventSourceLike;
-    // Pinned to the `jobs.resume` input contract (jobs owns both this
-    // interface and ResumeInputSchema), so the worker's construction of
-    // `with` is compile-checked against the schema the dispatcher parses.
-    with: ResumeInput;
-    where: Record<string, unknown>;
-    oneShot: boolean;
-  }) => Promise<void>;
+  /**
+   * Arm the one-shot trigger that wakes a wait, on `exec` — the transaction
+   * that records the wait, so the two exist together or not at all. Answers
+   * the row it wrote: the wait records it, and the wait's end deletes it
+   * (`wait-trigger.ts`).
+   */
+  registerTrigger: (
+    spec: {
+      event: EventSourceLike;
+      // Pinned to the `jobs.resume` input contract (jobs owns both this
+      // interface and ResumeInputSchema), so the worker's construction of
+      // `with` is compile-checked against the schema the dispatcher parses.
+      with: ResumeInput;
+      where: Record<string, unknown>;
+    },
+    exec: EnqueueTx,
+  ) => Promise<ArmedTrigger>;
+}
+
+/** The trigger row a wait armed: its table (in `public`) and id. */
+export interface ArmedTrigger {
+  table: string;
+  id: string;
 }
 
 const hooks: Partial<DurableHooks> = {};
@@ -192,6 +207,74 @@ export interface DurableCtx {
     opts: WaitForOptions<T>,
   ): Promise<T | null>;
   sleep(ms: number): Promise<void>;
+}
+
+type RegisterTrigger = DurableHooks["registerTrigger"];
+
+/**
+ * Record a pending wait and arm the one-shot event trigger that wakes it, in
+ * one transaction on `database`; the wait row records the trigger row, so the
+ * wait's end deletes it (`wait-trigger.ts`). `false` when this run already
+ * recorded the wait (two dispatches raced): the other one arms its wakers.
+ */
+export async function armEventWait(
+  database: EnqueueTx,
+  registerTrigger: RegisterTrigger,
+  wait: {
+    workflowRunId: string;
+    waitName: string;
+    wakerKey: string | null;
+    trigger: Parameters<RegisterTrigger>[0];
+  },
+): Promise<boolean> {
+  return database.transaction(async (tx) => {
+    const recorded = await tx
+      .insert(_jobWaits)
+      .values({
+        workflowRunId: wait.workflowRunId,
+        waitName: wait.waitName,
+        status: "pending",
+        wakerKey: wait.wakerKey,
+      })
+      .onConflictDoNothing()
+      .returning({ waitName: _jobWaits.waitName });
+    if (recorded.length === 0) return false;
+    const trigger = await registerTrigger(wait.trigger, tx);
+    await tx
+      .update(_jobWaits)
+      .set({ triggerTable: trigger.table, triggerId: trigger.id })
+      .where(
+        and(
+          eq(_jobWaits.workflowRunId, wait.workflowRunId),
+          eq(_jobWaits.waitName, wait.waitName),
+        ),
+      );
+    return true;
+  });
+}
+
+/**
+ * The `settled` recheck found the thing over: resolve the wait with no
+ * payload. Whether THIS call moved it out of `pending` (a waker may have
+ * resolved it first).
+ */
+export async function settleWait(
+  exec: EnqueueTx,
+  workflowRunId: string,
+  waitName: string,
+): Promise<boolean> {
+  const moved = await exec
+    .update(_jobWaits)
+    .set({ status: "resolved", payloadJson: null, resolvedAt: new Date() })
+    .where(
+      and(
+        eq(_jobWaits.workflowRunId, workflowRunId),
+        eq(_jobWaits.waitName, waitName),
+        eq(_jobWaits.status, "pending"),
+      ),
+    )
+    .returning({ waitName: _jobWaits.waitName });
+  return moved.length > 0;
 }
 
 export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
@@ -324,8 +407,10 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
       }
 
       // First time reaching this wait. Record a pending row (naming the
-      // racer that will surely wake it, armed below), register the event
-      // trigger, schedule the timeout, then suspend.
+      // racer that will surely wake it, armed below) and the event trigger
+      // that wakes it, in one transaction; schedule the timeout, then
+      // suspend. The wait row records the trigger it armed, so the trigger
+      // goes when the wait ends, whichever way (`wait-trigger.ts`).
       const resolvedTimeoutMs = resolveWaitTimeoutMs(
         opts.timeoutMs,
         opts.unbounded,
@@ -334,17 +419,9 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
         resolvedTimeoutMs === null
           ? null
           : `jobs.resume.timeout:${init.workflowRunId}:${waitName}`;
-      await db
-        .insert(_jobWaits)
-        .values({
-          workflowRunId: init.workflowRunId,
-          waitName,
-          status: "pending",
-          wakerKey: timeoutKey,
-        })
-        .onConflictDoNothing();
 
-      if (!hooks.registerTrigger) {
+      const { registerTrigger } = hooks;
+      if (!registerTrigger) {
         throw new Error(
           "[jobs] ctx.waitFor called but events plugin hooks are not installed. " +
             "Import @plugins/infra/plugins/events/server somewhere (its side-effect wires this up).",
@@ -357,18 +434,23 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
         ...(opts.where ?? {}),
       };
 
-      await hooks.registerTrigger({
-        event,
-        with: {
-          [RESUME_KEYS.workflowRunId]: init.workflowRunId,
-          [RESUME_KEYS.waitName]: waitName,
-          [RESUME_KEYS.jobName]: init.jobName,
-          [RESUME_KEYS.input]: init.originalInput,
-          [RESUME_KEYS.event]: init.originalEvent,
+      const armed = await armEventWait(db, registerTrigger, {
+        workflowRunId: init.workflowRunId,
+        waitName,
+        wakerKey: timeoutKey,
+        trigger: {
+          event,
+          with: {
+            [RESUME_KEYS.workflowRunId]: init.workflowRunId,
+            [RESUME_KEYS.waitName]: waitName,
+            [RESUME_KEYS.jobName]: init.jobName,
+            [RESUME_KEYS.input]: init.originalInput,
+            [RESUME_KEYS.event]: init.originalEvent,
+          },
+          where: mergedFilter,
         },
-        where: mergedFilter,
-        oneShot: true,
       });
+      if (!armed) throw new SuspendSignal("wait");
 
       // Always arm a timeout racer unless the caller explicitly opts out via
       // `unbounded`. An omitted `timeoutMs` resolves to the engine default, so a
@@ -393,29 +475,13 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
       // Both wakers are armed: anything from here on reaches the wait. What
       // happened before them did not — so ask once more (`settled`).
       if ("recheck" in opts.settled && (await opts.settled.recheck())) {
-        const moved = await db
-          .update(_jobWaits)
-          .set({
-            status: "resolved",
-            payloadJson: null,
-            resolvedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(_jobWaits.workflowRunId, init.workflowRunId),
-              eq(_jobWaits.waitName, waitName),
-              eq(_jobWaits.status, "pending"),
-            ),
-          )
-          .returning({ waitName: _jobWaits.waitName });
-        if (moved.length > 0) {
+        if (await settleWait(db, init.workflowRunId, waitName)) {
           if (timeoutKey !== null) {
             await JobQueue.get().cancelUnstarted({ key: timeoutKey });
           }
           // Recorded as resolved with no payload, so a replay reads `null`
-          // here too. The armed one-shot trigger, if its event never comes,
-          // stays exactly as a timed-out wait's does; if it comes, its
-          // resume finds the wait resolved and does nothing.
+          // here too. Leaving `pending` deleted the armed one-shot trigger
+          // with it (`wait-trigger.ts`).
           return null;
         }
         // A waker resolved it first — and in the same transaction queued this

@@ -7,7 +7,7 @@ import type { EventSource } from "./event";
 import { UNSAFE_triggerByName } from "./trigger";
 
 export const jobsHooksRegistration = UNSAFE_installDurableHooks({
-  registerTrigger: async (spec) => {
+  registerTrigger: async (spec, exec) => {
     // The jobs plugin types `spec.event` loosely (a duck-typed
     // `EventSourceLike` brand). At runtime it IS a real `EventSource` —
     // it came from `defineTriggerEvent` — so the cast is a typing-only
@@ -22,11 +22,16 @@ export const jobsHooksRegistration = UNSAFE_installDurableHooks({
     // `@plugins/infra/plugins/jobs/server`. Bind by name so this module
     // doesn't import the factory back from jobs (which would still be
     // safe, but keeps the events→jobs edge minimal).
-    await UNSAFE_triggerByName({
-      on: source,
-      jobName: "jobs.resume",
-      with: spec.with,
-      oneShot: spec.oneShot,
-    });
+    // One-shot: a wait is woken once. The wait records the row returned
+    // here and deletes it when it ends, however it ends.
+    return UNSAFE_triggerByName(
+      {
+        on: source,
+        jobName: "jobs.resume",
+        with: spec.with,
+        oneShot: true,
+      },
+      exec,
+    );
   },
 });

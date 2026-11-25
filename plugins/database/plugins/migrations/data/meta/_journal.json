@@ -3347,6 +3347,20 @@
       "tag": "20261125_124910_0dc587e2__merged_20261125_1249",
       "hash": "0dc587e2",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1795612321000,
+      "tag": "20261125_131201_c6e47577__drop_stale_wait_triggers",
+      "hash": "c6e47577",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1795612652000,
+      "tag": "20261125_131732_1e95abec__merged_20261125_1317",
+      "hash": "1e95abec",
+      "breakpoints": true
     }
   ]
 }

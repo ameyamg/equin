@@ -1,7 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, getTableName, sql } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { z } from "zod";
-import type { JobFactory } from "@plugins/infra/plugins/jobs/server";
+import type { EnqueueTx, JobFactory } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import type { EventSource } from "./event";
 import type { TriggerWith } from "./event-field";
@@ -54,8 +54,10 @@ export interface UnsafeTriggerByNameSpec<P> {
 // uses (e.g. `install-jobs-hooks.ts`); feature plugins use `trigger()`.
 export async function UNSAFE_triggerByName<P>(
   spec: UnsafeTriggerByNameSpec<P>,
-): Promise<string> {
-  return insertTriggerRow(spec);
+  exec: EnqueueTx = db,
+): Promise<{ table: string; id: string }> {
+  const { table } = rowOf(spec);
+  return { table: getTableName(table), id: await insertTriggerRow(spec, exec) };
 }
 
 interface RowInsertSpec<P> {
@@ -107,9 +109,12 @@ function rowOf<P>(spec: RowInsertSpec<P>): {
   return { table: def.table, values };
 }
 
-async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
+async function insertTriggerRow<P>(
+  spec: RowInsertSpec<P>,
+  exec: EnqueueTx = db,
+): Promise<string> {
   const { table, values } = rowOf(spec);
-  const rows = await db
+  const rows = await exec
     .insert(table)
     .values(values)
     .returning({

@@ -28,7 +28,7 @@ export const serverContributors: Readonly<Record<string, readonly string[]>> = {
   "conversations.stop-waiver": ["conversations/plugins/runtime-sdk#machine","conversations/plugins/self-compact","tasks/plugins/orchestration/plugins/watch"],
   "conversations.system-prompt.section": ["page/plugins/annotations/plugins/agent-access","tasks#machine","tasks/plugins/orchestration/plugins/mandate","tasks/plugins/supervisor-roles","tasks/plugins/task-source-url"],
   "data-files.root-location": ["apps/plugins/desktop/plugins/wallpaper#machine","apps/plugins/prototypes#machine","apps/plugins/prototypes/plugins/thumbnails#machine","apps/plugins/sonata/plugins/covers#machine","infra/plugins/asset-mirror#machine"],
-  "db-trigger": ["apps/plugins/deploy/plugins/box-link/plugins/link","conversations/plugins/usage","reports/plugins/engine","shell/plugins/notifications","stats/plugins/cost","tasks/plugins/tasks-core"],
+  "db-trigger": ["apps/plugins/deploy/plugins/box-link/plugins/link","conversations/plugins/usage","infra/plugins/jobs","reports/plugins/engine","shell/plugins/notifications","stats/plugins/cost","tasks/plugins/tasks-core"],
   "db-trigger-claim": ["database/plugins/table-mirror/plugins/source","network/plugins/live/plugins/change-feed"],
   "deploy-secrets.local-value": ["integrations/plugins/google-maps/plugins/browser-config#machine"],
   "deploy.gate": ["apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals"],

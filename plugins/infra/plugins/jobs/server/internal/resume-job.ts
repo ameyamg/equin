@@ -204,7 +204,7 @@ export const jobsResumeJob = defineJob({
  * Whether THIS call moved it — the event and its timeout racer may both get
  * here, and only the one whose update matched a pending row resumes the run.
  */
-async function resolveWait(
+export async function resolveWait(
   exec: EnqueueTx,
   workflowRunId: string,
   waitName: string,

@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 import {
   parsedJson,
@@ -80,6 +81,14 @@ export const _jobWaits = pgTable(
     // column existed). A pending wait whose waker no longer holds its key will
     // never be resolved: its run is not coming (`keysInFlight`).
     wakerKey: text("waker_key"),
+    // The one-shot event trigger row this wait armed (`ctx.waitFor`): its
+    // table and id, as the durable hook that wrote it answered. NULL for a
+    // `ctx.sleep` (no event) and for a wait armed before the columns existed.
+    // The trigger's life ends with the wait's, however the wait ends — the
+    // `jobs.wait-trigger` DB trigger (`wait-trigger.ts`) deletes it the moment
+    // the wait leaves `pending` or is deleted while pending.
+    triggerTable: text("trigger_table"),
+    triggerId: uuid("trigger_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

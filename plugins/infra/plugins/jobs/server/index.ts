@@ -12,7 +12,9 @@ import {
   jobRunsServed,
   jobsServed,
 } from "./internal/resources";
+import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
 import { jobsResumeJob } from "./internal/resume-job";
+import { waitTriggerLifetime } from "./internal/wait-trigger";
 import { assertDefinedJobsRegistered } from "./internal/registry";
 import { JobQueue } from "./internal/queue";
 import { listDeadJobs, retryJob, cancelJob } from "../core";
@@ -113,6 +115,7 @@ export default {
   },
   register: [jobsResumeJob],
   contributions: [
+    DbTrigger(waitTriggerLifetime),
     ...jobsServed.declare,
     ...deadJobsServed.declare,
     ...jobRunsServed.declare,

@@ -288,6 +288,18 @@ run's resume, so the handler suspends rather than run twice. `{ noRecheck:
 occurrence of something). A timeout firing should mean the thing really did
 not happen — never shorten one to hide a missed wake.
 
+## A wait's trigger lives as long as the wait
+
+`ctx.waitFor` records its wait and arms its one-shot event trigger in ONE
+transaction (the `DurableHooks.registerTrigger` hook writes on the
+transaction it is handed), and the wait row records the trigger row it armed
+(`trigger_table`, `trigger_id`). The `jobs.wait-trigger` DB trigger
+(`server/internal/wait-trigger.ts`) deletes that row the moment the wait
+leaves `pending` or is deleted while pending — fired, timed out, resolved by
+the `settled` recheck, ended orphaned, cancelled by `abortDurableRun`, closed
+by `jobs.resume`'s `onDead`, or discarded with its run's log. No code path
+deletes a wait's trigger itself; a new way to end a wait needs nothing.
+
 ## A fork inherits no run
 
 A run belongs to the database whose queue ran it. A worktree's database is
@@ -891,6 +903,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - Load-bearing: yes
 - Server:
   - Contributes:
+    - `db-trigger` "jobs.wait-trigger"
     - `resource.declare` "dead-jobs"
     - `resource.declare` "dead-jobs:groups"
     - `resource.declare` "dead-jobs:rows"
@@ -912,6 +925,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
     - `database/connection.createDbPool`
     - `database/connection.withQueryDeadline`
+    - `database/db-triggers.DbTrigger`
     - `database/db-triggers.defineDbTriggers`
     - `database/db-triggers.installDbTriggers`
     - `database/sql-column.parsedJson`

@@ -67,6 +67,8 @@ const queueSchema = ExcludeSchemaDataFromFork({
 //
 // The trigger rows themselves stay: they are a row subset spread over one table
 // per event, and without their wait they are inert (deleted when they fire).
+// They are only those of waits pending at the fork: on the source, a wait's
+// trigger is deleted when the wait ends (`server/internal/wait-trigger.ts`).
 const runLogs = [
   ExcludeFromFork({
     table: _jobSteps,

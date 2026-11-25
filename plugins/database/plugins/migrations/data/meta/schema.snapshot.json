@@ -1,6 +1,6 @@
 {
-  "id": "6924fb60-929c-40f7-bf51-180f9081887e",
-  "prevId": "7c1ae086-83db-45dd-9be6-1c951ddf7cf9",
+  "id": "cfc82e23-6c1c-4940-99dd-a09c08b59bc4",
+  "prevId": "6924fb60-929c-40f7-bf51-180f9081887e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13193,6 +13193,18 @@
         "waker_key": {
           "name": "waker_key",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trigger_table": {
+          "name": "trigger_table",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trigger_id": {
+          "name": "trigger_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
