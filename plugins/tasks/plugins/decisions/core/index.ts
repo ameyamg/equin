@@ -46,3 +46,8 @@ export {
   decisionAttachmentLinks,
   decisionAttachmentLinksEntityRef,
 } from "./internal/attachment-links";
+export {
+  DECISION_HISTORY_SOURCE,
+  DecisionSnapshotSchema,
+} from "./internal/snapshot";
+export type { DecisionSnapshot } from "./internal/snapshot";

@@ -1,51 +1,32 @@
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineHistorySource } from "@plugins/history/plugins/engine/server";
 import {
-  DECISION_OPTIONS_MAX,
-  DECISION_STATES,
+  DECISION_HISTORY_SOURCE,
   decisionIdKind,
-  DecisionOptionSchema,
+  DecisionSnapshotSchema,
+  type DecisionSnapshot,
 } from "../../core";
-import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { _decisions } from "./tables";
-
-/** The history source id a decision's versions are recorded under. */
-export const DECISION_HISTORY_SOURCE = "decision";
-
-/**
- * What a version of a decision holds: what the decision SAYS — never its
- * thread (append-only on its own) nor who saw it. `closedAt` travels with
- * `state` and `outcome`, so a restored version keeps the table's CHECKs.
- */
-const SnapshotSchema = z.object({
-  label: z.string(),
-  state: z.enum(DECISION_STATES),
-  stateLabel: z.string().nullable(),
-  question: z.string(),
-  body: z.string(),
-  options: cappedList(DecisionOptionSchema, { max: DECISION_OPTIONS_MAX }),
-  outcome: z.string().nullable(),
-  closedAt: z.string().nullable(),
-});
-type Snapshot = z.infer<typeof SnapshotSchema>;
 
 /**
  * Every edit of a decision is a version (`history/engine`), so a decision has
  * the version dialog a page has. The tools record one after each write that
  * changed the decision, and pin the closed version before a reopen — the old
- * outcome is kept there, not on the row.
+ * outcome is kept there, not on the row. Never coalesced: each write is an
+ * agent's deliberate tool call, and the card's version navigator steps
+ * through every state the user may have read.
  */
 export const decisionHistorySource = defineHistorySource({
   id: DECISION_HISTORY_SOURCE,
+  coalesce: false,
   serialize: async (entityId) => {
     const [row] = await db
       .select()
       .from(_decisions)
       .where(eq(_decisions.id, decisionIdKind.key(entityId)));
     if (row === undefined) return null; // deleted since (its task went)
-    const snapshot: Snapshot = {
+    const snapshot: DecisionSnapshot = {
       label: row.label,
       state: row.state,
       stateLabel: row.stateLabel,
@@ -61,7 +42,7 @@ export const decisionHistorySource = defineHistorySource({
   // engine pins the current version first). Its label only comes back when no
   // other decision of the task took it since — else the current one stays.
   restore: async (entityId, raw) => {
-    const s = SnapshotSchema.parse(raw);
+    const s = DecisionSnapshotSchema.parse(raw);
     const id = decisionIdKind.key(entityId);
     const [row] = await db
       .select({ taskId: _decisions.taskId })

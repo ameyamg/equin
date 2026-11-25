@@ -10,7 +10,7 @@ import { _entityVersions } from "./tables";
 // Reversible replace. First snapshot the current state as a distinct "Before
 // restore" undo point (force: true bypasses the coalescing window so it
 // survives), then load the chosen version and hand its snapshot to the source's
-// `restore`. 404s cleanly if the source is unregistered or the version is
+// `restore`, then record the restored state. 404s cleanly if the source is unregistered or the version is
 // missing.
 export const handleRestoreVersion = implement(
   restoreVersion,
@@ -40,6 +40,10 @@ export const handleRestoreVersion = implement(
     if (!row) throw new HttpError(404, "Version not found");
 
     await source.restore(params.entityId, row.snapshot);
+    // The restored state is a version too, so the newest version is always
+    // the entity's current state (a reader stepping through the timeline
+    // ends on what the entity says now, not on the pre-restore point).
+    await recordVersion(params.sourceId, params.entityId);
 
     return { ok: true as const };
   },

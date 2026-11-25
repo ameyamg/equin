@@ -10,12 +10,12 @@ import {
 import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
 import {
+  DECISION_HISTORY_SOURCE,
   DECISION_OPTIONS_MAX,
   DECISION_STATES,
   decisionIdKind,
   OPEN_DECISION_STATES,
 } from "../../core";
-import { DECISION_HISTORY_SOURCE } from "./history";
 import { readDecisionInFull } from "./full-read";
 import { decisionLines } from "./full-render";
 import { renderDecisionList } from "./render";

@@ -20,6 +20,14 @@ export interface HistorySource {
     label?: string;
     author?: string;
   } | null>;
+  /**
+   * Whether edits inside one ~10-minute window collapse onto a single version
+   * (default `true` — right for a page saved on every keystroke). `false`
+   * keeps every recorded edit as its own version: for an entity whose writes
+   * are each deliberate (an agent's tool call), so no state a reader saw is
+   * folded away.
+   */
+  coalesce?: boolean;
   /** Replace the entity's current state with a previously captured snapshot. */
   restore: (entityId: string, snapshot: unknown) => Promise<void>;
 }

@@ -56897,11 +56897,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×47
           - `primitives` ×23
           - `conversations` ×21
-          - `tasks` ×9
+          - `tasks` ×10
           - `page` ×7
           - `debug` ×5
           - `config_v2` ×4
@@ -65248,12 +65248,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "dec"
           - `IdKinds.Kind` "dex"
-        - Uses: 44 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+        - Uses: 46 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
           - `primitives/data-view` ×4
+          - `network/live` ×3
           - `primitives/collapsible` ×3
           - `conversations/conversation-view/user-message` ×2
           - `network/live/live-state` ×2
-          - `network/live` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/text` ×2
@@ -65272,6 +65272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/sticky.Sticky`
+          - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/markdown.Markdown`
@@ -65401,6 +65402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DecisionId`
           - `DecisionOption`
           - `DecisionRow`
+          - `DecisionSnapshot`
           - `DecisionState`
           - `DecisionTab`
           - `OpenDecisionState`
@@ -65410,6 +65412,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ANSWER_NOTE_MAX`
           - `ANSWER_REFUSALS`
           - `ANSWERS_PER_SUBMIT_MAX`
+          - `DECISION_HISTORY_SOURCE`
           - `DECISION_OPTIONS_MAX`
           - `DECISION_STATES`
           - `DECISION_TAB_OPTIONS`
@@ -65428,6 +65431,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DECISIONS_PER_TASK_MAX`
           - `decisionsEntityRef`
           - `decisionsList`
+          - `DecisionSnapshotSchema`
           - `EXCHANGE_KINDS`
           - `EXCHANGES_PER_DECISION_MAX`
           - `markDecisionSeenEndpoint`
@@ -68577,14 +68581,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 616 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 617 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×125
           - `primitives` ×54
           - `page` ×52
           - `fields` ×41
           - `debug` ×30
-          - `tasks` ×26
+          - `tasks` ×27
           - `plugin-meta` ×16
           - `ui` ×13
           - `active-data` ×11

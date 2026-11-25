@@ -100,8 +100,14 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   re-recommended.
 - Any successful update consumes the answers the user sent (ends Sent).
 - **History**: the `decision` history source (`history/engine`) records a
-  version after every edit; before a reopen the closed version is pinned
-  ("Before reopening"), so the old outcome survives the 10-minute coalescing.
+  version after every edit, never coalesced (`coalesce: false`: each write is
+  a deliberate tool call, so every state the user may have read is kept);
+  before a reopen the closed version is pinned ("Before reopening"). The
+  snapshot's schema is `DecisionSnapshotSchema` (core), shared by the server
+  and the card: `DecisionCard`'s header steps through the versions
+  (`‹ n / N ›`, `web/components/decision-versions.tsx`), a past one drawn
+  read-only (its pill, question, outcome, body, options; the thread as it is
+  now; no answer box) with Back to the current version.
   The tool checks the call first (`updateDecision(…, { dryRun: true })`), so
   a refused one pins nothing. The thread is not versioned (append-only on its
   own). A restore is the user's undo: it may reopen or close the decision,
@@ -182,12 +188,12 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   - Contributes:
     - `IdKinds.Kind` "dec"
     - `IdKinds.Kind` "dex"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
+    - `network/live` ×3
     - `primitives/collapsible` ×3
     - `conversations/conversation-view/user-message` ×2
     - `network/live/live-state` ×2
-    - `network/live` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
@@ -206,6 +212,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/sticky.Sticky`
+    - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
@@ -335,6 +342,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `DecisionId`
     - `DecisionOption`
     - `DecisionRow`
+    - `DecisionSnapshot`
     - `DecisionState`
     - `DecisionTab`
     - `OpenDecisionState`
@@ -344,6 +352,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `ANSWER_NOTE_MAX`
     - `ANSWER_REFUSALS`
     - `ANSWERS_PER_SUBMIT_MAX`
+    - `DECISION_HISTORY_SOURCE`
     - `DECISION_OPTIONS_MAX`
     - `DECISION_STATES`
     - `DECISION_TAB_OPTIONS`
@@ -362,6 +371,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `DECISIONS_PER_TASK_MAX`
     - `decisionsEntityRef`
     - `decisionsList`
+    - `DecisionSnapshotSchema`
     - `EXCHANGE_KINDS`
     - `EXCHANGES_PER_DECISION_MAX`
     - `markDecisionSeenEndpoint`

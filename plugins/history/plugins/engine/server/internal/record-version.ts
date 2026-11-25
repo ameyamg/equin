@@ -18,6 +18,8 @@ const WINDOW_MS = 10 * 60 * 1000;
  * over) — used for the pre-restore undo point so it always survives as a
  * distinct timeline entry. `opts.label` overrides the source-provided label.
  *
+ * A source declaring `coalesce: false` never coalesces: every call inserts.
+ *
  * Coalescing targets the newest *unpinned* version: pinned checkpoints (and any
  * auto-snapshot taken after one) are never overwritten, so a post-restore
  * snapshot lands as a new row rather than clobbering the "Before restore" point.
@@ -70,6 +72,7 @@ export async function recordVersion(
     .limit(1);
 
   if (
+    source.coalesce !== false &&
     newest &&
     !newest.pinned &&
     now.getTime() - newest.createdAt.getTime() < WINDOW_MS

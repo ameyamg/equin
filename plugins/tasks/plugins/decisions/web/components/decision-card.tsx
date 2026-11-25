@@ -33,7 +33,15 @@ import {
   type DecisionRow,
 } from "../../core";
 import { NewMark } from "./decision-state";
-import { decisionPresentation } from "../internal/presentation";
+import {
+  decisionPresentation,
+  type DecisionPresentation,
+} from "../internal/presentation";
+import {
+  PastVersion,
+  useDecisionVersions,
+  VersionNav,
+} from "./decision-versions";
 import { isAnswerable, type DecisionDraft } from "../internal/drafts";
 
 /**
@@ -45,6 +53,10 @@ import { isAnswerable, type DecisionDraft } from "../internal/drafts";
  * folded. Given its `draft`, it is answered in place: the options pick (and
  * unpick), a note goes with the pick or asks a question, an FYI takes "Got
  * it" — all drafts until the SubmitBar sends them.
+ *
+ * Once edited, its header steps through its versions (`‹ n / N ›`): a past
+ * one shows what the decision said then, read-only, with the thread as it is
+ * now.
  *
  * `under`: what the row this card expands beneath already prints beside the
  * decision's label — `"question"` (an open row) or `"outcome"` (a closed
@@ -70,55 +82,101 @@ export function DecisionCard({
    */
   seenBefore: Date | null;
 }): ReactElement {
+  const versions = useDecisionVersions(decision.id);
+  // The past version shown, null for what the decision says now. Kept per
+  // showing: a card opened again starts on the current version.
+  const [viewing, setViewing] = useState<string | null>(null);
   const presentation = decisionPresentation(decision);
   const isNew =
     seenBefore === null ||
     (decision.latestAgentAt !== null && decision.latestAgentAt > seenBefore);
-  const body = (
-    <Stack gap="md">
-      <Stack direction="row" gap="sm" align="center" wrap>
-        {under === null ? (
-          <Text variant="code" tone="muted">
-            {decision.label}
-          </Text>
-        ) : null}
-        <Badge variant={presentation.variant} shape="pill">
-          {presentation.label}
-        </Badge>
-        {isNew ? <NewMark /> : null}
-        {decision.fromDecisionId !== null ? (
-          <FromLabel decisionId={decision.fromDecisionId} />
-        ) : null}
-        <Text variant="caption" tone="muted">
-          <RelativeTime date={decision.openedAt} />
-        </Text>
-      </Stack>
-      {under === "question" ? null : (
-        <Text as="h2" variant="heading">
-          {decision.question}
-        </Text>
-      )}
-      <Outcome decision={decision} showOutcome={under !== "outcome"} />
-      {decision.body.trim() !== "" ? (
-        <Markdown>{decision.body}</Markdown>
-      ) : null}
-      {decision.options.length > 0 ? (
-        <Options
-          options={decision.options}
-          draft={draft !== undefined && isAnswerable(decision) ? draft : null}
-        />
-      ) : null}
-      <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
-      {decision.state !== "closed" && decision.unconsumedAnswers > 0 ? (
-        <Text variant="caption" tone="muted">
-          {`Sent to ${decision.taskTitle}. Waiting for it to act on your answer.`}
+  const header = (pill: DecisionPresentation, newMark: boolean) => (
+    <Stack direction="row" gap="sm" align="center" wrap>
+      {under === null ? (
+        <Text variant="code" tone="muted">
+          {decision.label}
         </Text>
       ) : null}
-      {draft !== undefined && isAnswerable(decision) ? (
-        <Answer decision={decision} draft={draft} />
+      <Badge variant={pill.variant} shape="pill">
+        {pill.label}
+      </Badge>
+      {newMark ? <NewMark /> : null}
+      {decision.fromDecisionId !== null ? (
+        <FromLabel decisionId={decision.fromDecisionId} />
       ) : null}
+      <Text variant="caption" tone="muted">
+        <RelativeTime date={decision.openedAt} />
+      </Text>
+      <Fill />
+      <VersionNav versions={versions} viewing={viewing} onView={setViewing} />
     </Stack>
   );
+  const thread = (
+    <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
+  );
+  const body =
+    viewing !== null ? (
+      // A past version, read-only: what the decision said then (its pill,
+      // question, outcome, body and options); the thread is not versioned,
+      // so it stays as it is now. Answering is on the current version only.
+      <PastVersion decisionId={decision.id} versionId={viewing}>
+        {(past, at) => (
+          <Stack gap="md">
+            {header(
+              decisionPresentation({ ...past, unconsumedAnswers: 0 }),
+              false,
+            )}
+            <Stack direction="row" gap="sm" align="center" wrap>
+              <Text variant="caption" tone="muted">
+                Earlier version, from <RelativeTime date={at} />
+              </Text>
+              <Button variant="ghost" onClick={() => setViewing(null)}>
+                Back to the current version
+              </Button>
+            </Stack>
+            <Text as="h2" variant="heading">
+              {past.question}
+            </Text>
+            {past.outcome !== null ? (
+              <Text variant="label">{past.outcome}</Text>
+            ) : null}
+            {past.body.trim() !== "" ? <Markdown>{past.body}</Markdown> : null}
+            {past.options.length > 0 ? (
+              <Options options={past.options} draft={null} />
+            ) : null}
+            {thread}
+          </Stack>
+        )}
+      </PastVersion>
+    ) : (
+      <Stack gap="md">
+        {header(presentation, isNew)}
+        {under === "question" ? null : (
+          <Text as="h2" variant="heading">
+            {decision.question}
+          </Text>
+        )}
+        <Outcome decision={decision} showOutcome={under !== "outcome"} />
+        {decision.body.trim() !== "" ? (
+          <Markdown>{decision.body}</Markdown>
+        ) : null}
+        {decision.options.length > 0 ? (
+          <Options
+            options={decision.options}
+            draft={draft !== undefined && isAnswerable(decision) ? draft : null}
+          />
+        ) : null}
+        {thread}
+        {decision.state !== "closed" && decision.unconsumedAnswers > 0 ? (
+          <Text variant="caption" tone="muted">
+            {`Sent to ${decision.taskTitle}. Waiting for it to act on your answer.`}
+          </Text>
+        ) : null}
+        {draft !== undefined && isAnswerable(decision) ? (
+          <Answer decision={decision} draft={draft} />
+        ) : null}
+      </Stack>
+    );
   return under === null ? <Card>{body}</Card> : body;
 }
 

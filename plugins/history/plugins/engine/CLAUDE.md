@@ -1,5 +1,13 @@
 # engine
 
+## Coalescing
+
+`recordVersion` folds edits inside a ~10-minute window into one version (a
+page saved on every keystroke). A source whose writes are each deliberate
+declares `coalesce: false` (decisions: an agent's tool call per edit), and
+every call inserts. A restore records the restored state after it, so the
+newest version is always the entity's current state.
+
 ## Retention
 
 `entity_versions` is an unbounded-growth firehose — one row per edit of a

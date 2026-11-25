@@ -2,8 +2,10 @@ import { db } from "@plugins/database/server";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { recordVersion } from "@plugins/history/plugins/engine/server";
 import { deliverEventTurn } from "@plugins/tasks/plugins/orchestration/plugins/message/server";
-import { submitDecisionAnswersEndpoint } from "../../core";
-import { DECISION_HISTORY_SOURCE } from "../../server/internal/history";
+import {
+  DECISION_HISTORY_SOURCE,
+  submitDecisionAnswersEndpoint,
+} from "../../core";
 import { takeDecisionNote } from "./take-note";
 import { taskAgentFinished } from "./agent-finished";
 import { submitAnswers, type AnswerPorts } from "./answers";
