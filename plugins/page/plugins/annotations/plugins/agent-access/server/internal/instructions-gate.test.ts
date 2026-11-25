@@ -37,6 +37,7 @@ import {
   restoreAfterCompaction,
 } from "./instructions-gate";
 import { redactHumanAudience } from "./policy";
+import { pageInstructionsPromptsConfig } from "../../core";
 
 let t: TestDb;
 
@@ -322,9 +323,9 @@ describe("the write rule", () => {
 describe("the connect-time section", () => {
   test("with no global instructions, only the fixed paragraph", async () => {
     const section = await t.db.transaction((tx) =>
-      renderGlobalSection("conv", tx),
+      renderGlobalSection("conv", tx, pageInstructionsPromptsConfig.defaults),
     );
-    expect(section).toContain("## Page instructions");
+    expect(section).toContain("equin pages can carry instructions");
     expect(section).not.toContain("global-instructions");
     expect(section).not.toContain("<instructions-page");
   });
@@ -338,7 +339,7 @@ describe("the connect-time section", () => {
       global: true,
     });
     const section = await t.db.transaction((tx) =>
-      renderGlobalSection("conv", tx),
+      renderGlobalSection("conv", tx, pageInstructionsPromptsConfig.defaults),
     );
     expect(section).toContain("<global-instructions>");
     expect(section).toContain("root rule");
@@ -395,7 +396,9 @@ describe("after a compaction", () => {
 
   test("global cards ride the system prompt, which survives: not repeated", async () => {
     await setData("IR", { global: true });
-    await t.db.transaction((tx) => renderGlobalSection("conv", tx));
+    await t.db.transaction((tx) =>
+      renderGlobalSection("conv", tx, pageInstructionsPromptsConfig.defaults),
+    );
     await read("conv", "TRACK", "TRACK");
 
     const restored = await restore("conv");

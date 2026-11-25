@@ -17484,8 +17484,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 104 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×104
+    - Slot contributors: 111 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×111
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -17750,14 +17750,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withListOrder`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 154 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 162 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×17
-      - `conversations` ×14
+      - `conversations` ×15
       - `backup` ×12
+      - `tasks` ×12
       - `ui` ×11
-      - `config_v2` ×8
-      - `tasks` ×7
+      - `config_v2` ×9
       - `auth` ×6
       - `infra` ×6
       - `framework` ×5
@@ -17774,6 +17774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `map/google`
       - `music/background`
       - `network/live/live-state-snapshot`
+      - `page/annotations/agent-access`
       - `reorder`
       - `reports`
       - `review/code-review`
@@ -18046,6 +18047,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/action-bar.ActionBar`
           - `shell/notifications.useToast`
           - `ui/icons.Icon`
+    - **`prompts`** — Agent prompts as config, server half: renderConfigPrompt(descriptor, key, variables) — a prompt field as the user saved it now, filled (a PromptText).
+      - Server:
+        - Uses: `config_v2.getConfig`
+        - Exports (values): `renderConfigPrompt`
+      - Core:
+        - Uses:
+          - `fields/multiline-text/config.multilineTextField`
+          - `fields/multiline-text/config.MultilineTextFieldDef`
+          - `packages/prompt-template.renderPrompt`
+          - `packages/prompt-template.unknownTemplateVariables`
+        - Exports (types):
+          - `PromptFieldDef`
+          - `PromptFieldVariable`
+          - `PromptKey`
+          - `PromptText`
+          - `PromptVariablesOf`
+        - Exports (values):
+          - `fillPrompt`
+          - `joinPrompts`
+          - `promptField`
+          - `promptList`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/conversation-view/push-and-exit/capabilities`
+          - `hints/ask`
+          - `page/annotations/agent-access`
+          - `tasks`
+          - `tasks/orchestration/mandate`
+          - `tasks/orchestration/watch`
+          - `tasks/outcome-report`
+          - `tasks/supervisor-roles`
+          - `tasks/task-mandate/manage-grant`
+          - `tasks/task-source-url`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
       - Web:
         - Slots:
@@ -23079,24 +23113,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pushAndExitConfig`
               - `startPushAndExit`
           - Plugins:
-            - **`capabilities`** — The push-and-exit mandate capabilities as plain data: push.policy (on-request | never | safe | checks — on-request for a task a person drives, the other three the closed automation push policy set; their labels and the instruction each becomes), exit.clean (on-request | when-done — when the agent closes itself with exit_clean, a tool every conversation has) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
+            - **`capabilities`** — Registers the push / exit agent-instructions config for Settings → Config and every browser reader (the upstream update row's {{pushPolicy}}). Registers the push / exit agent-instructions config — what each push policy and exit policy tells the agent — here, beside its definition, so every plugin reading it (the mandate lines, automations' {{pushPolicy}}, outcome-report's next step) has it registered wherever it runs.
+              - Web:
+                - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+                - Uses: `config_v2.ConfigV2`
+              - Server:
+                - Contributes: `ConfigV2.Register` "agent-instructions"
+                - Uses: `config_v2.ConfigV2`
               - Core:
-                - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+                - Uses:
+                  - `config_v2.defineConfig`
+                  - `config_v2/prompts.fillPrompt`
+                  - `config_v2/prompts.promptField`
+                  - `config_v2/prompts.PromptText`
+                  - `tasks/orchestration/mandate/policy.defineCapability`
                 - Exports (types):
                   - `ExitWhen`
                   - `MandatePushPolicy`
+                  - `PushExitPrompts`
                   - `PushPolicy`
                 - Exports (values):
-                  - `EXIT_WHEN_TEXT`
                   - `exitClean`
+                  - `exitWhenPrompt`
                   - `flagRaise`
                   - `MANDATE_PUSH_POLICIES`
-                  - `MANDATE_PUSH_POLICY_TEXT`
+                  - `mandatePushLine`
                   - `MandatePushPolicySchema`
                   - `PUSH_POLICIES`
                   - `PUSH_POLICY_LABELS`
-                  - `PUSH_POLICY_TEXT`
+                  - `pushExitPromptsConfig`
                   - `pushPolicy`
+                  - `pushPolicyPrompt`
                   - `PushPolicySchema`
               - Cross-plugin:
                 - Imported by:
@@ -31968,15 +32015,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by:
+              - `config_v2/prompts`
               - `conversations/conversation-view/launch-prompts`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/selection-actions`
               - `conversations/preprompts`
               - `fields/list/config`
-              - `hints/ask`
               - `tasks/automations`
-              - `tasks/supervisor-roles`
               - `tasks/task-triage`
     - **`number`** — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
@@ -36395,10 +36441,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `config_v2.defineConfig`
+          - `config_v2/prompts.promptField`
           - `conversations/agent-thread.defineThreadResult`
           - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
           - `fields/dynamic-enum/config.dynamicEnumField`
-          - `fields/multiline-text/config.multilineTextField`
           - `tasks/task-ids.taskIdKind`
         - Exports (types):
           - `AskInput`
@@ -46120,9 +46166,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`prompt-template`** — Prompt templates a person edits: `{{name}}` placeholders filled per use. templateVariables(template) lists the names a template uses, unknownTemplateVariables(template, declared) the ones a declared PromptVariable set does not offer, and renderPrompt(template, values) fills every placeholder — or refuses the whole template, naming the variables it has no value for, never rendering one blank.
       - Cross-plugin:
         - Imported by:
+          - `config_v2/prompts`
           - `hints/ask`
           - `tasks/automations`
-          - `tasks/supervisor-roles`
           - `tasks/supervisor-roles/pane`
           - `tasks/task-triage`
           - `upstream`
@@ -46888,15 +46934,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
       - Plugins:
-        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page), and the page-instructions system-prompt section (what page instructions are, and every global one). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
+        - **`agent-access`** — Page agent access, web half: registers the Page instructions prompts config (what every agent is told about page instructions, Settings → Config). The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page), and the page-instructions system-prompt section (what page instructions are, and every global one — its words the Page instructions prompts config). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+            - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
+              - `ConfigV2.Register` "agent-instructions"
               - `conversations.system-prompt.section` "page-instructions"
               - `conversations.compaction-context` "page-instructions (whole)"
-            - Uses: 28 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
               - `page/annotations/instructions` ×10
               - `page/markdown-apply` ×5
               - `page/editor` ×4
+              - `config_v2` ×2
               - `database` ×2
               - `page/tags` ×2
               - `conversations/compaction-context.CompactionContext`
@@ -46911,6 +46962,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ReadPageInput`
               - `WriteAgentNoteInput`
             - Exports (values): `pageTools`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `config_v2/prompts.promptField`
+            - Exports (values): `pageInstructionsPromptsConfig`
           - Cross-plugin:
             - Imported by: `apps/website/promo-film/seed`
           - Machine:
@@ -64564,9 +64620,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-map`
           - `apps/prototypes/gallery`
 
-- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
+- **`tasks`** — Nested tasks with attempts linking to conversations; registers the Task filing instructions config (Settings → Config). Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's. Registers the Task filing instructions config (the tasks.file Mandate line and the grant clauses add_task describes it with).
+  - Web:
+    - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+    - Uses:
+      - `config_v2.ConfigV2`
+      - `infra/endpoints.useEndpointMutation`
+      - `network/live.mapRow`
+      - `network/live.useLive`
+      - `network/live/live-state.mapResource`
+      - `network/live/live-state.ResourceResult`
+    - Exports (types): `TaskPatch`
+    - Exports (values):
+      - `useActiveDependentCount`
+      - `usePatchTask`
+      - `useTask`
+      - `useTasksById`
   - Server:
     - Contributes:
+      - `ConfigV2.Register` "agent-instructions"
       - `mandateCapability` "tasks.file"
       - `mandateCapability` "tasks.manage"
       - `exitCleanPrecondition` "tasks.open-sidequests"
@@ -64582,7 +64654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
-    - Uses: 55 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+    - Uses: 56 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×20
       - `tasks/orchestration/mandate` ×5
       - `tasks/task-mandate/manage-grant` ×5
@@ -64592,6 +64664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
       - `tasks/orchestration/mandate/definitions` ×2
+      - `config_v2.ConfigV2`
       - `conversations/conversation-view/push-and-exit/exit-precondition.ExitClean`
       - `conversations/model-provider/catalog.getModelCatalog`
       - `infra/attachments.getAttachment`
@@ -64617,19 +64690,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `POST /api/tasks/:id/dependencies`
       - `DELETE /api/tasks/:id/dependencies/:depId`
       - `POST /api/tasks/:id/deps-move`
-  - Web:
-    - Uses:
-      - `infra/endpoints.useEndpointMutation`
-      - `network/live.mapRow`
-      - `network/live.useLive`
-      - `network/live/live-state.mapResource`
-      - `network/live/live-state.ResourceResult`
-    - Exports (types): `TaskPatch`
-    - Exports (values):
-      - `useActiveDependentCount`
-      - `usePatchTask`
-      - `useTask`
-      - `useTasksById`
   - Machine:
     - Uses:
       - `infra/endpoints.implementMachine`
@@ -64642,6 +64702,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Routes: `POST /api/tasks/launch`
   - Core:
     - Uses:
+      - `config_v2.defineConfig`
+      - `config_v2/prompts.promptField`
       - `conversations/model-provider.ModelChoiceSchema`
       - `infra/endpoints.dateString`
       - `infra/endpoints.defineEndpoint`
@@ -64694,6 +64756,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `TaskChainSubmitBodySchema`
       - `TaskChainSubmitResponseSchema`
       - `TaskChainTargetSchema`
+      - `taskFilingPromptsConfig`
       - `updateTask`
       - `UpdateTaskBodySchema`
   - Cross-plugin:
@@ -65866,17 +65929,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `formatTreeHeader`
               - `formatTreeLine`
               - `readTree`
-        - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) and `managerTaskId` (the watching agent's task, hidden by default) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
+        - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) and `managerTaskId` (the watching agent's task, hidden by default) in every list whose rows reach a task; registers the Watch instructions config (Settings → Config). Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it); and the Watch instructions config (the Mandate lines a watcher is told, as editable prompts). Names no source, handler or workflow.
           - Web:
             - Contributes:
+              - `ConfigV2.WebRegister` "agent-instructions"
               - `IdKinds.Kind` "watch"
               - `IdKinds.Kind` "wevt"
               - `FieldPresentation.Register` "exposure:tasks_ext_manager"
             - Uses:
+              - `config_v2.ConfigV2`
               - `ids.IdKinds`
               - `network/live.FieldPresentation`
           - Server:
             - Contributes:
+              - `ConfigV2.Register` "agent-instructions"
               - `ids.kind` "watch"
               - `ids.kind` "wevt"
               - `conversations.stop-waiver` "watch"
@@ -65889,6 +65955,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `trigger` "watch.on-task-filed"
               - `trigger` "watch.on-task-status"
             - Uses:
+              - `config_v2.ConfigV2`
               - `conversations/stop-gate.StopWaiver`
               - `database.db`
               - `database.DbExecutor`
@@ -65917,6 +65984,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `watchTask`
           - Core:
             - Uses:
+              - `config_v2.defineConfig`
+              - `config_v2/prompts.promptField`
               - `fields/text/config.textField`
               - `ids.defineIdKind`
               - `ids.IdOf`
@@ -65933,6 +66002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WatcherSchema`
               - `watchEventIdKind`
               - `watchIdKind`
+              - `watchPromptsConfig`
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-view/push-and-exit`
@@ -65967,12 +66037,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/watch`
                   - `tasks/supervisor-roles/sessions`
-    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
+    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
       - Web:
         - Contributes:
+          - `ConfigV2.WebRegister` "agent-instructions"
           - `JsonlViewer.TranscriptEnd` "outcome-report" → `OutcomeReportCard`
           - `Automations.TaskDetail` → `OutcomeReportDetail`
         - Uses:
+          - `config_v2.ConfigV2`
           - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
           - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
           - `conversations/conversation-view/pending-turn.useSendConversationTurn`
@@ -65994,12 +66066,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "outcome-reports:rows"
+          - `ConfigV2.Register` "agent-instructions"
           - `mandateCapability` "report.required"
           - `conversations.stop-gate` "outcome-report"
           - `watchSource` "outcome-report"
           - `trigger` "watch.ingest"
           - `treeDigestAnnotation` "outcome-report"
         - Uses:
+          - `config_v2.ConfigV2`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
           - `network/live.serveCollection`
@@ -66019,6 +66093,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `mcpTool('submit_outcome_report')`
       - Core:
         - Uses:
+          - `config_v2.defineConfig`
+          - `config_v2/prompts.promptField`
           - `fields.nullable`
           - `fields/date/config.dateField`
           - `fields/json/config.jsonField`
@@ -66031,6 +66107,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OutcomeReport`
           - `ReportStanding`
         - Exports (values):
+          - `outcomeReportPromptsConfig`
           - `outcomeReportRows`
           - `OutcomeReportSchema`
           - `outcomeReportShape`
@@ -66231,11 +66308,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config` ×2
           - `tasks/orchestration/mandate/policy` ×2
           - `ui/icons/saved-names` ×2
+          - `config_v2/prompts.promptField`
           - `config_v2.defineConfig`
           - `conversations/conversations-view/queue.conversationSectionIdKind`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
-          - `fields/multiline-text/config.multilineTextField`
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `infra/entity-extensions.defineExtensionShape`
@@ -66251,7 +66328,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BACKLOG_STATUSES`
           - `createSupervisorRole`
           - `CreateSupervisorRoleBodySchema`
-          - `DECISIONS_PROMPT_VARIABLES`
           - `deleteSupervisorRole`
           - `ENDED_SESSION_STATUSES`
           - `isLiveSessionStatus`
@@ -67263,12 +67339,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `tasks/task-header`
       - Plugins:
-        - **`manage-grant`** — The task header's 'May manage tasks it doesn't own' switch (TaskManageGrantControl, beside the Mandate: a person's grant to that task's own conversation, a warning chip while on, read-only on a done or dropped task and on an agent-driven page), and the task detail's 'Done under a grant' section: a DataView of the actions taken on the task under a grant, and the grant's own switches. A person's grant on one task — 'may manage tasks it doesn't own': the tasks_ext_manage_grant row (on = a row), joined to the mandate of that task's OWN conversation only through a MandateOverlay (never a side chat, a worker or a subtask) while the task is not done or dropped, with its `## Mandate` line; removed when the task settles (a job on tasks.statusChanged, plus a boot sweep); setTaskManageGrant / clearTaskManageGrant (each recorded, and announced as tasks.mandateChanged so the running agent is told), grantHeld, and the task_unowned_actions audit every action taken under a grant is recorded in (recordUnownedAction), served as tasks.unowned-actions.
+        - **`manage-grant`** — The task header's 'May manage tasks it doesn't own' switch (TaskManageGrantControl, beside the Mandate: a person's grant to that task's own conversation, a warning chip while on, read-only on a done or dropped task and on an agent-driven page), and the task detail's 'Done under a grant' section: a DataView of the actions taken on the task under a grant, and the grant's own switches; registers the Manage grant instructions config (the grant's Mandate line, Settings → Config). A person's grant on one task — 'may manage tasks it doesn't own': the tasks_ext_manage_grant row (on = a row), joined to the mandate of that task's OWN conversation only through a MandateOverlay (never a side chat, a worker or a subtask) while the task is not done or dropped, with its `## Mandate` line (an editable prompt, the Manage grant instructions config); removed when the task settles (a job on tasks.statusChanged, plus a boot sweep); setTaskManageGrant / clearTaskManageGrant (each recorded, and announced as tasks.mandateChanged so the running agent is told), grantHeld, and the task_unowned_actions audit every action taken under a grant is recorded in (recordUnownedAction), served as tasks.unowned-actions.
           - Web:
             - Contributes:
+              - `ConfigV2.WebRegister` "agent-instructions"
               - `IdKinds.Kind` "grantact"
               - `TaskDetailSlots.Section` "Done under a grant" → `UnownedActionsSection`
             - Uses:
+              - `config_v2.ConfigV2`
               - `ids.IdKinds`
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.useLive`
@@ -67287,6 +67365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `TaskManageGrantControl`
           - Server:
             - Contributes:
+              - `ConfigV2.Register` "agent-instructions"
               - `resource.declare` "tasks.manage-grant:rows"
               - `resource.declare` "tasks.unowned-actions"
               - `resource.declare` "tasks.unowned-actions:groups"
@@ -67296,6 +67375,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.kind` "grantact"
               - `trigger` "tasks.manage-grant-clear-on-settle"
             - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2/prompts.renderConfigPrompt`
               - `database.db`
               - `database.DbExecutor`
               - `ids.IdKinds`
@@ -67332,6 +67413,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks.unowned-actions:rows` (keyed, point)
           - Core:
             - Uses:
+              - `config_v2.defineConfig`
+              - `config_v2/prompts.promptField`
               - `fields.FieldsRecord`
               - `fields.nullable`
               - `fields/date/config.dateField`
@@ -67350,6 +67433,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UnownedActionId`
             - Exports (values):
               - `deleteTaskManageGrant`
+              - `manageGrantPromptsConfig`
               - `putTaskManageGrant`
               - `TaskManageGrantRowSchema`
               - `taskManageGrants`
@@ -67420,13 +67504,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteTaskPreprompt`
           - `putTaskPreprompt`
           - `TaskPrepromptSchema`
-    - **`task-source-url`** — Reads back the page a task was filed from: by attempt (useAttemptSourceUrl), and by task as the task header's read-only Filed from row (TaskSourceUrlRow). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than as prompt text: handed to the task's agents as the `source-page` system-prompt section at every spawn, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
+    - **`task-source-url`** — Reads back the page a task was filed from: by attempt (useAttemptSourceUrl), and by task as the task header's read-only Filed from row (TaskSourceUrlRow); registers the Source page instructions config (Settings → Config). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than as prompt text: handed to the task's agents as the `source-page` system-prompt section at every spawn (its words the Source page instructions config), and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
+      - Web:
+        - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+        - Uses:
+          - `config_v2.ConfigV2`
+          - `network/live.useLive`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.SectionLabel`
+          - `primitives/css/text.Text`
+          - `primitives/file-links.FileLinkText`
+        - Exports (values):
+          - `TaskSourceUrlRow`
+          - `useAttemptSourceUrl`
       - Server:
         - Contributes:
+          - `ConfigV2.Register` "agent-instructions"
           - `resource.declare` "task-source-url.by-attempt"
           - `resource.declare` "task-source-urls:rows"
           - `conversations.system-prompt.section` "source-page"
         - Uses:
+          - `config_v2.ConfigV2`
+          - `config_v2/prompts.renderConfigPrompt`
           - `conversations/system-prompt.SystemPrompt`
           - `infra/entity-extensions.defineExtension`
           - `network/live.serveCollection`
@@ -67443,20 +67544,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `task-source-url.by-attempt` (push)
           - `task-source-urls:rows` (keyed, point)
-      - Web:
-        - Uses:
-          - `network/live.useLive`
-          - `primitives/css/fill.Fill`
-          - `primitives/css/line.Line`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.SectionLabel`
-          - `primitives/css/text.Text`
-          - `primitives/file-links.FileLinkText`
-        - Exports (values):
-          - `TaskSourceUrlRow`
-          - `useAttemptSourceUrl`
       - Core:
         - Uses:
+          - `config_v2.defineConfig`
+          - `config_v2/prompts.promptField`
           - `fields/text/config.textField`
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live.liveCollection`
@@ -67464,6 +67555,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `AttemptSourceUrl`
         - Exports (values):
           - `attemptSourceUrl`
+          - `sourcePagePromptsConfig`
           - `taskSourceUrls`
           - `taskSourceUrlShape`
       - Cross-plugin:
@@ -70927,15 +71019,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `HealthReport.Row` "Releases"
       - `HealthReport.Row` "Updates"
       - `Notifications.Action` "equin-update"
-    - Uses: 28 symbols — full list in [`plugins/upstream/REFERENCE.md`](../plugins/upstream/REFERENCE.md)
+    - Uses: 29 symbols — full list in [`plugins/upstream/REFERENCE.md`](../plugins/upstream/REFERENCE.md)
       - `primitives/css/ui-kit` ×6
       - `config_v2` ×3
+      - `network/live/live-state` ×2
       - `primitives/relative-time` ×2
       - `shell/notifications` ×2
       - `apps-core/tabs.useAppLinkProps`
       - `conversations/conversation-view/status.ConversationStatusChip`
       - `infra/endpoints.useFetchEndpoint`
-      - `network/live/live-state.ResourceErrorInline`
       - `network/live.useLive`
       - `primitives/css/fill.Fill`
       - `primitives/css/line.Line`

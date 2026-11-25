@@ -2011,6 +2011,10 @@
       "name": "@equin/plugin-config_v2-git-defaults-preview",
       "version": "0.0.1",
     },
+    "plugins/config_v2/plugins/prompts": {
+      "name": "@equin/plugin-config_v2-prompts",
+      "version": "0.0.1",
+    },
     "plugins/config_v2/plugins/settings": {
       "name": "@equin/plugin-config_v2-settings",
     },
@@ -9477,6 +9481,8 @@
     "@equin/plugin-config_v2-fields": ["@equin/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 
     "@equin/plugin-config_v2-git-defaults-preview": ["@equin/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
+
+    "@equin/plugin-config_v2-prompts": ["@equin/plugin-config_v2-prompts@workspace:plugins/config_v2/plugins/prompts"],
 
     "@equin/plugin-config_v2-settings": ["@equin/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 

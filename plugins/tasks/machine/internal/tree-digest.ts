@@ -78,12 +78,15 @@ export const taskTreeTool = Mcp.tool({
 export const treeSection = SystemPrompt.Section({
   id: "tree-digest",
   label: "Task tree",
+  heading: "Task tree",
   // The tree is the mandate's subtree, shown only under a `tasks.file` grant.
   followsMandate: true,
-  render: async (conversationId) => {
+  // Data, not instructions: one line per task (id, title, status words) —
+  // the same text `add_task` and `task_tree` answer with.
+  listing: async (conversationId) => {
     if ((await grantOf(tasksFile, conversationId)) === null) return null;
     const digest = await treeSnapshot({ conversationId });
-    return digest === null ? null : `## Task tree\n\n${digest.text}`;
+    return digest === null ? null : digest.text;
   },
 });
 

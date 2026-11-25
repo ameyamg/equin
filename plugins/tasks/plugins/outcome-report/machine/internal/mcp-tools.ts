@@ -13,7 +13,7 @@ import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskOutcomeReports } from "../../server/internal/tables";
 import { outcomeReportSubmitted } from "../../server/internal/tables-events";
-import { OUTCOME_REPORT_TOOL as TOOL } from "./capability";
+import { OUTCOME_REPORT_TOOL as TOOL } from "./report-line";
 import { nextStepAfterReport } from "./next-step";
 
 export const submitOutcomeReportTool = Mcp.tool({

@@ -1,0 +1,5 @@
+// @hash 49a86dfcbfb3
+{
+  // The line an agent whose mandate requires an outcome report reads in its Mandate section (an automation's run, a supervisor's worker). Filled at each use: {{reportTool}} (the outcome report tool's name).
+  "mandateLine": "The user is not watching: never ask questions mid-way — decide, or stop. End with `{{reportTool}}`."
+}

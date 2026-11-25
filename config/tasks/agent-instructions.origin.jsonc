@@ -1,0 +1,9 @@
+// @hash d213cb852934
+{
+  // The Mandate line of an agent whose mandate lets it file tasks (the tasks.file grant). Filled at each use: {{grant}} (what the grant allows: its tracks and start modes (`track "main": start "after"`), then the clauses below that apply, joined by "; ").
+  "mandateLine": "You may file tasks into this subtree with `add_task` — {{grant}}. Any other track or start mode is refused.",
+  // Added to the grant's description when a task filed with no `after` depends on nothing (a supervisor's root). It is filled with no variable.
+  "defaultAfterNone": "with no `after`, an \"after\" / \"manual\" task depends on nothing (not on your own task, which stays in progress while the tasks you file run)",
+  // Added to the grant's description when it may also file into a supervisor role's backlog. It is filled with no variable.
+  "backlog": "or, with `supervisor`, into a supervisor role's backlog"
+}

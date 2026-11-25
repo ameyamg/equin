@@ -1,9 +1,11 @@
 import { Mandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { getConfig } from "@plugins/config_v2/server";
 import {
-  EXIT_WHEN_TEXT,
   exitClean,
+  exitWhenPrompt,
   flagRaise,
-  MANDATE_PUSH_POLICY_TEXT,
+  mandatePushLine,
+  pushExitPromptsConfig,
   pushPolicy,
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 
@@ -13,6 +15,7 @@ import {
  * description says it closes on request. A line only for a policy that
  * differs — the Mandate is the only channel for a push or a close on the
  * agent's own initiative (pushing is a CLI command, no tool describes it).
+ * The words are `pushExitPromptsConfig`'s prompts, as the user saved them.
  */
 export const pushAndExitCapabilities = [
   Mandate.Capability({
@@ -20,11 +23,14 @@ export const pushAndExitCapabilities = [
     describe: (policy) =>
       policy === "on-request"
         ? null
-        : `Pushing: ${MANDATE_PUSH_POLICY_TEXT[policy]}`,
+        : mandatePushLine(getConfig(pushExitPromptsConfig), policy),
   }),
   Mandate.Capability({
     cap: exitClean,
-    describe: (when) => (when === "on-request" ? null : EXIT_WHEN_TEXT[when]),
+    describe: (when) =>
+      when === "on-request"
+        ? null
+        : exitWhenPrompt(getConfig(pushExitPromptsConfig), when),
   }),
   Mandate.Capability({
     cap: flagRaise,

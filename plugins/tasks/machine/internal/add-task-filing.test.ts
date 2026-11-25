@@ -19,6 +19,7 @@ import {
   type BacklogAddTaskInput,
   type AddTaskPorts,
 } from "./add-task-filing";
+import { taskFilingPromptsConfig } from "../../core";
 import {
   rewireOn,
   type DependencyGraph,
@@ -112,6 +113,7 @@ function makeStore(
       watches.push([taskId, conversationId]);
     },
     modelCatalog: () => catalog,
+    filingPrompts: () => taskFilingPromptsConfig.defaults,
     fileToBacklog: async (filing) => {
       if (filing.supervisor !== "srole-1")
         throw new Error(`No listed supervisor role "${filing.supervisor}"`);

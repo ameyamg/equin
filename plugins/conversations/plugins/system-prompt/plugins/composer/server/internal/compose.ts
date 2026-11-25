@@ -59,7 +59,12 @@ async function renderSection(
   conversationId: string,
 ): Promise<string | null> {
   try {
-    return await section.render(conversationId);
+    const body =
+      section.render !== undefined
+        ? await section.render(conversationId)
+        : await section.listing(conversationId);
+    if (body === null || body.trim() === "") return null;
+    return `## ${section.heading}\n\n${body}`;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[system-prompt] section "${section.id}" failed:`, err);

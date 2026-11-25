@@ -36,7 +36,4 @@ export type {
   SetTaskSupervisorBody,
   UpdateSupervisorRoleBody,
 } from "./internal/endpoints";
-export {
-  DECISIONS_PROMPT_VARIABLES,
-  supervisorPromptConfig,
-} from "./internal/config";
+export { supervisorPromptConfig } from "./internal/config";

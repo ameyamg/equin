@@ -1,5 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
+import { promptField } from "@plugins/config_v2/plugins/prompts/core";
 import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
 import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
 import {
@@ -28,11 +28,13 @@ export const askConfig = defineConfig({
         "The model a task Ask equin files for you launches with (in its own worktree, at once).",
       default: DEFAULT_MODEL_CHOICE,
     }),
-    instructions: multilineTextField({
+    instructions: promptField({
       label: "Instructions",
-      description: `The help agent's whole prompt (its CLAUDE.md), read at each new question. Filled per question: ${ASK_INSTRUCTIONS_VARIABLES.map((v) => `{{${v.name}}} (${v.description})`).join(", ")}.`,
+      description:
+        "The help agent's whole prompt (its CLAUDE.md), read at each new question.",
       default: ASK_INSTRUCTIONS_TEMPLATE,
       rows: 24,
+      variables: ASK_INSTRUCTIONS_VARIABLES,
     }),
   },
 });

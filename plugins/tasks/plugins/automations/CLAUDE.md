@@ -111,7 +111,8 @@ around its settings.
 3. Calls `detect` with only the INCLUDED sources, the settings and the whole
    config. `null` ⇒ stops. A source that fails calls `partialFailure(err)`.
 4. Fills the prompt template with the filing's `variables` + `pushPolicy`
-   (`PUSH_POLICY_TEXT`). A placeholder with no value throws — never a blank.
+   (`pushPolicyPrompt` — the push-and-exit prompt config's words for the Push
+   setting). A placeholder with no value throws — never a blank.
 5. In ONE transaction: `createTask` (author `automation:<id>`, the spec's
    `mandate` on it), its category, its origin row (role `filed`). Then, when
    its `watch` is `"refire"`, the `automations.refire` code watcher on the

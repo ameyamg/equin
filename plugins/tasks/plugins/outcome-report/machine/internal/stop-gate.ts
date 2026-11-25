@@ -3,7 +3,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { grantOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
 import { taskOutcomeReports } from "../../server/internal/tables";
-import { OUTCOME_REPORT_TOOL } from "./capability";
+import { OUTCOME_REPORT_TOOL } from "./report-line";
 
 /** A conversation whose mandate requires a report may not stop until it has
  * submitted one for its task (any report by THIS conversation counts). */

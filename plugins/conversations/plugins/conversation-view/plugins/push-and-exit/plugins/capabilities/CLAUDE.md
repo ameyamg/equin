@@ -5,14 +5,29 @@ The three mandate capabilities push-and-exit enforces, declared as plain data
 
 | id | value | grants |
 |---|---|---|
-| `push.policy` | `"on-request" \| "never" \| "safe" \| "checks"` (`on-request` is mandate-only; automations pick from the other three) | instructions only (`MANDATE_PUSH_POLICY_TEXT`) |
-| `exit.clean` | `"on-request" \| "when-done"` | instructions only (`EXIT_WHEN_TEXT`) — `exit_clean` itself is visible to every conversation |
+| `push.policy` | `"on-request" \| "never" \| "safe" \| "checks"` (`on-request` is mandate-only; automations pick from the other three) | instructions only (`mandatePushLine`) |
+| `exit.clean` | `"on-request" \| "when-done"` | instructions only (`exitWhenPrompt`) — `exit_clean` itself is visible to every conversation |
 | `flag.raise` | `true` | the `flag_raise` tool |
 
-The closed push-policy set (`PUSH_POLICIES`, its labels and text) lives here
+The closed push-policy set (`PUSH_POLICIES` and its labels) lives here
 too: automations' Push setting picks from it, and the `push.policy` grant
 extends it with `on-request` (`MANDATE_PUSH_POLICIES`) — the policy of a task a
 person drives, who says when to push; an automation has nobody to ask.
+
+**What each policy tells the agent is config, not code**:
+`pushExitPromptsConfig` (`core/internal/prompts.ts`, name
+`agent-instructions`, registered by push-and-exit's server and web barrels, so
+it is `config/conversations/conversation-view/push-and-exit/agent-instructions`)
+holds one prompt field per policy — `pushOnRequest`, `pushNever`, `pushSafe`,
+`pushChecks`, `exitOnRequest`, `exitWhenDone` — and `mandatePushLine`
+(`Pushing: {{policy}}`). The code only maps a policy to its field and fills it,
+through pure renders handed the config's values (`getConfig` on the server,
+`useConfig` on the web, `descriptor.defaults` in a test):
+`pushPolicyPrompt(values, policy)` — an automation's `{{pushPolicy}}` and the
+updates row's launch; `mandatePushLine(values, policy)` — the `## Mandate`
+line; `exitWhenPrompt(values, when)` — the Mandate line and the outcome
+report's next step. `prompts-unchanged.test.ts` holds the defaults to the
+words the constants they replaced carried.
 
 **Why a leaf.** Every root task states a mandate, and root creators include the
 conversations plugin itself (a new conversation files a root task). Push-and-exit
@@ -24,24 +39,37 @@ push-and-exit's server (`Mandate.Capability`, `granted(cap)`).
 
 ## Plugin reference
 
-- Description: The push-and-exit mandate capabilities as plain data: push.policy (on-request | never | safe | checks — on-request for a task a person drives, the other three the closed automation push policy set; their labels and the instruction each becomes), exit.clean (on-request | when-done — when the agent closes itself with exit_clean, a tool every conversation has) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
+- Description: Registers the push / exit agent-instructions config for Settings → Config and every browser reader (the upstream update row's {{pushPolicy}}). Registers the push / exit agent-instructions config — what each push policy and exit policy tells the agent — here, beside its definition, so every plugin reading it (the mandate lines, automations' {{pushPolicy}}, outcome-report's next step) has it registered wherever it runs.
+- Web:
+  - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+  - Uses: `config_v2.ConfigV2`
+- Server:
+  - Contributes: `ConfigV2.Register` "agent-instructions"
+  - Uses: `config_v2.ConfigV2`
 - Core:
-  - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.fillPrompt`
+    - `config_v2/prompts.promptField`
+    - `config_v2/prompts.PromptText`
+    - `tasks/orchestration/mandate/policy.defineCapability`
   - Exports (types):
     - `ExitWhen`
     - `MandatePushPolicy`
+    - `PushExitPrompts`
     - `PushPolicy`
   - Exports (values):
-    - `EXIT_WHEN_TEXT`
     - `exitClean`
+    - `exitWhenPrompt`
     - `flagRaise`
     - `MANDATE_PUSH_POLICIES`
-    - `MANDATE_PUSH_POLICY_TEXT`
+    - `mandatePushLine`
     - `MandatePushPolicySchema`
     - `PUSH_POLICIES`
     - `PUSH_POLICY_LABELS`
-    - `PUSH_POLICY_TEXT`
+    - `pushExitPromptsConfig`
     - `pushPolicy`
+    - `pushPolicyPrompt`
     - `PushPolicySchema`
 - Cross-plugin:
   - Imported by:

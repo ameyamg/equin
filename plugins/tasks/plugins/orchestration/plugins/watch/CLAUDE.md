@@ -98,17 +98,20 @@ it over the real tables with a fake agent.
 
 ## Plugin reference
 
-- Description: Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) and `managerTaskId` (the watching agent's task, hidden by default) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
+- Description: Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) and `managerTaskId` (the watching agent's task, hidden by default) in every list whose rows reach a task; registers the Watch instructions config (Settings → Config). Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it); and the Watch instructions config (the Mandate lines a watcher is told, as editable prompts). Names no source, handler or workflow.
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "agent-instructions"
     - `IdKinds.Kind` "watch"
     - `IdKinds.Kind` "wevt"
     - `FieldPresentation.Register` "exposure:tasks_ext_manager"
   - Uses:
+    - `config_v2.ConfigV2`
     - `ids.IdKinds`
     - `network/live.FieldPresentation`
 - Server:
   - Contributes:
+    - `ConfigV2.Register` "agent-instructions"
     - `ids.kind` "watch"
     - `ids.kind` "wevt"
     - `conversations.stop-waiver` "watch"
@@ -121,6 +124,7 @@ it over the real tables with a fake agent.
     - `trigger` "watch.on-task-filed"
     - `trigger` "watch.on-task-status"
   - Uses:
+    - `config_v2.ConfigV2`
     - `conversations/stop-gate.StopWaiver`
     - `database.db`
     - `database.DbExecutor`
@@ -149,6 +153,8 @@ it over the real tables with a fake agent.
     - `watchTask`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.IdOf`
@@ -165,6 +171,7 @@ it over the real tables with a fake agent.
     - `WatcherSchema`
     - `watchEventIdKind`
     - `watchIdKind`
+    - `watchPromptsConfig`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/push-and-exit`

@@ -4,9 +4,25 @@
 
 ## Plugin reference
 
-- Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
+- Description: Nested tasks with attempts linking to conversations; registers the Task filing instructions config (Settings → Config). Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's. Registers the Task filing instructions config (the tasks.file Mandate line and the grant clauses add_task describes it with).
+- Web:
+  - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `infra/endpoints.useEndpointMutation`
+    - `network/live.mapRow`
+    - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
+  - Exports (types): `TaskPatch`
+  - Exports (values):
+    - `useActiveDependentCount`
+    - `usePatchTask`
+    - `useTask`
+    - `useTasksById`
 - Server:
   - Contributes:
+    - `ConfigV2.Register` "agent-instructions"
     - `mandateCapability` "tasks.file"
     - `mandateCapability` "tasks.manage"
     - `exitCleanPrecondition` "tasks.open-sidequests"
@@ -22,7 +38,7 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×20
     - `tasks/orchestration/mandate` ×5
     - `tasks/task-mandate/manage-grant` ×5
@@ -32,6 +48,7 @@
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
     - `tasks/orchestration/mandate/definitions` ×2
+    - `config_v2.ConfigV2`
     - `conversations/conversation-view/push-and-exit/exit-precondition.ExitClean`
     - `conversations/model-provider/catalog.getModelCatalog`
     - `infra/attachments.getAttachment`
@@ -57,19 +74,6 @@
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `POST /api/tasks/:id/deps-move`
-- Web:
-  - Uses:
-    - `infra/endpoints.useEndpointMutation`
-    - `network/live.mapRow`
-    - `network/live.useLive`
-    - `network/live/live-state.mapResource`
-    - `network/live/live-state.ResourceResult`
-  - Exports (types): `TaskPatch`
-  - Exports (values):
-    - `useActiveDependentCount`
-    - `usePatchTask`
-    - `useTask`
-    - `useTasksById`
 - Machine:
   - Uses:
     - `infra/endpoints.implementMachine`
@@ -82,6 +86,8 @@
   - Routes: `POST /api/tasks/launch`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
     - `conversations/model-provider.ModelChoiceSchema`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
@@ -134,6 +140,7 @@
     - `TaskChainSubmitBodySchema`
     - `TaskChainSubmitResponseSchema`
     - `TaskChainTargetSchema`
+    - `taskFilingPromptsConfig`
     - `updateTask`
     - `UpdateTaskBodySchema`
 - Cross-plugin:
@@ -176,7 +183,7 @@
   - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, child-count, launch-agent).
   - **`task-mandate`** — The task detail's Mandate control: the task's effective mandate (Interactive / Supervisor / an automation's) as a select, an inherited one marked so and linked to the ancestor it comes from; picking…
   - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is added to the agent's system prompt on launch. Owns the…
-  - **`task-source-url`** — Reads back the page a task was filed from: by attempt (useAttemptSourceUrl), and by task as the task header's read-only Filed from row (TaskSourceUrlRow). Owns the tasks_ext_source_url side-table…
+  - **`task-source-url`** — Reads back the page a task was filed from: by attempt (useAttemptSourceUrl), and by task as the task header's read-only Filed from row (TaskSourceUrlRow); registers the Source page instructions…
   - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
   - **`task-subject`** — Reads back the live task about a subject — the record a task was launched about (useSubjectTask). Owns the tasks_ext_subject side-table: the record a task is about (a failed build run, a job run — a…
   - **`task-title`** — Presents a task's Haiku-made short title (at most three words) and the full title it was made from, exposed on every list whose rows reach a task; a row's short title is current only while its…

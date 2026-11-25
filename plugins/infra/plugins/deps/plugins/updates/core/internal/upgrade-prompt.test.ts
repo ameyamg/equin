@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
-import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
+import { pushExitPromptsConfig } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { boundedRows } from "./awaiting";
 import type { Outdated } from "./updater";
 import {
@@ -28,7 +28,7 @@ describe("DEPS_UPGRADE_PROMPT", () => {
   test("fills from the batch and the push policy, with no hole left", () => {
     const rendered = renderPrompt(DEPS_UPGRADE_PROMPT, {
       outdated: outdatedSections(batch),
-      pushPolicy: PUSH_POLICY_TEXT.checks,
+      pushPolicy: pushExitPromptsConfig.defaults.pushChecks,
     });
     expect(rendered.ok).toBe(true);
     if (!rendered.ok) return;
@@ -41,7 +41,7 @@ describe("DEPS_UPGRADE_PROMPT", () => {
   test("push never: no authorization reaches the agent", () => {
     const rendered = renderPrompt(DEPS_UPGRADE_PROMPT, {
       outdated: outdatedSections(batch),
-      pushPolicy: PUSH_POLICY_TEXT.never,
+      pushPolicy: pushExitPromptsConfig.defaults.pushNever,
     });
     expect(rendered.ok).toBe(true);
     if (!rendered.ok) return;

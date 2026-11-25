@@ -1,0 +1,7 @@
+// @hash cc3e76f20094
+{
+  // The Mandate line of an agent that watches the tasks it files (the watch.children grant). It is filled with no variable.
+  "childrenLine": "What happens under the tasks you file (an agent starting, a report, a question, a flag, a task settling, the subtree going quiet) arrives as an event turn: end your turn while they work, never poll.",
+  // The Mandate line of the agent on a tree's root task that also watches the whole tree (the watch.tree grant). It is filled with no variable.
+  "treeLine": "As the agent on this tree's root task, you also get those events from anywhere in the tree no nearer watcher takes, and the whole tree going quiet."
+}

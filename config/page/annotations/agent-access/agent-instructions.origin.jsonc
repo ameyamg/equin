@@ -1,0 +1,9 @@
+// @hash 4649c759629d
+{
+  // Told to every agent: what page instructions are and how the page tools deliver them. It is filled with no variable.
+  "intro": "equin pages can carry instructions from their author, the way a CLAUDE.md file carries instructions for a folder. They cover the page they sit on (an instructions page covers its parent page) and every page below it. read_page hands you the ones covering what you read, in a <received-instructions> block ahead of the page. edit_page and write_agent_note refuse to write under a page whose instructions you have not received yet; the refusal carries them, so read them and retry. When instructions you received are edited since, the write goes through and its result carries their new version in an <updated-instructions> part.",
+  // Told to every agent when some instructions are global, followed by them. Filled at each use: {{instructions}} (the global instructions: every global card in full (<global-instructions>), then one Global instructions page line per global page).
+  "global": "These instructions are global: they apply to every conversation, wherever it works.\n\n{{instructions}}",
+  // One per global instructions page, which is handed over as a pointer rather than in full. Filled at each use: {{page}} (the page as a tag: <instructions-page id="…" title="…"/>), {{coveredTitle}} (the title of the page it covers).
+  "pageLine": "{{page}}\nRead this page (read_page with its id) before working under \"{{coveredTitle}}\"."
+}

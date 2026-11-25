@@ -4,7 +4,7 @@ import type { PromptVariable } from "@plugins/packages/plugins/prompt-template/c
  * What the help agent's instructions template is filled with at each launch
  * (`{{name}}`), for the person editing it in Settings → Config → Ask equin.
  */
-export const ASK_INSTRUCTIONS_VARIABLES: readonly PromptVariable[] = [
+export const ASK_INSTRUCTIONS_VARIABLES = [
   {
     name: "page",
     description:
@@ -23,7 +23,7 @@ export const ASK_INSTRUCTIONS_VARIABLES: readonly PromptVariable[] = [
     name: "repoContext",
     description: "the copy of the repo's root CLAUDE.md, to import with @",
   },
-];
+] as const satisfies readonly PromptVariable[];
 
 /**
  * The help agent's whole CLAUDE.md, the default of `askConfig.instructions`:

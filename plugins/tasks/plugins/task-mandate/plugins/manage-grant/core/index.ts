@@ -17,3 +17,4 @@ export {
   deleteTaskManageGrant,
   putTaskManageGrant,
 } from "./internal/endpoints";
+export { manageGrantPromptsConfig } from "./internal/prompts";

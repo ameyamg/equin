@@ -1,4 +1,12 @@
 import { db, type DbExecutor } from "@plugins/database/server";
+import type { ConfigValues } from "@plugins/config_v2/core";
+import { getConfig } from "@plugins/config_v2/server";
+import {
+  fillPrompt,
+  joinPrompts,
+  type PromptText,
+} from "@plugins/config_v2/plugins/prompts/core";
+import { pageInstructionsPromptsConfig } from "../../core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   deliveredInstructionIds,
@@ -286,7 +294,10 @@ export async function admitWrite(args: {
 export async function renderGlobalSection(
   conversationId: string,
   executor: DbExecutor = db,
-): Promise<string> {
+  prompts: ConfigValues<
+    typeof pageInstructionsPromptsConfig.fields
+  > = getConfig(pageInstructionsPromptsConfig),
+): Promise<PromptText> {
   const globals = await globalInstructions(executor);
   const cards = await renderInstructions(
     globals.filter((g) => g.form === "card"),
@@ -295,37 +306,26 @@ export async function renderGlobalSection(
   const pages = globals.filter((g) => g.form === "page");
   await markInstructionsDelivered(conversationId, cards, executor);
 
-  const parts = [
-    `## Page instructions\n\n` +
-      `equin pages can carry instructions from their author, the way a ` +
-      `CLAUDE.md file carries instructions for a folder. They cover the page they ` +
-      `sit on (an instructions page covers its parent page) and every page below ` +
-      `it. read_page hands you the ones covering what you read, in a ` +
-      `<received-instructions> block ahead of the page. edit_page and ` +
-      `write_agent_note refuse to write under a page whose instructions you have ` +
-      `not received yet; the refusal carries them, so read them and retry. When ` +
-      `instructions you received are edited since, the write goes through and ` +
-      `its result carries their new version in an <updated-instructions> part.`,
-  ];
-  if (cards.length > 0 || pages.length > 0) {
-    parts.push(
-      `These instructions are global: they apply to every conversation, ` +
-        `wherever it works.`,
-    );
-  }
-  if (cards.length > 0) {
-    parts.push(
+  const cfg = pageInstructionsPromptsConfig;
+  const intro = fillPrompt(cfg, prompts, "intro", {});
+  if (cards.length === 0 && pages.length === 0) return intro;
+  // Data: the cards in full, and one pointer line per global page.
+  const listed: string[] = [];
+  if (cards.length > 0)
+    listed.push(
       `<global-instructions>\n${cards.map(formatBlock).join("\n\n")}\n</global-instructions>`,
     );
-  }
-  for (const page of pages) {
-    parts.push(
-      `<instructions-page id="${page.id}" title="${attr(page.title ?? "")}"/>\n` +
-        `Read this page (read_page with its id) before working under ` +
-        `"${page.covers.title}".`,
+  for (const page of pages)
+    listed.push(
+      fillPrompt(cfg, prompts, "pageLine", {
+        page: `<instructions-page id="${page.id}" title="${attr(page.title ?? "")}"/>`,
+        coveredTitle: page.covers.title,
+      }),
     );
-  }
-  return parts.join("\n\n");
+  const global = fillPrompt(cfg, prompts, "global", {
+    instructions: listed.join("\n\n"),
+  });
+  return joinPrompts([intro, global]) ?? intro;
 }
 
 /**

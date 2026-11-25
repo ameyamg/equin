@@ -4,12 +4,14 @@
 
 ## Plugin reference
 
-- Description: The task header's 'May manage tasks it doesn't own' switch (TaskManageGrantControl, beside the Mandate: a person's grant to that task's own conversation, a warning chip while on, read-only on a done or dropped task and on an agent-driven page), and the task detail's 'Done under a grant' section: a DataView of the actions taken on the task under a grant, and the grant's own switches. A person's grant on one task — 'may manage tasks it doesn't own': the tasks_ext_manage_grant row (on = a row), joined to the mandate of that task's OWN conversation only through a MandateOverlay (never a side chat, a worker or a subtask) while the task is not done or dropped, with its `## Mandate` line; removed when the task settles (a job on tasks.statusChanged, plus a boot sweep); setTaskManageGrant / clearTaskManageGrant (each recorded, and announced as tasks.mandateChanged so the running agent is told), grantHeld, and the task_unowned_actions audit every action taken under a grant is recorded in (recordUnownedAction), served as tasks.unowned-actions.
+- Description: The task header's 'May manage tasks it doesn't own' switch (TaskManageGrantControl, beside the Mandate: a person's grant to that task's own conversation, a warning chip while on, read-only on a done or dropped task and on an agent-driven page), and the task detail's 'Done under a grant' section: a DataView of the actions taken on the task under a grant, and the grant's own switches; registers the Manage grant instructions config (the grant's Mandate line, Settings → Config). A person's grant on one task — 'may manage tasks it doesn't own': the tasks_ext_manage_grant row (on = a row), joined to the mandate of that task's OWN conversation only through a MandateOverlay (never a side chat, a worker or a subtask) while the task is not done or dropped, with its `## Mandate` line (an editable prompt, the Manage grant instructions config); removed when the task settles (a job on tasks.statusChanged, plus a boot sweep); setTaskManageGrant / clearTaskManageGrant (each recorded, and announced as tasks.mandateChanged so the running agent is told), grantHeld, and the task_unowned_actions audit every action taken under a grant is recorded in (recordUnownedAction), served as tasks.unowned-actions.
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "agent-instructions"
     - `IdKinds.Kind` "grantact"
     - `TaskDetailSlots.Section` "Done under a grant" → `UnownedActionsSection`
   - Uses:
+    - `config_v2.ConfigV2`
     - `ids.IdKinds`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
@@ -28,6 +30,7 @@
   - Exports (values): `TaskManageGrantControl`
 - Server:
   - Contributes:
+    - `ConfigV2.Register` "agent-instructions"
     - `resource.declare` "tasks.manage-grant:rows"
     - `resource.declare` "tasks.unowned-actions"
     - `resource.declare` "tasks.unowned-actions:groups"
@@ -37,6 +40,8 @@
     - `ids.kind` "grantact"
     - `trigger` "tasks.manage-grant-clear-on-settle"
   - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2/prompts.renderConfigPrompt`
     - `database.db`
     - `database.DbExecutor`
     - `ids.IdKinds`
@@ -73,6 +78,8 @@
     - `tasks.unowned-actions:rows` (keyed, point)
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
     - `fields.FieldsRecord`
     - `fields.nullable`
     - `fields/date/config.dateField`
@@ -91,6 +98,7 @@
     - `UnownedActionId`
   - Exports (values):
     - `deleteTaskManageGrant`
+    - `manageGrantPromptsConfig`
     - `putTaskManageGrant`
     - `TaskManageGrantRowSchema`
     - `taskManageGrants`

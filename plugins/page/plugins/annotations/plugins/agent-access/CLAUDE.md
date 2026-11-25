@@ -603,15 +603,20 @@ Spec: `e2e/agent-access-verify.ts`.
 
 ## Plugin reference
 
-- Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page), and the page-instructions system-prompt section (what page instructions are, and every global one). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
+- Description: Page agent access, web half: registers the Page instructions prompts config (what every agent is told about page instructions, Settings → Config). The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page), and the page-instructions system-prompt section (what page instructions are, and every global one — its words the Page instructions prompts config). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
+- Web:
+  - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+  - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:
+    - `ConfigV2.Register` "agent-instructions"
     - `conversations.system-prompt.section` "page-instructions"
     - `conversations.compaction-context` "page-instructions (whole)"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/annotations/instructions` ×10
     - `page/markdown-apply` ×5
     - `page/editor` ×4
+    - `config_v2` ×2
     - `database` ×2
     - `page/tags` ×2
     - `conversations/compaction-context.CompactionContext`
@@ -626,6 +631,11 @@ Spec: `e2e/agent-access-verify.ts`.
     - `ReadPageInput`
     - `WriteAgentNoteInput`
   - Exports (values): `pageTools`
+- Core:
+  - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
+  - Exports (values): `pageInstructionsPromptsConfig`
 - Cross-plugin:
   - Imported by: `apps/website/promo-film/seed`
 - Machine:

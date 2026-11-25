@@ -7,6 +7,12 @@ import type {
   TaskFilingStart,
   TasksFileGrant,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import type { ConfigValues } from "@plugins/config_v2/core";
+import {
+  fillPrompt,
+  type PromptText,
+} from "@plugins/config_v2/plugins/prompts/core";
+import { taskFilingPromptsConfig } from "../../core";
 import type {
   ModelCatalog,
   ModelChoice,
@@ -75,6 +81,8 @@ export interface AddTaskPorts {
   watch(taskId: string, conversationId: string): Promise<void>;
   /** The live model catalog the `model` choice is checked against. */
   modelCatalog(): ModelCatalog;
+  /** The saved Task filing instructions a refusal describes the grant with. */
+  filingPrompts(): FilingPrompts;
   /** File a root task into a supervisor role's backlog (owned by the role,
    * never armed); throws for a role the caller may not name. */
   fileToBacklog(filing: {
@@ -113,9 +121,16 @@ export interface BacklogFilingResult {
   note: string;
 }
 
+/** The saved Task filing instructions (`taskFilingPromptsConfig`). */
+export type FilingPrompts = ConfigValues<typeof taskFilingPromptsConfig.fields>;
+
 /** The tracks and start modes a grant allows, as the agent reads them (the
- * tool's live description and every refusal). */
-export function describeFilingGrant(grant: TasksFileGrant): string {
+ * tool's live description, every refusal, the Mandate line): the tracks as
+ * data, then the user's clause prompts that apply. */
+export function describeFilingGrant(
+  grant: TasksFileGrant,
+  prompts: FilingPrompts,
+): string {
   const tracks = TASK_TRACKS.flatMap((track) => {
     const g = grant[track];
     if (!g) return [];
@@ -125,15 +140,15 @@ export function describeFilingGrant(grant: TasksFileGrant): string {
     ];
   });
   if (tracks.length === 0) return "no track";
-  const after =
+  const clauses = [
     grant.defaultAfter === "none"
-      ? '; with no `after`, an "after" / "manual" task depends on nothing (not on your own task, which stays in progress while the tasks you file run)'
-      : "";
-  const backlog =
+      ? fillPrompt(taskFilingPromptsConfig, prompts, "defaultAfterNone", {})
+      : null,
     grant.backlog === true
-      ? "; or, with `supervisor`, into a supervisor role's backlog"
-      : "";
-  return `${tracks.join("; ")}${after}${backlog}`;
+      ? fillPrompt(taskFilingPromptsConfig, prompts, "backlog", {})
+      : null,
+  ].filter((c): c is PromptText => c !== null && c.trim() !== "");
+  return [...tracks, ...clauses].join("; ");
 }
 
 /** Refuse, before anything is written, a filing the grant or the parameters
@@ -142,6 +157,7 @@ function checkFiling(
   input: AddTaskInput,
   grant: TasksFileGrant | null,
   catalog: ModelCatalog,
+  prompts: FilingPrompts,
 ): ModelChoice | null {
   if (grant === null)
     throw new Error("Your mandate does not allow filing tasks (`tasks.file`).");
@@ -149,7 +165,7 @@ function checkFiling(
   if (!trackGrant || !trackGrant.start.includes(input.start)) {
     throw new Error(
       `Your mandate does not allow filing track "${input.track}" with start "${input.start}". ` +
-        `It allows: ${describeFilingGrant(grant)}.`,
+        `It allows: ${describeFilingGrant(grant, prompts)}.`,
     );
   }
   if (input.start === "now" && input.after !== undefined)
@@ -251,7 +267,12 @@ export async function fileAddTask(
   ports: AddTaskPorts,
 ): Promise<AddTaskResult> {
   const grant = await ports.grant(conversationId);
-  const model = checkFiling(input, grant, ports.modelCatalog());
+  const model = checkFiling(
+    input,
+    grant,
+    ports.modelCatalog(),
+    ports.filingPrompts(),
+  );
 
   const conv = await ports.getConversation(conversationId);
   if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);

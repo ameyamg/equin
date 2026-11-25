@@ -8,9 +8,18 @@ import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
 import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
 import { mandateIsKindOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
 import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
-import { supervisorRoleMandate } from "../../core";
-import { supervisorPromptConfig } from "../../core";
-import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
+import {
+  supervisorPromptConfig,
+  supervisorRoleMandate,
+  type SupervisorRole,
+} from "../../core";
+import type { PromptText } from "@plugins/config_v2/plugins/prompts/core";
+import {
+  SUPERVISOR_HEADING,
+  SUPERVISOR_ROLES_HEADING,
+  supervisorBody,
+  supervisorRolesBody,
+} from "./prompt-bodies";
 import {
   getSupervisorRole,
   listSupervisorRoles,
@@ -19,84 +28,45 @@ import {
 
 /**
  * The listed roles, for an agent whose mandate lets it file into a backlog
- * (`tasks.file` with `backlog`): one item each — name, id, description (its
- * further lines indented under the item) — and how to file. Nothing when no
- * role is listed.
+ * (`tasks.file` with `backlog`). Nothing when no role is listed.
  */
 export async function renderSupervisorRoles(
   conversationId: string,
-): Promise<string | null> {
+): Promise<PromptText | null> {
   const grant = await grantOf(tasksFile, conversationId);
   if (grant?.backlog !== true) return null;
   const roles = await listSupervisorRoles();
-  const listed = roles.filter((r) => r.listed);
-  if (listed.length === 0) return null;
-  const lines = listed.map((r) => {
-    // A multi-line description stays inside its list item.
-    const description = r.description.trim().replace(/\n/g, "\n  ");
-    return `- **${r.name}** (\`${r.id}\`)${description ? ` — ${description}` : ""}`;
-  });
-  return [
-    "## Supervisor roles",
-    "",
-    'Work that is not part of your own task — a problem you found, a follow-up some other area owns — can be handed to a supervisor role instead of filed under your task: `add_task` with `supervisor: "<role id>"` and `start: "manual"` files it into that role\'s backlog, where it waits until a session of the role adopts it.',
-    "",
-    "Roles:",
-    ...lines,
-  ].join("\n");
-}
-
-/**
- * The decisions prompt (the config's `decisionsPrompt`, edited beside the
- * shared prompt) filled with the supervisor's root task id. A variable it
- * names that is not filled here fails loudly — never a prompt with a hole.
- */
-function decisionsPrompt(taskId: string): string {
-  const rendered = renderPrompt(
-    getConfig(supervisorPromptConfig).decisionsPrompt,
-    { taskId },
+  return supervisorRolesBody(
+    getConfig(supervisorPromptConfig),
+    roles.filter((r) => r.listed),
   );
-  if (!rendered.ok)
-    throw new Error(
-      `The supervisors' decisions prompt (agent manager → Supervisors → All supervisors) names unknown variables: ${rendered.unknown.map((n) => `{{${n}}}`).join(", ")} — only {{taskId}} is filled.`,
-    );
-  return rendered.text.trim();
 }
 
 /**
- * The shared supervisor prompt, for the conversation at the ROOT of a
- * supervisor mandate (an ad-hoc supervisor, or a role's session) — never a
- * worker below it. A role session also reads which role it works for, and a
- * root granted `decisions.open` the decisions prompt (how it records what
- * needs the user). Nothing when none has anything to say.
+ * The Supervisor section, for the conversation at the ROOT of a supervisor
+ * mandate (an ad-hoc supervisor, or a role's session) — never a worker below
+ * it (see {@link supervisorBody}).
  */
 export async function renderSupervisorPrompt(
   conversationId: string,
-): Promise<string | null> {
+): Promise<PromptText | null> {
   const mandate = await conversationMandate(conversationId);
   if (mandate.kind === "none" || mandate.at !== "root") return null;
   if (!mandateIsKindOf(mandate.mandateId, supervisorMandate)) return null;
-  const isRole = mandate.mandateId === supervisorRoleMandate.id;
-  const parts: string[] = [];
-  if (isRole) {
+  let role: SupervisorRole | null = null;
+  if (mandate.mandateId === supervisorRoleMandate.id) {
     const roleId = await supervisorOfTask(mandate.rootTaskId);
-    const role = roleId === null ? null : await getSupervisorRole(roleId);
+    role = roleId === null ? null : await getSupervisorRole(roleId);
     if (role === null)
       throw new Error(
         `Task ${mandate.rootTaskId} states the supervisor-role mandate but owns no existing supervisor role.`,
       );
-    parts.push(
-      `You are this session of the **${role.name}** supervisor role (\`${role.id}\`): work through its backlog (\`backlog\` lists it, \`adopt_task\` moves a task into your tree and arms it), route what belongs elsewhere (\`route_task\`), and manage every task the role owns — its backlog and its earlier sessions — with \`edit_task\` / \`drop_task\`. Your task's description is the role's brief.`,
-    );
   }
-  const shared = getConfig(supervisorPromptConfig).prompt.trim();
-  if (shared) parts.push(shared);
-  if ((await grantOf(decisionsOpen, conversationId)) === true) {
-    const decisions = decisionsPrompt(mandate.rootTaskId);
-    if (decisions) parts.push(decisions);
-  }
-  if (parts.length === 0) return null;
-  return ["## Supervisor", "", parts.join("\n\n")].join("\n");
+  const decisions = (await grantOf(decisionsOpen, conversationId)) === true;
+  return supervisorBody(getConfig(supervisorPromptConfig), {
+    role,
+    decisionsTaskId: decisions ? mandate.rootTaskId : null,
+  });
 }
 
 /** The Supervisor roles section's id — what the listing notice re-sends. */
@@ -105,6 +75,7 @@ export const SUPERVISOR_ROLES_SECTION_ID = "supervisor-roles";
 export const supervisorRolesSection = SystemPrompt.Section({
   id: SUPERVISOR_ROLES_SECTION_ID,
   label: "Supervisor roles",
+  heading: SUPERVISOR_ROLES_HEADING,
   followsMandate: true,
   render: renderSupervisorRoles,
 });
@@ -112,6 +83,7 @@ export const supervisorRolesSection = SystemPrompt.Section({
 export const supervisorPromptSection = SystemPrompt.Section({
   id: "supervisor-prompt",
   label: "Supervisor prompt",
+  heading: SUPERVISOR_HEADING,
   followsMandate: true,
   render: renderSupervisorPrompt,
 });

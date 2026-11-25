@@ -34,6 +34,8 @@ import {
   type AddTaskPorts,
 } from "./add-task-filing";
 import { digestFor } from "./tree-digest";
+import { getConfig } from "@plugins/config_v2/server";
+import { taskFilingPromptsConfig } from "../../core";
 import { fileToBacklog } from "@plugins/tasks/plugins/supervisor-roles/server";
 import { watchTask } from "@plugins/tasks/plugins/orchestration/plugins/watch/server";
 import { watchChildren } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
@@ -61,6 +63,7 @@ const ports: AddTaskPorts = {
     await watchTask(taskId, { kind: "conversation", conversationId });
   },
   modelCatalog: getModelCatalog,
+  filingPrompts: () => getConfig(taskFilingPromptsConfig),
   async fileToBacklog(filing) {
     const { taskId, role } = await fileToBacklog(filing);
     return { taskId, role: { id: role.id, name: role.name } };
@@ -80,7 +83,7 @@ export const addTaskTool = Mcp.tool({
     const grant = await grantOf(tasksFile, conversationId);
     return grant === null
       ? null
-      : `## Your mandate allows\n\n${describeFilingGrant(grant)}. Any other track or start mode is refused.`;
+      : `## Your mandate allows\n\n${describeFilingGrant(grant, getConfig(taskFilingPromptsConfig))}. Any other track or start mode is refused.`;
   },
   description: `Add a task to the equin task tree.
 

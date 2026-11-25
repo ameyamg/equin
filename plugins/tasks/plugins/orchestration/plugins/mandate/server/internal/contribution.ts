@@ -1,4 +1,5 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
+import type { PromptText } from "@plugins/config_v2/plugins/prompts/core";
 import type {
   Capability,
   Grant,
@@ -21,8 +22,12 @@ export interface MandateCapabilityEntry<T> {
    * CLAUDE.md already says (push only when asked) says nothing either. What is
    * left is behaviour no tool carries — how to pace itself while it watches,
    * that it may push or close on its own.
+   *
+   * The line's words are a prompt field the user edits (a `PromptText`, which
+   * only rendering one makes — a literal does not type-check): the code picks
+   * the prompt for the value and fills its data, never writes the sentence.
    */
-  describe: (value: T) => string | null;
+  describe: (value: T) => PromptText | null;
 }
 
 const CapabilityToken = defineServerContribution<

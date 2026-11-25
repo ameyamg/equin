@@ -1,0 +1,1 @@
+export { pageInstructionsPromptsConfig } from "./prompts";

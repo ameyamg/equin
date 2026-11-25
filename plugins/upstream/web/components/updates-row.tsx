@@ -2,12 +2,18 @@ import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
-import { MANDATE_PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
+import {
+  pushExitPromptsConfig,
+  pushPolicyPrompt,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { ConversationStatusChip } from "@plugins/conversations/plugins/conversation-view/plugins/status/web";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
-import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useCombinedResources,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -86,7 +92,10 @@ export function SendAgentButton({
   variant: "default" | "secondary";
   onSubmitted?: () => void;
 }) {
-  const merge = useConfigResult(upstreamMergeConfig);
+  const merge = useCombinedResources({
+    config: useConfigResult(upstreamMergeConfig),
+    prompts: useConfigResult(pushExitPromptsConfig),
+  });
   switch (merge.status) {
     case "loading":
       return (
@@ -100,7 +109,7 @@ export function SendAgentButton({
           error={merge.error}
           refetch={merge.refetch}
           variant="icon"
-          subject="the Upstream merges prompt"
+          subject="the Upstream merges prompt and the push policy prompts"
         />
       );
     case "ready":
@@ -108,7 +117,8 @@ export function SendAgentButton({
         <SendPopover
           current={current}
           latest={latest}
-          template={merge.data.prompt}
+          template={merge.data.config.prompt}
+          pushPolicy={pushPolicyPrompt(merge.data.prompts, "on-request")}
           variant={variant}
           onSubmitted={onSubmitted}
         />
@@ -120,12 +130,14 @@ function SendPopover({
   current,
   latest,
   template,
+  pushPolicy,
   variant,
   onSubmitted,
 }: {
   current: string | null;
   latest: string;
   template: string;
+  pushPolicy: string;
   variant: "default" | "secondary";
   onSubmitted: (() => void) | undefined;
 }) {
@@ -146,7 +158,7 @@ function SendPopover({
       getRequest={(userText) => {
         const prompt = renderPrompt(template, {
           ...upstreamMergeVariables(updates),
-          pushPolicy: MANDATE_PUSH_POLICY_TEXT["on-request"],
+          pushPolicy,
         });
         if (!prompt.ok)
           throw new Error(

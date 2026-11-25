@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Automations } from "@plugins/tasks/plugins/automations/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { outcomeReportPromptsConfig } from "../core";
 import {
   OutcomeReportCard,
   OutcomeReportDetail,
@@ -12,6 +14,7 @@ export default {
   description:
     "The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail).",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: outcomeReportPromptsConfig }),
     JsonlViewer.TranscriptEnd({
       id: "outcome-report",
       component: OutcomeReportCard,

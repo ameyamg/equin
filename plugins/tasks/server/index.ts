@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
 import { handleCreateChain } from "./internal/handle-create-chain";
@@ -38,6 +39,7 @@ import {
   addTaskDependency,
   removeTaskDependency,
   moveTaskInDepsTree,
+  taskFilingPromptsConfig,
 } from "../core";
 import {
   setTaskAutoStart,
@@ -48,8 +50,12 @@ export { armTaskAutoStart } from "./internal/arm-auto-start";
 
 export default {
   description:
-    "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.",
-  contributions: [tasksManageCapability, openSidequestsGate],
+    "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's. Registers the Task filing instructions config (the tasks.file Mandate line and the grant clauses add_task describes it with).",
+  contributions: [
+    ConfigV2.Register({ descriptor: taskFilingPromptsConfig }),
+    tasksManageCapability,
+    openSidequestsGate,
+  ],
   register: [editTaskTool, dropTaskTool],
   httpRoutes: {
     [listTasks.route]: handleList,

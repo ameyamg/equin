@@ -223,15 +223,15 @@ that cannot run on this database).
     - `HealthReport.Row` "Releases"
     - `HealthReport.Row` "Updates"
     - `Notifications.Action` "equin-update"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `config_v2` ×3
+    - `network/live/live-state` ×2
     - `primitives/relative-time` ×2
     - `shell/notifications` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `conversations/conversation-view/status.ConversationStatusChip`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

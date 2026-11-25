@@ -6,8 +6,38 @@ task tree. How to use a tool is the tool's own description; this is everything
 else an agent must know from its first token.
 
 ```ts
-SystemPrompt.Section({ id: "mandate", label: "Mandate", render: (conversationId) => … })
+SystemPrompt.Section({
+  id: "source-page", label: "Source page", heading: "Source page",
+  followsMandate: false,
+  render: async (conversationId) =>
+    renderConfigPrompt(sourcePagePromptsConfig, "sourcePage", { url }),
+})
 ```
+
+## Instructions are config, not code
+
+Every word an agent is told here is the user's to read and edit. A section's
+body is one or more **prompt fields** (`config_v2/prompts`' `promptField`, in
+its plugin's config, shown in Settings → Config), filled with the data the code
+computes: `render` returns a `PromptText`, which only rendering a prompt field
+makes (`renderConfigPrompt` / `fillPrompt`, joined with `joinPrompts` /
+`promptList`), so a sentence written in code does not type-check. The code
+decides only **whether** the section applies (`null`) and **the data** it is
+filled with — never the words. `Mandate.Capability`'s `describe` follows the
+same rule.
+
+- **Data stays in code.** A generated listing the agent reads — the task
+  tree's lines, the roles list, the page instruction cards (their authors'
+  words), the filing grant's tracks — is a variable's value, or a whole
+  section's `listing` (data only, never an instruction). The line: a sentence
+  telling the agent what to do, or what something means, is prose → a prompt.
+- **Headings are titles.** `heading` is data the composer writes as
+  `## {heading}`; the words under it are prompts.
+- **A user's override is their decision.** Never route around one: no copy of
+  a prompt's text in code, no sentence appended after their text. Guidance
+  every user must get goes in a new prompt field of its own; a changed default
+  reaches a user who overrode the old one through the config conflict and
+  auto-merge flow (`config_v2/auto-merge`), never by putting it in code.
 
 - **Two halves.** This plugin's `server/` is the contribution only — light, so
   a contributor's (portable) closure stays small. [`composer`](plugins/composer)

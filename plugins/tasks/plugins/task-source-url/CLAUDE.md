@@ -4,13 +4,30 @@
 
 ## Plugin reference
 
-- Description: Reads back the page a task was filed from: by attempt (useAttemptSourceUrl), and by task as the task header's read-only Filed from row (TaskSourceUrlRow). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than as prompt text: handed to the task's agents as the `source-page` system-prompt section at every spawn, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
+- Description: Reads back the page a task was filed from: by attempt (useAttemptSourceUrl), and by task as the task header's read-only Filed from row (TaskSourceUrlRow); registers the Source page instructions config (Settings → Config). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than as prompt text: handed to the task's agents as the `source-page` system-prompt section at every spawn (its words the Source page instructions config), and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
+- Web:
+  - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `network/live.useLive`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/file-links.FileLinkText`
+  - Exports (values):
+    - `TaskSourceUrlRow`
+    - `useAttemptSourceUrl`
 - Server:
   - Contributes:
+    - `ConfigV2.Register` "agent-instructions"
     - `resource.declare` "task-source-url.by-attempt"
     - `resource.declare` "task-source-urls:rows"
     - `conversations.system-prompt.section` "source-page"
   - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2/prompts.renderConfigPrompt`
     - `conversations/system-prompt.SystemPrompt`
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
@@ -27,20 +44,10 @@
   - Resources:
     - `task-source-url.by-attempt` (push)
     - `task-source-urls:rows` (keyed, point)
-- Web:
-  - Uses:
-    - `network/live.useLive`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/file-links.FileLinkText`
-  - Exports (values):
-    - `TaskSourceUrlRow`
-    - `useAttemptSourceUrl`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
     - `fields/text/config.textField`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
@@ -48,6 +55,7 @@
   - Exports (types): `AttemptSourceUrl`
   - Exports (values):
     - `attemptSourceUrl`
+    - `sourcePagePromptsConfig`
     - `taskSourceUrls`
     - `taskSourceUrlShape`
 - Cross-plugin:

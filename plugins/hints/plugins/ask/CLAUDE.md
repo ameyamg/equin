@@ -21,12 +21,14 @@ portable `server/` half.
   `<go>`, anything needing a change filed with `ask_file_task`, end the turn,
   never `exit_clean`.
 - **The prompt is config, not code**: `askConfig.instructions` (Settings →
-  Config → Ask equin → Instructions, a multiline field) is the whole CLAUDE.md
+  Config → Ask equin → Instructions, a `config_v2/prompts` prompt field) is the whole CLAUDE.md
   as a template, its default `ASK_INSTRUCTIONS_TEMPLATE`
   (`core/internal/instructions.ts`). Each launch fills `{{page}}`,
   `{{outline}}`, `{{checkout}}`, `{{fileTaskTool}}`, `{{repoContext}}`
-  (`ASK_INSTRUCTIONS_VARIABLES`) with `packages/prompt-template`'s `renderPrompt`; a
-  variable it does not know fails the launch loudly. Tune it in Settings, then
+  (`ASK_INSTRUCTIONS_VARIABLES`, the field's declared variables) with
+  `packages/prompt-template`'s `renderPrompt`; a save naming any other is
+  refused by the field's schema, and one that still reaches a launch fails it
+  loudly. Tune it in Settings, then
   port the edit back to the template to make it the default. The default
   tells the agent that agent work starts from the action bar's Improve button.
 - **The repo's map**: `prepare` copies the checkout's root `CLAUDE.md` and
@@ -233,10 +235,10 @@ portable `server/` half.
 - Core:
   - Uses:
     - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
     - `conversations/agent-thread.defineThreadResult`
     - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
     - `fields/dynamic-enum/config.dynamicEnumField`
-    - `fields/multiline-text/config.multilineTextField`
     - `tasks/task-ids.taskIdKind`
   - Exports (types):
     - `AskInput`

@@ -70,7 +70,10 @@ task resolves to a policy. Plan:
     description states its limits — and so does a value CLAUDE.md already says
     (push / close only when asked). The Mandate holds only what nothing else
     tells the agent (how to pace itself while it watches, a push or close on
-    its own initiative).
+    its own initiative). A line's words are a prompt field of its owner's
+    config: `describe` returns a `PromptText`, so a literal does not
+    type-check (`conversations/system-prompt`, "Instructions are config, not
+    code").
 - **Debug** — `mandate.capabilities` (core, a fixed `liveValue`): every
   contributed capability.
 

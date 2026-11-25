@@ -10,8 +10,12 @@ conversations whose task has an automation origin row (`Mcp.tool`'s `when`:
 `getConversation → automationOfTask`, two PK reads per MCP request). Elsewhere
 it is absent from `tools/list` and uncallable. The mandate's
 `report.required` line (its `## Mandate` system-prompt section) adds only that
-nobody is watching; the tool's description and the stop gate say to end with it. What it says to do after (the tool's `next`) is the mandate's
-`exit.clean` rule word for word (`machine/internal/next-step.ts`): a
+nobody is watching — its words are config, `outcomeReportPromptsConfig`'s
+`mandateLine` (`core/prompts.ts`, name `agent-instructions`, `{{reportTool}}`
+filled with the tool's name; registered by the server and web barrels, held to
+today's words by `machine/internal/prompts-unchanged.test.ts`); the tool's description and the stop gate say to end with it. What it says to do after (the tool's `next`) is the mandate's
+`exit.clean` rule word for word (`machine/internal/next-step.ts`, the same
+push-and-exit `exitWhenPrompt` the Mandate line renders): a
 supervisor's worker (`when-done`) closes itself, an automation (`on-request`)
 stays open for review — never a fixed instruction. Both live in `machine/` (an agent's MCP
 surface exists only on a host that runs agents); the table and the
@@ -52,12 +56,14 @@ On submit, in order:
 
 ## Plugin reference
 
-- Description: The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
+- Description: The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "agent-instructions"
     - `JsonlViewer.TranscriptEnd` "outcome-report" → `OutcomeReportCard`
     - `Automations.TaskDetail` → `OutcomeReportDetail`
   - Uses:
+    - `config_v2.ConfigV2`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `conversations/conversation-view/pending-turn.useSendConversationTurn`
@@ -79,12 +85,14 @@ On submit, in order:
 - Server:
   - Contributes:
     - `resource.declare` "outcome-reports:rows"
+    - `ConfigV2.Register` "agent-instructions"
     - `mandateCapability` "report.required"
     - `conversations.stop-gate` "outcome-report"
     - `watchSource` "outcome-report"
     - `trigger` "watch.ingest"
     - `treeDigestAnnotation` "outcome-report"
   - Uses:
+    - `config_v2.ConfigV2`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
     - `network/live.serveCollection`
@@ -104,6 +112,8 @@ On submit, in order:
   - Register: `mcpTool('submit_outcome_report')`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/json/config.jsonField`
@@ -116,6 +126,7 @@ On submit, in order:
     - `OutcomeReport`
     - `ReportStanding`
   - Exports (values):
+    - `outcomeReportPromptsConfig`
     - `outcomeReportRows`
     - `OutcomeReportSchema`
     - `outcomeReportShape`

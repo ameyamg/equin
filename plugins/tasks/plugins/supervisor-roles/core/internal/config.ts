@@ -1,6 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import type { PromptVariable } from "@plugins/packages/plugins/prompt-template/core";
-import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
+import { promptField } from "@plugins/config_v2/plugins/prompts/core";
 
 /** What every supervisor is told unless the user wrote their own. */
 const DEFAULT_SUPERVISOR_PROMPT = `You're supervising other tasks.
@@ -26,10 +25,22 @@ const DEFAULT_DECISIONS_PROMPT = `**Decisions.** The user reads your decisions o
 * Your session page carries one \`<task-decisions task="{{taskId}}"/>\` block, near the top (written with \`edit_page\`, in your agent page or an \`<agent-inline>\` card on a page of the user's): it shows your decisions live and the user answers them there.
 `;
 
-/** The variables the decisions prompt may use, filled for each supervisor. */
-export const DECISIONS_PROMPT_VARIABLES: readonly PromptVariable[] = [
-  { name: "taskId", description: "The supervisor's root task id" },
-];
+/**
+ * Who a role's session is and how it works its role, unless the user wrote
+ * their own. `{{roleName}}` / `{{roleId}}` are the role's, filled at render.
+ */
+const DEFAULT_ROLE_SESSION_PROMPT =
+  "You are this session of the **{{roleName}}** supervisor role (`{{roleId}}`): work through its backlog (`backlog` lists it, `adopt_task` moves a task into your tree and arms it), route what belongs elsewhere (`route_task`), and manage every task the role owns — its backlog and its earlier sessions — with `edit_task` / `drop_task`. Your task's description is the role's brief.";
+
+/**
+ * How an agent that may file into a backlog hands work to a supervisor role,
+ * unless the user wrote their own. `{{roles}}` is the listed roles (one item
+ * each), filled at render.
+ */
+const DEFAULT_ROLES_PROMPT = `Work that is not part of your own task — a problem you found, a follow-up some other area owns — can be handed to a supervisor role instead of filed under your task: \`add_task\` with \`supervisor: "<role id>"\` and \`start: "manual"\` files it into that role's backlog, where it waits until a session of the role adopts it.
+
+Roles:
+{{roles}}`;
 
 /**
  * The shared supervisor prompt: what every supervisor session's root is told,
@@ -40,19 +51,47 @@ export const DECISIONS_PROMPT_VARIABLES: readonly PromptVariable[] = [
 export const supervisorPromptConfig = defineConfig({
   name: "Supervisors",
   fields: {
-    prompt: multilineTextField({
+    prompt: promptField({
       label: "Shared supervisor prompt",
       description:
         "What every supervisor session is told at its root (ad-hoc supervisors and every role's sessions), ahead of the role's own prompt. Empty: nothing.",
       default: DEFAULT_SUPERVISOR_PROMPT,
       rows: 12,
     }),
-    decisionsPrompt: multilineTextField({
+    decisionsPrompt: promptField({
       label: "Decisions prompt",
       description:
-        "How every supervisor session records what needs the user, told at its root after the shared prompt. `{{taskId}}` is the supervisor's root task id. Empty: nothing.",
+        "How every supervisor session records what needs the user, told at its root after the shared prompt. Empty: nothing.",
       default: DEFAULT_DECISIONS_PROMPT,
       rows: 10,
+      variables: [
+        { name: "taskId", description: "the supervisor's root task id" },
+      ],
+    }),
+    roleSessionPrompt: promptField({
+      label: "Role session prompt",
+      description:
+        "What a supervisor role's session is told at its root, ahead of the shared prompt: which role it works for and how it works the role's backlog.",
+      default: DEFAULT_ROLE_SESSION_PROMPT,
+      rows: 4,
+      variables: [
+        { name: "roleName", description: "the role's name" },
+        { name: "roleId", description: "the role's id" },
+      ],
+    }),
+    rolesPrompt: promptField({
+      label: "Supervisor roles prompt",
+      description:
+        "What an agent that may file into a backlog is told about handing work to a supervisor role (its Supervisor roles section). Not sent while no role is listed.",
+      default: DEFAULT_ROLES_PROMPT,
+      rows: 6,
+      variables: [
+        {
+          name: "roles",
+          description:
+            "the listed roles, one list item each: name, id and description",
+        },
+      ],
     }),
   },
 });

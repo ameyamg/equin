@@ -4,6 +4,9 @@ import {
   type TasksFileGrant,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
+import { getConfig } from "@plugins/config_v2/server";
+import { renderConfigPrompt } from "@plugins/config_v2/plugins/prompts/server";
+import { taskFilingPromptsConfig } from "../../core";
 import { describeFilingGrant } from "./add-task-filing";
 
 // The grant's per-track keys ARE the task tracks (tasks-core cannot import
@@ -15,12 +18,12 @@ const tracksMatch: Same<
 > = true;
 void tracksMatch;
 
-function describeTasksFile(grant: TasksFileGrant): string {
-  return `You may file tasks into this subtree with \`add_task\` — ${describeFilingGrant(grant)}. Any other track or start mode is refused.`;
-}
-
-/** How a `tasks.file` grant reads to the agent. */
+/** How a `tasks.file` grant reads to the agent: the user's Task filing
+ * instructions, filled with what this grant allows. */
 export const tasksFileCapability = Mandate.Capability({
   cap: tasksFile,
-  describe: describeTasksFile,
+  describe: (grant: TasksFileGrant) =>
+    renderConfigPrompt(taskFilingPromptsConfig, "mandateLine", {
+      grant: describeFilingGrant(grant, getConfig(taskFilingPromptsConfig)),
+    }),
 });

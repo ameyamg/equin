@@ -5,3 +5,4 @@ export {
   REPORT_STANDINGS,
 } from "./schemas";
 export type { OutcomeReport, ReportStanding } from "./schemas";
+export { outcomeReportPromptsConfig } from "./prompts";

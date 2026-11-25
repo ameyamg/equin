@@ -11,3 +11,4 @@ export type {
   WatchId,
 } from "./internal/types";
 export { taskManagerShape } from "./internal/manager";
+export { watchPromptsConfig } from "./internal/prompts";

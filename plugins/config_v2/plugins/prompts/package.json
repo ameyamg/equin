@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-config_v2-prompts",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Agent prompts as config: promptField (a multiline config field declaring the {{variables}} it is filled with — a template naming any other is refused by its schema, so at every save), PromptText (text only a prompt field renders: what a system-prompt section and a mandate capability must return, so hard-coded agent prose does not type-check), fillPrompt / joinPrompts / promptList, and renderConfigPrompt (server: the saved prompt filled now)."
+}

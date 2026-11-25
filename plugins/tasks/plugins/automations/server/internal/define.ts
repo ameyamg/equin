@@ -15,7 +15,10 @@ import {
   defineMandate,
   type MandateRef,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
-import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
+import {
+  pushExitPromptsConfig,
+  pushPolicyPrompt,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import {
   SETTLE_MAX_WAIT_FACTOR,
   type AutomationConfigFields,
@@ -239,7 +242,10 @@ function fillPrompt(
 ): string {
   const prompt = renderPrompt(settings.prompt, {
     ...variables,
-    pushPolicy: PUSH_POLICY_TEXT[settings.push],
+    pushPolicy: pushPolicyPrompt(
+      getConfig(pushExitPromptsConfig),
+      settings.push,
+    ),
   });
   if (!prompt.ok) {
     // The pane refuses such a template; this is a hand edit. Start nothing
