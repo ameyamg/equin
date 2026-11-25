@@ -94,6 +94,18 @@ All rules live (and are tested) there:
   21 ms rate (report-1795436129-p17ttz). Only the filing tab has the
   profile, so the verdict is set there; the watchdog's draft never carries
   it. A busy loop still files under its function (`e2e/freeze.ts` case 1).
+  - **The renderer not scheduled**: a profile UNDER its pace (the sampler
+    thread stopped with the main thread — `stallSamplerKeptPace`) proves
+    nothing alone, but the LoAF frame spanning the stall listing NO script
+    (nor any frame during it), with ≥ 10 sampled intervals still no JS,
+    does: a stall is one task that never yielded, and LoAF lists every
+    script entry ≥ 5 ms in it (never judged by the capped list's sum). Same verdict
+    and row (`no-script`); the summary adds "or the renderer not
+    scheduled", the task says which. A visitor's equin.ai/ tab (Edge,
+    Windows, visible, focused, 2 s into page load): one 11,227 ms frame with
+    no script, its profile at 5.5% of its pace (622 ms sampled, 594 ms no
+    JS), 55 MB heap — filed as "frozen … unattributed" five times
+    (report-1795102621-jtqi2a).
 - **Cohort**: tabs silent within 1.5 s of each other froze together (one
   renderer): one incident, the focused visible tab primary, the others
   `cohort[]`; they stay `covered` (no second incident) until they answer.
@@ -401,10 +413,10 @@ frame's duration is on the monotonic clock, which pauses while the machine
 sleeps (macOS, Android, Linux), so a sleep does not lengthen it. A process
 suspended mid-frame while the machine stays awake *would* lengthen it, but a
 page is hidden (rAF stops) before Android freezes a backgrounded renderer, so
-that is not expected. Not confirmed on a device (2026-11-14): a visitor's
-imported stall now keeps `detector` and the sampled coverage (`sampledMs` far
-under `durationMs` = the sampler thread stopped too = suspended, not busy), so
-a real occurrence says which it was.
+that is not expected. Seen once since, with the worker detector
+(2026-11-25, report-1795102621-jtqi2a): an 11.2 s LoAF frame with no script
+while the sampler ran at 5.5% of its pace — a renderer not scheduled while the
+watchdog's ticks ran on (no sleep), now judged `ranNoScript` (above).
 
 ## Which browser
 
@@ -492,6 +504,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `StallFrameScriptSchema`
     - `StallInteractionSchema`
     - `stallRanNoScript`
+    - `stallSamplerKeptPace`
     - `StallTabSchema`
 - Cross-plugin:
   - Uses tokens:

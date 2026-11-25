@@ -1073,6 +1073,104 @@ describe("sampled stacks", () => {
     ).toBe(false);
   });
 
+  // report-1795102621-jtqi2a: a visitor's equin.ai/ tab (Edge, Windows),
+  // visible and focused, silent 11,227 ms — one LoAF frame of 11,227 ms with
+  // no script and 2 ms of style/layout, its profile sampling only 622 ms of
+  // it (5.5% of its pace), 594 ms of that no JS. The sampler thread stopped
+  // with the thread: the renderer was not running, not the page busy.
+  test("a starved sampler with one LoAF frame spanning the stall and no script in it ran no script", () => {
+    const base = recovered();
+    const dur = 11_227;
+    const d: MainThreadStallDraft = {
+      ...base,
+      durationMs: dur,
+      topFunction: null,
+      stallFrame: {
+        ...base.stallFrame!,
+        durationMs: dur,
+        blockingDurationMs: 11_127,
+        renderStartMs: 11_198,
+        styleAndLayoutStartMs: 11_225,
+        scripts: [],
+      },
+    };
+    const stacks = sampledStacks(dur, 594, { sampledMs: 622 });
+    const memory = { ...heap, afterMb: 55, limitMb: 4396 };
+    expect(stallRanNoScript(d, { stacks, memory })).toBe(true);
+    const filed = { ...d, stacks, memory, ranNoScript: true };
+    expect(mainThreadStallFingerprint(filed)).toBe(
+      "main-thread-stall:agent-manager|conversation|no-script",
+    );
+    expect(mainThreadStallSummary(filed)).toContain("renderer not scheduled");
+    // Before: the same stall read as the page frozen.
+    expect(mainThreadStallSummary({ ...filed, ranNoScript: false })).toContain(
+      "frozen",
+    );
+
+    // A script in that frame — a busy loop, however starved — is the page's.
+    const busy: MainThreadStallDraft = {
+      ...d,
+      stallFrame: { ...d.stallFrame!, scripts: base.stallFrame!.scripts },
+    };
+    expect(stallRanNoScript(busy, { stacks, memory })).toBe(false);
+    // Five small scripts listed — the list keeps the longest five, so its
+    // sum bounds nothing: any listed script is the page's.
+    const small = base.stallFrame!.scripts[0]!;
+    const many: MainThreadStallDraft = {
+      ...d,
+      stallFrame: {
+        ...d.stallFrame!,
+        scripts: Array.from({ length: 5 }, () => ({
+          ...small,
+          durationMs: 10,
+        })),
+      },
+    };
+    expect(stallRanNoScript(many, { stacks, memory })).toBe(false);
+    // A script in a frame during it.
+    expect(
+      stallRanNoScript(
+        { ...d, during: [{ ...base.stallFrame!, durationMs: 300 }] },
+        { stacks, memory },
+      ),
+    ).toBe(false);
+    // No frame spans it: LoAF cannot vouch for the time it does not cover.
+    expect(
+      stallRanNoScript({ ...d, stallFrame: null }, { stacks, memory }),
+    ).toBe(false);
+    // A sampler that saw (almost) nothing is no evidence.
+    expect(
+      stallRanNoScript(d, {
+        stacks: sampledStacks(dur, 0, { sampledMs: 0 }),
+        memory,
+      }),
+    ).toBe(false);
+    expect(
+      stallRanNoScript(d, {
+        stacks: sampledStacks(dur, 100, { sampledMs: 100 }),
+        memory,
+      }),
+    ).toBe(false);
+    // The heap at its ceiling: GC, whatever the sampler saw.
+    expect(
+      stallRanNoScript(d, { stacks, memory: { ...memory, afterMb: 4300 } }),
+    ).toBe(false);
+    // What the sampler did see was JS.
+    expect(
+      stallRanNoScript(d, {
+        stacks: sampledStacks(dur, 100, { sampledMs: 622 }),
+        memory,
+      }),
+    ).toBe(false);
+    // A buffer that filled first: its tail went unseen.
+    expect(
+      stallRanNoScript(d, {
+        stacks: sampledStacks(dur, 594, { sampledMs: 622, truncated: true }),
+        memory,
+      }),
+    ).toBe(false);
+  });
+
   test("JS on the stack, a profile that could not tell, GC near the ceiling, layout time or script the profiler cannot see is never 'no script'", () => {
     const d = ownScript(recovered());
     const dur = d.durationMs;

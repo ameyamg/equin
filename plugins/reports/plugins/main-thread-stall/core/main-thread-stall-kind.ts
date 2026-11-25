@@ -144,16 +144,19 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // the `main-thread` slow-op only — never a report, never a bell. Null:
   // it came back in view, or a long frame covers it.
   returnedOutOfView: z.enum(["hidden", "frozen"]).nullable().default(null),
-  // The stalled tab's own profile sampled the whole stall at its full rate
-  // and found no JS on the main thread, and no frame spent it in style or
-  // layout (`ranNoScript`): the thread was held outside the page's work —
-  // its tasks withheld by the browser, a nested native wait — not running a
-  // loop, whatever LoAF's entry point says (visitors' 180–1354 s "freezes" in
-  // `Ji (BODY.onanimationiteration)` sampled 100% no JS,
-  // report-1795436129-p17ttz). Set by the filing tab, which alone has the
+  // No JS ran on the main thread, and no frame spent the stall in style or
+  // layout (`ranNoScript`, see `stallRanNoScript`): the thread was held
+  // outside the page's work, not running a loop, whatever LoAF's entry point
+  // says. Either the tab's own profile sampled the whole stall at its full
+  // rate and found no JS — its tasks withheld by the browser, a nested native
+  // wait (visitors' 180–1354 s "freezes" in `Ji (BODY.onanimationiteration)`
+  // sampled 100% no JS, report-1795436129-p17ttz) — or the sampler thread
+  // stopped too and one LoAF frame spanning the stall ran no script: the
+  // renderer itself was not scheduled (a visitor's 11.2 s on equin.ai/, one
+  // 11,227 ms frame with no script, its profile at 5.5% of its pace,
+  // report-1795102621-jtqi2a). Set by the filing tab, which alone has the
   // profile; its own fingerprint row, and the summary names no function.
-  // False: JS ran, or the profile could not tell (unavailable, truncated,
-  // the sampler starved too).
+  // False: JS ran, or neither the profile nor LoAF could tell.
   ranNoScript: z.boolean().default(false),
   durationIsLowerBound: z.boolean(),
   // recovered: the tab answered again on its own. gone: it was reloaded,
@@ -246,6 +249,11 @@ export type MainThreadStallIdentity = MainThreadStallDraft &
 // script the profiler cannot see may have run.
 const NO_SCRIPT = {
   MIN_SAMPLED: 0.9,
+  // A sampler under its pace (it stopped with the thread: the renderer was
+  // not scheduled) proves nothing alone: then the LoAF frame spanning the
+  // stall must list no script at all, and the profile must still have
+  // sampled this many intervals (no JS in ≥ MIN_NO_JS of them).
+  MIN_UNDER_PACE_INTERVALS: 10,
   MIN_SAMPLED_TRUNCATED_MS: 60_000,
   MIN_NO_JS: 0.95,
   MAX_RENDER: 0.05,
@@ -266,11 +274,36 @@ function profilerSees(sourceURL: string, pageUrl: string): boolean {
 }
 
 /**
- * The stall ran no script (see `ranNoScript` on the payload): its profile
- * sampled ≥ 90% of it (or ≥ 60 s from its start, its buffer full), ≥ 95% of
- * that with no JS; its long frames spent ≤ 5% of it in style / layout (their
- * own pass or forced) and ≤ 5% in script the profiler cannot see; and the
- * heap was not near its ceiling (GC).
+ * The profile kept its pace through the stall (it sampled ≥ 90% of it, or
+ * ≥ 60 s from its start when its buffer filled first): the sampler thread was
+ * scheduled, so a no-JS sample is the main thread's own state. Under its pace,
+ * the sampler stopped with the thread — the renderer was not running.
+ */
+export function stallSamplerKeptPace(
+  stacks: { sampledMs: number; truncated: boolean },
+  durationMs: number,
+): boolean {
+  return stacks.truncated
+    ? stacks.sampledMs >= NO_SCRIPT.MIN_SAMPLED_TRUNCATED_MS
+    : stacks.sampledMs >= durationMs * NO_SCRIPT.MIN_SAMPLED;
+}
+
+/**
+ * The stall ran no script (see `ranNoScript` on the payload): ≥ 95% of what
+ * its profile sampled had no JS; its long frames spent ≤ 5% of it in style /
+ * layout (their own pass or forced) and ≤ 5% in script the profiler cannot
+ * see; the heap was not near its ceiling (GC); and the profile either
+ * sampled ≥ 90% of it (or ≥ 60 s from its start, its buffer full) — or fell
+ * under its pace (the sampler thread was not scheduled either), still
+ * sampled ≥ 10 intervals, while the LoAF frame spanning the stall (the
+ * watchdog takes the stall's span from it) and every frame during it listed
+ * no script at all.
+ *
+ * LoAF lists every script entry ≥ 5 ms of a frame: a stall is one task that
+ * never yielded (else the watchdog's ping would have run), so a frame
+ * spanning it that lists none ran no script of 5 ms or more — a busy loop,
+ * however starved its renderer, is one there and still files under its
+ * function. A list is never judged by its sum: it keeps the longest five.
  */
 export function stallRanNoScript(
   draft: MainThreadStallDraft,
@@ -279,10 +312,6 @@ export function stallRanNoScript(
   const st = evidence.stacks;
   const dur = draft.durationMs;
   if (st.kind !== "sampled" || dur <= 0) return false;
-  const covered = st.truncated
-    ? st.sampledMs >= NO_SCRIPT.MIN_SAMPLED_TRUNCATED_MS
-    : st.sampledMs >= dur * NO_SCRIPT.MIN_SAMPLED;
-  if (!covered) return false;
   if (st.noJsMs < st.sampledMs * NO_SCRIPT.MIN_NO_JS) return false;
   const m = evidence.memory;
   if (m.kind === "measured" && heapNearCeiling(m)) return false;
@@ -291,18 +320,30 @@ export function stallRanNoScript(
     ...draft.during,
   ];
   let renderMs = 0;
+  let scripts = 0;
   let unseenMs = 0;
   for (const f of frames) {
     if (f.styleAndLayoutStartMs !== null)
       renderMs += Math.max(0, f.durationMs - f.styleAndLayoutStartMs);
     for (const x of f.scripts) {
       renderMs += x.forcedStyleAndLayoutDurationMs;
+      scripts++;
       if (!profilerSees(x.sourceURL, draft.url)) unseenMs += x.durationMs;
     }
   }
+  if (
+    renderMs > dur * NO_SCRIPT.MAX_RENDER ||
+    unseenMs > dur * NO_SCRIPT.MAX_UNSEEN_SCRIPT
+  )
+    return false;
+  if (stallSamplerKeptPace(st, dur)) return true;
+  // The sampler fell under its pace: LoAF can still say no script ran — not
+  // past a full buffer, whose tail no profile saw.
   return (
-    renderMs <= dur * NO_SCRIPT.MAX_RENDER &&
-    unseenMs <= dur * NO_SCRIPT.MAX_UNSEEN_SCRIPT
+    !st.truncated &&
+    draft.stallFrame !== null &&
+    scripts === 0 &&
+    st.sampledMs >= st.sampleIntervalMs * NO_SCRIPT.MIN_UNDER_PACE_INTERVALS
   );
 }
 
@@ -342,7 +383,7 @@ export function mainThreadStallSummary(data: MainThreadStallIdentity): string {
   // Not a busy thread: say so, and name no function (none ran). A click's
   // freeze keeps its own form (its row is the click's, whatever ran).
   if (data.ranNoScript && !data.interaction)
-    return `Main thread unresponsive ${len}, no JS ran — ${at} — held outside script (browser-withheld or a native wait)${task}`;
+    return `Main thread unresponsive ${len}, no JS ran — ${at} — held outside script (browser-withheld, a native wait, or the renderer not scheduled)${task}`;
   const who = data.topFunction ?? "unattributed";
   const frozen = `Main thread frozen ${len}`;
   const i = data.interaction;

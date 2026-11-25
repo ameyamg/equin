@@ -62253,6 +62253,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallFrameScriptSchema`
           - `StallInteractionSchema`
           - `stallRanNoScript`
+          - `stallSamplerKeptPace`
           - `StallTabSchema`
       - Cross-plugin:
         - Uses tokens:

@@ -10,6 +10,7 @@ export {
   mainThreadStallFingerprint,
   mainThreadStallSummary,
   stallRanNoScript,
+  stallSamplerKeptPace,
 } from "./main-thread-stall-kind";
 export { coarseClient } from "./coarse-client";
 export type {

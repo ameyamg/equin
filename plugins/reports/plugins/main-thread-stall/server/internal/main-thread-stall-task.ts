@@ -4,6 +4,7 @@ import {
   interactionTargetLabel,
   MainThreadStallPayloadSchema,
   mainThreadStallSummary,
+  stallSamplerKeptPace,
   type MainThreadStallPayload,
   type StallFrame,
   type TaskMark,
@@ -62,8 +63,13 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
   );
   if (d.ranNoScript) {
     lines.push("");
+    const keptPace =
+      d.stacks.kind === "sampled" &&
+      stallSamplerKeptPace(d.stacks, d.durationMs);
     lines.push(
-      `**No JS ran.** The tab's own profile sampled the stall at its full rate and found no JS on the main thread, and no long frame spent it in style or layout: the thread was held outside the page's work (the browser withholding its tasks, or a native wait), not running a loop. A LoAF entry point that spans it (below) is where the hold began, not what spent the time. Keyed as \`no-script\`, apart from the busy freezes of this screen.`,
+      keptPace
+        ? `**No JS ran.** The tab's own profile sampled the stall at its full rate and found no JS on the main thread, and no long frame spent it in style or layout: the thread was held outside the page's work (the browser withholding its tasks, or a native wait), not running a loop. A LoAF entry point that spans it (below) is where the hold began, not what spent the time. Keyed as \`no-script\`, apart from the busy freezes of this screen.`
+        : `**No JS ran — the renderer was not running.** One LoAF frame spans the stall with no script in it, and the tab's own profile fell far under its pace (its sampler thread was not scheduled either; what it did sample had no JS): most likely the renderer process was suspended or starved of CPU (the machine, the OS or the browser), not the page busy — or native work LoAF does not list as script (parsing, a same-process cross-origin frame). Keyed as \`no-script\`, apart from the busy freezes of this screen.`,
     );
   }
   if (d.interaction) {
