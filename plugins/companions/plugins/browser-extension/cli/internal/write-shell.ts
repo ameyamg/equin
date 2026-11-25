@@ -2,7 +2,6 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
-import { createSha256 } from "@plugins/packages/plugins/string-hash/core";
 import { LOGO_FILES } from "@plugins/ui/plugins/logo/core";
 import {
   namespaceUrl,
@@ -15,6 +14,7 @@ import {
   SHELL_DIGEST_FILE,
   SHELL_FOLDER,
 } from "../../data-dirs";
+import { SHELL_BUILD_PLACEHOLDER, stampShell } from "./stamp-shell";
 
 /** The shell's sources, repo-relative. */
 const SHELL_SOURCES =
@@ -65,15 +65,7 @@ export async function writeExtensionShell(opts: {
     namespaceUrl(opts.namespace, "", gatewayPortSync()),
   );
 
-  const hasher = createSha256();
-  for (const [name, bytes] of files) hasher.update(name).update(bytes);
-  const digest = hasher.hex();
-  const html = files
-    .get("popup.html")
-    ?.toString()
-    .replace("{{SHELL_DIGEST}}", digest);
-  if (html === undefined) throw new Error("the shell has no popup.html");
-  files.set("popup.html", Buffer.from(html));
+  const { digest, files: stamped } = stampShell(files);
 
   const root = browserExtensionRoot(opts.namespace);
   const shell = join(root, SHELL_FOLDER);
@@ -88,7 +80,8 @@ export async function writeExtensionShell(opts: {
   await mkdir(root, { recursive: true });
   const staged = join(root, `.${SHELL_FOLDER}-${randomUUID()}`);
   await mkdir(staged);
-  for (const [name, bytes] of files) await writeFile(join(staged, name), bytes);
+  for (const [name, bytes] of stamped)
+    await writeFile(join(staged, name), bytes);
   const old = join(root, `.${SHELL_FOLDER}-old-${randomUUID()}`);
   if (existsSync(shell)) await rename(shell, old);
   await rename(staged, shell);
@@ -99,7 +92,8 @@ export async function writeExtensionShell(opts: {
   return { kind: "written", path: shell, digest };
 }
 
-/** Every file the shell ships, by name — `popup.html` still holding its digest placeholder. */
+/** Every file the shell ships, by name — the build's stamp still its
+ *  placeholder ({@link stampShell} writes it). */
 async function shellFiles(
   repoRoot: string,
   origin: string,
@@ -113,6 +107,7 @@ async function shellFiles(
       target: "browser",
       format: entry.format,
       minify: true,
+      define: { __SHELL_BUILD__: JSON.stringify(SHELL_BUILD_PLACEHOLDER) },
     });
     const [bundle] = built.outputs;
     if (!built.success || bundle === undefined || built.outputs.length !== 1)
@@ -123,37 +118,22 @@ async function shellFiles(
   }
 
   // The key is the core's, so the id Chrome derives is the one the page trusts.
-  // version_name names this manifest (a hash of it), and the popup carries the
-  // same name: a popup running under another manifest — Chrome reads the
-  // popup's files on every open but the manifest only on a (re)load — knows
-  // it is a stale load and has the page reload it.
+  // version_name is the whole shell's build (stampShell): every part compares
+  // its own build with the manifest Chrome runs.
   const manifest = JSON.parse(
     await readFile(join(sources, "manifest.json"), "utf8"),
   ) as Record<string, unknown>;
-  const keyed = { ...manifest, key: EXTENSION_PUBLIC_KEY };
-  const manifestVersion = createSha256()
-    .update(JSON.stringify(keyed))
-    .hex()
-    .slice(0, 12);
   files.set(
     "manifest.json",
     Buffer.from(
-      `${JSON.stringify({ ...keyed, version_name: manifestVersion }, null, 2)}\n`,
+      `${JSON.stringify({ ...manifest, key: EXTENSION_PUBLIC_KEY, version_name: SHELL_BUILD_PLACEHOLDER }, null, 2)}\n`,
     ),
   );
 
   const html = await readFile(join(sources, "popup.html"), "utf8");
-  for (const slot of ["{{ORIGIN}}", "{{SHELL_DIGEST}}", "{{MANIFEST_VERSION}}"])
-    if (!html.includes(slot))
-      throw new Error(`popup.html lost its ${slot} slot`);
-  files.set(
-    "popup.html",
-    Buffer.from(
-      html
-        .replace("{{ORIGIN}}", origin)
-        .replace("{{MANIFEST_VERSION}}", manifestVersion),
-    ),
-  );
+  if (!html.includes("{{ORIGIN}}"))
+    throw new Error("popup.html lost its {{ORIGIN}} slot");
+  files.set("popup.html", Buffer.from(html.replace("{{ORIGIN}}", origin)));
   // The offscreen recorder frames the relay page at the same origin.
   const offscreen = await readFile(join(sources, "offscreen.html"), "utf8");
   if (!offscreen.includes("{{ORIGIN}}"))

@@ -103,9 +103,16 @@ function bridgeClient(
       port.postMessage({ id, ...call });
     });
     // The schema is the method's own, so its output is that method's result.
-    return BRIDGE_RESULTS[call.method].parse(value) as BridgeResult<
-      (typeof call)["method"]
-    >;
+    const result = BRIDGE_RESULTS[call.method].safeParse(value);
+    // An answer of another shape: the extension is from another build than
+    // this page. Said in words, never as the schema's issue list.
+    if (!result.success)
+      throw new Error(
+        `The extension answered "${call.method}" in a shape this page does not read — it is from another build: reload it from chrome://extensions. (${result.error.issues
+          .map((i) => `${i.path.join(".") || "the answer"}: ${i.message}`)
+          .join("; ")})`,
+      );
+    return result.data as BridgeResult<(typeof call)["method"]>;
   };
 }
 

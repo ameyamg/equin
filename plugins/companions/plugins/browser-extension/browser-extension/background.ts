@@ -49,6 +49,8 @@ import {
   permitted,
   messageType,
   onMessageAsync,
+  sendToExtension,
+  sendToTab,
   type ChromeWindow,
 } from "./chrome-api";
 import {
@@ -133,10 +135,7 @@ async function toContent(
   tabId: number,
   command: ContentCommand,
 ): Promise<unknown> {
-  const answer = await chrome.tabs.sendMessage(
-    tabId,
-    ContentCommandSchema.parse(command),
-  );
+  const answer = await sendToTab(tabId, ContentCommandSchema.parse(command));
   // The content script answers a failure as `{ error }`.
   if (typeof answer === "object" && answer !== null && "error" in answer)
     throw new Error(String((answer as { error: unknown }).error));
@@ -146,9 +145,7 @@ async function toContent(
 async function toOffscreen(
   command: OffscreenCommand,
 ): Promise<SavedRecording | null> {
-  const reply = OffscreenReplySchema.parse(
-    await chrome.runtime.sendMessage(command),
-  );
+  const reply = OffscreenReplySchema.parse(await sendToExtension(command));
   if (!reply.ok) throw new Error(reply.error);
   return reply.saved;
 }

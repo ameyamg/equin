@@ -29,7 +29,12 @@ import {
   type SavedRecording,
   type StopCause,
 } from "../core/recorder";
-import { chrome, errorText, messageType, onMessageAsync } from "./chrome-api";
+import {
+  errorText,
+  messageType,
+  onMessageAsync,
+  sendToExtension,
+} from "./chrome-api";
 
 const FRAME_RATE = 30;
 /** Chunks waiting to upload past this stop the recording: never an unbounded
@@ -166,7 +171,7 @@ function recording(): Session {
  */
 async function keepingWorkerAwake<T>(work: Promise<T>): Promise<T> {
   const timer = window.setInterval(
-    () => void chrome.runtime.sendMessage({ type: "offscreen.heartbeat" }),
+    () => void sendToExtension({ type: "offscreen.heartbeat" }),
     20_000,
   );
   try {
@@ -348,7 +353,7 @@ function fail(s: Session, err: Error): void {
 }
 
 function report(event: OffscreenEvent): void {
-  void chrome.runtime.sendMessage(event);
+  void sendToExtension(event);
 }
 
 /** The recorder's last chunk handed over and uploaded; capture released. */

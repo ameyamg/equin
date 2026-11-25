@@ -19,7 +19,15 @@ import {
   type PointerSample,
   type PointerTrack,
 } from "../core/recorder";
-import { chrome, messageType } from "./chrome-api";
+import {
+  chrome,
+  errorText,
+  messageBuild,
+  messageType,
+  OTHER_BUILD_TEXT,
+  SHELL_BUILD,
+  unstamped,
+} from "./chrome-api";
 
 const ACCENT = "#e8643c";
 const POINTER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 2v17l4.5-4.2 3 6.6 3-1.3-3-6.4H18z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
@@ -235,22 +243,27 @@ async function handle(cmd: ContentCommand): Promise<unknown> {
   }
 }
 
-// Injected once per recording: a second injection into the same page (the
-// next recording) finds the listener already there.
-const installed = globalThis as { __equinRecorder?: true };
-if (installed.__equinRecorder !== true) {
-  installed.__equinRecorder = true;
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (messageType(message)?.startsWith("content.") !== true) return undefined;
-    handle(ContentCommandSchema.parse(message)).then(
-      sendResponse,
-      (err: unknown) => {
-        // The worker reads a throw as the tab being unusable: say why.
-        sendResponse({
-          error: err instanceof Error ? err.message : String(err),
-        });
-      },
-    );
-    return true;
-  });
-}
+// Injected once per recording, into the extension's one isolated world per
+// page: the listener a previous injection left (the last recording's, or
+// another build's) is replaced, so the page answers with ONE listener — this
+// build's, which refuses a command from another build in words rather than
+// parse it against a contract that may have changed.
+type Listener = Parameters<typeof chrome.runtime.onMessage.addListener>[0];
+const installed = globalThis as { __equinRecorderListener?: Listener };
+if (installed.__equinRecorderListener !== undefined)
+  chrome.runtime.onMessage.removeListener(installed.__equinRecorderListener);
+const listener: Listener = (message, _sender, sendResponse) => {
+  if (messageType(message)?.startsWith("content.") !== true) return undefined;
+  // The worker reads `{ error }` as a failure, and says it.
+  if (messageBuild(message) !== SHELL_BUILD) {
+    sendResponse({ error: OTHER_BUILD_TEXT });
+    return undefined;
+  }
+  handle(ContentCommandSchema.parse(unstamped(message))).then(
+    sendResponse,
+    (err: unknown) => sendResponse({ error: errorText(err) }),
+  );
+  return true;
+};
+installed.__equinRecorderListener = listener;
+chrome.runtime.onMessage.addListener(listener);

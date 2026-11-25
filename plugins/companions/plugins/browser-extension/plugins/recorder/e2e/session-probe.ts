@@ -110,7 +110,10 @@ try {
       query: (q: object) => Promise<{ id?: number; windowId: number }[]>;
     };
     windows: { update: (id: number, b: object) => Promise<unknown> };
-    runtime: { sendMessage: (m: unknown) => Promise<unknown> };
+    runtime: {
+      sendMessage: (m: unknown) => Promise<unknown>;
+      getManifest: () => { version_name: string };
+    };
     storage: {
       onChanged: {
         addListener: (
@@ -160,13 +163,14 @@ try {
     return found;
   };
   const send = (message: unknown) =>
-    ext.evaluate(
-      (m) =>
-        (
-          globalThis as unknown as { chrome: Chrome }
-        ).chrome.runtime.sendMessage(m),
-      message,
-    );
+    ext.evaluate((m) => {
+      const c = (globalThis as unknown as { chrome: Chrome }).chrome;
+      // Stamped with the loaded build, as the popup stamps its commands.
+      return c.runtime.sendMessage({
+        ...(m as object),
+        equinShellBuild: c.runtime.getManifest().version_name,
+      });
+    }, message);
 
   /** Start a recording and wait until it records; answers where its states
    *  begin. */
@@ -177,6 +181,7 @@ try {
       const [target] = await c.tabs.query({ url });
       if (target?.id === undefined) throw new Error(`no tab at ${url}`);
       return c.runtime.sendMessage({
+        equinShellBuild: c.runtime.getManifest().version_name,
         type: "recorder.start",
         tabId: target.id,
         options: {

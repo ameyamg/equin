@@ -103,6 +103,20 @@ one), a worktree's into `~/.equin/worktrees/<wt>/browser-extension/`. The root
 holds `shell/` (swapped whole by rename), `shell-digest.txt` (written last)
 and `connection.json`. Nothing is written when the digest is unchanged.
 
+**One shell, one build.** Chrome loads the shell's parts at different times:
+the manifest and the service worker only when the extension (re)loads, the
+popup, the offscreen document and the content script from disk on each open.
+So after a build, parts of two builds can run side by side. The build stamps
+the shell with its digest (`cli/internal/stamp-shell.ts`): the manifest's
+`version_name` and every script's `SHELL_BUILD` (`chrome-api.ts`), so a change
+to ANY part is a new manifest. The popup compares its build with the loaded
+manifest's (a stale load asks the page to reload the extension); every
+message between parts goes through `sendToExtension` / `sendToTab`, which
+stamp it (Chrome's raw `sendMessage` is not in the typed API), and a receiver
+refuses another build's message in words before its schema reads it.
+`errorText` never hands the panel zod's raw issue list.
+`e2e/build-skew-probe.ts` loads one build and writes the next over it on disk.
+
 The backend serves `browser-extension.shell` (the digest) from a watch on the
 digest file, so the push reaches open popups without a poll; the panel asks
 the shell to `reload()` when its own `shellDigest` differs (once per pair —

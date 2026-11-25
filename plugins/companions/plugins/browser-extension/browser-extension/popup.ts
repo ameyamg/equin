@@ -25,7 +25,15 @@ import {
   type TabFit,
   type WorkerCommand,
 } from "../core/recorder";
-import { chrome, errorText, hasApis, type ChromeTab } from "./chrome-api";
+import {
+  chrome,
+  errorText,
+  hasApis,
+  runsThisBuild,
+  sendToExtension,
+  SHELL_BUILD,
+  type ChromeTab,
+} from "./chrome-api";
 import { measureTab } from "./measure";
 import {
   OPTIONS_KEY,
@@ -75,23 +83,18 @@ window.addEventListener("message", (event) => {
 });
 
 /**
- * Whether Chrome runs the manifest on disk. An unpacked extension reads its
- * popup's files from disk on every open, its manifest only when (re)loaded: a
- * build that changed the manifest (a permission, the service worker) runs
- * under the old one until Chrome reloads the extension.
- */
-const manifestCurrent =
-  chrome.runtime.getManifest().version_name === meta("equin-manifest-version");
-
-/**
- * The shell that is actually running: its files' digest while Chrome runs the
- * manifest they were built with; under an older manifest, not that shell —
- * so the page, seeing it differ from the served one, asks Chrome to reload
+ * The shell that is actually running: this build's digest while Chrome runs
+ * the manifest it was built with — the manifest names the whole shell's
+ * digest, so a build that changed any part of it (a permission, the service
+ * worker, the offscreen recorder) is a new manifest. Under an older one, not
+ * this shell: an unpacked extension reads the popup's files from disk on
+ * every open but the manifest and the worker only when (re)loaded, so the
+ * page, seeing this digest differ from the served one, asks Chrome to reload
  * the extension (`web/internal/shell-update.tsx`), its usual self-update.
  */
-const shellDigest = manifestCurrent
-  ? meta("equin-shell-digest")
-  : `${meta("equin-shell-digest")}+stale-manifest`;
+const shellDigest = runsThisBuild()
+  ? SHELL_BUILD
+  : `${SHELL_BUILD}+stale-manifest`;
 
 /**
  * The tab the popup is about. Opened from the toolbar the popup is no tab, so
@@ -128,9 +131,7 @@ const hostInfo: ExtensionHostInfo = {
 // ── The recorder: commands go to the worker, state comes back by push ──────
 
 async function toWorker(command: WorkerCommand): Promise<void> {
-  const reply = WorkerReplySchema.parse(
-    await chrome.runtime.sendMessage(command),
-  );
+  const reply = WorkerReplySchema.parse(await sendToExtension(command));
   if (!reply.ok) throw new Error(reply.error);
 }
 
@@ -249,7 +250,7 @@ async function serve(port: MessagePort, data: unknown): Promise<void> {
     const refusal: BridgeResponse = {
       id,
       ok: false,
-      error: `not a bridge call: ${parsed.error.message}`,
+      error: `The extension does not know this call (the page is newer than the extension: reload it). ${errorText(parsed.error)}`,
     };
     port.postMessage(refusal);
     return;
@@ -259,11 +260,7 @@ async function serve(port: MessagePort, data: unknown): Promise<void> {
   try {
     response = { id, ok: true, value: await answer(call as BridgeCall, port) };
   } catch (err) {
-    response = {
-      id,
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
+    response = { id, ok: false, error: errorText(err) };
   }
   port.postMessage(response);
 }
