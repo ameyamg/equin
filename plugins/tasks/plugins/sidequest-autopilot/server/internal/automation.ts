@@ -32,7 +32,7 @@ const CANDIDATE_WINDOW = 200;
  * — best first by triage's priority (task-triage's `compareByTriage`); the
  * registry launches only the approved ones, at most `maxLaunches` per turn-on.
  * Each agent gets the autopilot prompt (never ask, check obsolescence first,
- * stay in scope, report with `submit_outcome_report`), and its slot
+ * stay in scope, end with the report as its last message), and its slot
  * frees when it reports or its task settles. Off by default.
  */
 export const sidequestAutopilotAutomation = defineAutomation({

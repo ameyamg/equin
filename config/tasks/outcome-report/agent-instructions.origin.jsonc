@@ -1,5 +1,5 @@
-// @hash 49a86dfcbfb3
+// @hash ae1706a975eb
 {
-  // The line an agent whose mandate requires an outcome report reads in its Mandate section (an automation's run, a supervisor's worker). Filled at each use: {{reportTool}} (the outcome report tool's name).
-  "mandateLine": "The user is not watching: never ask questions mid-way — decide, or stop. End with `{{reportTool}}`."
+  // The line an agent whose runs are handed back reads in its Mandate section (an automation's run, a supervisor's worker). Filled at each use: {{turnForTool}} (the tool that says whom a turn is for).
+  "mandateLine": "The user is not watching: work on your own. If only the user can unblock you, ask with `AskUserQuestion` — it waits for their answer. When you stop, your last message is your report to whoever started you (your supervisor, or the automation): say what you did, what is left and what they must know. Once the user has talked to you, call `{{turnForTool}}` before you end each turn to say whether it is for the user or your supervisor."
 }

@@ -4,10 +4,10 @@ import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/ca
 import { outcomeReportPromptsConfig } from "../../core";
 import { reportRequiredLine } from "./report-line";
 
-/** How `report.required` reads in the agent's `## Mandate` section: only
- * what the tool and the stop gate do not say — that nobody is watching. The
- * tool's description and the stop gate carry "end with the report". The
- * words are `outcomeReportPromptsConfig`'s, as the user saved them. */
+/** How `report.required` reads in the agent's `## Mandate` section: nobody
+ * is watching, ask with AskUserQuestion when blocked, the last message is the
+ * report, and `turn_for` once the user has talked to it. The words are
+ * `outcomeReportPromptsConfig`'s, as the user saved them. */
 export const reportRequiredCapability = Mandate.Capability({
   cap: reportRequired,
   describe: () => reportRequiredLine(getConfig(outcomeReportPromptsConfig)),

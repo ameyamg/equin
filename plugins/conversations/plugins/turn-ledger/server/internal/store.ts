@@ -1,4 +1,15 @@
-import { and, asc, eq, gte, inArray, lt, lte, max, min } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  inArray,
+  lt,
+  lte,
+  max,
+  min,
+  notInArray,
+} from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -410,6 +421,54 @@ export async function resolvePromptSubmit(
     }
   }
   return null;
+}
+
+/**
+ * The kinds of turn a person sends: what they wrote, an answer typed into a
+ * dismissed question's menu, the wrap-up they clicked. Every other kind is the
+ * app's (a launch prompt, a watched event, a self-compaction). One mislabel
+ * stays: the sdk runtime's auto-resume after an API error is a `turn` (it has
+ * to be — only a `turn` resumes a stopped conversation), so it reads as the
+ * person's word too.
+ */
+const PERSON_TURN_KINDS = [
+  "turn",
+  "answer",
+  "push-and-exit",
+] as const satisfies readonly TurnKind[];
+
+/** The states of a turn that never reached the agent, or that Stop took back. */
+const UNSPOKEN_TURN_STATES = [
+  "failed",
+  "withdrawn",
+  "returned",
+] as const satisfies readonly TurnState[];
+
+/**
+ * When a person last sent this conversation a turn (its row's creation:
+ * their word, even while it still waits to be typed), or null when they never
+ * did — up to `asOf` when given (a reader judging a turn that ended then).
+ * Turns that never reached the agent, or Stop took back, do not count.
+ */
+export async function latestPersonTurnAt(
+  conversationId: string,
+  asOf?: Date,
+  conn: Pick<NodePgDatabase, "select"> = db,
+): Promise<Date | null> {
+  const [row] = await conn
+    .select({ at: max(_conversationTurns.createdAt) })
+    .from(_conversationTurns)
+    .where(
+      and(
+        eq(_conversationTurns.conversationId, conversationId),
+        inArray(_conversationTurns.kind, [...PERSON_TURN_KINDS]),
+        notInArray(_conversationTurns.state, [...UNSPOKEN_TURN_STATES]),
+        asOf === undefined
+          ? undefined
+          : lte(_conversationTurns.createdAt, asOf),
+      ),
+    );
+  return row?.at ?? null;
 }
 
 /**

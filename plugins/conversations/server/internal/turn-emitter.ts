@@ -265,6 +265,7 @@ async function emitEndTurn(
         stopReason: "end_turn",
         text: turn.text,
         messageId: turn.messageId,
+        endedAt: turn.endedAt,
       },
       how === "late" ? { armedBefore: new Date(turn.endedAt) } : undefined,
     );

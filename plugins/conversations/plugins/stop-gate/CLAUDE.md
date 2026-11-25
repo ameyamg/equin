@@ -55,9 +55,14 @@ Monitors, background subagents, workflows — each of which re-invokes the agent
 Fixed once here, for every gate.
 
 ```ts
-StopGate({ id: "outcome-report", check: async (conversationId) => … })
+StopGate({ id: "outcome-report.turn-for", check: async (conversationId) => … })
 StopWaiver({ id: "watch", when: "a task subtree you watch still has work running…", waives: async (conversationId) => … })
 ```
+
+**Will it be woken anyway?** `wakeReasons(conversationId)` (server) is the
+waivers' half alone — every waiver that waives now, its reason — for a reader
+that asks whether a stop is a pause or the end of a run (outcome-report's
+hand-back), with no gate involved.
 
 This plugin names no contributor.
 
@@ -79,6 +84,7 @@ This plugin names no contributor.
   - Exports (values):
     - `StopGate`
     - `StopWaiver`
+    - `wakeReasons`
   - Routes: `GET /api/conversations/:id/stop-gate`
 - Core:
   - Uses:

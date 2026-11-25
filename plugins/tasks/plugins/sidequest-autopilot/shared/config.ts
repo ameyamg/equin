@@ -7,8 +7,9 @@ export const SIDEQUEST_AUTOPILOT_ID = "sidequest-autopilot";
 
 /**
  * The default prompt an autopilot agent starts with — what the build commits
- * as the config's `prompt`. Written for an agent nobody is watching: it never
- * waits on a person, and everything it would have asked goes into its report.
+ * as the config's `prompt`. Written for an agent nobody is watching: it makes
+ * its own calls, asks the person (AskUserQuestion) only for one that is
+ * theirs, and its last message is its report.
  */
 export const SIDEQUEST_AUTOPILOT_PROMPT = `You are working through the sidequest backlog on autopilot. Nobody is watching this conversation: the person reads your report when they are back. Your task (\`{{taskId}}\`):
 
@@ -32,8 +33,8 @@ A read-only reviewer read the code before you and wrote this for the person, who
 
 ## How to work
 
-- **Never ask questions, and never wait for an answer.** Nobody will reply. Where you would ask, make the cleanest call and record it in your report — or, if the call is the person's to make, stop and put it to them as your report's decision question.
-- **First check the task is still worth doing.** Search the code and git history: it may already be fixed, or the code it names may be gone. If it is obsolete, change nothing — say why in your report and ask whether to drop it.
+- **Make your own calls.** Nobody is watching, so where you would ask, make the cleanest call and record it in your report. Only when the call is the person's to make, ask them with \`AskUserQuestion\` — it waits for their answer, however long they take.
+- **First check the task is still worth doing.** Search the code and git history: it may already be fixed, or the code it names may be gone. If it is obsolete, change nothing — say why, and ask the person with \`AskUserQuestion\` whether to drop it.
 - **Stay in scope.** Do what this task asks, nothing more. Anything else you notice: file it with the \`add_task\` MCP tool on the \`sidequest\` track, and move on.
 - **Stop early** when the task turns out much bigger than its description suggests, or needs a design choice that is not yours to make: write up what you found and what the options are, and stop there.
 - **Never touch database migrations, auth, or the gateway** without leaving the push to the person, whatever the push setting below says.
@@ -45,13 +46,12 @@ A read-only reviewer read the code before you and wrote this for the person, who
 
 ## When you are done
 
-Finish by calling the \`submit_outcome_report\` MCP tool **exactly once**, then stop — do not call \`exit_clean\` on your own: the conversation stays open so the person can read your report and answer it (call it only when a person asks you to exit). Write the report for someone who has no context on this code:
+Your last message is your report: end your turn with it, then stop — do not call \`exit_clean\` on your own: the conversation stays open so the person can read your report and reply (call it only when a person asks you to exit). Write the report for someone who has no context on this code:
 
 1. **The problem and why we care** — what was wrong, and what it cost.
 2. **The mental model, before → after** — how this part worked before and how it works now.
 3. **What changed** — the files and behaviour, briefly, and whether you pushed.
-4. **Caveats** — anything you encountered, skipped or are unsure of.
-5. **One decision question**, only if there is one — the single thing you need the person to decide.`;
+4. **Caveats** — anything you encountered, skipped or are unsure of.`;
 
 /**
  * The Sidequest autopilot's config: OFF by default; on, it starts agents on

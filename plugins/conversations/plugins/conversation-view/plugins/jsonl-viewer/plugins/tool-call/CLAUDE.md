@@ -30,8 +30,8 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
   - Slots:
     - `renderer`
     - `JsonlViewerTool.Footer`
-  - Slot contributors: 31 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `renderer` ×30
+  - Slot contributors: 30 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `renderer` ×29
     - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
@@ -111,8 +111,8 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×32
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×31
     - `apps/places/places-map`
     - `debug/browser-recordings`
     - `reports/tool-input-drift`
@@ -126,7 +126,6 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
   - **`exit-clean`** — Renders exit_clean MCP tool calls as one quiet line — the agent closing its conversation as all-smooth; a refusal opens with the tool's reason.
   - **`flag-raise`** — Renders flag_raise MCP tool calls as a warning banner: the items the user must act on, and the details folded under them (or, for a flag raised before the split, its one reason).
   - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the…
-  - **`outcome-report`** — Renders submit_outcome_report MCP tool calls: the report's headline as the summary, the markdown body collapsed under it, and the question it asks as a note.
   - **`page-tools`** [3 sub-plugins] — Shared appearance for the equin page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes…
   - **`query-db`** — Renders query_db MCP tool calls: the SQL on one line (highlighted inside), the database when one was named, the row count in the note, and the rows as a compact table; a failed query turns the card…
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.

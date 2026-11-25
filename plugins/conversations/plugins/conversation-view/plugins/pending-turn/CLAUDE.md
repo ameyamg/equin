@@ -202,7 +202,6 @@ render (`reports/turn-unconfirmed`).
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/status`
     - `conversations/conversations-view/data-view`
-    - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
   - Exempted by:

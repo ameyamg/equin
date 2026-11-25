@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:tasks_ext_outcome_report.message_id",
+      "entityType": "column",
+      "entityName": "message_id",
+      "action": "create"
+    }
+  ]
+}

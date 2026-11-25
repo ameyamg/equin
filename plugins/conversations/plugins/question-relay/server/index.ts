@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { pendingQuestionsServed } from "./internal/resource";
 import { pendingQuestionsRetention } from "./internal/retention";
 
+export { latestAnswerAt, openQuestionsOf } from "./internal/latest";
 export { onQuestionResolved } from "./internal/resolved";
 export type { ResolvedQuestion } from "./internal/resolved";
 

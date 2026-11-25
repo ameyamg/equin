@@ -1,6 +1,6 @@
 {
-  "id": "4582ce89-3931-4c08-a4ba-edd778f17b84",
-  "prevId": "9f4ed54c-7348-4e55-a41f-90eaa7d557a5",
+  "id": "9b3d7987-b1bc-4ab2-9a4a-b4b1f6102161",
+  "prevId": "4582ce89-3931-4c08-a4ba-edd778f17b84",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17380,17 +17380,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "question": {
-          "name": "question",
+        "message_id": {
+          "name": "message_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "answers": {
-          "name": "answers",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
         },
         "submitted_at": {
           "name": "submitted_at",
@@ -17427,6 +17421,52 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outcome_report_turn_addressees": {
+      "name": "outcome_report_turn_addressees",
+      "schema": "",
+      "columns": {
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "to": {
+          "name": "to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "declared_at": {
+          "name": "declared_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "outcome_report_turn_addressees_conversation_id_conversations_id_fk": {
+          "name": "outcome_report_turn_addressees_conversation_id_conversations_id_fk",
+          "tableFrom": "outcome_report_turn_addressees",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},

@@ -3,6 +3,7 @@ import { stopGate } from "../core";
 import { handleStopGate } from "./internal/handler";
 
 export { StopGate, StopWaiver } from "./internal/registry";
+export { wakeReasons } from "./internal/waivers";
 export type {
   StopGateEntry,
   StopVerdict,

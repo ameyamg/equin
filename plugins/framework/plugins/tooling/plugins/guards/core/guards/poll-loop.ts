@@ -354,7 +354,7 @@ function livenessOf(
 function howToWait(subagent: boolean): string {
   return subagent
     ? "You are a subagent: no background-task notification reaches you. For an `./equin` op (build, push, check, test, run), `./equin await <op>` in the foreground blocks until its verdict and prints it (exit 70: still going, call it again)."
-    : "To wait for work you started: run it with `run_in_background: true` (or as a Monitor) and END YOUR TURN — you are re-invoked when it finishes, and a stop gate (an outcome report owed) lets that turn end while it runs. For an `./equin` op already running in this checkout, `./equin await <op>` blocks in the foreground until its verdict.";
+    : "To wait for work you started: run it with `run_in_background: true` (or as a Monitor) and END YOUR TURN — you are re-invoked when it finishes, and a stop gate lets that turn end while it runs. For an `./equin` op already running in this checkout, `./equin await <op>` blocks in the foreground until its verdict.";
 }
 
 /**

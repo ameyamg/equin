@@ -358,7 +358,7 @@ back.
   - **`system`** — Renders system events in the JSONL viewer; an informational notice folds with the harness context around it.
   - **`task-notification`** [exempt] — Renders background task completion notifications in the JSONL viewer, with a button onto the finished task that the owning plugin contributes through TaskNotification.Open (first claim wins).
   - **`teammate-message`** — Renders messages from other Claude sessions (<teammate-message> blocks, and cross-session messages: the sender's task as a chip opening its conversation, the message open) distinctly from human user…
-  - **`tool-call`** [exempt] [29 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+  - **`tool-call`** [exempt] [28 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
   - **`transcript-stats`** [4 sub-plugins] — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as…
   - **`user-image`** — Renders inline image thumbnails for user-image events.
   - **`user-text`** — Renders user text events in the JSONL viewer.

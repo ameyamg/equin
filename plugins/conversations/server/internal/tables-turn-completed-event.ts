@@ -11,6 +11,8 @@ export interface ConversationTurnCompletedPayload {
   stopReason: "end_turn";
   text: string;
   messageId: string | null;
+  /** When the turn ended: its end line's timestamp (ISO). */
+  endedAt: string;
   [key: string]: unknown;
 }
 

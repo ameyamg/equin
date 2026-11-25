@@ -197,7 +197,8 @@ task it launches (`watchTask(task, { kind: "code", handler: "automations.slot",
 key: automationId })`, `tasks/orchestration/watch`). For events on the task
 itself:
 
-- its report (`reported` / `asking`, the outcome-report watch source) →
+- its run handed back, or its agent waiting on an AskUserQuestion
+  (`reported` / `asking`, the outcome-report watch sources) →
   `releaseLaunchedTask(taskId)` — stamps the launched row's `releasedAt` and
   wakes the automation — and the watch ends, so a conversation left open for
   the person to read does not hold a slot;
@@ -208,9 +209,9 @@ itself:
   resumes takes its slot back, and the "Stopped before finishing" bell rings
   only while unreleased.
 
-Nothing names this plugin: the report tool and the task statuses emit
-events, the watch routes them. Every automation's
-mandate grants `report.required` (its agents report; they cannot stop before).
+Nothing names this plugin: the outcome-report hand-back and the task statuses
+emit events, the watch routes them. Every automation's mandate grants
+`report.required` (each run's last message is handed back as its report).
 
 Every run logs one line to the `automations` log channel.
 

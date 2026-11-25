@@ -1,4 +1,4 @@
-// @hash 3db67464afc6
+// @hash 43b239972c80
 {
   // The push policy of a task a person drives: push only when asked. Sent with the Send agent to update action of the updates row; the Mandate itself adds no line for it. It is filled with no variable.
   "pushOnRequest": "Push only when the user asks you to, with `./equin push -m \"…\"` — never on your own initiative.",
@@ -10,8 +10,8 @@
   "pushChecks": "**You are authorized to push this task's change without asking** once every check passes and the build is `ok`: `./equin push -m \"…\"`.",
   // The line a push policy other than on request becomes in the agent's Mandate section. Filled at each use: {{policy}} (the push policy's own prompt).
   "mandatePushLine": "Pushing: {{policy}}",
-  // When the agent closes its conversation with exit_clean, for a task a person reviews in the open conversation. Told after an outcome report is saved; the Mandate itself adds no line for it. It is filled with no variable.
+  // When the agent closes its conversation with exit_clean, for a task a person reviews in the open conversation. The Mandate itself adds no line for it. It is filled with no variable.
   "exitOnRequest": "When the user asks you to wrap up, you may close this conversation with `exit_clean` once your work landed and there is nothing they need to know. Never call it on your own: the conversation stays open for review.",
-  // When a supervisor's worker closes its own conversation with exit_clean: in its Mandate section, and after its outcome report is saved. It is filled with no variable.
-  "exitWhenDone": "Close this conversation with `exit_clean` on your own — without waiting to be asked — but only once the whole session is finished: your change pushed and the push landed (or, when your push policy keeps you from pushing, your flag raised), your outcome report submitted when your mandate requires one, no build, push, test or other `./equin` op still running, and nothing left to do. Submitting the report is not the end: if a push is still to run or in flight, finish it first (`./equin await <op>` until it settles) and only then close. Whoever supervises you can still message you: that resumes you."
+  // When a supervisor's worker closes its own conversation with exit_clean: in its Mandate section. It is filled with no variable.
+  "exitWhenDone": "Close this conversation with `exit_clean` on your own — without waiting to be asked — but only once the whole session is finished: your change pushed and the push landed (or, when your push policy keeps you from pushing, your flag raised), no build, push, test or other `./equin` op still running, and nothing left to do. If a push is still to run or in flight, finish it first (`./equin await <op>` until it settles) and only then close. Whoever supervises you can still message you: that resumes you."
 }

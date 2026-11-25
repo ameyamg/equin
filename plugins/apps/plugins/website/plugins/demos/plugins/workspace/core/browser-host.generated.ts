@@ -312,7 +312,6 @@ export const browserHost = {
     "conversations.conversation-view.jsonl-viewer.tool-call.exit-clean",
     "conversations.conversation-view.jsonl-viewer.tool-call.flag-raise",
     "conversations.conversation-view.jsonl-viewer.tool-call.orchestration-tools",
-    "conversations.conversation-view.jsonl-viewer.tool-call.outcome-report",
     "conversations.conversation-view.jsonl-viewer.tool-call.page-tools",
     "conversations.conversation-view.jsonl-viewer.tool-call.page-tools.edit-page",
     "conversations.conversation-view.jsonl-viewer.tool-call.page-tools.read-page",

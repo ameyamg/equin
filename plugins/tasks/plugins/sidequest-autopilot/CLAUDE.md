@@ -91,18 +91,19 @@ none), plus `pushPolicy`.
 ## The agent's prompt
 
 `SIDEQUEST_AUTOPILOT_PROMPT` (editable in the pane's Prompt section) hands the
-agent triage's `{{context}}`, the person's `{{decision}}` and `{{note}}`, then: never ask
-questions or wait; check the task is not obsolete first (if it is, change
-nothing and ask whether to drop it — agents cannot drop tasks); stay in scope
+agent triage's `{{context}}`, the person's `{{decision}}` and `{{note}}`, then: make its own
+calls, asking the person (AskUserQuestion) only for one that is theirs; check
+the task is not obsolete first (if it is, change nothing and ask whether to
+drop it — agents cannot drop tasks); stay in scope
 and file extras with `add_task` on the sidequest track; stop early when it is
 too big or needs a design choice; never touch migrations, auth or the gateway
-without leaving the push to the person; `{{pushPolicy}}`; finish with ONE
-`submit_outcome_report` (problem and why we care, mental model before → after,
-what changed, caveats, at most one decision question) and do not
-`exit_clean` on its own — the conversation stays open in the person's queue
-(its mandate grants `exit.clean` only so a person can later ask it to exit).
-`submit_outcome_report` and the slot release on submit belong to the
-outcome-report plugin; this plugin only asks for them.
+without leaving the push to the person; `{{pushPolicy}}`; end with its
+report as its last message (problem and why we care, mental model before →
+after, what changed, caveats) and do not `exit_clean` on its own — the
+conversation stays open in the person's queue (its mandate grants
+`exit.clean` only so a person can later ask it to exit). The hand-back of that
+last message and the slot release on it belong to the outcome-report plugin;
+this plugin only asks for them.
 
 ## When it runs
 
@@ -128,7 +129,7 @@ finish and report.
 
 ## Plugin reference
 
-- Description: The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED — best first by triage's priority (must → should → could, then oldest filed), `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context, the person's answer and their note included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage is task-triage's: while the `triage` toggle is on (default, main only) it asks task-triage for a read of each ready sidequest that has none — when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot and when the toggle turns on. Triage approves nothing. Turns itself off at its `runUntil`.
+- Description: The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED — best first by triage's priority (must → should → could, then oldest filed), `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context, the person's answer and their note included; make its own calls and ask only the person's with AskUserQuestion, check obsolescence first, stay in scope, push only what the push policy allows, end with its report as its last message). Triage is task-triage's: while the `triage` toggle is on (default, main only) it asks task-triage for a read of each ready sidequest that has none — when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot and when the toggle turns on. Triage approves nothing. Turns itself off at its `runUntil`.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "sidequest-autopilot"

@@ -25,7 +25,7 @@ const EXIT = {
   "on-request":
     "When the user asks you to wrap up, you may close this conversation with `exit_clean` once your work landed and there is nothing they need to know. Never call it on your own: the conversation stays open for review.",
   "when-done":
-    "Close this conversation with `exit_clean` on your own — without waiting to be asked — but only once the whole session is finished: your change pushed and the push landed (or, when your push policy keeps you from pushing, your flag raised), your outcome report submitted when your mandate requires one, no build, push, test or other `./equin` op still running, and nothing left to do. Submitting the report is not the end: if a push is still to run or in flight, finish it first (`./equin await <op>` until it settles) and only then close. Whoever supervises you can still message you: that resumes you.",
+    "Close this conversation with `exit_clean` on your own — without waiting to be asked — but only once the whole session is finished: your change pushed and the push landed (or, when your push policy keeps you from pushing, your flag raised), no build, push, test or other `./equin` op still running, and nothing left to do. If a push is still to run or in flight, finish it first (`./equin await <op>` until it settles) and only then close. Whoever supervises you can still message you: that resumes you.",
 } as const;
 
 describe("push and exit prompts render today's text", () => {

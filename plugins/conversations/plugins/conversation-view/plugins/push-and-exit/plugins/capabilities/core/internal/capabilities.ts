@@ -42,10 +42,10 @@ export const pushPolicy = defineCapability<MandatePushPolicy>({
  * - `on-request` — once a person asks it to wrap up (a task a person drives,
  *   or an automation whose report a person reviews in the open conversation).
  * - `when-done` — on its own, once its whole session is finished (its push
- *   landed or its flag raised, its outcome report submitted when one is
- *   required, no op still running): a supervisor's worker, whose reviewer is
- *   the supervisor — a `message_agent` resumes a closed one. The report is
- *   not the trigger: an agent may submit it before its push lands.
+ *   landed or its flag raised, no op still running): a supervisor's worker, whose reviewer is
+ *   the supervisor — a `message_agent` resumes a closed one. Its report is
+ *   not the trigger: a run is handed back at each of its ends, before its
+ *   push lands too.
  */
 export const EXIT_WHENS = ["on-request", "when-done"] as const;
 export const ExitWhenSchema = z.enum(EXIT_WHENS);

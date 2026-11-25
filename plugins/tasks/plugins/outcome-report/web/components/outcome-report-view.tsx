@@ -7,7 +7,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { OutcomeReport, ReportStanding } from "../../core";
 
@@ -21,16 +20,14 @@ const STANDING: Record<
 };
 
 /**
- * One outcome report: its standing at submit time, the markdown body (clamped,
- * Show more past 12rem) and its question. `answer` turns the question's labels
- * into buttons; without it they are listed as the options the agent offered.
+ * One outcome report: its standing when the run was handed back, and the
+ * markdown body — the agent's last message of that run (clamped, Show more
+ * past 12rem).
  */
 export function OutcomeReportView({
   report,
-  answer,
 }: {
   report: OutcomeReport;
-  answer?: { choose: (label: string) => void; disabled: boolean };
 }): ReactElement {
   const standing = STANDING[report.standing];
   return (
@@ -45,33 +42,6 @@ export function OutcomeReportView({
       <Expandable>
         <Markdown>{report.body}</Markdown>
       </Expandable>
-      {report.question !== null ? (
-        <Stack gap="xs">
-          <Text as="p" variant="label">
-            {report.question}
-          </Text>
-          {report.answers.length > 0 ? (
-            <Stack direction="row" gap="xs" wrap>
-              {report.answers.map((label) =>
-                answer ? (
-                  <Button
-                    key={label}
-                    variant="outline"
-                    disabled={answer.disabled}
-                    onClick={() => answer.choose(label)}
-                  >
-                    {label}
-                  </Button>
-                ) : (
-                  <Badge key={label} variant="muted">
-                    {label}
-                  </Badge>
-                ),
-              )}
-            </Stack>
-          ) : null}
-        </Stack>
-      ) : null}
     </Stack>
   );
 }

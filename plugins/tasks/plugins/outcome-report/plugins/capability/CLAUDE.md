@@ -1,9 +1,10 @@
 # outcome-report/capability
 
 The `report.required` mandate capability, as a leaf (core only): an agent whose
-mandate grants it ends its work with `submit_outcome_report`, and its stop gate
-refuses to let it stop before. Its describe, the tool gate and the stop gate are
-outcome-report's (`machine/`); this leaf only declares it, so a mandate author
+mandate grants it hands each run back to whoever started it (its last message is
+the report) and, once the user has talked to it, says whom each turn is for
+(`turn_for`, held by a stop gate). Its describe, the hand-back, the tool and the
+stop gate are outcome-report's (`machine/`); this leaf only declares it, so a mandate author
 (the automations) grants it with no import of outcome-report itself — the same
 pattern as `push-and-exit/plugins/capabilities`.
 
@@ -11,7 +12,7 @@ pattern as `push-and-exit/plugins/capabilities`.
 
 ## Plugin reference
 
-- Description: The report.required mandate capability as plain data: an agent granted it ends its work with an outcome report (submit_outcome_report), and cannot stop before. A leaf, so every mandate author (the automations) can grant it without a cycle through outcome-report.
+- Description: The report.required mandate capability as plain data: an agent granted it hands each run back to whoever started it — the run's last message is its outcome report — and, once the user has talked to it, says whom each turn is for (turn_for). A leaf, so every mandate author (the automations) can grant it without a cycle through outcome-report.
 - Core:
   - Uses: `tasks/orchestration/mandate/policy.defineCapability`
   - Exports (values): `reportRequired`

@@ -12,7 +12,7 @@ export type { OutcomeReportSubmittedPayload } from "./internal/tables-events";
 
 export default {
   description:
-    "Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.",
+    "Outcome reports: owns tasks_ext_outcome_report (one report per task — the agent's last message of the run it handed back, markdown, and the attempt's git-measured standing) and outcome_report_turn_addressees (whom an agent said its latest turn is for, `user` or `supervisor`), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a hand-back emits. The hand-back at the turn's end, the turn_for MCP tool and its stop gate, the question bell and the watch sources are the machine half.",
   contributions: [
     ...outcomeReportRowsServed.declare,
     ConfigV2.Register({ descriptor: outcomeReportPromptsConfig }),

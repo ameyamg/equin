@@ -1,62 +1,74 @@
 # outcome-report
 
-How an agent an automation started tells the user what it did. Design:
-`research/2026-10-10-tasks-sidequest-autopilot.md` §3.
+How an agent nobody watches (a supervisor's worker, an automation's run —
+mandates granting `report.required`) hands its work back. Design:
+`research/2026-11-25-global-run-handback.md`; the incident behind it,
+`conv-1795638366-ye3yup` (a forced report demanded mid-conversation with the
+user).
 
-## The tool
+## The model
 
-`submit_outcome_report({ body, question?, answers? })` (MCP) — visible ONLY to
-conversations whose task has an automation origin row (`Mcp.tool`'s `when`:
-`getConversation → automationOfTask`, two PK reads per MCP request). Elsewhere
-it is absent from `tools/list` and uncallable. The mandate's
-`report.required` line (its `## Mandate` system-prompt section) adds only that
-nobody is watching — its words are config, `outcomeReportPromptsConfig`'s
-`mandateLine` (`core/prompts.ts`, name `agent-instructions`, `{{reportTool}}`
-filled with the tool's name; registered by the server and web barrels, held to
-today's words by `machine/internal/prompts-unchanged.test.ts`); the tool's description and the stop gate say to end with it. What it says to do after (the tool's `next`) is the mandate's
-`exit.clean` rule word for word (`machine/internal/next-step.ts`, the same
-push-and-exit `exitWhenPrompt` the Mandate line renders): a
-supervisor's worker (`when-done`) closes itself, an automation (`on-request`)
-stays open for review — never a fixed instruction. Both live in `machine/` (an agent's MCP
-surface exists only on a host that runs agents); the table and the
-`outcome-reports` collection are the portable `server/` half.
+**A run's last message is its report**, handed back to whoever started it —
+as a Claude Code subagent's final message is its result. No tool writes it,
+so an agent cannot stop without reporting.
 
-On submit, in order:
+| At a turn's end | Handed back? |
+|---|---|
+| Nobody but its starter in the run, nothing will wake it | yes |
+| Same, but a `StopWaiver` waives (background work, a busy watched subtree, a compaction) | no — a pause, not the end |
+| The user has talked to it in this run (a turn they sent, an answer to its question) | only if it said `turn_for({ to: "supervisor" })` after the user's latest word |
 
-1. `standing` is measured from git (`attempt-work`'s `getAttemptStanding`):
-   `landed` | `pending` (work waiting for its push — committed, or still in
-   the checkout) | `none`. An unmeasurable attempt fails the call (the agent retries) — never a
-   guessed value. Stored instead of a `pushed` bool because "stopped at a built
-   branch" is the case the reader acts on.
-2. Upsert `tasks_ext_outcome_report` (one row per task; a resubmit replaces it).
-3. `releaseLaunchedTask(taskId)` (automations) — frees the slot and wakes the
-   automation. Dependency direction is outcome-report → automations only; the
-   framework never names this plugin.
-4. A `question` rings the bell (deduped per task, re-alerting on each new one),
-   linking to the conversation.
+A hand-back resets the run: until the user speaks again, its stops are handed
+back as is. A question that blocks the agent on the user is `AskUserQuestion`
+(question-relay): its watchers hear `asking` once, and the user's bell rings.
+Decisions (`tasks/decisions`) are the supervisor root's, not a worker's.
 
-`answers` without a `question` is refused.
+## Pieces (`machine/`)
+
+- `run-state.ts` — `readRunState` (the user's latest word: turn-ledger's
+  `latestPersonTurnAt` and question-relay's `latestAnswerAt`; the last
+  hand-back: the task's report when this conversation wrote it; the latest
+  `turn_for` after that word) and the pure `runEnd` / `userInRun`.
+- `handback.ts` — `handBackTurn`, judged as the run stood when the turn
+  ended (a word the user sent after it is the next turn's): `runEnd`,
+  stop-gate's `wakeReasons`, the standing measured from git
+  (`getAttemptStanding`; unmeasurable fails the job, never a guess), the
+  upsert (stamped with the turn's end, keyed by its message id so one message
+  is handed back once), then `outcomeReport.submitted`. The turn's
+  `turn_for` is used up either way: every turn the user is in says again.
+  Two callers, serialized per conversation: `outcome-report.hand-back` on
+  `conversation.turn-completed` (the live path; its payload carries the
+  final message), and `outcome-report.hand-back-backstop` on every stop
+  (`conversation.statusChanged` at rest), which reads the last finished turn
+  from the transcript — a turn that ended while the backend was down is
+  never announced (the emitter replays only to waits keyed to the
+  conversation).
+- `turn-for.ts` — the `turn_for` MCP tool (visible only under the grant):
+  records the agent's latest addressee in `outcome_report_turn_addressees`.
+- `stop-gate.ts` — blocks a stop only while the user is in the run and the
+  agent has not said whom the turn is for.
+- `question-bell.ts` — the bell when such an agent starts waiting on its
+  AskUserQuestion (`agent-question:<conversationId>`, re-alerting).
+- `watch-source.ts` — `reported` (a hand-back) and `asking` (waiting on an
+  AskUserQuestion). The automations' slot watcher releases on either.
+- The Mandate line is config (`core/prompts.ts`, `outcomeReportPromptsConfig`,
+  `{{turnForTool}}`), pinned by `machine/internal/prompts-unchanged.test.ts`.
 
 ## Reading it
 
 `outcomeReportRows` (core) — lookup-only `liveCollection` keyed on `taskId`;
 `useLive(outcomeReportRows, { id: taskId })`.
 
-- `OutcomeReportCard` (`Conversation.AbovePromptInput`) — shown only in the
-  conversation that submitted it (`report.conversationId`), so a sibling
-  conversation of the same task never answers for it. An answer button sends
-  its label as the next user turn through `pending-turn`'s
-  `useSendConversationTurn`; buttons are live only while the optimistic status is
-  `waiting`. The answer itself is not stored: the transcript carries it, and the
-  agent's next report replaces the question.
-- `OutcomeReportDetail({ taskId })` (web barrel) — the same report read-only,
-  for lists of automated tasks (the automation's History rows).
+- `OutcomeReportCard` (`JsonlViewer.TranscriptEnd`) — shown only in the
+  conversation that handed it back (`report.conversationId`).
+- `OutcomeReportDetail({ taskId })` (web barrel) — the same report, for lists
+  of automated tasks (the automation's History rows).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
+- Description: The outcome report a supervisor's worker or an automation's run handed back (its last message of the run, captured at the turn's end): a card at the end of the transcript of the conversation that handed it back (scrolling with it, not pinned over it) — markdown body and pushed / branch-waiting / no-changes standing — and OutcomeReportDetail, the same report shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — the agent's last message of the run it handed back, markdown, and the attempt's git-measured standing) and outcome_report_turn_addressees (whom an agent said its latest turn is for, `user` or `supervisor`), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a hand-back emits. The hand-back at the turn's end, the turn_for MCP tool and its stop gate, the question bell and the watch sources are the machine half.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "agent-instructions"
@@ -65,9 +77,6 @@ On submit, in order:
   - Uses:
     - `config_v2.ConfigV2`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
-    - `conversations/conversation-view/pending-turn.useSendConversationTurn`
-    - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
@@ -75,7 +84,6 @@ On submit, in order:
     - `primitives/css/card.Card`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/expandable.Expandable`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
@@ -87,15 +95,22 @@ On submit, in order:
     - `resource.declare` "outcome-reports:rows"
     - `ConfigV2.Register` "agent-instructions"
     - `mandateCapability` "report.required"
-    - `conversations.stop-gate` "outcome-report"
-    - `watchSource` "outcome-report"
+    - `conversations.stop-gate` "outcome-report.turn-for"
+    - `trigger` "outcome-report.hand-back"
+    - `trigger` "outcome-report.hand-back-backstop"
+    - `trigger` "outcome-report.question-bell"
     - `trigger` "watch.ingest"
+    - `trigger` "watch.ingest"
+    - `watchSource` "outcome-report"
+    - `watchSource` "outcome-report.asking"
     - `treeDigestAnnotation` "outcome-report"
   - Uses:
     - `config_v2.ConfigV2`
+    - `database/sql-column.parsedText`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
     - `network/live.serveCollection`
+    - `tasks/tasks-core._conversations`
     - `tasks/tasks-core._tasks`
   - DB schema:
     - `plugins/tasks/plugins/outcome-report/server/internal/tables-events.ts`
@@ -109,31 +124,36 @@ On submit, in order:
   - Resources: `outcome-reports:rows` (keyed, point)
 - Machine:
   - Uses: `tasks/orchestration/watch.watchSource`
-  - Register: `mcpTool('submit_outcome_report')`
+  - Register:
+    - `mcpTool('turn_for')`
+    - `defineJob('outcome-report.hand-back')`
+    - `defineJob('outcome-report.hand-back-backstop')`
+    - `defineJob('outcome-report.question-bell')`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
     - `config_v2/prompts.promptField`
     - `fields.nullable`
     - `fields/date/config.dateField`
-    - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
-    - `packages/list-bound.wholeList`
   - Exports (types):
     - `OutcomeReport`
     - `ReportStanding`
+    - `TurnAddressee`
   - Exports (values):
     - `outcomeReportPromptsConfig`
     - `outcomeReportRows`
     - `OutcomeReportSchema`
     - `outcomeReportShape`
     - `REPORT_STANDINGS`
+    - `TURN_ADDRESSEES`
+    - `TurnAddresseeSchema`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Sub-plugins:
-  - **`capability`** — The report.required mandate capability as plain data: an agent granted it ends its work with an outcome report (submit_outcome_report), and cannot stop before. A leaf, so every mandate author (the…
+  - **`capability`** — The report.required mandate capability as plain data: an agent granted it hands each run back to whoever started it — the run's last message is its outcome report — and, once the user has talked to…
 
 <!-- AUTOGENERATED:END -->

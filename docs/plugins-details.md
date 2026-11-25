@@ -22072,8 +22072,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slots:
                   - `renderer`
                   - `JsonlViewerTool.Footer`
-                - Slot contributors: 31 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `renderer` ×30
+                - Slot contributors: 30 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `renderer` ×29
                   - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
@@ -22153,8 +22153,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
-                - Imported by: 35 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `conversations` ×32
+                - Imported by: 34 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `conversations` ×31
                   - `apps/places/places-map`
                   - `debug/browser-recordings`
                   - `reports/tool-input-drift`
@@ -22444,23 +22444,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/color-palette --warning`
                       - `ui/tokens/density --pad-row-x`
-                      - `ui/tokens/type-scale --font-scale`
-                      - `ui/tokens/type-scale --font-size-caption`
-                      - `ui/tokens/type-scale --font-weight-normal`
-                      - `ui/tokens/type-scale --line-height-caption`
-                - **`outcome-report`** — Renders submit_outcome_report MCP tool calls: the report's headline as the summary, the markdown body collapsed under it, and the question it asks as a note.
-                  - Web:
-                    - Contributes: `renderer` "submit_outcome_report$" → `ParsedToolView`
-                    - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
-                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/text.Text`
-                      - `primitives/markdown.Markdown`
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --destructive`
-                      - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/type-scale --font-scale`
                       - `ui/tokens/type-scale --font-size-caption`
                       - `ui/tokens/type-scale --font-weight-normal`
@@ -23438,7 +23421,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/status`
               - `conversations/conversations-view/data-view`
-              - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
             - Exempted by:
@@ -23672,7 +23654,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/deps/updates`
                   - `tasks/automations`
                   - `tasks/mandate-presets`
-                  - `tasks/outcome-report`
                   - `tasks/sidequest-autopilot`
                   - `upstream`
             - **`exit-precondition`** — What must hold before an agent may close with exit_clean: the ExitClean.Precondition collection (each owning plugin contributes its check) and exitCleanRefusals, which exit_clean runs before closing. A leaf, so contributors need not import push-and-exit.
@@ -24750,7 +24731,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/conversations/plugins/question-relay/server/internal/tables.ts`
         - Exports (types): `ResolvedQuestion`
-        - Exports (values): `onQuestionResolved`
+        - Exports (values):
+          - `latestAnswerAt`
+          - `onQuestionResolved`
+          - `openQuestionsOf`
         - Register: `defineJob('retention.pending_questions')`
         - Resources:
           - `question-relay.pending` (keyed, window)
@@ -24794,7 +24778,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RelayResolutionSchema`
           - `RelayStateSchema`
       - Cross-plugin:
-        - Imported by: `conversations/runtime-sdk`
+        - Imported by:
+          - `conversations/runtime-sdk`
+          - `tasks/outcome-report`
     - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons.
       - Web:
         - Slots: `recoveryPane.Actions`
@@ -25247,6 +25233,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `StopGate`
           - `StopWaiver`
+          - `wakeReasons`
         - Routes: `GET /api/conversations/:id/stop-gate`
       - Core:
         - Uses:
@@ -25665,6 +25652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hasTurnInFlight`
           - `hasTypedTurn`
           - `holdIfStarting`
+          - `latestPersonTurnAt`
           - `latestSubmitAt`
           - `listHeldTurns`
           - `onStatusEvidence`
@@ -25726,6 +25714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-source`
           - `tasks/decisions`
           - `tasks/orchestration/watch`
+          - `tasks/outcome-report`
           - `tasks/task-title`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
@@ -27026,14 +27015,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×8
           - `fields` ×6
           - `infra` ×6
           - `conversations` ×3
+          - `tasks` ×3
           - `debug` ×2
           - `network` ×2
-          - `tasks` ×2
           - `database/table-mirror/replica`
           - `ids`
           - `search/engine`
@@ -32306,12 +32295,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 49 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×12
               - `conversations` ×8
-              - `tasks` ×6
               - `debug` ×5
               - `infra` ×5
+              - `tasks` ×5
               - `page` ×4
               - `backup` ×2
               - `active-data`
@@ -41057,12 +41046,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 97 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 98 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×24
           - `conversations` ×18
           - `infra` ×16
           - `debug` ×13
-          - `tasks` ×12
+          - `tasks` ×13
           - `database` ×4
           - `page` ×3
           - `build`
@@ -46643,7 +46632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installInflightJoinMeter`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex(name).run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×12
           - `conversations` ×5
           - `apps` ×4
@@ -46653,6 +46642,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/github-events`
           - `plugin-meta/plugin-records`
           - `reports/engine`
+          - `tasks/outcome-report`
       - Core:
         - Exports (types):
           - `KeyedMutex`
@@ -46684,12 +46674,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 149 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 148 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×36
           - `debug` ×21
           - `conversations` ×17
           - `infra` ×17
-          - `tasks` ×10
+          - `tasks` ×9
           - `build` ×5
           - `stats` ×5
           - `fields` ×4
@@ -54175,9 +54165,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 474 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 473 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×114
-              - `conversations` ×81
+              - `conversations` ×80
               - `primitives` ×55
               - `debug` ×39
               - `ui` ×32
@@ -54415,9 +54405,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 453 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 452 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×116
-              - `conversations` ×85
+              - `conversations` ×84
               - `primitives` ×48
               - `debug` ×39
               - `page` ×25
@@ -54747,14 +54737,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 492 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 491 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×116
               - `primitives` ×114
               - `conversations` ×54
               - `page` ×26
               - `debug` ×25
-              - `tasks` ×22
               - `ui` ×22
+              - `tasks` ×21
               - `fields` ×14
               - `apps-core` ×12
               - `plugin-meta` ×10
@@ -58284,8 +58274,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
-          - `conversations` ×16
+        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
+          - `conversations` ×15
           - `tasks` ×5
           - `active-data` ×2
           - `debug` ×2
@@ -66763,7 +66753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/watch`
                   - `tasks/supervisor-roles/sessions`
-    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
+    - **`outcome-report`** — The outcome report a supervisor's worker or an automation's run handed back (its last message of the run, captured at the turn's end): a card at the end of the transcript of the conversation that handed it back (scrolling with it, not pinned over it) — markdown body and pushed / branch-waiting / no-changes standing — and OutcomeReportDetail, the same report shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — the agent's last message of the run it handed back, markdown, and the attempt's git-measured standing) and outcome_report_turn_addressees (whom an agent said its latest turn is for, `user` or `supervisor`), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a hand-back emits. The hand-back at the turn's end, the turn_for MCP tool and its stop gate, the question bell and the watch sources are the machine half.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "agent-instructions"
@@ -66772,9 +66762,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.ConfigV2`
           - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-          - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
-          - `conversations/conversation-view/pending-turn.useSendConversationTurn`
-          - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
           - `network/live.useLive`
           - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/badge.Badge`
@@ -66782,7 +66769,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/card.Card`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
           - `primitives/expandable.Expandable`
           - `primitives/loading.Loading`
           - `primitives/markdown.Markdown`
@@ -66794,15 +66780,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "outcome-reports:rows"
           - `ConfigV2.Register` "agent-instructions"
           - `mandateCapability` "report.required"
-          - `conversations.stop-gate` "outcome-report"
-          - `watchSource` "outcome-report"
+          - `conversations.stop-gate` "outcome-report.turn-for"
+          - `trigger` "outcome-report.hand-back"
+          - `trigger` "outcome-report.hand-back-backstop"
+          - `trigger` "outcome-report.question-bell"
           - `trigger` "watch.ingest"
+          - `trigger` "watch.ingest"
+          - `watchSource` "outcome-report"
+          - `watchSource` "outcome-report.asking"
           - `treeDigestAnnotation` "outcome-report"
         - Uses:
           - `config_v2.ConfigV2`
+          - `database/sql-column.parsedText`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
           - `network/live.serveCollection`
+          - `tasks/tasks-core._conversations`
           - `tasks/tasks-core._tasks`
         - DB schema:
           - `plugins/tasks/plugins/outcome-report/server/internal/tables-events.ts`
@@ -66816,32 +66809,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources: `outcome-reports:rows` (keyed, point)
       - Machine:
         - Uses: `tasks/orchestration/watch.watchSource`
-        - Register: `mcpTool('submit_outcome_report')`
+        - Register:
+          - `mcpTool('turn_for')`
+          - `defineJob('outcome-report.hand-back')`
+          - `defineJob('outcome-report.hand-back-backstop')`
+          - `defineJob('outcome-report.question-bell')`
       - Core:
         - Uses:
           - `config_v2.defineConfig`
           - `config_v2/prompts.promptField`
           - `fields.nullable`
           - `fields/date/config.dateField`
-          - `fields/json/config.jsonField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live.liveCollection`
-          - `packages/list-bound.wholeList`
         - Exports (types):
           - `OutcomeReport`
           - `ReportStanding`
+          - `TurnAddressee`
         - Exports (values):
           - `outcomeReportPromptsConfig`
           - `outcomeReportRows`
           - `OutcomeReportSchema`
           - `outcomeReportShape`
           - `REPORT_STANDINGS`
+          - `TURN_ADDRESSEES`
+          - `TurnAddresseeSchema`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
       - Plugins:
-        - **`capability`** — The report.required mandate capability as plain data: an agent granted it ends its work with an outcome report (submit_outcome_report), and cannot stop before. A leaf, so every mandate author (the automations) can grant it without a cycle through outcome-report.
+        - **`capability`** — The report.required mandate capability as plain data: an agent granted it hands each run back to whoever started it — the run's last message is its outcome report — and, once the user has talked to it, says whom each turn is for (turn_for). A leaf, so every mandate author (the automations) can grant it without a cycle through outcome-report.
           - Core:
             - Uses: `tasks/orchestration/mandate/policy.defineCapability`
             - Exports (values): `reportRequired`
@@ -66862,7 +66860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.createTask`
           - `tasks/tasks-core.getTask`
-    - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED — best first by triage's priority (must → should → could, then oldest filed), `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context, the person's answer and their note included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage is task-triage's: while the `triage` toggle is on (default, main only) it asks task-triage for a read of each ready sidequest that has none — when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot and when the toggle turns on. Triage approves nothing. Turns itself off at its `runUntil`.
+    - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED — best first by triage's priority (must → should → could, then oldest filed), `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context, the person's answer and their note included; make its own calls and ask only the person's with AskUserQuestion, check obsolescence first, stay in scope, push only what the push policy allows, end with its report as its last message). Triage is task-triage's: while the `triage` toggle is on (default, main only) it asks task-triage for a read of each ready sidequest that has none — when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot and when the toggle turns on. Triage approves nothing. Turns itself off at its `runUntil`.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sidequest-autopilot"
@@ -69329,9 +69327,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 621 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 620 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×159
-          - `conversations` ×125
+          - `conversations` ×124
           - `primitives` ×54
           - `page` ×51
           - `fields` ×43
@@ -70676,9 +70674,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 571 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 570 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×127
-              - `conversations` ×96
+              - `conversations` ×95
               - `primitives` ×81
               - `debug` ×42
               - `page` ×33
@@ -71501,9 +71499,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 242 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 241 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×63
-              - `conversations` ×41
+              - `conversations` ×40
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14

@@ -47,7 +47,7 @@ keystrokes into one concatenated turn.
 
 - Description: Keyed FIFO mutex: createKeyedMutex(name).run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×12
     - `conversations` ×5
     - `apps` ×4
@@ -57,6 +57,7 @@ keystrokes into one concatenated turn.
     - `integrations/github-events`
     - `plugin-meta/plugin-records`
     - `reports/engine`
+    - `tasks/outcome-report`
 - Core:
   - Exports (types):
     - `KeyedMutex`

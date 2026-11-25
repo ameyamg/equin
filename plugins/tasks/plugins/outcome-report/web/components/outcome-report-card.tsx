@@ -4,21 +4,14 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  useOptimisticConversationStatus,
-  useSendConversationTurn,
-  useTurnSendAvailability,
-} from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { outcomeReportRows } from "../../core";
 import { OutcomeReportView } from "./outcome-report-view";
 
 /**
- * The report at the end of the transcript of the conversation that submitted
- * it — scrolling with the transcript, never pinned over it.
- * Answering its question sends the chosen label as the user's next turn,
- * through the ordinary send path; the buttons are live only while the agent
- * waits for input (the optimistic status flips to working on click).
+ * The report at the end of the transcript of the conversation that handed it
+ * back — scrolling with the transcript, never pinned over it. A question the
+ * agent needs answered is its AskUserQuestion card, not part of the report.
  */
 export function OutcomeReportCard({
   conversation,
@@ -26,10 +19,6 @@ export function OutcomeReportCard({
   conversation: ConversationRecord;
 }): ReactElement | null {
   const result = useLive(outcomeReportRows, { id: conversation.taskId });
-  const status = useOptimisticConversationStatus(conversation);
-  const sendConversationTurn = useSendConversationTurn();
-  // An answer is a turn: a host without the computer cannot send one.
-  const sendAvailability = useTurnSendAvailability();
   // Not loaded yet and "no report" both render nothing: an optional banner.
   if (result.status === "loading") return null;
   if (result.status === "error")
@@ -43,20 +32,12 @@ export function OutcomeReportCard({
     );
   if (!result.found) return null;
   const report = result.row;
-  // A task's report belongs to the conversation that wrote it; a sibling
-  // conversation of the same task must not answer for it.
+  // A task's report belongs to the conversation that handed it back; a
+  // sibling conversation of the same task does not show it.
   if (report.conversationId !== conversation.id) return null;
   return (
     <Card>
-      <OutcomeReportView
-        report={report}
-        answer={{
-          choose: (label) => {
-            sendConversationTurn(conversation.id, { text: label });
-          },
-          disabled: !sendAvailability.available || status !== "waiting",
-        }}
-      />
+      <OutcomeReportView report={report} />
     </Card>
   );
 }

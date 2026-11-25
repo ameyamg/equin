@@ -15,6 +15,7 @@ export {
   getTurn,
   hasHeldTurns,
   holdIfStarting,
+  latestPersonTurnAt,
   latestSubmitAt,
   listHeldTurns,
   resolvePromptSubmit,

@@ -295,6 +295,7 @@ withdrawn).
     - `hasTurnInFlight`
     - `hasTypedTurn`
     - `holdIfStarting`
+    - `latestPersonTurnAt`
     - `latestSubmitAt`
     - `listHeldTurns`
     - `onStatusEvidence`
@@ -356,6 +357,7 @@ withdrawn).
     - `conversations/transcript-source`
     - `tasks/decisions`
     - `tasks/orchestration/watch`
+    - `tasks/outcome-report`
     - `tasks/task-title`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
