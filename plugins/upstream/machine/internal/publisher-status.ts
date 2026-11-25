@@ -88,10 +88,9 @@ async function readPublisherStatus(): Promise<PublisherStatus> {
  */
 async function readGitHubPublication(tag: string): Promise<GitHubPublication> {
   const forwarder = forwarderStatusOf(SOURCE_REPO);
-  if (forwarder === null)
-    return { kind: "not-connected", reason: "GitHub events are not set up" };
+  if (forwarder === null) return { kind: "not-connected", state: "not-set-up" };
   if (forwarder.state !== "connected")
-    return { kind: "not-connected", reason: `GitHub ${forwarder.state}` };
+    return { kind: "not-connected", state: forwarder.state };
   const [run, release] = await Promise.all([
     newestRunOf({
       repo: SOURCE_REPO,

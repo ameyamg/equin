@@ -165,18 +165,24 @@ const failedRun = { status: "completed", conclusion: "failure" };
 const passedRun = { status: "completed", conclusion: "success" };
 
 describe("what GitHub published of the newest release", () => {
-  test("not connected: unknown, claims nothing", () => {
+  test("not connected: unknown, claims nothing, says why", () => {
     expect(
-      githubPublication({
-        kind: "not-connected",
-        reason: "GitHub reconnecting",
-      }),
+      githubPublication({ kind: "not-connected", state: "connecting" }),
     ).toEqual({
       health: "unknown",
       pulsing: false,
-      words: "GitHub not connected",
+      words: "Connecting to GitHub…",
       runUrl: null,
     });
+    expect(
+      githubPublication({ kind: "not-connected", state: "not-set-up" }).words,
+    ).toBe("GitHub events not set up");
+    expect(
+      githubPublication({ kind: "not-connected", state: "reconnecting" }).words,
+    ).toBe("Reconnecting to GitHub…");
+    expect(
+      githubPublication({ kind: "not-connected", state: "failed" }).words,
+    ).toBe("GitHub events stopped");
   });
 
   test("no run seen for the tag yet: waiting, pulsing", () => {
@@ -287,10 +293,10 @@ describe("what GitHub published of the newest release", () => {
       summary: expect.stringContaining("· GitHub release failed"),
     });
     expect(
-      releasesHealth(status({ kind: "not-connected", reason: "x" })),
+      releasesHealth(status({ kind: "not-connected", state: "reconnecting" })),
     ).toEqual({
       state: "unknown",
-      summary: expect.stringContaining("· GitHub not connected"),
+      summary: expect.stringContaining("· Reconnecting to GitHub…"),
     });
     expect(releasesHealth(status(connected(inProgress, null)))).toMatchObject({
       state: "ok",

@@ -165,13 +165,27 @@ export interface GitHubPublicationView {
 /** Every installer binary the release must carry, from release-assets' contract. */
 const INSTALLER_ASSETS: readonly string[] = Object.values(INSTALLER_BINARIES);
 
+/** Why GitHub's state is not known, as the row says it. */
+const NOT_CONNECTED_WORDS: Record<
+  Extract<GitHubPublication, { kind: "not-connected" }>["state"],
+  string
+> = {
+  "not-set-up": "GitHub events not set up",
+  connecting: "Connecting to GitHub…",
+  reconnecting: "Reconnecting to GitHub…",
+  failed: "GitHub events stopped",
+};
+
 /**
  * What GitHub published of the newest release tag (the publication the
  * machine read from GitHub's pushed events):
  *
  * | GitHub | row |
  * |---|---|
- * | not connected | unknown "GitHub not connected" |
+ * | not set up | unknown "GitHub events not set up" |
+ * | forwarder connecting (each backend start, until GitHub pings) | unknown "Connecting to GitHub…" |
+ * | forwarder reconnecting | unknown "Reconnecting to GitHub…" |
+ * | forwarder gave up | unknown "GitHub events stopped" |
  * | Release public, every installer binary attached | ok "On GitHub" |
  * | Release public, the run failed | attention "On GitHub without the installer window" |
  * | Release public, the run in progress | ok, pulsing "On GitHub · installer building" |
@@ -185,7 +199,7 @@ export function githubPublication(g: GitHubPublication): GitHubPublicationView {
     return {
       health: "unknown",
       pulsing: false,
-      words: "GitHub not connected",
+      words: NOT_CONNECTED_WORDS[g.state],
       runUrl: null,
     };
   const runUrl = g.run?.url ?? null;

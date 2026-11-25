@@ -85,10 +85,10 @@ const STATES: ReadonlyArray<{ name: string; status: Publisher }> = [
     ),
   },
   {
-    name: "GitHub not connected",
+    name: "GitHub connecting",
     status: publisher(
       { kind: "ready", commit: SERVED },
-      { github: { kind: "not-connected", reason: "GitHub reconnecting" } },
+      { github: { kind: "not-connected", state: "connecting" } },
     ),
   },
 ];

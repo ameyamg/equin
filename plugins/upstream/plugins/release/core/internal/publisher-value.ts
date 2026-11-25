@@ -48,15 +48,21 @@ export const PUBLICATION_ASSETS_MAX = 100;
  * What GitHub says of the newest release tag — read on main from the GitHub
  * events GitHub pushed (integrations/github-events), never fetched.
  *
- * - `not-connected` — no forwarder of the product repo is connected now
- *   (`reason`: not set up, connecting, reconnecting…): GitHub's state is not
- *   known, so nothing about it is claimed.
+ * - `not-connected` — no forwarder of the product repo is connected now, so
+ *   GitHub's state is not known and nothing about it is claimed. `state` says
+ *   why: `not-set-up` (no forwarder can start here), `connecting` (started,
+ *   GitHub has not pinged it yet — every backend start goes through it),
+ *   `reconnecting` (it died, the daemon respawns it), `failed` (the daemon
+ *   gave up on it).
  * - `connected`     — `run`: the release workflow's newest run of the tag
  *   (`null`: none seen yet); `release`: the tag's GitHub Release (`null`:
  *   none yet), `draft` until published, with the names of its assets.
  */
 export const GitHubPublicationSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("not-connected"), reason: z.string() }),
+  z.object({
+    kind: z.literal("not-connected"),
+    state: z.enum(["not-set-up", "connecting", "reconnecting", "failed"]),
+  }),
   z.object({
     kind: z.literal("connected"),
     run: z
