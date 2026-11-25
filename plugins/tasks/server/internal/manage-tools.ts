@@ -91,6 +91,10 @@ const ports: ManageTasksPorts = {
     return (await getConversation(conversationId))?.taskId ?? null;
   },
   async ownerOf(conversationId, taskId) {
+    // A guardrail against honest mistakes, NOT a security boundary: only these
+    // MCP tools enforce it (HTTP routes skip it; the person grant's route is
+    // best-effort). Decided: one instance per user, agents have a shell anyway.
+    // Don't add per-route patches — see CLAUDE.md "Task ownership".
     const owner = await taskOwnership(taskId);
     if (owner === null) return { kind: "not-found" };
     if (await actsAsOwner(conversationId, owner)) return { kind: "owned" };
