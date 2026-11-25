@@ -152,8 +152,9 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     the agent's next `update_decision` consumes it.
   - A note alone → a `question`: the decision stays in **Needs you** until the
     agent replies (`update_decision({ reply })`).
-  - **A finished agent** (latest agent conversation `done`,
-    `decisions.agent-finished`, the reading delivery takes) is never
+  - **A finished agent** (latest agent conversation `done` — `decisions.agent`,
+    the task's agent: that conversation's id and whether it finished, the
+    reading delivery takes) is never
     reopened: its answers are `recorded`, a pick closes the decision ("You
     chose A (not sent: the agent had finished)"), a note stays open, "Close
     without answering" settles it. The card says so before Submit and the bar
@@ -246,7 +247,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   - Contributes:
     - `ids.kind` "dec"
     - `ids.kind` "dex"
-    - `resource.declare` "decisions.agent-finished"
+    - `resource.declare` "decisions.agent"
     - `resource.declare` "decisions.attachment-links"
     - `resource.declare` "decisions.attachment-links:rows"
     - `resource.declare` "decisions.exchanges"
@@ -304,7 +305,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `mcpTool('list_decisions')`
     - `mcpTool('read_decision')`
   - Resources:
-    - `decisions.agent-finished` (push)
+    - `decisions.agent` (push)
     - `decisions.attachment-links` (keyed)
     - `decisions.attachment-links:rows` (keyed, point)
     - `decisions.exchanges` (keyed)
@@ -338,6 +339,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `packages/list-bound.cappedList`
   - Exports (types):
     - `AnswerRefusalReason`
+    - `DecisionAgent`
     - `DecisionAnswer`
     - `DecisionExchangeId`
     - `DecisionExchangeRow`
@@ -359,7 +361,8 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `DECISION_STATES`
     - `DECISION_TAB_OPTIONS`
     - `DECISION_TABS`
-    - `decisionAgentFinished`
+    - `decisionAgent`
+    - `DecisionAgentSchema`
     - `DecisionAnswerSchema`
     - `decisionAttachmentLinks`
     - `decisionAttachmentLinksEntityRef`

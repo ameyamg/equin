@@ -8,6 +8,7 @@ import {
   liveDataSource,
   type DataViewSourceProps,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { DataViewSection } from "@plugins/primitives/plugins/data-view/core";
 import {
   decisionsList,
   type DecisionRow,
@@ -20,6 +21,7 @@ import {
   useDecisionDrafts,
 } from "@plugins/tasks/plugins/decisions/web";
 import { DecisionsSources, type DecisionsHostProps } from "../slots";
+import { AgentConversationAction } from "./agent-link";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 // Its views are authored in `config/tasks/decisions/inbox/tasks.decisions.jsonc`.
@@ -101,12 +103,31 @@ function sourceComponent(tab: DecisionTab) {
       rowActivation: (r) => hostProps.linkTo(r.id),
       // j / k read the next / previous decision, as the rows are drawn.
       viewOptions: STEP_KEYS,
+      headerActions: agentHeaderAction,
       emptyState: <>{EMPTY[tab]}</>,
     });
   };
 }
 
 const STEP_KEYS = { list: { stepKeys: true } } as const;
+
+/**
+ * A group header's Open conversation, when its rows all belong to one agent
+ * (the authored grouping, by `taskId`; a regrouping that mixes agents gets
+ * none). The section's rows are this source's: `DecisionRow`s, typed
+ * `unknown` by the DataView's section-wide callback.
+ */
+function agentHeaderAction(
+  section: DataViewSection<unknown>,
+): ReactElement | null {
+  const rows = section.entries.map((e) => e.row as DecisionRow);
+  const first = rows[0];
+  if (first === undefined || rows.some((r) => r.taskId !== first.taskId))
+    return null;
+  return (
+    <AgentConversationAction taskId={first.taskId} title={first.taskTitle} />
+  );
+}
 
 export const NeedsSource = sourceComponent("needs");
 export const SentSource = sourceComponent("sent");

@@ -21,11 +21,16 @@ export type {
 export { DECISION_TAB_OPTIONS, DECISION_TABS } from "./internal/tab";
 export type { DecisionTab } from "./internal/tab";
 export {
-  decisionAgentFinished,
+  decisionAgent,
+  DecisionAgentSchema,
   decisionExchanges,
   decisionsList,
 } from "./internal/live";
-export type { DecisionExchangeRow, DecisionRow } from "./internal/live";
+export type {
+  DecisionAgent,
+  DecisionExchangeRow,
+  DecisionRow,
+} from "./internal/live";
 export { markDecisionSeenEndpoint } from "./internal/endpoints";
 export {
   ANSWER_NOTE_MAX,

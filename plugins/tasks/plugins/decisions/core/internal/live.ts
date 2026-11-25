@@ -107,15 +107,27 @@ export const decisionExchanges = liveCollection("decisions.exchanges", {
 export type DecisionExchangeRow =
   typeof decisionExchanges extends LiveRowsCollection<infer R> ? R : never;
 
+/** A task's agent: its latest conversation under the task's mandate. */
+export const DecisionAgentSchema = z.object({
+  /** The conversation answers are typed into — what "talk to it" opens. */
+  conversationId: z.string(),
+  /**
+   * The conversation is closed (`done`): an answer to one of its decisions is
+   * kept on the record, never sent (it is not reopened). `false` while it
+   * runs or is stopped (resumed on delivery).
+   */
+  finished: z.boolean(),
+});
+export type DecisionAgent = z.infer<typeof DecisionAgentSchema>;
+
 /**
- * Whether a task's agent has finished — its latest conversation under the
- * task's mandate is closed (`done`): an answer to one of its decisions is
- * kept on the record, never sent (it is not reopened). `false` while it runs,
- * is stopped (resumed on delivery) or never ran. The same reading delivery
- * takes (message's `latestAgentConversation`).
+ * A task's agent ({@link DecisionAgentSchema}), `null` when no agent ever ran
+ * on it — the same reading delivery takes (message's
+ * `latestAgentConversation`). Read beside a drafted answer (finished or not)
+ * and wherever a decision links to the agent asking it.
  */
-export const decisionAgentFinished = liveValue("decisions.agent-finished", {
-  schema: z.boolean(),
+export const decisionAgent = liveValue("decisions.agent", {
+  schema: DecisionAgentSchema.nullable(),
   params: ["taskId"],
-  needsMachine: { feature: "Reading whether an agent has finished" },
+  needsMachine: { feature: "Reading a decision's agent" },
 });

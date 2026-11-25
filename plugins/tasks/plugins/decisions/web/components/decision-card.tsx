@@ -30,7 +30,7 @@ import {
   type KeptPart,
 } from "@plugins/primitives/plugins/kept-state/core";
 import {
-  decisionAgentFinished,
+  decisionAgent,
   decisionExchanges,
   decisionsList,
   type DecisionExchangeRow,
@@ -318,7 +318,7 @@ function Answer({
   decision: DecisionRow;
   draft: KeptPart<DecisionDraft>;
 }): ReactElement {
-  const agent = useLive(decisionAgentFinished, { taskId: decision.taskId });
+  const agent = useLive(decisionAgent, { taskId: decision.taskId });
   // Said once known; a failed read says so instead.
   const agentLine = foldResource(agent, {
     loading: (): ReactElement | null => null,
@@ -332,8 +332,8 @@ function Answer({
         {message}
       </Text>
     ),
-    ready: (done) =>
-      done ? (
+    ready: (a) =>
+      a?.finished === true ? (
         <Text variant="caption" tone="muted">
           {`${decision.taskTitle} has finished — your answer will be kept here, not sent.`}
         </Text>
@@ -343,7 +343,7 @@ function Answer({
     loading: () => false,
     error: () => false,
     unavailable: () => false,
-    ready: (done) => done,
+    ready: (a) => a?.finished === true,
   });
   const d = draft.value;
   const canClose = decision.state === "fyi" || finished;

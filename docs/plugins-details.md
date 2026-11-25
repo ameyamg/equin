@@ -19579,9 +19579,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 60 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×45
-          - `tasks` ×6
+          - `tasks` ×7
           - `active-data` ×4
           - `debug/profiling/ops`
           - `hints/ask`
@@ -52965,12 +52965,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 142 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×42
               - `primitives` ×21
               - `conversations` ×20
               - `debug` ×10
-              - `tasks` ×8
+              - `tasks` ×9
               - `page` ×6
               - `ui` ×6
               - `plugin-meta` ×4
@@ -56898,11 +56898,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×47
           - `primitives` ×23
           - `conversations` ×21
-          - `tasks` ×10
+          - `tasks` ×11
           - `page` ×7
           - `debug` ×5
           - `config_v2` ×4
@@ -59521,6 +59521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/tree`
           - `shell/health-report`
           - `tasks/decisions`
+          - `tasks/decisions/inbox`
     - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).
       - Plugins:
         - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the instance-scoped id that storage entries are keyed by.
@@ -65318,7 +65319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `ids.kind` "dec"
           - `ids.kind` "dex"
-          - `resource.declare` "decisions.agent-finished"
+          - `resource.declare` "decisions.agent"
           - `resource.declare` "decisions.attachment-links"
           - `resource.declare` "decisions.attachment-links:rows"
           - `resource.declare` "decisions.exchanges"
@@ -65376,7 +65377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mcpTool('list_decisions')`
           - `mcpTool('read_decision')`
         - Resources:
-          - `decisions.agent-finished` (push)
+          - `decisions.agent` (push)
           - `decisions.attachment-links` (keyed)
           - `decisions.attachment-links:rows` (keyed, point)
           - `decisions.exchanges` (keyed)
@@ -65410,6 +65411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound.cappedList`
         - Exports (types):
           - `AnswerRefusalReason`
+          - `DecisionAgent`
           - `DecisionAnswer`
           - `DecisionExchangeId`
           - `DecisionExchangeRow`
@@ -65431,7 +65433,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DECISION_STATES`
           - `DECISION_TAB_OPTIONS`
           - `DECISION_TABS`
-          - `decisionAgentFinished`
+          - `decisionAgent`
+          - `DecisionAgentSchema`
           - `DecisionAnswerSchema`
           - `decisionAttachmentLinks`
           - `decisionAttachmentLinksEntityRef`
@@ -65503,7 +65506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sources` "Closed" → `DecisionsSource`
               - `IdKinds.Presenter` "dec"
               - `InlineChip.Tag` "dec" → `GenericIdChip`
-            - Uses: 41 symbols — full list in [`plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md`](../plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md)
+            - Uses: 47 symbols — full list in [`plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md`](../plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md)
               - `tasks/decisions` ×8
               - `primitives/pane` ×7
               - `primitives/data-view` ×6
@@ -65511,9 +65514,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state` ×3
               - `active-data/id-chip` ×2
               - `primitives/css/spacing` ×2
+              - `primitives/css/ui-kit` ×2
+              - `primitives/row-actions` ×2
+              - `conversations/conversation-view.conversationPane`
               - `primitives/app-shell.opensPane`
+              - `primitives/css/line.Line`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
+              - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
               - `primitives/loading.Loading`
               - `primitives/shortcuts.useSurfaceShortcuts`
@@ -65537,7 +65544,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `decisionDetailRoute`
               - `decisionsRoute`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/density --space-lg`
+            - Uses tokens:
+              - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-xs`
             - Imported by:
               - `tasks/decisions/page-block`
               - `tasks/decisions/tray`

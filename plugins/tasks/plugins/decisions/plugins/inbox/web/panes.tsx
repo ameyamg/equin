@@ -12,12 +12,9 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import {
   decisionsList,
   type DecisionRow,
@@ -31,6 +28,7 @@ import {
 } from "@plugins/tasks/plugins/decisions/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { decisionDetailRoute, decisionsRoute } from "../core";
+import { AgentLink } from "./components/agent-link";
 import { DecisionsView } from "./components/decisions-view";
 
 // Panes are declared first so their types are known before the component
@@ -115,12 +113,14 @@ function DecisionDetailBody(): ReactElement {
   );
 }
 
-/** One decision in full, under the agent it belongs to; opening it marks it seen. */
+/**
+ * One decision in full, under the agent it belongs to (a link to its
+ * conversation); opening it marks it seen.
+ */
 function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
   // What was new when it opened stays marked while it is shown, though opening it marks it seen.
   const [seenBefore] = useState(decision.seenAt);
   useMarkDecisionSeen(decision);
-  const openPane = useOpenPane();
   const draft = useDecisionDrafts().part(decision.id);
   const answerable = isAnswerable(decision);
   // 1–9 pick the open decision's options (a second press unpicks); typing in
@@ -138,19 +138,11 @@ function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
   );
   return (
     <Stack gap="md" className="rail-lg">
-      <Button
-        variant="ghost"
+      <AgentLink
+        taskId={decision.taskId}
+        title={decision.taskTitle}
         className={selfClass("start")}
-        {...activationProps(
-          openPane.to(
-            taskDetailPane,
-            { taskId: decision.taskId },
-            { mode: "push" },
-          ),
-        )}
-      >
-        {decision.taskTitle}
-      </Button>
+      />
       <DecisionCard
         decision={decision}
         seenBefore={seenBefore}

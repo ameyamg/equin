@@ -14,11 +14,7 @@ import {
 } from "@plugins/primitives/plugins/shortcuts/web";
 import type { TaskId } from "@plugins/tasks/plugins/task-ids/core";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import {
-  decisionAgentFinished,
-  decisionsList,
-  type DecisionRow,
-} from "../../core";
+import { decisionAgent, decisionsList, type DecisionRow } from "../../core";
 import {
   answerOf,
   isAnswerable,
@@ -80,7 +76,7 @@ export function SubmitBar({
   // Which of the drafts' agents have finished: one tuple per task.
   const tasks = [...new Set((answerable ?? []).map((r) => r.taskId))].sort();
   const finished = useLive(
-    decisionAgentFinished,
+    decisionAgent,
     tasks.map((t) => ({ taskId: t })),
   );
   // Not known (loading, failed, or no computer to ask): `null`.
@@ -95,7 +91,7 @@ export function SubmitBar({
           : foldResource(read, {
               loading: (): boolean | null => null,
               error: () => null,
-              ready: (done) => done,
+              ready: (agent) => agent?.finished === true,
             }),
       ];
     }),

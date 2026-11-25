@@ -14,7 +14,9 @@ an agent opened (`tasks/decisions`). Design:
   agent — its task, `taskId`, labelled by the task's title through the
   field's live options (`internal/task-options.ts`), so two agents sharing a
   title are two groups — newest first). Each tab chip counts its tab (the
-  switcher's `sourceCounts`, one grouping of `tab`). A row leads with its
+  switcher's `sourceCounts`, one grouping of `tab`). A group header whose
+  rows are one agent's has, on hover, Open conversation — the agent's
+  conversation (`decisions.agent`) beside the list. A row leads with its
   state dot (an `other` decision's dot names its own state label) and says
   its drafted answer on line 2 ("Your answer: A + note", "Your question",
   "Got it"). j / k step to the next / previous decision as drawn (the
@@ -22,7 +24,9 @@ an agent opened (`tasks/decisions`). Design:
 - **Answering**: the `SubmitBar` (`decisions/web`) sits sticky at the foot
   of the list — one Submit (⌘↵) for every drafted answer.
 - **`decisionDetailPane`** (`decision/:decisionId`): the decision beside the
-  list — a link to its agent's task, then `DecisionCard` (from
+  list — its agent's title opening the agent's conversation beside it (on
+  hover, an Expand opens that conversation on its own; a task no agent ran on
+  links to the task), then `DecisionCard` (from
   `decisions/web`) answered in place through the shared drafts; 1–9 pick
   its options (a second press unpicks). Opening it marks it seen (`useMarkDecisionSeen`, the
   `seen` endpoint), which clears the new dot until the agent writes again.
@@ -54,7 +58,7 @@ an agent opened (`tasks/decisions`). Design:
     - `sources` "Closed" → `DecisionsSource`
     - `IdKinds.Presenter` "dec"
     - `InlineChip.Tag` "dec" → `GenericIdChip`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/decisions` ×8
     - `primitives/pane` ×7
     - `primitives/data-view` ×6
@@ -62,9 +66,13 @@ an agent opened (`tasks/decisions`). Design:
     - `network/live/live-state` ×3
     - `active-data/id-chip` ×2
     - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/row-actions` ×2
+    - `conversations/conversation-view.conversationPane`
     - `primitives/app-shell.opensPane`
+    - `primitives/css/line.Line`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
+    - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/shortcuts.useSurfaceShortcuts`
@@ -88,7 +96,9 @@ an agent opened (`tasks/decisions`). Design:
     - `decisionDetailRoute`
     - `decisionsRoute`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/density --space-lg`
+  - Uses tokens:
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-xs`
   - Imported by:
     - `tasks/decisions/page-block`
     - `tasks/decisions/tray`

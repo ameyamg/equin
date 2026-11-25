@@ -7,7 +7,7 @@ import {
   submitDecisionAnswersEndpoint,
 } from "../../core";
 import { takeDecisionNote } from "./take-note";
-import { taskAgentFinished } from "./agent-finished";
+import { taskAgentFinished } from "./agent";
 import { submitAnswers, type AnswerPorts } from "./answers";
 
 const ports: AnswerPorts = {
