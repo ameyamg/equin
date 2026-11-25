@@ -150,8 +150,13 @@ export function TaskDecisionsPanel({
         </Line>
         <FoldMotion {...contentProps}>
           {/* Capped and scrolled on its own: an open decision is long, and an
-              unbounded panel would push the composer under it off-screen. */}
-          <Scroll className="max-h-[60vh] border-t border-border/60 bg-background/40">
+              unbounded panel would push the composer under it off-screen.
+              Kept across a reload under the pane's keep scope, per task (a
+              page may hold several tasks' panels). */}
+          <Scroll
+            keep={`decisions.panel:${taskId}`}
+            className="max-h-[60vh] border-t border-border/60 bg-background/40"
+          >
             <OpenDecisions taskId={taskId} />
             {counts.closed > 0 ? (
               <ClosedDecisions taskId={taskId} count={counts.closed} />
