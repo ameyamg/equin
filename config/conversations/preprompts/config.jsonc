@@ -17,7 +17,7 @@
         "color": null
       },
       "title": "Auto-push and exit",
-      "prompt": "Implement autonomously.\nDesign first if necessary.\nFor UX / UI issues, create a prototype mockup first to think about the best user experience.\nAt the end, push if everything went smooth.\nThen exit if there was no caveats, follow ups or anything I need to know"
+      "prompt": "Implement autonomously.\nDesign first if necessary.\nFor UX / UI issues, create a prototype mockup first to think about the best user experience.\nAt the end, push if everything went smooth.\nThen exit if there was no caveats, follow ups or anything I need to know. Otherwise, use flag_raise"
     }
   ]
 }
