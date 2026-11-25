@@ -132,7 +132,7 @@ export function PasteAction({ row }: ItemActionProps<EntryRow>): ReactNode {
       icon={pasteIcon}
       label={
         row.kind === "dir"
-          ? `Paste${items} into “${row.name}”`
+          ? `Paste${items} into folder`
           : `Paste${items}`
       }
       shortcut={row.kind === "dir" ? undefined : "mod+v"}
@@ -142,7 +142,10 @@ export function PasteAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   );
 }
 
-/** Compress — a .zip of the entries beside them. */
+/**
+ * Compress — a .zip of the entries beside them. The label never names the
+ * entry: the menu hangs off its row, and a long name stretched or wrapped it.
+ */
 export function CompressAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   const host = useEntryActionHost();
   const targets = useActionTargets(row);
@@ -152,7 +155,7 @@ export function CompressAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   return (
     <IconButton
       icon={compressIcon}
-      label={counted(targets, `Compress “${row.name}”`, "Compress # items")}
+      label={counted(targets, "Compress", "Compress # items")}
       onClick={() => host.compress(targets)}
     />
   );
