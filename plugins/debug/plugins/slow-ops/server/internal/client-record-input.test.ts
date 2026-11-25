@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { SlowOpClientItem } from "../../shared/endpoints";
-import {
-  toRecordInput,
-  toRecordInputs,
-} from "./client-record-input";
+import { toRecordInput, toRecordInputs } from "./client-record-input";
 
 const item = (over: Partial<SlowOpClientItem> = {}): SlowOpClientItem => ({
   operationKind: "update",
@@ -45,9 +42,9 @@ describe("toRecordInput", () => {
   test("an item with an end instant is timed on the wall clock", () => {
     // A browser times on the wall clock: the funnel takes the sleep and the
     // dark wakes over [endedAt − duration, endedAt] off (`attend`).
-    expect(toRecordInput(item({ endedAt: 1_000_000 }), undefined).timing).toEqual(
-      { clock: "wall", endedAtMs: 1_000_000 },
-    );
+    expect(
+      toRecordInput(item({ endedAt: 1_000_000 }), undefined).timing,
+    ).toEqual({ clock: "wall", endedAtMs: 1_000_000 });
   });
 
   test("no caller is null; clientBoot never reaches the recorder", () => {
@@ -96,4 +93,3 @@ describe("toRecordInputs", () => {
     expect(inputs.map((i) => i.traceId)).toEqual([undefined, undefined]);
   });
 });
-

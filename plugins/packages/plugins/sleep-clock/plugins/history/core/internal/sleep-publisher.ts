@@ -296,11 +296,7 @@ export function createSleepPublisher(
     //   known, and is never counted as dark;
     // - otherwise the machine woke since the last reading: from that wake.
     const startMs =
-      prev === null
-        ? atMs
-        : prev.wakeAtMs === wakeAtMs
-          ? prev.atMs
-          : wakeAtMs;
+      prev === null ? atMs : prev.wakeAtMs === wakeAtMs ? prev.atMs : wakeAtMs;
     const stretch = { startMs, endMs: Math.max(startMs, atMs) };
     openDark = { wakeAtMs, stretch };
     darks.push(stretch);

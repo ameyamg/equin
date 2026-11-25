@@ -430,7 +430,9 @@ describe("dark wakes", () => {
   });
 
   test("a process's first reading in a dark wake counts nothing before it", () => {
-    const p = createSleepPublisher(() => reading(600_000, 1_610_000, 1_615_000, true));
+    const p = createSleepPublisher(() =>
+      reading(600_000, 1_610_000, 1_615_000, true),
+    );
     expect(p.darkWakeDuring(1_000_000, 1_615_000)).toBe(0);
   });
 
