@@ -5,6 +5,11 @@ export interface TurnEnd {
   messageId: string;
   /** The message's text blocks, joined as the event builder joins them. */
   text: string;
+  /**
+   * When the turn ended: the timestamp of its `stop_hook_summary` line, the
+   * moment its Stop hooks let the agent stop (ISO, as the transcript writes it).
+   */
+  endedAt: string;
 }
 
 /**
@@ -98,7 +103,9 @@ export function createTurnEndTracker(): {
         const ended = pending && !blocked ? pending : null;
         pending = null;
         blocked = false;
-        return ended ? { messageId: ended.id, text: ended.text } : null;
+        return ended
+          ? { messageId: ended.id, text: ended.text, endedAt: ts }
+          : null;
       }
       return null;
     },

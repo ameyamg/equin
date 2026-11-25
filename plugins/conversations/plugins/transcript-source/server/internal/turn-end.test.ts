@@ -47,9 +47,10 @@ const stopBlock = () =>
   });
 const summary = () => line({ type: "system", subtype: "stop_hook_summary" });
 
-async function fromBuilder(
-  lines: Record<string, unknown>[],
-): Promise<TurnEnd[]> {
+/** What both readers answer: the builder's events carry no stop-hook time. */
+type Ended = Omit<TurnEnd, "endedAt">;
+
+async function fromBuilder(lines: Record<string, unknown>[]): Promise<Ended[]> {
   const events = await buildJsonlEvents(lines, noImages);
   return events.flatMap((e) =>
     e.kind === "assistant-text" &&
@@ -115,7 +116,19 @@ describe("createTurnEndTracker", () => {
     const lines = transcript();
     const built = await fromBuilder(lines);
     expect(built.map((t) => t.messageId)).toEqual(["m1", "m4"]);
-    expect(fromTracker(lines)).toEqual(built);
+    expect(
+      fromTracker(lines).map(({ messageId, text }) => ({ messageId, text })),
+    ).toEqual(built);
+  });
+
+  test("a turn ended when its stop_hook_summary line was written", () => {
+    const lines = transcript();
+    const summaries = lines.filter((l) => l.subtype === "stop_hook_summary");
+    // m1 ends at the first summary; m4 at the third (m3's was blocked).
+    expect(fromTracker(lines).map((t) => t.endedAt)).toEqual([
+      summaries[0]!.timestamp as string,
+      summaries[2]!.timestamp as string,
+    ]);
   });
 
   test("a turn pending at the end ends with the summary appended later", async () => {
@@ -123,7 +136,11 @@ describe("createTurnEndTracker", () => {
     const tracker = createTurnEndTracker();
     for (const l of lines) tracker.feed(l);
     const later = summary();
-    expect(tracker.feed(later)).toEqual({ messageId: "m6", text: "Pending" });
+    expect(tracker.feed(later)).toEqual({
+      messageId: "m6",
+      text: "Pending",
+      endedAt: later.timestamp as string,
+    });
     expect((await fromBuilder([...lines, later])).at(-1)).toEqual({
       messageId: "m6",
       text: "Pending",

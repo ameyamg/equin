@@ -13,7 +13,7 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import type { BootStep } from "@plugins/framework/plugins/server-core/core";
 import {
-  readJsonlEventsFromChain,
+  readChainLines,
   resolveConversationTranscriptPaths,
   watchTranscriptAppends,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
@@ -27,11 +27,21 @@ import {
 } from "./tables-turn-completed-event";
 import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
 import { isOwnConversation } from "./conversation-ownership";
+import { lateTurn } from "./late-turn";
+
+/**
+ * How a turn is announced: `live` as the transcript appends it, `late` when a
+ * replay hands over a turn that ended while nobody was following — which only
+ * the waits armed before it ended may hear (see {@link emitEndTurn}).
+ */
+type Announcement = "live" | "late";
 
 /** One followed conversation: how to stop following it, and how to announce a turn. */
 interface Followed {
   unsubscribe: () => void;
-  announce: (turn: TurnEnd) => void;
+  announce: (turn: TurnEnd, how: Announcement) => void;
+  /** When this subscription began: a turn ending from here on is the live path's. */
+  since: Date;
 }
 
 const subscriptions = new Map<string, Followed>();
@@ -71,7 +81,7 @@ function reconcile(conversationId: string): Promise<void> {
       const next = subscribeToConversation(conversationId);
       subscriptions.set(conversationId, next);
       void runTracked("conversations:turn-emitter-replay", () =>
-        replayForWaiter(conversationId, next.announce),
+        replayForWaiter(conversationId, next),
       );
     } else if (!active && followed) {
       followed.unsubscribe();
@@ -129,17 +139,18 @@ export const turnEmitterReconcileJob = defineJob({
 // backend was down is not announced, as before — except to a durable workflow
 // still waiting on this conversation, which gets the latest one replayed.
 function subscribeToConversation(conversationId: string): Followed {
+  const since = new Date();
   const tracker = createTurnEndTracker();
   // Turns this subscription announced: the waiter replay and the append stream
   // can both reach the latest turn.
   const announced = new Set<string>();
   let emitting = Promise.resolve();
-  const announce = (turn: TurnEnd) => {
+  const announce = (turn: TurnEnd, how: Announcement) => {
     if (announced.has(turn.messageId)) return;
     announced.add(turn.messageId);
     emitting = emitting.then(() =>
       runTracked("conversations:turn-emitter-events", () =>
-        emitEndTurn(conversationId, turn),
+        emitEndTurn(conversationId, turn, how),
       ),
     );
   };
@@ -156,11 +167,11 @@ function subscribeToConversation(conversationId: string): Followed {
       // the turn in progress, and a turn they end was over before it.
       for (const { line, seed } of lines) {
         const ended = tracker.feed(line);
-        if (ended && !seed) announce(ended);
+        if (ended && !seed) announce(ended, "live");
       }
     },
   );
-  return { unsubscribe, announce };
+  return { unsubscribe, announce, since };
 }
 
 /** The boot's waiter replay (see {@link bootReplayPending}). */
@@ -179,7 +190,7 @@ export const turnEmitterReplayWarmup = defineWarmup({
       const followed = subscriptions.get(id);
       if (followed === undefined) continue;
       await runTracked("conversations:turn-emitter-replay", () =>
-        replayForWaiter(id, followed.announce),
+        replayForWaiter(id, followed),
       ).catch((err: unknown) => {
         failures.push(err);
       });
@@ -215,42 +226,48 @@ function lastAssistantMessage(): (
 /**
  * A durable workflow waiting on this conversation (a trigger row keyed to it)
  * may have missed its turn while the backend was down: hand it the latest
- * finished turn. Only for a waited-on conversation — the one case a boot reads
- * the whole transcript.
+ * finished turn — late, so only a wait armed before that turn ended hears it.
+ * A wait armed after it is waiting for a LATER turn: on 2026-11-25 a boot's
+ * replay handed a 2-minute-old turn to exit_clean's finalize, armed mid-turn,
+ * which closed the conversation while the agent was still writing its answer
+ * (conv-1795608764-h27peb). Only for a conversation some wait was armed on
+ * before that turn ended — the one case a boot reads the whole transcript.
  */
 async function replayForWaiter(
   conversationId: string,
-  announce: (turn: TurnEnd) => void,
+  followed: Pick<Followed, "announce" | "since">,
 ): Promise<void> {
-  if (!(await hasPendingTrigger(conversationId))) return;
-  const events = await readJsonlEventsFromChain(
-    await resolveConversationTranscriptPaths(conversationId),
+  const firstArmedAt = await firstTriggerArmedAt(conversationId);
+  if (firstArmedAt === null) return;
+  const turn = lateTurn(
+    await readChainLines(
+      await resolveConversationTranscriptPaths(conversationId),
+    ),
+    { firstArmedAt, followedSince: followed.since },
   );
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i]!;
-    if (
-      e.kind === "assistant-text" &&
-      e.stopReason === "end_turn" &&
-      e.stopHooks === "allowed" &&
-      typeof e.messageId === "string"
-    ) {
-      announce({ messageId: e.messageId, text: e.text });
-      return;
-    }
-  }
+  if (turn !== null) followed.announce(turn, "late");
 }
 
+// A late turn reaches only the triggers armed by the time it ended
+// (`armedBefore`): a wait armed after it is waiting on a later turn. A live one
+// reaches every trigger — a wait armed a moment after the turn's end line was
+// written (the finalize of an exit_clean called near the turn's end) is
+// waiting on exactly that turn.
 async function emitEndTurn(
   conversationId: string,
   turn: TurnEnd,
+  how: Announcement,
 ): Promise<void> {
   try {
-    await conversationTurnCompleted.emit({
-      conversationId,
-      stopReason: "end_turn",
-      text: turn.text,
-      messageId: turn.messageId,
-    });
+    await conversationTurnCompleted.emit(
+      {
+        conversationId,
+        stopReason: "end_turn",
+        text: turn.text,
+        messageId: turn.messageId,
+      },
+      how === "late" ? { armedBefore: new Date(turn.endedAt) } : undefined,
+    );
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error(
@@ -260,15 +277,17 @@ async function emitEndTurn(
   }
 }
 
-// A durable workflow is "waiting" on this conversation iff the events plugin
-// has at least one enabled trigger row keyed to it.
-async function hasPendingTrigger(conversationId: string): Promise<boolean> {
+// When the first enabled trigger row keyed to this conversation was armed — a
+// durable workflow may be waiting on it — or null when there is none.
+async function firstTriggerArmedAt(
+  conversationId: string,
+): Promise<Date | null> {
   const rows = await executeRows(db, {
-    label: "conversation.turn-completed pending trigger",
-    query: sql`SELECT id FROM ${_conversationTurnCompletedTriggers}
-        WHERE enabled = true AND conversation_id = ${conversationId}
-        LIMIT 1`,
-    row: z.object({ id: z.string() }),
+    label: "conversation.turn-completed first trigger",
+    query: sql`SELECT min(created_at) AS armed_at
+        FROM ${_conversationTurnCompletedTriggers}
+        WHERE enabled = true AND conversation_id = ${conversationId}`,
+    row: z.object({ armed_at: z.coerce.date().nullable() }),
   });
-  return rows.length > 0;
+  return rows[0]?.armed_at ?? null;
 }

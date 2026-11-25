@@ -1,4 +1,4 @@
-import { and, eq, isNull, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, or, type SQL, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   index,
@@ -80,8 +80,16 @@ export type EventHandle<T, F extends Record<string, unknown>> = EventSource<T> &
      * INSERT all run on the same connection, so a rollback drops all three
      * atomically. Without `tx`, dispatch goes through Graphile's own pool
      * (correct for post-commit emit).
+     *
+     * `armedBefore` is for an emit that announces a fact LATE — a catch-up of
+     * one that happened while nobody could hear it (the backend was down). It
+     * reaches only the triggers that existed when the fact happened (created
+     * at or before that instant): a trigger armed after it is waiting for a
+     * LATER occurrence, and handing it this one wakes it for the wrong thing
+     * (2026-11-25: a boot's replay of a 2-minute-old turn woke exit_clean's
+     * finalize mid-turn and the agent was shut down while still answering).
      */
-    emit(payload: T, opts?: { tx?: EmitTx }): Promise<void>;
+    emit(payload: T, opts?: { tx?: EmitTx; armedBefore?: Date }): Promise<void>;
     where(filter: Partial<{ [K in keyof F & keyof T]: T[K] }>): EventSource<T>;
   };
 
@@ -174,8 +182,8 @@ export function defineTriggerEvent<
       _kind: "trigger-event" as const,
       _factory: "defineTriggerEvent",
       _doc: { label: spec.name },
-      emit: async (payload: T, opts?: { tx?: EmitTx }) => {
-        await dispatch(def, payload, opts?.tx);
+      emit: async (payload: T, opts?: { tx?: EmitTx; armedBefore?: Date }) => {
+        await dispatch(def, payload, opts?.tx, opts?.armedBefore);
       },
       where: (filter: Partial<{ [K in keyof F & keyof T]: T[K] }>) => ({
         __kind: "event" as const,
@@ -200,11 +208,17 @@ async function dispatch<T>(
   def: EventDef<T>,
   payload: T,
   tx?: EmitTx,
+  armedBefore?: Date,
 ): Promise<void> {
   const exec = tx ?? db;
   // biome-ignore lint/suspicious/noExplicitAny: base-column property access on PgTable.
   const enabledCol = (def.table as any).enabled as AnyPgColumn;
   const predicates: SQL[] = [eq(enabledCol, true)];
+  if (armedBefore !== undefined) {
+    // biome-ignore lint/suspicious/noExplicitAny: base-column property access on PgTable.
+    const createdAtCol = (def.table as any).createdAt as AnyPgColumn;
+    predicates.push(lte(createdAtCol, armedBefore));
+  }
 
   if (def.matchFn) {
     predicates.push(def.matchFn(def.table, payload));
