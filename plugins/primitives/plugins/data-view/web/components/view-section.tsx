@@ -90,6 +90,8 @@ export function ViewSection(props: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder: string | undefined;
+  /** `false`: no search field (the list has nothing to search). */
+  searchable: boolean;
   /** `DataViewProps.quickFilters`, on the `⋯` panel's first page. */
   quickFilters: readonly QuickFilter[] | undefined;
   actions: ViewActions;
@@ -154,6 +156,7 @@ export function ViewSection(props: {
                   query={query}
                   onQueryChange={onQueryChange}
                   searchPlaceholder={searchPlaceholder}
+                  searchable={props.searchable}
                   quickFilters={props.quickFilters}
                   instance={instance}
                   actions={actions}
@@ -197,6 +200,8 @@ function SectionOptions(props: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder: string | undefined;
+  /** `false`: no search field (the list has nothing to search). */
+  searchable: boolean;
   /** `DataViewProps.quickFilters`, on the `⋯` panel's first page. */
   quickFilters: readonly QuickFilter[] | undefined;
   instance: ResolvedViewInstance<DataViewContribution>;
@@ -235,6 +240,8 @@ function SectionRootPanel(props: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder: string | undefined;
+  /** `false`: no search field (the list has nothing to search). */
+  searchable: boolean;
   /** `DataViewProps.quickFilters`, on the `⋯` panel's first page. */
   quickFilters: readonly QuickFilter[] | undefined;
   instance: ResolvedViewInstance<DataViewContribution>;
@@ -271,15 +278,17 @@ function SectionRootPanel(props: {
           )
         }
         search={
-          <SearchInput
-            keep={transient(
-              "controlled by DataView: its view state keeps the query (useViewEphemeral, sessionStorage)",
-            )}
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            appearance="menu"
-          />
+          props.searchable ? (
+            <SearchInput
+              keep={transient(
+                "controlled by DataView: its view state keeps the query (useViewEphemeral, sessionStorage)",
+              )}
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              appearance="menu"
+            />
+          ) : null
         }
       />
       <ControlPanel.Footer>

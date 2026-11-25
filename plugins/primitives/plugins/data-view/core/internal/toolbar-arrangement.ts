@@ -46,8 +46,9 @@ export interface ToolbarParts {
    * places it right after the views).
    */
   quickFilters: ReactNode;
-  /** The search input, in `forms.search`. Always render it: a non-empty query
-   *  must stay visible — and the host binds `/` to focus it. */
+  /** The search input, in `forms.search` — `null` when the list has nothing
+   *  to search (no searchable field or column). Always render it: a non-empty
+   *  query must stay visible — and the host binds `/` to focus it. */
   search: ReactNode;
   /** The current search query. */
   query: string;

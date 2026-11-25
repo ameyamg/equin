@@ -22,12 +22,15 @@ export function HostedOptions({
   query,
   onQueryChange,
   searchPlaceholder = "Search…",
+  searchable,
   revealOnHover = true,
   quickFilters,
 }: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder?: string;
+  /** `false`: no search field (the list has nothing to search). */
+  searchable: boolean;
   /** `false`: visible at rest — the frame's `forms.options: "visible"`. */
   revealOnHover?: boolean;
   /** `DataViewProps.quickFilters`, on the first page under the search. */
@@ -38,15 +41,17 @@ export function HostedOptions({
   return (
     <CompactControls
       search={
-        <SearchInput
-          keep={transient(
-            "controlled by DataView: its view state keeps the query (useViewEphemeral, sessionStorage)",
-          )}
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder={searchPlaceholder}
-          appearance="menu"
-        />
+        searchable ? (
+          <SearchInput
+            keep={transient(
+              "controlled by DataView: its view state keeps the query (useViewEphemeral, sessionStorage)",
+            )}
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder={searchPlaceholder}
+            appearance="menu"
+          />
+        ) : null
       }
       quickFilters={
         quickFilters === undefined || quickFilters.length === 0 ? null : (

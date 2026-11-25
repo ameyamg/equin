@@ -1138,7 +1138,8 @@ new plugin (`capsule-toolbar`, `floating-toolbar`).
   reveals with the strip (`viewAddReveal: hover`, still tabbable).
 - **The views pill is the one cell that gives** (scrolls sideways); tools rigid; the
   row never wraps. Pinned surface → no views pill.
-- **Search always visible**, trailing `/` hint while empty. **`/` focuses search in
+- **Search always visible** while the list has something to search (else no
+  field — see `search` below), trailing `/` hint while empty. **`/` focuses search in
   every wide arrangement** (host binds it via `useSurfaceShortcuts`; yields to text
   fields; compact binds nothing).
 - **Create follows a divider**, only with creators (`ToolbarParts.creators` is
@@ -1186,7 +1187,13 @@ interface ToolbarParts {
 - **`switcher`**: render exactly one of `strip` / `chip` (both `null` when pinned) —
   it is the only way to manage views.
 - **`search` is always rendered** (a non-empty query must stay visible); placeholder
-  is `DataViewProps.searchPlaceholder`.
+  is `DataViewProps.searchPlaceholder`. It is `null` when the list has nothing to
+  search — derived, never a per-list flag (`searchesSomething`,
+  `web/internal/use-flat-rows.ts`): a live source's `searchable` columns; in
+  memory a `searchAccessor`, the nested table's label, or a field the search
+  reads (`text` / `enum` / `tags` or `filterable: true`); a controlled `search`
+  always has one. Every form (band, compact fold, hosted options, a section's
+  `⋯`) reads that one answer.
 - **`foldedControls`**: every control behind one trigger, for an arrangement short on
   room.
 - **The host keeps**: the `<Sticky>` band (`mask`, `layer="nav"`), the fade, the

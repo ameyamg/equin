@@ -78,6 +78,7 @@ function renderToolbar(opts: {
   createLabel?: string;
   quickFilters?: readonly QuickFilter[];
   controls?: Partial<DataViewControlsContextValue>;
+  searchable?: boolean;
 }) {
   lastParts = null;
   surfaceShortcuts.length = 0;
@@ -90,6 +91,7 @@ function renderToolbar(opts: {
         } as DataViewControlsContextValue)}
       >
         <DataViewToolbar
+          searchable={opts.searchable ?? true}
           query=""
           onQueryChange={() => {}}
           creators={"creators" in opts ? opts.creators : CREATORS}
@@ -304,6 +306,39 @@ describe("DataViewToolbar arrangements", () => {
     // The trigger reveals on hover; the pill (holding create) stays.
     expect(options.className).toContain("opacity-0");
     expect(tools.className).not.toContain("opacity-0");
+  });
+
+  it("draws no search field, in any form, when the list has nothing to search", () => {
+    renderToolbar({ searchable: false });
+    expect(screen.queryByPlaceholderText("Search…")).toBeNull();
+    expect(slashShortcut()).toBeUndefined();
+    cleanup();
+
+    renderToolbar({ arrangement: recordingArrangement, searchable: false });
+    expect(lastParts!.search).toBeNull();
+    cleanup();
+
+    // Folded with nothing else behind it: no options trigger at all.
+    renderToolbar({ density: "compact", searchable: false });
+    expect(screen.queryByRole("button", { name: "View options" })).toBeNull();
+  });
+
+  it("keeps the compact options trigger for quick filters when nothing is searchable", () => {
+    renderToolbar({
+      density: "compact",
+      searchable: false,
+      quickFilters: [
+        {
+          id: "whose",
+          kind: "segmented",
+          fieldId: "owner",
+          label: "Whose visits",
+          options: [{ id: "all", label: "All", rule: null }],
+        },
+      ],
+      controls: { fields: [{ id: "owner", label: "Owner" }] },
+    });
+    expect(screen.getByRole("button", { name: "View options" })).toBeTruthy();
   });
 
   it("reveals the compact tools pill itself when it holds only the trigger", () => {

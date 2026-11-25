@@ -84,7 +84,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
 import { bodyRowMatcher, useRowFilter } from "../internal/use-row-filter";
-import { useRowMatcher } from "../internal/use-flat-rows";
+import { searchesSomething, useRowMatcher } from "../internal/use-flat-rows";
+import { useFieldIdentities } from "../internal/use-field-identities";
 import {
   isGroupableField,
   partitionIntoSections,
@@ -780,6 +781,17 @@ function DataViewBodyInner<TRow>(
   // A live tree drawn nested reads level by level (`useLiveTree`); drawn
   // flat it is the ordinary flat source — `roots` scoped to its top level.
   const treeNests = liveTree != null && activeNests;
+  // Whether the search box is drawn: only when the list has something to
+  // search (`searchesSomething`) — every toolbar form reads this one answer.
+  const fieldIdentities = useFieldIdentities();
+  const searchable = searchesSomething({
+    controlled: search !== undefined,
+    liveSearchable: liveSource?.searchable,
+    searchAccessor,
+    nestsHierarchy: hierarchy != null && activeNests,
+    fields,
+    identities: fieldIdentities,
+  });
   const flatLiveSource = useMemo(
     () =>
       liveSource == null || treeNests
@@ -1975,6 +1987,7 @@ function DataViewBodyInner<TRow>(
               query={typedQuery}
               onQueryChange={onQueryChange}
               searchPlaceholder={chrome.searchPlaceholder}
+              searchable={searchable}
               quickFilters={props.quickFilters}
               actions={viewModel.actions}
               hostSettings={subItemsSettingsFor(
@@ -2003,6 +2016,7 @@ function DataViewBodyInner<TRow>(
                     query={typedQuery}
                     onQueryChange={onQueryChange}
                     searchPlaceholder={chrome.searchPlaceholder}
+                    searchable={searchable}
                     quickFilters={props.quickFilters}
                     revealOnHover={
                       (chrome.toolbar.forms?.options ?? "revealed") ===
@@ -2086,6 +2100,7 @@ function DataViewBodyInner<TRow>(
                 density={chrome.density}
                 arrangement={arrangement}
                 searchPlaceholder={chrome.searchPlaceholder}
+                searchable={searchable}
                 {...(search?.suggestions === undefined
                   ? {}
                   : { searchSuggestions: search.suggestions })}

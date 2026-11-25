@@ -50,6 +50,7 @@ function renderToolbar(expandAll: DataViewExpandAll | null) {
     <PluginProvider plugins={[plugin]}>
       <DataViewControlsProvider {...ctx(expandAll)}>
         <DataViewToolbar
+          searchable
           query=""
           onQueryChange={() => {}}
           switcher={{ strip: <div />, chip: <div /> }}

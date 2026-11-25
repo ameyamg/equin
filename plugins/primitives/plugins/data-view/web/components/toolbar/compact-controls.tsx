@@ -59,7 +59,7 @@ export function CompactControls({
   /**
    * The applicable controls, in order, and their summed count — the same read
    * the wide bar renders (`useToolbarControls`). Not known yet: no badge, and
-   * no trigger at all unless there is a search field to reach.
+   * no trigger at all unless there is a search field or quick filters to reach.
    */
   controls: SlotLayout<ToolbarControls>;
   /**
@@ -91,7 +91,14 @@ export function CompactControls({
 }): ReactNode {
   const [open, setOpen] = useState(false);
   const known = controls.kind === "known" ? controls.items : null;
-  if (!search && (known === null || known.controls.length === 0)) return null;
+  // Nothing to reach behind the trigger: no search field (the list has
+  // nothing to search), no quick filters, no applicable control.
+  if (
+    !search &&
+    !quickFilters &&
+    (known === null || known.controls.length === 0)
+  )
+    return null;
   // The badge sums what the controls narrow by — unknown while their layout
   // loads, so no number is shown rather than a count that then grows.
   const activeCount =

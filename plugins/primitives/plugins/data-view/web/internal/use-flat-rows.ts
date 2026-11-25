@@ -20,6 +20,34 @@ export function isSearchable<TRow>(
 }
 
 /**
+ * Whether the DataView's search box has anything to search — the ONE answer
+ * for whether the box is drawn at all (a box over nothing silently matches
+ * nothing). Derived from what the search reads, never declared per list:
+ * - a controlled `search` (the surface applies its own query — "search or
+ *   add" searches beyond the rows);
+ * - a live source: its `searchable` columns;
+ * - in memory: the host's `searchAccessor`, the nested table's primary label
+ *   (`useHierarchyTree`), else any field {@link isSearchable} reads.
+ */
+export function searchesSomething<TRow>(origin: {
+  controlled: boolean;
+  liveSearchable: readonly string[] | undefined;
+  searchAccessor: ((row: TRow) => string) | undefined;
+  nestsHierarchy: boolean;
+  fields: readonly FieldDef<TRow>[];
+  identities: ReadonlyMap<string, FieldIdentity>;
+}): boolean {
+  if (origin.controlled) return true;
+  if (origin.liveSearchable !== undefined)
+    return origin.liveSearchable.length > 0;
+  return (
+    origin.searchAccessor !== undefined ||
+    origin.nestsHierarchy ||
+    origin.fields.some((f) => isSearchable(f, origin.identities))
+  );
+}
+
+/**
  * The view's search and filter as ONE row predicate — the rows `useFlatRows`
  * keeps — or `null` when neither constrains.
  */

@@ -172,6 +172,7 @@ function mountToolbar(density?: "compact") {
         {...ctx({ expandAll: { allExpanded: false, setAll: () => {} } })}
       >
         <DataViewToolbar
+          searchable
           query=""
           onQueryChange={() => {}}
           switcher={{ strip: <div />, chip: <div /> }}

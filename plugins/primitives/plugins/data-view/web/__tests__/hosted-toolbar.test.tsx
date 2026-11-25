@@ -135,6 +135,7 @@ function renderOptions(query: string) {
         } as unknown as DataViewControlsContextValue)}
       >
         <HostedOptions
+          searchable
           query={query}
           onQueryChange={() => {}}
           searchPlaceholder="Search agents"

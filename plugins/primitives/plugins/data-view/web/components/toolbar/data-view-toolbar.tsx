@@ -158,6 +158,10 @@ export interface DataViewToolbarProps {
   density?: DataViewDensity;
   /** The wide layout; absent → {@link barArrangement}, today's inline bar. */
   arrangement?: ToolbarArrangement;
+  /** Whether the list has anything to search (`searchesSomething`): `false`
+   *  draws no search field in any form — a field over nothing matches
+   *  nothing. */
+  searchable: boolean;
   /** The search field's placeholder; default `"Search…"`. */
   searchPlaceholder?: string;
   /** The panel under the search field (`DataViewSearch.suggestions`). */
@@ -204,6 +208,7 @@ export function DataViewToolbar({
   density,
   arrangement = barArrangement,
   searchPlaceholder = "Search…",
+  searchable,
   searchSuggestions,
   searchTrailing,
   onSearchSubmit,
@@ -231,9 +236,10 @@ export function DataViewToolbar({
   // fight over `/`; a plain key, so it yields to any focused text field (the
   // `/` is typed there). With several banded DataViews on one surface, the
   // first mounted one answers.
+  // No field (the list has nothing to search): nothing to bind.
   const shortcuts = useMemo(
     () =>
-      compact
+      compact || !searchable
         ? []
         : [
             {
@@ -244,7 +250,7 @@ export function DataViewToolbar({
               handler: () => focusElement(searchRef.current, { reveal: true }),
             },
           ],
-    [compact],
+    [compact, searchable],
   );
   useSurfaceShortcuts(shortcuts);
   // Applicability, ordering and the badge count, derived the one way the
@@ -355,16 +361,15 @@ export function DataViewToolbar({
         {searchTrailing}
       </Line>
     );
-  const searchInput =
-    searchSuggestions === undefined ? (
-      fieldWithTrailing
-    ) : (
-      <SearchWithSuggestions
-        input={fieldWithTrailing}
-        inputRef={searchRef}
-        suggestions={searchSuggestions}
-      />
-    );
+  const searchInput = !searchable ? null : searchSuggestions === undefined ? (
+    fieldWithTrailing
+  ) : (
+    <SearchWithSuggestions
+      input={fieldWithTrailing}
+      inputRef={searchRef}
+      suggestions={searchSuggestions}
+    />
+  );
 
   // Placed by the arrangement (wide: one row, the groups divided) or on the
   // fold's first page (a column). Only one of the two ever renders.

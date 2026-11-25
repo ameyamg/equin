@@ -102,6 +102,7 @@ function renderToolbar(extra: Partial<DataViewControlsContextValue>) {
     <PluginProvider plugins={[plugin]}>
       <DataViewControlsProvider {...ctx(extra)}>
         <DataViewToolbar
+          searchable
           query=""
           onQueryChange={() => {}}
           switcher={{ strip: <div />, chip: <div /> }}
