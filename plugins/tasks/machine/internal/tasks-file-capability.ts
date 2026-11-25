@@ -19,11 +19,16 @@ const tracksMatch: Same<
 void tracksMatch;
 
 /** How a `tasks.file` grant reads to the agent: the user's Task filing
- * instructions, filled with what this grant allows. */
+ * instructions, filled with what this grant allows. The ONE rendering — the
+ * Mandate line and `add_task`'s live description both read it, so an edit to
+ * the prompt reaches both. */
+export function describeFilingMandate(grant: TasksFileGrant) {
+  return renderConfigPrompt(taskFilingPromptsConfig, "mandateLine", {
+    grant: describeFilingGrant(grant, getConfig(taskFilingPromptsConfig)),
+  });
+}
+
 export const tasksFileCapability = Mandate.Capability({
   cap: tasksFile,
-  describe: (grant: TasksFileGrant) =>
-    renderConfigPrompt(taskFilingPromptsConfig, "mandateLine", {
-      grant: describeFilingGrant(grant, getConfig(taskFilingPromptsConfig)),
-    }),
+  describe: describeFilingMandate,
 });

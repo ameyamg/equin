@@ -249,7 +249,7 @@ const ports: ManageTasksPorts = {
   },
 };
 
-const SCOPE = `Only the tasks you OWN: the tasks you filed (\`add_task\`, from this task's conversations) — or, as a supervisor, every task of your tree, plus your role's backlog and earlier sessions. Never a task a person or another agent filed, nor your own task itself; anything else is refused, naming its owner — unless a person granted your task leave to manage tasks you do not own (your Mandate says so when it has): then a task you do not own can be edited (content and dependencies) or dropped, each action recorded on it. A task you handed to a supervisor is the supervisor's.`;
+const SCOPE = `Only the tasks you OWN: the tasks you filed (\`add_task\`, from this task's conversations) — or, as a supervisor, every task of your tree, plus your role's backlog and earlier sessions. Never a task a person or another agent filed, nor your own task itself; anything else is refused, naming its owner, unless your Mandate says a person granted you leave to manage tasks you do not own (it says what that allows). A task you handed to a supervisor is the supervisor's.`;
 
 const EXIT = `**Before you exit**, every sidequest you filed that is still waiting must be resolved — \`exit_clean\` is refused until it is: drop it (\`drop_task\`) when it is not worth doing — ask yourself what it actually gains — or hand it to a supervisor (\`edit_task\` with \`supervisor\`), adding what you learned since filing it.`;
 

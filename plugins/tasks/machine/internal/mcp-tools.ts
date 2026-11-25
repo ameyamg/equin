@@ -28,12 +28,12 @@ import {
 import { armTaskAutoStart } from "../../server/internal/arm-auto-start";
 import { rewireDependencies } from "../../server/internal/rewire-dependencies";
 import {
-  describeFilingGrant,
   fileAddTask,
   fileIntoBacklog,
   type AddTaskPorts,
 } from "./add-task-filing";
 import { digestFor } from "./tree-digest";
+import { describeFilingMandate } from "./tasks-file-capability";
 import { getConfig } from "@plugins/config_v2/server";
 import { taskFilingPromptsConfig } from "../../core";
 import { fileToBacklog } from "@plugins/tasks/plugins/supervisor-roles/server";
@@ -78,12 +78,13 @@ export const addTaskTool = Mcp.tool({
   name: "add_task",
   // Only an agent whose mandate lets it file tasks sees the tool.
   when: granted(tasksFile),
-  // Which tracks and start modes THIS caller's mandate allows.
+  // Which tracks and start modes THIS caller's mandate allows: its Mandate
+  // line itself (the user's editable prompt), never a restatement of it.
   liveDescription: async ({ conversationId }) => {
     const grant = await grantOf(tasksFile, conversationId);
     return grant === null
       ? null
-      : `## Your mandate allows\n\n${describeFilingGrant(grant, getConfig(taskFilingPromptsConfig))}. Any other track or start mode is refused.`;
+      : `## Your mandate\n\n${describeFilingMandate(grant)}`;
   },
   description: `Add a task to the equin task tree.
 
@@ -93,8 +94,8 @@ The agent that picks up the task will design and plan the solution itself.
 Good: "Login button unresponsive on mobile". Bad: "Fix login button by
 adding a touchstart handler in auth.tsx".
 
-Which tracks and start modes you may use is set by your task's mandate (listed
-at the end of this description); anything else is refused. The result carries
+Which tracks and start modes you may use is set by your task's mandate (its
+line is repeated at the end of this description). The result carries
 a digest of what changed in your task tree since you last looked
 (\`task_tree\` reads the whole tree).
 
