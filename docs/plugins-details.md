@@ -8171,6 +8171,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/place-details`
               - `apps/places/places-core/no-icon-picker`
               - `apps/places/places-map`
+              - `apps/website/demos/workspace/story`
               - `apps/website/promo-film/seed`
           - Exemptions:
             - Exempts itself from: `investigate:failures-registered` — `core/internal/resources.ts` (sanctioned)
@@ -10559,8 +10560,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow-cover`
-            - Imported by: 23 plugins — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 24 plugins — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `apps` ×23
               - `active-data/song`
             - Extended by:
               - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
@@ -13247,7 +13248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `renderSiteSnapshot`
         - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
           - Plugins:
-            - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
+            - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-1760000000-demo02 and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shadow --shadow`
                 - Imported by:
@@ -13263,13 +13264,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Plugins:
                 - **`story`** — The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
                   - Core:
-                    - Uses: 29 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
+                    - Uses: 34 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
                       - `infra/namespace` ×5
                       - `apps/prototypes/files` ×4
                       - `conversations/before-after` ×3
                       - `page/place` ×3
+                      - `tasks/task-ids` ×3
                       - `conversations/agents` ×2
                       - `page/editor` ×2
+                      - `apps/places/places-core.placeIdKind`
+                      - `apps/sonata/library.songIdKind`
                       - `conversations/model-provider.ConversationModelSchema`
                       - `conversations.CONVERSATIONS_CATEGORY_ID`
                       - `infra/mcp.agentToolName`
@@ -67318,6 +67322,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/attempt`
           - `active-data/conv`
           - `active-data/task-link`
+          - `apps/website/demos/workspace/story`
           - `apps/website/promo-film/seed`
           - `build`
           - `conversations`

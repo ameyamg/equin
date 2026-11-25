@@ -27,7 +27,7 @@ export interface AppDemoPlace {
  */
 export const APP_DEMO_PLACES: Readonly<Record<string, AppDemoPlace>> = {
   // The practice-timer agent, waiting for review.
-  agents: { home: "/agents", shot: "/agents/c/conv-demo-practice-timer" },
+  agents: { home: "/agents", shot: "/agents/c/conv-1760000000-demo02" },
   prototypes: { home: "/prototypes", shot: "/prototypes" },
   // "Block tour": one of every block.
   pages: { home: "/pages", shot: "/pages/page/block-1760000000-demo30" },

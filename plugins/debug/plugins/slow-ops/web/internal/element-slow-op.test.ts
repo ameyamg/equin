@@ -141,7 +141,7 @@ test("a read of an in-browser server slow after the boot is still reported", () 
       transportId: "browser:srv-1:/ws/notifications",
     }),
     thresholds,
-    "/demo/at/agents/c/conv-demo-practice-timer",
+    "/demo/at/agents/c/conv-1760000000-demo02",
   );
   expect(item?.ownMs).toBe(3000);
   expect(item?.operation).toBe("config-v2.values");

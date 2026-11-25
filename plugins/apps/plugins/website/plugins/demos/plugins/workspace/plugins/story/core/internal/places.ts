@@ -1,3 +1,4 @@
+import { placeIdKind } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import type {
   PlaceFixture,
   PlaceTagPath,
@@ -22,7 +23,7 @@ import type {
 
 /** A seeded place id: stamped and carrying `demo`, like every demo id. */
 const placeId = (n: number) =>
-  `place-1792900000-demo${String(n).padStart(3, "0")}`;
+  placeIdKind.parse(`place-1792900000-demo${String(n).padStart(3, "0")}`);
 
 const WANT = ["Want to go"] as const;
 const BEEN = ["Been"] as const;

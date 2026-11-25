@@ -233,6 +233,7 @@ its own.
     - `apps/places/place-details`
     - `apps/places/places-core/no-icon-picker`
     - `apps/places/places-map`
+    - `apps/website/demos/workspace/story`
     - `apps/website/promo-film/seed`
 - Exemptions:
   - Exempts itself from: `investigate:failures-registered` — `core/internal/resources.ts` (sanctioned)

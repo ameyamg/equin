@@ -49,7 +49,7 @@ export const ROOT_PAGES = [
  * driving the Agent Manager start (the workspace scenario's route,
  * `website/demos/workspace`'s `scenario.ts`).
  */
-export const AGENT_MANAGER_LOCATION = "/agents/c/conv-demo-practice-timer";
+export const AGENT_MANAGER_LOCATION = `/agents${workspaceDemo.route}`;
 
 /** The gate's button (`DemoScope`'s gate): the plain homepage waits on it. */
 export const ENTER_DEMO = 'button:has-text("Enter equin")';

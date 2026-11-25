@@ -6,13 +6,16 @@
 
 - Description: The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
 - Core:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/namespace` ×5
     - `apps/prototypes/files` ×4
     - `conversations/before-after` ×3
     - `page/place` ×3
+    - `tasks/task-ids` ×3
     - `conversations/agents` ×2
     - `page/editor` ×2
+    - `apps/places/places-core.placeIdKind`
+    - `apps/sonata/library.songIdKind`
     - `conversations/model-provider.ConversationModelSchema`
     - `conversations.CONVERSATIONS_CATEGORY_ID`
     - `infra/mcp.agentToolName`

@@ -3,7 +3,7 @@ import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../views";
 import { TaskGraph, taskAuthorColumns, type TaskFiling } from "../../../core";
-import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
+import { taskIdKind, type TaskId } from "@plugins/tasks/plugins/task-ids/core";
 import {
   findNextRankInFolder,
   isDescendant,
@@ -26,7 +26,8 @@ import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 interface CreateTaskFields {
-  id?: string;
+  /** Minted when absent; given, it is a real task id (`taskIdKind.mint` / `.parse`), never a hand-made name. */
+  id?: TaskId;
   groupId?: string | null;
   title: string;
   // Defaults to true (machine-generated label). Pass false when the title is

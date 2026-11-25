@@ -44,6 +44,7 @@ recognition against real mints.
     - `active-data/attempt`
     - `active-data/conv`
     - `active-data/task-link`
+    - `apps/website/demos/workspace/story`
     - `apps/website/promo-film/seed`
     - `build`
     - `conversations`

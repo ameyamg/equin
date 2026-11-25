@@ -1,8 +1,14 @@
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
 import { browserHost } from "../browser-host.generated";
 
-/** The conversation the demo opens at — its id is distinctive, so a leak to the real server is findable in its logs. */
-export const DEMO_CONVERSATION_ID = "conv-demo-practice-timer";
+/**
+ * The conversation the demo opens at: the practice-timer story's
+ * (`story/core`'s `conversationId`, which parses it as a conversation id).
+ * Written out, since neither the story nor the id kinds ship in the site's
+ * bundle; `bin/browser-host.test.ts` pins the two equal. It carries `demo`, so
+ * a leak to the real server is findable in its logs.
+ */
+export const DEMO_CONVERSATION_ID = "conv-1760000000-demo02";
 
 /** Where the demo keeps its data in the browser: one IndexedDB storage, whatever the build. */
 export const WORKSPACE_DEMO_STORAGE = "demo-workspace";

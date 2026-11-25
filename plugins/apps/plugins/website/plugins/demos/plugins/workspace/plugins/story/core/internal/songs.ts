@@ -1,3 +1,4 @@
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import type {
   ChordGridSongFixture,
   SongFixture,
@@ -15,7 +16,7 @@ import type {
 
 /** A seeded song id: stamped and carrying `demo`, like every demo id. */
 const songId = (n: number) =>
-  `song-1792900000-demo${String(n).padStart(2, "0")}`;
+  songIdKind.parse(`song-1792900000-demo${String(n).padStart(2, "0")}`);
 
 /** The warm-up the practice-timer conversation links (and the song the demo opens in Sonata). */
 export const DEMO_SONG_ID = songId(1);

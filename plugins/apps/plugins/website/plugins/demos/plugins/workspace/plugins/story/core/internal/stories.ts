@@ -7,6 +7,11 @@ import {
   agentLaunchIdKind,
 } from "@plugins/conversations/plugins/agents/core";
 import type { ConversationPhase } from "@plugins/conversations/plugins/conversation-progress/core";
+import {
+  attemptIdKind,
+  conversationIdKind,
+  taskIdKind,
+} from "@plugins/tasks/plugins/task-ids/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 
@@ -22,6 +27,9 @@ import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 // findable in its logs. Written into the demo's browser host by its seed
 // (`bin/seed.ts`), each story's transcript by `./transcripts`.
 
+/** The stamp of every seeded agent-manager id (`<prefix>-<stamp>-demo<n>`). */
+const DEMO_ID_STAMP = "1760000000";
+
 export const MIN = 60_000;
 export const HOUR = 60 * MIN;
 
@@ -32,6 +40,13 @@ export type Status = "starting" | "working" | "waiting" | "gone" | "done";
 
 export interface Story {
   key: string;
+  /**
+   * 1-based and distinct: the story's task, attempt and conversation ids are
+   * `<prefix>-<stamp>-demo<NN>` ({@link taskId}), real ids of their kinds — a
+   * reader parses them (the decisions chip parses a row's task id, and a
+   * readable `task-demo-<key>` crashed it).
+   */
+  n: number;
   task: string;
   /**
    * What the user asked, word for word: the task's description and the
@@ -93,10 +108,11 @@ export const DEMO_AGENTS: readonly DemoAgent[] = [
 const PRACTICE_TIMER_PROMPT =
   "Add a practice timer to Sonata: count how long I actually play each song, and show this week's total in my library.";
 
-/** One agent per task: conversation `conv-demo-<key>`, attempt `att-demo-<key>`, task `task-demo-<key>`. */
+/** One agent per task: conversation `conv-<stamp>-demo<NN>`, attempt `att-…`, task `task-…`, NN the story's {@link Story.n}. */
 export const STORIES: readonly Story[] = [
   {
     key: "recipes",
+    n: 1,
     shortTitle: "Family recipes",
     phase: "design",
     category: WISHES_CATEGORY_ID,
@@ -111,6 +127,7 @@ export const STORIES: readonly Story[] = [
   },
   {
     key: "practice-timer",
+    n: 2,
     shortTitle: "Practice timer",
     phase: "implementation",
     note: "Check it only counts while I'm playing, not while a song is just open.",
@@ -127,6 +144,7 @@ export const STORIES: readonly Story[] = [
   },
   {
     key: "weekly-review",
+    n: 3,
     shortTitle: "Weekly review",
     track: "sidequest",
     phase: "research",
@@ -141,6 +159,7 @@ export const STORIES: readonly Story[] = [
   },
   {
     key: "calendar",
+    n: 4,
     shortTitle: "Task calendar",
     phase: "design",
     category: CONVERSATIONS_CATEGORY_ID,
@@ -154,6 +173,7 @@ export const STORIES: readonly Story[] = [
   },
   {
     key: "pin-songs",
+    n: 5,
     shortTitle: "Pinned songs",
     phase: "pushed",
     agent: "small-wishes",
@@ -167,6 +187,7 @@ export const STORIES: readonly Story[] = [
   },
   {
     key: "wish-shortcut",
+    n: 6,
     shortTitle: "Wish shortcut",
     phase: "pushed",
     category: WISHES_CATEGORY_ID,
@@ -180,6 +201,14 @@ export const STORIES: readonly Story[] = [
   },
 ];
 
+{
+  const numbers = STORIES.map((s) => s.n);
+  if (new Set(numbers).size !== numbers.length)
+    throw new Error(
+      `demo stories must have distinct numbers (their ids are made from them): ${numbers.join(", ")}`,
+    );
+}
+
 /** The story under `key` — loud when no story has it. */
 export function storyByKey(key: string): Story {
   const story = STORIES.find((s) => s.key === key);
@@ -191,14 +220,19 @@ export function storyByKey(key: string): Story {
 /** What the user asked ({@link Story.prompt}, else the task's title). */
 export const promptOf = (s: Story) => s.prompt ?? s.task;
 
-export const conversationId = (s: Story) => `conv-demo-${s.key}`;
-export const attemptId = (s: Story) => `att-demo-${s.key}`;
-export const taskId = (s: Story) => `task-demo-${s.key}`;
-// Parsed, so an id the kind does not recognise fails here, not in a reader.
+// Every id below is parsed by its kind, so an id the kind does not recognise
+// fails here (in the seed, so in the build), not in a reader on the page.
+const storySuffix = (s: Story) => `demo${String(s.n).padStart(2, "0")}`;
+export const conversationId = (s: Story) =>
+  conversationIdKind.parse(`conv-${DEMO_ID_STAMP}-${storySuffix(s)}`);
+export const attemptId = (s: Story) =>
+  attemptIdKind.parse(`att-${DEMO_ID_STAMP}-${storySuffix(s)}`);
+export const taskId = (s: Story) =>
+  taskIdKind.parse(`task-${DEMO_ID_STAMP}-${storySuffix(s)}`);
 export const agentId = (a: DemoAgent) =>
-  agentIdKind.parse(`agent-1760000000-demo${a.n}`);
+  agentIdKind.parse(`agent-${DEMO_ID_STAMP}-demo${a.n}`);
 export const agentLaunchId = (s: Story) =>
-  agentLaunchIdKind.parse(`launch-1760000000-demo${STORIES.indexOf(s) + 1}`);
+  agentLaunchIdKind.parse(`launch-${DEMO_ID_STAMP}-demo${s.n}`);
 /** The story's checkout: named by its attempt id, as every worktree is. */
 /**
  * The commit a pushed story's work landed as: hex, stable per story, so the

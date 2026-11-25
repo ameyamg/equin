@@ -4,7 +4,7 @@ The workspace demo — the website's live demo: the Agent Manager, Pages,
 Prototypes, Sonata, Keyboard Party, Isle, Places and Files on Demo's own equin, the story being what equin is for:
 a person shaping their apps with agents. Its
 scenario is `workspaceDemo` (`core`) — the app, the
-route it opens at (`/c/conv-demo-practice-timer`) and its browser host
+route it opens at (`/c/conv-1760000000-demo02`) and its browser host
 (`bin/browser-host.ts`): a Web Worker booting the real server code of the
 `agent-manager-demo` composition (`bin/browser-host.composition.ts`) on PGlite, seeded by
 `bin/seed.ts` with six agent sessions (one that added a practice timer to Sonata,
@@ -120,9 +120,12 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   agents' before / after pairs → settle → the transcripts → the prototypes fixture → settle → the songs → settle →
   Places → settle → the home folder → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
   them itself, as on a fresh install.)
-- **Every id carries `demo`** (`conv-demo-…`, `task-demo-…`, `att-demo-…`, the
-  pages and the blocks a record names), so a request that leaked past the
-  scope to the real server is findable in its logs. The blocks of a page's
+- **Every id carries `demo`, and is a real id of its kind** (`task-1760000000-demo02`,
+  `att-…`, `conv-…`, the agents, the pages and the blocks a record names —
+  stamped, with a `demo<NN>` suffix, and parsed by the kind where `story/core`
+  makes it), so a request that leaked past the scope to the real server is
+  findable in its logs, and a reader that parses an id (the decisions chip
+  parses a row's task id) reads the demo's like any other. The blocks of a page's
   markdown runs, which nothing names, get fresh ids from the writer.
 - **The user is "Demo"** — the browser host's guest account
   (`infra/host-account/guest`), so Pages reads "Demo's pages". No fictional
@@ -282,7 +285,7 @@ data and seed; no app folder changes:
 
 ## Plugin reference
 
-- Description: The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
+- Description: The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-1760000000-demo02 and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:

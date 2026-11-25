@@ -258,6 +258,12 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     }
   });
 
+  test("the demo opens at the practice-timer story's conversation", () => {
+    expect(DEMO_CONVERSATION_ID).toBe(
+      demoConversationId(demoStoryByKey("practice-timer")),
+    );
+  });
+
   test("the queue holds the live conversations, the done list the finished ones", async () => {
     const active = (await loadResourceByKey(
       "conversations-active.v2",
@@ -265,13 +271,13 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     )) as Row[];
     const live = DEMO_STORIES.filter((s) => s.status !== "done");
     expect(active.map((r) => r.id).sort()).toEqual(
-      live.map((s) => `conv-demo-${s.key}`).sort(),
+      live.map(demoConversationId).sort(),
     );
     const ranked = await db.execute<{ id: string }>(
       sql`SELECT parent_id AS id FROM conversations_ext_queue`,
     );
     expect(ranked.rows.map((r) => r.id).sort()).toEqual(
-      live.map((s) => `conv-demo-${s.key}`).sort(),
+      live.map(demoConversationId).sort(),
     );
   });
 
@@ -319,7 +325,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
 
   test("every story's session reads as a real one: several turns, tool calls, an ending for its state", async () => {
     for (const story of DEMO_STORIES) {
-      const events = await openConversationEvents(`conv-demo-${story.key}`);
+      const events = await openConversationEvents(demoConversationId(story));
       const calls = events.filter((e) => e.kind === "tool-call");
       expect(events[0]?.kind).toBe("user-text");
       expect(calls.length).toBeGreaterThanOrEqual(3);
@@ -366,22 +372,26 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       expect(answer.text).toContain(pair.id);
     }
     // The recipes session ENDS on its pair: the last call it makes.
-    const recipes = (await openConversationEvents("conv-demo-recipes")).filter(
-      (e): e is ToolCallEvent => e.kind === "tool-call",
-    );
+    const recipes = (
+      await openConversationEvents(
+        demoConversationId(demoStoryByKey("recipes")),
+      )
+    ).filter((e): e is ToolCallEvent => e.kind === "tool-call");
     expect(recipes.at(-1)?.toolUseId).toBe(DEMO_RECIPES_BEFORE_AFTER.toolUseId);
   });
 
   test("the weekly-review agent's Journal read is the real tool's", async () => {
     const [readJournal] = (
-      await openConversationEvents("conv-demo-weekly-review")
+      await openConversationEvents(
+        demoConversationId(demoStoryByKey("weekly-review")),
+      )
     ).filter(
       (e): e is ToolCallEvent =>
         e.kind === "tool-call" && (e.name ?? "").endsWith("read_page"),
     );
     const reread = await pageTools.read(
       { block_id: DEMO_PAGE_IDS.journal },
-      { conversationId: "conv-demo-weekly-review" },
+      { conversationId: demoConversationId(demoStoryByKey("weekly-review")) },
     );
     expect(readJournal!.result?.content).toBe(reread.content[0].text);
   });
