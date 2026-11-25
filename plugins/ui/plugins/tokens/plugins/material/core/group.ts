@@ -46,6 +46,16 @@ export const materialGroup = defineTokenGroup("material", {
     label: "Floating chrome border",
   },
   floatSheen: { default: "none", label: "Floating chrome sheen" },
+  // The fill of an overlay that IS its whole window (a companion's panel —
+  // the menu-bar tray, the extension popup: `bg-window-fill`). Its own token,
+  // not `popoverFill`: over a transparent system material (macOS vibrancy)
+  // the window is the panel, so a theme clears this fill — while the menus
+  // and popovers that open inside the panel stay as solid as everywhere.
+  // Default = the popover's fill.
+  windowFill: {
+    default: "var(--popover-fill)",
+    label: "Window panel fill",
+  },
 });
 
 export type MaterialTokenValues = {

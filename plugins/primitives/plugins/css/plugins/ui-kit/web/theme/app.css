@@ -109,6 +109,10 @@
        overlay surface role's background. Default = `--popover`; a frosted
        theme makes it translucent while `--popover` stays opaque. */
     --color-popover-fill: var(--popover-fill);
+    /* An overlay that is its whole window (material group, `bg-window-fill`:
+       a companion's panel). Default = the popover fill; a theme over a
+       transparent system material clears it, never the popovers inside. */
+    --color-window-fill: var(--window-fill);
     /* Floating chrome's fill (material group, `bg-float-fill`) — the float
        surface role's background: the card, barely translucent by default. */
     --color-float-fill: var(--float-fill);

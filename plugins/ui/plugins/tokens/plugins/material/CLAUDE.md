@@ -17,6 +17,14 @@ floating chrome over content — a toolbar card, a dock — never a menu):
 - `floatBackdrop` (`--float-backdrop`, `backdrop-float`) — default
   `blur(20px) saturate(1.5)`.
 
+A third, read by an overlay that IS its whole window (a companion's panel —
+the menu-bar tray, the extension popup):
+
+- `windowFill` (`--window-fill`, `bg-window-fill`) — default
+  `var(--popover-fill)`. Over a transparent system material (macOS vibrancy)
+  the companion theme clears it, so the window's material is the panel —
+  while the popovers opening inside keep `popoverFill` and stay readable.
+
 A frosted theme (the Desktop's) sets the fill to a `color-mix` of the popover
 with transparent and the backdrop to `blur(…) saturate(…)`; every overlay
 opened in that theme's scope wears it. `popover` itself stays opaque: it also
@@ -40,7 +48,9 @@ buttons, `--chrome-mask`).
     - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-border`
-  - Tokens used by: `primitives/css/ui-kit`
+  - Tokens used by:
+    - `companions/panel`
+    - `primitives/css/ui-kit`
   - Imported by:
     - `apps/desktop/shell`
     - `apps/prototypes/shell`

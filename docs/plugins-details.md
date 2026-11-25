@@ -17974,6 +17974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/density --space-md`
+          - `ui/tokens/material --window-fill`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
@@ -54722,7 +54723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 389 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 390 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/data-view` ×105
               - `ui/tokens/density` ×92
               - `ui/tokens/color-palette` ×62
@@ -54733,7 +54734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/sidebar-metrics` ×12
               - `ui/tokens/categorical` ×11
               - `ui/tokens/sidebar-palette` ×9
-              - `ui/tokens/material` ×6
+              - `ui/tokens/material` ×7
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
@@ -71074,7 +71075,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --card`
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --popover-border`
-            - Tokens used by: `primitives/css/ui-kit`
+            - Tokens used by:
+              - `companions/panel`
+              - `primitives/css/ui-kit`
             - Imported by:
               - `apps/desktop/shell`
               - `apps/prototypes/shell`

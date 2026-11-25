@@ -38,7 +38,7 @@ const r = report("Menu-bar panel · transparent window material");
 await withBrowser(async (h) => {
   const { page } = await h.session({
     viewport: { width: WIDTH, height: HEIGHT },
-    colorScheme: "dark",
+    colorScheme: "light",
   });
   // The helper's bridge, as bridge.js defines it, answering for a macOS
   // material window; every other method is a no-op.
@@ -63,7 +63,7 @@ await withBrowser(async (h) => {
     { methods: [...BRIDGE_METHODS], radius: RADIUS },
   );
   await boot(page, pathUrl("/home/menu-bar?embed=1"), {
-    marker: "textarea[aria-label='Task']",
+    marker: "text=Fix, change or build anything…",
   });
   r.eq(
     "html carries data-window-material",
@@ -130,6 +130,23 @@ await withBrowser(async (h) => {
     return hits;
   });
   for (const line of opaque) r.note(`painted: ${line}`);
+
+  // A menu opened inside the panel keeps its own opaque fill: only the panel
+  // (the window's material) goes clear, never the popovers over its rows.
+  await page.getByRole("button", { name: /preprompt/i }).first().click();
+  const menu = page.locator("[role=listbox], [role=menu], [role=dialog]").last();
+  await menu.waitFor({ state: "visible" });
+  await page.screenshot({ path: `${OUT}-menu.png`, omitBackground: true });
+  r.note(`screenshot: ${OUT}-menu.png`);
+  const menuBg = await menu.evaluate((el) => {
+    // The fill is on the popup itself or on its positioner's surface.
+    for (let e: Element | null = el; e; e = e.parentElement) {
+      const bg = getComputedStyle(e).backgroundColor;
+      if (bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") return bg;
+    }
+    return "transparent";
+  });
+  r.eq("the menu inside the panel paints an opaque fill", menuBg, "rgb(246, 246, 248)");
 });
 
 await r.finish();

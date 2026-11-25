@@ -87,6 +87,7 @@ pick which companions they appear in.
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/density --space-md`
+    - `ui/tokens/material --window-fill`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:

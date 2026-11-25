@@ -49,8 +49,10 @@ export function CompanionPanel({
     <Clip fill style={style}>
       <Surface
         level="overlay"
-        // The host's window IS the panel: it owns the shadow.
-        className="size-full rounded-none shadow-none ring-0"
+        // The host's window IS the panel: it owns the shadow, and its fill is
+        // the window's (`bg-window-fill`) — clear over a system material,
+        // while the popovers opening inside keep the overlay's own fill.
+        className="size-full rounded-none bg-window-fill shadow-none ring-0"
       >
         <StatusLineProvider onAttention={onAttention}>
           <Scroll className="h-full">

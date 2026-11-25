@@ -175,7 +175,8 @@ const categorical = categoricalGroup.fragment(both(APP_TILE_PALETTE));
  * What a companion's window is made of, which decides how its panel paints:
  *
  * - `translucent` — a transparent system material (the menu bar's helper
- *   window, macOS vibrancy): light, the panel draws NO fill of its own. The
+ *   window, macOS vibrancy): light, the panel (`windowFill`, never the
+ *   popovers inside it) draws NO fill of its own. The
  *   prototype's `rgba(246,246,248,.86)` + blur is its CSS stand-in for macOS's
  *   menu material, which the helper's window already IS — painting the 86%
  *   fill on top stacked a second light layer and the panel read near-opaque
@@ -207,12 +208,14 @@ function companionThemeFor(
       typeScale,
       density,
       shape,
+      // Only the panel itself (`windowFill`) goes clear: the menus and
+      // popovers that open inside it keep the opaque `popoverFill` default —
+      // a transparent popover over the panel's rows is unreadable.
       materialGroup.fragment({
         light: {
-          popoverFill: material === "solid" ? "var(--popover)" : "transparent",
-          popoverBackdrop: "none",
+          windowFill: material === "solid" ? "var(--popover)" : "transparent",
         },
-        dark: { popoverFill: "var(--popover)", popoverBackdrop: "none" },
+        dark: { windowFill: "var(--popover)" },
       }),
       categorical,
     ],
