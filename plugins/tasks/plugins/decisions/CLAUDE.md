@@ -25,7 +25,7 @@ Needs you → Sent → FYI, newest first) whose rows expand inline into
 seen); a collapsed "N closed" row over the closed ones
 (`tasks.decisions.panel-closed`, each line its outcome); the SubmitBar
 scoped to the task. `whenSettled: "hide"` (the tray) draws nothing while no
-decision is open. Decisions are never drawn inline in the transcript: the
+decision waits on the user (none in Needs you or FYI: a Sent one waits on the agent). Decisions are never drawn inline in the transcript: the
 agent edits them after opening them, so they are shown live here.
 
 The row fields every decision list shares — the state dot and the drafted
@@ -59,9 +59,9 @@ field, so it filters, sorts and groups like a column) and `list_decisions`.
 | tab | when |
 |---|---|
 | `closed` | `state = closed` |
-| `sent` | an answer not consumed yet, or `state = other` |
+| `sent` | an answer not consumed yet, a question not replied to, or `state = other` |
 | `fyi` | `state = fyi` |
-| `needs` | otherwise (a pending question keeps it here) |
+| `needs` | otherwise |
 
 ## Live reads
 
@@ -151,8 +151,8 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   task and what it says, so a resent request records nothing twice.
   - A pick (+ note) → an `answer` exchange: the decision is **Sent** until
     the agent's next `update_decision` consumes it.
-  - A note alone → a `question`: the decision stays in **Needs you** until the
-    agent replies (`update_decision({ reply })`).
+  - A note alone → a `question`: the decision is **Sent** too until the
+    agent replies (`update_decision({ reply })`), then back in **Needs you**.
   - **A finished agent** (latest agent conversation `done` — `decisions.agent`,
     the task's agent: that conversation's id and whether it finished, the
     reading delivery takes) is never

@@ -43,7 +43,7 @@ export const decisionsListServeOptions = {
   joins,
   columns: {
     tab: (j) =>
-      expr(decisionTabSql(j.base.state, j.facts.unconsumedAnswers), {
+      expr(decisionTabSql(j.base.state, j.facts), {
         decoder: parsed(z.enum(DECISION_TABS), "decisions.tab"),
         sqlType: "text",
         notNull: true,

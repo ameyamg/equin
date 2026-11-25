@@ -50,16 +50,17 @@ type SqlOperand =
 
 /**
  * The inbox tab (`DECISION_TABS`, core) of a decision in `state` whose thread
- * holds `unconsumedAnswers` answers the agent has not acted on — the ONE
- * definition: the live window's `tab` and `list_decisions` both render it.
+ * holds `unconsumedAnswers` answers the agent has not acted on and
+ * `pendingQuestions` notes it has not replied to — the ONE definition: the
+ * live window's `tab` and `list_decisions` both render it.
  */
 export function decisionTabSql(
   state: SqlOperand,
-  unconsumedAnswers: SqlOperand,
+  facts: { unconsumedAnswers: SqlOperand; pendingQuestions: SqlOperand },
 ): SQL {
   return sql`(CASE
     WHEN ${state} = 'closed' THEN 'closed'
-    WHEN ${unconsumedAnswers} > 0 OR ${state} = 'other' THEN 'sent'
+    WHEN ${facts.unconsumedAnswers} > 0 OR ${facts.pendingQuestions} > 0 OR ${state} = 'other' THEN 'sent'
     WHEN ${state} = 'fyi' THEN 'fyi'
     ELSE 'needs' END)`;
 }

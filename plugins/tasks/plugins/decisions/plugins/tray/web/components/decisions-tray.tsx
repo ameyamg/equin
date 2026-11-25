@@ -7,7 +7,7 @@ import { decisionsPane } from "@plugins/tasks/plugins/decisions/plugins/inbox/we
 
 /**
  * The decisions this conversation's agent raised, above its composer: its
- * task's {@link TaskDecisionsPanel}, absent while none is open. Not drawn in
+ * task's {@link TaskDecisionsPanel}, absent while none waits on the user. Not drawn in
  * the transcript: the agent edits a decision after opening it, so the record
  * is shown live here, not as the tool call that opened it.
  */

@@ -62,6 +62,7 @@ const closedSource = liveDataSource(decisionsList, {
 /** What a task's decisions count, per derived tab. */
 interface Counts {
   needs: number;
+  fyi: number;
   /** Not closed: Needs you, Sent and FYI. */
   open: number;
   closed: number;
@@ -77,8 +78,9 @@ interface Counts {
  * outcome) expand into the decision and its thread; and the SubmitBar scoped
  * to the task.
  *
- * `whenSettled`: `"hide"` draws nothing while the task has no open decision
- * (the tray: nothing to answer, nothing over the composer); `"show"` draws
+ * `whenSettled`: `"hide"` draws nothing while no decision waits on the user
+ * — none in Needs you or FYI (the tray: nothing to answer, nothing over the
+ * composer; a Sent one waits on the agent); `"show"` draws
  * the panel whatever it holds (the page block).
  */
 export function TaskDecisionsPanel({
@@ -114,10 +116,13 @@ export function TaskDecisionsPanel({
     groups.data.find((g) => g.value === tab)?.count ?? 0;
   const counts: Counts = {
     needs: countOf("needs"),
+    fyi: countOf("fyi"),
     open: countOf("needs") + countOf("sent") + countOf("fyi"),
     closed: countOf("closed"),
   };
-  if (whenSettled === "hide" && counts.open === 0) return null;
+  // Sent decisions wait on the agent: the tray stays away until the agent
+  // acts on them (an update or a reply brings one back to Needs you).
+  if (whenSettled === "hide" && counts.needs + counts.fyi === 0) return null;
   const { open, triggerProps, contentProps } = collapsible;
   return (
     <Text as="div" variant="caption">

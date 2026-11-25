@@ -12,8 +12,8 @@
  *     the second — and reloads: the drafts survive;
  *  4. the SubmitBar says "2 of N answered" and Submit sends them;
  *  5. one event turn per agent is recorded (two turns), the first decision
- *     carries an `answer` and moves to Sent, the second a `question` and
- *     stays in Needs you;
+ *     carries an `answer`, the second a `question`, and both leave Needs you
+ *     for Sent (the ball is with the agent until it acts or replies);
  *  6. screenshots the inbox (`<out>-before.png`, `<out>-after.png`).
  *
  * The seeds are deleted at the end (also on failure). Refuses main.
@@ -167,6 +167,18 @@ try {
       hint.match(/\d+( of \d+)? answered[^\n]*/)?.[0] ?? "(no hint)",
     );
 
+    // The Needs you tab's own count (the open detail pane keeps showing the
+    // second decision's question, so the page's text can't tell).
+    const needsCount = async () => {
+      const chip = await page
+        .getByRole("button", { name: /^Needs you/ })
+        .first()
+        .innerText();
+      const n = /\d+/.exec(chip);
+      if (n === null) throw new Error(`Needs you chip has no count: ${chip}`);
+      return Number(n[0]);
+    };
+    const needsBefore = await needsCount();
     await page.getByTestId("decisions-submit").click();
 
     // One event turn per agent, recorded with its exchanges.
@@ -209,13 +221,15 @@ try {
       ].sort(),
     );
 
-    // The first moves to Sent; the second stays in Needs you.
-    const after = await waitFor(
-      () => bodyText(page),
-      (t) => !t.includes(one.question) && t.includes(two.question),
-      { timeoutMs: 30_000 },
+    // Both leave Needs you: nothing is left for the user to act on.
+    const after = await waitFor(needsCount, (n) => n === needsBefore - 2, {
+      timeoutMs: 30_000,
+    });
+    r.ok(
+      "Needs you keeps neither the pick nor the question",
+      after.ok,
+      `Needs you ${needsBefore} → ${after.value}`,
     );
-    r.ok("Needs you keeps the question, not the pick", after.ok, "");
     const cleared = await page.getByTestId("decisions-submit").innerText();
     r.ok(
       "the drafts are cleared once taken",
@@ -225,10 +239,10 @@ try {
     await page.getByRole("button", { name: /^Sent/ }).first().click();
     const sent = await waitFor(
       () => bodyText(page),
-      (t) => t.includes(one.question),
+      (t) => t.includes(one.question) && t.includes(two.question),
       { timeoutMs: 30_000 },
     );
-    r.ok("the pick is in Sent", sent.ok, "");
+    r.ok("the pick and the question are in Sent", sent.ok, "");
     await snap(page, OUT, "after");
     await page.close();
     await r.finish();

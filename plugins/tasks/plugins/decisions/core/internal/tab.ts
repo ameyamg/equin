@@ -4,11 +4,11 @@
  * thread, and read by every surface:
  *
  * - `closed` → **Closed**;
- * - an `answer` the agent has not consumed yet, or `state = other` → **Sent**
- *   (the ball is with the agent);
+ * - an `answer` the agent has not consumed yet, a question (a note without a
+ *   pick) it has not replied to, or `state = other` → **Sent** (the ball is
+ *   with the agent: nothing to act on until it updates or replies);
  * - `fyi` → **FYI**;
- * - otherwise → **Needs you** (a question the agent has not replied to keeps
- *   it here: the user asked, the decision is still theirs).
+ * - otherwise → **Needs you**.
  *
  * Ordered: a window sorted by it reads Needs you first.
  */

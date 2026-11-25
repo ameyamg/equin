@@ -67,10 +67,10 @@ async function readDecisionsWhere(
       label: d.label,
       state: d.state,
       stateLabel: d.stateLabel,
-      tab: decisionTabSql(
-        sql`${d.state}`,
-        sql`COALESCE(${f.unconsumedAnswers}, 0)`,
-      ).mapWith(String),
+      tab: decisionTabSql(sql`${d.state}`, {
+        unconsumedAnswers: sql`COALESCE(${f.unconsumedAnswers}, 0)`,
+        pendingQuestions: sql`COALESCE(${f.pendingQuestions}, 0)`,
+      }).mapWith(String),
       question: d.question,
       body: d.body,
       options: d.options,

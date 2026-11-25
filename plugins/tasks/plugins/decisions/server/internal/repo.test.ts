@@ -125,7 +125,7 @@ describe("decisions: the inbox tab", () => {
           "recorded",
         ] as const) {
           const expected: DecisionTab =
-            state === "other" || kind === "answer"
+            state === "other" || kind === "answer" || kind === "question"
               ? "sent"
               : state === "fyi"
                 ? "fyi"

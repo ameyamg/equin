@@ -752,10 +752,10 @@ export async function listTaskDecisions(
   const d = _decisions;
   const f = _decisionExchangeFacts;
   const x = _decisionExchanges;
-  const tab = decisionTabSql(
-    sql`${d.state}`,
-    sql`COALESCE(${f.unconsumedAnswers}, 0)`,
-  );
+  const tab = decisionTabSql(sql`${d.state}`, {
+    unconsumedAnswers: sql`COALESCE(${f.unconsumedAnswers}, 0)`,
+    pendingQuestions: sql`COALESCE(${f.pendingQuestions}, 0)`,
+  });
   const rows = await executeRows(exec, {
     row: ListedSchema,
     label: "decisions.list-task",
