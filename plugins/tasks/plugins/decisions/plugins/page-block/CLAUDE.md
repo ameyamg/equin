@@ -24,12 +24,20 @@ decisions. Design: `research/2026-11-24-agent-decisions.md` §7.
 - **In `read_page`** the block projects per reader (`Editor.BlockProjection`,
   `server/internal/projection.ts`; the read's `reader` is agent-access's
   conversation):
-  - another agent reads every decision in full, read-only, as the tag's
-    derived body — per decision a `<decision …>` line (id, label, state,
-    where it stands, opened, question, from, outcome, closed), its body
-    QUOTED (`> ` per line, so a fence or a closing tag in it stays inert), its
-    options (`<option key="A" text="…" recommended="true"/>`, attribute-quoted), its thread (`<exchange …/>`), then
-    `</decision>`;
+  - another agent reads the task's decisions BOUNDED, read-only, as the
+    tag's derived body (`decisions="4 open, 3 closed"`, `shown="excerpts — …"`):
+    the open ones most pressing first (Needs you, Sent, FYI; then the oldest)
+    as a `<decision …>` line (id, label, state, where it stands, opened,
+    question, from, `thread="N"`), its body cut to one quoted line of
+    `BODY_EXCERPT_CHARS` (240), its options (`<option key="A" text="…"
+    recommended="true"/>`), then `</decision>` — while they fit in
+    `DETAIL_CHARS` (8k); the `RECENT_CLOSED` (5) latest closed as one line
+    each (question and outcome cut); every other decision as an index line
+    `<decision id="dec-…" label="D7" state="closed"/>`. Every id is on the
+    page and `read_decision` (tasks/decisions) returns any one in full —
+    body, options, thread. A task at the record's caps projects under 30k
+    chars (`projection.test.ts`); the bounds and why are on
+    `server/internal/projection.ts`;
   - the agent whose own task it is reads one stub:
     `<task-decisions title="…" own="4 open, 3 closed" task="task-…"/>` — it has
     its tool results, the answer turns and `list_decisions`;
@@ -43,7 +51,7 @@ decisions. Design: `research/2026-11-24-agent-decisions.md` §7.
 
 ## Plugin reference
 
-- Description: The <task-decisions task="task-…"/> page block: one task's decisions on a page, drawn as the conversation tray draws them (TaskDecisionsPanel, shown even while none is open) and answered in place with the inbox's drafts and Submit. Inserted by /decisions (a picker over the tasks, the latest edited first), or written by an agent with edit_page; a deleted task reads "task deleted". The <task-decisions task="task-…"/> page block, server half: registers its data schema at the write boundary; projects it per reader for read_page (the task's title, then every decision in full — label, state, where it stands, question, quoted body, options, thread, outcome — as <decision> lines to any other agent, and the one-line own="N open, M closed" stub to the agent whose task it is; missing="task deleted" when the task is gone), both read-only and discarded on parse, so the block round-trips through edit_page; and refuses a markdown apply minting or re-pointing one at a task that does not exist.
+- Description: The <task-decisions task="task-…"/> page block: one task's decisions on a page, drawn as the conversation tray draws them (TaskDecisionsPanel, shown even while none is open) and answered in place with the inbox's drafts and Submit. Inserted by /decisions (a picker over the tasks, the latest edited first), or written by an agent with edit_page; a deleted task reads "task deleted". The <task-decisions task="task-…"/> page block, server half: registers its data schema at the write boundary; projects it per reader for read_page (the task's title, then its decisions bounded to any other agent — the open ones as <decision> lines with a one-line body excerpt and options while they fit in 8k chars, the 5 latest closed as one line each, every other one an index line naming its id, which read_decision returns in full — and the one-line own="N open, M closed" stub to the agent whose task it is; missing="task deleted" when the task is gone), both read-only and discarded on parse, so the block round-trips through edit_page; and refuses a markdown apply minting or re-pointing one at a task that does not exist.
 - Web:
   - Contributes: `Editor.Block` "task-decisions" → `TaskDecisionsBlock`
   - Uses:
@@ -74,9 +82,11 @@ decisions. Design: `research/2026-11-24-agent-decisions.md` §7.
     - `page.block-reference-check` "task-decisions"
   - Uses:
     - `page/editor.Editor`
+    - `tasks/decisions.decisionAttrs`
     - `tasks/decisions.existingTaskIds`
     - `tasks/decisions.FullDecision`
-    - `tasks/decisions.FullExchange`
+    - `tasks/decisions.optionLines`
+    - `tasks/decisions.quotedLines`
     - `tasks/decisions.readTaskDecisionsInFull`
     - `tasks/decisions.TaskDecisionsRead`
     - `tasks/tasks-core.getConversation`

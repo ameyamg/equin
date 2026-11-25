@@ -12,9 +12,12 @@ import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capabili
 import {
   DECISION_OPTIONS_MAX,
   DECISION_STATES,
+  decisionIdKind,
   OPEN_DECISION_STATES,
 } from "../../core";
 import { DECISION_HISTORY_SOURCE } from "./history";
+import { readDecisionInFull } from "./full-read";
+import { decisionLines } from "./full-render";
 import { renderDecisionList } from "./render";
 import {
   countClosed,
@@ -224,5 +227,26 @@ export const listDecisionsTool = Mcp.tool({
       all === true ? Promise.resolve(0) : countClosed(db, caller.taskId),
     ]);
     return text(renderDecisionList(rows, { hiddenClosed: closed }));
+  },
+});
+
+export const readDecisionTool = Mcp.tool({
+  name: "read_decision",
+  description:
+    "Read one decision in full — any task's: its question, where it stands, its whole body, its options and its thread, as `<decision>` lines. A page's `<task-decisions>` block shows each decision as an excerpt naming its id; pass that id here. Read-only.",
+  inputSchema: {
+    decision: z.string().min(1).describe('The decision\'s id ("dec-…").'),
+  },
+  async handler({ decision }) {
+    if (!decisionIdKind.is(decision))
+      return text(
+        `${decision} is not a decision id: pass the \`dec-…\` id a \`<decision id="…">\` line shows.`,
+      );
+    const read = await readDecisionInFull(decision);
+    if (read === null)
+      return text(
+        `${decision} names no decision: pass the id a \`<decision id="dec-…">\` line shows.`,
+      );
+    return text(decisionLines(read).join("\n"));
   },
 });

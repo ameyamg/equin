@@ -37,7 +37,7 @@ export const taskDecisionsBlock = defineBlock({
     tag: {
       name: "task-decisions",
       body: "derived",
-      annotated: ["title", "own", "missing"],
+      annotated: ["title", "own", "decisions", "shown", "missing"],
       attrs: (data) => ({ task: data.taskId }),
       parseAttrs: (attrs) => {
         const task = attrs.task ?? "";

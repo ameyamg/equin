@@ -1,7 +1,7 @@
 /**
  * `<task-decisions>` through the agent page tools: the same page read by the
  * agent whose task owns the decisions (one stub line) and by another agent
- * (every decision in full), both round-tripping through `edit_page` with the
+ * (each decision's excerpt), both round-tripping through `edit_page` with the
  * block untouched; and a document minting one at a task that does not exist
  * refused with nothing written.
  *
@@ -26,6 +26,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { db } from "@plugins/database/server";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { pageTools } from "@plugins/page/plugins/annotations/plugins/agent-access/server";
+import { FULL_READ_HINT } from "./projection";
 
 setDefaultTimeout(300_000);
 
@@ -145,7 +146,7 @@ describe.if(IN_CHILD)("<task-decisions> through the page tools", () => {
     }
   });
 
-  test("the owner reads one stub line; another agent every decision in full", async () => {
+  test("the owner reads one stub line; another agent each decision's excerpt", async () => {
     const own = await textOf(OWNER);
     expect(own).toContain(
       `<task-decisions title="Phase 5" own="1 open, 0 closed" task="${OWNER_TASK}"/>`,
@@ -153,7 +154,7 @@ describe.if(IN_CHILD)("<task-decisions> through the page tools", () => {
     expect(own).not.toContain("<decision ");
     const other = await textOf(OTHER);
     expect(other).toContain(
-      `<task-decisions title="Phase 5" task="${OWNER_TASK}">`,
+      `<task-decisions title="Phase 5" decisions="1 open, 0 closed" shown="${FULL_READ_HINT}" task="${OWNER_TASK}">`,
     );
     expect(other).toContain(`<decision id="${DEC}" label="D1"`);
     expect(other).toContain("> Context.");

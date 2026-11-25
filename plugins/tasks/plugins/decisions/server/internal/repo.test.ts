@@ -28,6 +28,7 @@ import {
   type DecisionTab,
 } from "../../core";
 import type { ExchangeKind } from "../../core/internal/fields";
+import { readDecisionInFull } from "./full-read";
 import { renderDecisionList } from "./render";
 import {
   listTaskDecisions,
@@ -494,6 +495,26 @@ describe("decisions: list_decisions", () => {
     );
     expect(text).not.toContain("D2");
     expect(text).toContain("+1 closed");
+  });
+});
+
+describe("decisions: read_decision's read", () => {
+  test("any task's decision in full by id, with its task; an unknown id reads null", async () => {
+    const [full, missing, taskId] = await worktreeDbScenario(async (tx) => {
+      const c = await caller(tx);
+      const a = await open(tx, c, { body: "Context." });
+      await exchange(tx, a.id, "answer", { userText: "keep it short" });
+      return [
+        await readDecisionInFull(a.id, tx),
+        await readDecisionInFull("dec-1795560000-nonexx" as DecisionId, tx),
+        c.taskId,
+      ] as const;
+    });
+    expect(full?.taskId).toBe(taskId);
+    expect(full?.body).toBe("Context.");
+    expect(full?.tab).toBe("sent");
+    expect(full?.exchanges.map((e) => e.userText)).toEqual(["keep it short"]);
+    expect(missing).toBeNull();
   });
 });
 

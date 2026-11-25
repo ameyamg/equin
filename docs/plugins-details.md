@@ -48134,17 +48134,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 92 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 93 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×61
           - `apps` ×16
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×3
+          - `tasks` ×2
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `debug/slow-ops`
           - `network/live`
           - `reorder/node-types`
-          - `tasks/decisions/page-block`
         - Extended by:
           - `apps/pages/auto-icon` (table `page_blocks_ext_auto_icon`)
           - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
@@ -65088,7 +65088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/supervisor-roles/spend`
           - `tasks/task-triage`
           - `upstream`
-    - **`decisions`** — Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen; answering — the drafted answers (decisionDrafts: one browser-only kept work entry keyed by decision, shared by every surface; useDecisionDrafts' part(id) and submit), DecisionCard answered in place given a draft (options pick, a note or a question, Got it on an FYI, Close on a finished agent's decision, which says its answer will be kept, not sent), SubmitBar — the one sticky Submit (⌘↵) sending every drafted answer, N of M answered, how many go to agents and how many are only kept — and TaskDecisionsPanel, one task's decisions as the conversation tray and the page block draw them (a header folding it, open rows expanding inline into their card, a collapsed N closed row, the Submit scoped to the task); the row fields every decision list shares (the state dot, the drafted answer). The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open (a closed decision accepts only notes and replies unless the call reopens it); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
+    - **`decisions`** — Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen; answering — the drafted answers (decisionDrafts: one browser-only kept work entry keyed by decision, shared by every surface; useDecisionDrafts' part(id) and submit), DecisionCard answered in place given a draft (options pick, a note or a question, Got it on an FYI, Close on a finished agent's decision, which says its answer will be kept, not sent), SubmitBar — the one sticky Submit (⌘↵) sending every drafted answer, N of M answered, how many go to agents and how many are only kept — and TaskDecisionsPanel, one task's decisions as the conversation tray and the page block draw them (a header folding it, open rows expanding inline into their card, a collapsed N closed row, the Submit scoped to the task); the row fields every decision list shares (the state dot, the drafted answer). The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open (a closed decision accepts only notes and replies unless the call reopens it), and read_decision (any agent: one decision of any task in full — body, options, thread — by its id, what a page's <task-decisions> excerpt points to); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
       - Web:
         - Contributes:
           - `IdKinds.Kind` "dec"
@@ -65187,13 +65187,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_decisionExchanges`
           - `_decisions`
+          - `decisionAttrs`
           - `existingTaskIds`
+          - `optionLines`
+          - `quotedLines`
           - `readTaskDecisionsInFull`
         - Register:
           - `defineHistorySource('decision')`
           - `mcpTool('open_decision')`
           - `mcpTool('update_decision')`
           - `mcpTool('list_decisions')`
+          - `mcpTool('read_decision')`
         - Resources:
           - `decisions.agent-finished` (push)
           - `decisions.exchanges` (keyed)
@@ -65365,7 +65369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.useLive`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/badge.Badge`
-        - **`page-block`** — The <task-decisions task="task-…"/> page block: one task's decisions on a page, drawn as the conversation tray draws them (TaskDecisionsPanel, shown even while none is open) and answered in place with the inbox's drafts and Submit. Inserted by /decisions (a picker over the tasks, the latest edited first), or written by an agent with edit_page; a deleted task reads "task deleted". The <task-decisions task="task-…"/> page block, server half: registers its data schema at the write boundary; projects it per reader for read_page (the task's title, then every decision in full — label, state, where it stands, question, quoted body, options, thread, outcome — as <decision> lines to any other agent, and the one-line own="N open, M closed" stub to the agent whose task it is; missing="task deleted" when the task is gone), both read-only and discarded on parse, so the block round-trips through edit_page; and refuses a markdown apply minting or re-pointing one at a task that does not exist.
+        - **`page-block`** — The <task-decisions task="task-…"/> page block: one task's decisions on a page, drawn as the conversation tray draws them (TaskDecisionsPanel, shown even while none is open) and answered in place with the inbox's drafts and Submit. Inserted by /decisions (a picker over the tasks, the latest edited first), or written by an agent with edit_page; a deleted task reads "task deleted". The <task-decisions task="task-…"/> page block, server half: registers its data schema at the write boundary; projects it per reader for read_page (the task's title, then its decisions bounded to any other agent — the open ones as <decision> lines with a one-line body excerpt and options while they fit in 8k chars, the 5 latest closed as one line each, every other one an index line naming its id, which read_decision returns in full — and the one-line own="N open, M closed" stub to the agent whose task it is; missing="task deleted" when the task is gone), both read-only and discarded on parse, so the block round-trips through edit_page; and refuses a markdown apply minting or re-pointing one at a task that does not exist.
           - Web:
             - Contributes: `Editor.Block` "task-decisions" → `TaskDecisionsBlock`
             - Uses:
@@ -65396,9 +65400,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page.block-reference-check` "task-decisions"
             - Uses:
               - `page/editor.Editor`
+              - `tasks/decisions.decisionAttrs`
               - `tasks/decisions.existingTaskIds`
               - `tasks/decisions.FullDecision`
-              - `tasks/decisions.FullExchange`
+              - `tasks/decisions.optionLines`
+              - `tasks/decisions.quotedLines`
               - `tasks/decisions.readTaskDecisionsInFull`
               - `tasks/decisions.TaskDecisionsRead`
               - `tasks/tasks-core.getConversation`

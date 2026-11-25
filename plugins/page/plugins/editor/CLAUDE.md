@@ -2868,17 +2868,17 @@ mint a dangling one.
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×61
     - `apps` ×16
     - `reports` ×4
     - `active-data` ×3
     - `primitives` ×3
+    - `tasks` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `debug/slow-ops`
     - `network/live`
     - `reorder/node-types`
-    - `tasks/decisions/page-block`
   - Extended by:
     - `apps/pages/auto-icon` (table `page_blocks_ext_auto_icon`)
     - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
