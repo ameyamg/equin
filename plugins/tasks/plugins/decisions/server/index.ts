@@ -7,6 +7,7 @@ import {
   markDecisionSeenEndpoint,
 } from "../core";
 import { decisionsOpenCapability } from "./internal/capability";
+import { attachmentLinkContributions } from "./internal/attachment-links";
 import { decisionExchangeFacts } from "./internal/facts";
 import { decisionHistorySource } from "./internal/history";
 import { handleMarkDecisionSeen } from "./internal/seen";
@@ -44,6 +45,7 @@ export default {
     ...decisionExchangesServed.declare,
     DerivedTable(decisionExchangeFacts.rollup),
     decisionsOpenCapability,
+    ...attachmentLinkContributions,
   ],
   httpRoutes: {
     [markDecisionSeenEndpoint.route]: handleMarkDecisionSeen,

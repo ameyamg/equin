@@ -4,8 +4,13 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 /** The most answers one Submit carries. */
 export const ANSWERS_PER_SUBMIT_MAX = 200;
-/** The longest note the user may send with an answer, or as a question. */
-export const ANSWER_NOTE_MAX = 4_000;
+/**
+ * The longest note the user may send with an answer, or as a question. The
+ * note is written in the standard prompt field, so it carries what a prompt
+ * does: a `<ui-context>` chip alone is ~1.5 KB of markup, and attachment refs
+ * are markdown — room for a few of those beside the words.
+ */
+export const ANSWER_NOTE_MAX = 16_000;
 
 /**
  * One drafted answer, as Submit sends it:

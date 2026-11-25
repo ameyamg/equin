@@ -42,3 +42,7 @@ export type {
   SubmitAnswersBody,
   SubmitAnswersResponse,
 } from "./internal/answers";
+export {
+  decisionAttachmentLinks,
+  decisionAttachmentLinksEntityRef,
+} from "./internal/attachment-links";

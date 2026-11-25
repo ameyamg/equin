@@ -95,11 +95,11 @@ a hook conditionally inside one component.
     - `splitAttachmentRefs`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --space-2xs`
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×6
     - `page` ×6
+    - `tasks` ×4
     - `apps` ×3
-    - `tasks` ×3
     - `primitives` ×2
     - `screenshot` ×2
 - Exemptions:

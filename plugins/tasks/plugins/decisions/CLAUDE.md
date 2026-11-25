@@ -117,6 +117,15 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   kept-state's `keptEntry`), so a draft survives navigation and reloads and
   the inbox, the tray and the page block agree. A pick, a note or "Got it"
   only DRAFTS.
+- **The note is the standard prompt field** (`ComposerField`): a pasted,
+  dropped or picked image or file, and chips (`<ui-context>`, ids) work as in
+  any prompt, and the thread draws a note as a user turn is drawn
+  (`AttachmentText`). The draft's attachments are held by the draft itself
+  (paste-images' draft holds); once Submit takes a note, `takeNote`
+  (`machine/internal/take-note.ts`) links what it attached to the
+  decision (`decisions_attachments`, cascade) and hands the agent the note
+  with each attachment ref as its disk path. The record keeps the note as
+  written.
 - **One Submit** — `SubmitBar` (web), sticky at the foot of a list, ⌘↵ in
   its `region` (the panel whose drafts it sends, by focus only — shortcuts'
   regions: with two bars on one surface the one whose panel holds focus
@@ -173,15 +182,15 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   - Contributes:
     - `IdKinds.Kind` "dec"
     - `IdKinds.Kind` "dex"
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
     - `primitives/collapsible` ×3
-    - `primitives/css/ui-kit` ×3
     - `network/live/live-state` ×2
     - `network/live` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/kept-state` ×2
     - `primitives/shortcuts` ×2
     - `apps-core/tabs.useSurfaceShown`
@@ -201,6 +210,8 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `primitives/markdown.Markdown`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/text-editor/composer.ComposerField`
+    - `primitives/text-editor/paste-images.AttachmentText`
     - `shell/notifications.useToast`
   - Exports (types):
     - `DecisionDraft`
@@ -227,6 +238,8 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `ids.kind` "dec"
     - `ids.kind` "dex"
     - `resource.declare` "decisions.agent-finished"
+    - `resource.declare` "decisions.attachment-links"
+    - `resource.declare` "decisions.attachment-links:rows"
     - `resource.declare` "decisions.exchanges"
     - `resource.declare` "decisions.exchanges:rows"
     - `resource.declare` "decisions.list"
@@ -235,6 +248,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `resource.declare` "decisions.list:rows"
     - `derived-table` "decision_exchange_facts"
     - `mandateCapability` "decisions.open"
+    - `attachments.link` "decisions"
     - `conversations.stop-gate` "decisions.owed"
     - `exitCleanPrecondition` "decisions.unsettled"
   - Uses:
@@ -245,6 +259,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `history/engine.defineHistorySource`
     - `history/engine.recordVersion`
     - `ids.IdKinds`
+    - `infra/attachments.Attachments`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
@@ -259,6 +274,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `tasks/tasks-core.getConversation`
   - DB schema:
     - `plugins/tasks/plugins/decisions/server/internal/rollup-table.ts`
+    - `plugins/tasks/plugins/decisions/server/internal/schema-attachments.ts`
     - `plugins/tasks/plugins/decisions/server/internal/tables.ts`
   - Exports (types):
     - `FullDecision`
@@ -280,6 +296,8 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `mcpTool('read_decision')`
   - Resources:
     - `decisions.agent-finished` (push)
+    - `decisions.attachment-links` (keyed)
+    - `decisions.attachment-links:rows` (keyed, point)
     - `decisions.exchanges` (keyed)
     - `decisions.exchanges:rows` (keyed, point)
     - `decisions.list` (keyed, window)
@@ -293,26 +311,22 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `network/live.serveValue`
   - Routes: `POST /api/decisions/answers`
 - Core:
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ids` ×3
+    - `fields/text/config` ×2
+    - `fields` ×2
+    - `infra/attachments` ×2
+    - `network/live` ×2
+    - `tasks/task-ids` ×2
     - `conversations/turn-ledger.turnIdKind`
-    - `fields.FieldsRecord`
-    - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
-    - `ids.defineIdKind`
-    - `ids.idKindField`
-    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `network/live.liveCollection`
-    - `network/live.liveValue`
+    - `network/live/query-resource.compositeKey`
     - `packages/list-bound.cappedList`
-    - `tasks/task-ids.conversationIdKind`
-    - `tasks/task-ids.taskIdKind`
   - Exports (types):
     - `AnswerRefusalReason`
     - `DecisionAnswer`
@@ -336,6 +350,8 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `DECISION_TABS`
     - `decisionAgentFinished`
     - `DecisionAnswerSchema`
+    - `decisionAttachmentLinks`
+    - `decisionAttachmentLinksEntityRef`
     - `decisionExchangeFields`
     - `decisionExchangeIdKind`
     - `decisionExchanges`

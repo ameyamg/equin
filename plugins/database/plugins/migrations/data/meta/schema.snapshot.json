@@ -1,6 +1,6 @@
 {
-  "id": "cfc82e23-6c1c-4940-99dd-a09c08b59bc4",
-  "prevId": "6924fb60-929c-40f7-bf51-180f9081887e",
+  "id": "b377d3ba-1111-4a85-bdb2-9709a6cd8dc2",
+  "prevId": "cfc82e23-6c1c-4940-99dd-a09c08b59bc4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -21724,6 +21724,73 @@
       "compositePrimaryKeys": {
         "before_after_pairs_attachments_owner_id_attachment_id_pk": {
           "name": "before_after_pairs_attachments_owner_id_attachment_id_pk",
+          "columns": [
+            "owner_id",
+            "attachment_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.decisions_attachments": {
+      "name": "decisions_attachments",
+      "schema": "",
+      "columns": {
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "decisions_attachments_owner_id_decisions_id_fk": {
+          "name": "decisions_attachments_owner_id_decisions_id_fk",
+          "tableFrom": "decisions_attachments",
+          "tableTo": "decisions",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "decisions_attachments_attachment_id_attachments_id_fk": {
+          "name": "decisions_attachments_attachment_id_attachments_id_fk",
+          "tableFrom": "decisions_attachments",
+          "tableTo": "attachments",
+          "columnsFrom": [
+            "attachment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "decisions_attachments_owner_id_attachment_id_pk": {
+          "name": "decisions_attachments_owner_id_attachment_id_pk",
           "columns": [
             "owner_id",
             "attachment_id"

@@ -78,6 +78,7 @@ should look different wears a sub-theme over them — see the
     - `apps/agent-manager/welcome`
     - `apps/home/new-app`
     - `primitives/launch`
+    - `tasks/decisions`
     - `tasks/task-draft-form`
 - Sub-plugins:
   - **`picker-pill`** — Picker pill: a pill-shaped trigger reading `icon value(s) chevron` that opens one grouped menu. Several groups in one pill is the fused control — one trigger, one menu, one heading and one checked…

@@ -15,7 +15,8 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Textarea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
+import { AttachmentText } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import {
   keptField,
   type KeptPart,
@@ -282,16 +283,19 @@ function Answer({
   return (
     <Stack gap="xs">
       {agentLine}
-      <Textarea
+      {/* The standard prompt field: a pasted or dropped image or file, the
+          "+" picker, and chips (`<ui-context>`, ids) work as in any prompt. */}
+      <ComposerField
         keep={keptField(draft, "note")}
-        rows={2}
-        fitContent
+        minRows={2}
+        maxHeight="16rem"
+        namespace={`decision-note-${decision.id}`}
+        ariaLabel="Your note"
         placeholder={
           decision.state === "fyi"
             ? "Ask about this…"
             : "Add a note, or ask a question…"
         }
-        aria-label="Your note"
       />
       {canClose || d.close ? (
         <Stack direction="row" gap="sm" align="center">
@@ -367,23 +371,31 @@ function Thread({
   );
 }
 
-/** What the user said in an exchange (their pick, their note) — or null for an agent note. */
-function userLine(e: DecisionExchangeRow): string | null {
+/**
+ * What the user said in an exchange — the head (their pick, or what kind of
+ * note) and their note, drawn as the prompt field wrote it — or null for an
+ * agent note.
+ */
+function userSide(
+  e: DecisionExchangeRow,
+): { head: string; note: string | null } | null {
   switch (e.kind) {
     case "answer": {
       // The record's own rule (an answer is a pick): a row without one is a broken write.
       if (e.pick === null)
         throw new Error(`decision exchange ${e.id}: an answer without a pick`);
-      return e.userText === null
-        ? `You picked ${e.pick}`
-        : `You picked ${e.pick}: ${e.userText}`;
+      return { head: `You picked ${e.pick}`, note: e.userText };
     }
     case "recorded":
-      return e.pick === null
-        ? `You wrote (not sent): ${e.userText ?? ""}`
-        : `You picked ${e.pick} (not sent)${e.userText === null ? "" : `: ${e.userText}`}`;
+      return {
+        head:
+          e.pick === null
+            ? "You wrote (not sent)"
+            : `You picked ${e.pick} (not sent)`,
+        note: e.userText,
+      };
     case "question":
-      return `You asked: ${e.userText ?? ""}`;
+      return { head: "You asked", note: e.userText ?? "" };
     case "update":
       return null;
   }
@@ -397,7 +409,7 @@ function Exchange({
   exchange: DecisionExchangeRow;
   seenBefore: Date | null;
 }): ReactElement {
-  const user = userLine(e);
+  const user = userSide(e);
   const unseen =
     e.agentAt !== null && (seenBefore === null || e.agentAt > seenBefore);
   return (
@@ -412,7 +424,16 @@ function Exchange({
           </Text>
           {unseen ? <NewMark /> : null}
         </Stack>
-        {user !== null ? <Text variant="label">{user}</Text> : null}
+        {user !== null ? <Text variant="label">{user.head}</Text> : null}
+        {user !== null && user.note !== null ? (
+          <Text
+            as="div"
+            variant="body"
+            className="whitespace-pre-wrap break-words"
+          >
+            <AttachmentText text={user.note} />
+          </Text>
+        ) : null}
         {e.agentText !== null ? (
           <Markdown>{e.agentText}</Markdown>
         ) : e.kind === "question" ? (

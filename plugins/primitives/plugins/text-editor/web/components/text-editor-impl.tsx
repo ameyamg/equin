@@ -62,6 +62,8 @@ export interface TextEditorOptions {
   onSubmit?: () => void;
   submitMode?: "enter" | "cmd-enter" | "none";
   placeholder?: string;
+  /** The textbox's accessible name, where no visible label names it. */
+  ariaLabel?: string;
   disabled?: boolean;
   autoFocus?: boolean;
   className?: string;
@@ -85,6 +87,7 @@ export function TextEditor({
   onSubmit,
   submitMode = "cmd-enter",
   placeholder,
+  ariaLabel,
   disabled,
   autoFocus,
   className,
@@ -128,6 +131,7 @@ export function TextEditor({
     <LexicalComposer initialConfig={initialConfig}>
       <EditorShell
         placeholder={placeholder}
+        ariaLabel={ariaLabel}
         disabled={!!disabled}
         autoFocus={!!autoFocus}
         className={className}
@@ -205,6 +209,7 @@ function InitialSelectionPlugin({
 
 function EditorShell({
   placeholder,
+  ariaLabel,
   disabled,
   autoFocus,
   className,
@@ -213,6 +218,7 @@ function EditorShell({
   bottomSlot,
 }: {
   placeholder?: string;
+  ariaLabel: string | undefined;
   disabled: boolean;
   autoFocus: boolean;
   className?: string;
@@ -308,6 +314,7 @@ function EditorShell({
               // the sentence saying why it is disabled ("… isn't available in
               // this version of the app").
               role="textbox"
+              aria-label={ariaLabel}
               aria-disabled={disabled}
               aria-placeholder={placeholder ?? ""}
               placeholder={

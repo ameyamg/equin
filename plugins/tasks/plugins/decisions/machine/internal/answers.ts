@@ -36,6 +36,12 @@ export interface AnswerPorts {
   deliver(taskId: string, turn: EventTurn): Promise<EventDelivery>;
   /** A decision's record changed (closed): record its version. */
   recordVersion(decisionId: DecisionId): Promise<void>;
+  /**
+   * Take the note the user wrote on a decision (in the prompt field, so it
+   * may reference attachments): keep what it attached with the decision and
+   * answer the note as its agent reads it.
+   */
+  takeNote(decisionId: DecisionId, note: string): Promise<string>;
 }
 
 /** Whether the exchanges of `turnId` committed (its turn was recorded). */
@@ -109,8 +115,15 @@ const escapeText = (s: string): string =>
 const escapeAttr = (s: string): string =>
   escapeText(s).replaceAll('"', "&quot;");
 
-/** The event turn one agent reads: every answer and question of the batch that is its. */
-export function answerTurnText(answers: readonly Checked[]): string {
+/**
+ * The event turn one agent reads: every answer and question of the batch that
+ * is its, each note as the agent reads it (`agentNotes`, from `takeNote`:
+ * attachment refs as disk paths).
+ */
+export function answerTurnText(
+  answers: readonly Checked[],
+  agentNotes: ReadonlyMap<DecisionId, string>,
+): string {
   const picks = answers.filter((a) => a.pick !== null).length;
   const questions = answers.length - picks;
   const head =
@@ -120,14 +133,22 @@ export function answerTurnText(answers: readonly Checked[]): string {
         ? `The user asked about ${answers.length === 1 ? "1 of your decisions" : `${answers.length} of your decisions`}:`
         : `The user answered ${picks} and asked about ${questions} of your decisions:`;
   const lines = answers.map((a) => {
+    let note: string | null = null;
+    if (a.note !== null) {
+      note = agentNotes.get(a.target.id) ?? null;
+      if (note === null)
+        throw new Error(
+          `decisions.answers: ${a.target.id}'s note was never taken`,
+        );
+    }
     const attrs = `decision="${a.target.id}" label="${escapeAttr(a.target.label)}"`;
     if (a.pick !== null) {
       const open = `<decision-answer ${attrs} pick="${escapeAttr(a.pick)}"`;
-      return a.note === null
+      return note === null
         ? `${open}/>`
-        : `${open}>${escapeText(a.note)}</decision-answer>`;
+        : `${open}>${escapeText(note)}</decision-answer>`;
     }
-    return `<decision-question ${attrs}>${escapeText(a.note ?? "")}</decision-question>`;
+    return `<decision-question ${attrs}>${escapeText(note ?? "")}</decision-question>`;
   });
   const how: string[] = [];
   if (picks > 0)
@@ -399,6 +420,12 @@ export async function submitAnswers(
     seen.add(a.decision);
   }
   const { checked, refused } = await checkAnswers(db, body.answers);
+  // Every note taken first — delivered or only kept, the thread shows it, so
+  // what it attached stays with the decision either way.
+  const agentNotes = new Map<DecisionId, string>();
+  for (const a of checked)
+    if (a.note !== null)
+      agentNotes.set(a.target.id, await ports.takeNote(a.target.id, a.note));
   const delivered: SubmitAnswersResponse["delivered"] = [];
   const recorded: string[] = [];
 
@@ -450,7 +477,7 @@ export async function submitAnswers(
       try {
         outcome = await ports.deliver(taskId, {
           id: turnId,
-          text: answerTurnText(batch),
+          text: answerTurnText(batch, agentNotes),
           onRecorded: (tx) => writeDelivered(tx, batch, turnId),
         });
       } catch (err) {

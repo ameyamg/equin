@@ -9,7 +9,7 @@
 
 export const serverContributors: Readonly<Record<string, readonly string[]>> = {
   "apps.website.crawlable.page": ["apps/plugins/website/plugins/live-demo","apps/plugins/website/plugins/pages/plugins/apps","apps/plugins/website/plugins/pages/plugins/download","apps/plugins/website/plugins/pages/plugins/foundations","apps/plugins/website/plugins/pages/plugins/privacy","apps/plugins/website/plugins/pages/plugins/story","apps/plugins/website/plugins/pages/plugins/vision","apps/plugins/website/plugins/shell"],
-  "attachments.link": ["apps/plugins/mail/plugins/mail-core","apps/plugins/sonata/plugins/library","conversations/plugins/agents","conversations/plugins/before-after","page/plugins/attachment-block","tasks/plugins/tasks-core"],
+  "attachments.link": ["apps/plugins/mail/plugins/mail-core","apps/plugins/sonata/plugins/library","conversations/plugins/agents","conversations/plugins/before-after","page/plugins/attachment-block","tasks/plugins/decisions","tasks/plugins/tasks-core"],
   "background.trigger-source": ["infra/plugins/events"],
   "backup-data-exclusion": ["apps/plugins/chord/plugins/song-index","apps/plugins/mail/plugins/mail-core","debug/plugins/latency-ledger","debug/plugins/op-rate","debug/plugins/trace/plugins/engine"],
   "backup.source": ["apps/plugins/chord/plugins/song-index","backup/plugins/sources/plugins/attachments","backup/plugins/sources/plugins/claude-settings","backup/plugins/sources/plugins/config","backup/plugins/sources/plugins/databases","backup/plugins/sources/plugins/platform","backup/plugins/sources/plugins/project-memory","backup/plugins/sources/plugins/prototypes","backup/plugins/sources/plugins/secrets","backup/plugins/sources/plugins/transcripts"],

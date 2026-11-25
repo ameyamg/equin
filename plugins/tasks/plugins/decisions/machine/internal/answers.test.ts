@@ -69,6 +69,7 @@ function fakeAgents(tx: DbExecutor, finished: ReadonlySet<string> = new Set()) {
   const turns: { taskId: string; turn: EventTurn }[] = [];
   const recordedIds = new Set<string>();
   const versions: string[] = [];
+  const notesTaken: string[] = [];
   const ports: AnswerPorts = {
     isFinished: async (taskId) => finished.has(taskId),
     async deliver(taskId, turn) {
@@ -93,8 +94,16 @@ function fakeAgents(tx: DbExecutor, finished: ReadonlySet<string> = new Set()) {
     recordVersion: async (id) => {
       versions.push(id);
     },
+    // The agent's copy of a note: an attachment ref read as its disk path.
+    takeNote: async (decisionId, note) => {
+      notesTaken.push(decisionId);
+      return note.replaceAll(
+        "![shot](/api/attachments/att-1)",
+        "@/disk/att-1.png",
+      );
+    },
   };
-  return { ports, turns, versions };
+  return { ports, turns, versions, notesTaken };
 }
 
 const SUBMISSION = "6f0d2a43-3c1b-4b8e-9c55-0d3f3a2b1c10";
@@ -383,21 +392,53 @@ describe("decisions: submitting answers", () => {
     });
   });
 
-  test("the turn text escapes what the user typed", () => {
-    const text = answerTurnText([
-      {
-        target: {
-          id: "dec-1" as DecisionId,
-          taskId: "task-1",
-          label: "D1",
-          state: "decision",
-          optionKeys: ["A"],
+  test("a note's attachments reach the agent as disk paths, and the record keeps the note as written", async () => {
+    await worktreeDbScenario(async (tx) => {
+      const a = await caller(tx, "Agent A");
+      const live = await open(tx, a);
+      const b = await caller(tx, "Agent B");
+      const kept = await open(tx, b);
+      const agents = fakeAgents(tx, new Set([b.taskId]));
+      const note = "like this ![shot](/api/attachments/att-1)";
+      await submitAnswers(
+        tx,
+        {
+          submissionId: SUBMISSION,
+          answers: [
+            { decision: live, pick: "A", note },
+            { decision: kept, pick: "A", note },
+          ],
         },
-        pick: "A",
-        note: "a <b> & c",
-        close: false,
-      },
-    ]);
+        agents.ports,
+      );
+      // Both notes taken — the kept one's attachments stay with its decision too.
+      expect(agents.notesTaken.sort()).toEqual([live, kept].sort());
+      const text = agents.turns[0]!.turn.text;
+      expect(text).toContain("like this @/disk/att-1.png");
+      expect(text).not.toContain("/api/attachments/");
+      expect((await exchangesOf(tx, live))[0]?.userText).toBe(note);
+      expect((await exchangesOf(tx, kept))[0]?.userText).toBe(note);
+    });
+  });
+
+  test("the turn text escapes what the user typed", () => {
+    const text = answerTurnText(
+      [
+        {
+          target: {
+            id: "dec-1" as DecisionId,
+            taskId: "task-1",
+            label: "D1",
+            state: "decision",
+            optionKeys: ["A"],
+          },
+          pick: "A",
+          note: "a <b> & c",
+          close: false,
+        },
+      ],
+      new Map([["dec-1" as DecisionId, "a <b> & c"]]),
+    );
     expect(text).toContain("a &lt;b&gt; &amp; c");
     expect(text).toStartWith("The user answered 1 of your decisions:");
   });

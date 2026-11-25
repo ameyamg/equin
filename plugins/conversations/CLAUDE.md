@@ -170,6 +170,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `QuestionHolds`
     - `readConversationTurns`
     - `requestStatusReconcile`
+    - `resolveAttachmentRefs`
     - `resolvePromptAttachments`
     - `ResumeBlockedError`
     - `resumeConversation`
@@ -304,9 +305,9 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×62
-    - `tasks` ×10
+    - `tasks` ×11
     - `apps` ×6
     - `infra` ×3
     - `review` ×3

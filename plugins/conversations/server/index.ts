@@ -80,7 +80,10 @@ export type {
   StopResult,
 } from "./internal/runtime";
 export { submitTurn } from "./internal/turns";
-export { resolvePromptAttachments } from "./internal/resolve-prompt-attachments";
+export {
+  resolveAttachmentRefs,
+  resolvePromptAttachments,
+} from "./internal/resolve-prompt-attachments";
 export type { SubmitOutcome, TurnSubmission } from "./internal/turns";
 export { requestStatusReconcile } from "./internal/status-reconciler";
 export { QuestionHolds } from "./internal/question-hold";

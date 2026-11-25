@@ -18256,6 +18256,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `QuestionHolds`
       - `readConversationTurns`
       - `requestStatusReconcile`
+      - `resolveAttachmentRefs`
       - `resolvePromptAttachments`
       - `ResumeBlockedError`
       - `resumeConversation`
@@ -18390,9 +18391,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 91 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 92 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×62
-      - `tasks` ×10
+      - `tasks` ×11
       - `apps` ×6
       - `infra` ×3
       - `review` ×3
@@ -36806,11 +36807,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attachmentsEntityRef`
           - `getAttachmentFile`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/attachments/REFERENCE.md`](../plugins/infra/plugins/attachments/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/attachments/REFERENCE.md`](../plugins/infra/plugins/attachments/REFERENCE.md)
           - `apps` ×8
           - `page` ×6
+          - `tasks` ×4
           - `conversations` ×3
-          - `tasks` ×3
           - `screenshot` ×2
           - `backup/sources/attachments`
           - `debug/read-set`
@@ -60355,6 +60356,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/agent-manager/welcome`
               - `apps/home/new-app`
               - `primitives/launch`
+              - `tasks/decisions`
               - `tasks/task-draft-form`
           - Plugins:
             - **`picker-pill`** — Picker pill: a pill-shaped trigger reading `icon value(s) chevron` that opens one grouped menu. Several groups in one pill is the fused control — one trigger, one menu, one heading and one checked row per group.
@@ -60546,11 +60548,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `splitAttachmentRefs`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-2xs`
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md)
               - `conversations` ×6
               - `page` ×6
+              - `tasks` ×4
               - `apps` ×3
-              - `tasks` ×3
               - `primitives` ×2
               - `screenshot` ×2
           - Exemptions:
@@ -65179,15 +65181,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "dec"
           - `IdKinds.Kind` "dex"
-        - Uses: 42 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+        - Uses: 43 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
           - `primitives/data-view` ×4
           - `primitives/collapsible` ×3
-          - `primitives/css/ui-kit` ×3
           - `network/live/live-state` ×2
           - `network/live` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/text` ×2
+          - `primitives/css/ui-kit` ×2
           - `primitives/kept-state` ×2
           - `primitives/shortcuts` ×2
           - `apps-core/tabs.useSurfaceShown`
@@ -65207,6 +65209,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/markdown.Markdown`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/relative-time.RelativeTime`
+          - `primitives/text-editor/composer.ComposerField`
+          - `primitives/text-editor/paste-images.AttachmentText`
           - `shell/notifications.useToast`
         - Exports (types):
           - `DecisionDraft`
@@ -65233,6 +65237,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.kind` "dec"
           - `ids.kind` "dex"
           - `resource.declare` "decisions.agent-finished"
+          - `resource.declare` "decisions.attachment-links"
+          - `resource.declare` "decisions.attachment-links:rows"
           - `resource.declare` "decisions.exchanges"
           - `resource.declare` "decisions.exchanges:rows"
           - `resource.declare` "decisions.list"
@@ -65241,6 +65247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "decisions.list:rows"
           - `derived-table` "decision_exchange_facts"
           - `mandateCapability` "decisions.open"
+          - `attachments.link` "decisions"
           - `conversations.stop-gate` "decisions.owed"
           - `exitCleanPrecondition` "decisions.unsettled"
         - Uses:
@@ -65251,6 +65258,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history/engine.defineHistorySource`
           - `history/engine.recordVersion`
           - `ids.IdKinds`
+          - `infra/attachments.Attachments`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
@@ -65265,6 +65273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.getConversation`
         - DB schema:
           - `plugins/tasks/plugins/decisions/server/internal/rollup-table.ts`
+          - `plugins/tasks/plugins/decisions/server/internal/schema-attachments.ts`
           - `plugins/tasks/plugins/decisions/server/internal/tables.ts`
         - Exports (types):
           - `FullDecision`
@@ -65286,6 +65295,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mcpTool('read_decision')`
         - Resources:
           - `decisions.agent-finished` (push)
+          - `decisions.attachment-links` (keyed)
+          - `decisions.attachment-links:rows` (keyed, point)
           - `decisions.exchanges` (keyed)
           - `decisions.exchanges:rows` (keyed, point)
           - `decisions.list` (keyed, window)
@@ -65299,26 +65310,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
         - Routes: `POST /api/decisions/answers`
       - Core:
-        - Uses:
+        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+          - `ids` ×3
+          - `fields/text/config` ×2
+          - `fields` ×2
+          - `infra/attachments` ×2
+          - `network/live` ×2
+          - `tasks/task-ids` ×2
           - `conversations/turn-ledger.turnIdKind`
-          - `fields.FieldsRecord`
-          - `fields.nullable`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
-          - `fields/text/config.enumTextField`
-          - `fields/text/config.textField`
-          - `ids.defineIdKind`
-          - `ids.idKindField`
-          - `ids.IdOf`
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
-          - `network/live.liveCollection`
-          - `network/live.liveValue`
+          - `network/live/query-resource.compositeKey`
           - `packages/list-bound.cappedList`
-          - `tasks/task-ids.conversationIdKind`
-          - `tasks/task-ids.taskIdKind`
         - Exports (types):
           - `AnswerRefusalReason`
           - `DecisionAnswer`
@@ -65342,6 +65349,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DECISION_TABS`
           - `decisionAgentFinished`
           - `DecisionAnswerSchema`
+          - `decisionAttachmentLinks`
+          - `decisionAttachmentLinksEntityRef`
           - `decisionExchangeFields`
           - `decisionExchangeIdKind`
           - `decisionExchanges`
