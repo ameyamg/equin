@@ -17372,21 +17372,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-draft-form.DraftPageProvider`
               - `tasks/task-draft-form.NO_DRAFT_PAGE`
               - `wish.WishField`
-    - **`panel`** — The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere; PanelTile the one icon tile a row leads with (a glyph on a gradient squircle of one categorical colour), so tiles match too. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
+    - **`panel`** — The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere; PanelTile the one icon tile a row leads with (a glyph on a squircle of one categorical colour, lit from the top-left), so tiles match too. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
       - Web:
         - Slots: `Companion.Status`
         - Slot contributors: `Companion.Status` ← `conversations.companion-status`
         - Contributes:
           - `ThemeEngine.Theme` "Companion (solid)"
           - `ThemeEngine.Theme` "Companion"
-        - Uses: 21 symbols — full list in [`plugins/companions/plugins/panel/REFERENCE.md`](../plugins/companions/plugins/panel/REFERENCE.md)
-          - `primitives/css/spacing` ×3
-          - `primitives/avatar` ×2
+        - Uses:
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.insetClass`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
@@ -17396,6 +17397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/loading.Loading`
           - `primitives/slot-render.defineRenderSlot`
           - `shell/toast.useSuppressToasts`
+          - `ui/icons.Icon`
           - `ui/logo.Logo`
           - `ui/theme-engine.ThemeEngine`
         - Exports (types):
@@ -17410,6 +17412,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PanelTile`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/categorical --categorical-1`
+          - `ui/tokens/categorical --categorical-10`
+          - `ui/tokens/categorical --categorical-2`
+          - `ui/tokens/categorical --categorical-3`
+          - `ui/tokens/categorical --categorical-4`
+          - `ui/tokens/categorical --categorical-5`
+          - `ui/tokens/categorical --categorical-6`
+          - `ui/tokens/categorical --categorical-7`
+          - `ui/tokens/categorical --categorical-8`
+          - `ui/tokens/categorical --categorical-9`
+          - `ui/tokens/categorical --categorical-foreground`
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/density --space-md`
@@ -51821,7 +51834,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `apps/mail/reading-pane`
           - `code-explorer/commit-detail`
-          - `companions/panel`
           - `conversations/agents`
           - `conversations/conversation-category`
           - `conversations/conversation-ui/item`
@@ -68277,7 +68289,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 612 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 613 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×124
           - `primitives` ×54
@@ -68289,8 +68301,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×13
           - `active-data` ×11
           - `apps-core` ×8
+          - `companions` ×8
           - `infra` ×8
-          - `companions` ×7
           - `auth` ×6
           - `config_v2` ×6
           - `shell` ×6
@@ -69506,13 +69518,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `CategoricalTokenValues`
             - Exports (values): `categoricalGroup`
           - Cross-plugin:
-            - Tokens used by: 33 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
+            - Tokens used by: 34 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
               - `debug` ×10
               - `conversations` ×7
               - `apps` ×6
               - `plugin-meta` ×4
               - `primitives` ×2
               - `build/build-profiling`
+              - `companions/panel`
               - `page/place/map-layer`
               - `review/plugin-changes/api-changes`
               - `tasks/task-graph`

@@ -1,0 +1,62 @@
+/*
+ * The panel's row tile: a squircle of one categorical slot (`--tile`), lit
+ * from the top-left — the slot lifted toward white running into it deepened
+ * toward black, at 135° — under a hairline rim and a 1–2px contact shadow.
+ * The shadow is that small on purpose: a long drop shadow (the gallery
+ * card's) darkens the area under a 28px tile, and the glyph then reads high.
+ */
+/* Slot 1 until a data-color names one. */
+.panel-tile {
+  --tile: var(--categorical-1);
+  width: 28px;
+  height: 28px;
+  border-radius: 26%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--categorical-foreground);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tile) 70%, white),
+    color-mix(in srgb, var(--tile) 85%, black)
+  );
+  box-shadow:
+    inset 0 0 0 0.5px rgb(0 0 0 / 15%),
+    0 1px 2px rgb(0 0 0 / 15%);
+}
+.panel-tile > svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* The tile's slot, per AvatarColor (AVATAR_COLOR_NAMES, in slot order). */
+.panel-tile[data-color="sky"] {
+  --tile: var(--categorical-1);
+}
+.panel-tile[data-color="emerald"] {
+  --tile: var(--categorical-2);
+}
+.panel-tile[data-color="amber"] {
+  --tile: var(--categorical-3);
+}
+.panel-tile[data-color="rose"] {
+  --tile: var(--categorical-4);
+}
+.panel-tile[data-color="violet"] {
+  --tile: var(--categorical-5);
+}
+.panel-tile[data-color="indigo"] {
+  --tile: var(--categorical-6);
+}
+.panel-tile[data-color="teal"] {
+  --tile: var(--categorical-7);
+}
+.panel-tile[data-color="pink"] {
+  --tile: var(--categorical-8);
+}
+.panel-tile[data-color="orange"] {
+  --tile: var(--categorical-9);
+}
+.panel-tile[data-color="slate"] {
+  --tile: var(--categorical-10);
+}

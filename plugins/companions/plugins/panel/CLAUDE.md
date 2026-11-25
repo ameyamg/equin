@@ -33,21 +33,22 @@ pick which companions they appear in.
 
 ## Plugin reference
 
-- Description: The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere; PanelTile the one icon tile a row leads with (a glyph on a gradient squircle of one categorical colour), so tiles match too. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
+- Description: The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere; PanelTile the one icon tile a row leads with (a glyph on a squircle of one categorical colour, lit from the top-left), so tiles match too. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
 - Web:
   - Slots: `Companion.Status`
   - Slot contributors: `Companion.Status` ← `conversations.companion-status`
   - Contributes:
     - `ThemeEngine.Theme` "Companion (solid)"
     - `ThemeEngine.Theme` "Companion"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/spacing` ×3
-    - `primitives/avatar` ×2
+  - Uses:
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.insetClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
@@ -57,6 +58,7 @@ pick which companions they appear in.
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `shell/toast.useSuppressToasts`
+    - `ui/icons.Icon`
     - `ui/logo.Logo`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
@@ -71,6 +73,17 @@ pick which companions they appear in.
     - `PanelTile`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-10`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/categorical --categorical-7`
+    - `ui/tokens/categorical --categorical-8`
+    - `ui/tokens/categorical --categorical-9`
+    - `ui/tokens/categorical --categorical-foreground`
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/density --space-md`
