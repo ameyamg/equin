@@ -103,6 +103,7 @@ hover.
     - `Website.Resident` ← `apps.website.live-demo`
     - `Website.LearnEntry` ← `apps.website.pages.foundations`
     - `Website.LearnEntry` ← `apps.website.pages.story`
+    - `Website.LearnEntry` ← `apps.website.pages.tips`
     - `Website.FooterLink` ← `apps.website.pages.privacy`
     - `WebsiteHeader` ← `apps.website.improve`
     - `WebsiteHeader` ← `apps.website.pages.apps`
@@ -225,8 +226,8 @@ hover.
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×20
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×21
     - `companions/browser-extension/equin-site`
     - `hints/help-menu`
 

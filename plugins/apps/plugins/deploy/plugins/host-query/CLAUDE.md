@@ -44,6 +44,28 @@ answer's in its result schema.
   read is undeclared: `no-db-backed-notify` follows the loader into it, so each
   serving plugin sanctions it in its own `exempt/index.ts`.
 
+## Server — `hostOnlyWriteOverSsh(deploymentId, path, body, schema, { maxSeconds? })`
+
+The POST sibling: `curl -sS -w … -m <maxSeconds> -X POST [-H 'content-type:
+application/json' --data-binary @-] '<url>'`, the JSON body on the SSH
+session's **stdin** (never an argv: no quoting, nothing in a process list);
+`body === undefined` sends no body (a route whose question is its `?q=`).
+Same resolution, failure union, path rules, session semaphore and stand-in arm
+(a POST through this instance's gateway). `maxSeconds` (default 10, 1..600)
+is curl's deadline for a route whose work grows with a file; the SSH budget
+follows it (`sshTimeoutFor`). A route's own refusals are arms of its 200
+answer. Argv: `hostWriteCurlArgv`, tested in `query-over-ssh.test.ts`.
+
+## Machine — `uploadToBoxDataDir(deploymentId, dataDir, localPath, name)`
+
+Copies one local file into a declared data dir of the box: the dir's place is
+the install's `EQUIN_DIR` (`deriveInstall(compositionId).dataDir`) joined with
+`relativeToDataRoot(dataDir)`; `install -d -m 750 -o svc-<c> -g svc-<c>` makes
+it, then `sshUpload` lands the file beside its name and renames it in place.
+Answers `uploaded` · `no-ssh-key` · `unverified` · `ssh-failed` · `not-found`.
+A stand-in server copies into this instance's own dir. Pure sequence and
+paths: `machine/internal/upload.ts` (`upload.test.ts`).
+
 ### Stand-in box (demos)
 
 `markServerBoxIsThisInstance(serverId)` (table `deploy_host_stand_ins`, one row
@@ -71,8 +93,12 @@ with its two effects injected, tested without a box.
   (`useAvailable`) is `useShipsGate(deploymentId, pluginId)` — `kind !== "no"`,
   so the card shows while loading and on a failed read; every tab gated on one
   plugin spells it through that hook.
+- `useDeploymentShipsEach(deploymentId, pluginIds)` — the same question for a
+  set known only at run time (an open slot's contributors): `pending | failed |
+  ready { shipped }`, one closure walk (`useCompositionIncludesEach`).
 
-Consumers: `analytics/dashboard`, `analytics/sessions`, `site-messages/inbox`.
+Consumers: `analytics/dashboard`, `analytics/sessions`, `site-messages/inbox`,
+`site-feeds/editor`.
 
 Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`.
 
@@ -80,21 +106,24 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
 
 ## Plugin reference
 
-- Description: The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies); standInServerIds() lists those servers.
+- Description: The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no); useDeploymentShipsEach(deploymentId, pluginIds) answers which of several plugins it ships. hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. hostOnlyWriteOverSsh(deploymentId, path, body, schema, { maxSeconds? }): the POST sibling — the JSON body on the SSH session's stdin, never in an argv — with the same resolution, failures and stand-in arm. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies); standInServerIds() lists those servers.
 - Web:
   - Uses:
     - `network/live.LiveRowResult`
     - `network/live.useLive`
     - `plugin-meta/composition.useCompositionIncludes`
+    - `plugin-meta/composition.useCompositionIncludesEach`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
   - Exports (types):
     - `DeploymentShips`
+    - `DeploymentShipsEach`
     - `HostQuerySubject`
   - Exports (values):
     - `HostQueryErrorState`
     - `HostQueryFailureState`
     - `useDeploymentShips`
+    - `useDeploymentShipsEach`
     - `useShipsGate`
 - Server:
   - Uses:
@@ -108,9 +137,11 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
   - Exports (types):
     - `HostQueryAnswer`
     - `HostQueryOptions`
+    - `HostWriteOptions`
   - Exports (values):
     - `deployHostStandIns`
     - `hostOnlyQueryOverSsh`
+    - `hostOnlyWriteOverSsh`
     - `markServerBoxIsThisInstance`
     - `standInServerIds`
 - Core:
@@ -126,7 +157,11 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
     - `apps/deploy/analytics/sessions`
     - `apps/deploy/box-link/link`
     - `apps/deploy/fixtures`
+    - `apps/deploy/site-feeds/editor`
     - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-mirror/pull`
+- Machine:
+  - Exports (types): `BoxUploadAnswer`
+  - Exports (values): `uploadToBoxDataDir`
 
 <!-- AUTOGENERATED:END -->

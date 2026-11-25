@@ -1,4 +1,4 @@
-// @hash cfb636337485
+// @hash b4e058fee9a2
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -18,7 +18,7 @@
 // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   // The header's Learn menu, read top to bottom: what equin is built on,
-  // then how it came to be.
+  // then how it came to be, then the small things it can do.
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
@@ -27,6 +27,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.website.pages.foundations:foundations",
-    "apps.website.pages.story:story"
+    "apps.website.pages.story:story",
+    "apps.website.pages.tips:tips"
   ]
 }

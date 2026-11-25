@@ -56,6 +56,9 @@ plugin ships on the box, and SSH must not.
     - `apps/deploy/box-link/box`
     - `apps/deploy/deploy-secrets`
     - `apps/deploy/host-query`
+    - `apps/deploy/site-feeds`
+    - `apps/deploy/site-feeds/box`
+    - `apps/deploy/site-feeds/editor`
     - `apps/deploy/site-messages/intake`
     - `apps/deploy/site-mirror`
     - `apps/deploy/site-mirror/box`

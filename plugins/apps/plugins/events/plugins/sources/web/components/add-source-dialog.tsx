@@ -1,3 +1,4 @@
+import { FieldsForm } from "@plugins/config_v2/plugins/fields/web";
 import { useCallback, useState, type ReactElement } from "react";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
@@ -26,7 +27,6 @@ import {
 import type { EventSourceTypeContribution } from "../internal/source-types";
 import { initialConfigValues } from "../internal/config-values";
 import { CADENCE_LABEL } from "../internal/format";
-import { SourceConfigForm } from "./source-config-form";
 
 const CADENCE_SEGMENTS = REFRESH_CADENCES.map((id) => ({
   id,
@@ -147,12 +147,13 @@ function AddSourceDialog({
         <Input keep={nameKept} placeholder="Defaults to the page host" />
       </Stack>
 
-      <SourceConfigForm
+      <FieldsForm
         fields={type.configFields}
         values={values}
         onChange={(key, value) =>
           setValues((prev) => ({ ...prev, [key]: value }))
         }
+        emptyLabel="This source type has nothing to configure."
       />
 
       <Stack gap="xs">

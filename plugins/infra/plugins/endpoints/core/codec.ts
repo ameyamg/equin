@@ -113,6 +113,45 @@ export function blob(contentType?: string): Codec<Blob> {
 }
 
 /**
+ * What a {@link byteStream} body is: the client sends a `Blob` (a `File`),
+ * the server's handler is handed the request's own stream.
+ */
+export type ByteStreamBody = Blob | ReadableStream<Uint8Array>;
+
+/**
+ * A raw binary request body the server reads as it arrives, never buffered:
+ * for an upload too large to hold in memory (an attached video). Request-only.
+ *
+ * The client sends a `Blob` — a browser cannot stream a request body (fetch's
+ * `duplex: "half"` is Chromium-only, and only over HTTP/2), so a
+ * `ReadableStream` handed to `encodeRequest` throws. The handler always gets
+ * a `ReadableStream` (`req.body`); `blob()` would have read it whole first.
+ * The handler bounds what it reads: the codec has no size of its own.
+ */
+export function byteStream(contentType?: string): Codec<ByteStreamBody> {
+  return {
+    encodeRequest(value) {
+      if (!(value instanceof Blob)) {
+        throw new Error(
+          "byteStream(): send a Blob — a browser cannot stream a request body",
+        );
+      }
+      return { body: value, contentType };
+    },
+    async decodeRequest(req) {
+      if (req.body === null) throw new HttpError(400, "missing request body");
+      return req.body;
+    },
+    encodeResponse(): Response {
+      throw new Error("byteStream is request-only");
+    },
+    decodeResponse(): Promise<ByteStreamBody> {
+      throw new Error("byteStream is request-only");
+    },
+  };
+}
+
+/**
  * Multipart form-data codec. Request-only: the browser sets the multipart
  * boundary, so `encodeRequest` emits NO content-type. Never valid in a
  * `response:` slot.

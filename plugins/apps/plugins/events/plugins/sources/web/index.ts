@@ -16,8 +16,6 @@ export {
   eventSourceDetailRoute,
 } from "./panes";
 export { EventSourceDetail, EventSourceActions } from "./slots";
-export { SourceConfigForm } from "./components/source-config-form";
-export type { SourceConfigFormProps } from "./components/source-config-form";
 export { useEventSource } from "./internal/use-source";
 export type { SourceLookup } from "./internal/use-source";
 export {

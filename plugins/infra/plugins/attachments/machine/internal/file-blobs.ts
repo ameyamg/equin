@@ -1,6 +1,9 @@
-import { unlink } from "node:fs/promises";
+import { open, rename, unlink } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
-import type { AttachmentBlobsImpl } from "@plugins/infra/plugins/attachments/server";
+import {
+  pipeBounded,
+  type AttachmentBlobsImpl,
+} from "@plugins/infra/plugins/attachments/server";
 import { diskPathFor, ensureAttachmentsRoot } from "./paths";
 
 /**
@@ -9,11 +12,33 @@ import { diskPathFor, ensureAttachmentsRoot } from "./paths";
  * absolute path.
  */
 export const fileBlobs: AttachmentBlobsImpl = {
-  async write(id, filename, bytes) {
+  async write(id, filename, bytes, maxBytes) {
     await ensureAttachmentsRoot();
     const diskPath = diskPathFor(id, filename);
-    await Bun.write(diskPath, bytes);
-    return diskPath;
+    // Streamed into a sibling temp file, renamed into place once whole: a
+    // refused or cut upload leaves nothing under the attachment's name, and
+    // two writes of one id (an idempotent import racing itself) each land
+    // whole.
+    const partial = `${diskPath}.${crypto.randomUUID()}.partial`;
+    const file = await open(partial, "wx");
+    let size: number;
+    try {
+      size = await pipeBounded(bytes, maxBytes, async (chunk) => {
+        // A write may take less than it is handed: write the rest.
+        let at = 0;
+        while (at < chunk.byteLength) {
+          const { bytesWritten } = await file.write(chunk, at);
+          at += bytesWritten;
+        }
+      });
+    } catch (err) {
+      await file.close();
+      await unlink(partial);
+      throw err;
+    }
+    await file.close();
+    await rename(partial, diskPath);
+    return { key: diskPath, size };
   },
   async read(diskPath) {
     try {

@@ -8,8 +8,19 @@ import { defineHostService } from "@plugins/framework/plugins/server-core/core";
  * in memory. A row records the key its blob was stored under (`disk_path`).
  */
 export interface AttachmentBlobsImpl {
-  /** Store `bytes` for the new attachment `id`; the key the row records. */
-  write(id: string, filename: string, bytes: Uint8Array): Promise<string>;
+  /**
+   * Store the bytes of attachment `id`, read from `bytes` as they arrive —
+   * never held whole by the caller — and answer the key the row records with
+   * the size written. More than `maxBytes` throws
+   * {@link AttachmentTooLargeError} and leaves nothing stored. The write is
+   * atomic: a reader of the key sees no bytes or all of them.
+   */
+  write(
+    id: string,
+    filename: string,
+    bytes: ReadableStream<Uint8Array>,
+    maxBytes: number,
+  ): Promise<{ key: string; size: number }>;
   /** The bytes stored under `key`, or `null` when there are none (the file
    *  is gone) — a state the serve route answers `410` for. */
   read(key: string): Promise<Blob | null>;
@@ -23,3 +34,40 @@ export interface AttachmentBlobsImpl {
 
 export const AttachmentBlobs =
   defineHostService<AttachmentBlobsImpl>("attachments.blobs");
+
+/** An upload past the bound its caller declared (the serve route's 413). */
+export class AttachmentTooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`file too large (max ${maxBytes} bytes)`);
+    this.name = "AttachmentTooLargeError";
+  }
+}
+
+/**
+ * Read `bytes` chunk by chunk into `sink`, refusing past `maxBytes` — the one
+ * bounded read every blob store writes through. A reader loop, not
+ * `for await`: a browser host's worker (Safari) has no async-iterable stream.
+ * Answers the byte count.
+ */
+export async function pipeBounded(
+  bytes: ReadableStream<Uint8Array>,
+  maxBytes: number,
+  sink: (chunk: Uint8Array) => Promise<void> | void,
+): Promise<number> {
+  const reader = bytes.getReader();
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return size;
+      size += value.byteLength;
+      if (size > maxBytes) throw new AttachmentTooLargeError(maxBytes);
+      await sink(value);
+    }
+  } catch (err) {
+    await reader.cancel(err);
+    throw err;
+  } finally {
+    reader.releaseLock();
+  }
+}

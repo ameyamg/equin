@@ -380,10 +380,10 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnToFile`
     - `watchChildKills`
 - Cross-plugin:
-  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 115 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×34
     - `framework` ×33
-    - `apps` ×10
+    - `apps` ×11
     - `database` ×5
     - `debug` ×5
     - `build` ×2
@@ -399,6 +399,7 @@ presence only — **no re-exports**; import from `core/`.
     - `companions/browser-extension/recorder`
     - `hints/ask`
     - `integrations/github-events`
+    - `media/ffmpeg`
     - `plugin-meta/relocate`
     - `review/plugin-changes`
     - `tasks`

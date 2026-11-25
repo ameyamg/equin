@@ -18,12 +18,19 @@ import { getAttachmentFile } from "../core";
 
 export { _attachments } from "./internal/tables";
 export {
+  AttachmentConflictError,
   createAttachment,
   deleteAttachment,
+  EmptyAttachmentError,
   getAttachment,
+  importAttachment,
 } from "./internal/operations";
 export { Attachments } from "./internal/attachments";
-export { AttachmentBlobs } from "./internal/blobs";
+export {
+  AttachmentBlobs,
+  AttachmentTooLargeError,
+  pipeBounded,
+} from "./internal/blobs";
 export {
   AttachmentMissingError,
   readAttachmentBytes,

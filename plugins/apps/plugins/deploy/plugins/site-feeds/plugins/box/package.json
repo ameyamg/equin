@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-feeds-box",
+  "description": "Site feeds on the deployed box: the SiteFeeds.Feed registry (server and web), the published entries and their media links, the public site-feeds.entries read and media route, and the host-only upsert / delete / media import routes the computer publishes through.",
+  "private": true,
+  "version": "0.0.1"
+}

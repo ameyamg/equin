@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
+import {
+  FieldRenderer,
+  FieldsForm,
+} from "@plugins/config_v2/plugins/fields/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
@@ -9,7 +12,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useUpdateEventSource } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import {
-  SourceConfigForm,
   readConfigValues,
   useEventSource,
   useEventSourceType,
@@ -79,7 +81,7 @@ export function SourceSettingsSection({
     <Stack gap="md">
       {/* Its own panel, beside the type's. A field renderer reads the host's
           presentation policy (push vs inline, description as prose vs tooltip),
-          so it needs a panel around it — and `SourceConfigForm` below opens its
+          so it needs a panel around it — and `FieldsForm` below opens its
           own, which a second one here must not nest inside. Two panels stacked
           render as one form: same rail, same row height, same hairlines. */}
       <ControlPanelPane>
@@ -152,7 +154,7 @@ function SourceTypeConfig({
 
   return (
     <>
-      <SourceConfigForm
+      <FieldsForm
         fields={type.configFields}
         values={resolved.values}
         // Reworded for its new neighbour: with the Name field above it, the card

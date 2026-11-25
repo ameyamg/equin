@@ -383,6 +383,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `CompositionDataResult`
     - `CompositionGraph`
     - `CompositionInclusion`
+    - `CompositionInclusionEach`
     - `DiffState`
     - `ImpactResult`
     - `ManifestActions`
@@ -399,6 +400,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `useCompareComposition`
     - `useCompositionData`
     - `useCompositionIncludes`
+    - `useCompositionIncludesEach`
     - `useDiffMap`
     - `useEnsureCompositionData`
     - `useGraph`

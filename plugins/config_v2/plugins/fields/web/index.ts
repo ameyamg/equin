@@ -3,6 +3,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Fields } from "./internal/slots";
 export { FieldRenderer } from "./internal/field-renderer";
+export { FieldsForm } from "./internal/fields-form";
+export type { FieldsFormProps } from "./internal/fields-form";
 export { useFieldSamples } from "./internal/field-samples";
 export type { FieldSampleEntry } from "./internal/field-samples";
 export { ConfigFieldContext } from "./internal/config-field-context";

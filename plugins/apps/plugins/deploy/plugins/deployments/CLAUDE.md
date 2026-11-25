@@ -424,8 +424,8 @@ default, a left rail revealing each (`useRevealSection`).
     - `sitesIndexPane.Actions`
     - `sitePane.Actions`
     - `deploy-deployment-detail.actions`
-  - Slot contributors: 26 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `SiteTabs.View` ×5
+  - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `SiteTabs.View` ×6
     - `DeploymentDetail.Section` ×3
     - `SiteBanner` ×3
     - `SiteCheck` ×3
@@ -691,6 +691,8 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/remote-deploy/site-live`
+    - `apps/deploy/site-feeds/editor`
+    - `apps/deploy/site-feeds/syndication`
     - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-mirror/pull`
     - `framework/cli/deploy`

@@ -65,6 +65,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "deploy.deployment.secrets", pluginId: "apps.deploy.deploy-secrets.approvals" },
   { id: "deploy.deployments", pluginId: "apps.deploy.deployments" },
   { id: "deploy.servers", pluginId: "apps.deploy.servers" },
+  { id: "deploy.site-feed-items", pluginId: "apps.deploy.site-feeds.editor" },
   { id: "deploy.site-messages", pluginId: "apps.deploy.site-messages.inbox" },
   { id: "deploy.site-messages.overview", pluginId: "apps.deploy.site-messages.inbox" },
   { id: "deploy.sites", pluginId: "apps.deploy.deployments" },

@@ -214,6 +214,7 @@ so a size or glass option later is one set switched as a whole.
     - `ui/tokens/type-scale --line-height-tag-compact`
   - Imported by:
     - `apps/website/landing/hero`
+    - `apps/website/pages/tips`
     - `page/audio`
     - `page/video`
     - `primitives/file-viewer/media`

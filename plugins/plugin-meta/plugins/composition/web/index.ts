@@ -7,6 +7,7 @@ export {
   useEnsureCompositionData,
   useAppExclusions,
   useCompositionIncludes,
+  useCompositionIncludesEach,
   useInclusion,
   useImpact,
 } from "./internal/hooks";
@@ -15,6 +16,7 @@ export type {
   CompositionDataResult,
   CompositionGraph,
   CompositionInclusion,
+  CompositionInclusionEach,
   ImpactResult,
 } from "./internal/hooks";
 export {

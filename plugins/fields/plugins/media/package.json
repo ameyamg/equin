@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-fields-media",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Media field type: uploaded files (images, videos, …) as MediaRef[] over the attachments store — identity, the mediaField factory, mediaAttachmentIds and the shared MediaThumb."
+}

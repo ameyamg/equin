@@ -106,6 +106,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
   - Imported by:
     - `apps/deploy/deploy-secrets/approvals`
     - `apps/deploy/servers`
+    - `apps/deploy/site-feeds/syndication`
     - `auth`
     - `auth/apple-signing`
     - `backup/sources/platform`

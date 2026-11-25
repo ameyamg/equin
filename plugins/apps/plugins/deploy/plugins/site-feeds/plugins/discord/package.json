@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-feeds-discord",
+  "description": "Discord as a site feed syndication target: one message per item through a channel's webhook, its files attached (a video re-encoded to fit the upload limit), edited and deleted with the item.",
+  "private": true,
+  "version": "0.0.1"
+}

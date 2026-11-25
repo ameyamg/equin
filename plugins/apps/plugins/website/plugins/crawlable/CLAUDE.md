@@ -199,6 +199,7 @@ Run the take by hand (any initialized cluster file from the store):
     - `apps/website/pages/guide`
     - `apps/website/pages/privacy`
     - `apps/website/pages/story`
+    - `apps/website/pages/tips`
     - `apps/website/pages/vision`
     - `apps/website/shell`
     - `companions/browser-extension/equin-site`

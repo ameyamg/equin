@@ -487,6 +487,26 @@
       "name": "@equin/plugin-apps-deploy-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/site-feeds": {
+      "name": "@equin/plugin-apps-deploy-site-feeds",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box": {
+      "name": "@equin/plugin-apps-deploy-site-feeds-box",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-feeds/plugins/discord": {
+      "name": "@equin/plugin-apps-deploy-site-feeds-discord",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor": {
+      "name": "@equin/plugin-apps-deploy-site-feeds-editor",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-feeds/plugins/syndication": {
+      "name": "@equin/plugin-apps-deploy-site-feeds-syndication",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/site-messages": {
       "name": "@equin/plugin-apps-deploy-site-messages",
       "version": "0.0.1",
@@ -1698,6 +1718,10 @@
     },
     "plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/skills-graph": {
       "name": "@equin/plugin-apps-website-pages-story-skills-graph",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pages/plugins/tips": {
+      "name": "@equin/plugin-apps-website-pages-tips",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/pages/plugins/vision": {
@@ -3604,6 +3628,22 @@
       "name": "@equin/plugin-fields-location-table",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/media": {
+      "name": "@equin/plugin-fields-media",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/media/plugins/config": {
+      "name": "@equin/plugin-fields-media-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/media/plugins/storage": {
+      "name": "@equin/plugin-fields-media-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/media/plugins/table": {
+      "name": "@equin/plugin-fields-media-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/money": {
       "name": "@equin/plugin-fields-money",
       "version": "0.0.1",
@@ -4689,6 +4729,10 @@
     },
     "plugins/infra/plugins/attachments/plugins/memory-blobs": {
       "name": "@equin/plugin-infra-attachments-memory-blobs",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/attachments/plugins/upload-dropzone": {
+      "name": "@equin/plugin-infra-attachments-upload-dropzone",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/audio-analysis": {
@@ -8746,6 +8790,16 @@
 
     "@equin/plugin-apps-deploy-shell": ["@equin/plugin-apps-deploy-shell@workspace:plugins/apps/plugins/deploy/plugins/shell"],
 
+    "@equin/plugin-apps-deploy-site-feeds": ["@equin/plugin-apps-deploy-site-feeds@workspace:plugins/apps/plugins/deploy/plugins/site-feeds"],
+
+    "@equin/plugin-apps-deploy-site-feeds-box": ["@equin/plugin-apps-deploy-site-feeds-box@workspace:plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box"],
+
+    "@equin/plugin-apps-deploy-site-feeds-discord": ["@equin/plugin-apps-deploy-site-feeds-discord@workspace:plugins/apps/plugins/deploy/plugins/site-feeds/plugins/discord"],
+
+    "@equin/plugin-apps-deploy-site-feeds-editor": ["@equin/plugin-apps-deploy-site-feeds-editor@workspace:plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor"],
+
+    "@equin/plugin-apps-deploy-site-feeds-syndication": ["@equin/plugin-apps-deploy-site-feeds-syndication@workspace:plugins/apps/plugins/deploy/plugins/site-feeds/plugins/syndication"],
+
     "@equin/plugin-apps-deploy-site-messages": ["@equin/plugin-apps-deploy-site-messages@workspace:plugins/apps/plugins/deploy/plugins/site-messages"],
 
     "@equin/plugin-apps-deploy-site-messages-inbox": ["@equin/plugin-apps-deploy-site-messages-inbox@workspace:plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox"],
@@ -9329,6 +9383,8 @@
     "@equin/plugin-apps-website-pages-story-heads": ["@equin/plugin-apps-website-pages-story-heads@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/heads"],
 
     "@equin/plugin-apps-website-pages-story-skills-graph": ["@equin/plugin-apps-website-pages-story-skills-graph@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/skills-graph"],
+
+    "@equin/plugin-apps-website-pages-tips": ["@equin/plugin-apps-website-pages-tips@workspace:plugins/apps/plugins/website/plugins/pages/plugins/tips"],
 
     "@equin/plugin-apps-website-pages-vision": ["@equin/plugin-apps-website-pages-vision@workspace:plugins/apps/plugins/website/plugins/pages/plugins/vision"],
 
@@ -10264,6 +10320,14 @@
 
     "@equin/plugin-fields-location-table": ["@equin/plugin-fields-location-table@workspace:plugins/fields/plugins/location/plugins/table"],
 
+    "@equin/plugin-fields-media": ["@equin/plugin-fields-media@workspace:plugins/fields/plugins/media"],
+
+    "@equin/plugin-fields-media-config": ["@equin/plugin-fields-media-config@workspace:plugins/fields/plugins/media/plugins/config"],
+
+    "@equin/plugin-fields-media-storage": ["@equin/plugin-fields-media-storage@workspace:plugins/fields/plugins/media/plugins/storage"],
+
+    "@equin/plugin-fields-media-table": ["@equin/plugin-fields-media-table@workspace:plugins/fields/plugins/media/plugins/table"],
+
     "@equin/plugin-fields-money": ["@equin/plugin-fields-money@workspace:plugins/fields/plugins/money"],
 
     "@equin/plugin-fields-money-config": ["@equin/plugin-fields-money-config@workspace:plugins/fields/plugins/money/plugins/config"],
@@ -10769,6 +10833,8 @@
     "@equin/plugin-infra-attachments": ["@equin/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
 
     "@equin/plugin-infra-attachments-memory-blobs": ["@equin/plugin-infra-attachments-memory-blobs@workspace:plugins/infra/plugins/attachments/plugins/memory-blobs"],
+
+    "@equin/plugin-infra-attachments-upload-dropzone": ["@equin/plugin-infra-attachments-upload-dropzone@workspace:plugins/infra/plugins/attachments/plugins/upload-dropzone"],
 
     "@equin/plugin-infra-audio-analysis": ["@equin/plugin-infra-audio-analysis@workspace:plugins/infra/plugins/audio-analysis"],
 

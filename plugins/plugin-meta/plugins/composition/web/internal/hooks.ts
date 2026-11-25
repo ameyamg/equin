@@ -365,3 +365,35 @@ export function useCompositionIncludes(
   if (!bundle) return { kind: "unknown-composition" };
   return { kind: "ready", included: bundle.has(pluginId) };
 }
+
+const PENDING_EACH = { kind: "pending" } as const;
+
+/** {@link CompositionInclusion} for several plugins at once: which of them the bundle has. */
+export type CompositionInclusionEach =
+  | { kind: "pending" }
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
+  | { kind: "unknown-composition" }
+  | { kind: "ready"; included: ReadonlySet<PluginId> };
+
+/**
+ * {@link useCompositionIncludes} for a set of plugins known only at run time
+ * (an open slot's contributors): the subset of `pluginIds` the composition's
+ * resolved bundle includes, from one closure walk.
+ */
+export function useCompositionIncludesEach(
+  name: string | null,
+  pluginIds: readonly PluginId[],
+): CompositionInclusionEach {
+  const read = useCompositionGraph();
+  const items = useManifestItems();
+  if (name === null) return PENDING_EACH;
+  if (read.status === "loading") return PENDING_EACH;
+  if (read.status === "error")
+    return { kind: "failed", error: read.error, refetch: read.refetch };
+  const bundle = bundleOf(read.data.graph, items, name);
+  if (!bundle) return { kind: "unknown-composition" };
+  return {
+    kind: "ready",
+    included: new Set(pluginIds.filter((id) => bundle.has(id))),
+  };
+}

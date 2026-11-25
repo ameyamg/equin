@@ -12,6 +12,8 @@
   - Imported by:
     - `apps/deploy/deploy-history/investigate-failure`
     - `apps/deploy/deployments/runs-arm`
+    - `apps/deploy/site-feeds/editor`
+    - `apps/deploy/site-feeds/syndication`
     - `apps/deploy/site-messages/inbox`
 - Core:
   - Exports (values): `DEPLOY_CATEGORY_ID`
@@ -30,6 +32,7 @@
   - **`remote-deploy`** [1 sub-plugin] — Deploy one composition to its remote server, on the site page: the header's Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current…
   - **`servers`** [exempt] — Server registry for the deployment platform.
   - **`shell`** — App shell for the deploy platform.
+  - **`site-feeds`** [exempt] [4 sub-plugins] — Umbrella for the content a deployed site publishes itself (feeds — its tips, its news): defineSiteFeed (a site's own declaration of an entry's fields, how it syndicates, how many entries visitors…
   - **`site-messages`** [2 sub-plugins] — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email, the site_messages mirror set) and the…
   - **`site-mirror`** [2 sub-plugins] — The table mirror between a deployed site's box and this computer: the host-only route contracts both halves speak (changes, copy, keys, rows), the box half serving them over the source's readers…
   - **`site-reports`** [exempt] [4 sub-plugins] — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, mirror set) and the page channel that…

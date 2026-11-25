@@ -1,8 +1,11 @@
+import { rangedBlobResponse } from "@plugins/infra/plugins/endpoints/core";
 import { getAttachment } from "./operations";
 import { AttachmentBlobs } from "./blobs";
 
+// Honours `Range` (`rangedBlobResponse`), so an attached video or audio file
+// seeks, and plays at all in Safari.
 export async function handleGet(
-  _req: Request,
+  req: Request,
   params: Record<string, string>,
 ): Promise<Response> {
   const id = params.id;
@@ -16,11 +19,9 @@ export async function handleGet(
     return new Response("file missing on disk", { status: 410 });
   }
 
-  return new Response(file, {
-    headers: {
-      "content-type": row.mime,
-      "content-disposition": `inline; filename="${row.filename.replace(/"/g, "")}"`,
-      "cache-control": "private, max-age=3600",
-    },
+  return rangedBlobResponse(file, req.headers, {
+    "content-type": row.mime,
+    "content-disposition": `inline; filename="${row.filename.replace(/"/g, "")}"`,
+    "cache-control": "private, max-age=3600",
   });
 }

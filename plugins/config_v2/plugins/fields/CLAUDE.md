@@ -28,6 +28,12 @@ imports:
   renderer has nothing to draw its own chrome with.
 - `FieldRenderer` — recursive dispatch into a sub-field (used by `list` /
   `object` shapes to recurse).
+- `FieldsForm({ fields, values, onChange, emptyLabel? })` — a whole form from
+  any `FieldsRecord`: one `FieldRenderer` per key inside a `ControlPanelPane`,
+  `onChange(key, value)` per edited field (the caller merges and persists).
+  Used by the Events app's source forms; any consumer whose shape is declared
+  as fields gets a form with zero form code. It never names a field type or a
+  consumer.
 - `ConfigFieldContext` — the per-field render context.
 - `ConfigFieldAdornmentsProvider` — how a HOST says what it knows about a field
   that the field does not: modified, which tier, resettable, in conflict. The
@@ -70,18 +76,20 @@ the config-only templates to mirror.
   - Slots:
     - `Fields.Renderer`
     - `Fields.Sample`
-  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Renderer` ×20
-    - `Fields.Sample` ×20
+  - Slot contributors: 42 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Renderer` ×21
+    - `Fields.Sample` ×21
   - Uses:
     - `primitives/css/cluster.Cluster`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelHandleProps`
+    - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/control-panel.useControlPanelHost`
     - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/switch.Switch`
+    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
@@ -92,18 +100,20 @@ the config-only templates to mirror.
     - `ConfigFieldAdornments`
     - `FieldRendererProps`
     - `FieldSampleEntry`
+    - `FieldsFormProps`
   - Exports (values):
     - `ConfigFieldAdornmentsProvider`
     - `ConfigFieldContext`
     - `defineFieldShape`
     - `FieldRenderer`
     - `Fields`
+    - `FieldsForm`
     - `useFieldSamples`
     - `useLocalValue`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×21
-    - `apps` ×5
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×22
+    - `apps` ×7
     - `config_v2/settings`
     - `primitives/data-view/view-core`
 - Core:

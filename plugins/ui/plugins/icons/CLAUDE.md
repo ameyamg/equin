@@ -543,20 +543,20 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedSprites`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 616 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×156
+  - Imported by: 621 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×159
     - `conversations` ×125
     - `primitives` ×54
-    - `page` ×52
-    - `fields` ×41
+    - `page` ×51
+    - `fields` ×43
     - `debug` ×30
     - `tasks` ×27
     - `plugin-meta` ×16
     - `ui` ×13
     - `active-data` ×11
+    - `infra` ×9
     - `apps-core` ×8
     - `companions` ×8
-    - `infra` ×8
     - `auth` ×7
     - `config_v2` ×6
     - `shell` ×6

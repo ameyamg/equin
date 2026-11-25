@@ -1,0 +1,84 @@
+// @hash 6ec84829688d
+// Author "views" as terse { name, view } rows — one per view-type the
+// call site's `views={[…]}` whitelist enables, plus extra named
+// sort/filter views where the domain warrants one.
+// "view" is { type, sort?, filter?, …opts }; "sort" is a list of
+// { fieldId, direction }; "filter" is a FilterGroup tree.
+// Give every row an explicit bare-slug id — it keys the saved per-view
+// row order, so a derived one would orphan it on rename.
+// Worked example: config/apps/sonata/library/sonata.library.jsonc
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "table-rows",
+      "view": {
+        "type": "table",
+        "sort": [
+          {
+            "fieldId": "createdAt",
+            "direction": "desc"
+          }
+        ]
+      }
+    },
+    {
+      "id": "published",
+      "name": "Published",
+      "view": {
+        "type": "table",
+        "sort": [
+          {
+            "fieldId": "publishedAt",
+            "direction": "desc"
+          }
+        ],
+        "filter": {
+          "kind": "group",
+          "id": "f-published",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-published",
+              "fieldId": "state",
+              "operatorId": "is",
+              "value": "published"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "drafts",
+      "name": "Drafts",
+      "view": {
+        "type": "table",
+        "sort": [
+          {
+            "fieldId": "createdAt",
+            "direction": "desc"
+          }
+        ],
+        "filter": {
+          "kind": "group",
+          "id": "f-drafts",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-drafts",
+              "fieldId": "state",
+              "operatorId": "is",
+              "value": "draft"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

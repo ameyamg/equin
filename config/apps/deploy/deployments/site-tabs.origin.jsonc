@@ -1,4 +1,4 @@
-// @hash 0bfcb9fea549
+// @hash eb00fe30832d
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "apps.deploy.deploy-history:deployments",
     "apps.deploy.deployments:overview",
     "apps.deploy.deployments:settings",
+    "apps.deploy.site-feeds.editor:feeds",
     "apps.deploy.site-messages.inbox:messages"
   ]
 }

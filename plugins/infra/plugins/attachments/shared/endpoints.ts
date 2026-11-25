@@ -1,8 +1,9 @@
 import { z } from "zod";
 import {
+  byteStream,
   defineEndpoint,
-  multipart,
 } from "@plugins/infra/plugins/endpoints/core";
+import { ATTACHMENT_MAX_BYTES } from "../core";
 
 export const UploadedAttachmentSchema = z.object({
   id: z.string(),
@@ -11,9 +12,22 @@ export const UploadedAttachmentSchema = z.object({
   size: z.number(),
 });
 
+// The file's bytes as the raw body, streamed to the blob store (never held in
+// memory). `maxBytes` is the caller's own bound (a media field's), at most
+// ATTACHMENT_MAX_BYTES; absent, ATTACHMENT_DEFAULT_MAX_BYTES.
 export const uploadAttachment = defineEndpoint({
   route: "POST /api/attachments",
-  body: multipart(),
+  body: byteStream(),
+  query: z.object({
+    filename: z.string().min(1),
+    mime: z.string(),
+    maxBytes: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(ATTACHMENT_MAX_BYTES)
+      .optional(),
+  }),
   response: UploadedAttachmentSchema,
 });
 

@@ -1,0 +1,192 @@
+import { z } from "zod";
+import type { DiscordWebhook } from "../../core";
+
+/** Discord's API root the calls are made on (whatever spelling the webhook URL had). */
+export const DISCORD_API = "https://discord.com/api/v10";
+
+/** The most characters a message's `content` holds. */
+export const DISCORD_CONTENT_MAX = 2000;
+
+/** The most files one message carries. */
+export const DISCORD_FILES_MAX = 10;
+
+/** `POST` here posts a message; `?wait=true` answers it (its id). */
+export function executeWebhookUrl(hook: DiscordWebhook): string {
+  return `${DISCORD_API}/webhooks/${hook.id}/${hook.token}?wait=true`;
+}
+
+/** `PATCH` edits the webhook's message, `DELETE` deletes it. */
+export function webhookMessageUrl(
+  hook: DiscordWebhook,
+  messageId: string,
+): string {
+  return `${DISCORD_API}/webhooks/${hook.id}/${hook.token}/messages/${messageId}`;
+}
+
+/**
+ * A post's text as one message: the title in bold (its asterisks escaped, so
+ * it cannot close the bold early), then each paragraph, blank lines between.
+ */
+export function discordContent(text: {
+  title: string | null;
+  paragraphs: readonly string[];
+}): string {
+  const parts: string[] = [];
+  if (text.title !== null)
+    parts.push(`**${text.title.replace(/\*/g, "\\*")}**`);
+  parts.push(...text.paragraphs);
+  return parts.join("\n\n");
+}
+
+/**
+ * The message's JSON part (`payload_json`): its content, no mentions parsed
+ * (a tip's text never pings anyone), and one attachment per file, by its
+ * index in the multipart (`files[i]`). On an edit, the attachments listed are
+ * the message's whole set: the old ones go.
+ */
+export function discordPayload(
+  content: string,
+  filenames: readonly string[],
+): Record<string, unknown> {
+  return {
+    content,
+    allowed_mentions: { parse: [] },
+    attachments: filenames.map((filename, id) => ({ id, filename })),
+  };
+}
+
+/** The multipart body of a post or an edit: `payload_json`, then `files[i]`. */
+export function discordForm(
+  content: string,
+  files: readonly { filename: string; mime: string; blob: Blob }[],
+): FormData {
+  const form = new FormData();
+  form.append(
+    "payload_json",
+    JSON.stringify(
+      discordPayload(
+        content,
+        files.map((f) => f.filename),
+      ),
+    ),
+  );
+  files.forEach((f, i) => {
+    form.append(
+      `files[${i}]`,
+      new File([f.blob], f.filename, { type: f.mime }),
+      f.filename,
+    );
+  });
+  return form;
+}
+
+/** How Discord answered one call. */
+export type DiscordAnswer =
+  | { kind: "message"; id: string }
+  | { kind: "deleted" }
+  /** The message (or the webhook itself) no longer exists. */
+  | { kind: "unknown-message" }
+  | { kind: "unknown-webhook"; error: string }
+  | {
+      kind: "failed";
+      status: number;
+      error: string;
+      retryable: boolean;
+      /** A rate limit's wait, from `retry_after` (seconds in the body). */
+      retryAfterMs?: number;
+    };
+
+const MessageSchema = z.object({ id: z.string().min(1) });
+const ErrorSchema = z.object({
+  message: z.string(),
+  code: z.number().optional(),
+  retry_after: z.number().optional(),
+});
+
+/** Discord's JSON error codes this client acts on. */
+const UNKNOWN_MESSAGE = 10008;
+const UNKNOWN_WEBHOOK = 10015;
+
+const BODY_HEAD_CHARS = 300;
+
+/**
+ * Read one answer. A 2xx without a message id (when one was asked for) is a
+ * failure, so nothing reads as posted unless Discord said so. 429 and 5xx are
+ * retryable (a 429's `retry_after` kept); every other refusal is for good.
+ */
+export function parseDiscordResponse(
+  status: number,
+  body: string,
+  expect: "message" | "deleted",
+): DiscordAnswer {
+  if (status === 204 && expect === "deleted") return { kind: "deleted" };
+  let json: unknown;
+  try {
+    json = body === "" ? null : JSON.parse(body);
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    json = undefined;
+  }
+  if (status >= 200 && status < 300) {
+    if (expect === "deleted") return { kind: "deleted" };
+    const msg = MessageSchema.safeParse(json);
+    return msg.success
+      ? { kind: "message", id: msg.data.id }
+      : {
+          kind: "failed",
+          status,
+          error: `Discord answered ${status} without a message id: ${body.slice(0, BODY_HEAD_CHARS)}`,
+          retryable: false,
+        };
+  }
+  const parsed = ErrorSchema.safeParse(json);
+  const words = parsed.success
+    ? parsed.data.message
+    : body.slice(0, BODY_HEAD_CHARS) || `HTTP ${status}`;
+  if (status === 404 && parsed.success) {
+    if (parsed.data.code === UNKNOWN_MESSAGE)
+      return { kind: "unknown-message" };
+    if (parsed.data.code === UNKNOWN_WEBHOOK) {
+      return {
+        kind: "unknown-webhook",
+        error:
+          "Discord no longer knows this webhook (deleted from the channel?) — paste a new webhook URL.",
+      };
+    }
+  }
+  if (status === 429) {
+    const retryAfterMs =
+      parsed.success && parsed.data.retry_after !== undefined
+        ? Math.ceil(parsed.data.retry_after * 1000)
+        : undefined;
+    return {
+      kind: "failed",
+      status,
+      error: `Discord is rate limiting this webhook${retryAfterMs !== undefined ? ` (retry after ${(retryAfterMs / 1000).toFixed(1)} s)` : ""}: ${words}`,
+      retryable: true,
+      ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+    };
+  }
+  if (status >= 500) {
+    return {
+      kind: "failed",
+      status,
+      error: `Discord failed (${status}): ${words}`,
+      retryable: true,
+    };
+  }
+  if (status === 413) {
+    return {
+      kind: "failed",
+      status,
+      error: `Discord refused the files as too large (413) — lower the upload limit setting to the server's: ${words}`,
+      retryable: false,
+    };
+  }
+  return {
+    kind: "failed",
+    status,
+    error: `Discord refused the message (${status}): ${words}`,
+    retryable: false,
+  };
+}

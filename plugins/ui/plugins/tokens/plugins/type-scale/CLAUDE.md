@@ -55,8 +55,8 @@ follow.
     - `primitives` ×38
     - `debug` ×15
     - `plugin-meta` ×14
-    - `page` ×11
     - `tasks` ×11
+    - `page` ×10
     - `ui` ×7
     - `fields` ×4
     - `review` ×4
@@ -68,11 +68,11 @@ follow.
     - `build` ×2
     - `code-explorer` ×2
     - `config_v2` ×2
+    - `infra` ×2
     - `search` ×2
     - `apps-core/app-launcher`
     - `backup/runs-arm`
     - `framework/web-core`
-    - `infra/claude-cli`
     - `integrations/youtube`
     - `layouts/miller`
     - `media/player`

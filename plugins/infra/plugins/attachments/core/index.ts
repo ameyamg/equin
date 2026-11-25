@@ -14,3 +14,7 @@ export {
   attachmentsEntityRef,
 } from "./internal/entity";
 export { getAttachmentFile } from "./internal/file-endpoint";
+export {
+  ATTACHMENT_DEFAULT_MAX_BYTES,
+  ATTACHMENT_MAX_BYTES,
+} from "./internal/limits";

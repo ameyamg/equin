@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-fields-media-storage",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Media field type: DB storage capability — a Postgres jsonb column decoded by the field's own MediaRef[] schema."
+}

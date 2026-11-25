@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-website-pages-tips",
+  "description": "Tips of the day: the website's tips feed (title, text, screenshots and videos), declared for the box and the editor, and the tips page under the header's Learn menu that shows the published tips newest first.",
+  "private": true,
+  "version": "0.0.1"
+}

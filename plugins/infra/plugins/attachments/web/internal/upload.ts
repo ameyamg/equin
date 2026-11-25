@@ -8,24 +8,31 @@ import {
 
 export type UploadedAttachment = z.infer<typeof UploadedAttachmentSchema>;
 
-// Staged upload: POSTs a file to /api/attachments. Server stores bytes, creates
-// a row with owner_id = NULL, returns the id. Caller must then link it to an
-// owner via POST /api/attachments/:id/attach (or a higher-level submit endpoint
-// that does it server-side). Over the caller's transport: a component passes
-// its `useFetchEndpoint()`, a paste handler the one it was built with.
+// Staged upload: POSTs a file's bytes to /api/attachments (streamed to the
+// blob store server-side). Server creates a row with no owner link and returns
+// the id; the caller links it from its own submit path (`Attachments.defineLink`)
+// or holds it (`holdAttachments`). Over the caller's transport: a component
+// passes its `useFetchEndpoint()`, a paste handler the one it was built with.
+// `maxBytes` is the caller's bound (a video field's), at most
+// ATTACHMENT_MAX_BYTES; absent, ATTACHMENT_DEFAULT_MAX_BYTES.
 export async function uploadAttachment(
   fetchEndpoint: FetchEndpoint,
   file: File | Blob,
   filename: string,
   mime: string,
+  opts: { maxBytes?: number } = {},
 ): Promise<UploadedAttachment> {
-  const form = new FormData();
-  const fileObj = file instanceof File ? file : new File([file], filename, { type: mime });
-  form.append("file", fileObj, filename);
   // A reload would cut the request: the page is held until it settles.
   const release = holdReload("Upload");
   try {
-    return await fetchEndpoint(uploadAttachmentEndpoint, {}, { body: form });
+    return await fetchEndpoint(
+      uploadAttachmentEndpoint,
+      {},
+      {
+        body: file,
+        query: { filename, mime, maxBytes: opts.maxBytes },
+      },
+    );
   } finally {
     release();
   }

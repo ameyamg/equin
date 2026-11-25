@@ -12,7 +12,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`browser`** [exempt] [11 sub-plugins] — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
     - **`chord`** [test helpers] [exempt] [9 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [2 sub-plugins] — Debug app.
-    - **`deploy`** [test helpers] [exempt] [40 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
+    - **`deploy`** [test helpers] [exempt] [45 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`desktop`** [exempt] [12 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [23 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [7 sub-plugins] — File explorer app.
@@ -26,7 +26,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`prototypes`** [test helpers] [18 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
     - **`settings`** [5 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [86 sub-plugins] — Sonata — extensible piano and music app.
-    - **`website`** [test helpers] [34 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
+    - **`website`** [test helpers] [35 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the…
   - Plugins:
@@ -106,7 +106,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`debug`** [exempt] [75 sub-plugins] — Debug tools umbrella plugin.
 
-- **`fields`** [test helpers] [exempt] [127 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** [test helpers] [exempt] [131 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
@@ -158,7 +158,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, usePane); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [130 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [131 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`installer`** [test helpers] [exempt] — The equin installer: install.sh's structured event stream (protocol v1 — plan, step, log, done and exit events, one zod schema in core) and the renderers that draw it. Its window sub-plugin is the…
   - Plugins:
@@ -191,7 +191,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`media`** — Umbrella for media in equin: the player every surface plays video and audio in, the film engine (frame-exact composited video from captured app stills) and the ffmpeg it encodes with.
   - Plugins:
-    - **`ffmpeg`** — ffmpeg + ffprobe as an on-demand dependency: a pinned static macOS arm64 build (libx264, aac), sha256-checked, installed by infra/deps on first use — the encoder and probe the film engine renders…
+    - **`ffmpeg`** — transcodeToBudget(input, budgetBytes, { signal, outDir }): re-encode a video to an MP4 of at most budgetBytes — ffprobe for duration and sound, two-pass H.264 at budget·8·0.95/duration − 128k AAC…
     - **`film`** — Film engine: a composition of layers over captured app stills, animated by keyframe tracks and a 3D camera, rendered frame by frame in a headless page (renderAt(t) is a pure function of film time)…
     - **`media-session`** — The browser's media session for music played through Web Audio: useMediaSession({ title, artist, artwork, playing, position, actions }) lists the caller's music in Chrome's media controls and the…
     - **`player`** [exempt] — Themed video / audio player in place of the browser's native controls: a floating glass control pill (play, volume, time, seek, settings, full screen) that fades while playing, a vertical volume…

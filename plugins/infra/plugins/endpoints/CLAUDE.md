@@ -383,7 +383,7 @@ came stamped. A GET declaring it is a tsc error.
 A bare Zod schema in `body:`/`response:` means **JSON** — that's the default and covers ~all endpoints. Binary and multipart payloads opt into the *same* `body:`/`response:` slot via a **codec** exported from `@plugins/infra/plugins/endpoints/core`:
 
 ```typescript
-import { blob, multipart } from "@plugins/infra/plugins/endpoints/core";
+import { blob, byteStream, multipart } from "@plugins/infra/plugins/endpoints/core";
 
 export const createScreenshot = defineEndpoint({
   route: "POST /api/screenshot",
@@ -398,13 +398,15 @@ export const getAttachmentFile = defineEndpoint({
 
 export const uploadAttachment = defineEndpoint({
   route: "POST /api/attachments",
-  body: multipart(),                       // FormData upload; the browser sets the boundary
+  body: byteStream(),                      // client sends a Blob; handler reads req.body as it arrives
+  query: z.object({ filename: z.string(), mime: z.string(), maxBytes: … }),
   response: UploadedAttachmentSchema,
 });
 ```
 
 - `blob(contentType?)` — raw binary on the request (`body:`) or response (`response:`) side. The client encodes/decodes via `Blob`. A server handler that needs custom response headers (e.g. `cache-control`, `content-disposition`) may stay a raw handler instead of using `implement()` — `blob()` carries only the body.
 - A binary READ the UI shows (a screenshot, a sprite) is not an endpoint: it is a `bytes: true` live value (`network/live`; `live/no-endpoint-read` bans the GET). `getAttachmentFile` stays an endpoint because the browser loads it as an asset URL (`assetPath`).
+- `byteStream(contentType?)` — **request-only** raw upload too large to buffer: the client sends a `Blob` (a `ReadableStream` throws — browsers cannot stream a request body), the handler gets the request's `ReadableStream` (`blob()` would read it whole first) and bounds what it reads itself.
 - `multipart()` — **request-only** FormData. No `Content-Type` is set so the browser supplies the multipart boundary; using it in a `response:` slot throws.
 
 A `FetchEndpoint` call also accepts two transport opts for fire-and-forget beacons:
@@ -562,6 +564,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `AnyEndpointDef`
     - `AssetBase`
     - `AssetPath`
+    - `ByteStreamBody`
     - `Codec`
     - `ContentPath`
     - `EndpointAnswer`
@@ -586,6 +589,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `assetBase`
     - `assetPath`
     - `blob`
+    - `byteStream`
     - `contentPath`
     - `dateString`
     - `defineEndpoint`
@@ -608,13 +612,13 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 287 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×86
+  - Imported by: 294 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×91
     - `conversations` ×37
-    - `infra` ×23
+    - `infra` ×24
     - `tasks` ×23
     - `debug` ×21
-    - `page` ×19
+    - `page` ×18
     - `primitives` ×15
     - `ui` ×8
     - `auth` ×6
@@ -627,6 +631,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `config_v2` ×3
     - `network` ×3
     - `active-data` ×2
+    - `fields` ×2
     - `history` ×2
     - `screenshot` ×2
     - `shell` ×2

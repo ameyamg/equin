@@ -13,25 +13,25 @@
   - Exports (types): `ColorPaletteTokenValues`
   - Exports (values): `colorPaletteGroup`
 - Cross-plugin:
-  - Tokens used by: 569 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×126
+  - Tokens used by: 571 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×127
     - `conversations` ×96
     - `primitives` ×81
     - `debug` ×42
-    - `page` ×34
+    - `page` ×33
     - `plugin-meta` ×27
     - `ui` ×26
     - `tasks` ×20
     - `reports` ×17
-    - `fields` ×12
+    - `fields` ×13
     - `active-data` ×8
     - `apps-core` ×7
     - `stats` ×7
     - `build` ×6
+    - `infra` ×6
     - `reorder` ×6
     - `shell` ×6
     - `auth` ×5
-    - `infra` ×5
     - `review` ×5
     - `companions` ×4
     - `hints` ×3

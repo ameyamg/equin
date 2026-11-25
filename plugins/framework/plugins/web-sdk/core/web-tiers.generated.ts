@@ -16,6 +16,7 @@
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/agent-manager/plugins/welcome: watched boot slot Shell.Sidebar
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
+//   - apps/plugins/deploy/plugins/site-feeds/plugins/box: preloaded descriptor (site-feeds.entries)
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)
 //   - apps/plugins/file-explorer/plugins/browser: dependency closure (imported by an eager plugin)
@@ -82,6 +83,9 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/deploy/plugins/remote-deploy",
   "apps/plugins/deploy/plugins/remote-deploy/plugins/site-live",
   "apps/plugins/deploy/plugins/servers",
+  "apps/plugins/deploy/plugins/site-feeds/plugins/discord",
+  "apps/plugins/deploy/plugins/site-feeds/plugins/editor",
+  "apps/plugins/deploy/plugins/site-feeds/plugins/syndication",
   "apps/plugins/deploy/plugins/site-messages/plugins/inbox",
   "apps/plugins/deploy/plugins/site-messages/plugins/intake",
   "apps/plugins/deploy/plugins/site-mirror/plugins/pull",
@@ -272,5 +276,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/website/plugins/pages/plugins/story/plugins/essay",
   "apps/plugins/website/plugins/pages/plugins/story/plugins/heads",
   "apps/plugins/website/plugins/pages/plugins/story/plugins/skills-graph",
+  "apps/plugins/website/plugins/pages/plugins/tips",
   "apps/plugins/website/plugins/pages/plugins/vision",
 ]);

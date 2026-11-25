@@ -8,6 +8,8 @@ import {
   hostQueryCurlArgv,
   mapSshAnswer,
   queryOverSsh,
+  hostWriteCurlArgv,
+  writeOverSsh,
   type DeploymentTarget,
   type ThisInstanceResponse,
 } from "./query-over-ssh";
@@ -186,6 +188,7 @@ describe("queryOverSsh", () => {
           kind: "ready",
           target: TARGET,
           loopbackPort: 9123,
+          compositionId: "website",
         }),
         sshRun: async (target, argv) => {
           calls.push({ target, argv });
@@ -354,5 +357,134 @@ describe("queryOverSsh on a this-instance box", () => {
       thrown = err;
     }
     expect(String(thrown)).toMatch(/outside \/api\/host-only\//);
+  });
+});
+
+describe("hostWriteCurlArgv", () => {
+  it("POSTs JSON read from stdin to the install's gateway, the URL quoted last", () => {
+    const argv = hostWriteCurlArgv(9100, "/api/host-only/x/upsert", {
+      hasBody: true,
+    });
+    expect(argv).toEqual([
+      "curl",
+      "-sS",
+      "-w",
+      "'\\n%{http_code}'",
+      "-m",
+      "10",
+      "-X",
+      "POST",
+      "-H",
+      "'content-type: application/json'",
+      "--data-binary",
+      "@-",
+      "'http://127.0.0.1:9100/api/host-only/x/upsert'",
+    ]);
+  });
+
+  it("sends no body flags for a body-less POST, and takes a longer deadline", () => {
+    const argv = hostWriteCurlArgv(9100, PATH, {
+      hasBody: false,
+      maxSeconds: 120,
+    });
+    expect(argv).not.toContain("--data-binary");
+    expect(argv[argv.indexOf("-m") + 1]).toBe("120");
+  });
+
+  it("refuses a deadline outside 1..600 and the paths a read refuses", () => {
+    expect(() =>
+      hostWriteCurlArgv(9100, PATH, { hasBody: false, maxSeconds: 0 }),
+    ).toThrow();
+    expect(() =>
+      hostWriteCurlArgv(9100, PATH, { hasBody: false, maxSeconds: 601 }),
+    ).toThrow();
+    expect(() =>
+      hostWriteCurlArgv(9100, "/api/things", { hasBody: false }),
+    ).toThrow(/outside \/api\/host-only\//);
+    expect(() =>
+      hostWriteCurlArgv(9100, "/api/host-only/x?q=$(id)", { hasBody: false }),
+    ).toThrow(/remote shell/);
+  });
+});
+
+describe("writeOverSsh", () => {
+  it("hands the JSON body to the session's stdin, never to the argv", async () => {
+    const calls: { argv: string[]; stdin: string | undefined }[] = [];
+    const timeouts: (number | undefined)[] = [];
+    const result = await writeOverSsh(
+      {
+        resolveDeployment: async (_id, sshTimeoutMs) => {
+          timeouts.push(sshTimeoutMs);
+          return {
+            kind: "ready",
+            target: TARGET,
+            loopbackPort: 9123,
+            compositionId: "website",
+          };
+        },
+        sshRun: async (_target, argv, opts) => {
+          calls.push({ argv, stdin: opts?.stdin });
+          return ok(JSON.stringify({ things: ["done"] }));
+        },
+        fetchThisInstance: noInstance,
+      },
+      "dep-1",
+      "/api/host-only/things/put",
+      { secret: "it's $(not) a shell word" },
+      ThingsSchema,
+      { maxSeconds: 60 },
+    );
+    expect(result).toEqual({ kind: "answer", value: { things: ["done"] } });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.stdin).toBe(
+      JSON.stringify({ secret: "it's $(not) a shell word" }),
+    );
+    expect(calls[0]!.argv.join(" ")).not.toContain("secret");
+    // The session's budget grows with curl's deadline.
+    expect(timeouts[0]).toBe(70_000);
+  });
+
+  it("POSTs through this instance's gateway for a stand-in box", async () => {
+    const requests: unknown[] = [];
+    const result = await writeOverSsh(
+      {
+        resolveDeployment: async () => ({ kind: "this-instance" }),
+        sshRun: async () => {
+          throw new Error("no SSH for a stand-in");
+        },
+        fetchThisInstance: async (path, request) => {
+          requests.push({ path, request });
+          return { kind: "response", status: 200, body: '{"things":[]}' };
+        },
+      },
+      "dep-1",
+      PATH,
+      { a: 1 },
+      ThingsSchema,
+    );
+    expect(result).toEqual({ kind: "answer", value: { things: [] } });
+    expect(requests).toEqual([
+      {
+        path: PATH,
+        request: { method: "POST", maxSeconds: 10, body: '{"a":1}' },
+      },
+    ]);
+  });
+
+  it("answers an unresolved deployment without a session", async () => {
+    const result = await writeOverSsh(
+      {
+        resolveDeployment: async () => ({ kind: "unverified" }),
+        sshRun: async () => {
+          throw new Error("must not run");
+        },
+        fetchThisInstance: noInstance,
+      },
+      "dep-1",
+      PATH,
+      undefined,
+      ThingsSchema,
+    );
+    expect(result).toEqual({ kind: "unverified" });
   });
 });

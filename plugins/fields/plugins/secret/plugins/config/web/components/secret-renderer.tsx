@@ -17,6 +17,7 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useContext, useState } from "react";
 import { configSecretMeta } from "../../core";
+import { SecretFieldStatusContext } from "../internal/secret-status";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -35,6 +36,7 @@ const SecretRenderer = defineFieldShape({
   type: secretFieldType,
   useShape: ({ field, value, onChange }) => {
     const ctx = useContext(ConfigFieldContext);
+    const ownerStatus = useContext(SecretFieldStatusContext);
     const [editing, setEditing] = useState(false);
     const { local, setLocal, focus } = useLocalValue(value);
 
@@ -86,6 +88,9 @@ const SecretRenderer = defineFieldShape({
         };
       }
       isSet = metaResult.data[ctx.fieldKey]?.set ?? false;
+    } else if (ownerStatus !== null) {
+      // A form whose owner stores its secrets says which are set.
+      isSet = ownerStatus(field);
     }
     if (isSet && !editing) {
       return {

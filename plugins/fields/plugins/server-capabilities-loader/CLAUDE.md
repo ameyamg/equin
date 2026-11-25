@@ -39,6 +39,7 @@ drift. Fix by running `./equin build`.
     - `fields/int/storage`
     - `fields/json/storage`
     - `fields/location/storage`
+    - `fields/media/storage`
     - `fields/money/storage`
     - `fields/ordinal/storage`
     - `fields/person/storage`

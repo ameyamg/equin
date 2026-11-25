@@ -339,6 +339,12 @@ export async function serve({
     // readiness timeout. (The live WS is separately governed by the unset,
     // 120s-default websocket.idleTimeout — not this key.)
     idleTimeout: 60,
+    // Bun's default is 128 MiB. The largest body a route accepts is an
+    // attachment upload declaring the attachments' maximum (500 MB, video),
+    // which its route streams to disk rather than buffering — so this is the
+    // transport's outer bound, not a per-route one: each route still bounds
+    // what it reads (a JSON body, an upload's declared `maxBytes`).
+    maxRequestBodySize: 512 * 1024 * 1024,
     fetch(req, server) {
       // The gateway's word on this boot's priority, on its readiness probe: a
       // background-started backend boots darwinbg until the gateway says

@@ -102,13 +102,13 @@ tokens, so anything that imports the barrels back would cycle.
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity`
-  - Slot contributors: 35 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Identity` ×35
+  - Slot contributors: 36 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×36
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 147 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×65
-    - `apps` ×25
+  - Imported by: 151 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×66
+    - `apps` ×28
     - `conversations` ×12
     - `tasks` ×9
     - `infra` ×6
@@ -189,6 +189,7 @@ tokens, so anything that imports the barrels back would cycle.
   - **`json`** [2 sub-plugins] — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
   - **`list`** [1 sub-plugin] — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
   - **`location`** [3 sub-plugins] — Location field type: identity only. The read cell lives in the plugins/table sub-plugin, the is-set filter in plugins/filter, the jsonb column in plugins/storage.
+  - **`media`** [3 sub-plugins] — Media field type: identity, plus MediaThumb — one MediaRef as a small square (an image, a video's first frame, a file glyph) shared by the config renderer and the table cell.
   - **`money`** [3 sub-plugins] — Money field type: identity only, extends float — an amount in US dollars, drawn as currency (`$42.17`); sort, filter and grouping inherited from float → number.
   - **`multiline-text`** [1 sub-plugin] — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
   - **`number`** [5 sub-plugins] — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.

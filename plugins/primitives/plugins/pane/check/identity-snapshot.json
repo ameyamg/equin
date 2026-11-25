@@ -859,6 +859,12 @@
       "parent": null
     },
     {
+      "paneId": "website-tips",
+      "segment": "tips",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "website-vision",
       "segment": "vision",
       "appIndex": false,

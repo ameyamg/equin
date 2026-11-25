@@ -45,16 +45,7 @@ export function hostQueryCurlArgv(
   path: string,
   opts: HostQueryOptions = {},
 ): string[] {
-  if (!path.startsWith(HOST_ONLY_PREFIX)) {
-    throw new Error(
-      `hostOnlyQueryOverSsh: ${path} is outside ${HOST_ONLY_PREFIX} — only host-only routes are read over SSH`,
-    );
-  }
-  if (!SHELL_SAFE_PATH.test(path)) {
-    throw new Error(
-      `hostOnlyQueryOverSsh: ${JSON.stringify(path)} holds characters the remote shell would read — encode the query`,
-    );
-  }
+  assertShellSafeHostOnlyPath("hostOnlyQueryOverSsh", path);
   const { maxAnswerBytes } = opts;
   if (
     maxAnswerBytes !== undefined &&
@@ -82,6 +73,80 @@ export function hostQueryCurlArgv(
       : ["--max-filesize", String(maxAnswerBytes)]),
     // Quoted for the remote shell `sshRun` joins this into: `&` and `?`
     // would otherwise background the command or glob.
+    `'http://${LOOPBACK_HOST}:${loopbackPort}${path}'`,
+  ];
+}
+
+/** Throws unless `path` is a host-only route the remote shell reads verbatim. */
+function assertShellSafeHostOnlyPath(caller: string, path: string): void {
+  if (!path.startsWith(HOST_ONLY_PREFIX)) {
+    throw new Error(
+      `${caller}: ${path} is outside ${HOST_ONLY_PREFIX} — only host-only routes are reached over SSH`,
+    );
+  }
+  if (!SHELL_SAFE_PATH.test(path)) {
+    throw new Error(
+      `${caller}: ${JSON.stringify(path)} holds characters the remote shell would read — encode the query`,
+    );
+  }
+}
+
+/** The longest a write's curl may wait for its answer (an import hashing a large file). */
+export const CURL_WRITE_MAX_SECONDS_CAP = 600;
+
+/**
+ * How a write waits. `maxSeconds`: curl's own deadline for the answer —
+ * default {@link CURL_MAX_SECONDS}; a route doing work proportional to a file
+ * (an import checking a video's sha256) passes more, up to
+ * {@link CURL_WRITE_MAX_SECONDS_CAP}. The SSH session's budget follows it.
+ */
+export interface HostWriteOptions {
+  maxSeconds?: number;
+}
+
+/** The SSH budget of a curl allowed `curlSeconds`: connect + curl + slack. */
+export function sshTimeoutFor(curlSeconds: number): number {
+  return SSH_TIMEOUT_MS - CURL_MAX_SECONDS * 1000 + curlSeconds * 1000;
+}
+
+function writeMaxSeconds(opts: HostWriteOptions): number {
+  const { maxSeconds = CURL_MAX_SECONDS } = opts;
+  if (
+    !Number.isInteger(maxSeconds) ||
+    maxSeconds <= 0 ||
+    maxSeconds > CURL_WRITE_MAX_SECONDS_CAP
+  ) {
+    throw new Error(
+      `hostOnlyWriteOverSsh: maxSeconds must be an integer in 1..${CURL_WRITE_MAX_SECONDS_CAP}, got ${maxSeconds}`,
+    );
+  }
+  return maxSeconds;
+}
+
+/**
+ * The command a write runs on the box: a POST to the install's gateway on its
+ * loopback port, like {@link hostQueryCurlArgv}'s GET. A JSON body travels on
+ * the session's stdin (`--data-binary @-`), never in the argv — so neither
+ * the box's process list nor its shell ever reads it, and no quoting applies.
+ */
+export function hostWriteCurlArgv(
+  loopbackPort: number,
+  path: string,
+  { hasBody, ...opts }: HostWriteOptions & { hasBody: boolean },
+): string[] {
+  assertShellSafeHostOnlyPath("hostOnlyWriteOverSsh", path);
+  return [
+    "curl",
+    "-sS",
+    "-w",
+    `'${STATUS_LINE_FORMAT}'`,
+    "-m",
+    String(writeMaxSeconds(opts)),
+    "-X",
+    "POST",
+    ...(hasBody
+      ? ["-H", "'content-type: application/json'", "--data-binary", "@-"]
+      : []),
     `'http://${LOOPBACK_HOST}:${loopbackPort}${path}'`,
   ];
 }
@@ -212,9 +277,24 @@ export type DeploymentTarget =
   | { kind: "not-found" }
   | { kind: "no-ssh-key" }
   | { kind: "unverified" }
-  | { kind: "ready"; target: SshTarget; loopbackPort: number }
+  | {
+      kind: "ready";
+      target: SshTarget;
+      loopbackPort: number;
+      /** The install's composition: what names its dirs on the box (`deriveInstall`). */
+      compositionId: string;
+    }
   // A demo's stand-in: the box is this instance, asked through its own gateway.
   | { kind: "this-instance" };
+
+/** A write asked of this instance's own gateway (the `this-instance` arm). */
+export interface ThisInstanceRequest {
+  method: "POST";
+  /** The JSON body, already serialized; absent for a body-less POST. */
+  body?: string;
+  /** curl's deadline, mirrored. */
+  maxSeconds: number;
+}
 
 /** What asking this instance's own gateway answered. */
 export type ThisInstanceResponse =
@@ -223,10 +303,24 @@ export type ThisInstanceResponse =
 
 /** The two effects a query needs, injected so the mapping is testable without a box. */
 export interface QueryDeps {
-  resolveDeployment: (deploymentId: string) => Promise<DeploymentTarget>;
-  sshRun: (target: SshTarget, argv: string[]) => Promise<SshRunResult>;
-  /** GET `path` on this instance's own gateway (the `this-instance` arm). */
-  fetchThisInstance: (path: string) => Promise<ThisInstanceResponse>;
+  /** `sshTimeoutMs`: the session's budget (absent: a read's {@link SSH_TIMEOUT_MS}). */
+  resolveDeployment: (
+    deploymentId: string,
+    sshTimeoutMs?: number,
+  ) => Promise<DeploymentTarget>;
+  sshRun: (
+    target: SshTarget,
+    argv: string[],
+    opts?: { stdin?: string },
+  ) => Promise<SshRunResult>;
+  /**
+   * `path` on this instance's own gateway (the `this-instance` arm): a GET,
+   * or the write `request` describes.
+   */
+  fetchThisInstance: (
+    path: string,
+    request?: ThisInstanceRequest,
+  ) => Promise<ThisInstanceResponse>;
 }
 
 /** The `this-instance` arm: one gateway hop, mapped like the curl's answer. */
@@ -275,5 +369,54 @@ export async function queryOverSsh<T>(
     path,
     schema,
     opts,
+  );
+}
+
+/**
+ * POST one host-only route of a deployment's box, `body` (when given) as JSON
+ * on the session's stdin, and parse the answer with `schema` — the write
+ * sibling of {@link queryOverSsh}: the same target resolution, the same
+ * failure union and the same stand-in arm (a POST to this instance's own
+ * gateway).
+ */
+export async function writeOverSsh<T>(
+  deps: QueryDeps,
+  deploymentId: string,
+  path: string,
+  body: unknown,
+  schema: z.ZodType<T>,
+  opts: HostWriteOptions = {},
+): Promise<HostQueryAnswer<T>> {
+  const maxSeconds = writeMaxSeconds(opts);
+  const json = body === undefined ? undefined : JSON.stringify(body);
+  const resolved = await deps.resolveDeployment(
+    deploymentId,
+    sshTimeoutFor(maxSeconds),
+  );
+  if (resolved.kind === "this-instance") {
+    assertShellSafeHostOnlyPath("hostOnlyWriteOverSsh", path);
+    return mapThisInstanceAnswer(
+      await deps.fetchThisInstance(path, {
+        method: "POST",
+        maxSeconds,
+        ...(json === undefined ? {} : { body: json }),
+      }),
+      path,
+      schema,
+    );
+  }
+  if (resolved.kind !== "ready") return resolved;
+  const argv = hostWriteCurlArgv(resolved.loopbackPort, path, {
+    hasBody: json !== undefined,
+    maxSeconds,
+  });
+  return mapSshAnswer(
+    await deps.sshRun(
+      resolved.target,
+      argv,
+      json === undefined ? undefined : { stdin: json },
+    ),
+    path,
+    schema,
   );
 }

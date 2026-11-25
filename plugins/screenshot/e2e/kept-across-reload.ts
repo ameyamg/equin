@@ -48,15 +48,10 @@ await withBrowser(async (h) => {
     );
     return [...new Uint8Array(await blob.arrayBuffer())];
   });
-  const res = await page.request.post(pathUrl("/api/attachments"), {
-    multipart: {
-      file: {
-        name: "screenshot.png",
-        mimeType: "image/png",
-        buffer: Buffer.from(png),
-      },
-    },
-  });
+  const res = await page.request.post(
+    pathUrl("/api/attachments?filename=screenshot.png&mime=image%2Fpng"),
+    { data: Buffer.from(png), headers: { "content-type": "image/png" } },
+  );
   if (!res.ok()) throw new Error(`upload: ${res.status()} ${await res.text()}`);
   const { id: attachmentId } = (await res.json()) as { id: string };
   const id = `e2e-${Date.now()}`;

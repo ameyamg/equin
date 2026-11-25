@@ -26,7 +26,7 @@ The **secret** type's config capability, spanning all four runtimes:
 
 ## Plugin reference
 
-- Description: Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Central-side secret config reader for auth providers.
+- Description: Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory; SecretFieldStatusContext lets a form whose owner stores its own secrets say which are set. Central-side secret config reader for auth providers.
 - Web:
   - Contributes:
     - `Fields.Renderer` "secret" → `Rendered`
@@ -45,6 +45,7 @@ The **secret** type's config capability, spanning all four runtimes:
     - `primitives/css/ui-kit.Input`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
+  - Exports (values): `SecretFieldStatusContext`
 - Server:
   - Contributes: `resource.declare` "config-v2.secret-meta"
   - Resources: `config-v2.secret-meta` (push, notified, whole: one descriptor's secret fields — bounded by its schema)
@@ -74,6 +75,8 @@ The **secret** type's config capability, spanning all four runtimes:
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/deploy/site-feeds/discord`
+    - `apps/deploy/site-feeds/syndication`
     - `auth`
     - `auth/apple-signing`
     - `auth/apple-signing/setup-wizard`

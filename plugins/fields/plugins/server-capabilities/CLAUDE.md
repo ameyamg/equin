@@ -135,8 +135,8 @@ the live registry suffices.)
 
 - Description: Server-owned field-capability library: the Fields.Storage / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldValueTextCast — the latter answering a TEXT-stored value's cast AND the filter-language domain it reads in), and the storage eager self-registering index. A graph sink — never imports a capability barrel.
 - Cross-plugin:
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×21
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×22
     - `infra/entities`
     - `primitives/data-view/custom-columns`
 - Server:

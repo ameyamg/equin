@@ -2441,9 +2441,9 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 66 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `DataViewSlots.Cell` ×16
-    - `DataViewSlots.CollectionItemAction` ×12
+  - Slot contributors: 69 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DataViewSlots.Cell` ×17
+    - `DataViewSlots.CollectionItemAction` ×14
     - `DataViewSlots.Filter` ×9
     - `DataViewSlots.CellEditor` ×6
     - `DataViewSlots.CollectionRowActivation` ×5
@@ -2455,8 +2455,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 120 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×110
+  - Contributes: 121 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×111
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
@@ -2740,8 +2740,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 112 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×110
+  - Contributes: 113 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×111
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getAllDescriptors`
@@ -2947,9 +2947,9 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×3
-  - Imported by: 133 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×39
-    - `apps` ×29
+  - Imported by: 135 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×40
+    - `apps` ×30
     - `debug` ×17
     - `primitives` ×10
     - `conversations` ×9

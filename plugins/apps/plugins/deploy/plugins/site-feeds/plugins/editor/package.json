@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-feeds-editor",
+  "description": "The Feeds tab of a site's page: a site's feed items on this computer (drafts and published), edited with the feed's own fields, published to the site's box and unpublished from it by a job over SSH.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -988,8 +988,8 @@ the runtime shapes no inherited row). `query-resource:live-read-closure`
     - `liveSetOverBudgetSink`
     - `SQL_TYPE_RE`
 - Cross-plugin:
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×7
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
     - `page` ×4
     - `conversations` ×3
     - `infra` ×3

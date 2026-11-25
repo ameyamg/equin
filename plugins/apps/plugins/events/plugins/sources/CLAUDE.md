@@ -7,7 +7,7 @@ the umbrella for the *source types* themselves.
   DataView (`events.sources`) with its registry-driven `+` menu, the side-pane at
   `/events/sources/source/:sourceId`, and the `EventSourceDetail` section slot its
   regions contribute into. It also exports the generic pieces the sections reuse
-  (`SourceConfigForm`, `useEventSource`, `useEventSourceType`,
+  (`useEventSource`, `useEventSourceType`,
   `readConfigValues`, the label maps).
 - **`plugins/source-detail/`** — the side-pane's regions, one sub-plugin each.
 - **`plugins/source-field/`** — the `source` dimension of the *events* DataView.
@@ -22,7 +22,7 @@ Naming: a **source** is a configured instance (a row in `event_sources`); a
 
 The `+` menu is built from `EventSources.Type.useContributions()` and the
 configuration form is rendered from each type's `configFields` through
-`config_v2`'s `FieldRenderer`. **A source type therefore ships zero form code**,
+`config_v2/fields`' generic `FieldsForm`. **A source type therefore ships zero form code**,
 and a third type drops into this UI with zero edits here. The moment a file under
 `web/` mentions a type id, that promise is gone — a type needing bespoke chrome
 contributes `Extra` instead.
@@ -174,7 +174,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/events/events-core` ×7
     - `primitives/pane` ×6
     - `primitives/css/ui-kit` ×5
@@ -182,11 +182,10 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `network/live` ×3
     - `primitives/kept-state` ×2
     - `apps/events/shell.Events`
-    - `config_v2/fields.FieldRenderer`
+    - `config_v2/fields.FieldsForm`
     - `infra/endpoints.getEndpointErrorMessage`
     - `network/live/live-state.matchResource`
     - `primitives/css/badge.Badge`
-    - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
@@ -203,7 +202,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Exports (types):
     - `ConfigValues`
     - `EventSourceTypeContribution`
-    - `SourceConfigFormProps`
     - `SourceLookup`
     - `SourceTypeLookup`
   - Exports (values):
@@ -227,7 +225,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `SOURCE_STATE_OPTIONS`
     - `SOURCE_STATUS_LABEL`
     - `SOURCE_STATUS_VARIANT`
-    - `SourceConfigForm`
     - `useEventSource`
     - `useEventSourceType`
     - `useEventSourceTypes`

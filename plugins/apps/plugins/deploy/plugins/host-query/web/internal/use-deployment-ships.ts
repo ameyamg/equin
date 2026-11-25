@@ -1,6 +1,9 @@
 import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useCompositionIncludes } from "@plugins/plugin-meta/plugins/composition/web";
+import {
+  useCompositionIncludes,
+  useCompositionIncludesEach,
+} from "@plugins/plugin-meta/plugins/composition/web";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   deployments,
@@ -93,4 +96,47 @@ export function useShipsGate(
   pluginId: PluginId,
 ): boolean {
   return useDeploymentShips(deploymentId, pluginId).kind !== "no";
+}
+
+/**
+ * {@link useDeploymentShips} for a set of plugins known only at run time (an
+ * open slot's contributors): which of `pluginIds` the deployment ships —
+ * `ready` with the shipped subset (empty for a gone or unreadable deployment
+ * and an unknown composition, as `no` is there), or `pending` / `failed`.
+ */
+export type DeploymentShipsEach =
+  | { kind: "pending" }
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
+  | { kind: "ready"; shipped: ReadonlySet<PluginId> };
+
+const PENDING_EACH: DeploymentShipsEach = { kind: "pending" };
+const NONE_SHIPPED: DeploymentShipsEach = { kind: "ready", shipped: new Set() };
+
+export function useDeploymentShipsEach(
+  deploymentId: string,
+  pluginIds: readonly PluginId[],
+): DeploymentShipsEach {
+  const composition = compositionOf(useLive(deployments, { id: deploymentId }));
+  const inclusion = useCompositionIncludesEach(
+    composition.kind === "named" ? composition.name : null,
+    pluginIds,
+  );
+  switch (composition.kind) {
+    case "pending":
+      return PENDING_EACH;
+    case "gone":
+    case "unreadable":
+      return NONE_SHIPPED;
+    case "named":
+      switch (inclusion.kind) {
+        case "pending":
+          return PENDING_EACH;
+        case "failed":
+          return inclusion;
+        case "unknown-composition":
+          return NONE_SHIPPED;
+        case "ready":
+          return { kind: "ready", shipped: inclusion.included };
+      }
+  }
 }

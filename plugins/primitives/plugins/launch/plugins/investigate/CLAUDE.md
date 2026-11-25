@@ -31,6 +31,8 @@
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/deploy-history/investigate-failure`
+    - `apps/deploy/site-feeds/editor`
+    - `apps/deploy/site-feeds/syndication`
     - `apps/deploy/site-messages/inbox`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`

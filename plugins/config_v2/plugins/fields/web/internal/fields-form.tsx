@@ -1,31 +1,32 @@
 import type { ReactElement } from "react";
-import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { FieldRenderer } from "./field-renderer";
 
-export interface SourceConfigFormProps {
-  /** The source type's own `configFields`, verbatim. */
+export interface FieldsFormProps {
+  /** The record to render, verbatim (a source type's `configFields`, a feed's item fields, …). */
   fields: FieldsRecord;
-  /** Current value per field key (already resolved by `readConfigValues`). */
+  /** Current value per field key (already resolved by the caller). */
   values: Record<string, unknown>;
   /** Called with ONE key's new value; the caller owns merging + persistence. */
   onChange: (key: string, value: unknown) => void;
-  /** Shown when the record is empty. Zero config is a legitimate type. */
+  /** Shown when the record is empty. An empty record is legitimate. */
   emptyLabel?: string;
 }
 
 /**
- * The whole add/configure form for ANY source type, rendered from its
- * `FieldsRecord` through the same `FieldRenderer` dispatch `config_v2`'s
- * settings pane uses.
+ * A whole form rendered from ANY `FieldsRecord`, through the same
+ * `FieldRenderer` dispatch `config_v2`'s settings pane uses: a source type's
+ * config in the Events app, a feed's item in the Deploy app, anything whose
+ * shape is declared as fields.
  *
- * This file is the payoff of the design and the reason it must stay generic: a
- * new source type ships a `core/` field record and a `server/` extractor, and
- * gets a working form for free. There is no per-type branch here and there must
- * never be one — the moment this file names a type id, the marketplace promise
- * ("publish a source type, it drops into everyone's Events app") is gone. A type
- * that genuinely needs bespoke chrome contributes `Extra` instead.
+ * This file must stay generic: it never names a field type id and never
+ * branches on a record's owner. A new field type registers its renderer and
+ * every form gets it for free; a new consumer declares its fields and gets a
+ * working form with zero form code. The moment this file names a type id (or
+ * a consumer's record), that promise is gone — a consumer needing bespoke
+ * chrome renders it beside the form.
  *
  * Each renderer owns its own commit granularity (the text renderer commits on
  * blur, not per keystroke), so `onChange` fires at field-edit frequency and is
@@ -37,12 +38,12 @@ export interface SourceConfigFormProps {
  * reads — inline the first level of nesting, and keep descriptions visible on
  * the band rather than behind a hover.
  */
-export function SourceConfigForm({
+export function FieldsForm({
   fields,
   values,
   onChange,
-  emptyLabel = "This source type has nothing to configure.",
-}: SourceConfigFormProps): ReactElement {
+  emptyLabel = "Nothing to configure.",
+}: FieldsFormProps): ReactElement {
   const entries = Object.entries(fields);
 
   if (entries.length === 0) {

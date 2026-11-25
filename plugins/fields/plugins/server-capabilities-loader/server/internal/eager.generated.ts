@@ -20,6 +20,7 @@ import "@plugins/fields/plugins/identifier/plugins/storage/server";
 import "@plugins/fields/plugins/int/plugins/storage/server";
 import "@plugins/fields/plugins/json/plugins/storage/server";
 import "@plugins/fields/plugins/location/plugins/storage/server";
+import "@plugins/fields/plugins/media/plugins/storage/server";
 import "@plugins/fields/plugins/money/plugins/storage/server";
 import "@plugins/fields/plugins/ordinal/plugins/storage/server";
 import "@plugins/fields/plugins/person/plugins/storage/server";

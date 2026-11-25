@@ -18,16 +18,25 @@ import {
   type DeploymentTarget,
   type HostQueryAnswer,
   type HostQueryOptions,
+  type HostWriteOptions,
+  type ThisInstanceRequest,
   type ThisInstanceResponse,
+  writeOverSsh,
 } from "./query-over-ssh";
 import { awakeTimeoutSignal } from "@plugins/packages/plugins/deadline/core";
 
 /** SSH sessions to boxes at once, across every reader of every host-only route. */
 const SSH_SESSIONS = 2;
-const sshSessions = createSemaphore(SSH_SESSIONS);
+/** Shared with `machine/`'s file transfer: every SSH session to a box counts. */
+export const sshSessions = createSemaphore(SSH_SESSIONS);
 
-async function resolveDeployment(
+/**
+ * Where a deployment's box is and how to reach it — read by the queries here
+ * and by `machine/`'s file transfer, so the two cannot resolve it apart.
+ */
+export async function resolveDeployment(
   deploymentId: string,
+  sshTimeoutMs: number = SSH_TIMEOUT_MS,
 ): Promise<DeploymentTarget> {
   const [deployment] = await db
     .select()
@@ -51,7 +60,7 @@ async function resolveDeployment(
   const ssh = await resolveServerSshTarget(
     deployment.serverId,
     "require-pinned",
-    { timeoutMs: SSH_TIMEOUT_MS },
+    { timeoutMs: sshTimeoutMs },
   );
   switch (ssh.kind) {
     case "not-found":
@@ -66,20 +75,38 @@ async function resolveDeployment(
         kind: "ready",
         target: ssh.target,
         loopbackPort: deployment.loopbackPort,
+        compositionId: deployment.compositionId,
       };
   }
 }
 
 /**
- * One GET through this instance's own gateway: the one proxy hop `hostOnly`
- * accepts, from the owner (no Origin, no forwarded-for).
+ * One request through this instance's own gateway: the one proxy hop
+ * `hostOnly` accepts, from the owner (no Origin, no forwarded-for). A GET, or
+ * the POST `request` describes.
  */
-async function fetchThisInstance(path: string): Promise<ThisInstanceResponse> {
+async function fetchThisInstance(
+  path: string,
+  request?: ThisInstanceRequest,
+): Promise<ThisInstanceResponse> {
   try {
     const res = await fetch(
       namespaceUrl(runtimeNamespace(), path, servedGatewayPort()),
       {
-        signal: awakeTimeoutSignal(CURL_MAX_SECONDS * 1000),
+        signal: awakeTimeoutSignal(
+          (request?.maxSeconds ?? CURL_MAX_SECONDS) * 1000,
+        ),
+        ...(request === undefined
+          ? {}
+          : {
+              method: request.method,
+              ...(request.body === undefined
+                ? {}
+                : {
+                    body: request.body,
+                    headers: { "content-type": "application/json" },
+                  }),
+            }),
       },
     );
     return { kind: "response", status: res.status, body: await res.text() };
@@ -154,6 +181,37 @@ export function hostOnlyQueryOverSsh<T>(
       { resolveDeployment, sshRun, fetchThisInstance },
       deploymentId,
       path,
+      schema,
+      opts,
+    ),
+  );
+}
+
+/**
+ * POST one host-only route of a deployment's box — the write sibling of
+ * {@link hostOnlyQueryOverSsh}: `curl -X POST` through the install's gateway
+ * on its loopback port, `body` (when not `undefined`) as JSON on the SSH
+ * session's stdin (`--data-binary @-`, never in an argv), the answer parsed
+ * with `schema`. Same target resolution (`require-pinned`), same failure
+ * union, same session semaphore, same stand-in arm (a POST to this instance's
+ * own gateway). A route's own refusals are arms of its 200 answer.
+ *
+ * `opts.maxSeconds` (default 10, at most 600) is curl's deadline for a route
+ * whose work grows with a file; the SSH budget follows it.
+ */
+export function hostOnlyWriteOverSsh<T>(
+  deploymentId: string,
+  path: string,
+  body: unknown,
+  schema: z.ZodType<T>,
+  opts: HostWriteOptions = {},
+): Promise<HostQueryAnswer<T>> {
+  return sshSessions.run(() =>
+    writeOverSsh(
+      { resolveDeployment, sshRun, fetchThisInstance },
+      deploymentId,
+      path,
+      body,
       schema,
       opts,
     ),

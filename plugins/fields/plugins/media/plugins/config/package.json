@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-fields-media-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Media field type: config-render capability — reorderable thumbnails, remove, and the upload dropzone (holding each upload until its owner links it)."
+}

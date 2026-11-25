@@ -55,15 +55,15 @@
     - `conversations` ×51
     - `debug` ×29
     - `ui` ×28
-    - `page` ×21
+    - `page` ×20
     - `plugin-meta` ×13
     - `tasks` ×13
     - `fields` ×8
+    - `infra` ×5
     - `reorder` ×5
     - `review` ×5
     - `shell` ×5
     - `apps-core` ×4
-    - `infra` ×4
     - `stats` ×4
     - `build` ×3
     - `companions` ×3

@@ -37,10 +37,10 @@ a new type ships a field record + an extractor and gets a working form.
     - `apps/events/events-core.useUpdateEventSource`
     - `apps/events/sources.EventSourceDetail`
     - `apps/events/sources.readConfigValues`
-    - `apps/events/sources.SourceConfigForm`
     - `apps/events/sources.useEventSource`
     - `apps/events/sources.useEventSourceType`
     - `config_v2/fields.FieldRenderer`
+    - `config_v2/fields.FieldsForm`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/placeholder.Placeholder`

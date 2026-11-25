@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-feeds",
+  "description": "Umbrella for the content a deployed site publishes itself (feeds — its tips, its news): defineSiteFeed (a site's own declaration of an entry's fields, how it syndicates, how many entries visitors read) and the host-only route contracts the computer publishes through; the box half ships inside the site.",
+  "private": true,
+  "version": "0.0.1"
+}
