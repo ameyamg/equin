@@ -1,6 +1,7 @@
 import { agentModelGuard } from "./guards/agent-model";
 import { backgroundOpsGuard } from "./guards/background-ops";
 import { backgroundTimeoutGuard } from "./guards/background-timeout";
+import { bareTscGuard } from "./guards/bare-tsc";
 import { bunScriptGuard } from "./guards/bun-script";
 import { claudeMdHint } from "./guards/claude-md-hint";
 import { e2eToolUseIdGuard } from "./guards/e2e-tool-use-id";
@@ -44,6 +45,7 @@ export const GUARDS: Guard<any>[] = [
   mainWritesGuard,
   postgresGuard,
   macosAutomationGuard,
+  bareTscGuard,
   backgroundOpsGuard,
   pollLoopGuard,
   // Plumbing rewriters run after every judging guard, so those see what the

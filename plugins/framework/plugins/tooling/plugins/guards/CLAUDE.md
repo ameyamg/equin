@@ -175,6 +175,20 @@ The write scan itself (`core/write-scan.ts`: `firstFlaggedWrite` over a path
 classifier) is shared with `data-root-writes` below — a guard that refuses a
 write by WHERE it lands asks it, never rebuilds it.
 
+## The type checker runs admitted
+
+`bare-tsc` (Bash) refuses the TypeScript compiler run over an equin checkout
+in any spelling (`tsc`, `npx`/`bunx`/`pnpx tsc`, `npm exec`/`bun x`/`bun run`/
+`pnpm`/`yarn tsc`, `node …/tsc`, `typescript/lib/tsc.js`), and points at
+`./equin check type-check`. A checkout's tsconfig is one ~11k-file project:
+a bare run grows to 4.1–4.5 GB in under 30 s with no host grant, so admission
+never reserved it. On 2026-11-25 agents ran it 17 times, and every minute past
+20k compressor decompressions/s had one running beside an admitted build —
+including the three duress episodes (15:05, 18:21, 22:50 UTC) that stretched
+main's git, read and flush waits to 3–7 s. Info-only flags (`--version`,
+`--help`, `--showConfig`) and a tsc outside any checkout pass. A guard, not
+the fix: agent shell children are unadmitted in general (task-1795648323-aq17ba).
+
 ## The data root is declared, never written by hand
 
 `data-root-writes` (Bash, Write, Edit, NotebookEdit) refuses a write that would
