@@ -340,8 +340,9 @@ function RecordRow({
 /**
  * Apply, beside the size dropdown: size the window to the chosen preset's
  * page now, without recording (to lay the page out, or check it, first).
- * Off for As is (nothing to apply), a size this screen or zoom refuses, and
- * a page already at that size — each said in its tooltip.
+ * Lit as applied while the page is already that size (still clickable: it
+ * applies again), off for As is (nothing to apply) and a size this screen or
+ * zoom refuses — each said in its tooltip.
  */
 function ApplySize({
   preset,
@@ -353,25 +354,30 @@ function ApplySize({
   onClick: () => void;
 }) {
   const page = preset.page;
-  const off =
+  const refusal =
     page === null
       ? "As is keeps the window as it is"
-      : measure.innerWidth === page.width && measure.innerHeight === page.height
-        ? `The page is already ${page.width} × ${page.height}`
-        : (() => {
-            const bounds = windowBoundsFor(page, measure);
-            return bounds.ok ? null : sizeRefusalText(bounds.reason);
-          })();
+      : (() => {
+          const bounds = windowBoundsFor(page, measure);
+          return bounds.ok ? null : sizeRefusalText(bounds.reason);
+        })();
+  const applied =
+    page !== null &&
+    measure.innerWidth === page.width &&
+    measure.innerHeight === page.height;
   const title =
-    off ??
-    `Resize the window to ${preset.label} now (page ${page?.width} × ${page?.height}), without recording`;
+    refusal ??
+    (applied
+      ? `Applied: the page is ${page.width} × ${page.height} (${preset.label})`
+      : `Resize the window to ${preset.label} now (page ${page?.width} × ${page?.height}), without recording`);
   return (
     <button
       type="button"
       className="rec-tg rec-apply"
       title={title}
       aria-label={title}
-      disabled={off !== null}
+      data-applied={applied ? "" : undefined}
+      disabled={refusal !== null}
       onClick={onClick}
     >
       <Icon icon={icons.apply} />

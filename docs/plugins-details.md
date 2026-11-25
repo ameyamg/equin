@@ -17244,6 +17244,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --border`
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --primary-foreground`
               - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
