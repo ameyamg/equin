@@ -1517,6 +1517,16 @@ function renderTreeChromeRow(
   );
 }
 
+/**
+ * A one-line row's title while the row's detail is open: the row is then the
+ * heading of what it shows, so its title is read whole — a flow box (a column
+ * `Stack` resets the row's single-line context) lets it wrap instead of
+ * ellipsizing. Folded, it is one line again.
+ */
+function wrapWhileOpen(open: boolean, title: ReactNode): ReactNode {
+  return open ? <Stack gap="none">{title}</Stack> : title;
+}
+
 // Single source of row markup — shared verbatim by the plain and virtualized
 // branches so the two render identically.
 function listRowNode(
@@ -1729,24 +1739,27 @@ function listRowNode(
         // normally the longer one. That is the intent (the title identifies
         // the row) without inventing a shrink-priority primitive for it.
         <>
-          {titleField ? (
-            <Text
-              variant="label"
-              className={cn("text-foreground", toneClass)}
-              data-list-body=""
-            >
-              {/* `display="inline"` here, not `"block"`: a block cell asks for
+          {titleField
+            ? wrapWhileOpen(
+                open && detail != null,
+                <Text
+                  variant="label"
+                  className={cn("text-foreground", toneClass)}
+                  data-list-body=""
+                >
+                  {/* `display="inline"` here, not `"block"`: a block cell asks for
                   `w-full`, which in a flex line means the whole row rather
                   than the cell it means in the stacked shape. */}
-              <FieldCell
-                field={titleField}
-                row={row}
-                resolveCell={config.resolveCell}
-                resolveEditor={config.resolveEditor}
-                display="inline"
-              />
-            </Text>
-          ) : null}
+                  <FieldCell
+                    field={titleField}
+                    row={row}
+                    resolveCell={config.resolveCell}
+                    resolveEditor={config.resolveEditor}
+                    display="inline"
+                  />
+                </Text>,
+              )
+            : null}
           {marks}
           {terms.length > 0 ? (
             <Text variant="caption" className="text-muted-foreground">

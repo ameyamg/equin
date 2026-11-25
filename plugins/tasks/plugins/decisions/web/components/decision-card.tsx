@@ -293,8 +293,12 @@ function Options({
             }
           >
             <Stack direction="row" gap="sm" align="start">
+              {/* An option is read whole, never ellipsized: a column Stack
+                  resets the row's single-line context so the text wraps. */}
               <Fill>
-                <Text>{o.text}</Text>
+                <Stack gap="none">
+                  <Text>{o.text}</Text>
+                </Stack>
               </Fill>
               {mark}
             </Stack>
