@@ -19,13 +19,16 @@ whichever page asks for it. Design:
   equin gate: its URL says the visitor is in (`DemoScope`'s `resume`, passed
   live — also when the homepage mounted the scope first, at its gate). The
   gate is only ever the homepage frame's.
-- **Back to equin** (`landing/screenshot/chrome`'s `BackToSitePill`: an
-  always-shown, draggable pill at the top edge) is drawn only when the
-  visitor got to the demo page by Maximize (`viaMaximize`, set by Maximize
-  and cleared when the page is left) — never on a page opened directly, from
-  a link or from the apps gallery's Try it live.
+- **The site bar** (`DemoSiteBar`: a small draggable pill, bottom centre —
+  the corners hold the cookie prompt and toasts, and the apps' sidebar footers —
+  `dom/movable`) is drawn on the demo page for every visitor, however they
+  got there: Back to equin.ai — into the homepage's frame by the morph when
+  the visitor came by Maximize (`viaMaximize`, set by Maximize and cleared
+  when the page is left), else to the homepage — then the site links other
+  plugins contribute to `LiveDemo.BarLink` (`pages/download`: Download), each
+  a `DemoBarLink`. Their order is the slot's reorder config.
 - Maximize (under the frame) opens the demo page where the visitor is;
-  Back to equin (or the browser's Back) goes to `/about`, scrolled to the
+  Back to equin.ai (or the browser's Back) goes to `/about`, scrolled to the
   frame. Both run as
   `morphDemoFrame`'s view transition (a `flushSync` navigation).
 - A new browser tab opened from inside the demo, framed or not, opens the
@@ -52,30 +55,38 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
 
 ## Plugin reference
 
-- Description: The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, offering a draggable Back to equin pill — only after a Maximize, never on a page opened directly or from the apps gallery — Maximize and Back running as the morph view transition; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
+- Description: The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, Maximize and Back running as the morph view transition. The demo page always shows a draggable site bar at its bottom centre — Back to equin.ai (into the frame after a Maximize, else the homepage) and the LiveDemo.BarLink links (Download) — however the visitor got there; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
 - Web:
-  - Slots: `demoPane.Actions`
-  - Slot contributors: `demoPane.Actions` ← `primitives.pane`
+  - Slots:
+    - `demoPane.Actions`
+    - `LiveDemo.BarLink`
+  - Slot contributors:
+    - `demoPane.Actions` ← `primitives.pane`
+    - `LiveDemo.BarLink` ← `apps.website.pages.download`
   - Contributes:
     - `Website.Resident` "Live demo" → `DemoResident`
     - `Pane.Register` "website-demo"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/website/landing/screenshot/chrome` ×5
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/website/landing/screenshot/chrome` ×4
     - `primitives/pane` ×4
     - `apps-core/app-embed` ×2
     - `apps-core/tabs` ×2
     - `apps/website/shell` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/scope/scoped-store` ×2
     - `apps/deploy/analytics/collect.track`
     - `framework/browser-server/demo/scope.DemoScope`
     - `primitives/css/inline.Inline`
-    - `primitives/css/ui-kit.Button`
+    - `primitives/dom/movable.Movable`
     - `primitives/pane/route-prefix.withActiveRoutePrefix`
+    - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
   - Exports (values):
+    - `DemoBarLink`
     - `DemoControls`
     - `demoPane`
     - `DemoTarget`
+    - `LiveDemo`
     - `useDemoActions`
     - `useDemoState`
 - Server:
@@ -89,7 +100,14 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
     - `demoPage`
     - `demoPagePath`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/color-palette --background`
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/shadow --shadow-lg`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/website`
     - `apps/website/landing/screenshot`

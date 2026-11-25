@@ -186,6 +186,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"apps.sonata.shell.transport-overlay","plugin":"apps.sonata.shell","key":"transport-overlay","meta":{"kind":"slot","reorderable":false},"inMain":true},
   {"id":"apps.sonata.shell.view-option","plugin":"apps.sonata.shell","key":"view-option","meta":{"kind":"slot","reorderable":false},"inMain":true},
   {"id":"apps.sonata.shell.view-section","plugin":"apps.sonata.shell","key":"view-section","meta":{"kind":"slot","reorderable":false},"inMain":true},
+  {"id":"apps.website.live-demo.bar-link","plugin":"apps.website.live-demo","key":"bar-link","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.website.live-demo.page.actions","plugin":"apps.website.live-demo","key":"page.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.website.pages.guide.section","plugin":"apps.website.pages.guide","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.website.pages.story.section","plugin":"apps.website.pages.story","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},

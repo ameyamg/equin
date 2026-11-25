@@ -13488,7 +13488,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-md`
                 - Imported by: `apps/desktop/fullscreen-budget`
               - Plugins:
-                - **`chrome`** — The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then the Enter equin button on every visit (a first visit downloads nothing before it; a return visit's host already starts behind it; the homepage frame shows it even while the visitor is in the demo in another tab, Enter joining that same shared demo; only the demo page, whose URL names a place in it, opens with no gate), drawn in the frame or maximized where the URL is, and once entered, while the host starts, one bar in the logo's gradient — what it is doing and how much it downloaded, weighed from the worker's progress (the starting data, then the plugins loaded). Also the demo's controls: Reset demo (confirmed; the host wipes its data and every tab starts again from the story), and the demo page's way back — BackToSitePill: an always-shown, draggable pill at the top edge ('Demo · made-up data', Back to equin; only the button on a narrow screen) — with Maximize / Back run as a view transition (morphDemoFrame: the demo's box grows to the tab's surface and shrinks back). Drawn by the website.s demo band.
+                - **`chrome`** — The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then the Enter equin button on every visit (a first visit downloads nothing before it; a return visit's host already starts behind it; the homepage frame shows it even while the visitor is in the demo in another tab, Enter joining that same shared demo; only the demo page, whose URL names a place in it, opens with no gate), drawn in the frame or maximized where the URL is, and once entered, while the host starts, one bar in the logo's gradient — what it is doing and how much it downloaded, weighed from the worker's progress (the starting data, then the plugins loaded). Also the demo's controls: Reset demo (confirmed; the host wipes its data and every tab starts again from the story), with Maximize / Back run as a view transition (morphDemoFrame: the demo's box grows to the tab's surface and shrinks back). Drawn by the website.s demo band.
                   - Web:
                     - Uses:
                       - `framework/browser-server/demo/scope.useDemoHostControl`
@@ -13496,12 +13496,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
                       - `primitives/css/ui-kit.ControlSizeProvider`
-                      - `primitives/dom/movable.Movable`
                       - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
-                      - `ui/icons.Icon`
                       - `ui/logo.Logo`
                     - Exports (values):
-                      - `BackToSitePill`
                       - `DEMO_FRAME_ATTR`
                       - `DemoBootScreen`
                       - `morphDemoFrame`
@@ -13509,13 +13506,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --background`
-                      - `ui/tokens/color-palette --border`
                       - `ui/tokens/color-palette --foreground`
                       - `ui/tokens/color-palette --primary`
                       - `ui/tokens/density --space-lg`
-                      - `ui/tokens/density --space-md`
-                      - `ui/tokens/density --space-sm`
-                      - `ui/tokens/shadow --shadow-sm`
                     - Imported by: `apps/website/live-demo`
             - **`story-link`** — Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
               - Web:
@@ -13533,30 +13526,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/type-scale --font-weight-normal`
-        - **`live-demo`** — The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, offering a draggable Back to equin pill — only after a Maximize, never on a page opened directly or from the apps gallery — Maximize and Back running as the morph view transition; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
+        - **`live-demo`** — The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, Maximize and Back running as the morph view transition. The demo page always shows a draggable site bar at its bottom centre — Back to equin.ai (into the frame after a Maximize, else the homepage) and the LiveDemo.BarLink links (Download) — however the visitor got there; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
-            - Slots: `demoPane.Actions`
-            - Slot contributors: `demoPane.Actions` ← `primitives.pane`
+            - Slots:
+              - `demoPane.Actions`
+              - `LiveDemo.BarLink`
+            - Slot contributors:
+              - `demoPane.Actions` ← `primitives.pane`
+              - `LiveDemo.BarLink` ← `apps.website.pages.download`
             - Contributes:
               - `Website.Resident` "Live demo" → `DemoResident`
               - `Pane.Register` "website-demo"
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
-              - `apps/website/landing/screenshot/chrome` ×5
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
+              - `apps/website/landing/screenshot/chrome` ×4
               - `primitives/pane` ×4
               - `apps-core/app-embed` ×2
               - `apps-core/tabs` ×2
               - `apps/website/shell` ×2
+              - `primitives/css/ui-kit` ×2
               - `primitives/scope/scoped-store` ×2
               - `apps/deploy/analytics/collect.track`
               - `framework/browser-server/demo/scope.DemoScope`
               - `primitives/css/inline.Inline`
-              - `primitives/css/ui-kit.Button`
+              - `primitives/dom/movable.Movable`
               - `primitives/pane/route-prefix.withActiveRoutePrefix`
+              - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
             - Exports (values):
+              - `DemoBarLink`
               - `DemoControls`
               - `demoPane`
               - `DemoTarget`
+              - `LiveDemo`
               - `useDemoActions`
               - `useDemoState`
           - Server:
@@ -13570,7 +13571,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `demoPage`
               - `demoPagePath`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/color-palette --background`
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/shadow --shadow-lg`
+              - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/website`
               - `apps/website/landing/screenshot`
@@ -13668,20 +13676,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website`
                   - `apps/website/landing/layers`
                   - `apps/website/readme`
-            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish), and Download in the demo page's site bar (LiveDemo.BarLink). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-download"
                   - `WebsiteHeader` "download" → `DownloadNavItem`
                   - `WebsiteHeader` "demo" → `DemoNavItem`
+                  - `LiveDemo.BarLink` "Download" → `DemoBarDownload`
                   - `ThemeEngine.SubTheme` "equin download note"
                   - `ThemeEngine.SubTheme` "equin download tabs"
                   - `ThemeEngine.SubTheme` "equin download"
-                - Uses: 34 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
+                - Uses: 36 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
                   - `apps/website/shell` ×7
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
                   - `primitives/pane` ×3
+                  - `apps/website/live-demo` ×2
                   - `primitives/css/ui-kit` ×2
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
@@ -55994,7 +56004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/present`
-              - `apps/website/landing/screenshot/chrome`
+              - `apps/website/live-demo`
               - `hints/ask`
               - `page/prototype`
               - `primitives/data-table`
@@ -59958,8 +59968,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
-          - `apps` ×34
+        - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+          - `apps` ×35
           - `primitives` ×15
           - `conversations` ×13
           - `apps-core` ×6
@@ -61394,8 +61404,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 315 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×315
+    - Contributes: 316 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×316
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -61419,8 +61429,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 314 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×314
+    - Contributes: 315 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×315
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -68640,8 +68650,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 617 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×157
+        - Imported by: 616 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×156
           - `conversations` ×125
           - `primitives` ×54
           - `page` ×52
@@ -70812,8 +70822,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 241 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×62
+            - Tokens used by: 242 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×63
               - `conversations` ×41
               - `primitives` ×38
               - `debug` ×15

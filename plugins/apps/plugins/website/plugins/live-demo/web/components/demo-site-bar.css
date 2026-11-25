@@ -1,0 +1,36 @@
+/* The demo page's site bar (demo-site-bar.tsx): one small pill over the demo
+   — the site's tokens, a hairline, a soft shadow and a faint glow of the
+   brand so it reads above any app it covers. */
+.demo-site-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 44px -22px color-mix(in srgb, var(--primary) 36%, transparent);
+  backdrop-filter: blur(14px);
+  cursor: grab;
+  white-space: nowrap;
+}
+/* Back: a plain text link, no box of its own until the pointer is on it. */
+.demo-site-bar-back {
+  color: var(--muted-foreground);
+}
+.demo-site-bar-back:hover {
+  color: var(--foreground);
+}
+.demo-site-bar-short {
+  display: none;
+}
+@media (max-width: 640px) {
+  .demo-site-bar-long {
+    display: none;
+  }
+  .demo-site-bar-short {
+    display: inline;
+  }
+}

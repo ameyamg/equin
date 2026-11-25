@@ -220,14 +220,16 @@ await withBrowser(async (h) => {
     hostRequests.length,
     hostsBefore,
   );
-  const pill = page.locator("[data-demo-back]");
+  const pill = page.locator("[data-demo-site-bar]");
   r.ok(
-    "Maximize: the demo page offers Back to equin",
-    (await pill.count()) === 1 && (await pill.isVisible()),
+    "Maximize: the demo page's site bar offers Back to equin.ai and Download",
+    (await pill.count()) === 1 &&
+      (await pill.isVisible()) &&
+      (await pill.getByText("Download", { exact: true }).count()) === 1,
   );
   await snap(page, OUT, "4-maximized");
 
-  // The pill moves out of the way, and stays clickable. Once the Maximize
+  // The bar (bottom centre) moves out of the way, and stays clickable. Once the Maximize
   // morph has ended: during a view transition nothing on the page is hit.
   await page.waitForFunction(
     () => !document.documentElement.hasAttribute("data-demo-morph"),
@@ -237,14 +239,14 @@ await withBrowser(async (h) => {
   if (home !== null) {
     await page.mouse.move(home.x + 12, home.y + home.height / 2);
     await page.mouse.down();
-    await page.mouse.move(home.x + 12 - 200, home.y + home.height / 2 + 300, {
+    await page.mouse.move(home.x + 12 + 200, home.y + home.height / 2 - 300, {
       steps: 8,
     });
     await page.mouse.up();
   }
   const moved = await pill.boundingBox();
   r.ok(
-    "the pill can be dragged off what it covers",
+    "the site bar can be dragged off what it covers",
     home !== null &&
       moved !== null &&
       Math.abs(moved.y - home.y) > 100 &&
@@ -336,9 +338,9 @@ await withBrowser(async (h) => {
     { bands: 0, films: 0 },
   );
   r.eq(
-    "opened directly, the demo page offers no Back to equin",
-    await fresh.locator("[data-demo-back]").count(),
-    0,
+    "opened directly, the demo page offers its site bar too",
+    await fresh.locator("[data-demo-site-bar]").count(),
+    1,
   );
   await snap(fresh, OUT, "6-demo-page");
 

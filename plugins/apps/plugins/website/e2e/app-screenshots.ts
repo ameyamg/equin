@@ -101,12 +101,11 @@ if (unknown.length) {
 }
 
 /**
- * The demo page's own chrome — its "Back to equin" pill
- * (`landing/screenshot/chrome`, shown only after a Maximize, never on a
- * page opened directly as here) — is not the app: left out of the picture
- * should it ever show.
+ * The demo page's own chrome — its site bar (`live-demo`: Back to equin.ai,
+ * Download), always shown on the demo page — is not the app: left out of
+ * the picture.
  */
-const DEMO_CHROME_STYLE = "[data-demo-back] { display: none !important; }";
+const DEMO_CHROME_STYLE = "[data-demo-site-bar] { display: none !important; }";
 /**
  * The site's cookie consent prompt (`pages/privacy`) asks every fresh
  * visitor, the screenshot's browser included: left out of the picture

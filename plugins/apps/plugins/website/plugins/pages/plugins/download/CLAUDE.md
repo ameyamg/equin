@@ -23,20 +23,22 @@ installer beside another's source. The installer's steps are written out in
 
 ## Plugin reference
 
-- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish), and Download in the demo page's site bar (LiveDemo.BarLink). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-download"
     - `WebsiteHeader` "download" → `DownloadNavItem`
     - `WebsiteHeader` "demo" → `DemoNavItem`
+    - `LiveDemo.BarLink` "Download" → `DemoBarDownload`
     - `ThemeEngine.SubTheme` "equin download note"
     - `ThemeEngine.SubTheme` "equin download tabs"
     - `ThemeEngine.SubTheme` "equin download"
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×7
     - `primitives/collapsible` ×4
     - `primitives/css/spacing` ×3
     - `primitives/pane` ×3
+    - `apps/website/live-demo` ×2
     - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `apps/deploy/analytics/collect.track`

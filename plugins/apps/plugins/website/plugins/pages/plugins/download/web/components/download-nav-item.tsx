@@ -1,6 +1,7 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { demoPagePath } from "@plugins/apps/plugins/website/plugins/live-demo/core";
+import { DemoBarLink } from "@plugins/apps/plugins/website/plugins/live-demo/web";
 import { WebsiteNavLink } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -19,6 +20,18 @@ export function DownloadNavItem() {
     <WebsiteNavLink
       label="Download"
       {...openPane.link(downloadPane, {}, { mode: "root" })}
+    />
+  );
+}
+
+/** "Download" in the demo page's site bar: the way on from trying equin. */
+export function DemoBarDownload() {
+  const openPane = useOpenPane();
+  return (
+    <DemoBarLink
+      label="Download"
+      {...openPane.link(downloadPane, {}, { mode: "root" })}
+      onClickCapture={() => track("demo_bar_download")}
     />
   );
 }

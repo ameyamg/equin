@@ -16,7 +16,6 @@ import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
   DemoBootScreen,
-  BackToSitePill,
   morphDemoFrame,
   ResetDemoButton,
 } from "@plugins/apps/plugins/website/plugins/landing/plugins/screenshot/plugins/chrome/web";
@@ -30,6 +29,7 @@ import {
 } from "../internal/demo-store";
 import { landingUrl } from "../internal/demo-url";
 import { demoPagePath } from "../../core";
+import { DemoSiteBar } from "./demo-site-bar";
 
 /**
  * The live demo's resident, wrapping the site's pages (`Website.Resident`):
@@ -56,7 +56,7 @@ export function DemoResident({ children }: { children: ReactNode }): ReactNode {
  * on a page without one, nothing is drawn and the server keeps running.
  */
 function DemoServer(): ReactNode {
-  const { started, target } = useDemoState();
+  const { started, target, viaMaximize } = useDemoState();
   const demo = useDemoActions();
   const navigate = useNavigate();
   const maximize = useCallback(() => {
@@ -68,8 +68,17 @@ function DemoServer(): ReactNode {
     () => morphDemoFrame(() => navigate(landingUrl())),
     [navigate],
   );
+  // The demo page's Back to equin.ai: into the frame it was maximized from
+  // (the morph), else the homepage — a page opened directly has no frame to
+  // shrink back into.
+  const back = useCallback(() => {
+    track("demo_back_to_site");
+    if (viaMaximize) restore();
+    else navigate(landingUrl());
+  }, [viaMaximize, restore, navigate]);
   if (!started) return null;
   return (
+    <>
     <DemoScope
       scenario={workspaceDemo}
       onEnter={demo.entered}
@@ -91,13 +100,20 @@ function DemoServer(): ReactNode {
       }
     >
       {target !== null && (
-        <ResidentDemo
-          target={target}
-          onMaximize={maximize}
-          onRestore={restore}
-        />
+          <ResidentDemo target={target} onMaximize={maximize} />
       )}
     </DemoScope>
+      {/* The demo page's site bar, outside the scope: it is the site's
+          chrome — its links the site's contributions (the scope's plugins
+          are the demo's), its look the site's theme — drawn over the demo
+          from the start, its boot included. */}
+      {target?.kind === "page" &&
+        createPortal(
+          <DemoSiteBar onBack={back} bounds={target.element} />,
+          target.element,
+          "site-bar",
+        )}
+    </>
   );
 }
 
@@ -105,13 +121,11 @@ function DemoServer(): ReactNode {
 function ResidentDemo({
   target,
   onMaximize,
-  onRestore,
 }: {
   target: DemoTargetEntry;
   onMaximize: () => void;
-  onRestore: () => void;
 }): ReactNode {
-  const { controls, viaMaximize } = useDemoState();
+  const { controls } = useDemoState();
   const demo = useDemoActions();
   const { setPlace } = demo;
   const claimTitle = useClaimTabTitle();
@@ -136,11 +150,6 @@ function ResidentDemo({
             fills={page ? "viewport" : undefined}
             onTitleChange={claimTitle}
           />
-          {/* The way back, only for a visitor who maximized the homepage's
-              frame — a link or the apps gallery opens the demo page alone. */}
-          {page && viaMaximize && (
-            <BackToSitePill onBack={onRestore} bounds={target.element} />
-          )}
         </>,
         target.element,
         target.kind,

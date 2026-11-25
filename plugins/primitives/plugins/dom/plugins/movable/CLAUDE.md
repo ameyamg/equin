@@ -54,7 +54,7 @@ pill, a tag, a chip) that covers what the user wants to see.
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/present`
-    - `apps/website/landing/screenshot/chrome`
+    - `apps/website/live-demo`
     - `hints/ask`
     - `page/prototype`
     - `primitives/data-table`
