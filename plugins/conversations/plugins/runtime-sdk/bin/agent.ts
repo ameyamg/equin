@@ -41,12 +41,13 @@ import {
   transcriptUuidOfTurn,
   turnIdKind,
 } from "@plugins/conversations/plugins/turn-ledger/core";
-import { SAMPLE, SYSCTL } from "@plugins/infra/plugins/paths/server";
+import { LSAPPINFO, SAMPLE, SYSCTL } from "@plugins/infra/plugins/paths/server";
 import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-core/core";
 import { SecretStore } from "@plugins/infra/plugins/secrets/server";
 import { centralSecretStore } from "@plugins/infra/plugins/secrets/cli";
 import { basename, dirname, join } from "node:path";
 import { promptContent } from "./prompt-content";
+import { checkDisplayName, lsAppInfoAt } from "./display-name";
 import { startExitWatchdog, type ExitWatchdog } from "./exit-watchdog";
 import { parseArgs } from "node:util";
 import { ZodError, z } from "zod";
@@ -608,6 +609,7 @@ void Promise.all([session.initializationResult(), startedWritten]).then(
     emit({ kind: "agent", payload: { event: "ready", cliVersion } });
     log(`● ready · claude ${cliVersion ?? "?"}`);
     measureContext();
+    checkOwnDisplayName();
   },
   (err: unknown) => {
     const why = err instanceof Error ? err.message : String(err);
@@ -615,6 +617,37 @@ void Promise.all([session.initializationResult(), startedWritten]).then(
     shutdown(`initialize failed: ${why}`);
   },
 );
+
+// ── Activity Monitor name: read back once the CLI is up ────────────────────
+// The named launcher set it just before it became the CLI, and can only say
+// so on stderr when it could not (bin/display-name.ts). Never awaited by the
+// start: a name is cosmetic, so it neither delays nor stops an agent.
+function checkOwnDisplayName(): void {
+  const launcher = options.namedLauncher;
+  const pid = cli?.pid;
+  if (launcher === null || pid === undefined) return;
+  const startedAt = performance.now();
+  void checkDisplayName({
+    pid,
+    expected: basename(launcher),
+    lsappinfo: LSAPPINFO === null ? null : lsAppInfoAt(LSAPPINFO),
+  }).then((unset) => {
+    const ms = Math.round(performance.now() - startedAt);
+    if (unset === null) {
+      log(`● display name checked (${String(ms)} ms)`);
+      return;
+    }
+    log(
+      `● display name not set: ${unset.cause}${unset.detail === null ? "" : ` — ${unset.detail}`} (${String(ms)} ms)`,
+    );
+    if (!closed) {
+      emit({
+        kind: "agent",
+        payload: { event: "display_name_unset", ...unset },
+      });
+    }
+  });
+}
 
 // ── context window: measured here, written as an event ──────────────────────
 // The window moves when a turn ends (a compaction ends one too), so it is

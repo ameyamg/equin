@@ -579,4 +579,30 @@ describe("reduceEvents", () => {
       error: "CLI gone",
     });
   });
+  test("a display name the launcher could not set is a reported effect", () => {
+    const { effects, malformed } = reduceEvents(EMPTY_PROJECTION, [
+      started(1),
+      {
+        seq: 2,
+        t: at(),
+        kind: "agent",
+        payload: {
+          event: "display_name_unset",
+          cause: "other-name",
+          expected: "equin · conv-1",
+          registered: "claude",
+          detail: null,
+        },
+      },
+    ]);
+    expect(malformed).toEqual([]);
+    expect(effects).toContainEqual({
+      kind: "display-name-unset",
+      seq: 2,
+      cause: "other-name",
+      expected: "equin · conv-1",
+      registered: "claude",
+      detail: null,
+    });
+  });
 });

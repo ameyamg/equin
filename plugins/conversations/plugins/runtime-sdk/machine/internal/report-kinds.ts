@@ -275,3 +275,71 @@ export const turnUnknownIdKind = ReportKind({
     };
   },
 });
+
+const DisplayNameUnsetSchema = z.object({
+  conversationId: z.string(),
+  cause: z.enum(["unregistered", "unnamed", "other-name", "unreadable"]),
+  expected: z.string(),
+  registered: z.string().nullable(),
+  detail: z.string().nullable(),
+});
+type DisplayNameUnsetData = z.infer<typeof DisplayNameUnsetSchema>;
+
+const DISPLAY_NAME_CAUSES: Record<DisplayNameUnsetData["cause"], string> = {
+  unregistered:
+    "LaunchServices holds no registration for the pid: the launcher's check-in (`_LSApplicationCheckIn`) failed or never ran",
+  unnamed:
+    "the pid is registered, but with no display name: `_LSSetApplicationInformationItem` failed or is missing",
+  "other-name":
+    "the pid is registered under another name: the call was refused, or it returned success and the name did not stick",
+  unreadable:
+    "the registry could not be read back (`lsappinfo` failed), so whether the name is set is unknown",
+};
+
+/**
+ * `sdk-agent-display-name`: **an agent's claude is not listed under its
+ * conversation's name in Activity Monitor.** The named launcher
+ * (`named-launcher.ts`, spawn-disclaim's `--exec-named`) sets the name through
+ * private LaunchServices calls just before it becomes claude, so a failure
+ * there is only a stderr line; the agent reads the registry back once its CLI
+ * is ready (`bin/display-name.ts`) and writes `display_name_unset`. The agent
+ * runs either way — the name is cosmetic, and permissions follow the
+ * launcher's path, not its name.
+ */
+export const sdkAgentDisplayNameKind = ReportKind({
+  kind: "sdk-agent-display-name",
+  schema: DisplayNameUnsetSchema,
+  // By cause, never by conversation: a macOS update that drops the calls
+  // fails every agent the same way, and that is one bug.
+  fingerprint: (d: DisplayNameUnsetData) => `sdk-agent-display-name:${d.cause}`,
+  meta: {
+    tag: "[sdk-agent-name]",
+    notif: "Agents are not named in Activity Monitor",
+    variant: "warning",
+    category: "error",
+  },
+  renderTask: (row: ReportRow) => {
+    const d = DisplayNameUnsetSchema.parse(row.data);
+    return {
+      title: `[sdk-agent-name] An agent's Activity Monitor name is not set (${d.cause})`,
+      description: [
+        `Conversation \`${d.conversationId}\`'s claude should be listed in ` +
+          `Activity Monitor as \`${d.expected}\` (its named launcher's file ` +
+          "name), and LaunchServices says otherwise: " +
+          `${DISPLAY_NAME_CAUSES[d.cause]}.`,
+        "",
+        `**Registered name:** ${d.registered === null ? "none" : `\`${d.registered}\``}`,
+        ...(d.detail === null ? [] : [`**Detail:** ${d.detail}`]),
+        "",
+        "The agent ran normally. The launcher's own reason, when the call " +
+          "failed, is its `disclaim-exec: display name not set (…)` line in " +
+          "the conversation's `agent.log` (`state/sdk-agents/<ns>/<id>/`). " +
+          "After a macOS update, check that the SPI `set_display_name` looks " +
+          "up (`packages/spawn-disclaim/native/disclaim-exec.c`) still exists " +
+          'and still works: `lsappinfo info -only name "$(lsappinfo find pid=<pid>)"`.',
+        "",
+        ...occurrences(row),
+      ].join("\n"),
+    };
+  },
+});

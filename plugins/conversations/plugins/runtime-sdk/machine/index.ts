@@ -14,6 +14,7 @@ import { requestDisclaimHelper } from "./internal/disclaim";
 import { claudeUsageServed } from "./internal/claude-usage";
 import { sdkEventsWatcher } from "./internal/consumer";
 import {
+  sdkAgentDisplayNameKind,
   sdkAgentUnresponsiveKind,
   sdkCatchUpOverdueKind,
   sdkConsumerStalledKind,
@@ -68,6 +69,7 @@ export default {
     sdkConsumerStalledKind,
     sdkCatchUpOverdueKind,
     sdkAgentUnresponsiveKind,
+    sdkAgentDisplayNameKind,
     turnWithoutIdKind,
     turnUnknownIdKind,
   ],

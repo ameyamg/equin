@@ -581,6 +581,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `isRelease`
     - `listWorktreeDirsAsync`
     - `listWorktreeDirsSync`
+    - `LSAPPINFO`
     - `LSOF`
     - `MACOS_TRASH`
     - `MKFIFO`

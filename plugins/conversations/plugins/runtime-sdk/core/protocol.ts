@@ -164,6 +164,25 @@ const envelope = { seq: z.number().int(), t: z.number() };
  *   only record of when the first one came;
  * - `exited` — the process is going away.
  */
+/**
+ * `display_name_unset`: the process the agent's named launcher became does not
+ * carry the launcher's name in LaunchServices (what Activity Monitor lists),
+ * read back once its CLI is ready (bin/display-name.ts). `cause`:
+ * `unregistered` — the pid has no registration (the check-in failed or never
+ * ran); `unnamed` — registered with no display name; `other-name` — a name
+ * other than the launcher's (the call refused it, or it did not stick);
+ * `unreadable` — the registry could not be read (`detail` says why).
+ */
+export const DisplayNameUnsetSchema = z.object({
+  event: z.literal("display_name_unset"),
+  cause: z.enum(["unregistered", "unnamed", "other-name", "unreadable"]),
+  /** The launcher's file name: the name the process should carry. */
+  expected: z.string(),
+  registered: z.string().nullable(),
+  detail: z.string().nullable(),
+});
+export type DisplayNameUnset = z.infer<typeof DisplayNameUnsetSchema>;
+
 export const AgentLifecycleSchema = z.discriminatedUnion("event", [
   z.object({
     event: z.literal("started"),
@@ -193,6 +212,7 @@ export const AgentLifecycleSchema = z.discriminatedUnion("event", [
   z.object({ event: z.literal("context_usage"), usage: z.unknown() }),
   z.object({ event: z.literal("context_usage_failed"), error: z.string() }),
   z.object({ event: z.literal("exited"), reason: z.string() }),
+  DisplayNameUnsetSchema,
   // After `exited`: process.exit returned, did not end the process within the
   // grace period, or a SIGTERM came first. Written by the hard exit just
   // before it SIGKILLs the CLI and the agent; the backend reports it.

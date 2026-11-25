@@ -339,6 +339,16 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   argv[0], `top` says `claude`. The name is chosen at the conversation's
   first start and kept across relaunches (read back from the previous
   launch.json).
+- **A name that did not take is reported, never a reason not to start.** The
+  launcher can only print a `disclaim-exec: display name not set (…)` line
+  (agent.log) before it becomes claude, so once the CLI is `ready` the agent
+  reads the registry back itself (`bin/display-name.ts`: `lsappinfo find
+  pid=` + `info -only name`, ~20 ms, never awaited by the start) — one check
+  for a call that failed and one that "succeeded" while the name did not
+  stick. A mismatch is a `display_name_unset` line, reported by the consumer
+  as `sdk-agent-display-name`, fingerprinted by its cause (unregistered /
+  unnamed / other-name / unreadable), so a macOS update that breaks every
+  agent's name is one row, not one per agent.
 - **No per-conversation copy of claude** (until 2026-11-25 the named file was
   an APFS clone of claude itself). macOS scans a new executable file on its
   first exec, for a time that grows with the file: 3.3 s for the 344 MB
@@ -430,6 +440,7 @@ Gotchas the spike hit:
     - `trigger` "runtime-sdk.attempt-ended"
     - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
     - `conversations.stop-waiver` "background-work"
+    - `report-kind` "sdk-agent-display-name"
     - `report-kind` "sdk-agent-unresponsive"
     - `report-kind` "sdk-catch-up-overdue"
     - `report-kind` "sdk-consumer-stalled"
@@ -515,6 +526,7 @@ Gotchas the spike hit:
     - `ClaudeUsageRefresh`
     - `ClaudeUsageWindow`
     - `CommandReply`
+    - `DisplayNameUnset`
     - `ErrorStoppedConversation`
     - `HelloReply`
     - `LaunchCandidate`

@@ -426,6 +426,20 @@ async function runEffect(id: string, effect: AgentEffect): Promise<void> {
         },
       });
       return;
+    case "display-name-unset":
+      await recordReport({
+        kind: "sdk-agent-display-name",
+        source: "server-caught",
+        message: `SDK agent ${id}: its claude is not listed in Activity Monitor under its launcher's name (${effect.cause}, event ${String(effect.seq)}; registered as ${effect.registered === null ? "nothing" : JSON.stringify(effect.registered)})${effect.detail === null ? "" : ` — ${effect.detail}`}`,
+        data: {
+          conversationId: id,
+          cause: effect.cause,
+          expected: effect.expected,
+          registered: effect.registered,
+          detail: effect.detail,
+        },
+      });
+      return;
     case "launch-phase":
       await markAgentLaunchPhase(id, effect.pid, effect.phase, effect.at);
       return;

@@ -8,7 +8,12 @@ import {
   clockStamp,
   type ClockStamp,
 } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
-import type { AgentEvent, AgentLifecycle, OpenRequest } from "../../core";
+import type {
+  AgentEvent,
+  AgentLifecycle,
+  DisplayNameUnset,
+  OpenRequest,
+} from "../../core";
 
 // Event lines → the conversation's projection, plus the side effects the
 // consumer must run for them. Pure: lines in, state and effects out, so replay
@@ -153,6 +158,14 @@ export type AgentEffect =
   | { kind: "context-measured"; usage: ContextUsage }
   /** The agent could not measure its context window: reported. */
   | { kind: "context-unmeasured"; seq: number; error: string }
+  /**
+   * The agent's claude does not carry its named launcher's Activity Monitor
+   * name: reported, one row per cause.
+   */
+  | ({ kind: "display-name-unset"; seq: number } & Omit<
+      DisplayNameUnset,
+      "event"
+    >)
   /**
    * The process `pid` reached a launch phase at `at` (its own clocks — the
    * line's wall time and sleep stamp): marked on the conversation's launch
@@ -385,6 +398,11 @@ export function reduceEvents(
               error: p.error,
             });
             break;
+          case "display_name_unset": {
+            const { event: _event, ...unset } = p;
+            effects.push({ kind: "display-name-unset", seq: e.seq, ...unset });
+            break;
+          }
           case "exit_stalled":
             // Follows `exited`, which already cleared the state.
             stalls.push({ ...p, seq: e.seq });

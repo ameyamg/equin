@@ -14,6 +14,14 @@ export const SYSCTL =
   Bun.which("sysctl") ??
   Bun.which("sysctl", { PATH: "/usr/sbin:/sbin" }) ??
   "/usr/sbin/sysctl";
+/**
+ * macOS's `lsappinfo`: reads the LaunchServices registry Activity Monitor
+ * names processes from. Looked up in the system's own bin folder only; `null`
+ * where it is not there (Linux).
+ */
+export const LSAPPINFO: string | null = Bun.which("lsappinfo", {
+  PATH: "/usr/bin",
+});
 /** `mkfifo`: makes a named pipe. */
 export const MKFIFO = Bun.which("mkfifo") ?? "mkfifo";
 /**

@@ -24303,6 +24303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger` "runtime-sdk.attempt-ended"
           - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
           - `conversations.stop-waiver` "background-work"
+          - `report-kind` "sdk-agent-display-name"
           - `report-kind` "sdk-agent-unresponsive"
           - `report-kind` "sdk-catch-up-overdue"
           - `report-kind` "sdk-consumer-stalled"
@@ -24388,6 +24389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClaudeUsageRefresh`
           - `ClaudeUsageWindow`
           - `CommandReply`
+          - `DisplayNameUnset`
           - `ErrorStoppedConversation`
           - `HelloReply`
           - `LaunchCandidate`
@@ -41392,6 +41394,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isRelease`
           - `listWorktreeDirsAsync`
           - `listWorktreeDirsSync`
+          - `LSAPPINFO`
           - `LSOF`
           - `MACOS_TRASH`
           - `MKFIFO`

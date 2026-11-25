@@ -54,6 +54,7 @@ export type {
 
 export {
   GIT,
+  LSAPPINFO,
   LSOF,
   MACOS_TRASH,
   SYSTEM_ZIP,

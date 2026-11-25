@@ -22,6 +22,7 @@ export type {
   AgentLaunchPrompt,
   AgentLifecycle,
   CommandReply,
+  DisplayNameUnset,
   HelloReply,
   OpenRequest,
 } from "./protocol";
