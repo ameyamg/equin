@@ -1,4 +1,4 @@
-// @hash be1d68be9cd7
+// @hash 1178a0c45bc9
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,9 @@
 {
   "items": [
     "conversations.conversation-view.op-status:op-status",
+    // What the row's agent is waiting on the user for: before the counts that
+    // are only about the work.
+    "tasks.decisions.item-count:decisions",
     "conversations.conversation-view.dependent-count:dependent-count",
     "conversations.conversation-progress:progress",
     "conversations.conversation-preprompt:preprompt"

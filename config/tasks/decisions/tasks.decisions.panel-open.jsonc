@@ -1,0 +1,12 @@
+// @hash 6ec84829688d
+// A task's open decisions in its panel (the conversation tray, the page block):
+// what needs the user first (the tab's declared order: Needs you, Sent, FYI),
+// newest first within it.
+{
+  "views": [
+    { "id": "open", "name": "Open", "view": { "type": "list", "sort": [{ "fieldId": "tab", "direction": "asc" }, { "fieldId": "openedAt", "direction": "desc" }] } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

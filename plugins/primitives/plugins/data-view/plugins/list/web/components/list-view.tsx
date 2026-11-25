@@ -1,4 +1,12 @@
-import { memo, useMemo, type CSSProperties, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  type CSSProperties,
+  type ReactNode,
+  type RefCallback,
+} from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -107,6 +115,7 @@ import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/c
 import type { ViewSlots } from "@plugins/primitives/plugins/data-view/core";
 import type { ListViewOptions } from "../../core";
 import { slotWidthVar, useSlotWidths, type SlotRef } from "./use-slot-widths";
+import { useStepKeys } from "./use-step-keys";
 
 /**
  * Wraps one list row with its sortable drag wiring: the whole row is the drag
@@ -498,6 +507,17 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     () => paintedSequence(sections),
     [sections],
   );
+  // j / k step the selection through the rows as drawn (`stepKeys`),
+  // revealing the row stepped to under the list's root.
+  const listRoot = useRef<HTMLElement | null>(null);
+  useStepKeys({
+    root: listRoot,
+    enabled: options.stepKeys === true,
+    sections,
+    collapsedSections: props.collapsedSections,
+    selectedRowId: props.selectedRowId,
+    rowActivation,
+  });
   // Rows and each section's empty space as native drop targets. A list row is
   // no native drag source: its drag is the manual order's reorder.
   const dnd = useRowDnd<unknown>({
@@ -551,6 +571,14 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     terms.trailingFields.map((f) => f.id).join("\u0000"),
     terms.trailingFields.length,
     { dropOrders: terms.trailingDropOrders, stacked: lines === 2 },
+  );
+  // The list's root: the slot widths' variables, and where a step finds its row.
+  const rootRef = useCallback<RefCallback<HTMLElement>>(
+    (el) => {
+      listRoot.current = el;
+      slotRootRef(el);
+    },
+    [slotRootRef],
   );
   const trailingSlots = useMemo(
     () =>
@@ -917,7 +945,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       fields={terms.elisionFields}
       rowsComplete={props.rowsComplete}
     >
-      <div ref={slotRootRef} className="contents">
+      <div ref={rootRef} className="contents">
         {options.columnCaptions === true && options.rowChrome !== "tree" ? (
           <ListCaptions config={config} firstRow={firstRow} />
         ) : null}

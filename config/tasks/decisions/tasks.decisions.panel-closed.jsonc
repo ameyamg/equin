@@ -1,0 +1,11 @@
+// @hash 6ec84829688d
+// A task's closed decisions in its panel, behind the "N closed" row: the most
+// recently closed first.
+{
+  "views": [
+    { "id": "closed", "name": "Closed", "view": { "type": "list", "sort": [{ "fieldId": "closedAt", "direction": "desc" }] } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

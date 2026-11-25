@@ -106,9 +106,9 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `useSurfaceShortcuts`
     - `useSurfaceSignal`
 - Cross-plugin:
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
-    - `primitives` ×10
+    - `primitives` ×11
     - `tasks` ×4
     - `apps-core` ×2
     - `companions/browser-extension`

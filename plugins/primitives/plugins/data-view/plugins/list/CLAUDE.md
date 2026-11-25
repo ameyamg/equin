@@ -254,6 +254,12 @@ conditional hook.
   toggles it, the row carries `aria-expanded`, no disclosure glyph is drawn.
   Needs `detail`; beside a surface's own row activation it throws (one click,
   one answer). The Sessions tab: a visit opens onto its timeline.
+- `stepKeys?` — j / k run the row activation of the next / previous row as
+  drawn (a collapsed section's rows, and those under it, skipped; attached
+  rows not stepped to) and reveal it in the list's nearest scroller
+  (`use-step-keys.ts`). Needs a row activation (throws otherwise); none
+  selected, j takes the first row. One stepping list per surface. A windowed
+  section only reveals a row that is mounted. The Decisions inbox.
 - `frame?: "card"` — each entry (the row and its open detail) is one raised
   card, primary-tinted border while open, the detail on the page ground under
   a hairline, cards a `sm` step apart (padding inside the entry, so windowed
@@ -284,7 +290,7 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×50
     - `primitives/rank-reorder` ×9
     - `primitives/tree` ×3
@@ -305,8 +311,10 @@ conditional hook.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserverSet`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
+    - `primitives/shortcuts.useSurfaceShortcuts`
     - `primitives/virtual-rows.VirtualRows`
     - `ui/icons.Icon`
   - Exports (types): `ListViewOptions`

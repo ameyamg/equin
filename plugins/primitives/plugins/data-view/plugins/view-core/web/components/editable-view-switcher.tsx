@@ -136,6 +136,11 @@ function ChipLabel(props: {
  * A chip's row count and dirty dot, after its name. The count is the caption's
  * faint tally; it goes with the name when the theme draws inactive chips
  * icon-only (`hideClass`). The dot (unsaved edits) always shows.
+ *
+ * Each is parted from what precedes it by a literal space, not a gap: the
+ * chip draws its label as ONE truncating inline run (`ToggleChip`'s label
+ * span), where a flex gap never applies — "Needs you2". A space at the run's
+ * start or end collapses, so a chip whose name is hidden stays tight.
  */
 function ChipMarks(props: {
   count: number | undefined;
@@ -145,6 +150,7 @@ function ChipMarks(props: {
   const { count, dirty, hideClass } = props;
   return (
     <>
+      {count !== undefined ? " " : null}
       {count !== undefined ? (
         <span
           className={cn(
@@ -156,6 +162,7 @@ function ChipMarks(props: {
           {count}
         </span>
       ) : null}
+      {dirty ? " " : null}
       {dirty ? (
         <span
           title="Unsaved changes"

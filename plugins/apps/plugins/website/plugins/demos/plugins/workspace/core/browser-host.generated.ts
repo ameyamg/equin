@@ -855,6 +855,8 @@ export const browserHost = {
     "tasks.auto-start.launch-option",
     "tasks.decisions",
     "tasks.decisions.inbox",
+    "tasks.decisions.item-count",
+    "tasks.decisions.tray",
     "tasks.launch-options",
     "tasks.orchestration.mandate.definitions",
     "tasks.orchestration.watch",

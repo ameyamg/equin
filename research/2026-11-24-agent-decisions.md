@@ -328,6 +328,26 @@ Where the code differs from the above:
   `DataViewSwitcher` `sourceCounts`), rows say their drafted answer, 1–9 pick
   on the open decision. j/k are not bound yet.
 
+### As landed (phase 4)
+
+- **`TaskDecisionsPanel({ taskId, inboxLink, whenSettled })`** in
+  `decisions/web`: the open decisions and the closed ones are two DataView
+  lists over `decisionsList` scoped to the task (`tab ne closed` / `tab =
+  closed`), each row expanding inline through the list's `detail` +
+  `detailOnActivate` into `DecisionCard`; the closed list sits behind a
+  collapsed "N closed" row. `inboxLink` is the caller's (decisions/web names
+  no pane); `whenSettled: "hide"` draws nothing while no decision is open (the
+  tray), `"show"` always (the page block).
+- **The tray** is `decisions/tray` (`Conversation.AbovePromptInput`, placed
+  just above running-agents). The chip is `decisions/item-count`
+  (`Item.Chips`), an exact `count` per row's task — not a grouping of
+  `taskId`, whose group cap would read a task past it as zero.
+- **j/k in the inbox** is the data-view list's new `stepKeys` option (steps
+  the rows as drawn, runs the row's activation, reveals the row).
+- **Tab counts** ("Needs you2"): the view-switcher chip draws its label as one
+  inline run, where the chip's flex gap never applies; `ChipMarks` now parts
+  the count and the dirty dot with a literal space.
+
 ## 6. Live surfaces and the plugin split
 
 Reads, all `network/live`:

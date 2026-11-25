@@ -87,6 +87,16 @@ export interface ListViewOptions<TRow> {
    */
   detailOnActivate?: boolean;
   /**
+   * j / k step the selection to the next / previous row as drawn (sections
+   * in order, a collapsed section's rows skipped): the surface's row
+   * activation is run for that row, so the step does what a click on it
+   * would (opens its detail pane). Bound on the list's surface, yielding to
+   * text fields. Needs a row activation and a `selectedRowId` to step from
+   * (none selected: j takes the first row). For a list read one item at a
+   * time (an inbox).
+   */
+  stepKeys?: boolean;
+  /**
    * The box each entry is drawn in. Absent: rows sit flush in the list's band.
    * `"card"`: each entry — the row and, while open, its detail — is ONE raised
    * card (the theme's surface, radius and shadow), its border taking the
