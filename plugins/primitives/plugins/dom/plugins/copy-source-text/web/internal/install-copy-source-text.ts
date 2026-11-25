@@ -79,6 +79,14 @@ function serialize(
   stage.setAttribute("aria-hidden", "true");
   stage.style.cssText = "position:fixed;top:0;left:-99999px;width:120ch;";
   stage.append(fragment);
+  // The stage is a copy, never an editor: an editable cloned along with the
+  // selection (a composer inside a selected card) makes Chrome's
+  // `Selection.toString()` answer "" for the WHOLE stage — and the default is
+  // prevented below, so the clipboard would carry nothing at all. Without the
+  // attribute the field's text serializes like any other text.
+  for (const editable of stage.querySelectorAll("[contenteditable]")) {
+    editable.removeAttribute("contenteditable");
+  }
   document.body.append(stage);
   try {
     const html = stage.innerHTML;

@@ -60,6 +60,10 @@ the HTML a rich target reads.
   `Selection.toString()`, which only points at the live document. Off-screen and
   not `display:none`, because the serializer walks layout and a hidden stage
   serializes as `""`. (Cost: ancestor-dependent CSS doesn't reach the clone.)
+  The stage also drops every cloned `contenteditable`: a selection that spans
+  an editor (Ctrl+A on a card holding a composer) clones it, and Chrome's
+  `Selection.toString()` answers `""` for a stage holding an editable — an
+  empty clipboard, since the default is prevented.
 - **Nesting resolves outward with no precedence list.** A chip declares its
   token, the `Badge` inside it declares "my own text", and the token wins
   because `querySelectorAll` is document-ordered: the outer element is replaced
