@@ -110,17 +110,9 @@
 }
 
 /* Apply, beside the size dropdown: an action, so lit at rest (not a
-   toggle's dim off state); tinted while the page is already at the chosen
-   size; faded when the size cannot be applied. */
+   toggle's dim off state); faded when there is nothing to apply. */
 .rec-apply {
   opacity: 0.75;
-}
-.rec-apply[data-applied] {
-  opacity: 1;
-  background: var(--rec-tint);
-}
-.rec-apply[data-applied] svg {
-  color: var(--primary);
 }
 .rec-apply:disabled {
   opacity: 0.25;

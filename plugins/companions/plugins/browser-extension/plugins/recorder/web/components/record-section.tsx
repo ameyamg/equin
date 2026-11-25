@@ -11,6 +11,7 @@ import {
   recordPreset,
   sizeRefusalText,
   stopCauseText,
+  RECORD_PRESETS,
   windowBoundsFor,
   type RecordPreset,
   type RecorderOptions,
@@ -340,9 +341,9 @@ function RecordRow({
 /**
  * Apply, beside the size dropdown: size the window to the chosen preset's
  * page now, without recording (to lay the page out, or check it, first).
- * Lit as applied while the page is already that size (still clickable: it
- * applies again), off for As is (nothing to apply) and a size this screen or
- * zoom refuses — each said in its tooltip.
+ * Off for As is (nothing to apply), a size this screen or zoom refuses, and
+ * a page already at that size — each said in its tooltip (720p, 1080p and
+ * 1440p share one layout: switching between them has nothing to resize).
  */
 function ApplySize({
   preset,
@@ -354,35 +355,43 @@ function ApplySize({
   onClick: () => void;
 }) {
   const page = preset.page;
-  const refusal =
+  const off =
     page === null
       ? "As is keeps the window as it is"
-      : (() => {
-          const bounds = windowBoundsFor(page, measure);
-          return bounds.ok ? null : sizeRefusalText(bounds.reason);
-        })();
-  const applied =
-    page !== null &&
-    measure.innerWidth === page.width &&
-    measure.innerHeight === page.height;
+      : measure.innerWidth === page.width && measure.innerHeight === page.height
+        ? alreadySized(page)
+        : (() => {
+            const bounds = windowBoundsFor(page, measure);
+            return bounds.ok ? null : sizeRefusalText(bounds.reason);
+          })();
   const title =
-    refusal ??
-    (applied
-      ? `Applied: the page is ${page.width} × ${page.height} (${preset.label})`
-      : `Resize the window to ${preset.label} now (page ${page?.width} × ${page?.height}), without recording`);
+    off ??
+    `Resize the window to ${preset.label} now (page ${page?.width} × ${page?.height}), without recording`;
   return (
     <button
       type="button"
       className="rec-tg rec-apply"
       title={title}
       aria-label={title}
-      data-applied={applied ? "" : undefined}
-      disabled={refusal !== null}
+      disabled={off !== null}
       onClick={onClick}
     >
       <Icon icon={icons.apply} />
     </button>
   );
+}
+
+/** Why Apply is off on a page already sized: which presets share its layout
+ *  (only their video's resolution differs). */
+function alreadySized(page: { width: number; height: number }): string {
+  const sharing = RECORD_PRESETS.filter(
+    (p) => p.page?.width === page.width && p.page.height === page.height,
+  ).map((p) => p.label);
+  const shared =
+    sharing.length > 1
+      ? ` — ${sharing.join(", ")} share this layout; only the video’s resolution differs`
+      : "";
+  return `Already sized: the page is ${page.width} × ${page.height}${shared}`;
 }
 
 function Toggle({
