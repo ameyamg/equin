@@ -70,9 +70,16 @@ both ends) and `core/viewport.ts` (pure, tested); what the panel shows is
   `RECORDER_RELAY_PATH` (the recorder plugin's unlisted app) with the same
   hello → port handshake as the popup, so the uploads are the owner's, chunk by
   chunk in order, at most 64 MB queued.
-- **`content.ts`** draws the countdown (before the capture) and the pointer
-  (tab capture has no cursor) into the page's top layer, in a closed shadow
-  root, and keeps the pointer samples for `<name>.pointer.json`.
+- **`content.ts`** draws the countdown (before the capture) and, with the
+  Clicks option, a ripple on each click into the page's top layer, in a
+  closed shadow root; it always keeps the pointer samples for
+  `<name>.pointer.json`. It never draws a pointer: Chrome's tab capture
+  composites the OS cursor itself (while the mouse moves over the tab,
+  hidden after 2 s still), with no way for an extension to turn it off — a
+  drawn arrow was a second cursor. Injected again into the same page (each
+  recording, each `complete` of the tab), the new script takes the previous
+  one's session over, so one script draws.
+  `plugins/recorder/e2e/cursor-probe.ts --headed` reads the frames.
 - **`permissions.html`** asks for the microphone once (an offscreen document
   cannot prompt); Chrome keeps the grant for the extension's origin.
 

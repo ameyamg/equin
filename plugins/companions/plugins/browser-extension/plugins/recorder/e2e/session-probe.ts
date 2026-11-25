@@ -188,7 +188,7 @@ try {
           preset: "1080p",
           tabAudio: true,
           mic: false,
-          pointer: true,
+          clicks: true,
           countdown: true,
         },
       });

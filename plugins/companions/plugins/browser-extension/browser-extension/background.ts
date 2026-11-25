@@ -76,9 +76,6 @@ const SessionSchema = z.object({
       state: z.string(),
     })
     .nullable(),
-  /** Whether the content script runs in the tab (countdown or pointer). */
-  content: z.boolean(),
-  pointer: z.boolean(),
   /** The window's size once recording started (`null` before): only a
    *  change from it stops the recording, not a late event of our own resize. */
   recordedSize: z.object({ width: z.number(), height: z.number() }).nullable(),
@@ -285,8 +282,6 @@ async function begin(tabId: number, options: RecorderOptions): Promise<void> {
             height: win.height ?? before.window.height,
             state: win.state ?? "normal",
           },
-    content: options.countdown || options.pointer,
-    pointer: options.pointer,
     recordedSize: null,
   };
   await writeSession(session);
@@ -301,11 +296,11 @@ async function begin(tabId: number, options: RecorderOptions): Promise<void> {
   const output = outputFor(preset, measure);
   if (!output.ok) throw new Error(sizeRefusalText(output.reason));
 
-  if (session.content)
-    await permitted("scripting").executeScript({
-      target: { tabId },
-      files: ["content.js"],
-    });
+  // Always: the pointer track is kept whatever the options draw.
+  await permitted("scripting").executeScript({
+    target: { tabId },
+    files: ["content.js"],
+  });
   if (options.countdown) await toContent(tabId, { type: "content.countdown" });
 
   const streamId = await permitted("tabCapture").getMediaStreamId({
@@ -321,8 +316,10 @@ async function begin(tabId: number, options: RecorderOptions): Promise<void> {
     mic: options.mic,
     title: tab.title ?? "",
   });
-  if (options.pointer)
-    await toContent(tabId, { type: "content.pointer-start" });
+  await toContent(tabId, {
+    type: "content.track-start",
+    clicks: options.clicks,
+  });
   const sized = await chrome.windows.get(tab.windowId);
   await writeSession({
     ...session,
@@ -356,7 +353,7 @@ async function abandon(): Promise<string[]> {
   };
   const session = await readSession();
   await writeSession(null);
-  if (session !== null && session.content)
+  if (session !== null)
     await step(() =>
       toContent(session.tabId, { type: "content.finish" }).catch(
         (err: unknown) => {
@@ -387,8 +384,7 @@ async function stop(stoppedBy: StopCause): Promise<void> {
   if (session === null) throw new Error("The recording session is lost.");
   await setState({ kind: "saving" });
   try {
-    const pointer = session.pointer ? await finishContent(session.tabId) : null;
-    if (session.content && !session.pointer) await finishContent(session.tabId);
+    const pointer = await finishContent(session.tabId);
     const saved = await toOffscreen({
       type: "offscreen.stop",
       stoppedBy,
@@ -447,7 +443,7 @@ async function pause(paused: boolean): Promise<void> {
   await toOffscreen({ type: paused ? "offscreen.pause" : "offscreen.resume" });
   const now = wallNow("human-time");
   // The video is paused (or not) from here: the state says so before the
-  // pointer is told, whatever the page does.
+  // page is told, whatever the page does.
   await setState(
     paused
       ? { ...state, pausedAt: now }
@@ -457,9 +453,9 @@ async function pause(paused: boolean): Promise<void> {
           pausedMs: state.pausedMs + (now - (state.pausedAt ?? now)),
         },
   );
-  if (session?.pointer)
+  if (session !== null)
     await toContent(session.tabId, {
-      type: paused ? "content.pointer-pause" : "content.pointer-resume",
+      type: paused ? "content.track-pause" : "content.track-resume",
     }).catch((err: unknown) => {
       // The page navigated: its new content script starts as the state says.
       if (!isGoneTab(err)) throw err;
@@ -555,22 +551,28 @@ chrome.windows.onBoundsChanged.addListener((changed) => {
   });
 });
 
-// The recorded tab navigated: its content script went with the old page.
-// Draw the pointer again on the new one (its samples start over there).
+// The recorded tab navigated: its content script went with the old page, so
+// track (and draw clicks) again on the new one — its samples start over
+// there. Chrome also says `complete` after an in-page navigation, which keeps
+// the script: the new injection takes its session over (content.ts), and
+// `track-start` leaves a running one alone.
 chrome.tabs.onUpdated.addListener((tabId, change) => {
   if (change.status !== "complete") return;
   void serial(async () => {
     const state = await readRecorderState();
     if (state.kind !== "recording") return;
     const session = await readSession();
-    if (session === null || session.tabId !== tabId || !session.pointer) return;
+    if (session === null || session.tabId !== tabId) return;
     await permitted("scripting").executeScript({
       target: { tabId },
       files: ["content.js"],
     });
-    await toContent(tabId, { type: "content.pointer-start" });
+    await toContent(tabId, {
+      type: "content.track-start",
+      clicks: state.options.clicks,
+    });
     if (state.pausedAt !== null)
-      await toContent(tabId, { type: "content.pointer-pause" });
+      await toContent(tabId, { type: "content.track-pause" });
   });
 });
 

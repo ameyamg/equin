@@ -39,7 +39,6 @@ export const ICON_MANIFEST: {
     "arrow-forward",
     "arrow-left",
     "arrow-right",
-    "arrow-selector-tool",
     "arrow-upward",
     "article",
     "aspect-ratio",

@@ -30,10 +30,14 @@ export async function writeRecorderState(state: RecorderState): Promise<void> {
 export async function readRecorderOptions(): Promise<RecorderOptions> {
   const raw = (await permitted("storage").local.get(OPTIONS_KEY))[OPTIONS_KEY];
   if (raw === undefined) return DEFAULT_RECORDER_OPTIONS;
-  // Options an older shell stored may lack a newer field: the default fills it.
+  // Options an older shell stored may lack a newer field: the default fills
+  // it. Before 2026-11-25 the Clicks option was `pointer` (an arrow and
+  // clicks): a person who had turned it off keeps clicks off.
+  const stored = raw as { pointer?: unknown; clicks?: unknown };
   return RecorderOptionsSchema.parse({
     ...DEFAULT_RECORDER_OPTIONS,
-    ...(raw as object),
+    ...(typeof stored.pointer === "boolean" ? { clicks: stored.pointer } : {}),
+    ...stored,
   });
 }
 

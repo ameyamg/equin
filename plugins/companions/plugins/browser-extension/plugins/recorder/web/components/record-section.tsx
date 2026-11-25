@@ -43,7 +43,7 @@ const icons = {
   tabOff: symbol("volume-off"),
   micOn: symbol("mic"),
   micOff: symbol("mic-off"),
-  pointer: symbol("arrow-selector-tool"),
+  clicks: symbol("ads-click"),
   timerOn: symbol("timer"),
   timerOff: symbol("timer-off"),
   discard: symbol("delete"),
@@ -58,7 +58,7 @@ const icons = {
 /**
  * The extension's Record section (`BrowserExtension.Section` "record"): the
  * prototype's "Record this tab" row — the size dropdown, the tab audio / mic /
- * pointer / countdown toggles and the round Record button (⌥⇧R) —, the live
+ * clicks / countdown toggles and the round Record button (⌥⇧R) —, the live
  * recording card while one runs (timer, Discard, Pause, Stop), and the last
  * recording saved (Show in Files, Delete). Absent on a shell from before the
  * recorder.
@@ -274,14 +274,14 @@ function RecordRow({
               }
             />
             <Toggle
-              on={options.pointer}
-              icon={icons.pointer}
+              on={options.clicks}
+              icon={icons.clicks}
               title={
-                options.pointer
-                  ? "Pointer and clicks: in the video"
-                  : "Pointer: not in the video"
+                options.clicks
+                  ? "Clicks: a ripple on each click (the pointer is always in the video while it moves)"
+                  : "Clicks: not shown (the pointer is always in the video while it moves)"
               }
-              onClick={() => set({ pointer: !options.pointer })}
+              onClick={() => set({ clicks: !options.clicks })}
             />
             <Toggle
               on={options.countdown}

@@ -3,7 +3,7 @@ import { dirPathField } from "@plugins/fields/plugins/directory-path/plugins/con
 
 /**
  * Where the browser extension's recordings go. The recorder's other choices
- * (size, audio, pointer, countdown) are the extension's own (kept in Chrome's
+ * (size, audio, clicks, countdown) are the extension's own (kept in Chrome's
  * storage), so ⌥⇧R starts with the panel's last pick without asking equin.
  */
 export const recorderConfig = defineConfig({

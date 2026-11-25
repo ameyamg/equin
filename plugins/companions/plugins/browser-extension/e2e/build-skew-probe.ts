@@ -171,7 +171,7 @@ try {
           preset: "as-is",
           tabAudio: false,
           mic: false,
-          pointer: false,
+          clicks: false,
           countdown: false,
         },
         // As the loaded build's popup stamps it.

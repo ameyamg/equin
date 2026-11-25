@@ -140,6 +140,15 @@ drawn like the popover's other row actions:
 
 ### The pointer, drawn into the page
 
+> **Superseded 2026-11-25.** The premise below was wrong: Chrome's tab capture
+> composites the real OS cursor into the frames (Chromium's
+> `mouse_cursor_overlay_controller`: always on, shown once the mouse moves over
+> the tab, hidden after 2 s still; no constraint turns it off). The drawn arrow
+> was a second cursor in every real video, and the probes never saw it because
+> Playwright's input never moves the OS cursor. The recorder no longer draws a
+> pointer: the option is **Clicks** (ripples), and the pointer track is always
+> kept for `<name>.pointer.json`. See `content.ts`.
+
 tabCapture never contains the OS cursor. With **Pointer** on (default), the
 recorder's content script (the same one that draws the countdown) draws a
 pointer element that follows `pointermove`, plus a ripple on each

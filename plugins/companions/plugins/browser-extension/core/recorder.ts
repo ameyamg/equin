@@ -30,7 +30,11 @@ export const RecorderOptionsSchema = z.object({
   preset: RecordPresetIdSchema,
   tabAudio: z.boolean(),
   mic: z.boolean(),
-  pointer: z.boolean(),
+  /** A ripple drawn into the page on each click, so it is in the video. The
+   *  pointer itself is Chrome's: tab capture composites the OS cursor while
+   *  the mouse moves over the tab (hidden after 2 s still), and an extension
+   *  cannot turn that off — so the recorder never draws one of its own. */
+  clicks: z.boolean(),
   countdown: z.boolean(),
 });
 export type RecorderOptions = z.infer<typeof RecorderOptionsSchema>;
@@ -39,7 +43,7 @@ export const DEFAULT_RECORDER_OPTIONS: RecorderOptions = {
   preset: "1080p",
   tabAudio: true,
   mic: false,
-  pointer: true,
+  clicks: true,
   countdown: true,
 };
 
@@ -224,15 +228,17 @@ export const OffscreenEventSchema = z.object({
 });
 export type OffscreenEvent = z.infer<typeof OffscreenEventSchema>;
 
-// ── Worker ↔ content script (countdown, pointer) ───────────────────────────
+// ── Worker ↔ content script (countdown, clicks, pointer track) ─────────────
 
 export const ContentCommandSchema = z.discriminatedUnion("type", [
   /** 3-2-1 over the page; answers once it is gone from the screen. */
   z.object({ type: z.literal("content.countdown") }),
-  /** Draw the pointer into the page and record its samples. */
-  z.object({ type: z.literal("content.pointer-start") }),
-  z.object({ type: z.literal("content.pointer-pause") }),
-  z.object({ type: z.literal("content.pointer-resume") }),
+  /** Record the pointer's samples (for `<name>.pointer.json`), and draw a
+   *  ripple on each click when `clicks`. A page already tracking (the script
+   *  injected again into the same page) keeps its session. */
+  z.object({ type: z.literal("content.track-start"), clicks: z.boolean() }),
+  z.object({ type: z.literal("content.track-pause") }),
+  z.object({ type: z.literal("content.track-resume") }),
   /** Remove everything; answers the pointer track (or `null`). */
   z.object({ type: z.literal("content.finish") }),
 ]);
