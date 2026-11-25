@@ -23492,6 +23492,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/pending-turn`
+              - `tasks/decisions`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Web:
             - Contributes: `Conversation.ActionBar` → `VscodeButton`
@@ -60548,11 +60549,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `splitAttachmentRefs`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-2xs`
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md)
               - `conversations` ×6
               - `page` ×6
-              - `tasks` ×4
               - `apps` ×3
+              - `tasks` ×3
               - `primitives` ×2
               - `screenshot` ×2
           - Exemptions:
@@ -65181,9 +65182,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "dec"
           - `IdKinds.Kind` "dex"
-        - Uses: 43 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+        - Uses: 44 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
           - `primitives/data-view` ×4
           - `primitives/collapsible` ×3
+          - `conversations/conversation-view/user-message` ×2
           - `network/live/live-state` ×2
           - `network/live` ×2
           - `primitives/css/fill` ×2
@@ -65210,7 +65212,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/relative-time.RelativeTime`
           - `primitives/text-editor/composer.ComposerField`
-          - `primitives/text-editor/paste-images.AttachmentText`
           - `shell/notifications.useToast`
         - Exports (types):
           - `DecisionDraft`

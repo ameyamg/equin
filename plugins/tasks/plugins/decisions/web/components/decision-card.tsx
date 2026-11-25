@@ -16,7 +16,10 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
-import { AttachmentText } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+import {
+  UserMessageCard,
+  UserMessageText,
+} from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
 import {
   keptField,
   type KeptPart,
@@ -402,7 +405,13 @@ function userSide(
   }
 }
 
-/** One exchange: the user's side, then the agent's reply or note — marked new when the user has not seen it. */
+/**
+ * One exchange, drawn the way a conversation is: the user's side in the
+ * transcript's user-turn card (who, when, their pick or kind of note, the
+ * note), then the agent's reply or note below it, outside the card, under its
+ * own "Agent" line and time — marked new when the user has not seen it — so
+ * which words are whose reads at a glance.
+ */
 function Exchange({
   exchange: e,
   seenBefore,
@@ -413,36 +422,50 @@ function Exchange({
   const user = userSide(e);
   const unseen =
     e.agentAt !== null && (seenBefore === null || e.agentAt > seenBefore);
+  const agent =
+    e.agentText !== null ? (
+      <Markdown>{e.agentText}</Markdown>
+    ) : e.kind === "question" ? (
+      <Text variant="caption" tone="muted">
+        Waiting for the agent's answer.
+      </Text>
+    ) : null;
   return (
-    <Card>
-      <Stack gap="xs">
-        <Stack direction="row" gap="sm" align="center">
-          <Text variant="caption" tone="muted">
-            {user === null ? "Update" : "You"}
-          </Text>
-          <Text variant="caption" tone="muted">
-            <RelativeTime date={e.agentAt ?? e.createdAt} />
-          </Text>
-          {unseen ? <NewMark /> : null}
+    <Stack gap="sm">
+      {user !== null ? (
+        <UserMessageCard>
+          <Stack gap="xs">
+            <Stack direction="row" gap="sm" align="center">
+              <Text variant="caption" tone="muted">
+                You
+              </Text>
+              <Text variant="caption" tone="muted">
+                <RelativeTime date={e.createdAt} />
+              </Text>
+            </Stack>
+            <Text variant="label">{user.head}</Text>
+            {user.note !== null && user.note !== "" ? (
+              <UserMessageText text={user.note} />
+            ) : null}
+          </Stack>
+        </UserMessageCard>
+      ) : null}
+      {agent !== null ? (
+        <Stack gap="xs">
+          <Stack direction="row" gap="sm" align="center">
+            <Text variant="caption" tone="muted">
+              {user === null ? "Agent update" : "Agent"}
+            </Text>
+            {e.agentAt !== null ? (
+              <Text variant="caption" tone="muted">
+                <RelativeTime date={e.agentAt} />
+              </Text>
+            ) : null}
+            {unseen ? <NewMark /> : null}
+          </Stack>
+          {agent}
         </Stack>
-        {user !== null ? <Text variant="label">{user.head}</Text> : null}
-        {user !== null && user.note !== null ? (
-          <Text
-            as="div"
-            variant="body"
-            className="whitespace-pre-wrap break-words"
-          >
-            <AttachmentText text={user.note} />
-          </Text>
-        ) : null}
-        {e.agentText !== null ? (
-          <Markdown>{e.agentText}</Markdown>
-        ) : e.kind === "question" ? (
-          <Text variant="caption" tone="muted">
-            Waiting for an answer.
-          </Text>
-        ) : null}
-      </Stack>
-    </Card>
+      ) : null}
+    </Stack>
   );
 }

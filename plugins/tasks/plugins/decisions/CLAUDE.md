@@ -182,9 +182,10 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   - Contributes:
     - `IdKinds.Kind` "dec"
     - `IdKinds.Kind` "dex"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
     - `primitives/collapsible` ×3
+    - `conversations/conversation-view/user-message` ×2
     - `network/live/live-state` ×2
     - `network/live` ×2
     - `primitives/css/fill` ×2
@@ -211,7 +212,6 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/relative-time.RelativeTime`
     - `primitives/text-editor/composer.ComposerField`
-    - `primitives/text-editor/paste-images.AttachmentText`
     - `shell/notifications.useToast`
   - Exports (types):
     - `DecisionDraft`
