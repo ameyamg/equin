@@ -24,6 +24,7 @@ import {
 
 export { _decisionExchanges, _decisions } from "./internal/tables";
 export { existingTaskIds, readTaskDecisionsInFull } from "./internal/full-read";
+export { handOverDecisions } from "./internal/hand-over";
 export {
   decisionAttrs,
   optionLines,

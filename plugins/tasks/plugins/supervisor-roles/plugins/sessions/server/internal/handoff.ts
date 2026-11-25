@@ -23,6 +23,7 @@ export async function recordHandoff(row: {
   fromTaskId: string;
   roleId: string;
   handoff: string;
+  moveOpenTasks: boolean;
   model: ModelChoice | null;
 }): Promise<void> {
   await db
@@ -30,7 +31,12 @@ export async function recordHandoff(row: {
     .values(row)
     .onConflictDoUpdate({
       target: h.fromTaskId,
-      set: { handoff: row.handoff, model: row.model, createdAt: sql`now()` },
+      set: {
+        handoff: row.handoff,
+        moveOpenTasks: row.moveOpenTasks,
+        model: row.model,
+        createdAt: sql`now()`,
+      },
       setWhere: isNull(h.consumedAt),
     });
 }

@@ -11,7 +11,9 @@
     - `tasks`
     - `tasks/decisions`
 - Server:
-  - Exports (types): `ExitCleanPreconditionEntry`
+  - Exports (types):
+    - `CleanExitKind`
+    - `ExitCleanPreconditionEntry`
   - Exports (values):
     - `ExitClean`
     - `exitCleanRefusals`

@@ -176,7 +176,10 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   waits for a reply or an answer waits to be acted on; the
   `decisions.unsettled` exit_clean precondition also refuses while a
   `decision` / `action` still waits on the user (an answer after the exit
-  would only be kept) — close it, or `flag_raise`. Both hold only an agent
+  would only be kept) — close it, or `flag_raise`. Not for a hand-over
+  (`CleanExitKind.handedOver`: a supervisor's `handoff`), which moves the
+  task's open decisions to the successor session's root
+  (`handOverDecisions`, run by supervisor-roles/sessions/handoff's carry). Both hold only an agent
   granted `decisions.open`: one without the tools (a task that opened
   decisions before its mandate stopped granting them) cannot settle them,
   so it owes nothing.
@@ -296,6 +299,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `_decisions`
     - `decisionAttrs`
     - `existingTaskIds`
+    - `handOverDecisions`
     - `optionLines`
     - `quotedLines`
     - `readTaskDecisionsInFull`
@@ -404,6 +408,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `tasks/decisions/item-count`
     - `tasks/decisions/page-block`
     - `tasks/decisions/tray`
+    - `tasks/supervisor-roles/sessions/handoff`
 - Sub-plugins:
   - **`capability`** — The decisions.open mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through decisions, which imports…
   - **`inbox`** — The Decisions inbox in the agent manager: the Decisions sidebar entry with the count of decisions that need the user (a grouping of the derived tab), the decisions pane — one view bar over the Needs…

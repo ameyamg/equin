@@ -23166,7 +23166,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks`
                   - `tasks/decisions`
               - Server:
-                - Exports (types): `ExitCleanPreconditionEntry`
+                - Exports (types):
+                  - `CleanExitKind`
+                  - `ExitCleanPreconditionEntry`
                 - Exports (values):
                   - `ExitClean`
                   - `exitCleanRefusals`
@@ -65370,6 +65372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_decisions`
           - `decisionAttrs`
           - `existingTaskIds`
+          - `handOverDecisions`
           - `optionLines`
           - `quotedLines`
           - `readTaskDecisionsInFull`
@@ -65478,6 +65481,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/decisions/item-count`
           - `tasks/decisions/page-block`
           - `tasks/decisions/tray`
+          - `tasks/supervisor-roles/sessions/handoff`
       - Plugins:
         - **`capability`** — The decisions.open mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through decisions, which imports tasks-core and conversations.
           - Core:
@@ -66631,7 +66635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `tasks/supervisor-roles/spend`
               - `tasks/task-header`
-        - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role). Hand-offs (the handoff tool is the handoff child's): supervisor_session_handoffs holds a session's note for the next one (recordHandoff), taken by the role's next launch whichever path launches it — the role's prompt then the note as its brief, the ended session's open tasks moved under the new root — and the supervisor-roles.handoff-launch job launches that session once the ending root settles.
+        - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role). Hand-offs (the handoff tool is the handoff child's): supervisor_session_handoffs holds a session's note for the next one (recordHandoff), taken by the role's next launch whichever path launches it — the role's prompt then the note as its brief, the ended session's open tasks moved under the new root only when the hand-off asked for it — and the supervisor-roles.handoff-launch job launches that session once the ending root settles.
           - Server:
             - Contributes: `trigger` "supervisor-roles.handoff-launch"
             - Uses: 37 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
@@ -66649,9 +66653,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-track.getTaskTrack`
               - `tasks.armTaskAutoStart`
             - DB schema: `plugins/tasks/plugins/supervisor-roles/plugins/sessions/server/internal/tables.ts`
+            - Exports (types): `SessionHandoffCarryEntry`
             - Exports (values):
               - `openRoleSession`
               - `recordHandoff`
+              - `SessionHandoff`
             - Register:
               - `mcpTool('backlog')`
               - `mcpTool('adopt_task')`
@@ -66688,15 +66694,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/pane`
               - `tasks/supervisor-roles/sessions/handoff`
           - Plugins:
-            - **`handoff`** — The handoff MCP tool of a supervisor role session (gated on the role capability): closes the session through exit_clean's path (push-and-exit's requestCleanExit — refused while an exit precondition fails) and records a note for the role's next session, which sessions' launch takes into its brief after the role's prompt.
+            - **`handoff`** — The handoff MCP tool of a supervisor role session (gated on the role capability): closes the session through exit_clean's path (push-and-exit's requestCleanExit — refused while an exit precondition fails) and records a note for the role's next session, which sessions' launch takes into its brief after the role's prompt; and the decisions carry (SessionHandoff.Carry): the ending session's open decisions move to the new session's root, so the exit check stands aside for them (handedOver).
               - Server:
+                - Contributes: `supervisorSessionHandoffCarry` "decisions"
                 - Uses:
                   - `conversations/conversation-view/push-and-exit.requestCleanExit`
                   - `conversations/model-provider/catalog.getModelCatalog`
                   - `infra/mcp.Mcp`
+                  - `tasks/decisions.handOverDecisions`
                   - `tasks/orchestration/mandate.granted`
                   - `tasks/supervisor-roles.roleOfConversation`
                   - `tasks/supervisor-roles/sessions.recordHandoff`
+                  - `tasks/supervisor-roles/sessions.SessionHandoff`
                   - `tasks/tasks-core.getConversation`
                 - Register: `mcpTool('handoff')`
         - **`spend`** — The supervisors spend breakdown, web half: the Spent this week glance atop the Supervisors list (the total, the categories as a thin bar and a legend; a segment or an entry opens its category) and the breakdown pane (/agents/supervisors/spend/<path>): one level at a time, the title its path, the total counting to each level's, the bar zooming into the picked part, the rows (a DataView) cross-fading, Esc going up; a conversation's row opens it in a new pane. Each account counts from its own weekly reset (an API-key account, or one with no usage reading, over the last 7 days); usage counted under no account, from the earliest of them. The supervisors spend breakdown, server half: serves supervisors.spend — this week's Claude spend (each account over its own window, the browser's) as one drill tree: Supervisors (a role's sessions and workers), Ad hoc, Background (automations, background calls and system conversations such as triage), You (Claude Code sessions outside equin included) and Unknown (usage counted under no account, from the earliest window), each level its five biggest parts and a rest. One aggregate over the spend ledger joined to the conversation → attempt → task → mandate root → role / automation, recomputed on every ledger write.
@@ -67311,6 +67320,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/decisions/item-count`
           - `tasks/decisions/page-block`
           - `tasks/decisions/tray`
+          - `tasks/supervisor-roles/sessions/handoff`
           - `tasks/tasks-core`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, child-count, launch-agent).
       - Web:

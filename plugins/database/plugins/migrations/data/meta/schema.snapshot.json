@@ -1,6 +1,6 @@
 {
-  "id": "736bab8f-0538-4108-9e7e-4dbd006f1ac6",
-  "prevId": "b377d3ba-1111-4a85-bdb2-9709a6cd8dc2",
+  "id": "9f4ed54c-7348-4e55-a41f-90eaa7d557a5",
+  "prevId": "736bab8f-0538-4108-9e7e-4dbd006f1ac6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17433,6 +17433,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "move_open_tasks": {
+          "name": "move_open_tasks",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "model": {
           "name": "model",

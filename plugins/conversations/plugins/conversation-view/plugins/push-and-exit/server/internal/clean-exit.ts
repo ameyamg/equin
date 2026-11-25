@@ -13,9 +13,16 @@ import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
  */
 export async function requestCleanExit(
   conversationId: string,
-  opts: { beforeClose?: () => Promise<void> } = {},
+  opts: {
+    beforeClose?: () => Promise<void>;
+    /** The task's work goes on in a successor that takes over what this
+     * conversation holds (`CleanExitKind`). */
+    handedOver?: boolean;
+  } = {},
 ): Promise<string[]> {
-  const refusals = await exitCleanRefusals(conversationId);
+  const refusals = await exitCleanRefusals(conversationId, {
+    handedOver: opts.handedOver ?? false,
+  });
   if (refusals.length > 0) return refusals;
   await opts.beforeClose?.();
   await updateConversation(conversationId, { closeRequested: true });

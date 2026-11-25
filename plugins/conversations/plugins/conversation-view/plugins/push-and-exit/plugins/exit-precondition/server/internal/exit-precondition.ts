@@ -15,7 +15,20 @@ export interface ExitCleanPreconditionEntry {
   id: string;
   /** `null` when the agent may exit; otherwise what is in the way and how to
    * clear it, addressed to the agent. */
-  check: (conversationId: string) => Promise<{ message: string } | null>;
+  check: (
+    conversationId: string,
+    exit: CleanExitKind,
+  ) => Promise<{ message: string } | null>;
+}
+
+/**
+ * How the conversation ends. `handedOver`: its task's work goes on in a
+ * successor session that takes over what the ending one holds (a supervisor's
+ * `handoff`: its open decisions move to the successor), so a precondition
+ * about what only the ending conversation could settle need not hold.
+ */
+export interface CleanExitKind {
+  handedOver: boolean;
 }
 
 const PreconditionToken = defineServerContribution<ExitCleanPreconditionEntry>(
@@ -30,10 +43,11 @@ export const ExitClean = { Precondition: PreconditionToken };
  * empty when it may exit. */
 export async function exitCleanRefusals(
   conversationId: string,
+  exit: CleanExitKind = { handedOver: false },
 ): Promise<string[]> {
   const out: string[] = [];
   for (const entry of PreconditionToken.getContributions()) {
-    const refusal = await entry.check(conversationId);
+    const refusal = await entry.check(conversationId, exit);
     if (refusal !== null) out.push(refusal.message);
   }
   return out;

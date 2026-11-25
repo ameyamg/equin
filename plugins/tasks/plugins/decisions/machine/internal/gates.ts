@@ -60,7 +60,10 @@ export const decisionsStopGate = StopGate({
  */
 export const decisionsExitGate = ExitClean.Precondition({
   id: "decisions.unsettled",
-  async check(conversationId) {
+  async check(conversationId, exit) {
+    // A hand-over moves the task's open decisions to the successor session
+    // (`handOverDecisions`): the user's answers reach it, not a closed agent.
+    if (exit.handedOver) return null;
     const taskId = await agentTaskOf(conversationId);
     if (taskId === null) return null;
     const owed = owedMessage(await owedDecisions(db, taskId));

@@ -1,7 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { ExitClean, exitCleanRefusals } from "./internal/exit-precondition";
-export type { ExitCleanPreconditionEntry } from "./internal/exit-precondition";
+export type {
+  CleanExitKind,
+  ExitCleanPreconditionEntry,
+} from "./internal/exit-precondition";
 
 export default {
   description:

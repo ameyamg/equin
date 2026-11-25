@@ -21,17 +21,23 @@ export const handoffTool = Mcp.tool({
   when: granted(supervisorRole),
   description: `Hand your role over to a fresh session and close this one — like \`exit_clean\`, but the role carries on. Use it when this conversation has grown long (its context is full of finished work) and the role still has work to watch.
 
-Once this turn ends, this conversation closes and a new session of your role launches: it starts with the role's own prompt, as every session does, and your \`handoff\` text as context after it. Every open task of your session's tree (not done or dropped) moves under the new session's root, so it watches them from its first turn.
+Once this turn ends, this conversation closes and a new session of your role launches: it starts with the role's own prompt, as every session does, and your \`handoff\` text as context after it. Your open decisions move to the new session (the user's answers go to it); your session's tasks stay in its tree; pass \`move_open_tasks: true\` only when the user asked for them to move — every open task (not done or dropped) then moves under the new session's root, which watches them from its first turn.
 
 Write \`handoff\` for a reader who knows the role but none of this conversation: what is in flight and why, what you are waiting on, decisions taken and their reasons, what to do next. Never restate the role's prompt.
 
-Refused — nothing changes, the conversation stays open — while something must be settled before an exit (as for \`exit_clean\`); the refusal says what to do, then call it again.`,
+Refused — nothing changes, the conversation stays open — while something must be settled before an exit (as for \`exit_clean\`, except decisions waiting on the user, which move); the refusal says what to do, then call it again.`,
   inputSchema: {
     handoff: z
       .string()
       .trim()
       .min(1)
       .describe("What the next session needs to know, as markdown."),
+    move_open_tasks: z
+      .boolean()
+      .optional()
+      .describe(
+        "Move your session's open tasks under the new session. Only when the user asked for it; absent = false (they stay in this session's tree).",
+      ),
     model: ModelChoiceSchema.optional().describe(
       "The model the next session launches with; absent = the default.",
     ),
@@ -48,11 +54,14 @@ Refused — nothing changes, the conversation stays open — while something mus
     if (input.model !== undefined)
       assertChoiceLaunchable(input.model, getModelCatalog());
     const refusals = await requestCleanExit(conversationId, {
+      // Its open decisions move to the next session (`decisionsCarry`).
+      handedOver: true,
       beforeClose: () =>
         recordHandoff({
           fromTaskId: role.rootTaskId,
           roleId: role.roleId,
           handoff: input.handoff,
+          moveOpenTasks: input.move_open_tasks ?? false,
           model: input.model ?? null,
         }),
     });

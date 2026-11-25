@@ -28,12 +28,13 @@ imports the parent.
 ## Handoff
 
 A long-lived session's context fills with finished work. `handoff({ handoff,
-model? })` (the `handoff` child — it alone imports push-and-exit) ends the session and
+move_open_tasks?, model? })` (the `handoff` child — it alone imports push-and-exit) ends the session and
 hands the role to a fresh one:
 
 - It goes through push-and-exit's `requestCleanExit` — `exit_clean`'s own
-  path: every exit precondition is checked first (refused → nothing
-  written), then the note is recorded (`recordHandoff`) in `supervisor_session_handoffs`
+  path, as a hand-over (`handedOver: true`): every exit precondition is
+  checked first (refused → nothing written) — the decisions one stands
+  aside, since the open decisions move — then the note is recorded (`recordHandoff`) in `supervisor_session_handoffs`
   (keyed by the ending session's root, pending while `consumedAt` is null,
   one pending per role) and the conversation closes once its turn ends.
 - The note is taken by the role's **next launch, whichever path launches
@@ -41,9 +42,18 @@ hands the role to a fresh one:
   the handoff job) — on the launch's transaction, after the one-live-session
   check: the brief is the role's prompt, then `## Handoff from the previous
   session` (the note, and which open tasks moved), then the launcher's own
-  brief. The ended session's open direct children (not done / dropped) move
-  under the new root, so its tree watch covers them. A launch while the old
+  brief. The ended session's tasks stay in its tree by default; only with
+  `move_open_tasks: true` (the tool says: only at the user's request) do its
+  open direct children (not done / dropped) move under the new root, so its
+  tree watch covers them. A launch while the old
   session is still live answers the live one and leaves the note pending.
+- **Carries** — `SessionHandoff.Carry({ id, carry(from, to, tx) })`: what
+  else the new session takes over, run by the take on its transaction (passed
+  in explicitly — `handoffCarries()` at launch), each returning a line for
+  the brief. The `handoff` child contributes the decisions carry: every open
+  (not closed) decision of the ended root moves to the new root with its
+  label (decisions' `handOverDecisions`), so the user's answers go to the
+  new session; closed ones stay.
 - `supervisor-roles.handoff-launch` (on `tasks.statusChanged`) launches the
   next session once the ending root settles (`attempted` / `done` /
   `dropped`), with the note's `model` (default otherwise). When another path
@@ -55,7 +65,7 @@ hands the role to a fresh one:
 
 ## Plugin reference
 
-- Description: Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role). Hand-offs (the handoff tool is the handoff child's): supervisor_session_handoffs holds a session's note for the next one (recordHandoff), taken by the role's next launch whichever path launches it — the role's prompt then the note as its brief, the ended session's open tasks moved under the new root — and the supervisor-roles.handoff-launch job launches that session once the ending root settles.
+- Description: Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role). Hand-offs (the handoff tool is the handoff child's): supervisor_session_handoffs holds a session's note for the next one (recordHandoff), taken by the role's next launch whichever path launches it — the role's prompt then the note as its brief, the ended session's open tasks moved under the new root only when the hand-off asked for it — and the supervisor-roles.handoff-launch job launches that session once the ending root settles.
 - Server:
   - Contributes: `trigger` "supervisor-roles.handoff-launch"
   - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -73,9 +83,11 @@ hands the role to a fresh one:
     - `tasks/task-track.getTaskTrack`
     - `tasks.armTaskAutoStart`
   - DB schema: `plugins/tasks/plugins/supervisor-roles/plugins/sessions/server/internal/tables.ts`
+  - Exports (types): `SessionHandoffCarryEntry`
   - Exports (values):
     - `openRoleSession`
     - `recordHandoff`
+    - `SessionHandoff`
   - Register:
     - `mcpTool('backlog')`
     - `mcpTool('adopt_task')`

@@ -30,7 +30,40 @@ async function task(
 }
 
 describe("handoff: pendingHandoffOf / consumeHandoff", () => {
-  test("moves the open children under the new root and consumes the note", async () => {
+  test("leaves the ended session's tasks in its tree unless asked to move them", async () => {
+    const got = await worktreeDbScenario(async (tx) => {
+      const role = uid("srole");
+      await tx.execute(
+        sql`INSERT INTO supervisor_roles (id, name) VALUES (${role}, ${role})`,
+      );
+      const oldRoot = await task(tx, {
+        folderId: null,
+        mandate: "supervisor-role",
+      });
+      const open = await task(tx, { folderId: oldRoot, mandate: null });
+      const newRoot = await task(tx, {
+        folderId: null,
+        mandate: "supervisor-role",
+      });
+      await tx.execute(sql`
+        INSERT INTO supervisor_session_handoffs (from_task_id, role_id, handoff)
+        VALUES (${oldRoot}, ${role}, 'Watch the deploy.')`);
+      const taken = await pendingHandoffOf(role, tx);
+      if (taken === null) throw new Error("expected a pending hand-off");
+      await consumeHandoff(taken, newRoot, tx, []);
+      const [row] = (
+        await tx.execute<{ folder: string | null }>(
+          sql`SELECT folder_id AS folder FROM tasks WHERE id = ${open}`,
+        )
+      ).rows;
+      return { oldRoot, taken, folder: row?.folder };
+    });
+    expect(got.taken.moved).toEqual([]);
+    expect(got.folder).toBe(got.oldRoot);
+    expect(handoffBrief(got.taken)).toContain(`under ${got.oldRoot}`);
+  });
+
+  test("with move_open_tasks, moves the open children under the new root and consumes the note", async () => {
     const got = await worktreeDbScenario(async (tx) => {
       const role = uid("srole");
       await tx.execute(
@@ -51,11 +84,11 @@ describe("handoff: pendingHandoffOf / consumeHandoff", () => {
         mandate: "supervisor-role",
       });
       await tx.execute(sql`
-        INSERT INTO supervisor_session_handoffs (from_task_id, role_id, handoff)
-        VALUES (${oldRoot}, ${role}, 'Watch the deploy.')`);
+        INSERT INTO supervisor_session_handoffs (from_task_id, role_id, handoff, move_open_tasks)
+        VALUES (${oldRoot}, ${role}, 'Watch the deploy.', true)`);
       const taken = await pendingHandoffOf(role, tx);
       if (taken === null) throw new Error("expected a pending hand-off");
-      await consumeHandoff(taken, newRoot, tx);
+      await consumeHandoff(taken, newRoot, tx, []);
       const folders = (
         await tx.execute<{ id: string; folder: string | null }>(
           sql`SELECT id, folder_id AS folder FROM tasks WHERE id IN (${open}, ${settled})`,

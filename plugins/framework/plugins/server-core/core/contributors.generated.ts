@@ -119,6 +119,7 @@ export const serverContributors: Readonly<Record<string, readonly string[]>> = {
   "site-mirror-sink": ["apps/plugins/deploy/plugins/site-reports/plugins/import"],
   "song-videos.source": ["apps/plugins/chord/plugins/song-index","integrations/plugins/youtube/plugins/song-videos/plugins/youtube-search"],
   "supervisor-event-stream": ["tasks/plugins/supervisor-roles/plugins/events/plugins/report-streams#machine"],
+  "supervisorSessionHandoffCarry": ["tasks/plugins/supervisor-roles/plugins/sessions/plugins/handoff"],
   "table-mirror-never": ["apps/plugins/deploy/plugins/analytics/plugins/collect","apps/plugins/deploy/plugins/site-messages/plugins/intake"],
   "table-mirror-reader-routes": ["apps/plugins/deploy/plugins/site-mirror/plugins/box"],
   "table-mirror-set": ["apps/plugins/deploy/plugins/analytics/plugins/collect","apps/plugins/deploy/plugins/site-messages/plugins/intake","apps/plugins/deploy/plugins/site-reports/plugins/intake"],

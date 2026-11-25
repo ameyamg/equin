@@ -7,7 +7,10 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  createTask,
+  updateTask,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
 import {
   supervisorRoleMandate,
@@ -22,6 +25,7 @@ import {
 import { adoptBacklogTask, launchRoleSession } from "../../core";
 import { adoptIntoSession, adoptRefusalMessage } from "./adopt";
 import { consumeHandoff, handoffBrief, pendingHandoffOf } from "./handoff-take";
+import { handoffCarries } from "./carry";
 
 async function roleOr404(id: string): Promise<SupervisorRole> {
   const role = await getSupervisorRole(id);
@@ -56,19 +60,20 @@ export async function openRoleSession(
     if (live)
       return { taskId: live.id, started: false, arm: live.status === "new" };
     const handoff = await pendingHandoffOf(role.id, tx);
-    const prompt = [
-      role.prompt.trim(),
-      handoff === null ? "" : handoffBrief(handoff),
-      brief?.trim() ?? "",
-    ]
-      .filter((p) => p !== "")
-      .join("\n\n");
+    const promptOf = (handoffPart: string) => {
+      const p = [role.prompt.trim(), handoffPart, brief?.trim() ?? ""]
+        .filter((part) => part !== "")
+        .join("\n\n");
+      return p === "" ? null : p;
+    };
     const task = await createTask(
       {
         mandate: supervisorRoleMandate,
         title: `${role.name} session`,
         titleAuto: false,
-        description: prompt === "" ? null : prompt,
+        // With a hand-off, rewritten below once its carries said what they
+        // took (they need the new root to exist).
+        description: promptOf(""),
         filing: {
           author: { kind: "human" },
           filedFrom: asPluginId("tasks.supervisor-roles.sessions"),
@@ -77,7 +82,19 @@ export async function openRoleSession(
       tx,
     );
     await setTaskSupervisorRole(task.id, role.id, tx);
-    if (handoff !== null) await consumeHandoff(handoff, task.id, tx);
+    if (handoff !== null) {
+      const carried = await consumeHandoff(
+        handoff,
+        task.id,
+        tx,
+        handoffCarries(),
+      );
+      await updateTask(
+        task.id,
+        { description: promptOf(handoffBrief(handoff, carried)) },
+        tx,
+      );
+    }
     return { taskId: task.id, started: true, arm: true };
   });
   // After the commit: the launcher it wakes must see the task.

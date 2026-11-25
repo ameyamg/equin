@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { StoredModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
@@ -24,6 +30,9 @@ export const _supervisorSessionHandoffs = pgTable(
       .references(() => _supervisorRoles.id, { onDelete: "cascade" }),
     /** What the ending session wrote for the next one. */
     handoff: text("handoff").notNull(),
+    /** Whether the ended session's open tasks move under the next session —
+     * only when the user asked for it; otherwise they stay where they are. */
+    moveOpenTasks: boolean("move_open_tasks").notNull().default(false),
     /** The model the next session launches with; null = the default. */
     model: parsedText("model", StoredModelChoiceSchema),
     createdAt: timestamp("created_at", { withTimezone: true })

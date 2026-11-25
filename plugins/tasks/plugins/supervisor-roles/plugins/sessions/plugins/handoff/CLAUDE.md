@@ -10,15 +10,18 @@ the take at launch, the launch job — is the parent's; see its `## Handoff`.
 
 ## Plugin reference
 
-- Description: The handoff MCP tool of a supervisor role session (gated on the role capability): closes the session through exit_clean's path (push-and-exit's requestCleanExit — refused while an exit precondition fails) and records a note for the role's next session, which sessions' launch takes into its brief after the role's prompt.
+- Description: The handoff MCP tool of a supervisor role session (gated on the role capability): closes the session through exit_clean's path (push-and-exit's requestCleanExit — refused while an exit precondition fails) and records a note for the role's next session, which sessions' launch takes into its brief after the role's prompt; and the decisions carry (SessionHandoff.Carry): the ending session's open decisions move to the new session's root, so the exit check stands aside for them (handedOver).
 - Server:
+  - Contributes: `supervisorSessionHandoffCarry` "decisions"
   - Uses:
     - `conversations/conversation-view/push-and-exit.requestCleanExit`
     - `conversations/model-provider/catalog.getModelCatalog`
     - `infra/mcp.Mcp`
+    - `tasks/decisions.handOverDecisions`
     - `tasks/orchestration/mandate.granted`
     - `tasks/supervisor-roles.roleOfConversation`
     - `tasks/supervisor-roles/sessions.recordHandoff`
+    - `tasks/supervisor-roles/sessions.SessionHandoff`
     - `tasks/tasks-core.getConversation`
   - Register: `mcpTool('handoff')`
 
