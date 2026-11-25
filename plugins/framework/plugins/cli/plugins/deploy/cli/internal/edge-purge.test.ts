@@ -24,7 +24,8 @@ describe("purgeAfterRun", () => {
     const purge: EdgePurge = {
       zones,
       tag: "equin-documents-website",
-      purge: () => Promise.reject(new Error("Authentication error (code 10000)")),
+      purge: () =>
+        Promise.reject(new Error("Authentication error (code 10000)")),
     };
     const failures: string[] = [];
     await purgeAfterRun(purge, failures)({ seenToEnd: true });

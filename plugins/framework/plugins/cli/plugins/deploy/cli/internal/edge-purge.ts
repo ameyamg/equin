@@ -73,14 +73,12 @@ export async function resolveEdgePurge(
         `but ${token.needsConsent ? "no Cloudflare account is connected" : `the Cloudflare token could not be read (${token.message})`}. ${SET_UP}`,
     );
   }
-  const readable = await listZones(token.accessToken).catch(
-    (err: unknown) => {
-      if (!(err instanceof Error)) throw err;
-      return refuse(
-        `reading the Cloudflare token's zones failed: ${err.message}. ${SET_UP}`,
-      );
-    },
-  );
+  const readable = await listZones(token.accessToken).catch((err: unknown) => {
+    if (!(err instanceof Error)) throw err;
+    return refuse(
+      `reading the Cloudflare token's zones failed: ${err.message}. ${SET_UP}`,
+    );
+  });
   const zones = new Map<string, CloudflareZone>();
   for (const hostname of deployment.hostnames) {
     const zone = zoneOfHostname(readable, hostname);
