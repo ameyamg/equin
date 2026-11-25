@@ -171,6 +171,13 @@ export const WorkerCommandSchema = z.discriminatedUnion("type", [
     tabId: z.number().int(),
     options: RecorderOptionsSchema,
   }),
+  /** Size the tab's window to a preset's page now, without recording (kept
+   *  so: nothing puts it back). */
+  z.object({
+    type: z.literal("recorder.apply-size"),
+    tabId: z.number().int(),
+    preset: RecordPresetIdSchema,
+  }),
   z.object({ type: z.literal("recorder.stop") }),
   z.object({ type: z.literal("recorder.pause") }),
   z.object({ type: z.literal("recorder.resume") }),

@@ -8,12 +8,19 @@ import type {
 /** The recorder as the section reads it: not known yet, or known. */
 export type RecorderView =
   | { kind: "pending" }
-  | { kind: "ready"; snapshot: RecorderSnapshot; fit: TabFit };
+  | {
+      kind: "ready";
+      snapshot: RecorderSnapshot;
+      fit: TabFit;
+      /** Measure the tab again — after the panel resized its window. */
+      remeasure: () => Promise<void>;
+    };
 
 /**
  * The shell's recorder, live: its snapshot (read once, then pushed by the
  * shell on every change) and the tab measured for the size presets (read
- * once per open — the tab the popup is about does not change under it).
+ * once per open — the tab the popup is about does not change under it — and
+ * again by `remeasure` once the panel itself resized its window).
  * A failed read throws to the section's error boundary.
  */
 export function useRecorder(recorder: ExtensionRecorder): RecorderView {
@@ -31,7 +38,12 @@ export function useRecorder(recorder: ExtensionRecorder): RecorderView {
   if (error !== null) throw error;
   return snapshot === null || fit === null
     ? { kind: "pending" }
-    : { kind: "ready", snapshot, fit };
+    : {
+        kind: "ready",
+        snapshot,
+        fit,
+        remeasure: async () => setFit(await recorder.fit()),
+      };
 }
 
 /** A clock that ticks every 250 ms while `running` — the timer's display. */

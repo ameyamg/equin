@@ -109,6 +109,19 @@
   opacity: 1;
 }
 
+/* Apply, beside the size dropdown: an action, so lit at rest (not a
+   toggle's dim off state); faded when there is nothing to apply. */
+.rec-apply {
+  opacity: 0.75;
+}
+.rec-apply:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.rec-apply:disabled:hover {
+  background: none;
+}
+
 /* The round Record button. */
 .rec-go {
   align-self: center;

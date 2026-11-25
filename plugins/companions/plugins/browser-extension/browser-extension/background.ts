@@ -40,6 +40,7 @@ import {
   recordPreset,
   sizeRefusalText,
   windowBoundsFor,
+  type RecordPresetId,
   type TabMeasure,
   type WindowBounds,
 } from "../core/viewport";
@@ -174,15 +175,20 @@ async function closeOffscreen(): Promise<void> {
 // ── The window ──────────────────────────────────────────────────────────────
 
 /**
- * Size the window so the tab's page is `page`: resize, wait for the page to
+ * Size the window so the tab's page is `page` (un-maximized first): resize,
+ * wait for the page to
  * take it, and correct once by what is left (the chrome can change as the
  * window shrinks — a bookmarks bar wrapping). Still off: fail loudly.
  */
 async function sizeWindow(
   tabId: number,
-  windowId: number,
+  win: { id: number; state?: ChromeWindow["state"] },
   page: { width: number; height: number },
 ): Promise<void> {
+  const windowId = win.id;
+  // A maximized (or full-screen) window takes no bounds: make it normal first.
+  if (win.state !== "normal")
+    await chrome.windows.update(windowId, { state: "normal" });
   let measure = await measureTab(tabId);
   for (let attempt = 0; attempt < 2; attempt++) {
     const bounds = windowBoundsFor(page, measure);
@@ -288,9 +294,11 @@ async function begin(tabId: number, options: RecorderOptions): Promise<void> {
 
   let measure: TabMeasure = before;
   if (preset.page !== null) {
-    if (win.state !== "normal")
-      await chrome.windows.update(tab.windowId, { state: "normal" });
-    await sizeWindow(tabId, tab.windowId, preset.page);
+    await sizeWindow(
+      tabId,
+      { id: tab.windowId, state: win.state },
+      preset.page,
+    );
     measure = await measureTab(tabId);
   }
   const output = outputFor(preset, measure);
@@ -462,10 +470,32 @@ async function pause(paused: boolean): Promise<void> {
     });
 }
 
+/**
+ * Size the tab's window to `presetId`'s page now, without recording — the
+ * size dropdown's Apply. The window keeps it (no restore: there is no
+ * session to end). Refused mid-recording: the recording keeps one size.
+ */
+async function applySize(
+  tabId: number,
+  presetId: RecordPresetId,
+): Promise<void> {
+  const state = await readRecorderState();
+  if (state.kind !== "idle")
+    throw new Error("A recording is running: its window keeps its size.");
+  const preset = recordPreset(presetId);
+  if (preset.page === null)
+    throw new Error(`${preset.label} keeps the window as it is.`);
+  const tab = await chrome.tabs.get(tabId);
+  const win = await chrome.windows.get(tab.windowId);
+  await sizeWindow(tabId, { id: tab.windowId, state: win.state }, preset.page);
+}
+
 async function command(cmd: WorkerCommand): Promise<void> {
   switch (cmd.type) {
     case "recorder.start":
       return start(cmd.tabId, cmd.options);
+    case "recorder.apply-size":
+      return applySize(cmd.tabId, cmd.preset);
     case "recorder.stop":
       return stop("user");
     case "recorder.pause":

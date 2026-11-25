@@ -137,7 +137,7 @@ async function toWorker(command: WorkerCommand): Promise<void> {
 
 const WORKER_COMMAND: Record<
   RecorderCommand,
-  Exclude<WorkerCommand, { type: "recorder.start" }>
+  Exclude<WorkerCommand, { type: "recorder.start" | "recorder.apply-size" }>
 > = {
   stop: { type: "recorder.stop" },
   pause: { type: "recorder.pause" },
@@ -231,6 +231,13 @@ async function answer(call: BridgeCall, port: MessagePort): Promise<unknown> {
       return null;
     case "recorderCommand":
       await toWorker(WORKER_COMMAND[call.params.command]);
+      return null;
+    case "recorderApplySize":
+      await toWorker({
+        type: "recorder.apply-size",
+        tabId: (await aboutTab()).id,
+        preset: call.params.preset,
+      });
       return null;
     case "requestMicrophone":
       await chrome.tabs.create({

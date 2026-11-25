@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EXTENSION_ORIGIN } from "./extension-id";
 import {
+  RecordPresetIdSchema,
   RecorderCommandSchema,
   RecorderOptionsSchema,
   RecorderSnapshotSchema,
@@ -32,7 +33,8 @@ export const ExtensionCapabilitiesSchema = z.object({
   /** Close the popup (`close`). */
   close: z.boolean(),
   /** Record the tab (`recorder`, `recorderFit`, `recorderStart`,
-   *  `recorderOptions`, `recorderCommand`, `requestMicrophone`). Absent on a
+   *  `recorderOptions`, `recorderCommand`, `recorderApplySize`,
+   *  `requestMicrophone`). Absent on a
    *  shell from before the recorder. */
   record: z.boolean().optional(),
 });
@@ -90,6 +92,11 @@ export const BridgeCallSchema = z.discriminatedUnion("method", [
     method: z.literal("recorderCommand"),
     params: z.object({ command: RecorderCommandSchema }),
   }),
+  // Size the tab's window to a preset's page now, without recording.
+  z.object({
+    method: z.literal("recorderApplySize"),
+    params: z.object({ preset: RecordPresetIdSchema }),
+  }),
   z.object({ method: z.literal("requestMicrophone"), params: NoParams }),
 ]);
 export type BridgeCall = z.infer<typeof BridgeCallSchema>;
@@ -109,6 +116,7 @@ export const BRIDGE_RESULTS = {
   recorderStart: z.null(),
   recorderOptions: z.null(),
   recorderCommand: z.null(),
+  recorderApplySize: z.null(),
   requestMicrophone: z.null(),
 } as const satisfies Record<BridgeMethod, z.ZodType>;
 export type BridgeResult<M extends BridgeMethod> = z.infer<

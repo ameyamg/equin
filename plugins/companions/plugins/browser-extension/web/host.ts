@@ -13,6 +13,7 @@ import {
   type RecorderCommand,
   type RecorderOptions,
   type RecorderSnapshot,
+  type RecordPresetId,
   type TabFit,
 } from "../core";
 
@@ -30,6 +31,9 @@ export interface ExtensionRecorder {
   start: (options: RecorderOptions) => Promise<void>;
   setOptions: (options: RecorderOptions) => Promise<void>;
   command: (command: RecorderCommand) => Promise<void>;
+  /** Size the tab's window to `preset`'s page now, without recording; the
+   *  window keeps that size. */
+  applySize: (preset: RecordPresetId) => Promise<void>;
   /** Open the extension's one-time microphone grant page. */
   requestMicrophone: () => Promise<void>;
 }
@@ -159,6 +163,8 @@ async function presentHost(
               done(call({ method: "recorderOptions", params: { options } })),
             command: (command) =>
               done(call({ method: "recorderCommand", params: { command } })),
+            applySize: (preset) =>
+              done(call({ method: "recorderApplySize", params: { preset } })),
             requestMicrophone: () =>
               done(call({ method: "requestMicrophone", params: {} })),
           }

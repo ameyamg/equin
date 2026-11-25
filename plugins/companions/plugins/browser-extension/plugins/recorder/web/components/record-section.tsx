@@ -11,11 +11,14 @@ import {
   recordPreset,
   sizeRefusalText,
   stopCauseText,
+  windowBoundsFor,
+  type RecordPreset,
   type RecorderOptions,
   type RecorderSnapshot,
   type RecorderState,
   type SavedRecording,
   type TabFit,
+  type TabMeasure,
 } from "@plugins/companions/plugins/browser-extension/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -39,6 +42,7 @@ import "../internal/record.css";
 
 const icons = {
   tile: symbol("videocam"),
+  apply: symbol("fit-screen"),
   tabOn: symbol("volume-up"),
   tabOff: symbol("volume-off"),
   micOn: symbol("mic"),
@@ -109,6 +113,7 @@ function RecorderBody({
             recorder={recorder}
             snapshot={view.snapshot}
             fit={view.fit}
+            remeasure={view.remeasure}
             run={run}
           />
         )}
@@ -125,12 +130,14 @@ function Body({
   recorder,
   snapshot,
   fit,
+  remeasure,
   run,
 }: {
   host: PresentHost;
   recorder: ExtensionRecorder;
   snapshot: RecorderSnapshot;
   fit: TabFit;
+  remeasure: () => Promise<void>;
   run: Run;
 }) {
   const { state, options } = snapshot;
@@ -168,6 +175,13 @@ function Body({
             fit={fit}
             mic={snapshot.mic}
             onOptions={(next) => run(() => recorder.setOptions(next))}
+            onApplySize={() => {
+              const preset = recordPreset(options.preset);
+              run(async () => {
+                await recorder.applySize(preset.id);
+                await remeasure();
+              }, `Window sized for ${preset.label}`);
+            }}
             onMicOn={(next) =>
               run(async () => {
                 await recorder.setOptions(next);
@@ -213,6 +227,7 @@ function RecordRow({
   fit,
   mic,
   onOptions,
+  onApplySize,
   onMicOn,
   onRecord,
 }: {
@@ -220,6 +235,7 @@ function RecordRow({
   fit: TabFit;
   mic: RecorderSnapshot["mic"];
   onOptions: (next: RecorderOptions) => void;
+  onApplySize: () => void;
   onMicOn: (next: RecorderOptions) => void;
   onRecord: () => void;
 }) {
@@ -249,6 +265,11 @@ function RecordRow({
               value={options.preset}
               measure={fit.measure}
               onChange={(preset) => set({ preset })}
+            />
+            <ApplySize
+              preset={recordPreset(options.preset)}
+              measure={fit.measure}
+              onClick={onApplySize}
             />
             <span className="rec-vsep" />
             <Toggle
@@ -313,6 +334,48 @@ function RecordRow({
         <span className="rec-go-dot" />
       </button>
     </div>
+  );
+}
+
+/**
+ * Apply, beside the size dropdown: size the window to the chosen preset's
+ * page now, without recording (to lay the page out, or check it, first).
+ * Off for As is (nothing to apply), a size this screen or zoom refuses, and
+ * a page already at that size — each said in its tooltip.
+ */
+function ApplySize({
+  preset,
+  measure,
+  onClick,
+}: {
+  preset: RecordPreset;
+  measure: TabMeasure;
+  onClick: () => void;
+}) {
+  const page = preset.page;
+  const off =
+    page === null
+      ? "As is keeps the window as it is"
+      : measure.innerWidth === page.width && measure.innerHeight === page.height
+        ? `The page is already ${page.width} × ${page.height}`
+        : (() => {
+            const bounds = windowBoundsFor(page, measure);
+            return bounds.ok ? null : sizeRefusalText(bounds.reason);
+          })();
+  const title =
+    off ??
+    `Resize the window to ${preset.label} now (page ${page?.width} × ${page?.height}), without recording`;
+  return (
+    <button
+      type="button"
+      className="rec-tg rec-apply"
+      title={title}
+      aria-label={title}
+      disabled={off !== null}
+      onClick={onClick}
+    >
+      <Icon icon={icons.apply} />
+    </button>
   );
 }
 
