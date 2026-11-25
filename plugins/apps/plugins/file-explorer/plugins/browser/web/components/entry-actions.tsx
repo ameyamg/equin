@@ -130,11 +130,7 @@ export function PasteAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   return (
     <IconButton
       icon={pasteIcon}
-      label={
-        row.kind === "dir"
-          ? `Paste${items} into folder`
-          : `Paste${items}`
-      }
+      label={row.kind === "dir" ? `Paste${items} into folder` : `Paste${items}`}
       shortcut={row.kind === "dir" ? undefined : "mod+v"}
       disabled={n === 0}
       onClick={() => host.paste(folder)}
