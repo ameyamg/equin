@@ -5,6 +5,7 @@ import {
   grantOf,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
+import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
 import { mandateIsKindOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
 import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { supervisorRoleMandate } from "../../core";
@@ -45,10 +46,24 @@ export async function renderSupervisorRoles(
 }
 
 /**
+ * How a supervisor root records what needs the user — code-owned, not part of
+ * the shared prompt config: it names tools and a block tag, so it must follow
+ * the code, and a user's own override of the shared prompt (written before
+ * decisions existed) must not hide it. Only while `decisions.open` is granted.
+ */
+function decisionsGuidance(taskId: string): string {
+  return [
+    '**Decisions.** This replaces any page-based list of decisions ("Still open" / "Decided" sections, numbered "D<n>" items) your other instructions describe: everything that needs the user — a choice, an action only they can take, something they should know — is a decision you open with `open_decision`, its context in its `body`. Keep it current with `update_decision`, notes included after it closes.',
+    `On your session page, place one \`<task-decisions task="${taskId}"/>\` block (with \`edit_page\`, near the top — in your agent page, or an \`<agent-inline>\` card on a page of the user's): it shows your task's decisions live and the user answers them there.`,
+  ].join("\n\n");
+}
+
+/**
  * The shared supervisor prompt, for the conversation at the ROOT of a
  * supervisor mandate (an ad-hoc supervisor, or a role's session) — never a
- * worker below it. A role session also reads which role it works for.
- * Nothing when neither has anything to say.
+ * worker below it. A role session also reads which role it works for, and a
+ * root granted `decisions.open` how it records what needs the user. Nothing
+ * when none has anything to say.
  */
 export async function renderSupervisorPrompt(
   conversationId: string,
@@ -71,6 +86,8 @@ export async function renderSupervisorPrompt(
   }
   const shared = getConfig(supervisorPromptConfig).prompt.trim();
   if (shared) parts.push(shared);
+  if ((await grantOf(decisionsOpen, conversationId)) === true)
+    parts.push(decisionsGuidance(mandate.rootTaskId));
   if (parts.length === 0) return null;
   return ["## Supervisor", "", parts.join("\n\n")].join("\n");
 }
