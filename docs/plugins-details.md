@@ -57398,7 +57398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×12
@@ -57419,6 +57419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/source-digest/prune`
           - `primitives/log-channels/memory-persistence`
           - `release`
+          - `shell/toast`
           - `upstream`
         - Endpoint callers: `log-files`
       - Exemptions:
@@ -59599,6 +59600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports`
               - `reports/main-thread-stall`
               - `shell/notifications`
+              - `shell/toast`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Web:
         - Uses:
@@ -63632,7 +63634,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Item` → `BellButton`
           - `Notifications.Action` "open"
           - `Notifications.Action` "reload"
-        - Uses: 48 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 49 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `apps-core/tab-origin` ×4
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
@@ -63641,6 +63643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/coords` ×2
           - `primitives/css/fill` ×2
           - `primitives/cursor-pagination` ×2
+          - `shell/toast` ×2
           - `apps-core/tabs.useAppLink`
           - `audience/developer-mark.DeveloperMark`
           - `audience.useAudience`
@@ -63667,7 +63670,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/tab-id.getTabId`
           - `shell/action-bar.ActionBar`
-          - `shell/toast.useShowCustomToast`
           - `ui/icons.Icon`
         - Exports (types):
           - `LiveToastAction`
@@ -63881,7 +63883,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-3xs`
               - `ui/tokens/type-scale --line-height-3xs`
-    - **`toast`** — The toast stack: useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Feature code never raises a toast here: useToast (shell/notifications) shows every toast through it AND records it in the notification history; the shell-toast/no-direct-custom-toast lint rule keeps it so. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. A custom toast states why it is shown: an announcement (something that happened on its own, e.g. a notification arriving) is raised only on a page on screen and always leaves after the announcement duration, whatever its variant; a reply (the answer to the user's own action) stays as long as its caller says, Infinity included. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
+    - **`toast`** — The toast stack: useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Feature code never raises a toast here: useToast (shell/notifications) shows every toast through it AND records it in the notification history; the shell-toast/no-direct-custom-toast lint rule keeps it so. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. A custom toast states why it is shown: an announcement (something that happened on its own, e.g. a notification arriving) is raised only on a page on screen and always leaves after the announcement duration, whatever its variant; a reply (the answer to the user's own action) stays as long as its caller says, Infinity included. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted. Every toast decision a tab makes (raised, skipped and why, mounted, gone) is written to the `toasts` client log (logToast), stamped with the tab, its visibility, focus and host state.
       - Web:
         - Contributes:
           - `Core.Root` → `ToasterHost`
@@ -63897,15 +63899,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/z-layers/stack.defineZLayer`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/latest-ref.useEventCallback`
+          - `primitives/log-channels.clientLog`
           - `primitives/overlay/portal-host.PortalContainerProvider`
           - `primitives/overlay/portal-host.usePortalContainer`
           - `primitives/scope/render-origin.RenderOriginHandle`
           - `primitives/scope/render-origin.useRenderOrigin`
+          - `primitives/scope/tab-id.getTabId`
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`
         - Exports (types): `CustomToastArgs`
         - Exports (values):
           - `isInToast`
+          - `logToast`
           - `useShowCustomToast`
           - `useSuppressToasts`
       - Cross-plugin:

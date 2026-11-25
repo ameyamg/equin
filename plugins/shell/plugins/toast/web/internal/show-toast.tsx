@@ -16,8 +16,9 @@ import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import type { ReactNode } from "react";
 import type { Audience } from "@plugins/audience/core";
 import { trackToast, untrackToast } from "./live-toasts";
-import { toastReachesReader } from "./reader-audience";
+import { readerAudience, toastReachesReader } from "./reader-audience";
 import { isPageOnScreen } from "./on-screen";
+import { logToast } from "./toast-log";
 
 /**
  * Page-unique toast ids we mint ourselves, rather than taking sonner's return
@@ -92,6 +93,14 @@ function ToastBody({
     return () => untrackToast(id);
   }, [id]);
 
+  // The toasts log: when sonner actually mounted the toast, and for how long.
+  // StrictMode's re-run logs a second pair in dev; the ids tell them apart.
+  useEffect(() => {
+    const mountedAt = Date.now();
+    logToast(`mounted ${id}`);
+    return () => logToast(`gone ${id} after ${Date.now() - mountedAt} ms`);
+  }, [id]);
+
   // A custom toast's content lives in its caller's origin: it ends when the
   // body does. StrictMode's destroy → create re-mounts within the same task,
   // so the end is decided a microtask later.
@@ -160,6 +169,11 @@ export type CustomToastArgs = {
   /** Who it is for — a `developer` toast is shown only in Developer mode. */
   audience?: Audience;
   /**
+   * What the toast is, as the `toasts` log names it (a notification's id and
+   * title), so a toast that never showed can be traced to what raised it.
+   */
+  subject: string;
+  /**
    * The same event raised again replaces its toast instead of stacking one
    * more: a toast with this key takes the place of the one still on screen
    * with it (dismissed, the new one animating in, so every raise visibly
@@ -191,10 +205,19 @@ export function useShowCustomToast(): (args: CustomToastArgs) => void {
   const origin = useRenderOrigin();
   return useCallback(
     (args: CustomToastArgs) => {
-      if (!toastReachesReader(args.audience)) return;
+      if (!toastReachesReader(args.audience)) {
+        logToast(
+          `skip ${args.kind} ${args.subject}: audience ${args.audience} not reached (reader ${readerAudience() ?? "unknown"})`,
+        );
+        return;
+      }
       // An announcement is for a user looking at the page (`isPageOnScreen`).
-      if (args.kind === "announcement" && !isPageOnScreen()) return;
+      if (args.kind === "announcement" && !isPageOnScreen()) {
+        logToast(`skip ${args.kind} ${args.subject}: page not on screen`);
+        return;
+      }
       const id = nextToastId();
+      logToast(`raise ${args.kind} ${args.subject} as ${id}`);
       if (args.replaces !== undefined) {
         const previous = byReplaceKey.get(args.replaces);
         // One not published yet drops itself before publishing (showCustomToast);

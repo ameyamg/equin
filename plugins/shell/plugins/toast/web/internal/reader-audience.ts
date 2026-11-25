@@ -18,6 +18,11 @@ export function usePublishReaderAudience(): void {
   }, [known]);
 }
 
+/** The reader's audience as last published — `null` while unknown (the toasts log). */
+export function readerAudience(): Audience | null {
+  return reader;
+}
+
 /**
  * Whether a toast declared for `declared` is shown: a toast declaring no
  * audience (or `user`) is for everyone; a `developer` toast only once the

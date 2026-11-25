@@ -5,6 +5,8 @@ import type { Audience } from "@plugins/audience/core";
 import type { Notification } from "../../shared/resources";
 import { useReachingNotifications } from "./use-reaching-notifications";
 import { recentClientIds } from "./toast";
+import { logToast } from "@plugins/shell/plugins/toast/web";
+import { notificationLogName } from "../components/notification-view";
 
 /**
  * Calls `onArrive` once for each notification that ARRIVES while the caller is
@@ -34,16 +36,18 @@ export function useNotificationArrivals(
     const rows = result.data;
     const before =
       seen.current?.audience === audience.data ? seen.current.ids : null;
-    if (before !== null) {
+    if (before === null) {
+      logToast(
+        `bell watching for ${audience.data}: ${rows.length} notifications already there (history, not announced)`,
+      );
+    } else {
       for (const n of rows) {
-        if (
-          !before.has(n.id) &&
-          !recentClientIds.has(n.id) &&
-          !n.muted &&
-          announcedElsewhere(n)
-        ) {
-          arrive(n);
-        }
+        if (before.has(n.id)) continue;
+        const skip = arrivalSkip(n);
+        logToast(
+          `arrival ${notificationLogName(n)} (${n.variant}) ${skip === null ? "announced" : `skipped: ${skip}`}`,
+        );
+        if (skip === null) arrive(n);
       }
     }
     seen.current = {
@@ -51,6 +55,14 @@ export function useNotificationArrivals(
       ids: new Set(rows.map((n) => n.id)),
     };
   }, [result, audience, arrive]);
+}
+
+/** Why an arriving row is not announced here, or `null` when it is. */
+function arrivalSkip(n: Notification): string | null {
+  if (recentClientIds.has(n.id)) return "this tab raised it (its own toast)";
+  if (n.muted) return "muted";
+  if (!announcedElsewhere(n)) return "another tab's confirmation";
+  return null;
 }
 
 /**

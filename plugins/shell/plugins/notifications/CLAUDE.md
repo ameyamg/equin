@@ -281,7 +281,7 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
     - `ActionBar.Item` → `BellButton`
     - `Notifications.Action` "open"
     - `Notifications.Action` "reload"
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tab-origin` ×4
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
@@ -290,6 +290,7 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
     - `primitives/cursor-pagination` ×2
+    - `shell/toast` ×2
     - `apps-core/tabs.useAppLink`
     - `audience/developer-mark.DeveloperMark`
     - `audience.useAudience`
@@ -316,7 +317,6 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
-    - `shell/toast.useShowCustomToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `LiveToastAction`

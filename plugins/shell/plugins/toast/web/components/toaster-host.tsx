@@ -10,6 +10,8 @@ import { DismissAllButton } from "./dismiss-all-button";
 import { useToastsSuppressed } from "../internal/suppress-toasts";
 import { usePublishReaderAudience } from "../internal/reader-audience";
 import { ToastLayer } from "../internal/layer";
+import { markToastHostMounted } from "../internal/toast-log";
+import { useEffect } from "react";
 
 /**
  * Sonner's own `VIEWPORT_OFFSET` default, restated here because the stack-action
@@ -30,6 +32,8 @@ export function ToasterHost() {
 
 function Toasts() {
   const [actionsRef, actionsHeight] = useElementSize((s) => s.height);
+  // The toasts log names whether a raised toast had a stack to draw it.
+  useEffect(() => markToastHostMounted(), []);
 
   // The strip is a reserved band, not an overlay: the stack's own bottom offset
   // grows by exactly what the strip measures, so the actions can never paint

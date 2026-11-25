@@ -25,6 +25,14 @@
 
 import { createContext, useContext, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Toaster, toast as sonnerToast } from "sonner";
 
@@ -45,6 +53,7 @@ const TIME_BEFORE_UNMOUNT = 200;
 function textToast(text: string): CustomToastArgs {
   return {
     kind: "reply",
+    subject: "test toast",
     duration: TOAST_LIFETIME,
     render: () => <span>{text}</span>,
   };
@@ -292,6 +301,7 @@ describe("click-to-dismiss", () => {
     render(<Harness toaster />);
     await raise({
       kind: "reply",
+      subject: "test toast",
       duration: Infinity,
       render: () => (
         <div>
@@ -361,6 +371,7 @@ describe("a custom toast renders in its caller's origin", () => {
 
   const worldToast: CustomToastArgs = {
     kind: "reply",
+    subject: "test toast",
     duration: Infinity,
     render: () => <WorldName />,
   };
@@ -395,7 +406,11 @@ describe("an announcement is never sticky", () => {
 
   it("an announcement leaves after the announcement duration", async () => {
     render(<Harness toaster />);
-    await raise({ kind: "announcement", render: () => <p>arrived</p> });
+    await raise({
+      kind: "announcement",
+      subject: "test toast",
+      render: () => <p>arrived</p>,
+    });
     expect(mountedToasts()).toHaveLength(1);
     await flushToasts(ANNOUNCEMENT_DURATION_MS);
     await flushToasts(TIME_BEFORE_UNMOUNT + 50);
@@ -407,6 +422,7 @@ describe("an announcement is never sticky", () => {
     render(<Harness toaster />);
     await raise({
       kind: "reply",
+      subject: "test toast",
       duration: Infinity,
       render: () => <p>save failed</p>,
     });
@@ -420,7 +436,11 @@ describe("an announcement is never sticky", () => {
       .mockReturnValue("hidden");
     try {
       render(<Harness toaster />);
-      await raise({ kind: "announcement", render: () => <p>arrived</p> });
+      await raise({
+        kind: "announcement",
+        subject: "test toast",
+        render: () => <p>arrived</p>,
+      });
       expect(mountedToasts()).toHaveLength(0);
       await raise(textToast("copied"));
       expect(mountedToasts()).toHaveLength(1);
@@ -442,6 +462,7 @@ describe("a toast with a replace key takes the place of its predecessor", () => 
     replaces = "failed-action",
   ): CustomToastArgs => ({
     kind: "reply",
+    subject: "test toast",
     duration: Infinity,
     replaces,
     render: () => <p>{text}</p>,

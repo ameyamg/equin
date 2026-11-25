@@ -773,6 +773,13 @@ function staysUntilHandled(
  */
 export type NotificationToastKind = "announcement" | "reply";
 
+/** A notification as the `toasts` log names it: its id (if stored) and title. */
+export function notificationLogName(
+  n: Pick<NotificationContent, "id" | "title">,
+): string {
+  return `${n.id ?? "unstored"} "${n.title}"`;
+}
+
 /**
  * Shows a notification as a toast through the toast host's custom-content
  * path, rendered in the caller's render origin — so its action kind, its
@@ -796,8 +803,15 @@ export function useToastNotification(): (
         <NotificationToastCard n={n} dismiss={dismiss} />
       );
       const replaces = options?.replaces;
+      const subject = notificationLogName(n);
       if (kind === "announcement") {
-        showCustomToast({ kind, render, audience: n.audience, replaces });
+        showCustomToast({
+          kind,
+          render,
+          audience: n.audience,
+          replaces,
+          subject,
+        });
         return;
       }
       showCustomToast({
@@ -806,6 +820,7 @@ export function useToastNotification(): (
         duration: staysUntilHandled(n) ? Infinity : REPLY_DURATION_MS,
         audience: n.audience,
         replaces,
+        subject,
       });
     },
     [showCustomToast],

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The toast stack: useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Feature code never raises a toast here: useToast (shell/notifications) shows every toast through it AND records it in the notification history; the shell-toast/no-direct-custom-toast lint rule keeps it so. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. A custom toast states why it is shown: an announcement (something that happened on its own, e.g. a notification arriving) is raised only on a page on screen and always leaves after the announcement duration, whatever its variant; a reply (the answer to the user's own action) stays as long as its caller says, Infinity included. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
+- Description: The toast stack: useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Feature code never raises a toast here: useToast (shell/notifications) shows every toast through it AND records it in the notification history; the shell-toast/no-direct-custom-toast lint rule keeps it so. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. A custom toast states why it is shown: an announcement (something that happened on its own, e.g. a notification arriving) is raised only on a page on screen and always leaves after the announcement duration, whatever its variant; a reply (the answer to the user's own action) stays as long as its caller says, Infinity included. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted. Every toast decision a tab makes (raised, skipped and why, mounted, gone) is written to the `toasts` client log (logToast), stamped with the tab, its visibility, focus and host state.
 - Web:
   - Contributes:
     - `Core.Root` → `ToasterHost`
@@ -20,15 +20,18 @@
     - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/log-channels.clientLog`
     - `primitives/overlay/portal-host.PortalContainerProvider`
     - `primitives/overlay/portal-host.usePortalContainer`
     - `primitives/scope/render-origin.RenderOriginHandle`
     - `primitives/scope/render-origin.useRenderOrigin`
+    - `primitives/scope/tab-id.getTabId`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
   - Exports (types): `CustomToastArgs`
   - Exports (values):
     - `isInToast`
+    - `logToast`
     - `useShowCustomToast`
     - `useSuppressToasts`
 - Cross-plugin:
@@ -101,6 +104,23 @@ unmounts for good, and the content is built in its own function
 (`raiseContent`) so no closure the JSX holds shares its scope. Without that,
 each dismissed custom toast kept ~58 KB, 7 DOM nodes and ~143 listeners until
 100 later toasts pushed it out.
+
+## A missed toast is explained by the `toasts` log
+
+Every decision a tab makes about a toast goes to the `toasts` client log
+(`~/.equin/worktrees/<wt>/logs/toasts.jsonl`, Debug → Logs), each line stamped
+`[tab <id> <visible|hidden> <focused|unfocused> host=<drawn|suppressed|absent>]`:
+
+- `bell watching …` — the bell's first read settled (those rows are history).
+- `arrival <notif> (<variant>) announced | skipped: <why>` — a notification
+  reaching this tab's bell (shell/notifications' `useNotificationArrivals`).
+- `skip <kind> <subject>: <why>` / `raise <kind> <subject> as <toast id>` —
+  the gate in `useShowCustomToast` (audience, page not on screen).
+- `mounted <toast id>` / `gone <toast id> after N ms` — sonner drew it, and it left.
+
+So "the toast never showed" reads as: which tabs received the notification,
+which one was on screen, and whether its toast mounted. Callers name what a
+toast is with `CustomToastArgs.subject`.
 
 ## Click-to-dismiss
 

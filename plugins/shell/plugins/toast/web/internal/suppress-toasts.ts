@@ -44,6 +44,11 @@ export function useSuppressToasts(): void {
   }, []);
 }
 
+/** Whether a mounted surface has turned the page's toasts off, read now (the toasts log). */
+export function isToastHostSuppressed(): boolean {
+  return suppressed;
+}
+
 /** Whether a mounted surface has turned the page's toasts off. */
 export function useToastsSuppressed(): boolean {
   return useSyncExternalStore(subscribe, isSuppressed, isSuppressed);
