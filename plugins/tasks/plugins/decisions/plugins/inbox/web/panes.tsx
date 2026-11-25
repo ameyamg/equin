@@ -151,7 +151,12 @@ function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
       >
         {decision.taskTitle}
       </Button>
-      <DecisionCard decision={decision} seenBefore={seenBefore} draft={draft} />
+      <DecisionCard
+        decision={decision}
+        seenBefore={seenBefore}
+        draft={draft}
+        under={null}
+      />
     </Stack>
   );
 }

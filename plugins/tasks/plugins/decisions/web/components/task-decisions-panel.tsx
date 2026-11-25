@@ -263,24 +263,49 @@ const OPEN_PLACE = {
 const CLOSED_PLACE = { pill: "lead" } as const;
 
 /**
- * A decision expanded in place: marked seen while shown, answered with its
- * draft while it is answerable (the card's own rule — never a closed one).
+ * A decision expanded in place under its row: marked seen while shown,
+ * answered with its draft while it is answerable (the card's own rule — never
+ * a closed one). The row stays its heading: `under` is what the row prints.
  */
-function ShownDecision({ decision }: { decision: DecisionRow }): ReactElement {
+function ShownDecision({
+  decision,
+  under,
+}: {
+  decision: DecisionRow;
+  under: "question" | "outcome";
+}): ReactElement {
   // What was new when it opened stays marked while it is shown.
   const [seenBefore] = useState(decision.seenAt);
   useMarkDecisionSeen(decision);
   const draft = useDecisionDrafts().part(decision.id);
   return (
-    <DecisionCard decision={decision} seenBefore={seenBefore} draft={draft} />
+    <DecisionCard
+      decision={decision}
+      seenBefore={seenBefore}
+      draft={draft}
+      under={under}
+    />
   );
 }
 
-const shownDetail = (r: DecisionRow) => (
-  <ShownDecision key={r.id} decision={r} />
-);
-const LIST_OPTIONS = {
-  list: { detail: shownDetail, detailOnActivate: true, lines: 1 },
+// An open row prints its question, a closed row its outcome (the overrides above).
+const OPEN_LIST_OPTIONS = {
+  list: {
+    detail: (r: DecisionRow) => (
+      <ShownDecision key={r.id} decision={r} under="question" />
+    ),
+    detailOnActivate: true,
+    lines: 1,
+  },
+} as const;
+const CLOSED_LIST_OPTIONS = {
+  list: {
+    detail: (r: DecisionRow) => (
+      <ShownDecision key={r.id} decision={r} under="outcome" />
+    ),
+    detailOnActivate: true,
+    lines: 1,
+  },
 } as const;
 
 /** The task's open decisions — Needs you first, then Sent and FYI. */
@@ -302,7 +327,7 @@ function OpenDecisions({ taskId }: { taskId: TaskId }): ReactElement {
       recipe="inbox"
       place={OPEN_PLACE}
       views={["list"]}
-      viewOptions={LIST_OPTIONS}
+      viewOptions={OPEN_LIST_OPTIONS}
       toolbar={HOSTED}
       density="compact"
       emptyState={<>Nothing open.</>}
@@ -347,7 +372,7 @@ function ClosedDecisions({
           recipe="inbox"
           place={CLOSED_PLACE}
           views={["list"]}
-          viewOptions={LIST_OPTIONS}
+          viewOptions={CLOSED_LIST_OPTIONS}
           toolbar={HOSTED}
           density="compact"
           emptyState={<>Nothing closed.</>}

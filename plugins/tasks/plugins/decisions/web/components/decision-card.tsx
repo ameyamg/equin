@@ -41,13 +41,20 @@ import { isAnswerable, type DecisionDraft } from "../internal/drafts";
  * folded. Given its `draft`, it is answered in place: the options pick (and
  * unpick), a note goes with the pick or asks a question, an FYI takes "Got
  * it" — all drafts until the SubmitBar sends them.
+ *
+ * `under`: what the row this card expands beneath already prints beside the
+ * decision's label — `"question"` (an open row) or `"outcome"` (a closed
+ * row). The card then leaves out the label and that line, so the row is its
+ * heading; `null` for a card that stands on its own (the inbox's detail).
  */
 export function DecisionCard({
   decision,
   seenBefore,
   draft,
+  under,
 }: {
   decision: DecisionRow;
+  under: "question" | "outcome" | null;
   /** The decision's drafted answer (`useDecisionDrafts().part(id)`); absent: read-only. */
   draft?: KeptPart<DecisionDraft>;
   /**
@@ -65,9 +72,11 @@ export function DecisionCard({
     <Card>
       <Stack gap="md">
         <Stack direction="row" gap="sm" align="center" wrap>
-          <Text variant="code" tone="muted">
-            {decision.label}
-          </Text>
+          {under === null ? (
+            <Text variant="code" tone="muted">
+              {decision.label}
+            </Text>
+          ) : null}
           <Badge variant={presentation.variant} shape="pill">
             {presentation.label}
           </Badge>
@@ -79,10 +88,12 @@ export function DecisionCard({
             <RelativeTime date={decision.openedAt} />
           </Text>
         </Stack>
-        <Text as="h2" variant="heading">
-          {decision.question}
-        </Text>
-        <Outcome decision={decision} />
+        {under === "question" ? null : (
+          <Text as="h2" variant="heading">
+            {decision.question}
+          </Text>
+        )}
+        <Outcome decision={decision} showOutcome={under !== "outcome"} />
         {decision.body.trim() !== "" ? (
           <Markdown>{decision.body}</Markdown>
         ) : null}
@@ -119,8 +130,17 @@ function FromLabel({ decisionId }: { decisionId: string }): ReactElement {
 /** How many decisions split from one the card names. */
 const SPLIT_SHOWN = 20;
 
-/** A closed decision's outcome, and the decisions split from it (derived from their `from`). */
-function Outcome({ decision }: { decision: DecisionRow }): ReactElement | null {
+/**
+ * A closed decision's outcome (unless its row already prints it), and the
+ * decisions split from it (derived from their `from`).
+ */
+function Outcome({
+  decision,
+  showOutcome,
+}: {
+  decision: DecisionRow;
+  showOutcome: boolean;
+}): ReactElement | null {
   const split = useLive(decisionsList, {
     where: { fromDecisionId: decision.id },
     limit: SPLIT_SHOWN,
@@ -143,12 +163,11 @@ function Outcome({ decision }: { decision: DecisionRow }): ReactElement | null {
         </Text>
       ),
   });
-  if (decision.outcome === null && splitLine === null) return null;
+  const outcome = showOutcome ? decision.outcome : null;
+  if (outcome === null && splitLine === null) return null;
   return (
     <Stack gap="2xs">
-      {decision.outcome !== null ? (
-        <Text variant="label">{decision.outcome}</Text>
-      ) : null}
+      {outcome !== null ? <Text variant="label">{outcome}</Text> : null}
       {splitLine}
     </Stack>
   );
