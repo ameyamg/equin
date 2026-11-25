@@ -133,8 +133,13 @@ await withBrowser(async (h) => {
 
   // A menu opened inside the panel keeps its own opaque fill: only the panel
   // (the window's material) goes clear, never the popovers over its rows.
-  await page.getByRole("button", { name: /preprompt/i }).first().click();
-  const menu = page.locator("[role=listbox], [role=menu], [role=dialog]").last();
+  await page
+    .getByRole("button", { name: /preprompt/i })
+    .first()
+    .click();
+  const menu = page
+    .locator("[role=listbox], [role=menu], [role=dialog]")
+    .last();
   await menu.waitFor({ state: "visible" });
   await page.screenshot({ path: `${OUT}-menu.png`, omitBackground: true });
   r.note(`screenshot: ${OUT}-menu.png`);
@@ -146,7 +151,11 @@ await withBrowser(async (h) => {
     }
     return "transparent";
   });
-  r.eq("the menu inside the panel paints an opaque fill", menuBg, "rgb(246, 246, 248)");
+  r.eq(
+    "the menu inside the panel paints an opaque fill",
+    menuBg,
+    "rgb(246, 246, 248)",
+  );
 });
 
 await r.finish();
