@@ -249,7 +249,7 @@ conditional hook.
   placed box. `Sticky active={open}`, so opening never remounts the row.
   Default-on (the consumers in 2026-11 — automations' History, the sidequest
   launch list — have short details, where it is invisible). Not under
-  `frame: "card"`: the card clips its content, which bounds a sticky row.
+  `frame`: the card clips its content, which bounds a sticky row.
 - `detailOnActivate?` — the whole row is its detail's disclosure: a click
   toggles it, the row carries `aria-expanded`, no disclosure glyph is drawn.
   Needs `detail`; beside a surface's own row activation it throws (one click,
@@ -271,6 +271,9 @@ conditional hook.
   card, primary-tinted border while open, the detail on the page ground under
   a hairline, cards a `sm` step apart (padding inside the entry, so windowed
   rows space the same). `CardFrame` in `list-view.tsx`. Default row chrome only.
+  `frame?: "fold"` — the same card ghosted at rest: a closed entry is a bare
+  row (no fill, border, shadow or spacing), opening raises the row and its
+  detail into one card — the row is the detail's heading. The decisions panel.
 - `lines?` — rows per item, `1 | 2` (default: 2 when `line2` holds a field — see above).
 - `columnCaptions?` — a caption row over the list (title label, each trailing
   label over its slot). Default off; also the view type's `configSchema`

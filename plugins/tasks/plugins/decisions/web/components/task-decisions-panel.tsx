@@ -288,13 +288,15 @@ function ShownDecision({
   );
 }
 
-// An open row prints its question, a closed row its outcome (the overrides above).
+// An open row prints its question, a closed row its outcome (the overrides
+// above). `fold`: an open row and its card are one block, the row its heading.
 const OPEN_LIST_OPTIONS = {
   list: {
     detail: (r: DecisionRow) => (
       <ShownDecision key={r.id} decision={r} under="question" />
     ),
     detailOnActivate: true,
+    frame: "fold",
     lines: 1,
   },
 } as const;
@@ -304,6 +306,7 @@ const CLOSED_LIST_OPTIONS = {
       <ShownDecision key={r.id} decision={r} under="outcome" />
     ),
     detailOnActivate: true,
+    frame: "fold",
     lines: 1,
   },
 } as const;

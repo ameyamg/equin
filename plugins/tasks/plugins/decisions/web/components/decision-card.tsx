@@ -45,8 +45,10 @@ import { isAnswerable, type DecisionDraft } from "../internal/drafts";
  *
  * `under`: what the row this card expands beneath already prints beside the
  * decision's label — `"question"` (an open row) or `"outcome"` (a closed
- * row). The card then leaves out the label and that line, so the row is its
- * heading; `null` for a card that stands on its own (the inbox's detail).
+ * row). The card then leaves out the label and that line and draws no box of
+ * its own — the row's frame is its box (the list's `frame: "fold"`), so the
+ * row is its heading; `null` for a card that stands on its own (the inbox's
+ * detail).
  */
 export function DecisionCard({
   decision,
@@ -69,53 +71,52 @@ export function DecisionCard({
   const isNew =
     seenBefore === null ||
     (decision.latestAgentAt !== null && decision.latestAgentAt > seenBefore);
-  return (
-    <Card>
-      <Stack gap="md">
-        <Stack direction="row" gap="sm" align="center" wrap>
-          {under === null ? (
-            <Text variant="code" tone="muted">
-              {decision.label}
-            </Text>
-          ) : null}
-          <Badge variant={presentation.variant} shape="pill">
-            {presentation.label}
-          </Badge>
-          {isNew ? <NewMark /> : null}
-          {decision.fromDecisionId !== null ? (
-            <FromLabel decisionId={decision.fromDecisionId} />
-          ) : null}
-          <Text variant="caption" tone="muted">
-            <RelativeTime date={decision.openedAt} />
-          </Text>
-        </Stack>
-        {under === "question" ? null : (
-          <Text as="h2" variant="heading">
-            {decision.question}
-          </Text>
-        )}
-        <Outcome decision={decision} showOutcome={under !== "outcome"} />
-        {decision.body.trim() !== "" ? (
-          <Markdown>{decision.body}</Markdown>
-        ) : null}
-        {decision.options.length > 0 ? (
-          <Options
-            options={decision.options}
-            draft={draft !== undefined && isAnswerable(decision) ? draft : null}
-          />
-        ) : null}
-        <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
-        {decision.state !== "closed" && decision.unconsumedAnswers > 0 ? (
-          <Text variant="caption" tone="muted">
-            {`Sent to ${decision.taskTitle}. Waiting for it to act on your answer.`}
+  const body = (
+    <Stack gap="md">
+      <Stack direction="row" gap="sm" align="center" wrap>
+        {under === null ? (
+          <Text variant="code" tone="muted">
+            {decision.label}
           </Text>
         ) : null}
-        {draft !== undefined && isAnswerable(decision) ? (
-          <Answer decision={decision} draft={draft} />
+        <Badge variant={presentation.variant} shape="pill">
+          {presentation.label}
+        </Badge>
+        {isNew ? <NewMark /> : null}
+        {decision.fromDecisionId !== null ? (
+          <FromLabel decisionId={decision.fromDecisionId} />
         ) : null}
+        <Text variant="caption" tone="muted">
+          <RelativeTime date={decision.openedAt} />
+        </Text>
       </Stack>
-    </Card>
+      {under === "question" ? null : (
+        <Text as="h2" variant="heading">
+          {decision.question}
+        </Text>
+      )}
+      <Outcome decision={decision} showOutcome={under !== "outcome"} />
+      {decision.body.trim() !== "" ? (
+        <Markdown>{decision.body}</Markdown>
+      ) : null}
+      {decision.options.length > 0 ? (
+        <Options
+          options={decision.options}
+          draft={draft !== undefined && isAnswerable(decision) ? draft : null}
+        />
+      ) : null}
+      <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
+      {decision.state !== "closed" && decision.unconsumedAnswers > 0 ? (
+        <Text variant="caption" tone="muted">
+          {`Sent to ${decision.taskTitle}. Waiting for it to act on your answer.`}
+        </Text>
+      ) : null}
+      {draft !== undefined && isAnswerable(decision) ? (
+        <Answer decision={decision} draft={draft} />
+      ) : null}
+    </Stack>
   );
+  return under === null ? <Card>{body}</Card> : body;
 }
 
 /** The decision this one comes from, by its label once read. */

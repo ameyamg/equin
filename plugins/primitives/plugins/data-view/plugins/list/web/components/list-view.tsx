@@ -1770,9 +1770,10 @@ function listRowNode(
     ) : (
       rowNode
     );
-  if (config.frame === "card")
+  if (config.frame !== undefined)
     return (
       <CardFrame
+        ghostAtRest={config.frame === "fold"}
         open={open}
         row={withPrimary}
         detail={detail ? detail(row) : null}
@@ -1805,28 +1806,38 @@ const OPEN_ROW_TOP: CSSProperties = {
 };
 
 /**
- * One entry as a card (`ListViewOptions.frame: "card"`): the row and its open
- * detail in one raised surface, clipped to its radius so the row's hover fill
- * keeps the card's corners. The spacing to the next card is padding INSIDE the
- * entry's own box (never a margin, never the band's gap), so a windowed list —
- * whose rows are positioned one by one — spaces its cards the same.
+ * One entry as a card (`ListViewOptions.frame: "card"` / `"fold"`): the row
+ * and its open detail in one raised surface, clipped to its radius so the
+ * row's hover fill keeps the card's corners. The spacing to the next card is
+ * padding INSIDE the entry's own box (never a margin, never the band's gap),
+ * so a windowed list — whose rows are positioned one by one — spaces its
+ * cards the same. `ghostAtRest` (`"fold"`): closed, the card paints nothing
+ * and takes no spacing — a bare row among bare rows — and opening it raises
+ * the card around the row and its detail.
  */
 function CardFrame({
+  ghostAtRest,
   open,
   row,
   detail,
 }: {
+  ghostAtRest: boolean;
   open: boolean;
   row: ReactNode;
   detail: ReactNode;
 }): ReactNode {
+  const ghost = ghostAtRest && !open;
   return (
-    <Inset b="sm">
+    <Inset
+      x={ghostAtRest ? "xs" : undefined}
+      b={ghost ? undefined : ghostAtRest ? "xs" : "sm"}
+    >
       <Surface
         level="raised"
         className={cn(
           clipClasses({ axis: "both", fill: false }),
-          "transition-colors",
+          "transition-[background-color,border-color,box-shadow]",
+          ghost && "border-transparent bg-transparent shadow-none",
           open && "border-primary/55",
         )}
       >

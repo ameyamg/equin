@@ -103,8 +103,12 @@ export interface ListViewOptions<TRow> {
    * primary tint while open, the detail on the page ground under a hairline,
    * and the cards a `sm` step apart: rows that are records of their own
    * (sessions, runs), each read as a unit with what it opens onto.
+   * `"fold"`: the same card, ghosted at rest — a closed entry is a bare row
+   * (no fill, border or shadow, the entries flush), and opening it raises the
+   * row and its detail into one card: a heading over what it folds open
+   * (decisions under their panel), never a row with a separate box under it.
    */
-  frame?: "card";
+  frame?: "card" | "fold";
   /**
    * The row's action cluster stays painted at rest, not only while the row
    * is hovered — for a short list whose item action IS the point of the row
