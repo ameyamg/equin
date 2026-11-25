@@ -1,3 +1,4 @@
+import { toolCallableBy } from "@plugins/infra/plugins/mcp/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { stopGate } from "../../core";
 import { evaluateStop } from "./decide";
@@ -9,5 +10,6 @@ export const handleStopGate = implement(stopGate, ({ params }) =>
     params.id,
     StopGate.getContributions(),
     StopWaiver.getContributions(),
+    toolCallableBy,
   ),
 );

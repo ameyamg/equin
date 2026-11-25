@@ -7,10 +7,19 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
-import { handleMcpRequest } from "./handle-mcp";
+import { createMcpHandler } from "./handle-mcp";
 import { currentMcpHealth, resetMcpHealth } from "./health";
 import { Mcp } from "../../server";
 import { registry, scopeRegistry } from "../../server/internal/registry";
+
+/** Every tools/list answer, as the request path recorded it. */
+const listings: { conversationId: string; tools: readonly string[] }[] = [];
+const handleMcpRequest = createMcpHandler({
+  recordListing: (conversationId, tools) => {
+    listings.push({ conversationId, tools });
+    return Promise.resolve();
+  },
+});
 
 function listTools(): Promise<Response> {
   return handleMcpRequest(

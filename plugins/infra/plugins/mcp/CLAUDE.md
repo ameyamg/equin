@@ -48,6 +48,20 @@ Both factories return a `Registration` token that goes in the plugin's server
   conversations). A profile scope sees exactly its `tools` (an unknown or
   foreign-reserved name throws); `when` still applies on top. Pure filter: `machine/internal/scope.ts`.
 
+## What a session holds
+
+A client lists the tools when it connects and keeps that list: a tool added
+since (a deploy) or whose `when` turned true since is not in it until it
+reconnects. So every `tools/list` to a conversation records the names it
+listed (`mcp_listed_tools`, 30-day retention; the record's failure is isolated
+like a contribution's), and `toolCallableBy(conversationId, toolRegistration)`
+(server) answers whether the agent can call a tool now — listed to it and its
+`when` still true — or why not (`never-listed` / `not-listed` / `hidden`).
+`Mcp.tool` returns an `McpToolRegistration` (it names its tool), so a reader
+refers to a tool by its declaration, never a spelled name. Its reader: a stop
+gate's `tools` (`conversations/stop-gate`), so a gate never demands a tool
+the session lacks.
+
 ## Unattached sessions
 
 A `claude` started in a terminal — the usual way to recover a broken main —
@@ -126,12 +140,16 @@ and without it no tool set can be computed.
 
 ## Plugin reference
 
-- Description: The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
+- Description: The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable. Owns mcp_listed_tools (the tools last listed to each conversation — what its client holds) and toolCallableBy(conversationId, toolRegistration): whether a conversation's agent can call a tool now (listed to it and its when still true), or why not.
 - Load-bearing: yes
 - Server:
   - Contributes:
     - `resource.declare` "mcp.catalog"
     - `resource.declare` "mcp.health"
+  - Uses:
+    - `database.db`
+    - `infra/retention.defineRetention`
+  - DB schema: `plugins/infra/plugins/mcp/server/internal/tables.ts`
   - Exports (types):
     - `McpCallerContext`
     - `McpConversationTool`
@@ -140,9 +158,14 @@ and without it no tool set can be computed.
     - `McpTool`
     - `McpToolCallContext`
     - `McpToolContext`
+    - `McpToolRegistration`
     - `McpToolResult`
     - `McpUnattachedTool`
-  - Exports (values): `Mcp`
+    - `ToolReach`
+  - Exports (values):
+    - `Mcp`
+    - `toolCallableBy`
+  - Register: `defineJob('retention.mcp_listed_tools')`
   - Resources:
     - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
     - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
@@ -176,10 +199,10 @@ and without it no tool set can be computed.
     - `McpHealthSchema`
     - `mcpRequest`
 - Cross-plugin:
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks` ×9
+    - `conversations` ×6
     - `debug` ×6
-    - `conversations` ×5
     - `apps` ×4
     - `infra` ×2
     - `database/query`

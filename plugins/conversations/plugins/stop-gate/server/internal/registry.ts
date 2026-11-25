@@ -1,3 +1,4 @@
+import type { McpToolRegistration } from "@plugins/infra/plugins/mcp/server";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 
 /** What one gate says about a conversation's agent ending its turn. */
@@ -11,6 +12,15 @@ export type StopVerdict = { kind: "allow" } | { kind: "block"; reason: string };
 export interface StopGateEntry {
   /** Stable id, for logs and the docs. */
   id: string;
+  /**
+   * The MCP tools the agent clears this gate with — what its `reason` asks
+   * it to call. The gate is enforced only while the agent can call every one
+   * (`toolCallableBy`: listed to its session and visible now); otherwise its
+   * block is dropped, since an agent cannot do what it was not given (a
+   * session that connected before `turn_for` existed was held on it at every
+   * turn, 2026-11-26). `[]` only for a gate cleared without a tool.
+   */
+  tools: readonly McpToolRegistration[];
   check(conversationId: string): Promise<StopVerdict>;
 }
 

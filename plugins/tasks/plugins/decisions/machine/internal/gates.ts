@@ -11,15 +11,17 @@ import {
   owedDecisions,
   owedMessage,
 } from "../../server/internal/owing";
+import { updateDecisionTool } from "../../server/internal/tools";
 
 /**
  * The task `conversationId` is the agent of — the one answers are typed into
  * (its task's latest conversation under the task's mandate) — or `null` for
  * any other conversation (a side chat, an older one), which owes nothing.
- * An agent not granted `decisions.open` owes nothing either (`mayDecide`):
- * it has no `update_decision` to settle a decision with (its task may hold
- * some from before its mandate stopped granting them), so the gates would
- * hold it on something it cannot do.
+ * An agent without `update_decision` owes nothing either: its task may hold
+ * decisions from before its mandate stopped granting them, and a gate would
+ * hold it on something it cannot do. The stop gate says so by its `tools`
+ * (enforced only while the session can call them); the exit gate asks the
+ * grant (`mayDecide`).
  */
 async function agentTaskOf(conversationId: string) {
   const conversation = await getConversation(conversationId);
@@ -42,11 +44,12 @@ async function mayDecide(conversationId: string): Promise<boolean> {
  */
 export const decisionsStopGate = StopGate({
   id: "decisions.owed",
+  tools: [updateDecisionTool],
   async check(conversationId) {
     const taskId = await agentTaskOf(conversationId);
     if (taskId === null) return { kind: "allow" };
     const message = owedMessage(await owedDecisions(db, taskId));
-    return message === null || !(await mayDecide(conversationId))
+    return message === null
       ? { kind: "allow" }
       : { kind: "block", reason: message };
   },

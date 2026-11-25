@@ -11,6 +11,7 @@ import type {
 } from "../../server";
 import { recordMcpRequest } from "./health";
 import { registry, scopeRegistry } from "../../server/internal/registry";
+import { recordToolsListed } from "../../server/internal/listed";
 import { toolsInScope } from "./scope";
 import { mcpSdk, type McpSdk } from "./sdk";
 
@@ -23,26 +24,41 @@ import { mcpSdk, type McpSdk } from "./sdk";
  * reads the body, and "Internal server error" told it nothing (a 9 s Postgres
  * restart once failed every `browser_act` call that way, 2026-11-15).
  */
-export async function handleMcpRequest(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const messages = await bodyMessages(req);
-  let res: Response;
-  try {
-    res = await answerMcpRequest(req, params, messages);
-  } catch (err) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    recordMcpRequest({ ok: false, message: error.message });
-    throw answerThrowWith(error, mcpFailureResponse(messages, error));
-  }
-  recordMcpRequest(
-    res.status >= 500
-      ? { ok: false, message: `Answered HTTP ${res.status}` }
-      : { ok: true },
-  );
-  return res;
+export function createMcpHandler(ports: McpPorts) {
+  return async function handleMcpRequest(
+    req: Request,
+    params: Record<string, string>,
+  ): Promise<Response> {
+    const messages = await bodyMessages(req);
+    let res: Response;
+    try {
+      res = await answerMcpRequest(req, params, messages, ports);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      recordMcpRequest({ ok: false, message: error.message });
+      throw answerThrowWith(error, mcpFailureResponse(messages, error));
+    }
+    recordMcpRequest(
+      res.status >= 500
+        ? { ok: false, message: `Answered HTTP ${res.status}` }
+        : { ok: true },
+    );
+    return res;
+  };
 }
+
+/** What the request path writes outside itself. */
+export interface McpPorts {
+  /** Records the tools a `tools/list` answer to a conversation held. */
+  recordListing(
+    conversationId: string,
+    tools: readonly string[],
+  ): Promise<void>;
+}
+
+export const handleMcpRequest = createMcpHandler({
+  recordListing: recordToolsListed,
+});
 
 /** JSON-RPC's code for an error inside the server. */
 const INTERNAL_ERROR = -32603;
@@ -90,6 +106,7 @@ async function answerMcpRequest(
   req: Request,
   params: Record<string, string>,
   messages: readonly unknown[],
+  ports: McpPorts,
 ): Promise<Response> {
   const conversationId = params.conversationId;
   if (!conversationId) {
@@ -106,7 +123,7 @@ async function answerMcpRequest(
   const mounted =
     caller.kind === "unattached"
       ? unattachedTools()
-      : await conversationTools(caller.conversationId, messages);
+      : await conversationTools(caller.conversationId, messages, ports);
   for (const { tool, description } of mounted) {
     mountTool(server, tool, description, caller);
   }
@@ -151,6 +168,7 @@ function unattachedTools(): MountedTool[] {
 async function conversationTools(
   conversationId: string,
   messages: readonly unknown[],
+  ports: McpPorts,
 ): Promise<MountedTool[]> {
   // The conversation's scope: a scratch profile sees exactly its allowlist;
   // everyone else every tool reserved for no profile.
@@ -161,9 +179,8 @@ async function conversationTools(
 
   // Live description sections likewise render only for the request that lists
   // the tools; a tool call never pays for them.
-  const descriptions = hasToolsList(messages)
-    ? await renderDescriptions(ctx)
-    : null;
+  const listing = hasToolsList(messages);
+  const descriptions = listing ? await renderDescriptions(ctx) : null;
 
   // Per-conversation visibility: first the scope, then each tool's own `when`.
   // A tool either says no to is never registered on this request's server, so
@@ -181,12 +198,24 @@ async function conversationTools(
       return outcome.ok && outcome.value;
     }),
   );
-  return tools
-    .filter((_, i) => visible[i])
-    .map((tool) => ({
-      tool,
-      description: descriptions?.get(tool.name) ?? tool.description,
-    }));
+  const mounted = tools.filter((_, i) => visible[i]);
+  // What this listing hands the client is what the session holds until it
+  // reconnects: recorded, so a stop gate demands only a tool the agent has
+  // (`toolCallableBy`). A failed record is reported and leaves the listing
+  // served: the gates then read this conversation's previous listing, or
+  // none (and spare it).
+  if (listing) {
+    await runContribution("listed-tools record", () =>
+      ports.recordListing(
+        conversationId,
+        mounted.map((tool) => tool.name),
+      ),
+    );
+  }
+  return mounted.map((tool) => ({
+    tool,
+    description: descriptions?.get(tool.name) ?? tool.description,
+  }));
 }
 
 /**

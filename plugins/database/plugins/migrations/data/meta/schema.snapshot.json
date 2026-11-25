@@ -1,6 +1,6 @@
 {
-  "id": "9b3d7987-b1bc-4ab2-9a4a-b4b1f6102161",
-  "prevId": "4582ce89-3931-4c08-a4ba-edd778f17b84",
+  "id": "023d623c-9052-4d38-bf14-87efe7f46bc8",
+  "prevId": "9b3d7987-b1bc-4ab2-9a4a-b4b1f6102161",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13590,6 +13590,38 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.mcp_listed_tools": {
+      "name": "mcp_listed_tools",
+      "schema": "",
+      "columns": {
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tools": {
+          "name": "tools",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listed_at": {
+          "name": "listed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

@@ -1,3 +1,4 @@
+import type { McpToolRegistration } from "@plugins/infra/plugins/mcp/server";
 import type { StopGateResponse } from "../../core";
 import type { StopGateEntry, StopVerdict, StopWaiverEntry } from "./registry";
 
@@ -31,16 +32,36 @@ export function decideStop(
   };
 }
 
+/** Whether the conversation's agent can call an MCP tool now (mcp's `toolCallableBy`). */
+export type ToolCallable = (
+  conversationId: string,
+  tool: McpToolRegistration,
+) => Promise<{ callable: boolean }>;
+
 /**
- * Ask every gate, and — only when one blocks — every waiver. One that throws
- * fails the whole decision, loudly: the hook then fails open, and says so.
+ * Ask every gate, and — only when one blocks — every waiver. A block stands
+ * only while the agent can call every tool its gate is cleared with: a gate
+ * may never demand what the session does not have. One that throws fails the
+ * whole decision, loudly: the hook then fails open, and says so.
  */
 export async function evaluateStop(
   conversationId: string,
   gates: readonly StopGateEntry[],
   waivers: readonly StopWaiverEntry[],
+  callable: ToolCallable,
 ): Promise<StopGateResponse> {
-  const verdicts = await Promise.all(gates.map((g) => g.check(conversationId)));
+  const verdicts = await Promise.all(
+    gates.map(async (g) => {
+      const verdict = await g.check(conversationId);
+      if (verdict.kind === "allow") return verdict;
+      const reach = await Promise.all(
+        g.tools.map((tool) => callable(conversationId, tool)),
+      );
+      return reach.every((r) => r.callable)
+        ? verdict
+        : ({ kind: "allow" } as const);
+    }),
+  );
   if (!verdicts.some((v) => v.kind === "block")) {
     return decideStop(verdicts, [], []);
   }

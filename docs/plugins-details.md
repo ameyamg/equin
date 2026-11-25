@@ -25226,6 +25226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `trigger` "stop-gate.backstop"
         - Uses:
           - `infra/endpoints.implement`
+          - `infra/mcp.toolCallableBy`
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/conversations/plugins/stop-gate/server/internal/tables.ts`
         - Exports (types):
@@ -26068,11 +26069,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 191 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 192 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×53
       - `tasks` ×23
       - `conversations` ×22
-      - `infra` ×18
+      - `infra` ×19
       - `page` ×14
       - `debug` ×12
       - `active-data` ×8
@@ -41762,11 +41763,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/rust`
               - `infra/deps/updates`
               - `infra/launcher`
-    - **`mcp`** — The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
+    - **`mcp`** — The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable. Owns mcp_listed_tools (the tools last listed to each conversation — what its client holds) and toolCallableBy(conversationId, toolRegistration): whether a conversation's agent can call a tool now (listed to it and its when still true), or why not.
       - Server:
         - Contributes:
           - `resource.declare` "mcp.catalog"
           - `resource.declare` "mcp.health"
+        - Uses:
+          - `database.db`
+          - `infra/retention.defineRetention`
+        - DB schema: `plugins/infra/plugins/mcp/server/internal/tables.ts`
         - Exports (types):
           - `McpCallerContext`
           - `McpConversationTool`
@@ -41775,9 +41780,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpTool`
           - `McpToolCallContext`
           - `McpToolContext`
+          - `McpToolRegistration`
           - `McpToolResult`
           - `McpUnattachedTool`
-        - Exports (values): `Mcp`
+          - `ToolReach`
+        - Exports (values):
+          - `Mcp`
+          - `toolCallableBy`
+        - Register: `defineJob('retention.mcp_listed_tools')`
         - Resources:
           - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
           - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
@@ -41811,10 +41821,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
           - `tasks` ×9
+          - `conversations` ×6
           - `debug` ×6
-          - `conversations` ×5
           - `apps` ×4
           - `infra` ×2
           - `database/query`
@@ -42706,10 +42716,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTableGrowthBounds`
           - `markCascadeBounded`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
           - `apps` ×6
           - `debug` ×6
-          - `infra` ×3
+          - `infra` ×4
           - `page` ×3
           - `conversations` ×2
           - `apps-core/app-usage`

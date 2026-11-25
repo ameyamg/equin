@@ -42,6 +42,17 @@ the blocking reasons joined; a waived block is an `allow` carrying the waivers'
 reasons (for the log). A contribution that throws fails the request, loudly —
 and the hook then fails open, saying so on stderr.
 
+**A gate demands only what the session has.** Every gate declares `tools`,
+the MCP tools (their `Mcp.tool` registrations) its reason asks the agent to
+call, and a block stands only while the agent can call every one — mcp's
+`toolCallableBy`: listed to its session (`mcp_listed_tools`, recorded at each
+`tools/list`) and visible now. A Claude Code client lists the tools once, when
+it connects, so a tool added or granted since is one it does not have: the
+2026-11-26 case, every session started before `turn_for` shipped held by
+`outcome-report.turn-for` at every turn it had with the user. A session with
+no listing recorded (connected before the record existed) is spared too, as
+the hook fails open.
+
 **A block names how to wait.** Every waiver declares `when` (required): the
 condition it waives for, said to the agent. A blocked stop's reason is the
 gates' reasons, then "You may end your turn anyway while:" and each waiver's
@@ -55,7 +66,7 @@ Monitors, background subagents, workflows — each of which re-invokes the agent
 Fixed once here, for every gate.
 
 ```ts
-StopGate({ id: "outcome-report.turn-for", check: async (conversationId) => … })
+StopGate({ id: "outcome-report.turn-for", tools: [turnForTool], check: async (conversationId) => … })
 StopWaiver({ id: "watch", when: "a task subtree you watch still has work running…", waives: async (conversationId) => … })
 ```
 
@@ -75,6 +86,7 @@ This plugin names no contributor.
   - Contributes: `trigger` "stop-gate.backstop"
   - Uses:
     - `infra/endpoints.implement`
+    - `infra/mcp.toolCallableBy`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/stop-gate/server/internal/tables.ts`
   - Exports (types):

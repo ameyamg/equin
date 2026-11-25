@@ -123,6 +123,15 @@ export type McpScope =
 export type McpScopeResolver = (ctx: McpToolContext) => Promise<McpScope>;
 
 /**
+ * A declared tool's registration token, naming the tool: what another plugin
+ * holds to refer to it (a stop gate's `tools`), so a reference is to a tool
+ * that exists in code, never a spelled name.
+ */
+export interface McpToolRegistration extends Registration {
+  readonly toolName: string;
+}
+
+/**
  * Returns a {@link Registration} token. The actual `registry.set` (and the
  * duplicate-name guard) fire when the framework invokes `.register()`
  * during the plugin register phase. Plugins list the result in their
@@ -134,12 +143,13 @@ export type McpScopeResolver = (ctx: McpToolContext) => Promise<McpScope>;
  */
 function tool<T extends z.ZodRawShape>(
   decl: McpConversationTool<T>,
-): Registration;
+): McpToolRegistration;
 function tool<T extends z.ZodRawShape>(
   decl: McpUnattachedTool<T>,
-): Registration;
-function tool<T extends z.ZodRawShape>(decl: McpTool<T>): Registration {
+): McpToolRegistration;
+function tool<T extends z.ZodRawShape>(decl: McpTool<T>): McpToolRegistration {
   return {
+    toolName: decl.name,
     _kind: "mcp-tool",
     _factory: "mcpTool",
     _doc: { label: decl.name, detail: decl.description.split("\n")[0] },

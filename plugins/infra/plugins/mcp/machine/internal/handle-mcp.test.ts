@@ -9,10 +9,19 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
-import { handleMcpRequest } from "./handle-mcp";
+import { createMcpHandler } from "./handle-mcp";
 import { Mcp, type McpToolContext } from "../../server";
 import { MCP_UNATTACHED_ID } from "../../core";
 import { registry, scopeRegistry } from "../../server/internal/registry";
+
+/** Every tools/list answer, as the request path recorded it. */
+const listings: { conversationId: string; tools: readonly string[] }[] = [];
+const handleMcpRequest = createMcpHandler({
+  recordListing: (conversationId, tools) => {
+    listings.push({ conversationId, tools });
+    return Promise.resolve();
+  },
+});
 
 const CONVERSATION = "conv-test";
 
@@ -183,6 +192,26 @@ describe("Mcp.tool when", () => {
     gate("hidden", false);
     expect((await listed()).sort()).toEqual(["echo", "shown", "shown-async"]);
     expect(gated).toContainEqual({ conversationId: CONVERSATION });
+  });
+
+  test("a tools/list records exactly the tools it listed; a call records nothing", async () => {
+    listings.length = 0;
+    gate("shown", true);
+    gate("hidden", false);
+    const names = await listed();
+    expect(listings).toEqual([{ conversationId: CONVERSATION, tools: names }]);
+    expect([...names].sort()).toEqual(["echo", "shown"]);
+    await call("shown");
+    expect(listings).toHaveLength(1);
+  });
+
+  test("an unattached session's listing is not recorded", async () => {
+    listings.length = 0;
+    await post(
+      { jsonrpc: "2.0", id: 4, method: "tools/list" },
+      MCP_UNATTACHED_ID,
+    );
+    expect(listings).toEqual([]);
   });
 
   test("a tool whose when is false is refused on call", async () => {

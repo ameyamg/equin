@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { decideStop, evaluateStop } from "./decide";
+import type { McpToolRegistration } from "@plugins/infra/plugins/mcp/server";
 import type { StopGateEntry, StopVerdict, StopWaiverEntry } from "./registry";
 
 const allow = { kind: "allow" } as const;
@@ -59,7 +60,10 @@ describe("evaluateStop", () => {
   const gate = (
     id: string,
     verdict: () => Promise<StopVerdict>,
-  ): StopGateEntry => ({ id, check: verdict });
+    tools: readonly McpToolRegistration[] = [],
+  ): StopGateEntry => ({ id, tools, check: verdict });
+  /** Every tool is callable: the session has what each gate asks for. */
+  const all = () => Promise.resolve({ callable: true });
 
   test("asks the waivers only when a gate blocks", async () => {
     let asked = 0;
@@ -76,6 +80,7 @@ describe("evaluateStop", () => {
         "c",
         [gate("g", () => Promise.resolve(allow))],
         [waiver],
+        all,
       ),
     ).toEqual({ decision: "allow", reason: null });
     expect(asked).toBe(0);
@@ -84,6 +89,7 @@ describe("evaluateStop", () => {
         "c",
         [gate("g", () => Promise.resolve(block("report")))],
         [waiver],
+        all,
       ),
     ).toEqual({ decision: "allow", reason: "woken" });
     expect(asked).toBe(1);
@@ -101,14 +107,18 @@ describe("evaluateStop", () => {
     });
 
     test("background work running: the turn may end", async () => {
-      expect(await evaluateStop("c", [reportGate], [background(1)])).toEqual({
+      expect(
+        await evaluateStop("c", [reportGate], [background(1)], all),
+      ).toEqual({
         decision: "allow",
         reason: "1 running",
       });
     });
 
     test("nothing pending: still refused, naming how to wait", async () => {
-      expect(await evaluateStop("c", [reportGate], [background(0)])).toEqual({
+      expect(
+        await evaluateStop("c", [reportGate], [background(0)], all),
+      ).toEqual({
         decision: "block",
         reason:
           "submit your outcome report\n\nYou may end your turn anyway while:\n- you have background work running that will wake you",
@@ -120,12 +130,13 @@ describe("evaluateStop", () => {
     const seen: string[] = [];
     const g: StopGateEntry = {
       id: "g",
+      tools: [],
       check: (id) => {
         seen.push(id);
         return Promise.resolve(allow);
       },
     };
-    await evaluateStop("conv-1", [g], []);
+    await evaluateStop("conv-1", [g], [], all);
     expect(seen).toEqual(["conv-1"]);
   });
 
@@ -136,10 +147,65 @@ describe("evaluateStop", () => {
         "c",
         [gate("g", () => Promise.reject(new Error("db down")))],
         [],
+        all,
       );
     } catch (err) {
       error = err;
     }
     expect(error).toBeInstanceOf(Error);
+  });
+
+  describe("a gate is enforced only while the agent can call its tools", () => {
+    const turnFor = { toolName: "turn_for" } as McpToolRegistration;
+    const turnForGate = gate(
+      "turn-for",
+      () => Promise.resolve(block("call turn_for")),
+      [turnFor],
+    );
+    const asked: string[] = [];
+    const reach =
+      (callable: boolean) =>
+      (conversationId: string, t: McpToolRegistration) => {
+        asked.push(`${conversationId}:${t.toolName}`);
+        return Promise.resolve({ callable });
+      };
+
+    test("the session holds the tool: the block stands", async () => {
+      expect(await evaluateStop("c", [turnForGate], [], reach(true))).toEqual({
+        decision: "block",
+        reason: "call turn_for",
+      });
+    });
+
+    test("the session lacks the tool (connected before it existed): allowed", async () => {
+      asked.length = 0;
+      expect(await evaluateStop("c", [turnForGate], [], reach(false))).toEqual({
+        decision: "allow",
+        reason: null,
+      });
+      expect(asked).toEqual(["c:turn_for"]);
+    });
+
+    test("an allowing gate's tools are never asked about", async () => {
+      asked.length = 0;
+      await evaluateStop(
+        "c",
+        [gate("g", () => Promise.resolve(allow), [turnFor])],
+        [],
+        reach(false),
+      );
+      expect(asked).toEqual([]);
+    });
+
+    test("another gate's block still stands", async () => {
+      expect(
+        await evaluateStop(
+          "c",
+          [turnForGate, gate("other", () => Promise.resolve(block("other")))],
+          [],
+          reach(false),
+        ),
+      ).toEqual({ decision: "block", reason: "other" });
+    });
   });
 });

@@ -3,6 +3,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { grantOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
 import { TURN_FOR_TOOL } from "./report-line";
+import { turnForTool } from "./turn-for";
 import { readRunState, userInRun } from "./run-state";
 
 /**
@@ -15,6 +16,7 @@ import { readRunState, userInRun } from "./run-state";
  */
 export const turnForStopGate = StopGate({
   id: "outcome-report.turn-for",
+  tools: [turnForTool],
   async check(conversationId) {
     if ((await grantOf(reportRequired, conversationId)) === null)
       return { kind: "allow" };

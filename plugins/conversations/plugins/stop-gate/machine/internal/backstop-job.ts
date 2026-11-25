@@ -1,3 +1,4 @@
+import { toolCallableBy } from "@plugins/infra/plugins/mcp/server";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
@@ -19,6 +20,7 @@ const productionPorts: BackstopPorts = {
       conversationId,
       StopGate.getContributions(),
       StopWaiver.getContributions(),
+      toolCallableBy,
     ),
   readiness: (conversationId, exec) =>
     automaticTurnReadiness(conversationId, { exec }),
