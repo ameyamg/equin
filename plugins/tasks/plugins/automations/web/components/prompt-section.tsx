@@ -1,3 +1,8 @@
+import {
+  templateVariables,
+  unknownTemplateVariables,
+  type PromptVariable,
+} from "@plugins/packages/plugins/prompt-template/core";
 import type { ReactElement } from "react";
 import { configTiers } from "@plugins/config_v2/core";
 import { useSetConfig } from "@plugins/config_v2/web";
@@ -17,13 +22,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  AUTOMATIONS_CONFIG_PLUGIN_ID,
-  PUSH_POLICY_VARIABLE,
-  templateVariables,
-  unknownTemplateVariables,
-  type PromptVariable,
-} from "../../core";
+import { AUTOMATIONS_CONFIG_PLUGIN_ID, PUSH_POLICY_VARIABLE } from "../../core";
 import type { AutomationSectionProps } from "./section-props";
 
 /**

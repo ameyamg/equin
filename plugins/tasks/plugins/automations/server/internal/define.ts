@@ -1,3 +1,4 @@
+import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
 import { z } from "zod";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
@@ -16,7 +17,6 @@ import {
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import {
-  renderPrompt,
   SETTLE_MAX_WAIT_FACTOR,
   type AutomationConfigFields,
   type AutomationSettings,

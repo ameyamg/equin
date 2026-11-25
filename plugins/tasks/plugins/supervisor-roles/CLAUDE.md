@@ -260,6 +260,7 @@ tools — are `plugins/sessions`.
     - `BACKLOG_STATUSES`
     - `createSupervisorRole`
     - `CreateSupervisorRoleBodySchema`
+    - `DECISIONS_PROMPT_VARIABLES`
     - `deleteSupervisorRole`
     - `ENDED_SESSION_STATUSES`
     - `isLiveSessionStatus`

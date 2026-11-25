@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
+import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
 import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { boundedRows } from "./awaiting";
 import type { Outdated } from "./updater";

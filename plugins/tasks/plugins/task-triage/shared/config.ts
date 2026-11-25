@@ -2,7 +2,7 @@ import { defineConfig } from "@plugins/config_v2/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
-import type { PromptVariable } from "@plugins/tasks/plugins/automations/core";
+import type { PromptVariable } from "@plugins/packages/plugins/prompt-template/core";
 
 /** The most commits since filing the triage prompt lists. */
 export const MAX_RECENT_COMMITS = 200;

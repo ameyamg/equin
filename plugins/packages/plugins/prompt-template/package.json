@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-prompt-template",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Prompt templates a person edits: `{{name}}` placeholders filled per use. templateVariables(template) lists the names a template uses, unknownTemplateVariables(template, declared) the ones a declared PromptVariable set does not offer, and renderPrompt(template, values) fills every placeholder — or refuses the whole template, naming the variables it has no value for, never rendering one blank."
+}

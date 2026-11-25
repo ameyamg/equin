@@ -25,7 +25,7 @@ portable `server/` half.
   as a template, its default `ASK_INSTRUCTIONS_TEMPLATE`
   (`core/internal/instructions.ts`). Each launch fills `{{page}}`,
   `{{outline}}`, `{{checkout}}`, `{{fileTaskTool}}`, `{{repoContext}}`
-  (`ASK_INSTRUCTIONS_VARIABLES`) with the automations' `renderPrompt`; a
+  (`ASK_INSTRUCTIONS_VARIABLES`) with `packages/prompt-template`'s `renderPrompt`; a
   variable it does not know fails the launch loudly. Tune it in Settings, then
   port the edit back to the template to make it the default. The default
   tells the agent that agent work starts from the action bar's Improve button.

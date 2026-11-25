@@ -1,4 +1,4 @@
-import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
+import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
 import { FILE_TASK_TOOL, type AskInput } from "../../core";
 import { REPO_CONTEXT_DIR } from "./repo-context";
 

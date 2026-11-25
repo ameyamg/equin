@@ -1,19 +1,9 @@
-/** A variable an automation fills into its prompt template on every run. */
+/** A variable a prompt template may use, filled on every use. */
 export interface PromptVariable {
   name: string;
   /** What it holds, for the person editing the template. */
   description: string;
 }
-
-/**
- * The variable every automation's template may use: the paragraph saying what
- * the Push setting lets the agent do. A template without it never tells the
- * agent it may push, so it never does.
- */
-export const PUSH_POLICY_VARIABLE: PromptVariable = {
-  name: "pushPolicy",
-  description: "What the Push setting allows, as an instruction",
-};
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z_][\w]*)\s*\}\}/g;
 

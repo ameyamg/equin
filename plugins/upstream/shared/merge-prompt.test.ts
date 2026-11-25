@@ -3,7 +3,7 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   renderPrompt,
   templateVariables,
-} from "@plugins/tasks/plugins/automations/core";
+} from "@plugins/packages/plugins/prompt-template/core";
 import {
   UPSTREAM_MERGE_PROMPT,
   upstreamMergeTitle,

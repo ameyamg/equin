@@ -55,7 +55,7 @@ export const supervisorRolePane = Pane.define({
   component: SupervisorRoleBody,
 });
 
-// The pinned "All supervisors" entry: the shared prompt.
+// The pinned "All supervisors" entry: the shared and decisions prompts.
 export const supervisorsSharedPane = Pane.define({
   title: "All supervisors",
   route: supervisorsSharedRoute,

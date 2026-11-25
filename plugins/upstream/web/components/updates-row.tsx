@@ -1,7 +1,7 @@
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
-import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
+import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
 import { MANDATE_PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { ConversationStatusChip } from "@plugins/conversations/plugins/conversation-view/plugins/status/web";
 import { conversationRoute } from "@plugins/conversations/core";

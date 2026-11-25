@@ -1,4 +1,4 @@
-import type { PromptVariable } from "@plugins/tasks/plugins/automations/core";
+import type { PromptVariable } from "@plugins/packages/plugins/prompt-template/core";
 
 /**
  * What the help agent's instructions template is filled with at each launch

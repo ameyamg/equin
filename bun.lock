@@ -5531,6 +5531,10 @@
       "name": "@equin/plugin-packages-process-name",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/prompt-template": {
+      "name": "@equin/plugin-packages-prompt-template",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/refcount-hub": {
       "name": "@equin/plugin-packages-refcount-hub",
       "version": "0.0.1",
@@ -11161,6 +11165,8 @@
     "@equin/plugin-packages-process-alive": ["@equin/plugin-packages-process-alive@workspace:plugins/packages/plugins/process-alive"],
 
     "@equin/plugin-packages-process-name": ["@equin/plugin-packages-process-name@workspace:plugins/packages/plugins/process-name"],
+
+    "@equin/plugin-packages-prompt-template": ["@equin/plugin-packages-prompt-template@workspace:plugins/packages/plugins/prompt-template"],
 
     "@equin/plugin-packages-refcount-hub": ["@equin/plugin-packages-refcount-hub@workspace:plugins/packages/plugins/refcount-hub"],
 

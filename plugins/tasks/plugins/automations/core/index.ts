@@ -53,13 +53,7 @@ export type {
 } from "./internal/config";
 export { cadenceCron, cadenceWords } from "./internal/cadence";
 export type { CadenceCron } from "./internal/cadence";
-export {
-  PUSH_POLICY_VARIABLE,
-  renderPrompt,
-  templateVariables,
-  unknownTemplateVariables,
-} from "./internal/template";
-export type { PromptVariable, RenderedPrompt } from "./internal/template";
+export { PUSH_POLICY_VARIABLE } from "./internal/push-policy-variable";
 export {
   automationsCatalog,
   automationTasks,

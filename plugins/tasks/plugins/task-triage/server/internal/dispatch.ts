@@ -13,7 +13,7 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
-import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
+import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import {

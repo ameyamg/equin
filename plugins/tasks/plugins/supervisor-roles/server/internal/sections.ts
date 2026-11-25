@@ -10,6 +10,7 @@ import { mandateIsKindOf } from "@plugins/tasks/plugins/orchestration/plugins/ma
 import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { supervisorRoleMandate } from "../../core";
 import { supervisorPromptConfig } from "../../core";
+import { renderPrompt } from "@plugins/packages/plugins/prompt-template/core";
 import {
   getSupervisorRole,
   listSupervisorRoles,
@@ -46,24 +47,28 @@ export async function renderSupervisorRoles(
 }
 
 /**
- * How a supervisor root records what needs the user — code-owned, not part of
- * the shared prompt config: it names tools and a block tag, so it must follow
- * the code, and a user's own override of the shared prompt (written before
- * decisions existed) must not hide it. Only while `decisions.open` is granted.
+ * The decisions prompt (the config's `decisionsPrompt`, edited beside the
+ * shared prompt) filled with the supervisor's root task id. A variable it
+ * names that is not filled here fails loudly — never a prompt with a hole.
  */
-function decisionsGuidance(taskId: string): string {
-  return [
-    '**Decisions.** This replaces any page-based list of decisions ("Still open" / "Decided" sections, numbered "D<n>" items) your other instructions describe: everything that needs the user — a choice, an action only they can take, something they should know — is a decision you open with `open_decision`, its context in its `body`. Keep it current with `update_decision`, notes included after it closes.',
-    `On your session page, place one \`<task-decisions task="${taskId}"/>\` block (with \`edit_page\`, near the top — in your agent page, or an \`<agent-inline>\` card on a page of the user's): it shows your task's decisions live and the user answers them there.`,
-  ].join("\n\n");
+function decisionsPrompt(taskId: string): string {
+  const rendered = renderPrompt(
+    getConfig(supervisorPromptConfig).decisionsPrompt,
+    { taskId },
+  );
+  if (!rendered.ok)
+    throw new Error(
+      `The supervisors' decisions prompt (agent manager → Supervisors → All supervisors) names unknown variables: ${rendered.unknown.map((n) => `{{${n}}}`).join(", ")} — only {{taskId}} is filled.`,
+    );
+  return rendered.text.trim();
 }
 
 /**
  * The shared supervisor prompt, for the conversation at the ROOT of a
  * supervisor mandate (an ad-hoc supervisor, or a role's session) — never a
  * worker below it. A role session also reads which role it works for, and a
- * root granted `decisions.open` how it records what needs the user. Nothing
- * when none has anything to say.
+ * root granted `decisions.open` the decisions prompt (how it records what
+ * needs the user). Nothing when none has anything to say.
  */
 export async function renderSupervisorPrompt(
   conversationId: string,
@@ -86,8 +91,10 @@ export async function renderSupervisorPrompt(
   }
   const shared = getConfig(supervisorPromptConfig).prompt.trim();
   if (shared) parts.push(shared);
-  if ((await grantOf(decisionsOpen, conversationId)) === true)
-    parts.push(decisionsGuidance(mandate.rootTaskId));
+  if ((await grantOf(decisionsOpen, conversationId)) === true) {
+    const decisions = decisionsPrompt(mandate.rootTaskId);
+    if (decisions) parts.push(decisions);
+  }
   if (parts.length === 0) return null;
   return ["## Supervisor", "", parts.join("\n\n")].join("\n");
 }

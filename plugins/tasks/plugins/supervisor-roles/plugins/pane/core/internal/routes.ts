@@ -13,7 +13,7 @@ export const supervisorRoleRoute = defineRoute({
   parent: supervisorsRoute,
 });
 
-/** The pinned "All supervisors" entry: the prompt every supervisor shares. */
+/** The pinned "All supervisors" entry: the prompts every supervisor shares. */
 export const supervisorsSharedRoute = defineRoute({
   id: "supervisors-shared",
   segment: "all",

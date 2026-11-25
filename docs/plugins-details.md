@@ -46098,6 +46098,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `refreshCheckoutBun`
           - `sharedBunDir`
           - `sharedBunsNamed`
+    - **`prompt-template`** — Prompt templates a person edits: `{{name}}` placeholders filled per use. templateVariables(template) lists the names a template uses, unknownTemplateVariables(template, declared) the ones a declared PromptVariable set does not offer, and renderPrompt(template, values) fills every placeholder — or refuses the whole template, naming the variables it has no value for, never rendering one blank.
+      - Cross-plugin:
+        - Imported by:
+          - `hints/ask`
+          - `tasks/automations`
+          - `tasks/supervisor-roles`
+          - `tasks/supervisor-roles/pane`
+          - `tasks/task-triage`
+          - `upstream`
+      - Core:
+        - Exports (types):
+          - `PromptVariable`
+          - `RenderedPrompt`
+        - Exports (values):
+          - `renderPrompt`
+          - `templateVariables`
+          - `unknownTemplateVariables`
     - **`refcount-hub`** — Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.
       - Cross-plugin:
         - Imported by:
@@ -65065,8 +65082,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LaunchDecision`
           - `LaunchDecisionRow`
           - `OriginRole`
-          - `PromptVariable`
-          - `RenderedPrompt`
           - `ScheduleSettings`
           - `TriggerKind`
           - `Weekday`
@@ -65103,16 +65118,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PromptVariableSchema`
           - `PUSH_POLICY_VARIABLE`
           - `readAutomationSettings`
-          - `renderPrompt`
           - `ScheduleSettingsSchema`
           - `SETTLE_MAX_WAIT_FACTOR`
           - `SLOT_SETTLED_STATUSES`
           - `taskApprovalEndpoint`
           - `taskOriginShape`
-          - `templateVariables`
           - `TRIGGER_KIND_LABELS`
           - `TRIGGER_KINDS`
-          - `unknownTemplateVariables`
           - `WEEKDAY_LABELS`
           - `WEEKDAYS`
       - Cross-plugin:
@@ -65130,7 +65142,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
         - Imported by:
-          - `hints/ask`
           - `infra/deps/updates`
           - `tasks/outcome-report`
           - `tasks/sidequest-autopilot`
@@ -66204,6 +66215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BACKLOG_STATUSES`
           - `createSupervisorRole`
           - `CreateSupervisorRoleBodySchema`
+          - `DECISIONS_PROMPT_VARIABLES`
           - `deleteSupervisorRole`
           - `ENDED_SESSION_STATUSES`
           - `isLiveSessionStatus`
@@ -66378,7 +66390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Machine:
                 - Uses: `tasks/supervisor-roles/events.publishSupervisorEvent`
                 - Register: `defineJob('supervisor-events.report')`
-        - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role; InheritedTaskSupervisor: a nested task's role, read from its tree's root and naming it), SupervisorPill and SupervisorRoleBadge (a role by id, read live — the add_task card's backlog badge).
+        - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt and the decisions prompt, each edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role; InheritedTaskSupervisor: a nested task's role, read from its tree's root and naming it), SupervisorPill and SupervisorRoleBadge (a role by id, read live — the add_task card's backlog badge).
           - Web:
             - Slots:
               - `supervisors.actions`

@@ -1,3 +1,4 @@
+import type { PromptVariable } from "@plugins/packages/plugins/prompt-template/core";
 import type { ConfigDescriptor, ConfigValues } from "@plugins/config_v2/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
 import type {
@@ -5,7 +6,6 @@ import type {
   LaunchAutomationConfigFields,
   AutomationSettings,
   AutomationSource,
-  PromptVariable,
   TriggerKind,
 } from "../../core";
 import type { AutomationFiling } from "./origin";

@@ -132,8 +132,8 @@ export function SupervisorsList({
 }
 
 /**
- * The pinned "All supervisors" entry — not a record but the door to the one
- * prompt every supervisor shares, so a single Row ahead of the list.
+ * The pinned "All supervisors" entry — not a record but the door to the
+ * prompts every supervisor shares, so a single Row ahead of the list.
  */
 function SharedEntry({
   selected,
@@ -151,7 +151,7 @@ function SharedEntry({
       <Stack gap="none">
         <Text variant="label">All supervisors</Text>
         <Text variant="caption" tone="muted">
-          Shared prompt
+          Shared and decisions prompts
         </Text>
       </Stack>
     </Row>
