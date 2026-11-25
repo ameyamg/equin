@@ -510,7 +510,7 @@ export function FileTree({
   onRename,
   editLabel,
 }: FileTreeProps): ReactNode {
-  // "Today" is today as of this visit to the folder.
+  // "Today" (shown as a time of day) is today as of this visit to the folder.
   const [now] = useState(() => Date.now());
   const rows = useMemo(
     () => buildRows(system.fs, listings, root, shows),

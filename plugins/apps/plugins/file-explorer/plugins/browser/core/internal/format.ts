@@ -29,8 +29,10 @@ function startOfDay(ms: number): number {
 }
 
 /**
- * A modification time, short: "Today", "Yesterday", "Sep 28", or "Sep 28, 2024"
- * outside the current year — local calendar days, not 24-hour spans.
+ * A modification time, short: the time of day for today ("1:05 PM" — a bare
+ * "Today" leaves a folder's recent files indistinguishable), "Yesterday",
+ * "Sep 28", or "Sep 28, 2024" outside the current year — local calendar days,
+ * not 24-hour spans.
  */
 export function formatModified(
   ms: number,
@@ -39,7 +41,11 @@ export function formatModified(
 ): string {
   const today = startOfDay(now);
   const day = startOfDay(ms);
-  if (day === today) return "Today";
+  if (day === today)
+    return new Date(ms).toLocaleTimeString(locale, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   if (day === startOfDay(today - DAY_MS / 2)) return "Yesterday";
   const sameYear = new Date(ms).getFullYear() === new Date(now).getFullYear();
   return new Date(ms).toLocaleDateString(locale, {

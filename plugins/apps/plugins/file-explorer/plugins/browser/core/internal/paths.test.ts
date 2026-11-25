@@ -77,9 +77,13 @@ describe("format", () => {
 
   test("modified, by local calendar day", () => {
     const now = new Date(2026, 9, 2, 15, 0).getTime();
-    expect(formatModified(new Date(2026, 9, 2, 0, 5).getTime(), now)).toBe(
-      "Today",
-    );
+    // Today reads as its time of day, so today's files tell apart.
+    const today = (h: number, m: number) =>
+      formatModified(new Date(2026, 9, 2, h, m).getTime(), now, "en-US")
+        // ICU may space "1:05 PM" with a narrow no-break space.
+        .replace(/\s/g, " ");
+    expect(today(0, 5)).toBe("12:05 AM");
+    expect(today(13, 5)).toBe("1:05 PM");
     expect(formatModified(new Date(2026, 9, 1, 23, 59).getTime(), now)).toBe(
       "Yesterday",
     );
