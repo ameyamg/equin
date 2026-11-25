@@ -23,7 +23,7 @@ describe("state from an older shell", () => {
     });
     expect(state).toEqual({
       kind: "idle",
-      last: { kind: "saved", recording, stoppedBy: null },
+      last: { kind: "saved", recording, stoppedBy: null, failure: null },
     });
   });
 

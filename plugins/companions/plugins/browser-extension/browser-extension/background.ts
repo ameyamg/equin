@@ -143,9 +143,16 @@ async function toContent(
 async function toOffscreen(
   command: OffscreenCommand,
 ): Promise<SavedRecording | null> {
+  return (await offscreenReply(command)).saved;
+}
+
+/** The offscreen document's answer: what it saved, and any upload failure. */
+async function offscreenReply(
+  command: OffscreenCommand,
+): Promise<{ saved: SavedRecording | null; failure: string | null }> {
   const reply = OffscreenReplySchema.parse(await sendToExtension(command));
   if (!reply.ok) throw new Error(reply.error);
-  return reply.saved;
+  return reply;
 }
 
 async function hasOffscreen(): Promise<boolean> {
@@ -385,6 +392,7 @@ function isGoneTab(err: unknown): boolean {
   );
 }
 
+/** Stop and save — as far as equin took it, when an upload failed. */
 async function stop(stoppedBy: StopCause): Promise<void> {
   const state = await readRecorderState();
   if (state.kind !== "recording") throw new Error("Nothing is recording.");
@@ -393,7 +401,7 @@ async function stop(stoppedBy: StopCause): Promise<void> {
   await setState({ kind: "saving" });
   try {
     const pointer = await finishContent(session.tabId);
-    const saved = await toOffscreen({
+    const { saved, failure } = await offscreenReply({
       type: "offscreen.stop",
       stoppedBy,
       durationMs: recordedMs(state, wallNow("human-time")),
@@ -405,7 +413,14 @@ async function stop(stoppedBy: StopCause): Promise<void> {
     await restoreWindow(session);
     await setState({
       kind: "idle",
-      last: { kind: "saved", recording: saved, stoppedBy },
+      // An upload failure is why it ended, whatever asked it to stop (a
+      // failure can land while a Stop flushes).
+      last: {
+        kind: "saved",
+        recording: saved,
+        stoppedBy: failure === null ? stoppedBy : "upload-failed",
+        failure,
+      },
     });
   } catch (err) {
     await fail(err);
@@ -537,8 +552,9 @@ onMessageAsync(
     await serial(async () => {
       const state = await readRecorderState();
       if (state.kind !== "recording") return;
-      if (event.reason === "error")
-        await fail(new Error(event.error ?? "The recording failed."));
+      // An upload failed: stopped and saved as far as equin took it (the
+      // offscreen finishes what was uploaded), the failure said beside it.
+      if (event.reason === "error") await stop("upload-failed");
       else await stop("capture-ended");
     });
     return null;

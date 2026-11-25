@@ -11,6 +11,8 @@ import {
   useFetchEndpoint,
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
+import { report } from "@plugins/reports/web";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
 import { useReloadHold } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -102,8 +104,29 @@ async function serve(
       ok: false,
       error: err instanceof Error ? err.message : String(err),
     };
+    // Mid-recording: a chunk or finish failing cuts a recording short. A
+    // create that fails (no Recordings folder, no computer) is said at Record.
+    if (req.op === "chunk" || req.op === "finish") reportRelayFailure(req, err);
   }
   port.postMessage(response);
+}
+
+/**
+ * A chunk or finish that failed is never expected control flow, whatever its
+ * status: it stops the recording early (the extension saves what was
+ * uploaded). So the relay files it as a crash —
+ * the generic endpoint reporter cannot tell a 404 here from a 404 a caller
+ * handles.
+ */
+function reportRelayFailure(req: RelayRequest, err: unknown): void {
+  void report({
+    kind: "crash",
+    source: "client-tab-recorder",
+    message: `Tab recording ${req.op} failed: ${err instanceof Error ? err.message : String(err)}`,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    data: crashFieldsOf(err, `tab-recording ${req.op}`),
+  });
 }
 
 /** A machine endpoint's answer, or a throw saying why this host has none. */

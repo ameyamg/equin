@@ -76,6 +76,9 @@ export const StopCauseSchema = z.enum([
   "window-resized",
   /** Chrome ended the tab's capture (the tab closed, …). */
   "capture-ended",
+  /** equin refused or never answered an upload: the video holds what it
+   *  took before (the failure itself is the saved state's `failure`). */
+  "upload-failed",
 ]);
 export type StopCause = z.infer<typeof StopCauseSchema>;
 
@@ -88,6 +91,8 @@ export function stopCauseText(cause: StopCause): string {
       return "the window was resized while recording (a video keeps one size)";
     case "capture-ended":
       return "Chrome ended the tab's capture (the tab closed, or went to a page Chrome does not capture)";
+    case "upload-failed":
+      return "equin stopped taking the video, so it holds what was uploaded before";
   }
 }
 
@@ -105,6 +110,9 @@ export const LastRecordingSchema = z.discriminatedUnion("kind", [
     /** Why it stopped; `null` from a shell older than the field (the page
      *  can be newer than the shell), which did not say. */
     stoppedBy: StopCauseSchema.nullable().default(null),
+    /** What went wrong, for a recording stopped by `upload-failed`; `null`
+     *  otherwise (and from a shell older than the field). */
+    failure: z.string().nullable().default(null),
   }),
   z.object({ kind: z.literal("failed"), error: z.string() }),
 ]);
@@ -223,7 +231,14 @@ export type OffscreenCommand = z.infer<typeof OffscreenCommandSchema>;
 
 /** The offscreen document's answers (to `start` and `stop`). */
 export const OffscreenReplySchema = z.discriminatedUnion("ok", [
-  z.object({ ok: z.literal(true), saved: SavedRecordingSchema.nullable() }),
+  z.object({
+    ok: z.literal(true),
+    saved: SavedRecordingSchema.nullable(),
+    /** A stop's: the upload failure the recording ended on (what was
+     *  uploaded before it is `saved`), whatever stopped it; `null` when every
+     *  upload went through. */
+    failure: z.string().nullable().default(null),
+  }),
   z.object({ ok: z.literal(false), error: z.string() }),
 ]);
 export type OffscreenReply = z.infer<typeof OffscreenReplySchema>;

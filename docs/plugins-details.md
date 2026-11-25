@@ -17170,20 +17170,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `moveInstance`
               - `parseEquinAddress`
               - `sameInstance`
-        - **`recorder`** — The browser extension's tab recorder, in the panel: the Record section (BrowserExtension.Section 'record', after Wish) — the 'Record this tab' row with the size dropdown (each preset named by the page size it lays the tab out at — 1280 × 720, 1920 × 1080, 2560 × 1440, 540 × 960, As is — with 720p… and the video size on this display beneath, the video always every physical pixel of the page; one this tab cannot record now stays choosable with a Too big / Zoomed badge) and its Apply button (size the window to the chosen preset now, without recording), the tab audio / mic / clicks / countdown toggles and the round Record button (⌥⇧R); the live recording card (timer, Discard, Pause, Stop); and the last recording saved, with Show in Files and Delete (to the Trash) on hover. The relay page the extension's offscreen recorder frames to upload a recording as the owner (its own unlisted app at /home/browser-extension-recorder). Registers the Recordings folder setting. The tab recorder, every host's half: registers the Recordings folder setting (Settings → Config), which the machine half writes recordings into.
+        - **`recorder`** — The browser extension's tab recorder, in the panel: the Record section (BrowserExtension.Section 'record', after Wish) — the 'Record this tab' row with the size dropdown (each preset named by the page size it lays the tab out at — 1280 × 720, 1920 × 1080, 2560 × 1440, 540 × 960, As is — with 720p… and the video size on this display beneath, the video always every physical pixel of the page; one this tab cannot record now stays choosable with a Too big / Zoomed badge) and its Apply button (size the window to the chosen preset now, without recording), the tab audio / mic / clicks / countdown toggles and the round Record button (⌥⇧R); the live recording card (timer, Discard, Pause, Stop); and the last recording saved, with Show in Files and Delete (to the Trash) on hover — or, when an upload stopped it, what was uploaded saved and the failure said; and Unfinished recordings (the folder's recordings never finished — a closed browser, a failed save), each with Save and Delete. The relay page the extension's offscreen recorder frames to upload a recording as the owner (its own unlisted app at /home/browser-extension-recorder). Registers the Recordings folder setting. The tab recorder, every host's half: registers the Recordings folder setting (Settings → Config), which the machine half writes recordings into.
           - Web:
+            - Slots: `item-actions`
+            - Slot contributors: `item-actions` ← `companions.browser-extension.recorder`
             - Contributes:
               - `ConfigV2.WebRegister` "recorder"
               - `BrowserExtension.Section` "Record" → `RecordSection`
               - `Apps.App` "Recorder relay" → `RecorderRelayPage`
-            - Uses: 28 symbols — full list in [`plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md`](../plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md)
+              - `item-actions` "save" → `SaveUnfinishedAction`
+              - `item-actions` "discard" → `DiscardUnfinishedAction`
+            - Uses: 35 symbols — full list in [`plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md`](../plugins/companions/plugins/browser-extension/plugins/recorder/REFERENCE.md)
               - `primitives/css/ui-kit` ×5
+              - `primitives/data-view` ×5
               - `companions/browser-extension` ×4
               - `infra/endpoints` ×3
               - `companions/panel` ×2
               - `apps-core.Apps`
               - `apps/file-explorer/browser.useOpenInFiles`
               - `config_v2.ConfigV2`
+              - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/css/line.Line`
               - `primitives/css/row.Row`
@@ -17194,14 +17200,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/reload-readiness.useReloadHold`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `reports.report`
               - `ui/icons.Icon`
           - Server:
             - Contributes:
               - `ConfigV2.Register` "recorder"
+              - `resource.declare` "recorder.unfinished"
               - `DocumentHead.FrameAncestors` "browser-extension-recorder (/home/browser-extension-recorder)"
             - Uses: `config_v2.ConfigV2`
+            - Resources: `recorder.unfinished` (push, notified, whole: the recordings in one folder that were never finished — one per interrupted recording, cleared by Save or Delete)
           - Machine:
-            - Uses: `infra/endpoints.implementMachine`
+            - Uses:
+              - `infra/endpoints.implementMachine`
+              - `infra/host-fs.watchHostDir`
+              - `network/live.serveValue`
             - Routes:
               - `POST /api/tab-recordings`
               - `POST /api/tab-recordings/:id/chunks/:seq`
@@ -17217,8 +17229,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/directory-path/config.dirPathField`
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
               - `primitives/pane.defineApp`
               - `ui/icons.symbol`
+            - Exports (types): `UnfinishedRecording`
             - Exports (values):
               - `appendTabRecordingChunk`
               - `createTabRecording`
@@ -17230,6 +17245,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `recorderRelayApp`
               - `recordingBaseName`
               - `recordingFileNames`
+              - `UnfinishedRecordingSchema`
+              - `unfinishedTabRecordings`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -40016,17 +40033,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 119 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 120 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×45
               - `framework` ×23
               - `apps` ×8
               - `debug` ×7
               - `packages` ×7
               - `plugin-meta` ×6
+              - `companions` ×3
               - `database` ×3
               - `release` ×3
               - `code-explorer` ×2
-              - `companions` ×2
               - `config_v2` ×2
               - `fields` ×2
               - `primitives` ×2
@@ -44637,7 +44654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 374 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 375 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×95
           - `conversations` ×74
           - `debug` ×36
@@ -44653,12 +44670,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×4
           - `apps-core` ×3
           - `auth` ×3
+          - `companions` ×3
           - `config_v2` ×3
           - `plugin-meta` ×3
           - `reports` ×3
           - `ui` ×3
           - `backup` ×2
-          - `companions` ×2
           - `database` ×2
           - `hints` ×2
           - `history` ×2
@@ -45682,7 +45699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×9
           - `database` ×6
           - `conversations` ×5
@@ -45691,6 +45708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×3
           - `framework` ×3
           - `network` ×2
+          - `companions/browser-extension/recorder`
           - `integrations/github-events`
           - `tasks/tasks-core`
       - Exemptions:
@@ -45869,10 +45887,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installInflightJoinMeter`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex(name).run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×12
           - `conversations` ×5
           - `apps` ×3
+          - `companions/browser-extension/recorder`
           - `config_v2`
           - `debug/sentinel/status-file`
           - `integrations/github-events`
@@ -45909,7 +45928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 143 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 144 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×32
           - `debug` ×21
           - `conversations` ×17
@@ -45924,12 +45943,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×3
           - `primitives` ×3
           - `code-explorer` ×2
+          - `companions` ×2
           - `config_v2` ×2
           - `reports` ×2
           - `apps-core/app-usage`
           - `auth`
           - `backup`
-          - `companions/menu-bar`
           - `network/live`
           - `release`
           - `review/plugin-changes`
@@ -46054,13 +46073,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by: `debug/heap-snapshot` (0 debt)
     - **`process-alive`** — Writer liveness by pid: isProcessAlive(pid) — kill(pid, 0), ESRCH dead, EPERM alive (another account's), anything else thrown, a non-pid refused; isProcessGroupAlive(pgid) the same for kill(-pgid, 0) — and isOrphanedTemp(name, pattern) / writerPidOf: a temp file whose name carries its writer's pid is orphaned exactly when that writer is gone, so a sweep never reaps a live writer's temp across a machine sleep the way an mtime-age grace does.
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
+        - Imported by: 33 plugins — full list in [`plugins/packages/plugins/process-alive/REFERENCE.md`](../plugins/packages/plugins/process-alive/REFERENCE.md)
           - `infra` ×13
           - `framework` ×10
           - `conversations` ×2
           - `debug` ×2
           - `packages` ×2
           - `apps/browser/engine`
+          - `companions/browser-extension/recorder`
           - `config_v2`
           - `installer`
       - Exemptions:
@@ -54297,8 +54317,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 119 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×109
+        - Contributes: 120 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×110
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -54582,8 +54602,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 111 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×109
+        - Contributes: 112 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×110
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getAllDescriptors`
@@ -54789,7 +54809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 132 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
           - `apps` ×29
           - `debug` ×17
@@ -54797,12 +54817,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×9
           - `tasks` ×9
           - `infra` ×4
+          - `companions` ×2
           - `config_v2` ×2
           - `apps-core/app-launcher`
           - `auth`
           - `build/build-logs`
           - `code-explorer/commit-detail`
-          - `companions/menu-bar/app-grid`
           - `history/dialog`
           - `integrations/google-maps/usage`
           - `page/links`
@@ -61304,8 +61324,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 314 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×314
+    - Contributes: 315 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×315
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -61329,8 +61349,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 313 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×313
+    - Contributes: 314 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×314
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -61703,7 +61723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 94 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 95 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×34
       - `debug` ×21
       - `conversations` ×7
@@ -61716,6 +61736,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data/report`
       - `auth`
       - `backup`
+      - `companions/browser-extension/recorder`
       - `integrations/github-events`
       - `network/live/boot-snapshot`
       - `page/place/google`

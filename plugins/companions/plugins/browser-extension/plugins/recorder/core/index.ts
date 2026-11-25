@@ -12,3 +12,8 @@ export {
   recordingBaseName,
   recordingFileNames,
 } from "./file-name";
+export {
+  unfinishedTabRecordings,
+  UnfinishedRecordingSchema,
+  type UnfinishedRecording,
+} from "./unfinished";

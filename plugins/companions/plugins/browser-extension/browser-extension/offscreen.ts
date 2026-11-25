@@ -148,6 +148,8 @@ interface Session {
   width: number;
   height: number;
   seq: number;
+  /** The chunks equin took (each MediaRecorder's 1 s slice). */
+  uploaded: number;
   /** The chunks' uploads, in order: each waits for the one before. */
   uploads: Promise<void>;
   queuedBytes: number;
@@ -304,6 +306,7 @@ async function start(
     width: size.width,
     height: size.height,
     seq: 0,
+    uploaded: 0,
     uploads: Promise.resolve(),
     queuedBytes: 0,
     failed: null,
@@ -343,6 +346,7 @@ function enqueue(s: Session, chunk: Blob): void {
       return;
     }
     s.queuedBytes -= chunk.size;
+    s.uploaded += 1;
   });
 }
 
@@ -383,13 +387,19 @@ async function stop(
   stoppedBy: StopCause,
   durationMs: number,
   pointer: PointerTrack | null,
-): Promise<SavedRecording> {
+): Promise<{ saved: SavedRecording; failure: string | null }> {
   const s = recording();
   // Taken at once: a second stop (⌥⇧R twice) finds nothing to stop.
   session = null;
   const thumb = thumbnail(s);
   await wind(s);
-  if (s.failed !== null) throw s.failed;
+  // An upload failed (before the stop, or while it flushed): saved as far as
+  // equin took it, and the failure goes back with it whatever stopped it.
+  if (s.failed !== null)
+    return {
+      saved: await salvage(s, s.failed, pointer, thumb),
+      failure: s.failed.message,
+    };
   // Stopped before the recorder handed over a single chunk: there is no
   // video, and the failure is why it stopped — never a finish of nothing.
   if (s.seq === 0) {
@@ -409,6 +419,50 @@ async function stop(
         }))(),
     ),
   );
+  return {
+    saved: {
+      ...finished,
+      durationMs,
+      width: s.width,
+      height: s.height,
+      thumbnail: thumb,
+    },
+    failure: null,
+  };
+}
+
+/**
+ * An upload failed mid-recording: what equin took before it is still a video
+ * (its state is on disk, chunk by chunk), so it is finished as one — never
+ * dropped. Nothing taken: the failure is the answer. The finish failing too:
+ * both are said, and the recording stays in the folder, listed in the panel's
+ * Unfinished recordings to save later.
+ */
+async function salvage(
+  s: Session,
+  failed: Error,
+  pointer: PointerTrack | null,
+  thumb: string | null,
+): Promise<SavedRecording> {
+  if (s.uploaded === 0) throw failed;
+  // The video holds the chunks taken: one second each (paused time sends none).
+  const durationMs = s.uploaded * 1000;
+  const finished = await (async () =>
+    RelayFinishedSchema.parse(
+      await keepingWorkerAwake(
+        (async () =>
+          (await openRelay())({
+            op: "finish",
+            recordingId: s.recordingId,
+            durationMs,
+            pointer,
+          }))(),
+      ),
+    ))().catch((err: unknown) => {
+    throw new Error(
+      `${failed.message} — and saving what was uploaded failed too (${errorText(err)}). Whatever equin kept of it is listed under Unfinished recordings in this panel.`,
+    );
+  });
   return {
     ...finished,
     durationMs,
@@ -442,21 +496,21 @@ onMessageAsync(
     switch (cmd.type) {
       case "offscreen.start":
         await start(cmd);
-        return { ok: true, saved: null };
+        return { ok: true, saved: null, failure: null };
       case "offscreen.pause":
         recording().recorder.pause();
-        return { ok: true, saved: null };
+        return { ok: true, saved: null, failure: null };
       case "offscreen.resume":
         recording().recorder.resume();
-        return { ok: true, saved: null };
+        return { ok: true, saved: null, failure: null };
       case "offscreen.stop":
         return {
           ok: true,
-          saved: await stop(cmd.stoppedBy, cmd.durationMs, cmd.pointer),
+          ...(await stop(cmd.stoppedBy, cmd.durationMs, cmd.pointer)),
         };
       case "offscreen.discard":
         await discard();
-        return { ok: true, saved: null };
+        return { ok: true, saved: null, failure: null };
     }
   },
 );

@@ -174,6 +174,9 @@ export const CLIENT_REPORT_SOURCES = [
   // reload-loss): the dev unmount detector saw a page-level place unmount
   // with it neither kept nor marked transient. Developer mode only.
   "client-reload-loss",
+  // A tab recording's upload request failed (companions/browser-extension/
+  // recorder's relay page): whatever the status, the recording stopped early.
+  "client-tab-recorder",
 ] as const;
 export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]

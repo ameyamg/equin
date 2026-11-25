@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, rm, writeFile } from "node:fs/promises";
+import { mkdir, open } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
@@ -26,57 +26,68 @@ import {
   recorderConfig,
   recordingBaseName,
 } from "../../core";
-import { chunkDecision, type ChunkCursor } from "./chunk-order";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import { chunkDecision } from "./chunk-order";
+import {
+  claimFinish,
+  createUpload,
+  readUpload,
+  releaseFinish,
+  remuxPathOf,
+  removeUpload,
+  writeChunk,
+  writeCursor,
+  type Upload,
+} from "./upload-store";
+import type { PointerTrack } from "@plugins/companions/plugins/browser-extension/core";
+import { unfinishedServed } from "./unfinished";
 import { saveFreePair } from "./save-pair";
-
-/**
- * The recordings being uploaded, by id. In memory: a recording lives as long
- * as the backend that took its first chunk — after a restart its id answers
- * 404 and the extension says the recording failed; the `.partial.mp4` it left
- * stays in the folder, remuxable by hand.
- */
-interface Upload extends ChunkCursor {
-  folder: string;
-  partial: string;
-  base: string;
-  bytes: number;
-}
-const uploads = new Map<string, Upload>();
 
 /** A remux of an hour's 1440p file copies ~6 GB: minutes, never an hour. */
 const REMUX_TIMEOUT_MS = 30 * 60_000;
 /** ffmpeg is a ~60 MB download the first time: a bound on the network. */
 const INSTALL_WAIT_MS = 15 * 60_000;
 
-function uploadOf(id: string | undefined): Upload {
-  const upload = id === undefined ? undefined : uploads.get(id);
-  if (upload === undefined)
-    throw new HttpError(404, `no recording ${id ?? ""} is being uploaded here`);
+/**
+ * One request at a time per recording in this process: a chunk's read of the
+ * cursor, its write and its commit are one step, and a finish or discard runs
+ * after the chunks before it. (Across processes the relay is the order: it
+ * sends one request at a time, so a request reaches the next backend only
+ * once the last one answered.)
+ */
+const perRecording = createKeyedMutex("tab-recordings");
+
+/** The configured Recordings folder, resolved; a 400 when none is set. */
+function recordingsFolder(): string {
+  const configured = getConfig(recorderConfig).folder;
+  if (configured === "")
+    throw new HttpError(
+      400,
+      "No Recordings folder is set (Settings → Config → Recorder).",
+    );
+  return resolveHostPath(configured);
+}
+
+/** Recording `id` as the Recordings folder holds it; a 404 when it holds none. */
+async function uploadOf(id: string | undefined): Promise<Upload> {
+  const folder = recordingsFolder();
+  const upload = id === undefined ? null : await readUpload(folder, id);
+  if (upload === null)
+    throw new HttpError(
+      404,
+      `no recording ${id ?? ""} is in ${folder} (finished, deleted, or the Recordings folder changed since it started)`,
+    );
   return upload;
 }
 
 export const handleCreate = implementMachine(
   createTabRecording,
   async ({ body }) => {
-    const configured = getConfig(recorderConfig).folder;
-    if (configured === "")
-      throw new HttpError(
-        400,
-        "No Recordings folder is set (Settings → Config → Recorder).",
-      );
-    const folder = resolveHostPath(configured);
+    const folder = recordingsFolder();
     await mkdir(folder, { recursive: true });
     const id = randomUUID();
-    const partial = join(folder, `.${id}.partial.mp4`);
-    await writeFile(partial, new Uint8Array(), { flag: "wx" });
-    uploads.set(id, {
-      folder,
-      partial,
-      base: recordingBaseName(body.title, new Date()),
-      bytes: 0,
-      nextSeq: 0,
-      lastSize: null,
-    });
+    await createUpload(folder, id, recordingBaseName(body.title, new Date()));
+    unfinishedServed.notify();
     // The finish remuxes with ffmpeg: have it installed while this records
     // (a first recording would otherwise wait for the download at Stop).
     if ((await readyNow(ffmpeg)).kind !== "ready") await requestDep(ffmpeg);
@@ -87,94 +98,136 @@ export const handleCreate = implementMachine(
 export const handleChunk = implementMachine(
   appendTabRecordingChunk,
   async ({ body, params }) => {
-    const upload = uploadOf(params.id);
     const seq = Number(params.seq);
     if (!Number.isInteger(seq) || seq < 0) throw new HttpError(400, "bad seq");
     const bytes = new Uint8Array(await body.arrayBuffer());
-    const decision = chunkDecision(upload, seq, bytes.byteLength);
-    if (decision.kind === "conflict")
-      throw new HttpError(409, decision.message);
-    if (decision.kind === "append") {
-      // Written at the file's known end (not append mode): the file is the
-      // recording itself, bounded by its length, not a growing log.
-      const handle = await open(upload.partial, "r+");
-      try {
-        await handle.write(bytes, 0, bytes.byteLength, upload.bytes);
-      } finally {
-        await handle.close();
-      }
-      upload.nextSeq = seq + 1;
-      upload.lastSize = bytes.byteLength;
-      upload.bytes += bytes.byteLength;
-    }
-    return { bytes: upload.bytes };
+    return perRecording.run(params.id ?? "", async () => {
+      const upload = await uploadOf(params.id);
+      if (upload.finishingBy !== null)
+        throw new HttpError(
+          409,
+          `recording ${upload.id} is being saved (by process ${upload.finishingBy}): it takes no more chunks`,
+        );
+      const cursor = upload.cursor;
+      if (cursor === null)
+        throw new HttpError(
+          409,
+          `recording ${upload.id} takes no more chunks: ${upload.cursorProblem ?? "it was started by an older equin"}. Save it from Unfinished recordings in the extension's panel.`,
+        );
+      const decision = chunkDecision(cursor, seq, bytes.byteLength);
+      if (decision.kind === "conflict")
+        throw new HttpError(409, decision.message);
+      if (decision.kind === "replay") return { bytes: cursor.bytes };
+      // Written at the committed end (not append mode): bytes a lost commit
+      // left past it are overwritten, the file is the recording itself.
+      await writeChunk(upload, bytes, cursor.bytes);
+      const next = {
+        base: cursor.base,
+        nextSeq: seq + 1,
+        lastSize: bytes.byteLength,
+        bytes: cursor.bytes + bytes.byteLength,
+      };
+      await writeCursor(upload.folder, upload.id, next);
+      return { bytes: next.bytes };
+    });
   },
 );
 
 export const handleFinish = implementMachine(
   finishTabRecording,
-  async ({ body, params }) => {
-    const id = params.id;
-    const upload = uploadOf(id);
-    if (upload.nextSeq === 0)
-      throw new HttpError(409, "the recording has no chunk");
-    // Claimed at once: a second finish (or a chunk, or a discard) of this id
-    // answers 404 instead of remuxing and saving the same partial again. A
-    // finish that fails from here leaves the partial in the folder, as a
-    // restart does.
-    uploads.delete(id);
-    const handle = await open(upload.partial, "r+");
-    try {
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    const tools = await installedFfmpeg(upload.partial);
-    const remuxed = join(upload.folder, `.${id}.mp4`);
-    // MediaRecorder's MP4 is fragmented, with no duration up front: one copy
-    // (no re-encode) moves the index to the start, so it seeks and shares.
-    await spawnExpectOk(
-      [
-        tools.ffmpeg,
-        "-y",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-i",
-        upload.partial,
-        "-c",
-        "copy",
-        "-movflags",
-        "+faststart",
-        remuxed,
-      ],
-      { timeoutMs: REMUX_TIMEOUT_MS },
-    );
-    const name = await saveFreePair(
-      remuxed,
-      body.pointer === null ? null : `${JSON.stringify(body.pointer)}\n`,
-      upload.folder,
-      upload.base,
-    );
-    await rm(remuxed);
-    await rm(upload.partial);
-    const path = join(upload.folder, name);
-    return {
-      path,
-      folder: upload.folder,
-      name,
-      bytes: (await stat(path)).size,
-    };
-  },
+  async ({ body, params }) =>
+    // Behind the chunks before it in this process; a second finish of the
+    // same id waits for the first and then answers 404 (its files are gone).
+    // Across processes the claim decides: one finish at a time.
+    perRecording.run(params.id ?? "", async () => {
+      const upload = await uploadOf(params.id);
+      if (upload.bytes === 0)
+        throw new HttpError(409, "the recording has no chunk");
+      if (!(await claimFinish(upload)))
+        throw new HttpError(
+          409,
+          `recording ${upload.id} is already being saved (by process ${upload.finishingBy})`,
+        );
+      unfinishedServed.notify();
+      try {
+        return await finishClaimed(upload, body.pointer);
+      } catch (err) {
+        // Not saved: unfinished again, to be saved from the panel. A finish
+        // cut by its process dying leaves a stale claim, taken over likewise.
+        await releaseFinish(upload);
+        unfinishedServed.notify();
+        throw err;
+      }
+    }),
 );
+
+/** Finish a claimed recording: truncate, sync, remux, link, clean up. */
+async function finishClaimed(
+  upload: Upload,
+  pointer: PointerTrack | null,
+): Promise<{ path: string; folder: string; name: string; bytes: number }> {
+  const id = upload.id;
+  const handle = await open(upload.partial, "r+");
+  try {
+    // Bytes past the last commit are a chunk whose cursor never landed.
+    await handle.truncate(upload.bytes);
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  // A finish that fails from here leaves the recording in the folder,
+  // listed as unfinished, to be saved again.
+  const tools = await installedFfmpeg(upload.partial);
+  const remuxed = remuxPathOf(upload.folder, id);
+  // MediaRecorder's MP4 is fragmented, with no duration up front: one copy
+  // (no re-encode) moves the index to the start, so it seeks and shares.
+  await spawnExpectOk(
+    [
+      tools.ffmpeg,
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      upload.partial,
+      "-c",
+      "copy",
+      "-movflags",
+      "+faststart",
+      remuxed,
+    ],
+    { timeoutMs: REMUX_TIMEOUT_MS },
+  );
+  const name = await saveFreePair(
+    remuxed,
+    pointer === null ? null : `${JSON.stringify(pointer)}\n`,
+    upload.folder,
+    upload.base,
+  );
+  await removeUpload(upload);
+  unfinishedServed.notify();
+  const path = join(upload.folder, name);
+  return {
+    path,
+    folder: upload.folder,
+    name,
+    bytes: (await stat(path)).size,
+  };
+}
 
 export const handleDiscard = implementMachine(
   discardTabRecording,
-  async ({ params }) => {
-    const upload = uploadOf(params.id);
-    uploads.delete(params.id ?? "");
-    await rm(upload.partial, { force: true });
-  },
+  async ({ params }) =>
+    perRecording.run(params.id ?? "", async () => {
+      const upload = await uploadOf(params.id);
+      if (upload.finishingBy !== null)
+        throw new HttpError(
+          409,
+          `recording ${upload.id} is being saved (by process ${upload.finishingBy}): delete the video once it is saved`,
+        );
+      await removeUpload(upload);
+      unfinishedServed.notify();
+    }),
 );
 
 /**

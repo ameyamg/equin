@@ -209,6 +209,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"build.section","plugin":"build","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"code-explorer.commit-detail.commit-detail.actions","plugin":"code-explorer.commit-detail","key":"commit-detail.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"companions.browser-extension.page-action","plugin":"companions.browser-extension","key":"page-action","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"companions.browser-extension.recorder.item-actions","plugin":"companions.browser-extension.recorder","key":"item-actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"companions.browser-extension.section","plugin":"companions.browser-extension","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"companions.menu-bar.app-grid.item-actions","plugin":"companions.menu-bar.app-grid","key":"item-actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"companions.menu-bar.mount","plugin":"companions.menu-bar","key":"mount","meta":{"kind":"mount","reorderable":false},"inMain":true},
