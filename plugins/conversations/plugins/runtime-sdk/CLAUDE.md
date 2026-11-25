@@ -231,6 +231,24 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   projection's `lastPromptUuid`, the transcript line of the turn taken back.
   The conversations server returns the ledger row confirmed as that line and
   hands back the row's own text; the agent's prompt text is never read back.
+- **A Stop whose relaunch fails still ends the turn in a defined state**
+  (`launchRewound`, `machine/internal/pending-rewind.ts`). The drop is written
+  as the agent's pending rewind (`pending-rewind.json`, beside launch.json)
+  before the relaunch and cleared by the start that settles it. When the
+  rewound start fails (Claude Code refusing the drop — `Resume rejected by
+  --resume-drops-turn:`, deterministic — or anything else), the session is
+  resumed plainly, as the SDK asks:
+  - it starts: the turn is KEPT in the session (no text handed back, so
+    nothing is sent twice), the debt cleared, the failure reported with the
+    CLI's words;
+  - nothing starts: the turn is RETURNED (its text back in the draft) and the
+    drop stays owed — the next `create` resuming that session applies it
+    (`SdkStopRelaunchFailed`), the same way, so the user's next message never
+    runs on top of the prompt they took back.
+  Either way `stop` resolves with `relaunchFailure` (never a bare 500), which
+  the Stop endpoint carries to the composer's error toast.
+  conv-1795608764-h27peb (2026-11-25): the relaunch died, Stop answered 500,
+  the row stayed `accepted` and the next message resumed with the prompt in.
 - **The rewind resumes at the prompt's parent in the transcript**
   (`machine/internal/rewind-anchor.ts`): `resumeSessionAt` is the entry the
   dropped prompt's `parentUuid` names in the session file — the kept turn's

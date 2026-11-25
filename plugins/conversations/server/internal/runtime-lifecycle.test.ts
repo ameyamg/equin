@@ -27,7 +27,7 @@ function recordingRuntime(launchDone: Promise<void>) {
     },
     async stop(id: string) {
       log.push(`stop:${id}`);
-      return { returnedPromptUuid: null };
+      return { returnedPromptUuid: null, relaunchFailure: null };
     },
     async send(id: string) {
       log.push(`send:${id}`);

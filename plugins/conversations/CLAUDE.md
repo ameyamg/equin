@@ -150,6 +150,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `RuntimeInfo`
     - `RuntimeInspection`
     - `RuntimeSignal`
+    - `StopResult`
     - `SubmitOutcome`
     - `Turn`
     - `TurnSubmission`

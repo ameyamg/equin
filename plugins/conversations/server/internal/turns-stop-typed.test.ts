@@ -84,6 +84,8 @@ const agent = {
   turnId: turnIdKind.mint() as TurnId,
   running: false,
   stateAtStop: null as string | null,
+  /** The relaunch failure the runtime's stop answers (null: it went through). */
+  relaunchFailure: null as string | null,
   async take(): Promise<void> {
     await confirmTurn(
       this.conversationId,
@@ -115,10 +117,12 @@ const fakeRuntime = partialFake<ConversationRuntime>("ConversationRuntime", {
   },
   async stop() {
     agent.stateAtStop = await turnState(agent.turnId);
-    if (!agent.running) return { returnedPromptUuid: null };
+    if (!agent.running)
+      return { returnedPromptUuid: null, relaunchFailure: null };
     agent.running = false;
     return {
       returnedPromptUuid: transcriptUuidOfTurn(agent.turnId),
+      relaunchFailure: agent.relaunchFailure,
     };
   },
 });
@@ -165,10 +169,51 @@ test("Stop waits for the agent to take the typed turn, then stops it and hands i
     // Stop is waiting: it has not interrupted the idle agent.
     expect(agent.stateAtStop).toBeNull();
     await agent.take();
-    expect(await stopping).toBe("the request");
+    expect(await stopping).toEqual({
+      text: "the request",
+      relaunchFailure: null,
+    });
   });
   // The interrupt came once the turn was running, never before.
   expect(agent.stateAtStop).toBe("accepted");
   expect(agent.running).toBe(false);
+  expect(await turnState(turnId)).toBe("returned");
+});
+
+test("A relaunch that failed after the turn was taken back still returns its text, and says why", async () => {
+  const task = "task-stop-typed-2";
+  const attempt = "att-stop-typed-2";
+  const conv = "conv-stop-typed-2";
+  const turnId = turnIdKind.mint();
+  await t.db.execute(sql`
+    INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref, author_kind)
+    VALUES (${task}, ${task}, 'stop relaunch failed', 'a1', 'interactive', 'human')
+  `);
+  await t.db.execute(sql`
+    INSERT INTO attempts (id, task_id, worktree_path)
+    VALUES (${attempt}, ${task}, ${`/tmp/${attempt}`})
+  `);
+  await t.db.execute(sql`
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause)
+    VALUES (${conv}, ${attempt}, 'working', 'sdk', ${FALLBACK_MODEL}, 'direct')
+  `);
+  await t.db.execute(sql`
+    INSERT INTO conversation_turns (id, conversation_id, kind, text, typed_text, state)
+    VALUES (${turnId}, ${conv}, 'turn', 'why no toast?', 'why no toast?', 'typed')
+  `);
+  agent.conversationId = conv;
+  agent.turnId = turnId;
+  agent.stateAtStop = null;
+  agent.relaunchFailure =
+    "The agent could not be restarted: Claude Code exited";
+  await withThrowaway(async () => {
+    await agent.take();
+    expect(await stopTurn(conv)).toEqual({
+      text: "why no toast?",
+      relaunchFailure: "The agent could not be restarted: Claude Code exited",
+    });
+  });
+  agent.relaunchFailure = null;
+  // A defined end: the turn is returned, never left `accepted`.
   expect(await turnState(turnId)).toBe("returned");
 });

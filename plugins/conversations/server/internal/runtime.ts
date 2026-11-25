@@ -65,6 +65,14 @@ export interface OutgoingTurn {
   text: string;
 }
 
+/** What {@link ConversationRuntime.stop} did with the stopped turn. */
+export interface StopResult {
+  /** The transcript line uuid of the turn taken back, or null when it stays. */
+  returnedPromptUuid: string | null;
+  /** Why relaunching the agent after taking the turn back failed, or null. */
+  relaunchFailure: string | null;
+}
+
 export interface ConversationRuntime {
   /** One of the closed list `CONVERSATION_RUNTIMES` (conversations core). */
   readonly id: ConversationRuntimeId;
@@ -136,8 +144,14 @@ export interface ConversationRuntime {
    * whose text the web hands back to the composer), or null when the turn
    * stays (it had a reply, or there was none). Runs as the conversation's
    * terminal writer.
+   *
+   * Taking the turn back relaunches the agent; when that relaunch fails the
+   * stop still resolves, with `relaunchFailure` saying why (and the runtime
+   * has reported it). The turn is then in one of two defined states:
+   * returned (`returnedPromptUuid` set — the runtime drops it from the
+   * session at the agent's next start) or kept in the session (null).
    */
-  stop(conversationId: string): Promise<{ returnedPromptUuid: string | null }>;
+  stop(conversationId: string): Promise<StopResult>;
   /**
    * Reply to an open question (AskUserQuestion) with `turn` instead of an
    * answer, as ONE operation: dismiss the question, then send `turn` as a

@@ -77,6 +77,7 @@ export type {
   ConversationRuntime,
   OutgoingTurn,
   RunningAccount,
+  StopResult,
 } from "./internal/runtime";
 export { submitTurn } from "./internal/turns";
 export { resolvePromptAttachments } from "./internal/resolve-prompt-attachments";

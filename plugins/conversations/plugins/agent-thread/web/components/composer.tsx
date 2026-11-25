@@ -173,6 +173,15 @@ export function ThreadComposer({
   const stop = useEndpointMutation(stopConversation, {
     onSuccess: (data) => {
       if (data.rewindText) setDraft(data.rewindText);
+      // Stopped, but the agent did not come back as Stop meant it to.
+      if (data.relaunchFailure !== null)
+        toast({
+          type: "conversation-stop-relaunch-failed",
+          title: "Stopped, but the agent couldn't restart",
+          description: data.relaunchFailure,
+          category: "conversations",
+          variant: "error",
+        });
     },
     onError: (err) =>
       failed(toast, "conversation-stop-failed", "Couldn't stop the agent", err),

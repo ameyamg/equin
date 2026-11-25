@@ -297,8 +297,14 @@ async function withOldestHeldTurn(
  * the prompt and sends it again. A launch message already riding the agent's
  * start (`typing` / `typed`) is stopped as a running turn, once the launch has
  * the terminal back.
+ *
+ * A relaunch that failed after the turn was taken back (or kept) does not
+ * fail the Stop: it answers `relaunchFailure`, the runtime's sentence, for the
+ * web to show beside whatever text came back.
  */
-export async function stopTurn(conversationId: string): Promise<string | null> {
+export async function stopTurn(
+  conversationId: string,
+): Promise<StopTurnResult> {
   const row = await getConversation(conversationId);
   if (!row) throw new Error(`Conversation ${conversationId} not found`);
   if (
@@ -311,8 +317,11 @@ export async function stopTurn(conversationId: string): Promise<string | null> {
     const takenBack = await returnHeldTurns(conversationId);
     const stopped = (await hasTurnInFlight(conversationId))
       ? await stopRunningTurn(conversationId, row.waitingFor)
-      : null;
-    return joinStopTexts(stopped, takenBack);
+      : NOTHING_STOPPED;
+    return {
+      text: joinStopTexts(stopped.text, takenBack),
+      relaunchFailure: stopped.relaunchFailure,
+    };
   }
   return withTerminal(conversationId, async () => {
     const stopped = await stopRunningTurn(conversationId, row.waitingFor, {
@@ -321,9 +330,22 @@ export async function stopTurn(conversationId: string): Promise<string | null> {
     // As the terminal writer no launch or flush is claiming a held turn, so
     // taking them back here — after the wait, which may throw — is race-free
     // and loses none.
-    return joinStopTexts(stopped, await returnHeldTurns(conversationId));
+    return {
+      text: joinStopTexts(stopped.text, await returnHeldTurns(conversationId)),
+      relaunchFailure: stopped.relaunchFailure,
+    };
   });
 }
+
+/** What Stop gives back. */
+export interface StopTurnResult {
+  /** The text taken back into the draft, or null. */
+  text: string | null;
+  /** Why the agent's relaunch failed (`StopResult.relaunchFailure`), or null. */
+  relaunchFailure: string | null;
+}
+
+const NOTHING_STOPPED = { text: null, relaunchFailure: null } as const;
 
 /** Oldest first: the running turn was sent before any turn held behind it. */
 function joinStopTexts(
@@ -345,15 +367,16 @@ async function stopRunningTurn(
   conversationId: string,
   waitingFor: string | null,
   { locked }: { locked: boolean } = { locked: false },
-): Promise<string | null> {
-  const run = async (): Promise<string | null> => {
+): Promise<StopTurnResult> {
+  const run = async (): Promise<StopTurnResult> => {
     const { runtime } = await conversationRuntime(conversationId);
     // A stuck agent (its CLI wedged holding a turn) will never take it: stop
     // it as it stands rather than wait out the bound.
     if (waitingFor !== STUCK_TURN_WAITING_FOR)
       await awaitTypedTurnTaken(conversationId, runtime);
-    const { returnedPromptUuid } = await runtime.stop(conversationId);
-    if (returnedPromptUuid === null) return null;
+    const { returnedPromptUuid, relaunchFailure } =
+      await runtime.stop(conversationId);
+    if (returnedPromptUuid === null) return { text: null, relaunchFailure };
     const returned = await returnTurnByPromptUuid(
       conversationId,
       returnedPromptUuid,
@@ -366,7 +389,7 @@ async function stopRunningTurn(
         `Stop took turn ${returnedPromptUuid} out of conversation ${conversationId}, but no ledger turn was confirmed as it`,
       );
     }
-    return returned.text;
+    return { text: returned.text, relaunchFailure };
   };
   return locked ? run() : withTerminal(conversationId, run);
 }

@@ -351,6 +351,19 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
               await fetchEndpoint(stopConversation, { id: convId }),
             );
             if (data.rewindText) setDraft(data.rewindText);
+            // Stopped, but the agent did not come back as Stop meant it to:
+            // say so, with what became of the message.
+            if (data.relaunchFailure === null) return;
+            return {
+              type: "conversation",
+              category: "conversations",
+              title: "Stopped, but the agent couldn't restart",
+              description: "",
+              subjectId: subject.id,
+              subjectName: subject.name,
+              detail: data.relaunchFailure,
+              variant: "error",
+            };
           },
         };
       case "push-and-exit":

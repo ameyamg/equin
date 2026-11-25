@@ -4,6 +4,7 @@ import type {
   ConversationRuntime,
   OutgoingTurn,
   RuntimeInspection,
+  StopResult,
   RuntimeSignal,
 } from "@plugins/conversations/server";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
@@ -12,6 +13,7 @@ import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider
 import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/machine";
 import { stopGateHookEntry } from "@plugins/conversations/plugins/stop-gate/machine";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { noteClaudeCodeFailure } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import {
   type AgentLaunchIntent,
@@ -39,6 +41,12 @@ import {
 } from "./consumer";
 import { agentEventsExist } from "./paths";
 import { rewindAnchorUuid } from "./rewind-anchor";
+import {
+  clearPendingRewind,
+  readPendingRewind,
+  writePendingRewind,
+  type PendingRewind,
+} from "./pending-rewind";
 import type { AgentProjection } from "../../server/internal/reducer";
 import {
   ProjectionTimeoutError,
@@ -586,6 +594,65 @@ async function moveToLaunchAccount(id: string): Promise<void> {
   await launchAgent(id, relaunch);
 }
 
+type RewoundLaunch =
+  /** The agent runs, the turn dropped from its session. */
+  | { kind: "dropped" }
+  /**
+   * The rewound start failed (`err`) but the session resumed plainly: the
+   * agent runs with the turn KEPT in its session, the drop no longer owed.
+   */
+  | { kind: "kept"; err: Error }
+  /**
+   * Neither start ran (`err`, then `plain`): the agent is down and the drop
+   * stays owed to the next start of the session (pending-rewind.ts).
+   */
+  | { kind: "owed"; err: Error; plain: Error };
+
+/**
+ * Start `id` with `rewind`'s turn dropped from its session (`rewound`), owed
+ * as its pending rewind until a start settles it. When that start fails the
+ * session is resumed plainly (`plain`), as the SDK asks of a refused drop —
+ * and of any other failure too: a drop that keeps failing while Claude Code
+ * itself starts must not keep the conversation from ever resuming. Only when
+ * nothing starts is the drop left owed.
+ */
+async function launchRewound(
+  id: string,
+  rewind: PendingRewind,
+  rewound: AgentLaunchIntent,
+  plain: AgentLaunchIntent,
+): Promise<RewoundLaunch> {
+  await writePendingRewind(id, rewind);
+  await recordLaunchSession(id, rewound.sessionId);
+  try {
+    // The same launch wait as every start: a projection still showing the
+    // predecessor's pid (its `exited` line not applied yet) is not this start.
+    await launchAgent(id, rewound);
+    await clearPendingRewind(id);
+    return { kind: "dropped" };
+  } catch (err) {
+    if (!(err instanceof Error)) throw err;
+    // A rewind of the session's first turn starts a fresh session: failed,
+    // the conversation stays on the one that holds its history.
+    await recordLaunchSession(id, plain.sessionId);
+    try {
+      await launchAgent(id, plain);
+    } catch (plainErr) {
+      if (!(plainErr instanceof Error)) throw plainErr;
+      return { kind: "owed", err, plain: plainErr };
+    }
+    await clearPendingRewind(id);
+    // The evidence the SDK asks to keep: the CLI's own words.
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `SDK agent ${id}: dropping turn ${rewind.promptUuid} from session ${rewind.sessionId} (resumed at ${String(rewind.anchorUuid)}) failed, so the session was resumed with the turn kept — ${err.message}`,
+      data: { ...crashFieldsOf(err), label: "runtime-sdk.rewind" },
+    });
+    return { kind: "kept", err };
+  }
+}
+
 async function sendTurn(id: string, turn: OutgoingTurn): Promise<void> {
   await moveToLaunchAccount(id);
   await commandAgent(
@@ -661,7 +728,27 @@ export const sdkRuntime: ConversationRuntime = {
     });
     const fresh = !(await agentEventsExist(id));
     await prepareLaunchRow(id, cwd, !fresh, options.sessionId);
-    await launchAgent(id, options);
+    // A Stop whose relaunch failed took the turn back without dropping it
+    // from the session: this start, resuming that session, owes the drop.
+    const pending = await readPendingRewind(id);
+    if (
+      pending === null ||
+      options.fork ||
+      options.resume !== pending.sessionId
+    ) {
+      await launchAgent(id, options);
+      return;
+    }
+    const outcome = await launchRewound(
+      id,
+      pending,
+      { ...rewindRelaunchOptions(options, pending), prompt: options.prompt },
+      options,
+    );
+    // `kept`: the agent runs, the turn still in its session although its
+    // text went back to the draft — reported by launchRewound; the start
+    // itself succeeded.
+    if (outcome.kind === "owed") throw outcome.plain;
   },
 
   async delete(id: string) {
@@ -674,16 +761,17 @@ export const sdkRuntime: ConversationRuntime = {
     await commandAgent(id, { type: "interrupt" }, UnknownReplySchema);
   },
 
-  async stop(id: string) {
+  async stop(id: string): Promise<StopResult> {
     await catchUpNow(id);
     const before = await currentAgentRow(id);
-    if (!before?.working) return { returnedPromptUuid: null };
+    if (!before?.working)
+      return { returnedPromptUuid: null, relaunchFailure: null };
     const interruptedAt = before.cursorSeq;
     await commandAgent(id, { type: "interrupt" }, UnknownReplySchema);
     const settled = await interruptSettled(id, interruptedAt);
     // A turn the agent has begun answering (an assistant message or a tool result) stays.
     if (settled.turnReplied || !settled.lastPromptUuid) {
-      return { returnedPromptUuid: null };
+      return { returnedPromptUuid: null, relaunchFailure: null };
     }
     if (!settled.sessionId) {
       throw new Error(
@@ -691,7 +779,7 @@ export const sdkRuntime: ConversationRuntime = {
       );
     }
     const previous = await readAgentOptions(id);
-    const relaunch = rewindRelaunchOptions(previous, {
+    const rewind: PendingRewind = {
       sessionId: settled.sessionId,
       anchorUuid: await rewindAnchorUuid(
         previous.cwd,
@@ -699,13 +787,37 @@ export const sdkRuntime: ConversationRuntime = {
         settled.lastPromptUuid,
       ),
       promptUuid: settled.lastPromptUuid,
-    });
+    };
     await stopAgent(id);
-    await recordLaunchSession(id, relaunch.sessionId);
-    // The same launch wait as every start: a projection still showing the
-    // predecessor's pid (its `exited` line not applied yet) is not this start.
-    await launchAgent(id, relaunch);
-    return { returnedPromptUuid: settled.lastPromptUuid };
+    const outcome = await launchRewound(
+      id,
+      rewind,
+      rewindRelaunchOptions(previous, rewind),
+      continueRelaunchOptions(previous, settled.sessionId),
+    );
+    switch (outcome.kind) {
+      case "dropped":
+        return { returnedPromptUuid: rewind.promptUuid, relaunchFailure: null };
+      case "kept":
+        // Still in the session: handing its text back too would send it twice.
+        return {
+          returnedPromptUuid: null,
+          relaunchFailure: `Taking the message back out of the conversation failed (${outcome.err.message}), so it stays in it; the agent was restarted with it.`,
+        };
+      case "owed":
+        // Returned, the drop owed to the next start (pending-rewind.ts): the
+        // user's text is never lost, and never sent twice.
+        await recordReport({
+          kind: "crash",
+          source: "server-caught",
+          message: `SDK agent ${id}: Stop took turn ${rewind.promptUuid} back, but the agent could not be relaunched — ${outcome.err.message}; nor resumed plainly — ${outcome.plain.message}. The drop is owed to its next start`,
+          data: { ...crashFieldsOf(outcome.plain), label: "runtime-sdk.stop" },
+        });
+        return {
+          returnedPromptUuid: rewind.promptUuid,
+          relaunchFailure: `The agent could not be restarted: ${outcome.plain.message}. Your message is back in the composer; it is taken out of the conversation when the agent next starts.`,
+        };
+    }
   },
 
   async answerPrompt(id: string, turn: OutgoingTurn) {

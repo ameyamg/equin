@@ -18219,6 +18219,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RuntimeInfo`
       - `RuntimeInspection`
       - `RuntimeSignal`
+      - `StopResult`
       - `SubmitOutcome`
       - `Turn`
       - `TurnSubmission`

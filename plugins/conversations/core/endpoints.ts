@@ -164,7 +164,17 @@ export const interruptConversationTurn = defineEndpoint({
 
 export const stopConversation = defineEndpoint({
   route: "POST /api/conversations/:id/stop",
-  response: z.object({ ok: z.boolean(), rewindText: z.string().nullable() }),
+  response: z.object({
+    ok: z.boolean(),
+    /** The text taken back into the draft, or null. */
+    rewindText: z.string().nullable(),
+    /**
+     * The turn was stopped, but relaunching the agent failed: why, and what
+     * became of the turn, in the runtime's words — shown to the user. Null
+     * when the relaunch went through (or none was needed).
+     */
+    relaunchFailure: z.string().nullable(),
+  }),
   needsMachine: { feature: "Stopping an agent" },
 });
 
