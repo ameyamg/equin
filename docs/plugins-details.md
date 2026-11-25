@@ -60328,6 +60328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor/inline-chip`
           - `primitives/text-editor/paste-images`
           - `screenshot`
+          - `tasks/decisions`
           - `tasks/supervisor-roles/pane`
           - `tasks/task-description`
       - Exemptions:
@@ -60419,7 +60420,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/agent-manager/welcome`
               - `apps/home/new-app`
               - `primitives/launch`
-              - `tasks/decisions`
               - `tasks/task-draft-form`
           - Plugins:
             - **`picker-pill`** — Picker pill: a pill-shaped trigger reading `icon value(s) chevron` that opens one grouped menu. Several groups in one pill is the fused control — one trigger, one menu, one heading and one checked row per group.
@@ -65293,7 +65293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/markdown.Markdown`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/relative-time.RelativeTime`
-          - `primitives/text-editor/composer.ComposerField`
+          - `primitives/text-editor.TextEditor`
           - `shell/notifications.useToast`
         - Exports (types):
           - `DecisionDraft`

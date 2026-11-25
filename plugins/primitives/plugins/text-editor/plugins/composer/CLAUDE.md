@@ -19,7 +19,14 @@ slot, and a caller handing in a second one would silently lose the bar.
 ## The parts
 
 - **`barStart`** / **`barEnd`** — the two halves of the bar, slack between them.
-  Pass neither ⇒ no bar.
+  The bar always leads with the "+" (attach files). `barStart` is required: a
+  field with no controls to configure its submit is not a composer.
+
+## When not to use it
+
+A plain answer or note field — AskUserQuestion's "Other…" and comment, a
+decision's note — is a bare `TextEditor`. It already takes a pasted or dropped
+image or file and renders chips; only the "+" and the bar are the composer's.
 - **`ComposerRule`** — the hairline separating the bar's icon actions from its
   pills.
 - **`ComposerAttachButton`** — an attach toggle ON the bar, beside the icon
@@ -78,7 +85,6 @@ should look different wears a sub-theme over them — see the
     - `apps/agent-manager/welcome`
     - `apps/home/new-app`
     - `primitives/launch`
-    - `tasks/decisions`
     - `tasks/task-draft-form`
 - Sub-plugins:
   - **`picker-pill`** — Picker pill: a pill-shaped trigger reading `icon value(s) chevron` that opens one grouped menu. Several groups in one pill is the fused control — one trigger, one menu, one heading and one checked…

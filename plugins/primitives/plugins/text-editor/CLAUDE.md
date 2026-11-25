@@ -144,6 +144,7 @@ registry readers are headless.
     - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `screenshot`
+    - `tasks/decisions`
     - `tasks/supervisor-roles/pane`
     - `tasks/task-description`
 - Exemptions:

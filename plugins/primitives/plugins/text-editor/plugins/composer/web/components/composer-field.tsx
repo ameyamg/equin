@@ -27,14 +27,18 @@ export type ComposerFieldProps = TextEditorText &
      * Leading half of the bar, after the composer's own "+" (attach files): icon
      * actions and attach toggles (`ComposerAttachButton`), a
      * {@link ComposerRule}, then pills.
+     *
+     * Required: a composer exists to hold controls that configure what
+     * submitting does. A field with nothing to put here is a plain
+     * `TextEditor` — it already takes a paste, a drop and chips.
      */
-    barStart?: React.ReactNode;
+    barStart: React.ReactNode;
     /** Trailing half of the bar, pushed flush right. */
     barEnd?: React.ReactNode;
   };
 
 /**
- * The prompt field the Improve and Launch popovers are built from: ONE box
+ * The launch field the Improve and Launch popovers are built from: ONE box
  * holding the prose and the bar of controls that configure
  * what submitting it will do.
  *
@@ -44,9 +48,10 @@ export type ComposerFieldProps = TextEditorText &
  * imperative `insertRef` insert and the inline chips all keep working exactly as
  * they do in a bare editor; the composer only decides what sits under the prose.
  *
- * Every composer attaches files: the bar always leads with the "+" picker, and
- * the whole box takes a paste or a drop — so no prompt field can be the one that
- * only accepts images.
+ * The bar always leads with the "+" picker, so a composer attaches files as
+ * well as images. A paste or a drop is not the composer's: every `TextEditor`
+ * takes those. For a plain answer or note field (no controls to configure it),
+ * use `TextEditor` itself — never a composer with an empty bar.
  *
  * Every other `TextEditor` prop is forwarded untouched.
  */

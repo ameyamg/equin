@@ -123,9 +123,10 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   kept-state's `keptEntry`), so a draft survives navigation and reloads and
   the inbox, the tray and the page block agree. A pick, a note or "Got it"
   only DRAFTS.
-- **The note is the standard prompt field** (`ComposerField`): a pasted,
-  dropped or picked image or file, and chips (`<ui-context>`, ids) work as in
-  any prompt, and the thread draws a note as a user turn is drawn
+- **The note is the prompt's own editor** (`TextEditor`, one row that
+  grows — the same field AskUserQuestion's answers use; not a `ComposerField`,
+  which is for a field with a bar of launch controls): a pasted or dropped
+  image or file, and chips (`<ui-context>`, ids) work as in any prompt, and the thread draws a note as a user turn is drawn
   (`AttachmentText`). The draft's attachments are held by the draft itself
   (paste-images' draft holds); once Submit takes a note, `takeNote`
   (`machine/internal/take-note.ts`) links what it attached to the
@@ -221,7 +222,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `primitives/markdown.Markdown`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/text-editor/composer.ComposerField`
+    - `primitives/text-editor.TextEditor`
     - `shell/notifications.useToast`
   - Exports (types):
     - `DecisionDraft`

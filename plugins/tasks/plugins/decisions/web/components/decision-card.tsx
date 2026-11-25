@@ -15,7 +15,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
   UserMessageCard,
   UserMessageText,
@@ -350,11 +350,12 @@ function Answer({
   return (
     <Stack gap="xs">
       {agentLine}
-      {/* The standard prompt field: a pasted or dropped image or file, the
-          "+" picker, and chips (`<ui-context>`, ids) work as in any prompt. */}
-      <ComposerField
+      {/* The prompt's own editor, one row that grows: a pasted or dropped
+          image or file and chips (`<ui-context>`, ids) work as in any prompt.
+          Not a composer — there is no control bar to configure the answer. */}
+      <TextEditor
         keep={keptField(draft, "note")}
-        minRows={2}
+        minRows={1}
         maxHeight="16rem"
         namespace={`decision-note-${decision.id}`}
         ariaLabel="Your note"
