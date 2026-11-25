@@ -126,32 +126,24 @@ try {
   await size.waitFor({ timeout: TIMEOUT_MS });
   r.ok("the tab was measured: the size dropdown is offered", true);
   r.eq(
-    "the default size is 1080p",
-    (await size.innerText()).includes("1080p"),
+    "the default size is 720p, named by its page size",
+    (await size.innerText()).includes("1280 × 720"),
     true,
   );
-  r.eq("four toggles", await panel.locator(".rec-tg").count(), 4);
-  // Headless Chromium draws at DPR 1: 1080p would be an upscale, so Record
-  // says why it is off rather than failing on click.
+  r.eq("four toggles and Apply", await panel.locator(".rec-tg").count(), 5);
+  // Record is off only for a size this window's screen cannot take, and
+  // then says why rather than failing on click.
   const go = panel.locator(".rec-go");
-  const dpr = await tab.evaluate(() => window.devicePixelRatio);
-  r.eq(
-    "Record is off exactly when the size cannot be recorded",
-    await go.isDisabled(),
-    dpr < 1.5,
-  );
-  if (dpr < 1.5)
+  if (await go.isDisabled())
     r.ok(
-      "and says why",
-      ((await go.getAttribute("title")) ?? "").includes(
-        "Needs a Retina display",
-      ),
+      "Record is off: it says why",
+      ((await go.getAttribute("title")) ?? "").includes("Too big"),
     );
   await popup.screenshot({ path: shot("record-section.png") });
   await size.click();
-  // 720p's entry names its video size whatever the display.
-  await panel.getByText("1280 × 720").waitFor({ timeout: TIMEOUT_MS });
-  r.ok("the dropdown lists the presets with their video size", true);
+  // Every entry is named by its page size, one too big still listed.
+  await panel.getByText("2560 × 1440").waitFor({ timeout: TIMEOUT_MS });
+  r.ok("the dropdown lists the presets by their page size", true);
   await popup.screenshot({ path: shot("record-size-menu.png") });
   await popup.keyboard.press("Escape");
 

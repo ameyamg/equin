@@ -1,8 +1,12 @@
 /**
- * The recorder's sizes: which page layout and which video size each preset
- * records, and the window bounds that give the tab that layout. Pure — the
- * shell's worker (`browser-extension/background.ts`) resizes with it, the
- * panel disables a preset it refuses, with the same reason.
+ * The recorder's sizes: the page layout each preset sizes the window to (the
+ * standard recording sizes, in CSS px), and the window bounds that give the
+ * tab that layout. The video is always every physical pixel of that page
+ * (layout × the display's pixel ratio: a 1080p page on a Retina display is a
+ * 3840 × 2160 video). Pure — the shell's worker
+ * (`browser-extension/background.ts`) resizes with it, the panel marks a
+ * preset it refuses (too big for this screen, a zoomed page), with the same
+ * reason.
  */
 
 /** A recording size, as the panel's dropdown lists it (a closed list). */
@@ -13,46 +17,29 @@ export interface RecordPreset {
   label: string;
   /** The page's CSS layout the window is resized to; `null`: kept as it is. */
   page: { width: number; height: number } | null;
-  /** The video's size; `null`: the page's own physical size. */
-  video: { width: number; height: number } | null;
 }
 
-const LANDSCAPE = { width: 1280, height: 720 };
-
 export const RECORD_PRESETS: readonly RecordPreset[] = [
-  {
-    id: "720p",
-    label: "720p",
-    page: LANDSCAPE,
-    video: { width: 1280, height: 720 },
-  },
-  {
-    id: "1080p",
-    label: "1080p",
-    page: LANDSCAPE,
-    video: { width: 1920, height: 1080 },
-  },
-  {
-    id: "1440p",
-    label: "1440p",
-    page: LANDSCAPE,
-    video: { width: 2560, height: 1440 },
-  },
-  {
-    id: "vertical",
-    label: "9:16",
-    page: { width: 540, height: 960 },
-    video: { width: 1080, height: 1920 },
-  },
-  { id: "as-is", label: "As is", page: null, video: null },
+  { id: "720p", label: "720p", page: { width: 1280, height: 720 } },
+  { id: "1080p", label: "1080p", page: { width: 1920, height: 1080 } },
+  { id: "1440p", label: "1440p", page: { width: 2560, height: 1440 } },
+  // A phone's layout (a 1080 × 1920 page fits no landscape screen); the
+  // video is 1080 × 1920 on a Retina display.
+  { id: "vertical", label: "9:16", page: { width: 540, height: 960 } },
+  { id: "as-is", label: "As is", page: null },
 ];
-
-export const DEFAULT_RECORD_PRESET: RecordPresetId = "1080p";
 
 export function recordPreset(id: RecordPresetId): RecordPreset {
   const preset = RECORD_PRESETS.find((p) => p.id === id);
   if (preset === undefined) throw new Error(`no record preset ${id}`);
   return preset;
+}
+
+/** A preset as the panel names it: its page size (`1280 × 720`), or As is. */
+export function presetSizeText(preset: RecordPreset): string {
+  return preset.page === null
+    ? preset.label
+    : `${preset.page.width} × ${preset.page.height}`;
 }
 
 /** The recorded tab and its window, as measured before a recording. */
@@ -72,7 +59,7 @@ export interface TabMeasure {
 }
 
 /** Why a preset cannot record this tab. */
-export type SizeRefusal = "does-not-fit" | "zoomed" | "upscale";
+export type SizeRefusal = "does-not-fit" | "zoomed";
 
 export type SizeResult<T> =
   { ok: true; value: T } | { ok: false; reason: SizeRefusal };
@@ -107,10 +94,19 @@ export function windowBoundsFor(
 }
 
 /**
- * The video size `preset` records `m`'s tab at: the preset's own, refused
- * when the page renders fewer physical pixels than it (a DPR-1 display at
- * 1080p would be an upscale); "As is" is the page's own physical size, made
- * even (H.264 needs even dimensions).
+ * The largest frame the recorder's encoder takes, in 16 × 16 macroblocks:
+ * H.264 level 5.1 (`avc1.640033`, `offscreen.ts`), 4096 × 2304. A page whose
+ * physical pixels exceed it (a 2560 × 1440 layout at DPR 2) is recorded at
+ * the largest size under it, its aspect kept.
+ */
+export const MAX_FRAME_MACROBLOCKS = 36_864;
+
+/**
+ * The video size `preset` records `m`'s tab at: every physical pixel of the
+ * page (its layout × the pixel ratio — the preset's layout, or the page's
+ * own for As is), scaled down only past the encoder's largest frame
+ * ({@link MAX_FRAME_MACROBLOCKS}), made even (H.264 needs even dimensions).
+ * A zoomed tab is refused for a preset: its CSS px are not the layout's.
  */
 export function outputFor(
   preset: RecordPreset,
@@ -121,20 +117,19 @@ export function outputFor(
 ): SizeResult<{ width: number; height: number }> {
   if (preset.page !== null && Math.abs(m.zoom - 1) > 1e-3)
     return { ok: false, reason: "zoomed" };
-  if (preset.video === null || preset.page === null) {
-    const even = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
-    return {
-      ok: true,
-      value: {
-        width: even(m.innerWidth * m.devicePixelRatio),
-        height: even(m.innerHeight * m.devicePixelRatio),
-      },
-    };
-  }
-  const physical = preset.page.width * m.devicePixelRatio;
-  if (preset.video.width > physical + 0.5)
-    return { ok: false, reason: "upscale" };
-  return { ok: true, value: preset.video };
+  const page = preset.page ?? { width: m.innerWidth, height: m.innerHeight };
+  const w = page.width * m.devicePixelRatio;
+  const h = page.height * m.devicePixelRatio;
+  const even = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
+  const blocks = (a: number, b: number) =>
+    Math.ceil(a / 16) * Math.ceil(b / 16);
+  let scale = Math.min(1, Math.sqrt((MAX_FRAME_MACROBLOCKS * 256) / (w * h)));
+  while (blocks(even(w * scale), even(h * scale)) > MAX_FRAME_MACROBLOCKS)
+    scale -= 0.001;
+  return {
+    ok: true,
+    value: { width: even(w * scale), height: even(h * scale) },
+  };
 }
 
 /** Whether `preset` can record `m`'s tab, and why not. */
@@ -154,11 +149,9 @@ export function presetFit(
 export function sizeRefusalText(reason: SizeRefusal): string {
   switch (reason) {
     case "does-not-fit":
-      return "Doesn’t fit this screen";
+      return "Too big for this screen";
     case "zoomed":
       return "Reset the page zoom to 100%";
-    case "upscale":
-      return "Needs a Retina display";
   }
 }
 

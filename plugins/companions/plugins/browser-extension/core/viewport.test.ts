@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  MAX_FRAME_MACROBLOCKS,
   outputFor,
   presetFit,
   recordPreset,
@@ -58,19 +59,41 @@ describe("windowBoundsFor", () => {
 });
 
 describe("outputFor", () => {
-  test("a preset's own size on Retina", () => {
-    expect(outputFor(recordPreset("1440p"), measure())).toEqual({
+  test("every physical pixel of the preset's page on Retina", () => {
+    expect(outputFor(recordPreset("720p"), measure())).toEqual({
       ok: true,
       value: { width: 2560, height: 1440 },
     });
+    expect(outputFor(recordPreset("1080p"), measure())).toEqual({
+      ok: true,
+      value: { width: 3840, height: 2160 },
+    });
   });
 
-  test("refuses an upscale on a DPR-1 display", () => {
+  test("past the encoder's largest frame: scaled under it, aspect kept", () => {
+    const out = outputFor(recordPreset("1440p"), measure());
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    const { width, height } = out.value;
+    expect(Math.ceil(width / 16) * Math.ceil(height / 16)).toBeLessThanOrEqual(
+      MAX_FRAME_MACROBLOCKS,
+    );
+    expect(width).toBeGreaterThan(4000);
+    expect(Math.abs(width / height - 16 / 9)).toBeLessThan(0.01);
+  });
+
+  test("the page's own size at DPR 1", () => {
     const m = measure({ devicePixelRatio: 1 });
-    expect(outputFor(recordPreset("720p"), m).ok).toBe(true);
     expect(outputFor(recordPreset("1080p"), m)).toEqual({
+      ok: true,
+      value: { width: 1920, height: 1080 },
+    });
+  });
+
+  test("a zoomed tab is refused for a preset", () => {
+    expect(outputFor(recordPreset("720p"), measure({ zoom: 1.1 }))).toEqual({
       ok: false,
-      reason: "upscale",
+      reason: "zoomed",
     });
   });
 
@@ -84,5 +107,15 @@ describe("outputFor", () => {
       ok: true,
       value: { width: 1000, height: 700 },
     });
+  });
+});
+
+describe("presetFit", () => {
+  test("1080p is too big for a 14-inch screen, 720p fits", () => {
+    expect(presetFit(recordPreset("1080p"), measure())).toEqual({
+      ok: false,
+      reason: "does-not-fit",
+    });
+    expect(presetFit(recordPreset("720p"), measure())).toEqual({ ok: true });
   });
 });

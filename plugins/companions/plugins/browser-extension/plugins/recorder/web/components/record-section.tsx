@@ -7,11 +7,11 @@ import {
 } from "@plugins/companions/plugins/browser-extension/web";
 import {
   presetFit,
+  presetSizeText,
   recordedMs,
   recordPreset,
   sizeRefusalText,
   stopCauseText,
-  RECORD_PRESETS,
   windowBoundsFor,
   type RecordPreset,
   type RecorderOptions,
@@ -178,10 +178,13 @@ function Body({
             onOptions={(next) => run(() => recorder.setOptions(next))}
             onApplySize={() => {
               const preset = recordPreset(options.preset);
-              run(async () => {
-                await recorder.applySize(preset.id);
-                await remeasure();
-              }, `Window sized for ${preset.label}`);
+              run(
+                async () => {
+                  await recorder.applySize(preset.id);
+                  await remeasure();
+                },
+                `Window sized: the page is ${presetSizeText(preset)}`,
+              );
             }}
             onMicOn={(next) =>
               run(async () => {
@@ -251,7 +254,7 @@ function RecordRow({
           const ok = presetFit(recordPreset(options.preset), fit.measure);
           return ok.ok
             ? null
-            : `${recordPreset(options.preset).label}: ${sizeRefusalText(ok.reason)}`;
+            : `${presetSizeText(recordPreset(options.preset))}: ${sizeRefusalText(ok.reason)}`;
         })();
   return (
     <div className="rec-row">
@@ -342,8 +345,7 @@ function RecordRow({
  * Apply, beside the size dropdown: size the window to the chosen preset's
  * page now, without recording (to lay the page out, or check it, first).
  * Off for As is (nothing to apply), a size this screen or zoom refuses, and
- * a page already at that size — each said in its tooltip (720p, 1080p and
- * 1440p share one layout: switching between them has nothing to resize).
+ * a page already at that size — each said in its tooltip.
  */
 function ApplySize({
   preset,
@@ -359,14 +361,14 @@ function ApplySize({
     page === null
       ? "As is keeps the window as it is"
       : measure.innerWidth === page.width && measure.innerHeight === page.height
-        ? alreadySized(page)
+        ? `Already sized: the page is ${page.width} × ${page.height}`
         : (() => {
             const bounds = windowBoundsFor(page, measure);
             return bounds.ok ? null : sizeRefusalText(bounds.reason);
           })();
   const title =
     off ??
-    `Resize the window to ${preset.label} now (page ${page?.width} × ${page?.height}), without recording`;
+    `Resize the window so the page is ${presetSizeText(preset)} now, without recording`;
   return (
     <button
       type="button"
@@ -379,19 +381,6 @@ function ApplySize({
       <Icon icon={icons.apply} />
     </button>
   );
-}
-
-/** Why Apply is off on a page already sized: which presets share its layout
- *  (only their video's resolution differs). */
-function alreadySized(page: { width: number; height: number }): string {
-  const sharing = RECORD_PRESETS.filter(
-    (p) => p.page?.width === page.width && p.page.height === page.height,
-  ).map((p) => p.label);
-  const shared =
-    sharing.length > 1
-      ? ` — ${sharing.join(", ")} share this layout; only the video’s resolution differs`
-      : "";
-  return `Already sized: the page is ${page.width} × ${page.height}${shared}`;
 }
 
 function Toggle({
@@ -431,10 +420,10 @@ function audioLabel(o: RecorderOptions): string {
 function sizeLabel(
   state: Extract<RecorderState, { kind: "recording" }>,
 ): string {
-  const preset = recordPreset(state.options.preset);
-  return preset.video === null
-    ? `current size · ${state.width} × ${state.height}`
-    : `${preset.label} · ${state.width} × ${state.height}`;
+  const page = recordPreset(state.options.preset).page;
+  return page === null
+    ? `current size · video ${state.width} × ${state.height}`
+    : `${page.width} × ${page.height} · video ${state.width} × ${state.height}`;
 }
 
 function RecordingCard({

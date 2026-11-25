@@ -40,7 +40,9 @@ export const RecorderOptionsSchema = z.object({
 export type RecorderOptions = z.infer<typeof RecorderOptionsSchema>;
 
 export const DEFAULT_RECORDER_OPTIONS: RecorderOptions = {
-  preset: "1080p",
+  // 720p: the one landscape layout a laptop's screen takes (a 1080p page is
+  // bigger than a 14-inch MacBook's).
+  preset: "720p",
   tabAudio: true,
   mic: false,
   clicks: true,

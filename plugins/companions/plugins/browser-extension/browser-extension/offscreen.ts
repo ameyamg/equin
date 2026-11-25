@@ -1,7 +1,7 @@
 /**
  * The recorder's offscreen document (reason USER_MEDIA): turns the worker's
- * tab-capture stream id into a `MediaStream`, scaled by Chrome to the preset's
- * video size, mixes the tab's audio and the microphone into one track, and
+ * tab-capture stream id into a `MediaStream` at every physical pixel of the
+ * page (the worker's `outputFor`), mixes the tab's audio and the microphone into one track, and
  * records it as H.264/AAC MP4 in 1 s chunks.
  *
  * It never calls equin itself — a fetch from the extension's origin reaches

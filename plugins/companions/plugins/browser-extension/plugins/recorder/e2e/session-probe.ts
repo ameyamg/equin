@@ -7,7 +7,7 @@
  * MediaRecorder, upload through the relay page. Twice:
  *
  * 1. Stop after a few seconds: it was still recording, and the file is a
- *    1920 × 1080 H.264 video holding those seconds.
+ *    2560 × 1440 H.264 video (a 1280 × 720 page at DPR 2) holding them.
  * 2. Resize the window mid-recording: it stops on its own, the video kept,
  *    and the state says why (`stoppedBy: "window-resized"`), for the panel.
  *
@@ -82,7 +82,7 @@ const context = await launchPersistentChromium(installed, profile, {
     `--disable-extensions-except=${shell}`,
     `--load-extension=${shell}`,
     `--allowlisted-extension-id=${EXTENSION_ID}`,
-    // A Retina display, as the user's: 1080p is a layout at DPR 2.
+    // A Retina display, as the user's: the video is the page's every pixel.
     "--force-device-scale-factor=2",
     // Maximized, as the user's window was: the start un-maximizes and
     // resizes it, the events of which stopped every recording.
@@ -185,7 +185,7 @@ try {
         type: "recorder.start",
         tabId: target.id,
         options: {
-          preset: "1080p",
+          preset: "720p",
           tabAudio: true,
           mic: false,
           clicks: true,
@@ -197,10 +197,10 @@ try {
     // Resize, countdown (3 s), capture.
     const recording = await until("recording", from);
     r.ok(
-      `${name}: it records at the preset's size`,
+      `${name}: it records every pixel of the preset's page`,
       recording.kind === "recording" &&
-        recording.width === 1920 &&
-        recording.height === 1080,
+        recording.width === 2560 &&
+        recording.height === 1440,
       JSON.stringify(recording),
     );
     return from;
@@ -298,9 +298,9 @@ async function checkVideo(name: string, saved: SavedRecording): Promise<void> {
   };
   const video = info.streams.find((s) => s.codec_name === "h264");
   r.eq(
-    `${name}: H.264, 1920 × 1080`,
+    `${name}: H.264, 2560 × 1440`,
     `${video?.width}x${video?.height}`,
-    "1920x1080",
+    "2560x1440",
   );
   r.ok(
     `${name}: it holds the seconds recorded`,

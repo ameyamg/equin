@@ -17073,7 +17073,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `browserExtensionConnection`
           - `browserExtensionShell`
           - `ConnectionStateSchema`
-          - `DEFAULT_RECORD_PRESET`
           - `DEFAULT_RECORDER_OPTIONS`
           - `EXTENSION_ID`
           - `EXTENSION_ORIGIN`
@@ -17087,6 +17086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `outputFor`
           - `PointerTrackSchema`
           - `presetFit`
+          - `presetSizeText`
           - `RECORD_PRESETS`
           - `recordedMs`
           - `RECORDER_RELAY_PATH`
@@ -17181,7 +17181,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `moveInstance`
               - `parseEquinAddress`
               - `sameInstance`
-        - **`recorder`** — The browser extension's tab recorder, in the panel: the Record section (BrowserExtension.Section 'record', after Wish) — the 'Record this tab' row with the size dropdown (720p / 1080p / 1440p / 9:16 / As is, each with its video size, one this tab cannot record disabled with the reason) and its Apply button (size the window to the chosen preset now, without recording), the tab audio / mic / clicks / countdown toggles and the round Record button (⌥⇧R); the live recording card (timer, Discard, Pause, Stop); and the last recording saved, with Show in Files and Delete (to the Trash) on hover. The relay page the extension's offscreen recorder frames to upload a recording as the owner (its own unlisted app at /home/browser-extension-recorder). Registers the Recordings folder setting. The tab recorder, every host's half: registers the Recordings folder setting (Settings → Config), which the machine half writes recordings into.
+        - **`recorder`** — The browser extension's tab recorder, in the panel: the Record section (BrowserExtension.Section 'record', after Wish) — the 'Record this tab' row with the size dropdown (each preset named by the page size it lays the tab out at — 1280 × 720, 1920 × 1080, 2560 × 1440, 540 × 960, As is — with 720p… and the video size on this display beneath, the video always every physical pixel of the page; one this tab cannot record now stays choosable with a Too big / Zoomed badge) and its Apply button (size the window to the chosen preset now, without recording), the tab audio / mic / clicks / countdown toggles and the round Record button (⌥⇧R); the live recording card (timer, Discard, Pause, Stop); and the last recording saved, with Show in Files and Delete (to the Trash) on hover. The relay page the extension's offscreen recorder frames to upload a recording as the owner (its own unlisted app at /home/browser-extension-recorder). Registers the Recordings folder setting. The tab recorder, every host's half: registers the Recordings folder setting (Settings → Config), which the machine half writes recordings into.
           - Web:
             - Contributes:
               - `ConfigV2.WebRegister` "recorder"

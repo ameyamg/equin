@@ -48,9 +48,9 @@ export {
   type ShellState,
 } from "./shell-state";
 export {
-  DEFAULT_RECORD_PRESET,
   outputFor,
   presetFit,
+  presetSizeText,
   RECORD_PRESETS,
   recordPreset,
   sizeRefusalText,
