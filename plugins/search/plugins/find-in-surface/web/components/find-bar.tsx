@@ -13,7 +13,9 @@ import {
   useTransient,
 } from "@plugins/primitives/plugins/kept-state/web";
 import {
+  Button,
   ControlSizeProvider,
+  Separator,
   Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -45,8 +47,6 @@ import {
 import "./find-in-surface.css";
 
 const searchIcon = symbol("search");
-const matchCaseIcon = symbol("match-case");
-const matchWordIcon = symbol("match-word");
 const previousIcon = symbol("expand-less");
 const nextIcon = symbol("expand-more");
 const closeIcon = symbol("close");
@@ -373,55 +373,59 @@ export function FindBar({ label }: FindBarProps) {
         aria-label={label}
         className="find-bar"
       >
-        <Surface level="overlay" className="p-2xs">
+        <Surface level="overlay" className="find-bar-surface">
           <ControlSizeProvider size="sm">
             <Stack direction="row" gap="2xs" align="start">
-              <Icon
-                icon={searchIcon}
-                className={`${rigidClass()} find-bar-glyph text-muted-foreground`}
-              />
               <Fill>
-                <Textarea
-                  ref={fieldRef}
-                  bare
-                  fitContent
-                  rows={1}
-                  keep={keptField(kept, "query")}
-                  placeholder={label}
-                  aria-label={label}
-                  spellCheck={false}
-                  aria-invalid={missed}
-                  className="find-query"
-                  onKeyDown={(e) => {
-                    const field = e.currentTarget;
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      close();
-                    } else if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      step(1);
-                    } else if (
-                      e.key === "ArrowUp" &&
-                      !e.shiftKey &&
-                      caretOnEdgeLine(field, "first")
-                    ) {
-                      e.preventDefault();
-                      step(-1);
-                    } else if (
-                      e.key === "ArrowDown" &&
-                      !e.shiftKey &&
-                      caretOnEdgeLine(field, "last")
-                    ) {
-                      e.preventDefault();
-                      step(1);
-                    }
-                  }}
-                />
+                <Stack direction="row" gap="sm" align="start">
+                  <Icon
+                    icon={searchIcon}
+                    className={`${rigidClass()} find-bar-glyph`}
+                  />
+                  <Fill>
+                    <Textarea
+                      ref={fieldRef}
+                      bare
+                      fitContent
+                      rows={1}
+                      keep={keptField(kept, "query")}
+                      placeholder={label}
+                      aria-label={label}
+                      spellCheck={false}
+                      aria-invalid={missed}
+                      className="find-query text-control"
+                      onKeyDown={(e) => {
+                        const field = e.currentTarget;
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          close();
+                        } else if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          step(1);
+                        } else if (
+                          e.key === "ArrowUp" &&
+                          !e.shiftKey &&
+                          caretOnEdgeLine(field, "first")
+                        ) {
+                          e.preventDefault();
+                          step(-1);
+                        } else if (
+                          e.key === "ArrowDown" &&
+                          !e.shiftKey &&
+                          caretOnEdgeLine(field, "last")
+                        ) {
+                          e.preventDefault();
+                          step(1);
+                        }
+                      }}
+                    />
+                  </Fill>
+                </Stack>
               </Fill>
               <Text
-                variant="count"
+                variant="caption"
                 tone={missed ? "destructive" : "muted"}
-                className={`${rigidClass()} find-bar-count`}
+                className={`${rigidClass()} find-bar-count tabular-nums`}
                 aria-live="polite"
               >
                 {state.query.trim() === ""
@@ -430,25 +434,35 @@ export function FindBar({ label }: FindBarProps) {
                     ? "No results"
                     : `${found.active + 1} of ${n}`}
               </Text>
-              <IconButton
-                icon={matchCaseIcon}
-                label="Match case"
-                active={state.matchCase}
+              <Separator orientation="vertical" className="find-bar-sep" />
+              <Button
+                variant="ghost"
+                aspect="icon"
+                tooltip="Match case"
                 aria-pressed={state.matchCase}
+                className="find-bar-button find-bar-toggle text-caption"
                 onClick={() =>
                   setState((s) => ({ ...s, matchCase: !s.matchCase }))
                 }
-              />
-              <IconButton
-                icon={matchWordIcon}
-                label="Whole word"
-                active={state.wholeWord}
+              >
+                Aa
+              </Button>
+              <Button
+                variant="ghost"
+                aspect="icon"
+                tooltip="Whole word"
                 aria-pressed={state.wholeWord}
+                className="find-bar-button find-bar-toggle text-caption"
                 onClick={() =>
                   setState((s) => ({ ...s, wholeWord: !s.wholeWord }))
                 }
-              />
+              >
+                <span className="find-bar-whole-word">ab</span>
+              </Button>
+              <Separator orientation="vertical" className="find-bar-sep" />
               <IconButton
+                glyph="small"
+                className="find-bar-button"
                 icon={previousIcon}
                 label="Previous match"
                 shortcut="mod+shift+g"
@@ -456,6 +470,8 @@ export function FindBar({ label }: FindBarProps) {
                 onClick={() => step(-1)}
               />
               <IconButton
+                glyph="small"
+                className="find-bar-button"
                 icon={nextIcon}
                 label="Next match"
                 shortcut="mod+g"
@@ -463,6 +479,8 @@ export function FindBar({ label }: FindBarProps) {
                 onClick={() => step(1)}
               />
               <IconButton
+                glyph="small"
+                className="find-bar-button"
                 icon={closeIcon}
                 label="Close"
                 shortcut="escape"

@@ -15,28 +15,59 @@
 
 /* The bar — on the pin itself, so the % is the pane's (a % inside a
    shrink-to-fit box resolves to nothing): wide enough for a sentence, never
-   wider than its pane. */
+   wider than its pane. Measures follow the find prototype
+   (proto-1795552135-8woydk): a 34px field row in a 4px frame, 10px before the
+   glyph. */
 .find-bar {
-  width: min(26rem, calc(100% - 1rem));
+  --find-row: calc(var(--control-height-md) + var(--space-2xs));
+  width: min(26.25rem, calc(100% - 1rem));
+}
+.find-bar-surface {
+  padding: var(--space-xs) var(--space-xs) var(--space-xs)
+    calc(var(--space-sm) + var(--space-2xs));
+}
+/* Every item of the row sits centred on the field's first line. */
+.find-bar-glyph {
+  width: 0.875rem;
+  height: var(--find-row);
+  color: var(--faint-foreground);
+}
+.find-bar-count {
+  line-height: var(--find-row);
+  padding-inline: calc(var(--space-xs) + var(--space-2xs));
+}
+.find-bar-button {
+  margin-block-start: calc((var(--find-row) - var(--control-height-sm)) / 2);
+  color: var(--muted-foreground);
+}
+.find-bar-sep {
+  align-self: flex-start;
+  height: 1.125rem;
+  margin-block-start: calc((var(--find-row) - 1.125rem) / 2);
+  margin-inline: var(--space-xs);
 }
 /* One line until the query has a line break, then it grows up to five. */
 .find-query {
+  /* Block: an inline textarea sits on a baseline and grows the row by its descent. */
+  display: block;
   width: 100%;
   resize: none;
   max-height: calc(5lh + 0.5rem);
   white-space: pre;
   overflow-x: hidden;
-  padding-block: calc((var(--control-height-sm) - 1lh) / 2);
-  line-height: 1.25rem;
+  scrollbar-width: none;
+  padding-block: calc((var(--find-row) - 1lh) / 2);
+  color: var(--foreground);
+}
+.find-query::placeholder {
+  color: var(--faint-foreground);
+}
+.find-query[aria-invalid="true"] {
+  color: var(--destructive);
 }
 .find-query:focus-visible {
   /* The bar is the field's box; a ring inside it would be a box in a box. */
   outline: none;
-}
-.find-bar-glyph,
-.find-bar-count {
-  line-height: var(--control-height-sm);
-  height: var(--control-height-sm);
 }
 
 .find-tick {
@@ -45,4 +76,16 @@
 }
 .find-tick-active {
   background-color: var(--find-match-active);
+}
+
+/* Match case / whole word: the option said in letters, as an editor's find
+   does — "ab" underlined is a whole word. */
+.find-bar-toggle[aria-pressed="true"] {
+  background-color: var(--selected);
+  color: var(--foreground);
+}
+.find-bar-whole-word {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
 }

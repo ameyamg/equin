@@ -74,9 +74,9 @@ state (`search.find-bar`): a reload gives them back.
 
 - Description: Ctrl+F inside one surface: <FindScope> around a <FindRoot> (the searched region, as drawn — no box of its own) and a <FindBar label> (pinned top-right in a non-scrolling overlay). Every match painted with the CSS Custom Highlight API (the DOM is never touched), the current one distinct and scrolled into view, a mark per match on the scroller's edge; match case / whole word; a line break in the query matches a line break on screen (Shift+Enter types one). Enter or ↓ on the last line: next; ↑ on the first line: previous; ⌘G / ⇧⌘G; Esc closes. The key goes to the region holding focus, else the one last pressed in, else the only visible one — none, and the browser's own find opens.
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
     - `primitives/kept-state` ×3
-    - `primitives/css/ui-kit` ×2
     - `primitives/dom/scroll-reveal` ×2
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
@@ -99,12 +99,26 @@ state (`search.find-bar`): a reload gives them back.
     - `FindScope`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --find-match`
     - `ui/tokens/color-palette --find-match-active`
     - `ui/tokens/color-palette --find-match-active-foreground`
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --selected`
+    - `ui/tokens/density --control-height-md`
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-size-control`
+    - `ui/tokens/type-scale --font-weight-control`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
+    - `ui/tokens/type-scale --line-height-control`
   - Imported by: `apps/pages/page-tree`
 - Core:
   - Exports (types):

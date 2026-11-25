@@ -49,7 +49,7 @@ follow.
   - Exports (types): `TypeScaleTokenValues`
   - Exports (values): `typeScaleGroup`
 - Cross-plugin:
-  - Tokens used by: 240 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 241 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
     - `conversations` ×41
     - `primitives` ×38
@@ -68,6 +68,7 @@ follow.
     - `build` ×2
     - `code-explorer` ×2
     - `config_v2` ×2
+    - `search` ×2
     - `apps-core/app-launcher`
     - `backup/runs-arm`
     - `framework/web-core`
@@ -76,7 +77,6 @@ follow.
     - `layouts/miller`
     - `media/player`
     - `screenshot`
-    - `search/quick-find`
     - `tag-tree/picker`
     - `upstream`
   - Imported by:

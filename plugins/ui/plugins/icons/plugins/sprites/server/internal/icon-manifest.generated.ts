@@ -244,8 +244,6 @@ export const ICON_MANIFEST: {
     "mail",
     "map",
     "markdown",
-    "match-case",
-    "match-word",
     "memory",
     "menu",
     "menu-book",

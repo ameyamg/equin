@@ -63159,9 +63159,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `search/quick-find`
     - **`find-in-surface`** — Ctrl+F inside one surface: <FindScope> around a <FindRoot> (the searched region, as drawn — no box of its own) and a <FindBar label> (pinned top-right in a non-scrolling overlay). Every match painted with the CSS Custom Highlight API (the DOM is never touched), the current one distinct and scrolled into view, a mark per match on the scroller's edge; match case / whole word; a line break in the query matches a line break on screen (Shift+Enter types one). Enter or ↓ on the last line: next; ↑ on the first line: previous; ⌘G / ⇧⌘G; Esc closes. The key goes to the region holding focus, else the one last pressed in, else the only visible one — none, and the browser's own find opens.
       - Web:
-        - Uses: 21 symbols — full list in [`plugins/search/plugins/find-in-surface/REFERENCE.md`](../plugins/search/plugins/find-in-surface/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/search/plugins/find-in-surface/REFERENCE.md`](../plugins/search/plugins/find-in-surface/REFERENCE.md)
+          - `primitives/css/ui-kit` ×4
           - `primitives/kept-state` ×3
-          - `primitives/css/ui-kit` ×2
           - `primitives/dom/scroll-reveal` ×2
           - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
@@ -63184,12 +63184,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FindScope`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/color-palette --faint-foreground`
           - `ui/tokens/color-palette --find-match`
           - `ui/tokens/color-palette --find-match-active`
           - `ui/tokens/color-palette --find-match-active-foreground`
+          - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/color-palette --selected`
+          - `ui/tokens/density --control-height-md`
           - `ui/tokens/density --control-height-sm`
           - `ui/tokens/density --space-2xs`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xs`
+          - `ui/tokens/type-scale --font-scale`
+          - `ui/tokens/type-scale --font-size-caption`
+          - `ui/tokens/type-scale --font-size-control`
+          - `ui/tokens/type-scale --font-weight-control`
+          - `ui/tokens/type-scale --font-weight-normal`
+          - `ui/tokens/type-scale --line-height-caption`
+          - `ui/tokens/type-scale --line-height-control`
         - Imported by: `apps/pages/page-tree`
       - Core:
         - Exports (types):
@@ -70460,7 +70474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 240 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 241 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×62
               - `conversations` ×41
               - `primitives` ×38
@@ -70479,6 +70493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
+              - `search` ×2
               - `apps-core/app-launcher`
               - `backup/runs-arm`
               - `framework/web-core`
@@ -70487,7 +70502,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller`
               - `media/player`
               - `screenshot`
-              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
             - Imported by:
