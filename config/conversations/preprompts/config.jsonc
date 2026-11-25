@@ -4,7 +4,7 @@
     {
       "id": "2e1cfdf4-df13-450d-b65a-cb54312670dc",
       "icon": {
-        "icon": null,
+        "icon": "backup",
         "color": null
       },
       "title": "Auto-Push",
@@ -13,7 +13,7 @@
     {
       "id": "145ae26a-ccda-4144-9bdd-854cc233467f",
       "icon": {
-        "icon": null,
+        "icon": "logout",
         "color": null
       },
       "title": "Auto-push and exit",
