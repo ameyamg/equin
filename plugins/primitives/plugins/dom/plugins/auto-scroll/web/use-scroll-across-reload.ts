@@ -7,7 +7,20 @@ import {
 import { listenForNavigation } from "./announce-navigation";
 import { useScrollRevival } from "./scroll-revival";
 import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
-import { claimKeptKey, markKept } from "./scroller-marks";
+import {
+  claimKeptKey,
+  claimSharedKey,
+  markKept,
+  onFollows,
+} from "./scroller-marks";
+
+/**
+ * How many live scrollers may carry one key. `one` (a name written for one
+ * scroller): a second throws at its attach. `many` (a key shared by design, a
+ * call site's — `<Scroll>`'s default keep): it keeps while one scroller holds
+ * it, and nothing once a second does (`claimSharedKey`).
+ */
+export type KeptInstances = "one" | "many";
 
 /**
  * This document. An offset saved under another one was saved before a reload
@@ -64,9 +77,14 @@ const SCROLL_KEYS = new Set([
  * anchoring off, until the reader takes over (wheel, touch, a pointer down, a key pressed in it or a scroll
  * key, an announced navigation). A restore is a compensation, not a
  * navigation: it announces nothing.
+ *
+ * A stick-to-bottom follower owns its scroller's offset: once the scroller is
+ * marked one (`useStickyScroll`), this keep stands down for good — it would
+ * otherwise put back an old offset while the follower pins the bottom.
  */
 export function useScrollAcrossReload(
   key: string | undefined,
+  instances: KeptInstances = "one",
 ): (el: HTMLElement | null) => void {
   const store = useStore(offsetStore);
   const revival = useScrollRevival();
@@ -75,8 +93,19 @@ export function useScrollAcrossReload(
 
   useLayoutEffect(() => {
     if (!el || key === undefined) return;
-    // Throws when another live scroller keeps under this key (see claimKeptKey).
-    const release = claimKeptKey(el, key);
+    // `one`: throws when another live scroller keeps under this key (see
+    // claimKeptKey). `many`: kept only while no other live scroller carries it.
+    let standDown = () => {};
+    const release =
+      instances === "one"
+        ? claimKeptKey(el, key)
+        : claimSharedKey(el, key, () => standDown());
+    if (release === null) {
+      // Rendered more than once at a time: no instance can be told apart, and
+      // what was kept under it describes none of them.
+      store.remove(key);
+      return;
+    }
     const unmark = markKept(el, key);
     const saved = store.read(key);
     let target =
@@ -148,19 +177,17 @@ export function useScrollAcrossReload(
     if (target !== null) {
       setAnchoring(el, "none");
       arrivals.observe(el, { childList: true, subtree: true });
-      apply();
+      // A shared key waits out the commit: a second instance mounting in it
+      // stands this one down before anything is written (a microtask still
+      // runs before paint).
+      if (instances === "one") apply();
+      else queueMicrotask(apply);
     }
     const unlisten = listenForNavigation(el, stopRestoring);
-    el.addEventListener("scroll", onScroll, { passive: true });
-    el.addEventListener("wheel", stopRestoring, { passive: true });
-    el.addEventListener("touchstart", stopRestoring, { passive: true });
-    el.addEventListener("pointerdown", stopRestoring);
-    // eslint-disable-next-line shortcuts/no-window-key-listener -- observes, never handles: a key the reader presses in this scroller (or a scroll key on the body) ends the restore; nothing is prevented
-    window.addEventListener("keydown", onKeyDown);
-    // A reload unmounts nothing: the page hiding is the last chance to save.
-    window.addEventListener("pagehide", flush);
-    return () => {
-      flush();
+    let detached = false;
+    const detach = () => {
+      if (detached) return;
+      detached = true;
       unmark();
       release();
       stopRestoring();
@@ -172,7 +199,30 @@ export function useScrollAcrossReload(
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("pagehide", flush);
     };
-  }, [el, key, store, revival]);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("wheel", stopRestoring, { passive: true });
+    el.addEventListener("touchstart", stopRestoring, { passive: true });
+    el.addEventListener("pointerdown", stopRestoring);
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- observes, never handles: a key the reader presses in this scroller (or a scroll key on the body) ends the restore; nothing is prevented
+    window.addEventListener("keydown", onKeyDown);
+    // A reload unmounts nothing: the page hiding is the last chance to save.
+    window.addEventListener("pagehide", flush);
+    // Standing down for good: this keep no longer owns the scroller's offset,
+    // and what it kept no longer describes it.
+    standDown = () => {
+      if (saveTimer !== null) clearTimeout(saveTimer);
+      saveTimer = null;
+      detach();
+      store.remove(key);
+    };
+    // A follower took the scroller: its offset is the follower's from now on.
+    const stopWatchingFollows = onFollows(el, () => standDown());
+    return () => {
+      stopWatchingFollows();
+      if (!detached) flush();
+      detach();
+    };
+  }, [el, key, instances, store, revival]);
 
   return ref;
 }

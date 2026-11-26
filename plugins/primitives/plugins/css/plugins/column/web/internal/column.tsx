@@ -1,4 +1,7 @@
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import {
+  Scroll,
+  type ScrollKeep,
+} from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   rampClass,
   type SpaceStep,
@@ -46,6 +49,12 @@ type ColumnInset =
       /** Wrap `body` in a `<Scroll axis="y" fill>` cell. Defaults to true. */
       scrollBody?: true;
       /**
+       * The body scroller's keep across a reload (`Scroll`'s `keep`). Leave it
+       * unset: the build writes the column's call site here, so the body is
+       * kept under where the column is written, not under `column.tsx`.
+       */
+      keep?: ScrollKeep;
+      /**
        * Open the column as a region inset by this ramp step: header, body and
        * footer content lands on the rail (and bands on its text rail — a
        * column's body is rows, so the text rail is one row pad further in) by
@@ -58,6 +67,8 @@ type ColumnInset =
       /** A plain flexible body that manages its own overflow. */
       scrollBody: false;
       inset?: undefined;
+      /** No scroller of the column's own to keep: the body's own `<Scroll>` keeps itself. */
+      keep?: ScrollKeep;
     };
 
 export type ColumnProps = ColumnBaseProps & ColumnSizing & ColumnInset;
@@ -134,6 +145,7 @@ export function Column({
   footer,
   scrollBody = true,
   inset,
+  keep,
   rules = false,
   hideScrollbar = false,
   fill = false,
@@ -192,6 +204,7 @@ export function Column({
             <Scroll
               axis="y"
               fill
+              keep={keep}
               hideScrollbar={hideScrollbar}
               className={regionInset}
             >

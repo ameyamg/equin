@@ -55,7 +55,7 @@ reads what is on screen rather than a per-app flag.
   - Slot contributors:
     - `AppShell.Framing` ← `ui.sidebar-framing`
     - `AppShell.Brand` ← `apps-core.app-launcher`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×13
     - `primitives/pane` ×4
     - `primitives/collapsible` ×3
@@ -69,6 +69,7 @@ reads what is on screen rather than a per-app flag.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/auto-scroll.KeepScrollScope`
     - `primitives/scope/surface-id.useSurfaceTabId`
   - Exports (types):
     - `AppShellBrandForm`

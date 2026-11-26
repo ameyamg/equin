@@ -16,6 +16,7 @@ import { SidewaysScrollProvider } from "@plugins/primitives/plugins/css/plugins/
 import { scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/web";
 import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
+import { PopupSurface } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/use-scroll-fade";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
@@ -267,7 +268,11 @@ export function OverlayPanel({
                 <div className="rail-band-region">{header}</div>
               </div>
             )}
-            <IconScopeProvider scope={popupScope}>{children}</IconScopeProvider>
+            <IconScopeProvider scope={popupScope}>
+              {/* A popup's content: a reload never reopens it, so its
+                  scrollers keep nothing by default (css/scroll). */}
+              <PopupSurface>{children}</PopupSurface>
+            </IconScopeProvider>
             {footer != null && (
               // The header's mirror: `my-overlay-footer` bleeds DOWN through
               // the panel's block padding (`--rail-block-end`) and spaces the

@@ -42,10 +42,43 @@ export function markKept(el: HTMLElement, key: string): () => void {
   };
 }
 
+/** Whoever waits to hear that a scroller became a follower ({@link onFollows}). */
+const followWatchers = new Map<HTMLElement, Set<() => void>>();
+
 /** Mark `el` a stick-to-bottom follower while it is; returns the unmark. */
 export function markFollows(el: HTMLElement): () => void {
   el.setAttribute(FOLLOWS_ATTR, "");
+  for (const watcher of [...(followWatchers.get(el) ?? [])]) watcher();
   return () => el.removeAttribute(FOLLOWS_ATTR);
+}
+
+/**
+ * Call `then` once `el` is a stick-to-bottom follower — now, when it already
+ * is, else when {@link markFollows} marks it. A follower owns its scroller's
+ * offset (it pins the bottom, or keeps its own reading position when it
+ * persists), so a reload keep on the same scroller stands down through this:
+ * the follower marks its scroller in a passive effect, after the scroller's
+ * own keep attached. Returns the stop.
+ */
+export function onFollows(el: HTMLElement, then: () => void): () => void {
+  if (el.hasAttribute(FOLLOWS_ATTR)) {
+    then();
+    return () => {};
+  }
+  let watchers = followWatchers.get(el);
+  if (watchers === undefined) followWatchers.set(el, (watchers = new Set()));
+  // Once: a follower marks again whenever its sentinel or persist key changes.
+  const stop = () => {
+    watchers.delete(once);
+    if (watchers.size === 0 && followWatchers.get(el) === watchers)
+      followWatchers.delete(el);
+  };
+  const once = () => {
+    stop();
+    then();
+  };
+  watchers.add(once);
+  return stop;
 }
 
 /**
@@ -65,5 +98,50 @@ export function claimKeptKey(el: HTMLElement, key: string): () => void {
   holders.set(key, el);
   return () => {
     if (holders.get(key) === el) holders.delete(key);
+  };
+}
+
+/**
+ * Live scrollers keeping under a key shared by design — a call site's — each
+ * with how it stands down; and the keys found rendered more than once at a
+ * time in this document.
+ */
+const sharedHolders = new Map<string, Map<HTMLElement, () => void>>();
+const ambiguousKeys = new Set<string>();
+
+/**
+ * Claim `key` for `el` when several scrollers may carry it by design (one
+ * call site rendered more than once in a scope: a code block per row, a card
+ * per item). Those instances have nothing that tells them apart across a
+ * reload — numbering them by mount order puts one's offset into another once
+ * anything mounted, unmounted or moved — so the key keeps only while ONE
+ * scroller holds it. The moment a second live scroller claims it, every holder
+ * stands down (`standDown`: it drops its mark and its entry) and the key keeps
+ * nothing for the rest of this document.
+ *
+ * Returns the release, or `null` when `el` keeps nothing under it.
+ */
+export function claimSharedKey(
+  el: HTMLElement,
+  key: string,
+  standDown: () => void,
+): (() => void) | null {
+  if (ambiguousKeys.has(key)) return null;
+  const live = sharedHolders.get(key) ?? new Map<HTMLElement, () => void>();
+  for (const other of [...live.keys()])
+    if (other !== el && !other.isConnected) live.delete(other);
+  if ([...live.keys()].some((other) => other !== el)) {
+    ambiguousKeys.add(key);
+    sharedHolders.delete(key);
+    for (const down of live.values()) down();
+    return null;
+  }
+  live.set(el, standDown);
+  sharedHolders.set(key, live);
+  return () => {
+    if (live.get(el) !== standDown) return;
+    live.delete(el);
+    if (live.size === 0 && sharedHolders.get(key) === live)
+      sharedHolders.delete(key);
   };
 }

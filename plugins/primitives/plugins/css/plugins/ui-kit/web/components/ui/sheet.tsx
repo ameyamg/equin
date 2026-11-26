@@ -1,4 +1,5 @@
 import * as React from "react";
+import { PopupSurface } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { MenuSurfaceProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-surface";
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 
@@ -100,7 +101,11 @@ function SheetContent({
             contract so content opened from a line container wraps instead of
             collapsing onto one line. */}
           <SingleLineProvider value={false}>
-            <ContentScope fill={false}>{children}</ContentScope>
+            <ContentScope fill={false}>
+              {/* A reload never reopens a sheet: its scrollers keep nothing
+                  by default (css/scroll). */}
+              <PopupSurface>{children}</PopupSurface>
+            </ContentScope>
           </SingleLineProvider>
           {showCloseButton && (
             <SheetPrimitive.Close

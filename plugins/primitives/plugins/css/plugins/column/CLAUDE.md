@@ -40,6 +40,10 @@ Only present slots render — an absent slot produces no region and no phantom g
 - **`scrollBody`** — wrap `body` in a `<Scroll axis="y" fill>` cell. Default
   `true`. Set `false` for a plain flexible region (`min-h-0 flex-1`) that manages
   its own overflow (e.g. an embedded `data-view`).
+- **`keep`** — the scrolling body's keep across a reload (`Scroll`'s
+  `keep`). Leave it unset: the build writes the column's call site here, so
+  the body is kept under where the column is written, not under `column.tsx`
+  (`scroll`'s "Kept across a reload by default").
 - **`fill`** — emit the flex-child fill pair (`min-h-0 flex-1`) on the root so the
   column fills its own flex-col parent. Default `false`. Needed when `Column` is
   itself a flex child whose height is externally clamped.
@@ -96,6 +100,7 @@ is a region owner (slice 2's document panes).
 - Web:
   - Uses:
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/scroll.ScrollKeep`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
   - Exports (types):

@@ -7,6 +7,8 @@ import {
   useKeptScroll,
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import type { Transient } from "@plugins/primitives/plugins/kept-state/core";
+import type { ScrollSite } from "../../core";
+import { useInPopupSurface } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { useMemo, type Ref, type RefCallback } from "react";
 import type React from "react";
 import "./scroll.css";
@@ -17,6 +19,47 @@ import "./scroll.css";
  * versa); `both` opens both axes.
  */
 export type ScrollAxis = "y" | "x" | "both";
+
+/**
+ * How a scroller's offset fares across a reload: kept under its call site
+ * (`ScrollSite`, the build's default), kept under a name written for it, or
+ * throwaway by design (`transient("<why>")`).
+ */
+export type ScrollKeep = string | ScrollSite | Transient;
+
+/**
+ * The name a scroller keeps under, and whether other scrollers of its scope
+ * may share it. A call site is shared by design (one `<Scroll>` rendered once
+ * per row) and then has no identity to tell its instances apart, so it keeps
+ * while it is the only one in its scope (`instances: "many"`). A written name
+ * is one scroller's: a second throws. The call site keeps nothing in a popup
+ * (a reload never reopens one) or on a sideways scroller (only the vertical
+ * offset is kept); a written name still does.
+ */
+function keptName(
+  keep: ScrollKeep | undefined,
+  axis: ScrollAxis,
+  inPopup: boolean,
+): {
+  name: string | undefined;
+  instances: "one" | "many";
+  /** Why its offset is throwaway — the dev loss detector's mark — or "". */
+  transientReason: string;
+} {
+  if (typeof keep === "string")
+    return { name: keep, instances: "one", transientReason: "" };
+  if (keep?.kind === "transient")
+    return { name: undefined, instances: "one", transientReason: keep.reason };
+  if (keep?.kind === "site" && inPopup)
+    return {
+      name: undefined,
+      instances: "one",
+      transientReason: "in a popup: a reload never reopens it",
+    };
+  if (keep?.kind === "site" && axis !== "x")
+    return { name: keep.site, instances: "many", transientReason: "" };
+  return { name: undefined, instances: "one", transientReason: "" };
+}
 
 const OVERFLOW_CLASS: Record<ScrollAxis, string> = {
   // A vertical scroller ALSO scrolls sideways while it holds content marked
@@ -96,20 +139,26 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
    */
   bleed?: boolean;
   /**
-   * Keep this scroller's offset across a page reload, under this name within
-   * the enclosing keep scope (auto-scroll's `KeepScrollScope` — every pane
-   * body opens one, keyed by its pane instance). The name tells the scope's
-   * scrollers apart: a body that scrolls in a box of its own (a file preview, a
-   * code listing) names it, so it is kept like the pane's own scroller.
-   * Outside a scope it keeps nothing; unset keeps nothing.
+   * How this scroller's offset fares across a page reload, within the
+   * enclosing keep scope (auto-scroll's `KeepScrollScope` — every pane opens
+   * one, keyed by its pane instance). Outside a scope nothing is kept.
    *
-   * `transient("<why>")` says its offset is throwaway by design (a picker's
-   * list that opens at its top). Unset and filling most of its pane, a
-   * vertical scroller the user scrolls is filed by the dev loss detector
-   * (`kept-state/loss-detector`) as a `reload-loss`: a reload would open it
-   * at its top.
+   * Leave it unset: the build writes the call site here (`ScrollSite`, this
+   * plugin's `vite/index.ts`), so a vertical scroller is kept by default under
+   * where it is written — while it is the only live instance of that call
+   * site in its scope, and not inside a popup.
+   *
+   * - a name (`keep="pane"`): kept under it — for a scroller whose entry must
+   *   survive its code moving, or one passed through a wrapper. Unique in its
+   *   scope: two live scrollers under one name throw.
+   * - `transient("<why>")`: throwaway by design (a picker's list that opens
+   *   at its top); the reason is the review surface.
+   *
+   * Without the build's stamp (a test) an unset keep keeps nothing, and the
+   * dev loss detector (`kept-state/loss-detector`) files a scrolled, unkept
+   * main scroller as a `reload-loss`.
    */
-  keep?: string | Transient;
+  keep?: ScrollKeep;
 }
 
 /**
@@ -139,7 +188,12 @@ export function Scroll({
   ...rest
 }: ScrollProps) {
   const bleeds = bleed && axis === "x";
-  const kept = useKeptScroll(typeof keep === "string" ? keep : undefined);
+  const { name, instances, transientReason } = keptName(
+    keep,
+    axis,
+    useInPopupSurface(),
+  );
+  const kept = useKeptScroll(name, instances);
   // Stable across renders: a new callback ref would detach and re-attach the
   // scroller on every render.
   const scrollRef = useMemo(() => bothRefs(kept, ref), [kept, ref]);
@@ -159,7 +213,9 @@ export function Scroll({
       // it is transient when it says so (auto-scroll's scroller marks).
       {...(axis === "x"
         ? {}
-        : { [SCROLLER_ATTR]: typeof keep === "object" ? keep.reason : "" })}
+        : {
+            [SCROLLER_ATTR]: transientReason,
+          })}
       // Bleed: the region and the bleeding scroller are keyed on in scroll.css.
       data-bleed-region={bleed && axis === "y" ? "" : undefined}
       data-bleed={bleeds ? "" : undefined}

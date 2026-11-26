@@ -23,7 +23,11 @@
 // contribution shape `{ order, plugin, appliesTo }` (web-core's
 // `BabelContribution`) and reserve
 // `order: -100` ("must run first") so the compiler always precedes the default
-// `order: 0` contributions, regardless of filesystem discovery order.
+// `order: 0` contributions, regardless of filesystem discovery order. The one
+// contribution ordered before it, css/scroll's call-site `keep` stamp (-200),
+// must read the component a JSX element is WRITTEN in, which the compiler's
+// outlining (`.map` callbacks into a module-level `_temp`) loses; it only adds a
+// constant attribute, which the compiler then memoizes like any other.
 //
 // React 19 (react/react-dom ^19.1.0) has NATIVE compiler support: `target: "19"`
 // means NO `react-compiler-runtime` polyfill is needed (the runtime ships in

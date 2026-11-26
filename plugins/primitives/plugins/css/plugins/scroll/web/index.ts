@@ -5,6 +5,7 @@ export {
   scrollClasses,
   type ScrollProps,
   type ScrollAxis,
+  type ScrollKeep,
 } from "./internal/scroll";
 export { useScrollsSideways } from "./internal/use-scrolls-sideways";
 

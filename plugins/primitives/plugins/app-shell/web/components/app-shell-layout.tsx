@@ -32,6 +32,7 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { SidebarItem } from "./sidebar-nav-item";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
+import { KeepScrollScope } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { AppShellBrand, useHasAppShellBrand } from "./app-shell-brand";
 import { useRecordSidebarDrawn } from "../internal/sidebar-presence";
 
@@ -364,9 +365,20 @@ export function AppShellLayout({
         } as React.CSSProperties
       }
     >
-      <sidebarSlot.Render>
-        {(item) => <SidebarItem {...item} />}
-      </sidebarSlot.Render>
+      {/* The sidebar's keep scope: its scrollers (each `<Scroll>` is kept by
+          default, under its call site) keep their offsets across a reload,
+          per tab and per app's sidebar — no pane opens one here. */}
+      <KeepScrollScope
+        scope={
+          surfaceId === undefined
+            ? undefined
+            : `${surfaceId}:sidebar:${sidebarSlot.id}`
+        }
+      >
+        <sidebarSlot.Render>
+          {(item) => <SidebarItem {...item} />}
+        </sidebarSlot.Render>
+      </KeepScrollScope>
       {/* The sidebar's bottom inset under its last item — sidebar-metrics
           `sidebarEndPad`, default 0 (nothing). A box rather than padding: this
           wrapper is `display: contents` and the framing owns the column. */}

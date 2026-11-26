@@ -1,5 +1,8 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { useScrollAcrossReload } from "./use-scroll-across-reload";
+import {
+  useScrollAcrossReload,
+  type KeptInstances,
+} from "./use-scroll-across-reload";
 
 /**
  * The place the scrollers under it belong to, stable across a reload — a pane
@@ -34,12 +37,17 @@ export function KeepScrollScope({
  * and `name` — what this scroller is among the scope's scrollers, so two kept
  * scrollers of one place (the pane's, and the file preview's inside it) never
  * share an entry. Outside a scope, or with no name, nothing is kept.
+ * `instances: "many"` for a name several scrollers of one scope carry by
+ * design (a call site's): kept while one scroller carries it, nothing once a
+ * second does, instead of the second throwing.
  */
 export function useKeptScroll(
   name: string | undefined,
+  instances: KeptInstances = "one",
 ): (el: HTMLElement | null) => void {
   const scope = useContext(KeepScrollScopeContext);
   return useScrollAcrossReload(
     scope === undefined || name === undefined ? undefined : `${scope}#${name}`,
+    instances,
   );
 }

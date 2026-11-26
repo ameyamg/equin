@@ -52123,7 +52123,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors:
           - `AppShell.Framing` ← `ui.sidebar-framing`
           - `AppShell.Brand` ← `apps-core.app-launcher`
-        - Uses: 33 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+        - Uses: 34 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
           - `primitives/css/ui-kit` ×13
           - `primitives/pane` ×4
           - `primitives/collapsible` ×3
@@ -52137,6 +52137,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/yield.yieldClass`
+          - `primitives/dom/auto-scroll.KeepScrollScope`
           - `primitives/scope/surface-id.useSurfaceTabId`
         - Exports (types):
           - `AppShellBrandForm`
@@ -52855,6 +52856,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `primitives/css/scroll.Scroll`
+              - `primitives/css/scroll.ScrollKeep`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
             - Exports (types):
@@ -53581,8 +53583,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.SidewaysScrollProvider`
               - `primitives/dom/auto-scroll.SCROLLER_ATTR`
               - `primitives/dom/auto-scroll.useKeptScroll`
+              - `primitives/overlay/popup-open.useInPopupSurface`
             - Exports (types):
               - `ScrollAxis`
+              - `ScrollKeep`
               - `ScrollProps`
             - Exports (values):
               - `Scroll`
@@ -53608,6 +53612,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/json/config`
               - `shell/notifications`
               - `ui/theme-engine/theme-gallery`
+          - Core:
+            - Exports (types): `ScrollSite`
         - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -54112,27 +54118,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context, and the page's input modality (pointer / keyboard) the focus-ring utilities read.
           - Web:
             - Contributes: `Core.Root` → `InputModalityTracker`
-            - Uses:
+            - Uses: 21 symbols — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives/overlay/popup-open` ×4
+              - `primitives/latest-ref` ×2
+              - `primitives/select-scope` ×2
+              - `primitives/shortcuts` ×2
+              - `ui/icons` ×2
               - `primitives/css/motion.useSizeMotion`
               - `primitives/css/rail.useRailGuard`
               - `primitives/dom/after-layout.afterLayout`
               - `primitives/dom/box-presence.generatesBox`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/kept-state.useTransient`
-              - `primitives/latest-ref.useEventCallback`
-              - `primitives/latest-ref.useLatestRef`
               - `primitives/link-gesture.activationProps`
               - `primitives/overlay/overlay-boundary.OverlayBoundary`
-              - `primitives/overlay/popup-open.usePopupAnchorAtRest`
-              - `primitives/overlay/popup-open.usePublishOpenPopup`
-              - `primitives/overlay/popup-open.useReportPopupOpen`
               - `primitives/overlay/portal-host.usePortalContainer`
-              - `primitives/select-scope.ContentScope`
-              - `primitives/select-scope.scopeSelectAllKeyDown`
-              - `primitives/shortcuts.ShortcutDescriptor`
-              - `primitives/shortcuts.useSurfaceShortcuts`
-              - `ui/icons.Icon`
-              - `ui/icons.IconScopeProvider`
             - Exports (types):
               - `ButtonIconSize`
               - `ControlSize`
@@ -55931,6 +55931,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JumpToBottomView`
               - `KeepAnchorAcrossProps`
               - `KeepScrollAcrossProps`
+              - `KeptInstances`
               - `ScrollAlign`
               - `ScrollChildIntoViewOptions`
               - `ScrollerKeep`
@@ -55964,8 +55965,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
-              - `primitives` ×9
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+              - `primitives` ×10
               - `apps` ×8
               - `conversations` ×4
               - `apps-core/tab-surface`
@@ -58782,13 +58783,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli/sign-in`
               - `reorder/editor`
               - `tag-tree/picker`
-        - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Page-wide, the same Roots publish through usePublishOpenPopup, read as anyPopupOpen / subscribeOpenPopups: whether any popup is open on the page, whatever region it is in (the hints engine holds a tip back meanwhile). And the reverse signal, PopupAnchorRest / usePopupAnchorAtRest: whether the region a popup is opened from is at rest (a FloatingAction mid-morph is not), so a popover requested meanwhile waits and is laid out against where its trigger ends up. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
+        - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Page-wide, the same Roots publish through usePublishOpenPopup, read as anyPopupOpen / subscribeOpenPopups: whether any popup is open on the page, whatever region it is in (the hints engine holds a tip back meanwhile). And the reverse signal, PopupAnchorRest / usePopupAnchorAtRest: whether the region a popup is opened from is at rest (a FloatingAction mid-morph is not), so a popover requested meanwhile waits and is laid out against where its trigger ends up. And whether something is drawn inside a popup's surface at all (PopupSurface, provided by ui-kit's OverlayPanel and sheet; useInPopupSurface) — a reload never reopens a popup, so a scroller in one keeps nothing by default. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/present`
               - `conversations/prompt-snippets`
               - `hints`
               - `primitives/adaptive-bar`
+              - `primitives/css/scroll`
               - `primitives/css/ui-kit`
               - `primitives/data-view/view-core`
               - `primitives/dom/reload-readiness`
@@ -58800,7 +58802,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `anyPopupOpen`
               - `PopupAnchorRest`
               - `PopupOpenScope`
+              - `PopupSurface`
               - `subscribeOpenPopups`
+              - `useInPopupSurface`
               - `usePopupAnchorAtRest`
               - `usePublishOpenPopup`
               - `useReportPopupOpen`

@@ -39,6 +39,7 @@ export { restoreScrollOffset } from "./restore-scroll-offset";
 export { glideScroll } from "./glide-scroll";
 export type { CubicBezier, GlideScrollOptions } from "./glide-scroll";
 export { useScrollAcrossReload } from "./use-scroll-across-reload";
+export type { KeptInstances } from "./use-scroll-across-reload";
 export { KeepScrollScope, useKeptScroll } from "./keep-scroll-scope";
 export { SCROLLER_ATTR, scrollerKeep } from "./scroller-marks";
 export type { ScrollerKeep } from "./scroller-marks";

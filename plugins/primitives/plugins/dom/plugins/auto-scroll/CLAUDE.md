@@ -204,11 +204,24 @@ restore is pending, and is disconnected the moment it lands or the reader acts.
 opens a `KeepScrollScope` keyed by its pane instance, and `PaneScroll` keeps
 itself under the name `pane`. A body that fills the pane (`h-full`) and scrolls in a box of its own —
 a file preview, a code listing — leaves the pane's scroller at 0, so that box
-names itself (`<Scroll keep="file-preview">`, `useKeptScroll`) and is kept under
-`<scope>#<name>`. The names keep the scope's entries apart: a pane scroller at
-0 removes its OWN entry, never the inner one's. Two live scrollers keeping
-under one key throw at the second's attach (`claimKeptKey`): they would
-overwrite each other's entry.
+is kept under `<scope>#<name>` (`useKeptScroll`). Every `<Scroll>` has a name
+by default: the build writes its call site as its `keep` (`css/scroll`'s "Kept
+across a reload by default"); `<Scroll keep="file-preview">` writes one by
+hand. The names keep the scope's entries apart: a pane scroller at 0 removes
+its OWN entry, never the inner one's. Two live scrollers keeping under one
+written name throw at the second's attach (`claimKeptKey`): they would
+overwrite each other's entry. A key shared by design — one call site rendered
+more than once — is claimed with `instances: "many"` (`claimSharedKey`): it
+keeps while one scroller holds it, and the moment a second live one claims it
+every holder stands down and drops its entry, for the rest of the document.
+Instances of one call site have no identity across a reload; numbering them
+by mount order put one's offset into another.
+
+**A follower owns its scroller.** When `useStickyScroll` marks the scroller a
+follower (`markFollows`, in a passive effect — after the keep attached), the
+reload keep stands down for good (`onFollows`): it stops restoring and drops
+its mark, claim and entry. Otherwise it would put an old offset back while the
+follower pins the bottom.
 
 **Each scroller says how its offset fares, as DOM marks** (`scroller-marks.ts`,
 read with `scrollerKeep`): `<Scroll>` stamps `data-scroller` (vertical only;
@@ -304,6 +317,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `JumpToBottomView`
     - `KeepAnchorAcrossProps`
     - `KeepScrollAcrossProps`
+    - `KeptInstances`
     - `ScrollAlign`
     - `ScrollChildIntoViewOptions`
     - `ScrollerKeep`
@@ -337,8 +351,8 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×9
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×10
     - `apps` ×8
     - `conversations` ×4
     - `apps-core/tab-surface`

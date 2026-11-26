@@ -452,27 +452,21 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
 - Description: Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context, and the page's input modality (pointer / keyboard) the focus-ring utilities read.
 - Web:
   - Contributes: `Core.Root` → `InputModalityTracker`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/overlay/popup-open` ×4
+    - `primitives/latest-ref` ×2
+    - `primitives/select-scope` ×2
+    - `primitives/shortcuts` ×2
+    - `ui/icons` ×2
     - `primitives/css/motion.useSizeMotion`
     - `primitives/css/rail.useRailGuard`
     - `primitives/dom/after-layout.afterLayout`
     - `primitives/dom/box-presence.generatesBox`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/kept-state.useTransient`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.activationProps`
     - `primitives/overlay/overlay-boundary.OverlayBoundary`
-    - `primitives/overlay/popup-open.usePopupAnchorAtRest`
-    - `primitives/overlay/popup-open.usePublishOpenPopup`
-    - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/overlay/portal-host.usePortalContainer`
-    - `primitives/select-scope.ContentScope`
-    - `primitives/select-scope.scopeSelectAllKeyDown`
-    - `primitives/shortcuts.ShortcutDescriptor`
-    - `primitives/shortcuts.useSurfaceShortcuts`
-    - `ui/icons.Icon`
-    - `ui/icons.IconScopeProvider`
   - Exports (types):
     - `ButtonIconSize`
     - `ControlSize`

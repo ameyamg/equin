@@ -6522,6 +6522,11 @@
     "plugins/primitives/plugins/css/plugins/scroll": {
       "name": "@equin/plugin-primitives-css-scroll",
       "version": "0.0.1",
+      "devDependencies": {
+        "@babel/core": "^7.29.13",
+        "@types/babel__core": "^7.20.5",
+        "babel-plugin-react-compiler": "^1.0.0",
+      },
     },
     "plugins/primitives/plugins/css/plugins/selection-indicator": {
       "name": "@equin/plugin-primitives-css-selection-indicator",
