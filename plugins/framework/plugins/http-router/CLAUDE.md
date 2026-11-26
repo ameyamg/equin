@@ -22,6 +22,7 @@ requests are timed (`Transport.requestTiming`).
 - Core:
   - Uses: `packages/floor-compat.jsonResponse`
   - Exports (types):
+    - `Refusal`
     - `RequestHandlerOptions`
     - `RouteHandler`
     - `ServerTimingStamp`

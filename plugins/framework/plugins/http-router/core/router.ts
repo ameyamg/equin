@@ -15,6 +15,22 @@ export interface RequestHandlerOptions {
   onError: (err: Error, req: Request, pathname: string) => void;
   /** The response when no route matches. Default: 404 "Not found". */
   onUnmatched?: (req: Request, pathname: string) => Response;
+  /**
+   * Called with every 4xx answer, after it is built and before it is
+   * returned — a matched route's under its route key (`"GET /api/x/:id"`), an
+   * unmatched request's under `null`. Observes only: it must not consume
+   * `res`'s body (clone it) and its own failure is its own.
+   */
+  onRefused?: (refusal: Refusal) => void;
+}
+
+/** A 4xx answer, as `onRefused` is handed it. */
+export interface Refusal {
+  /** The matched route's key, or `null` when no route matched. */
+  route: string | null;
+  method: string;
+  pathname: string;
+  res: Response;
 }
 
 // ── Route tables ────────────────────────────────────────────────
@@ -23,6 +39,7 @@ export interface RequestHandlerOptions {
 // order.
 type Segment = { literal: string } | { param: string };
 interface ParamRoute {
+  key: string;
   method: string;
   segments: Segment[];
   handler: RouteHandler;
@@ -39,7 +56,7 @@ function matchSegments(
   pathname: string,
   routes: ParamRoute[],
   method: string,
-): { handler: RouteHandler; params: Record<string, string> } | null {
+): (ParamRoute & { params: Record<string, string> }) | null {
   const parts = pathname.split("/").filter((s) => s.length > 0);
   for (const route of routes) {
     if (route.method !== method) continue;
@@ -58,7 +75,7 @@ function matchSegments(
         params[seg.param] = decodeURIComponent(part);
       }
     }
-    if (ok) return { handler: route.handler, params };
+    if (ok) return { ...route, params };
   }
   return null;
 }
@@ -123,9 +140,20 @@ export function createRequestHandler(
       literalRoutes.set(`${method} ${path}`, handler);
       continue;
     }
-    paramRoutes.push({ method, segments: pathSegments(path), handler });
+    paramRoutes.push({ key, method, segments: pathSegments(path), handler });
   }
   const onUnmatched = opts.onUnmatched ?? notFound;
+  const onRefused = opts.onRefused;
+  function observed(
+    res: Response,
+    route: string | null,
+    req: Request,
+    pathname: string,
+  ): Response {
+    if (onRefused && res.status >= 400 && res.status < 500)
+      onRefused({ route, method: req.method, pathname, res });
+    return res;
+  }
 
   async function safeHandle(
     handler: RouteHandler,
@@ -161,12 +189,25 @@ export function createRequestHandler(
 
     // Literal fast-path, then :param matcher.
     const literal = literalRoutes.get(`${req.method} ${pathname}`);
-    if (literal) return safeHandle(literal, req, {}, pathname);
+    if (literal) {
+      const key = `${req.method} ${pathname}`;
+      return observed(
+        await safeHandle(literal, req, {}, pathname),
+        key,
+        req,
+        pathname,
+      );
+    }
 
     const matched = matchSegments(pathname, paramRoutes, req.method);
     if (matched)
-      return safeHandle(matched.handler, req, matched.params, pathname);
+      return observed(
+        await safeHandle(matched.handler, req, matched.params, pathname),
+        matched.key,
+        req,
+        pathname,
+      );
 
-    return onUnmatched(req, pathname);
+    return observed(onUnmatched(req, pathname), null, req, pathname);
   };
 }

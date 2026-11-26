@@ -225,3 +225,32 @@ describe("readServerTiming", () => {
     expect(readServerTiming("cdn;dur=2").kind).toBe("unstamped");
   });
 });
+
+describe("onRefused", () => {
+  test("hands every 4xx its route key, unmatched as null, and nothing else", async () => {
+    const seen: { route: string | null; status: number }[] = [];
+    const handle = createRequestHandler({
+      routes: [
+        ["GET /api/ok", ok("ok")],
+        ["GET /api/gone", () => new Response("gone", { status: 404 })],
+        ["POST /api/items/:id", () => new Response("taken", { status: 409 })],
+        ["GET /api/boom", () => new Response("down", { status: 503 })],
+      ],
+      onError: noError,
+      onRefused: ({ route, res }) => {
+        seen.push({ route, status: res.status });
+      },
+    });
+    await handle(req("GET", "/api/ok"));
+    await handle(req("GET", "/api/boom"));
+    const gone = await handle(req("GET", "/api/gone"));
+    await handle(req("POST", "/api/items/x1"));
+    await handle(req("GET", "/api/nowhere"));
+    expect(seen).toEqual([
+      { route: "GET /api/gone", status: 404 },
+      { route: "POST /api/items/:id", status: 409 },
+      { route: null, status: 404 },
+    ]);
+    expect(await gone.text()).toBe("gone");
+  });
+});

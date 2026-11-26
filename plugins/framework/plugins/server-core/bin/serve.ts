@@ -69,6 +69,7 @@ import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/
 import { holdSlotForLife } from "@plugins/infra/plugins/git/plugins/main-slots/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { writeBootStartEvent } from "@plugins/debug/plugins/boot-events/server";
+import { recordRefusal } from "@plugins/debug/plugins/http-refusals/server";
 import { markOwnBootUnsettled } from "@plugins/debug/plugins/boot-events/machine";
 import { claimSchemaOwnerBoot } from "@plugins/database/machine";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
@@ -266,6 +267,8 @@ export async function serve({
           ([path, handler]) => [path, handler.access ?? "owner"] as const,
         ),
       }),
+      // Every 4xx, counted per route and status (debug/http-refusals).
+      onRefused: recordRefusal,
       onError: (errObj, req, pathname) => {
         // Fail loudly: always emit a durable log line (captured by the gateway into
         // the per-worktree backend log) BEFORE returning a generic 500. The crash

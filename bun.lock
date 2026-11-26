@@ -3098,6 +3098,10 @@
       "name": "@equin/plugin-debug-heap-snapshot",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/http-refusals": {
+      "name": "@equin/plugin-debug-http-refusals",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/icons": {
       "name": "@equin/plugin-debug-icons",
       "version": "0.0.1",
@@ -10051,6 +10055,8 @@
     "@equin/plugin-debug-health-monitor": ["@equin/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 
     "@equin/plugin-debug-heap-snapshot": ["@equin/plugin-debug-heap-snapshot@workspace:plugins/debug/plugins/heap-snapshot"],
+
+    "@equin/plugin-debug-http-refusals": ["@equin/plugin-debug-http-refusals@workspace:plugins/debug/plugins/http-refusals"],
 
     "@equin/plugin-debug-icons": ["@equin/plugin-debug-icons@workspace:plugins/debug/plugins/icons"],
 

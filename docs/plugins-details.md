@@ -28087,6 +28087,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
           - `process-memory/no-rss-memory` — `server/internal/heap-stats.ts` (sanctioned)
+    - **`http-refusals`** — Records every 4xx the serving backend answers into the http-refusals log channel (route key, method, path, status, body excerpt), so refusals can be counted per route and status — stage 0 of declared refusals.
+      - Server:
+        - Uses: `primitives/log-channels.defineLogSink`
+        - Exports (types): `RefusalLine`
+        - Exports (values): `recordRefusal`
     - **`icons`** — Debug → Icons: every icon name the app draws (the build's icon manifest), plus every inline family's app-only glyphs (family.icon names no Material name maps), as each icon family draws it — Material plus every contributed family — side by side (Matrix) or as one tile grid per family (By set), each cell a real <Icon> under an IconFamilyPreview, badged when it falls back (L / M: the initial of the family drawing it) and dashed when a strict family has a gap. The left list holds every app set (an app whose theme draws in an app-drawn family: own/total over the manifest, +N own glyphs, how far from strict) and every library; a click shows or hides its column. Search, size, Fallbacks only; the body is an icon motion region.
       - Web:
         - Slots:
@@ -34349,6 +34354,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses: `packages/floor-compat.jsonResponse`
         - Exports (types):
+          - `Refusal`
           - `RequestHandlerOptions`
           - `RouteHandler`
           - `ServerTimingStamp`
@@ -42850,9 +42856,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×25
-          - `debug` ×21
+          - `debug` ×22
           - `apps` ×9
           - `conversations` ×6
           - `database` ×4
@@ -58178,9 +58184,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+          - `debug` ×15
           - `apps` ×14
-          - `debug` ×14
           - `infra` ×12
           - `framework` ×7
           - `conversations` ×6

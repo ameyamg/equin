@@ -1,6 +1,6 @@
 export { createRequestHandler } from "./router";
 export { answerThrowWith } from "./thrown-response";
-export type { RouteHandler, RequestHandlerOptions } from "./router";
+export type { RouteHandler, RequestHandlerOptions, Refusal } from "./router";
 export {
   readServerTiming,
   SERVER_TIMING_METRIC,
