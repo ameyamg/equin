@@ -505,7 +505,9 @@ describe("DataViewToolbar: the global floating bar's room", () => {
       ),
     ];
     expect(anchors[0]).toBe(band(container));
-    expect(container.querySelectorAll(".anchor-floating-bar-band")).toHaveLength(1);
+    expect(
+      container.querySelectorAll(".anchor-floating-bar-band"),
+    ).toHaveLength(1);
     const line = anchors.at(-1)!;
     expect(line.className).toContain("anchor-floating-bar-line");
     expect(line.contains(screen.getByTestId("bar-line"))).toBe(true);
