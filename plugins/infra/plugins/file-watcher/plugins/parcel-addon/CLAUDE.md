@@ -125,6 +125,19 @@ plugin ships the fixed build.
     the process (each on a Bun worker-pool thread) waited; and a write in an
     entry folder stat'ed its listing into a tree that wanted none of it. The
     engine's kqueue children watch passes `depth: 1`;
+  - **an entry the watcher ignores is never stat'ed**, at open or in a
+    folder diff. `readTree` runs fts with `FTS_NOSTAT` (folders are still
+    stat'ed to descend; every other entry comes back `FTS_NSOK` and is
+    `lstat`'ed only if wanted), and `compareDir` keeps an entry every
+    subscription of the tree ignores as a bare name in the tree (no stat, no
+    descriptor), so the next diff finds it there. Upstream stat'ed them all
+    under the backend's lock: a follow of the runs dir (2 names, ~1,800
+    entries) stat'ed every entry on each re-open and again on the first write
+    after it. While the vnode cache was recycling thousands of vnodes a
+    second and the disk was queueing (5–7 ms a read), that stalled every
+    kqueue watcher of the process for 2–6 s after each supervised run's
+    start or end (2026-11-25 12:45, 2026-11-26 17:08 and 17:10;
+    report-1795610730-j1bceo);
   - `childPrefix` (`DirTree.hh`): the prefix below a path is `path + "/"`
     except for `/` itself (upstream built `//`, so a watch of `/` ignored
     nothing and its diff named entries `//bin`).

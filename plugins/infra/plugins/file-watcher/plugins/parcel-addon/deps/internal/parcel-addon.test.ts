@@ -806,6 +806,66 @@ describe.skipIf(process.platform !== "darwin")(
       expect(watchErrors).toEqual([]);
     }, 60_000);
 
+    test("a follow of a few names in a big folder hears its own files, and nothing of the entries it ignores", async () => {
+      // The open and every folder diff list the folder and now stat only the
+      // entries the follow wants: the ignored ones stay bare names in the tree
+      // (the patch before stat'ed all ~1,800 of the runs dir's under the
+      // backend's lock — seconds with cold metadata, report-1795610730-j1bceo).
+      // What a stat would decide for an ignored entry must not leak: none is
+      // reported, created, written or deleted, and the named files still are.
+      const dir = tempDir("big");
+      for (let i = 0; i < 2_000; i++)
+        writeFileSync(join(dir, `old-${i}.log`), "");
+      mkdirSync(join(dir, "old-folder"));
+      writeFileSync(join(dir, "old-folder", "inside"), "");
+      writeFileSync(join(dir, "run.log"), "x\n");
+
+      const base = openFds();
+      const { sub, events } = await subscribe(dir, {
+        ignore: [onlyNames(["run.log", "run.exit"])],
+      });
+      // run.log and the folder: run.exit is not there yet.
+      await expectHeld(base, 2);
+
+      // A diff with the ignored entries not in the tree yet: they go in as names.
+      writeFileSync(join(dir, "new-0.log"), "");
+      appendFileSync(join(dir, "run.log"), "y\n");
+      await until(
+        () => events.some((e) => e.path === join(dir, "run.log")),
+        5_000,
+        "a write to the followed file",
+      );
+      // The next diffs find them there; ignored ones come and go unheard.
+      rmSync(join(dir, "old-folder"), { recursive: true });
+      for (let i = 0; i < 100; i++) unlinkSync(join(dir, `old-${i}.log`));
+      writeFileSync(join(dir, "run.exit"), "0\n");
+      await until(
+        () =>
+          events.some(
+            (e) => e.type === "create" && e.path === join(dir, "run.exit"),
+          ),
+        5_000,
+        "the second named file created",
+      );
+      await expectHeld(base, 3);
+      appendFileSync(join(dir, "run.exit"), "1\n");
+      unlinkSync(join(dir, "run.log"));
+      await until(
+        () =>
+          events.some(
+            (e) => e.type === "delete" && e.path === join(dir, "run.log"),
+          ),
+        5_000,
+        "the followed file deleted",
+      );
+      const named = new Set(["run.log", "run.exit"].map((n) => join(dir, n)));
+      expect(events.filter((e) => !named.has(e.path))).toEqual([]);
+
+      await sub.unsubscribe();
+      await expectHeld(base, 0);
+      expect(watchErrors).toEqual([]);
+    });
+
     test("beside upstream's prebuild in one process, a subscribe that fails rejects in either load order", async () => {
       // A test run that covers the engine and this file loads both: the
       // engine's `@parcel/watcher` (the prebuild, in a checkout `./equin

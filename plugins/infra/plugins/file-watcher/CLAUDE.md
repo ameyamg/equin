@@ -79,8 +79,12 @@ enumerated: one descriptor per named file present plus one per directory —
   not either — measured: 70 deletes under a dir-wide watch left 90 descriptors
   after unsubscribe). We run a patched build instead: see *The patched addon*
   below.
-- An open lists the dir (parcel stats every entry, ignored ones included): an
-  entry deleted mid-listing fails the open. A follower that deletes in the
+- An open lists the dir and stats only the named entries; a later folder diff
+  keeps the others as bare names, never stat'ed (the patched addon). Each stat
+  is made under the kqueue backend's one lock, so stat-ing the ignored ones
+  held every kqueue watcher of the process: with the runs dir's ~1,800
+  entries and cold metadata, 2–6 s after each run's start or end
+  (report-1795610730-j1bceo). An entry deleted mid-listing fails the open. A follower that deletes in the
   same dir holds its deletes outside its opens (`supervised-job`'s
   `pruneOutsideWatcherStart`).
 

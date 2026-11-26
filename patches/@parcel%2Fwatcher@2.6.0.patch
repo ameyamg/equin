@@ -413,7 +413,7 @@ index 057b61b83385793a2f13c7adc8c2e983bef67538..9f3f89517fcfcba15e1c36ad127b61ab
    return runner->queue();
  }
 diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
-index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab56b80b9e9 100644
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948eca6abc11 100644
 --- a/src/kqueue/KqueueBackend.cc
 +++ b/src/kqueue/KqueueBackend.cc
 @@ -1,4 +1,5 @@
@@ -669,7 +669,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab5
 +      // Gone since the listing: not in the tree, so a re-creation is a create.
 +      gone.push_back(it->second.path);
 +      continue;
-     }
++    }
 +    // Nothing of a failed subscription stays behind. Upstream left the
 +    // entries it had watched so far in the backend — their descriptors held,
 +    // their tree alive and diffed for the life of the process.
@@ -691,7 +691,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab5
 +        close(fd);
 +      }
 +      forgetSubscriptions(entry->first, tree);
-+    }
+     }
 +    tree->remove(*it);
    }
  }
@@ -878,7 +878,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab5
  
    std::unordered_set<std::shared_ptr<DirTree>> trees;
    for (auto it = subs.begin(); it != subs.end(); it++) {
-@@ -213,41 +505,114 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -213,41 +505,135 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
  
    std::unordered_set<std::string> entries;
    struct dirent *entry;
@@ -903,6 +903,27 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab5
 -        fstatat(fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW);
 -        tree->add(fullpath, CONVERT_TIME(st.st_mtim), S_ISDIR(st.st_mode));
 +      if (tree->find(fullpath)) {
++        continue;
++      }
++      // equin: an entry every subscription of the tree ignores is kept in the
++      // tree as a bare name — never stat'ed, never watched — so the next diff
++      // finds it there. Stat'ed, a follow of a few names in a big folder (the
++      // supervised runs dir: 2 names, ~1,800 entries) paid one `fstatat` per
++      // entry under the backend's lock on the first write after every
++      // re-open; with the metadata cold (the vnode cache recycling thousands
++      // a second, each stat a disk read) that held every kqueue watcher of
++      // the process 2–6 s (report-1795610730-j1bceo, 2026-11-25/26). Such an
++      // entry is never a folder holding entries of the tree (its own would be
++      // ignored below it), so its kind does not matter.
++      bool wanted = false;
++      for (auto i = subs.begin(); i != subs.end(); i++) {
++        if ((*i)->tree == tree && !(*i)->watcher->isIgnored(fullpath)) {
++          wanted = true;
++          break;
++        }
++      }
++      if (!wanted) {
++        tree->add(fullpath, 0, false);
 +        continue;
 +      }
 +      if (!statted) {
@@ -1011,7 +1032,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab5
    }
  
    for (auto it = trees.begin(); it != trees.end(); it++) {
-@@ -270,8 +635,17 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -270,8 +656,17 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
            }
          }
  
@@ -1031,7 +1052,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..216e6a1ec2ce6d68ccdbc4e05f4b9ab5
          entry = tree->entries.erase(entry);
        } else {
          entry++;
-@@ -284,17 +658,61 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -284,17 +679,61 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
    #else
      fdclosedir(dir);
    #endif
@@ -1246,10 +1267,30 @@ index de7a73d1e9549300408fbb56dec837720eed80d1..46e7462bcdc77891eec59ad80d9fa59d
  };
  
 diff --git a/src/unix/fts.cc b/src/unix/fts.cc
-index d50c3e4931eb29a408ea29c1394a3fc977349455..707e8ff0cd74c63c6b0ee5cb46a6639519cc31ca 100644
+index d50c3e4931eb29a408ea29c1394a3fc977349455..ea679c91ea864be7b93b3d3a675679596428d1b9 100644
 --- a/src/unix/fts.cc
 +++ b/src/unix/fts.cc
-@@ -28,6 +28,21 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
+@@ -18,7 +18,18 @@
+ 
+ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tree) {
+   char *paths[2] {(char *)watcher->mDir.c_str(), NULL};
+-  FTS *fts = fts_open(paths, FTS_NOCHDIR | FTS_PHYSICAL, NULL);
++  // equin: FTS_NOSTAT — fts stats only what it must to descend (folders, and
++  // entries whose kind the listing does not give), and keeps no stat of any
++  // entry: each one the watcher wants is lstat'ed below. Upstream let
++  // fts stat every entry while building each folder's list, before the ignore
++  // ran: a follow of a few names in a big folder (the supervised runs dir: 2
++  // names, ~1,800 entries) stat'ed all of them under the backend's lock on
++  // every open — seconds with the metadata cold (report-1795610730-j1bceo).
++  // Under FTS_NOSTAT, BSD fts counts a folder's subfolders from its link
++  // count and returns the rest unvisited: right on APFS (it counts every
++  // entry) and on file systems that report 1 (the guess is off); a mount
++  // reporting fewer links than subfolders would lose what is below them.
++  FTS *fts = fts_open(paths, FTS_NOCHDIR | FTS_PHYSICAL | FTS_NOSTAT, NULL);
+   if (!fts) {
+     throw WatcherError(strerror(errno), watcher);
+   }
+@@ -28,6 +39,21 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
  
    while ((node = fts_read(fts)) != NULL) {
      if (node->fts_errno) {
@@ -1271,14 +1312,42 @@ index d50c3e4931eb29a408ea29c1394a3fc977349455..707e8ff0cd74c63c6b0ee5cb46a66395
        fts_close(fts);
        throw WatcherError(strerror(node->fts_errno), watcher);
      }
-@@ -44,6 +59,12 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
+@@ -42,8 +68,39 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
+       continue;
+     }
  
-     tree->add(node->fts_path, CONVERT_TIME(node->fts_statp->st_mtim), (node->fts_info & FTS_D) == FTS_D);
+-    tree->add(node->fts_path, CONVERT_TIME(node->fts_statp->st_mtim), (node->fts_info & FTS_D) == FTS_D);
++    // A folder's postorder visit: added at its preorder one.
++    if (node->fts_info == FTS_DP) {
++      continue;
++    }
++    // FTS_NOSTAT (above): fts hands out no stat buffer at all (`fts_statp` is
++    // NULL on every node), so a wanted entry is stat'ed here; one that went
++    // since the listing is not part of the tree.
++    struct stat st;
++    if (lstat(node->fts_path, &st) != 0) {
++      int err = errno;
++      if (!isRoot && (err == ENOENT || err == ENOTDIR)) {
++        continue;
++      }
++      fts_close(fts);
++      throw WatcherError(strerror(err), watcher);
++    }
++    tree->add(node->fts_path, CONVERT_TIME(st.st_mtim), S_ISDIR(st.st_mode));
      isRoot = false;
++
++    // fts decided to descend from its own earlier stat: a folder replaced by
++    // something else since (a symlink renamed over it) is an entry with no
++    // entries of its own — listed through the link, they would sit below an
++    // entry the tree holds as no folder, never freed with it.
++    if (node->fts_info == FTS_D && !S_ISDIR(st.st_mode)) {
++      fts_set(fts, node, FTS_SKIP);
++      continue;
++    }
 +
 +    // equin: a folder at the watcher's depth is an entry, never listed — fts
 +    // would read it and stat every entry in it before the ignore dropped them.
-+    if ((node->fts_info & FTS_D) && !watcher->seesBelow(std::string(node->fts_path))) {
++    if (node->fts_info == FTS_D && !watcher->seesBelow(std::string(node->fts_path))) {
 +      fts_set(fts, node, FTS_SKIP);
 +    }
    }
