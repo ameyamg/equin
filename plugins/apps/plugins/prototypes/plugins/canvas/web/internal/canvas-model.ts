@@ -182,7 +182,10 @@ export function initialCanvasState({
 }: {
   size: PrototypeViewport;
   version?: PrototypeVersion | null;
-  /** Frame A's picks — `"shared"` except on a page that names its own. */
+  /**
+   * Frame A's picks — `"shared"` except on a page that names its own, which
+   * opens in `linkVariant` mode: A's own picks never reach the shared record.
+   */
   picks?: "shared" | StoredPicks;
   source?: string;
 }): CanvasState {
@@ -199,7 +202,7 @@ export function initialCanvasState({
     swipeAt: 0.5,
     spread: null,
     linked: new Set(),
-    linkVariant: false,
+    linkVariant: picks !== "shared",
     preview: null,
   };
 }

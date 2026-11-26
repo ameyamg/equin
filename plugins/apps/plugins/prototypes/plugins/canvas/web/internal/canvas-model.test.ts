@@ -260,10 +260,22 @@ describe("canvasWith", () => {
     expect(s.frames.map((f) => f.kind)).toEqual(["prototype", "source"]);
   });
 
+  it("a page naming its own picks opens linked, and adding writes nothing", () => {
+    const s = initialCanvasState({ picks: { design: "paper" } });
+    expect(s.linkVariant).toBe(true);
+    const next = canvasWith(s, { type: "addPrototype" }, { design: "mist" });
+    expect(next.linkVariant).toBe(true);
+    expect(proto(next, 0).picks).toEqual({ design: "paper" });
+    expect(proto(next, 1).picks).toEqual({ design: "paper" });
+  });
+
   it("throws rather than hand frame A's own picks to the shared record", () => {
     expect(() =>
       canvasWith(
-        initialCanvasState({ picks: { design: "paper" } }),
+        {
+          ...initialCanvasState({ picks: { design: "paper" } }),
+          linkVariant: false,
+        },
         { type: "addPrototype" },
         {},
       ),

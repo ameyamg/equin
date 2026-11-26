@@ -357,10 +357,9 @@ function LeaveToCanvasButton({ name }: { name: string }): ReactElement {
  * The canvas's add rail, as a presentation hands it its actions: either way the
  * comparison is made on the prototype's canvas in the app. An overlay
  * (`onExtend`) applies each to the live canvas and leaves. The new-tab page
- * opens the app's canvas on the frame plus the new one, in this tab — and only
- * a page reading the shared picks record (frame A's link) can: one carrying a
- * variant of its own would, as frame A of a canvas, have to write that variant
- * to the record.
+ * opens the app's canvas on the frame plus the new one, in this tab — a page
+ * carrying a variant of its own hands it over in `linkVariant` mode (the
+ * variant in the canvas's URL), so the shared picks record is never written.
  */
 function ExtendActions({
   meta,
@@ -370,16 +369,9 @@ function ExtendActions({
   onExtend: ((action: CanvasAddAction) => void) | undefined;
 }): ReactElement {
   const { canvas, shared } = usePrototypeDetail();
-  const ownPicks =
-    onExtend === undefined && frameA(canvas.frames)?.picks !== "shared";
   return (
     <AddFrameRail
       meta={meta}
-      disabled={
-        ownPicks
-          ? "This page shows a variant of its own — open frame A to compare"
-          : undefined
-      }
       extend={(action) => ({
         onClick: () =>
           onExtend !== undefined

@@ -136,10 +136,10 @@ page chrome of its own instead of the overlays' Exit:
   (`canvasWith`, the reducer without its effects) and open the prototype's
   canvas in the full app on it (`openCanvasInApp` from `canvas`: a document
   load of `proto/<id>` handing the canvas over through this tab's
-  sessionStorage). Only a page reading the shared picks (frame A's link)
-  offers them: one carrying a variant of its own would, as frame A of a
-  canvas, have to write that variant to the shared record, so they are
-  disabled there.
+  sessionStorage). A page carrying a variant of its own hands the canvas
+  over in `linkVariant` mode — its variant in the canvas URL's `;variant=`,
+  frame A holding it as its own picks — so the shared record is never
+  written.
 
 The routes live in `internal/routes.ts`, apart from the panes.
 

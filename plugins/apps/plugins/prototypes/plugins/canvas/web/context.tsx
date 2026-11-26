@@ -132,7 +132,20 @@ export function openCanvasInApp(name: string, state: CanvasState): void {
   if (!written.ok) {
     throw new Error(`Could not hand the canvas over: ${written.reason}`);
   }
-  window.location.assign(prototypeDetailRoute.link(prototypesApp, { name }));
+  // A canvas whose frame A shows a variant of its own (`linkVariant`) opens
+  // on that variant through the URL's `;variant=` — the pane follows the key,
+  // and without it would put A back on the shared record.
+  const a = frameA(state.frames);
+  const variant =
+    state.linkVariant && a !== null && a.picks !== "shared"
+      ? variantParam(a.picks)
+      : undefined;
+  window.location.assign(
+    prototypeDetailRoute.link(
+      prototypesApp,
+      variant === undefined ? { name } : { name, variant },
+    ),
+  );
 }
 
 /**

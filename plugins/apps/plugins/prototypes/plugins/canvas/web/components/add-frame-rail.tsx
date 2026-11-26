@@ -40,26 +40,18 @@ export type AddFrameHandlers = Partial<
  * owns) still adds its frame, which names the issue. Names no source.
  *
  * By default each dispatches its action to this canvas. A surface that also
- * leaves (Present's overlay, its new-tab page) passes `extend`, and
- * `disabled` (with the reason as tooltip) when it cannot add at all.
+ * leaves (Present's overlay, its new-tab page) passes `extend`.
  */
 export function AddFrameRail({
   meta,
   extend,
-  disabled,
 }: {
   meta: PrototypeMeta;
   extend?: (action: CanvasAddAction) => AddFrameHandlers;
-  /** Why no button can add here; every button is disabled with it as tooltip. */
-  disabled?: string;
 }): ReactElement {
   const { canvas, sources, dispatch } = usePrototypeDetail();
   const handlers = (action: CanvasAddAction): AddFrameHandlers =>
-    disabled !== undefined
-      ? {}
-      : extend !== undefined
-        ? extend(action)
-        : { onClick: () => dispatch(action) };
+    extend !== undefined ? extend(action) : { onClick: () => dispatch(action) };
   return (
     <ControlSizeProvider size="sm">
       <Stack direction="col" gap="xs" align="center">
@@ -68,19 +60,16 @@ export function AddFrameRail({
           className={railButtonClass}
           icon={addIcon}
           label={ADD_FRAME_LABEL}
-          tooltip={disabled ?? ADD_TIP}
-          disabled={disabled !== undefined}
+          tooltip={ADD_TIP}
           {...handlers({ type: "addPrototype" })}
         />
         {sources.map((source) => {
           const onCanvas = canvas.frames.some(
             (f) => f.kind === "source" && f.source === source.id,
           );
-          const reason =
-            disabled ??
-            (onCanvas
-              ? `${source.addLabel} is already on the canvas`
-              : undefined);
+          const reason = onCanvas
+            ? `${source.addLabel} is already on the canvas`
+            : undefined;
           return (
             <FrameSource.Dispatch
               key={source.id}
@@ -122,16 +111,10 @@ export function AddFrameRail({
                     className={railButtonClass}
                     icon={compareIcon}
                     label={compareWithLabel(source.addLabel)}
-                    tooltip={
-                      disabled ??
-                      `No ${source.addLabel} to compare with yet — launch an agent to add one`
-                    }
-                    disabled={disabled !== undefined}
+                    tooltip={`No ${source.addLabel} to compare with yet — launch an agent to add one`}
                   />
                 );
-                return disabled !== undefined ? (
-                  trigger
-                ) : (
+                return (
                   <LaunchAgentPopover
                     {...resolution.launch}
                     trigger={trigger}

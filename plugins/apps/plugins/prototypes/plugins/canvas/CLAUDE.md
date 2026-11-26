@@ -83,6 +83,10 @@ prototype: the canvas goes through this tab's sessionStorage (a second store,
 `prototypes.canvas-handoff`, keyed by prototype, one-minute TTL), and the next
 detail pane that opens on that prototype with nothing saved takes it — saving
 it as its own at once, so it is taken exactly once.
+A canvas in `linkVariant` mode (Present's page for a frame with picks of its
+own — `initialCanvasState` opens such a canvas linked) is opened on
+`proto/<id>;variant=<A's picks>`, so the pane keeps A on that variant and the
+shared record is never written.
 
 ## Frame A holds the shared picks
 
