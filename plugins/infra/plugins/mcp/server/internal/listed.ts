@@ -20,6 +20,20 @@ export async function recordToolsListed(
 }
 
 /**
+ * The tools last listed to `conversationId` — what its client holds — or
+ * `null` when no listing is recorded (`never-listed` below).
+ */
+export async function readToolsListed(
+  conversationId: string,
+): Promise<readonly string[] | null> {
+  const [row] = await db
+    .select({ tools: _mcpListedTools.tools })
+    .from(_mcpListedTools)
+    .where(eq(_mcpListedTools.conversationId, conversationId));
+  return row ? row.tools : null;
+}
+
+/**
  * Whether a conversation's agent can call a tool now: listed to it (its
  * client knows the tool exists) and its `when` still true (else the call is an
  * unknown-tool error). Otherwise why not:
@@ -42,12 +56,9 @@ export async function toolCallableBy(
   const name = ref.toolName;
   const tool = registry.get(name);
   if (!tool) throw new Error(`MCP tool "${name}" is not registered here`);
-  const [row] = await db
-    .select({ tools: _mcpListedTools.tools })
-    .from(_mcpListedTools)
-    .where(eq(_mcpListedTools.conversationId, conversationId));
-  if (!row) return { callable: false, why: "never-listed" };
-  if (!row.tools.includes(name)) return { callable: false, why: "not-listed" };
+  const listed = await readToolsListed(conversationId);
+  if (!listed) return { callable: false, why: "never-listed" };
+  if (!listed.includes(name)) return { callable: false, why: "not-listed" };
   if (tool.when && !(await tool.when({ conversationId })))
     return { callable: false, why: "hidden" };
   return { callable: true };

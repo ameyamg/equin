@@ -62,6 +62,13 @@ refers to a tool by its declaration, never a spelled name. Its reader: a stop
 gate's `tools` (`conversations/stop-gate`), so a gate never demands a tool
 the session lacks.
 
+The record also tells a client its list moved: when a conversation's request
+(not a `tools/list`, `initialize` or lone notification) mounts other names than
+were last listed, or none is recorded, its JSON answer is re-sent as an SSE
+stream with `notifications/tools/list_changed` before the reply — still
+stateless, the stream closes with the reply. Claude Code re-lists at once.
+A failed read is reported and sends no notice.
+
 ## Unattached sessions
 
 A `claude` started in a terminal — the usual way to recover a broken main —
@@ -210,7 +217,9 @@ and without it no tool set can be computed.
     - `page/annotations/agent-access`
   - Endpoint callers: `health`
 - Exemptions:
-  - Exempts itself from: `endpoints:no-raw-json-handlers` — `machine/internal/handle-mcp.ts` (sanctioned)
+  - Exempts itself from:
+    - `endpoints:no-raw-json-handlers` — `machine/internal/handle-mcp.ts` (sanctioned)
+    - `no-raw-sse` — `machine/internal/handle-mcp.ts`, `machine/internal/handle-mcp.test.ts` (sanctioned)
 - Sub-plugins:
   - **`browser`** [exempt] — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a…
   - **`health`** — The health report's MCP server row: critical while the latest MCP request failed (agents launched from here have no equin tools), attention while a per-connection contribution (a tool's gate or live…

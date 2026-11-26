@@ -21,7 +21,39 @@ const handleMcpRequest = createMcpHandler({
     listings.push({ conversationId, tools });
     return Promise.resolve();
   },
+  readListing: (conversationId) => readListing(conversationId),
 });
+
+/** The port's read of a conversation's listing: by default its latest one. */
+let readListing: (conversationId: string) => Promise<readonly string[] | null>;
+
+function latestListing(conversationId: string): readonly string[] | null {
+  return (
+    listings.findLast((l) => l.conversationId === conversationId)?.tools ?? null
+  );
+}
+
+/** The messages an answer carries, in order, whichever form it was sent in. */
+async function messagesOf(res: Response): Promise<unknown[]> {
+  const type = res.headers.get("content-type") ?? "";
+  if (type.startsWith("text/event-stream")) {
+    return (await res.text())
+      .split("\n")
+      .filter((line) => line.startsWith("data: "))
+      .map((line) => JSON.parse(line.slice("data: ".length)) as unknown);
+  }
+  const body = (await res.json()) as unknown;
+  return Array.isArray(body) ? body : [body];
+}
+
+/** A one-request answer's reply, whichever form it was sent in. */
+async function replyOf(res: Response): Promise<unknown> {
+  const replies = (await messagesOf(res)).filter(
+    (m) => (m as { id?: unknown }).id !== undefined,
+  );
+  if (replies.length !== 1) throw new Error(`${replies.length} replies`);
+  return replies[0];
+}
 
 const CONVERSATION = "conv-test";
 
@@ -54,6 +86,8 @@ let reported: string[] = [];
 
 beforeEach(() => {
   reported = [];
+  listings.length = 0;
+  readListing = (id) => Promise.resolve(latestListing(id));
   setServerErrorHandler((report) => reported.push(report.message));
   registry.clear();
   void Mcp.tool({
@@ -179,7 +213,7 @@ describe("Mcp.tool when", () => {
       method: "tools/call",
       params: { name, arguments: {} },
     });
-    return res.json();
+    return replyOf(res);
   }
 
   beforeEach(() => {
@@ -345,7 +379,7 @@ describe("unattached sessions", () => {
       },
       conversation,
     );
-    return res.json();
+    return replyOf(res);
   }
 
   test("lists only the tools declared unattached, running no scope or gate", async () => {
@@ -420,5 +454,167 @@ describe("a request the server fails to serve", () => {
       },
     });
     expect(logged).toEqual(["the database system is shutting down"]);
+  });
+});
+
+describe("a client whose tool list is stale", () => {
+  const LIST_CHANGED = {
+    jsonrpc: "2.0",
+    method: "notifications/tools/list_changed",
+  };
+
+  function callEcho(id = 20): Promise<Response> {
+    return post({
+      jsonrpc: "2.0",
+      id,
+      method: "tools/call",
+      params: { name: "echo", arguments: { text: "hi" } },
+    });
+  }
+
+  function gated(name: string, open: () => boolean): void {
+    void Mcp.tool({
+      name,
+      description: name,
+      inputSchema: {},
+      when: () => open(),
+      handler: () => ({ content: [{ type: "text", text: name }] }),
+    }).register();
+  }
+
+  test("a listing that still matches is answered as plain JSON", async () => {
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    const res = await callEcho();
+    expect(res.headers.get("content-type")).toStartWith("application/json");
+    expect(await res.json()).toMatchObject({ id: 20, result: {} });
+  });
+
+  // conv-1795638366-ye3yup: connected before turn_for shipped, it never got
+  // the tool. Shipping one (or its `when` turning true) is the same change.
+  test("a tool visible since the listing: the reply streams list_changed first", async () => {
+    let open = false;
+    gated("granted", () => open);
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    expect(latestListing(CONVERSATION)).toEqual(["echo"]);
+    open = true;
+    const res = await callEcho();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/event-stream");
+    const [first, second, ...rest] = await messagesOf(res);
+    expect(first).toEqual(LIST_CHANGED);
+    expect(second).toMatchObject({
+      id: 20,
+      result: { content: [{ type: "text", text: "hi" }] },
+    });
+    expect(rest).toEqual([]);
+    // The client re-lists: the record moves, and the next answer is JSON.
+    await post({ jsonrpc: "2.0", id: 3, method: "tools/list" });
+    const after = await callEcho(21);
+    expect(after.headers.get("content-type")).toStartWith("application/json");
+  });
+
+  test("a tool hidden since the listing streams it too", async () => {
+    let open = true;
+    gated("revoked", () => open);
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    open = false;
+    expect((await messagesOf(await callEcho()))[0]).toEqual(LIST_CHANGED);
+  });
+
+  test("the same names in another order are no change", async () => {
+    gated("b", () => true);
+    readListing = () => Promise.resolve(["b", "echo"]);
+    const res = await callEcho();
+    expect(res.headers.get("content-type")).toStartWith("application/json");
+  });
+
+  test("no recorded listing (connected before the record) streams it", async () => {
+    const res = await callEcho();
+    expect((await messagesOf(res))[0]).toEqual(LIST_CHANGED);
+  });
+
+  test("a listing, an initialize or a lone notification never carries it", async () => {
+    let reads = 0;
+    readListing = () => {
+      reads += 1;
+      return Promise.resolve(null);
+    };
+    const list = await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    expect(list.headers.get("content-type")).toStartWith("application/json");
+    const init = await post(initialize);
+    expect(init.headers.get("content-type")).toStartWith("application/json");
+    const note = await post({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    });
+    expect(note.status).toBe(202);
+    expect(reads).toBe(0);
+  });
+
+  test("a batch streams the notice once, then every reply", async () => {
+    const res = await post([
+      { jsonrpc: "2.0", id: 30, method: "ping" },
+      {
+        jsonrpc: "2.0",
+        id: 31,
+        method: "tools/call",
+        params: { name: "echo", arguments: { text: "x" } },
+      },
+    ]);
+    const messages = await messagesOf(res);
+    expect(messages[0]).toEqual(LIST_CHANGED);
+    expect(
+      messages
+        .slice(1)
+        .map((m) => (m as { id: number }).id)
+        .sort(),
+    ).toEqual([30, 31]);
+  });
+
+  test("an unattached session is never told", async () => {
+    let reads = 0;
+    readListing = () => {
+      reads += 1;
+      return Promise.resolve(null);
+    };
+    void Mcp.tool({
+      name: "anywhere",
+      description: "anywhere",
+      unattached: true,
+      inputSchema: {},
+      handler: () => ({ content: [{ type: "text", text: "ok" }] }),
+    }).register();
+    const res = await post(
+      {
+        jsonrpc: "2.0",
+        id: 40,
+        method: "tools/call",
+        params: { name: "anywhere", arguments: {} },
+      },
+      MCP_UNATTACHED_ID,
+    );
+    expect(res.headers.get("content-type")).toStartWith("application/json");
+    expect(reads).toBe(0);
+  });
+
+  test("a gate that threw is no reason to re-list", async () => {
+    let broken = false;
+    gated("flaky", () => {
+      if (broken) throw new Error("gate down");
+      return true;
+    });
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    broken = true;
+    const res = await callEcho();
+    expect(res.headers.get("content-type")).toStartWith("application/json");
+    expect(reported).toEqual(['MCP tool "flaky" when failed: gate down']);
+  });
+
+  test("a failed read is reported and the reply still served as JSON", async () => {
+    readListing = () => Promise.reject(new Error("db down"));
+    const res = await callEcho();
+    expect(res.headers.get("content-type")).toStartWith("application/json");
+    expect(await res.json()).toMatchObject({ id: 20, result: {} });
+    expect(reported).toEqual(["MCP listed-tools read failed: db down"]);
   });
 });

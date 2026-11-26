@@ -35376,7 +35376,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`no-raw-sse`**
               - Exemptions:
                 - Exempts itself from: `no-raw-sse` — `check/index.ts` (sanctioned)
-                - Exempted by: `framework/tooling/checks/no-raw-sse` (0 debt)
+                - Exempted by:
+                  - `framework/tooling/checks/no-raw-sse` (0 debt)
+                  - `infra/mcp` (0 debt)
             - **`no-raw-websocket`**
               - Exemptions:
                 - Exempted by:
@@ -41842,7 +41844,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/agent-access`
         - Endpoint callers: `health`
       - Exemptions:
-        - Exempts itself from: `endpoints:no-raw-json-handlers` — `machine/internal/handle-mcp.ts` (sanctioned)
+        - Exempts itself from:
+          - `endpoints:no-raw-json-handlers` — `machine/internal/handle-mcp.ts` (sanctioned)
+          - `no-raw-sse` — `machine/internal/handle-mcp.ts`, `machine/internal/handle-mcp.test.ts` (sanctioned)
       - Plugins:
         - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a recent failure the host hit on its own, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
           - Web:

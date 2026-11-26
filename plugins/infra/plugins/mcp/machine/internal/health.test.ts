@@ -19,6 +19,7 @@ const handleMcpRequest = createMcpHandler({
     listings.push({ conversationId, tools });
     return Promise.resolve();
   },
+  readListing: () => Promise.resolve(null),
 });
 
 function listTools(): Promise<Response> {
