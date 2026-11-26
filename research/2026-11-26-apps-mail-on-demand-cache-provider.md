@@ -704,6 +704,26 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
 6. **Actions.** Archive/done, star, read/unread, labels (apply, create, rename, delete),
    trash/delete and move to inbox. Optimistic, durable ops with undo toasts and bulk
    selection. *Ships:* triage.
+   *Done* (`mail/cache` ops, endpoints and `mail.apply-op`; `mail/threads` UI):
+   - Ops (`MailThreadOp`): archive, move to inbox (out of trash and spam),
+     trash, spam, not spam, read / unread, labels add / remove — each a target
+     state, ONE reducer (`applyMailOp`) the server writes per message and the
+     browser predicts on the row. Permanent delete is not offered (the Gmail
+     scope narrows to `gmail.modify`).
+   - The cache first (summaries rewritten under row locks, local queries
+     re-checked, the op pending over any provider re-read until it lands),
+     then the durable serial job; the provider writes per message
+     (`MailWriteTarget`; Gmail: one `messages.batchModify` per 1,000).
+   - "Row leaves the view at once" is a `network/live` primitive: the row
+     overlay (`writeRows`), drawn by every `useLive` read of the collection;
+     bulk selection is DataView's checkbox selection in the list view
+     (bottom bar).
+   - Undo is the server's answer (per thread). Keys: j / k, e, #, /.
+   - Labels: an interim "Label as" menu and dialogs; the shared tag picker
+     replaces them (its own step).
+   - **Measured on the real account** (2026-11-26): each op reached Gmail
+     127–220 ms after the click (job run, one batchModify); bulk Done of 3
+     threads one call (178 ms), its Undo one call (196 ms).
 7. **Compose.** Local drafts mirrored to Gmail drafts, compose/reply/reply-all/forward,
    attachments, `packages/mime`, and the outbox with undo send. *Ships:* sending.
 8. **Push.** Pub/Sub setup action, the StreamingPull daemon and the daily `watch` renewal.

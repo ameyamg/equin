@@ -17,6 +17,12 @@ import {
 } from "@plugins/network/plugins/live/core";
 import { withoutWindowFields } from "./window-fields";
 import {
+  frameStamp,
+  objectStamp,
+  overlayRows,
+  useRowPatches,
+} from "./row-overlay";
+import {
   createCrossPageGaps,
   type CrossPageGaps,
   type GapPage,
@@ -656,6 +662,8 @@ function usePages<Row, Q, P extends Record<string, string>>(
       derive: list.map((t) => t.derive),
     };
   }, [readCurrent, readPrevious, source]);
+  // Writes predicted on this collection's rows (`./row-overlay`).
+  const patches = useRowPatches(source.key);
   const results = useResources(source.descriptor, reads.params, {
     release: "now",
     derive: reads.derive,
@@ -667,6 +675,8 @@ function usePages<Row, Q, P extends Record<string, string>>(
       string,
       { result: ResourceTupleResult<Row[]>; obs: Observation }
     >();
+    // Which tuple frame each entry came in (the row overlay's receipt).
+    const frameOf = new WeakMap<RowEntry, { tk: string; seq: number }>();
     reads.keys.forEach((tk, i) => {
       const result = results[i]!;
       const rows = rowsOfResult(result);
@@ -677,19 +687,23 @@ function usePages<Row, Q, P extends Record<string, string>>(
             : { kind: "pending" }
           : {
               kind: "settled",
-              entries: rows.map((row) => entryOf(row, source.idField)),
+              entries: rows.map((row) => {
+                const e = entryOf(row, source.idField);
+                frameOf.set(e, { tk, seq: result.appliedSeq });
+                return e;
+              }),
               error: result.status === "error" ? result.error : null,
               appliedSeq: result.appliedSeq,
             };
       map.set(tk, { result, obs });
     });
-    return map;
+    return { map, frameOf };
   }, [reads, results, source]);
   /** A page's read — `null` for a page this render does not read (minted or made live since). */
   const read = useCallback(
     (plan: Plan<Q>, page: Page) => {
       const tk = reads.tupleKeyOf.get(pageKeyOf(plan, page));
-      const hit = tk === undefined ? undefined : byTuple.get(tk);
+      const hit = tk === undefined ? undefined : byTuple.map.get(tk);
       return hit === undefined || tk === undefined
         ? null
         : { ...hit, tupleKey: tk };
@@ -910,7 +924,28 @@ function usePages<Row, Q, P extends Record<string, string>>(
       };
     }
     if (!a.loaded) return { result: { status: "loading" }, segments: null };
-    const rows = a.entries.map((e) => withoutWindowFields(e.row as Row));
+    const served = a.entries.map((e) => withoutWindowFields(e.row as Row));
+    // The predicted writes drawn over the served rows: a row they move out of
+    // this question's filter left out (segments keep the served cut, read
+    // only for a tree's ancestors).
+    const rows = overlayRows(
+      patches,
+      served,
+      (_row, i) => a.entries[i]!.id,
+      source.overlay === null
+        ? null
+        : () => ({
+            filter: source.overlay!.filterOf(shown.query),
+            filterable: source.overlay!.filterable,
+          }),
+      (_row, i) => {
+        const e = a.entries[i]!;
+        const f = byTuple.frameOf.get(e);
+        return f === undefined
+          ? objectStamp(e.row as object)
+          : frameStamp(`${source.key}|${f.tk}`, f.seq);
+      },
+    ) as Row[];
     const pageErrors: LivePageError[] = a.failures.map((f) => {
       const before = a.firstOf[f.index]! - 1;
       const { result, tupleKey } = read(shown, f.page)!;
@@ -944,10 +979,21 @@ function usePages<Row, Q, P extends Record<string, string>>(
         pageErrors,
       },
       segments: a.firstOf.map((start, i) =>
-        rows.slice(start, a.firstOf[i + 1] ?? rows.length),
+        served.slice(start, a.firstOf[i + 1] ?? served.length),
       ),
     };
-  }, [readCurrent, readPrevious, read, observeIn, loadMore, capped, limits]);
+  }, [
+    readCurrent,
+    readPrevious,
+    read,
+    observeIn,
+    loadMore,
+    capped,
+    limits,
+    patches,
+    source,
+    byTuple,
+  ]);
 
   // A last page that cannot be paged past, in the plan's own terms (the
   // surface tells the user in theirs), logged once each time the read

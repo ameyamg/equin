@@ -59,6 +59,7 @@ export {
   type MailCallOptions,
   type MailChanges,
   type MailFlags,
+  type MailWriteTarget,
   type MailProvider,
   type MailProviderCapabilities,
   type MailProviderDefinition,

@@ -57,13 +57,17 @@ const downloadIcon = symbol("download");
  * and the unread ones open, the others folded to one line (a click opens
  * one). An HTML body is framed (`InlineFrame fit`: an opaque origin under the
  * mail policy, as tall as the message); a text body is text. Each message
- * lists its files (open in a tab, or download). Opening marks nothing read.
+ * lists its files (open in a tab, or download). The bar carries the caller's
+ * `tools` (the thread's triage) at its end.
  */
 export function ThreadReader({
   threadId,
   onClose,
+  tools,
 }: {
   threadId: string;
+  /** The thread's tools (its triage), drawn at the bar's end (absent: none). */
+  tools?: ReactNode;
   /** Closes the reading pane (the pane's own close, with the click's gesture); null: nowhere to close to now. */
   onClose: ((gesture: Gesture) => void) | null;
 }): ReactNode {
@@ -91,6 +95,8 @@ export function ThreadReader({
             onClick={(e) => onClose(gestureOf(e))}
           />
         )}
+        <Fill />
+        {tools}
       </Bar>
       {body}
     </Stack>

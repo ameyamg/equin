@@ -19,3 +19,24 @@ export {
   type MailPushStatus,
 } from "./internal/account-status";
 export { mailCacheConfig } from "./internal/config";
+export {
+  applyMailOp,
+  inMailTrash,
+  isMailRole,
+  mailOpColumns,
+  mailOpMoves,
+  MailOpUndoSchema,
+  MailThreadOpSchema,
+  primaryMailAction,
+  undoMailOp,
+  type MailOpFacts,
+  type MailOpUndo,
+  type MailPrimaryAction,
+  type MailThreadOp,
+} from "./internal/ops";
+export {
+  applyMailThreadOp,
+  createMailLabel,
+  deleteMailLabel,
+  renameMailLabel,
+} from "./internal/endpoints";

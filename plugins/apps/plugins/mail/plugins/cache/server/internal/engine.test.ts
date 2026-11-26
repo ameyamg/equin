@@ -28,7 +28,11 @@ import {
   threadId,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { mailThreads, type MailThreadRow } from "../../core";
-import { createMailCache, type MailWindowQuery } from "./engine";
+import {
+  createMailCache,
+  type MailOpJob,
+  type MailWindowQuery,
+} from "./engine";
 
 const INBOX = roleMailboxId("inbox");
 /** The fake's declared slack in the skew test: twice the 170 s skew it holds, and more. */
@@ -70,6 +74,7 @@ function harness(opts: FakeMailProviderOptions) {
   let statusNotified = 0;
   const notifiedIds: string[][] = [];
   const background: unknown[] = [];
+  const ops: MailOpJob[] = [];
   const cache = createMailCache({
     db: t.db,
     definition: () => f.definition,
@@ -88,10 +93,15 @@ function harness(opts: FakeMailProviderOptions) {
       ticking: true,
     }),
     onBackgroundError: (_what, err) => background.push(err),
+    enqueueOp: async (job) => {
+      ops.push(job);
+    },
   });
   return {
     f,
     cache,
+    /** The triage ops handed to the durable queue, not run yet. */
+    ops,
     notified: () => notified,
     notifiedIds,
     mailboxesNotified: () => mailboxesNotified,
@@ -284,7 +294,7 @@ describe("mail cache: catch-up", () => {
     const h = harness({ threads: inboxThreads(4) });
     await h.cache.window(win({ limit: 10 }));
     await settle(h);
-    await h.f.provider.archive([threadId("t3")]);
+    await h.f.provider.archive(h.f.targets([threadId("t3")]));
     h.f.deliver("t9", {
       id: "m9",
       date: "2026-01-02T08:00:00Z",
@@ -373,7 +383,7 @@ describe("mail cache: the sync step (the change signal's entry)", () => {
     await h.cache.window(win({ limit: 10 }));
     await settle(h);
     const boxes = h.mailboxesNotified();
-    await h.f.provider.archive([threadId("t2")]);
+    await h.f.provider.archive(h.f.targets([threadId("t2")]));
     h.f.deliver("t9", {
       id: "m9",
       date: "2026-01-02T08:00:00Z",
@@ -414,13 +424,17 @@ describe("mail cache: the sync step (the change signal's entry)", () => {
     const view = win({ where: unread, limit: 10 });
     expect(ids(await h.cache.window(view))).toEqual(["t3", "t2", "t1"]);
     await settle(h);
-    await h.f.provider.setFlags([threadId("t2")], { unread: false });
+    await h.f.provider.setFlags(h.f.targets([threadId("t2")]), {
+      unread: false,
+    });
     await h.cache.sync();
     h.resetCalls();
     expect(ids(await h.cache.window(view))).toEqual(["t3", "t1"]);
     expect(h.count("listMessages")).toBe(0);
     await settle(h);
-    await h.f.provider.setFlags([threadId("t2")], { unread: true });
+    await h.f.provider.setFlags(h.f.targets([threadId("t2")]), {
+      unread: true,
+    });
     await h.cache.sync();
     h.resetCalls();
     expect(ids(await h.cache.window(view))).toEqual(["t3", "t2", "t1"]);
@@ -432,7 +446,7 @@ describe("mail cache: the sync step (the change signal's entry)", () => {
     const h = harness({ threads: inboxThreads(3) });
     await h.cache.window(win({ limit: 10 }));
     await settle(h);
-    await h.f.provider.archive([threadId("t1")]);
+    await h.f.provider.archive(h.f.targets([threadId("t1")]));
     h.f.failNext("listMailboxes", new Error("labels down"));
     h.notifiedIds.splice(0);
     await h.cache.sync();
@@ -463,7 +477,7 @@ describe("mail cache: the sync step (the change signal's entry)", () => {
     const before = h.notified();
     await h.cache.sync();
     expect(h.notified()).toBeGreaterThan(before);
-    await h.f.provider.archive([threadId("t3")]);
+    await h.f.provider.archive(h.f.targets([threadId("t3")]));
     // The read answers the cache, the re-list it starts fixes it.
     await h.cache.window(win({ limit: 10 }));
     await settle(h);
@@ -699,4 +713,100 @@ test("held writes nothing (a boot preload is not a use)", async () => {
     sql`select count(*)::int as n from mail_threads where last_used_at <> '2026-01-01T00:00:00Z'`,
   );
   expect((r.rows[0] as { n: number }).n).toBe(0);
+});
+
+describe("mail cache: triage (apply)", () => {
+  const done: Filter = clause("mailboxes", "hasNone", [INBOX]) as Filter;
+
+  test("an archive leaves the Inbox and enters Done in the cache at once, then reaches the provider through the queued job", async () => {
+    const h = harness({ threads: inboxThreads(3) });
+    const inboxView = win({ where: inbox, limit: 10 });
+    const doneView = win({ where: done, limit: 10 });
+    expect(ids(await h.cache.window(inboxView))).toEqual(["t3", "t2", "t1"]);
+    expect(ids(await h.cache.window(doneView))).toEqual([]);
+    await settle(h);
+    h.resetCalls();
+    h.notifiedIds.splice(0);
+    await h.cache.apply(["t2"], { kind: "archive" });
+    // The cache moved it with no provider call; the write is queued.
+    expect(h.f.calls).toEqual([]);
+    expect(h.notifiedIds).toEqual([["t2"]]);
+    expect(ids(await h.cache.window(inboxView))).toEqual(["t3", "t1"]);
+    expect(ids(await h.cache.window(doneView))).toEqual(["t2"]);
+    expect(h.ops).toEqual([
+      {
+        accountId: expect.any(String),
+        opId: expect.any(String),
+        op: { kind: "archive" },
+        targets: [{ thread: "t2", messages: ["m2"] }],
+      },
+    ]);
+    await settle(h);
+    h.resetCalls();
+    await h.cache.applyAtProvider(h.ops[0]!);
+    expect(h.count("archive")).toBe(1);
+    // The provider's change agrees with the prediction: the next step keeps it.
+    await h.cache.sync();
+    expect(ids(await h.cache.window(inboxView))).toEqual(["t3", "t1"]);
+    await settle(h);
+  });
+
+  test("labels and read go to the provider as label and flag writes", async () => {
+    const h = harness({ threads: inboxThreads(2) });
+    await h.cache.window(win({ where: inbox, limit: 10 }));
+    await settle(h);
+    await h.cache.apply(["t1"], { kind: "read", unread: true });
+    await h.cache.apply(["t1"], { kind: "spam" });
+    for (const job of h.ops) await h.cache.applyAtProvider(job);
+    expect(h.f.calls.map((c) => c.method)).toContain("setFlags");
+    expect(h.f.calls.map((c) => c.method)).toContain("setMailboxes");
+    await h.cache.sync();
+    const [row] = await h.cache.rows(["t1"]);
+    expect(row!.unread).toBe(true);
+    expect(row!.mailboxes).toEqual([roleMailboxId("spam")]);
+    await settle(h);
+  });
+
+  test("an op that failed for good gives way to the provider's state, offline-safe", async () => {
+    const h = harness({ threads: inboxThreads(2) });
+    const inboxView = win({ where: inbox, limit: 10 });
+    await h.cache.window(inboxView);
+    await settle(h);
+    await h.cache.apply(["t1"], { kind: "archive" });
+    expect(ids(await h.cache.window(inboxView))).toEqual(["t2"]);
+    // Gave up (never written): the database alone — the thread stale, the
+    // Inbox unverified — so its next read re-lists it from the provider.
+    h.f.setConnected("unreachable");
+    await h.cache.restoreThreads(h.ops[0]!);
+    h.f.setConnected(true);
+    await h.cache.window(inboxView);
+    const { query_id } = (
+      await t.db.execute(
+        sql`select query_id from mail_queries where provider_query not like '%-%' limit 1`,
+      )
+    ).rows[0] as { query_id: number };
+    await h.cache.relistSettled(query_id);
+    expect(ids(await h.cache.window(inboxView))).toEqual(["t2", "t1"]);
+    await settle(h);
+  });
+
+  test("a provider re-read before the op's write lands keeps the prediction", async () => {
+    const h = harness({ threads: inboxThreads(2) });
+    const inboxView = win({ where: inbox, limit: 10 });
+    await h.cache.window(inboxView);
+    await settle(h);
+    await h.cache.apply(["t1"], { kind: "archive" });
+    // Something else changes t1 at the provider (a read elsewhere): the
+    // sync step re-reads it — still in the inbox there.
+    await h.f.provider.setFlags(h.f.targets([threadId("t1")]), {
+      unread: true,
+    });
+    await h.cache.sync();
+    expect(ids(await h.cache.window(inboxView))).toEqual(["t2"]);
+    // The op lands: the pending entry is dropped, the provider agrees.
+    await h.cache.applyAtProvider(h.ops[0]!);
+    await h.cache.sync();
+    expect(ids(await h.cache.window(inboxView))).toEqual(["t2"]);
+    await settle(h);
+  });
 });

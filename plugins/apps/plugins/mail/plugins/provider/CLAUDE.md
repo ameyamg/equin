@@ -90,7 +90,10 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
   `untrash`, `setFlags`, `setMailboxes`, mailbox
   create / rename / delete, `saveDraft`, `deleteDraft`, `send`. "Archive" is
   a label removal on Gmail and a move on IMAP. Each sets a target state, so a
-  durable job may replay it.
+  durable job may replay it. The message writes take **`MailWriteTarget`s**
+  (a thread and the message ids the caller knows — its summary's), so a
+  provider writes per message (Gmail: one `messages.batchModify` per 1,000);
+  a message that arrived after the caller's summary is left as it is.
 - **Errors:**
   - `MailUnreachableError`: offline. A cached answer stands.
   - `MailNotConnectedError`: the account needs (re)consent.
@@ -124,6 +127,8 @@ versions that move on change, a change log with `more`, and
 - `definition` and `provider`;
 - `calls`, to count what a fill cost;
 - `deliver(thread, message)`, to add mail;
+- `targets(ids)`, write targets naming every message of each thread (a
+  change "made elsewhere" in a test);
 - `failNext(method, error, { after })`. With `after: true` the write lands
   and its answer is lost;
 - `setConnected(false | "unreachable")`, so `connectedAccount()` answers
@@ -177,6 +182,7 @@ The cache and e2e tests run on it, never on Gmail.
     - `MailQueryColumn`
     - `MailQueryRefusal`
     - `MailQueryRefusalReason`
+    - `MailWriteTarget`
     - `MessageBody`
     - `MessageContent`
     - `MessageFacts`

@@ -28,6 +28,32 @@ hover-revealed trailing actions, and leading icon slot all come for free:
   the narrowest surfaces. The primary action sits over the thumbnail (below);
   without one it joins the hover cluster.
 
+### Checkbox multi-select (`selection`)
+
+With `DataViewRenderProps.selection` (data-view CLAUDE.md, "Checkbox
+multi-select") the list mounts the `multi-select` provider over its rows as
+painted (`paintedKeys`: each section's entries, attached rows after their
+parent) and draws:
+
+- **a box per row** (`SelectionBox`, in `Row`'s `lead` — outside the row's
+  control, so no nested button; its press never activates or drags the row;
+  shift-click adds the range). Over a `renderLeading` glyph (an avatar) the box
+  shares the glyph's box and swaps with it; otherwise it takes a slot of its
+  own ahead of the glyph or the disclosure, its width always reserved. Hidden
+  at rest, shown while the row is hovered or holds focus (the row box's
+  `group/row-actions`), and on every row while anything is selected.
+- **the checked tint** (`CheckedTint`: `bg-primary/8` behind the row, under
+  its own hover and selected fills). Box and tint subscribe themselves, so a
+  check re-renders them, never the memoized row.
+- **the `SelectionBar`** — before the rows (`bar: "top"`) or after them
+  (`"bottom"`, the floating pill), with the surface's `bulkActions`.
+- **Escape clears** (`useClearOnEscape`, a surface shortcut of the list's
+  region, registered only while something is selected; it yields to text
+  fields).
+
+Without `selection` nothing of this is drawn (no box, no slot, no provider).
+Pinned by `web/__tests__/multi-select.test.tsx`.
+
 ### Cover thumbnail
 
 When the surface is covered (`resolveCover(visibleFields, props.cover)`: the
@@ -304,9 +330,10 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×50
     - `primitives/rank-reorder` ×9
+    - `primitives/multi-select` ×5
     - `primitives/tree` ×3
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
@@ -316,6 +343,7 @@ conditional hook.
     - `primitives/css/clip.clipClasses`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/layer.layerClasses`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`

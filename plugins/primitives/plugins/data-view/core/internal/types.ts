@@ -350,13 +350,20 @@ interface CreateOptionBase {
 /**
  * Declares a data source as multi-selectable. Presence on `DataViewProps`
  * (mirroring `hierarchy`) enables checkbox multi-select in the views that
- * support it (currently the tree). Gate on `selection != null`, NOT on
- * `bulkActions` truthiness — `selection={{}}` still activates selection.
+ * support it (the nested table and the list). Gate on `selection != null`,
+ * NOT on `bulkActions` truthiness — `selection={{}}` still activates selection.
  */
 export interface SelectionConfig {
   /** Bulk-action buttons in the SelectionBar (rendered inside the multi-select
    *  provider, so they may call useMultiSelect()). */
   bulkActions?: ReactNode;
+  /**
+   * Where the selection bar floats while rows are checked: `"top"` (default)
+   * a strip pinned under the top edge of the scroller, `"bottom"` a raised
+   * pill centred at the bottom of the list's viewport (`SelectionBar`'s
+   * `placement`).
+   */
+  bar?: "top" | "bottom";
 }
 
 /**
@@ -1606,7 +1613,8 @@ export interface DataViewRenderProps<TRow> {
    * and draws each entry's `children` under it.
    */
   attach?: DataViewAttachConfig<TRow>;
-  /** Present → the view enables checkbox multi-select (currently the tree). */
+  /** Present → the view enables checkbox multi-select (the nested table and
+   *  the list). */
   selection?: ViewSelection;
   /** Finder-style row selection (see {@link RowSelectionConfig}). */
   rowSelection?: RowSelectionConfig;
@@ -2758,7 +2766,8 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    * with `manualOrder` (collapse the rank-ordered entries) and group-by.
    */
   aggregate?: DataViewAggregateConfig<TRow>;
-  /** Present → selectable views (tree) enable checkbox multi-select. */
+  /** Present → checkbox multi-select: honoured by the nested table and the
+   *  list (see {@link SelectionConfig}). */
   selection?: SelectionConfig;
   /**
    * Finder-style row selection — a set and an anchor, controlled here. See

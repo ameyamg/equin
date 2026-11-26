@@ -167,6 +167,59 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   page (50), the head (25) of every view read in the last day. A stale
   summary is skipped (re-read when listed or opened).
 
+## Triage: the cache first, the provider after (design §6)
+
+- **The ops** (`core/internal/ops.ts`, `MailThreadOp`): `archive` (Done),
+  `move-to-inbox` (out of trash and spam too), `trash`, `spam`, `not-spam`,
+  `read` (`unread` true / false), `labels` (`add` / `remove`, roles
+  included). Each SETS a state (a replay is harmless). `applyMailOp` is the
+  ONE reducer: the server applies it per message, the browser to the row
+  (the union over messages — every op acts on every message alike, so the
+  two agree). `undoMailOp(op, before)` gives the inverse as `labels` / `read`
+  ops per thread as it was, grouped; `primaryMailAction(mailboxes)` the
+  thread's first action (Done / Restore / Not spam / Move to Inbox).
+- **`POST /api/mail/threads/apply`** (`applyMailThreadOp`, ≤ 1,000 ids) →
+  `mailCache.apply(ids, op)`, answering the ops that undo it (each thread as
+  the cache held it before — the browser's Undo sends them):
+  1. a thread not cached is read first (its messages are what the write
+     acts on);
+  2. the op is **pending** on its threads until its provider write lands:
+     every summary read from the provider meanwhile (`fetchSummaries`: a sync
+     step, a fill) has it laid over, so a re-read of the pre-op state never
+     undoes the prediction (in memory: a restart forgets it, and the next
+     sync after the write lands corrects any bounce);
+  3. the summaries are rewritten as the op leaves them in one transaction,
+     rows locked (`FOR UPDATE`: a concurrent upsert waits, then lays the
+     pending op over what it read);
+  4. the provider's write is queued — **`mail.apply-op`** (`defineJob`,
+     `serial` so ops land in the order made; offline or not connected:
+     retried, 8 attempts; any other refusal: `NonRetryableError`, so one
+     doomed op never holds the ones behind it) — before anything is shown;
+  5. every verified locally maintained query re-checked per message (an
+     archived thread leaves the Inbox, enters Done) — NOT under the query's
+     lock: a fill holds it across paced provider calls, and a click waited
+     43.6 s on the Done view's cold fill before this; the race left (a fill
+     that read the pre-op summary) is undone by the next sync's re-check —
+     every provider-evaluated query holding one unverified, `mail.threads`
+     notified.
+  - Given up (`onDead`): reported, and — database only, as it likely gave up
+    offline — the threads marked stale and every query unverified, so the
+    next read re-lists from the provider and the truth replaces the
+    prediction.
+- **The provider writes per message** (`MailWriteTarget`: a thread and its
+  summary's message ids): Gmail answers one `messages.batchModify` per 1,000
+  messages (50 units; a per-thread modify is 10 a thread).
+- **Labels**: `POST /api/mail/labels` (`{ path }`: "Travel/Ski 2027", each
+  missing level created under the one before, answers the last level's id),
+  `PATCH /api/mail/labels/:id` (its own name; Gmail nests by name, so the
+  Gmail provider renames every label under it too), `DELETE
+  /api/mail/labels/:id` — each through the provider, then the mailboxes
+  relisted. Not optimistic: the dialog's Button pends. Interim UI: the
+  shared tag picker replaces it (task-1795721629-kk5kdx).
+- **Undo is per thread, not per message**: it restores the thread's union
+  facts on every message (Undo Done puts INBOX on each message of the
+  thread, Undo mark-read marks each unread).
+
 ## Opening Mail: the Inbox in the first frame
 
 `mailThreadsServed` declares `preloadWindows` (network/live): the Inbox's
@@ -201,7 +254,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
 
 ## Plugin reference
 
-- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "mail-cache"
@@ -229,7 +282,9 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `database/sql-column.parsedJson`
     - `ids.externalIdColumn`
     - `infra/background/timer.defineTimer`
+    - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
+    - `infra/jobs.NonRetryableError`
     - `infra/retention.defineRetention`
     - `infra/retention.markCascadeBounded`
     - `network/live.serveCollection`
@@ -255,6 +310,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `defineJob('retention.mail_threads')`
     - `defineTimer('mail.sync-tick')`
     - `defineJob('mail.sync-idle')`
+    - `defineJob('mail.apply-op')`
   - Resources:
     - `mail.account-status` (push, notified)
     - `mail.mailboxes` (keyed)
@@ -262,6 +318,11 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `mail.threads` (keyed, window)
     - `mail.threads:groups` (push)
     - `mail.threads:rows` (keyed, point)
+  - Routes:
+    - `POST /api/mail/threads/apply`
+    - `POST /api/mail/labels`
+    - `PATCH /api/mail/labels/:id`
+    - `DELETE /api/mail/labels/:id`
 - Core:
   - Uses:
     - `apps/mail/provider.MAIL_QUERY_OPS`
@@ -279,6 +340,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `fields/string-list/config.stringListField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
+    - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
@@ -286,10 +348,20 @@ offline, the byte budget, prefetch (background priority, neighbours first).
   - Exports (types):
     - `MailAccountStatus`
     - `MailMailboxRow`
+    - `MailOpFacts`
+    - `MailOpUndo`
+    - `MailPrimaryAction`
     - `MailPushStatus`
+    - `MailThreadOp`
     - `MailThreadRow`
     - `MailThreadsRefusal`
   - Exports (values):
+    - `applyMailOp`
+    - `applyMailThreadOp`
+    - `createMailLabel`
+    - `deleteMailLabel`
+    - `inMailTrash`
+    - `isMailRole`
     - `MAIL_THREADS_MAX_LIMIT`
     - `MAIL_THREADS_REFUSALS`
     - `mailAccountStatus`
@@ -299,12 +371,22 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `mailCacheConfig`
     - `mailInboxView`
     - `mailMailboxes`
+    - `mailOpColumns`
+    - `mailOpMoves`
+    - `MailOpUndoSchema`
+    - `MailThreadOpSchema`
     - `mailThreads`
     - `PARENT_VIEW_INCLUDES_SUB_LABELS`
+    - `primaryMailAction`
+    - `renameMailLabel`
+    - `undoMailOp`
 - Cross-plugin:
   - Imported by:
     - `apps/mail/reader`
     - `apps/mail/threads`
+  - Endpoint callers:
+    - `gmail`
+    - `reader`
 - Exemptions:
   - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/sync.ts` (sanctioned)
 

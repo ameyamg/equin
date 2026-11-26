@@ -214,6 +214,8 @@ export interface DataTableSelection {
   /** What the selection is kept under — stable across a reload, unique
    *  among the tables of one place (`MultiSelectProvider`'s `keep`). */
   keep: string;
+  /** Where the `SelectionBar` floats (its `placement`). Default `"top"`. */
+  bar?: "top" | "bottom";
 }
 
 export interface DataTableProps<TRow> {

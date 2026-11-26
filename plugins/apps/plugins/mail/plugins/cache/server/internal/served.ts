@@ -7,12 +7,15 @@ import { MailProviders } from "@plugins/apps/plugins/mail/plugins/provider/serve
 import type { MailProviderDefinition } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { getConfig } from "@plugins/config_v2/server";
+import { z } from "zod";
+import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import {
   mailAccountStatus,
   mailCacheConfig,
   mailInboxView,
   mailMailboxes,
   mailThreads,
+  MailThreadOpSchema,
   type MailPushStatus,
 } from "../../core";
 import { mailChangeSignal, SYNC_IDLE_MS, SYNC_TICK_MS } from "./sync";
@@ -72,6 +75,46 @@ export const mailCache = createMailCache({
   bodyBudgetBytes: () => getConfig(mailCacheConfig).bodyBudgetMb * 1024 * 1024,
   prefetch: { perRun: () => getConfig(mailCacheConfig).prefetchPerRun },
   onBackgroundError,
+  enqueueOp: async (job) => {
+    await mailApplyOpJob.enqueue(job);
+  },
+});
+
+/**
+ * The provider's half of a triage op (design §6): run after the cache holds
+ * the op's prediction, one at a time in the order they were made (`serial`:
+ * an undo lands after its op), retried through an outage. One that fails
+ * for good re-reads its threads from the provider — the truth replaces the
+ * prediction — and is reported.
+ */
+export const mailApplyOpJob = defineJob({
+  name: "mail.apply-op",
+  description:
+    "Writes a mail action you took (Done, read or unread, labels, trash, spam) to your mail provider right after the app shows it, retrying through an outage; one that cannot be written puts the threads back as the provider holds them.",
+  // One paced provider write (Gmail: a batchModify per 1,000 messages).
+  hold: "seconds",
+  input: z.object({
+    accountId: z.string(),
+    opId: z.string(),
+    op: MailThreadOpSchema,
+    targets: z
+      .array(z.object({ thread: z.string(), messages: z.array(z.string()) }))
+      .max(1000),
+  }),
+  event: z.never(),
+  dedup: "none",
+  serial: true,
+  maxAttempts: 8,
+  run: ({ input }) => mailCache.applyAtProvider(input),
+  onDead: async ({ input }) => {
+    onBackgroundError(
+      `writing ${input.op.kind} on ${input.targets.length} thread(s) to the provider`,
+      new Error(
+        "gave up; its threads are marked stale and re-read from the provider on their next listing or open",
+      ),
+    );
+    await mailCache.restoreThreads(input);
+  },
 });
 
 function onBackgroundError(what: string, err: unknown): void {

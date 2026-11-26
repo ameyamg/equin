@@ -77,6 +77,7 @@ appears (YAGNI).
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deploy-history/rollback`
+    - `apps/mail/threads`
     - `apps/places/places-map`
     - `apps/prototypes/canvas`
     - `apps/website/landing/screenshot/chrome`

@@ -13,7 +13,9 @@ thread's messages, else fetched from the provider (the read stays loading).
 NOT cache-only: any thread id is read, listed or not. Re-pushed when the cache
 learns the thread moved (`onMailThreadsChanged`: read elsewhere, relabelled, a
 reply). Refused `gone`, `not-connected` (the provider's connect surface) or
-`offline-not-cached`. Opening marks nothing read (step 6's write).
+`offline-not-cached`. The reader itself writes nothing: the thread pane
+(`threads/web/panes.tsx`) marks the thread read on open and puts its triage
+in the bar (`ThreadReader`'s `tools`).
 
 ## Safe HTML (`server/internal/render.ts`, `web/internal/mail-frame.ts`)
 
@@ -56,8 +58,8 @@ them again.
 The prototype's reading pane: a bar (Close), the subject and message count,
 the messages oldest first — the last and the unread ones open, the others
 folded to one line (a click opens one) — an HTML body framed on a light page
-of its own, a text body as text, each message's files. Not yet: the label
-chips, the actions (step 6) and the reply bar (step 7).
+of its own, a text body as text, each message's files. The bar ends with the
+caller's `tools`. Not yet: the label chips and the reply bar (step 7).
 
 ## Measuring
 

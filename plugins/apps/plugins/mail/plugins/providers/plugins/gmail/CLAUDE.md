@@ -221,7 +221,6 @@ what moved). Design §5, task 8.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
-  - Endpoint callers: `reader`
 - Exemptions:
   - Exempts itself from: `endpoints/no-raw-content-disposition` — `server/internal/content.ts` (sanctioned)
 

@@ -29,6 +29,7 @@ import {
   type MailProviderDefinition,
   type MailPush,
   type MailQuery,
+  type MailWriteTarget,
   type MessageContent,
   type OutgoingMessage,
   type Participant,
@@ -404,6 +405,22 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     }
   }
 
+  /** Each target's listed messages (a write acts on those only), its thread touched once. */
+  function eachMessage(
+    targets: readonly MailWriteTarget[],
+    fn: (m: FakeThread["messages"][number]) => void,
+  ) {
+    eachThread(
+      targets.map((t) => t.thread),
+      (t) => {
+        const want = new Set<string>(
+          targets.find((x) => x.thread === t.id)!.messages,
+        );
+        t.messages.filter((m) => want.has(m.id)).forEach(fn);
+      },
+    );
+  }
+
   const findRfc = (rfc: string) => {
     for (const t of threads.values())
       for (const m of t.messages)
@@ -553,58 +570,46 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
           more: upTo < clock,
         };
       }),
-    archive: (ids, o) =>
-      call("archive", ids.length, o, () =>
-        eachThread(ids, (t) =>
-          t.messages.forEach((m) => m.mailboxes.delete(INBOX)),
-        ),
+    archive: (targets, o) =>
+      call("archive", targets.length, o, () =>
+        eachMessage(targets, (m) => m.mailboxes.delete(INBOX)),
       ),
-    moveToInbox: (ids, o) =>
-      call("moveToInbox", ids.length, o, () =>
-        eachThread(ids, (t) =>
-          t.messages.forEach((m) => {
-            m.mailboxes.delete(TRASH);
-            m.mailboxes.delete(SPAM);
-            m.mailboxes.add(INBOX);
-          }),
-        ),
+    moveToInbox: (targets, o) =>
+      call("moveToInbox", targets.length, o, () =>
+        eachMessage(targets, (m) => {
+          m.mailboxes.delete(TRASH);
+          m.mailboxes.delete(SPAM);
+          m.mailboxes.add(INBOX);
+        }),
       ),
-    trash: (ids, o) =>
-      call("trash", ids.length, o, () =>
-        eachThread(ids, (t) =>
-          t.messages.forEach((m) => {
-            m.mailboxes.delete(INBOX);
-            m.mailboxes.add(TRASH);
-          }),
-        ),
+    trash: (targets, o) =>
+      call("trash", targets.length, o, () =>
+        eachMessage(targets, (m) => {
+          m.mailboxes.delete(INBOX);
+          m.mailboxes.add(TRASH);
+        }),
       ),
-    untrash: (ids, o) =>
-      call("untrash", ids.length, o, () =>
-        eachThread(ids, (t) =>
-          t.messages.forEach((m) => m.mailboxes.delete(TRASH)),
-        ),
+    untrash: (targets, o) =>
+      call("untrash", targets.length, o, () =>
+        eachMessage(targets, (m) => m.mailboxes.delete(TRASH)),
       ),
-    setFlags: (ids, flags, o) =>
-      call("setFlags", ids.length, o, () =>
-        eachThread(ids, (t) =>
-          t.messages.forEach((m) => {
-            if (flags.unread !== undefined) m.unread = flags.unread;
-            if (flags.starred !== undefined) m.starred = flags.starred;
-          }),
-        ),
+    setFlags: (targets, flags, o) =>
+      call("setFlags", targets.length, o, () =>
+        eachMessage(targets, (m) => {
+          if (flags.unread !== undefined) m.unread = flags.unread;
+          if (flags.starred !== undefined) m.starred = flags.starred;
+        }),
       ),
-    setMailboxes: (ids, change, o) =>
-      call("setMailboxes", ids.length, o, () =>
-        eachThread(ids, (t) =>
-          t.messages.forEach((m) => {
-            for (const b of change.remove) m.mailboxes.delete(b);
-            for (const b of change.add) {
-              if (!mailboxes.has(b))
-                throw new Error(`fake mail: no mailbox ${b}`);
-              m.mailboxes.add(b);
-            }
-          }),
-        ),
+    setMailboxes: (targets, change, o) =>
+      call("setMailboxes", targets.length, o, () =>
+        eachMessage(targets, (m) => {
+          for (const b of change.remove) m.mailboxes.delete(b);
+          for (const b of change.add) {
+            if (!mailboxes.has(b))
+              throw new Error(`fake mail: no mailbox ${b}`);
+            m.mailboxes.add(b);
+          }
+        }),
       ),
     createMailbox: (m, o) =>
       call("createMailbox", 0, o, () => {
@@ -685,6 +690,14 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     /** Every call made, in order: the method and how many thread ids it carried. */
     calls,
     deliver,
+    /** Write targets naming every message of each thread (a test's change made elsewhere). */
+    targets(ids: readonly ThreadId[]): MailWriteTarget[] {
+      return ids.map((id) => {
+        const t = threads.get(id);
+        if (!t) throw new Error(`fake mail: no thread ${id}`);
+        return { thread: id, messages: t.messages.map((m) => m.id) };
+      });
+    },
     /** Every cursor minted up to now answers `reset` from here on (Gmail's 404). */
     expireHistory() {
       historyFloor = clock + 1;

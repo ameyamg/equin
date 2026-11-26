@@ -123,9 +123,9 @@ query never wait.) See
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×9
-    - `apps` ×5
+    - `apps` ×4
     - `debug` ×3
     - `framework` ×3
     - `conversations` ×2

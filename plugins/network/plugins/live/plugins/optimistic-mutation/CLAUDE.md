@@ -126,6 +126,21 @@ sync-status cloud on "Saving…" forever:
 confirming push hasn't been matched yet, and failed ops awaiting a retry. It is
 NOT "is anything unsaved" — read `saving` for that.
 
+## Rows of a windowed collection: `writeRows`
+
+`useOptimisticResource` predicts one value, an id set or a scoped set — not a
+collection read through many filtered windows. `writeRows(collection, { ids,
+columns, apply, send })` (`web/internal/row-write.ts`) is that case: the
+prediction is a row patch every `useLive` read of the collection draws (the
+row changed, or gone from each window its new values no longer match on
+`columns`), the send on the collection's send lane, the patch acked when the
+send resolves (rows received after it are the server's; `writeRows`
+resolves to the send's answer) and dropped — the error rethrown — when it
+rejects. `apply` follows the rule above: the server's
+own reducer, from `core/`. Read side and its rules: `network/live`'s
+CLAUDE.md, "Writes drawn on every read: the row overlay". Consumer: the Mail
+thread list's triage (`apps/mail/threads`).
+
 ## API
 
 The read is a declaration, positionally — mirroring `useLive`'s arguments:
@@ -620,11 +635,11 @@ that drops it from the overlay — is emitted on `clientLatencySink`
 
 ## Plugin reference
 
-- Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
+- Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported. writeRows predicts a write on rows of a collection read through windows: every read draws it at once (the row changed, or gone from each window whose filter it no longer matches), ordered on the collection's send lane, giving way to the server's rows once acked, dropped and rethrown when rejected.
 - Web:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×10
     - `network/live/live-state` ×9
-    - `network/live` ×9
     - `infra/endpoints` ×6
     - `primitives/networking` ×2
     - `primitives/latest-ref.useLatestRef`
@@ -634,14 +649,17 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `OptimisticOptions`
     - `OptimisticResult`
     - `OptimisticSettled`
+    - `RowWrite`
   - Exports (values):
     - `enqueueDetachedWrite`
     - `enqueueResourceWrite`
     - `OpNoLongerApplies`
     - `useAwaitResourceWrite`
     - `useOptimisticResource`
+    - `writeRows`
 - Cross-plugin:
   - Imported by:
+    - `apps/mail/threads`
     - `apps/sonata/track-mixer`
     - `page/editor`
     - `ui/theme-engine/saved-themes`

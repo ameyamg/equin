@@ -1,5 +1,14 @@
+import { useEffect, useRef } from "react";
 import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  mailThreads,
+  primaryMailAction,
+  type MailThreadOp,
+} from "@plugins/apps/plugins/mail/plugins/cache/core";
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
+import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { ThreadActions, useMailActions } from "./internal/actions";
+import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import { mailThread } from "@plugins/apps/plugins/mail/plugins/reader/core";
 import { ThreadReader } from "@plugins/apps/plugins/mail/plugins/reader/web";
@@ -55,5 +64,65 @@ function MailThreadPaneView() {
   // Null for the frame a swap to another thread is in flight (the route's
   // head is moving): the reader then draws no Close.
   const close = mailThreadPane.useClose();
-  return <ThreadReader threadId={threadId} onClose={close} />;
+  // The thread's row (by id: the prediction of an op in flight included):
+  // what its actions read — and, unread, it is marked read as it opens.
+  const read = useLive(mailThreads, { id: threadId });
+  // Not known yet and gone draw the same: no actions (the reader says which).
+  const row = rowOrStale(read) ?? null;
+  const { run } = useMailActions();
+  const markedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (row === null || markedFor.current === row.id) return;
+    markedFor.current = row.id;
+    if (row.unread)
+      run([row.id], { kind: "read", unread: false }, { toast: false });
+  }, [row, run]);
+  // Done, Delete and the rest move the thread away: back to the list.
+  const leave = close === null ? undefined : () => close(PLAIN_GESTURE);
+  const act = (op: MailThreadOp) => {
+    if (row === null) return;
+    run([row.id], op);
+    leave?.();
+  };
+  // e: the primary action (Done in the inbox); #: delete — on the open thread.
+  useSurfaceShortcuts([
+    {
+      id: "mail.primary",
+      keys: "e",
+      label: "Done (the open thread's primary action)",
+      group: "Mail",
+      when: () => row !== null,
+      handler: () => {
+        if (row !== null) act({ kind: primaryMailAction(row.mailboxes).op });
+      },
+    },
+    {
+      // Where "#" is unshifted (UK layouts).
+      id: "mail.trash-unshifted",
+      keys: "#",
+      label: "Delete the open thread",
+      group: "Mail",
+      when: () => row !== null,
+      handler: () => act({ kind: "trash" }),
+    },
+    {
+      id: "mail.trash",
+      keys: "shift+#",
+      label: "Delete the open thread",
+      group: "Mail",
+      when: () => row !== null,
+      handler: () => act({ kind: "trash" }),
+    },
+  ]);
+  return (
+    <ThreadReader
+      threadId={threadId}
+      onClose={close}
+      tools={
+        row === null ? null : (
+          <ThreadActions row={row} withUnread onLeave={leave} />
+        )
+      }
+    />
+  );
 }

@@ -247,6 +247,7 @@
   {"list":"apps.mail.provider.connect","plugin":"apps.mail.providers.gmail","fact":{"component":{"$code":true},"id":"gmail"}},
   {"list":"apps.mail.threads.mail-thread.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"apps.mail.threads.mail.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
+  {"list":"apps.mail.threads.thread-actions","plugin":"apps.mail.threads","fact":{"component":{"$code":true},"id":"triage"}},
   {"list":"apps.pages.page-tree.block-detail.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"apps.pages.page-tree.header-tool","plugin":"apps.pages.page-tags","fact":{"component":{"$code":true},"id":"add-tag","useAvailable":{"$code":true}}},
   {"list":"apps.pages.page-tree.header-tool","plugin":"apps.pages.page-tree","fact":{"component":{"$code":true},"id":"add-icon","useAvailable":{"$code":true}}},

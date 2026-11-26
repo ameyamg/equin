@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type ReactNode,
   type RefCallback,
+  type RefObject,
 } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -93,6 +94,14 @@ import {
 } from "@plugins/primitives/plugins/rank-reorder/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import {
+  MultiSelectProvider,
+  SelectionBar,
+  SelectionBox,
+  useClearOnEscape,
+  useMultiSelectItem,
+} from "@plugins/primitives/plugins/multi-select/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
@@ -105,6 +114,7 @@ import {
   DATA_VIEW_SECTION_OFFSET_VAR,
   dataPart,
   type LinkedHover,
+  type ViewSelection,
 } from "@plugins/primitives/plugins/data-view/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
@@ -180,6 +190,7 @@ const collapseIcon = symbol("expand-less");
 const VIRTUALIZE_THRESHOLD = 100;
 
 const NO_ITEMS: readonly RankReorderItem[] = [];
+const NO_KEYS: readonly string[] = [];
 
 /**
  * The slots a list row draws: a glyph lead (`Row.icon`), the title with its
@@ -275,6 +286,10 @@ interface ListRowConfig {
    *  enter / leave to it and reads whether IT is hovered (`ListEntry`);
    *  `null` when the surface tracks none. */
   hover: LinkedHover | null;
+  /** Checkbox multi-select (`DataViewRenderProps.selection`): every row
+   *  leads with its selection box ({@link SelectLead}) and wears the checked
+   *  tint ({@link CheckedTint}). The provider is the list's. */
+  selectable: boolean;
 }
 
 /** One row's props: the shared config plus what is this row's own. Each is a
@@ -554,6 +569,16 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // The linked hover: a store the host holds for its life, so the row
   // config keeps its identity across hovers.
   const hover = props.rowHover ?? null;
+  // Checkbox multi-select: a box on every row, the bar over the list.
+  const selection = props.selection;
+  const selectable = selection != null;
+  // The provider's order: the rows as painted (attached rows under their
+  // parent), so a range runs down the screen and a row leaving the window
+  // leaves the selection.
+  const selectableKeys = useMemo(
+    () => (selectable ? paintedKeys(sections) : NO_KEYS),
+    [selectable, sections],
+  );
   // The row's terms, split once per schema: the title, the subtitle run and
   // the trailing slots.
   const terms = useMemo(() => {
@@ -663,6 +688,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       setExpanded,
       dnd,
       hover,
+      selectable,
     };
   }, [
     anyAttached,
@@ -692,6 +718,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     setExpanded,
     dnd,
     hover,
+    selectable,
   ]);
 
   // The rank-reorder host's item list (id + rank + group); the provider keys
@@ -1016,7 +1043,17 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         {options.columnCaptions === true && options.rowChrome !== "tree" ? (
           <ListCaptions config={config} firstRow={firstRow} />
         ) : null}
-        {body}
+        {selection ? (
+          <ListSelection
+            selection={selection}
+            orderedIds={selectableKeys}
+            root={listRoot}
+          >
+            {body}
+          </ListSelection>
+        ) : (
+          body
+        )}
         {reseatNew ? <NewGroupSlot label={reseatNew.label} /> : null}
       </div>
     </FieldPresentationProvider>
@@ -1653,7 +1690,33 @@ function listRowNode(
   const activation = config.detailOnActivate
     ? () => config.toggleDetail(key, open)
     : surfaceActivation;
-  const rowNode = (
+  const disclosureNode = disclosure ? (
+    <TreeLeading
+      depth={0}
+      hasChildren={folds}
+      isOpen={isOpen}
+      onToggle={toggle}
+      icon={glyph}
+      disclosure={config.disclosureVariant}
+    />
+  ) : undefined;
+  // Multi-select: the row's box goes in `Row`'s `lead` — outside the row's
+  // own control, so the box is no nested button. Over a `renderLeading`
+  // glyph (an avatar) it shares the glyph's box, swapping with it; else it
+  // takes a slot of its own ahead of the glyph (or the disclosure).
+  const overGlyph =
+    config.selectable && config.renderLeading != null && !disclosure;
+  const leadNode = !config.selectable ? (
+    disclosureNode
+  ) : overGlyph ? (
+    <SelectLead rowKey={key} glyph={glyph} />
+  ) : (
+    <>
+      <SelectLead rowKey={key} glyph={null} />
+      {disclosureNode}
+    </>
+  );
+  const plainRow = (
     <Row
       // The row's identity on the DOM: what the DataView measures the rows
       // it has on screen by.
@@ -1677,19 +1740,8 @@ function listRowNode(
       // middle- / ⌘-click (`Row` forwards the gesture handlers).
       {...activationProps(activation)}
       aria-expanded={config.detailOnActivate ? open : undefined}
-      icon={disclosure ? undefined : glyph}
-      lead={
-        disclosure ? (
-          <TreeLeading
-            depth={0}
-            hasChildren={folds}
-            isOpen={isOpen}
-            onToggle={toggle}
-            icon={glyph}
-            disclosure={config.disclosureVariant}
-          />
-        ) : undefined
-      }
+      icon={disclosure || overGlyph ? undefined : glyph}
+      lead={leadNode}
       actions={
         detailInCluster ? (
           <>
@@ -1836,6 +1888,13 @@ function listRowNode(
       )}
     </Row>
   );
+  // A checked row wears the checked tint behind it — its own subscriber, so
+  // checking a box re-renders the tint, never the row it holds.
+  const rowNode = config.selectable ? (
+    <CheckedTint rowKey={key}>{plainRow}</CheckedTint>
+  ) : (
+    plainRow
+  );
   const withPrimary =
     thumbnail && config.primary ? (
       <PrimaryOverThumbnail
@@ -1965,4 +2024,130 @@ function paintedSequence(
     above: (key) => above.get(key) ?? null,
     rowOf: (key) => rows.get(key),
   };
+}
+
+/** Every painted key, in drawing order: each section's entries, an entry's
+ *  attached rows right after it. */
+function paintedKeys(sections: readonly DataViewSection<unknown>[]): string[] {
+  const keys: string[] = [];
+  const walk = (entries: readonly DataViewRowEntry<unknown>[]): void => {
+    for (const entry of entries) {
+      keys.push(entry.key);
+      if (entry.children) walk(entry.children);
+    }
+  };
+  for (const section of sections) walk(section.entries);
+  return keys;
+}
+
+/**
+ * The list's checkbox multi-select (`DataViewRenderProps.selection`): the
+ * provider over the rows as painted (a row leaving them leaves the
+ * selection), kept under the host's `keep`; Escape clears it while the key
+ * is the list's; the bar — `bar: "top"` before the rows, `"bottom"` after
+ * them (a bottom sticky sticks within the box it ends). The bulk actions
+ * render inside the provider, so they read `useMultiSelect()`.
+ */
+function ListSelection({
+  selection,
+  orderedIds,
+  root,
+  children,
+}: {
+  selection: ViewSelection;
+  orderedIds: readonly string[];
+  root: RefObject<HTMLElement | null>;
+  children: ReactNode;
+}): ReactNode {
+  const bottom = selection.bar === "bottom";
+  return (
+    <MultiSelectProvider keep={selection.keep} orderedIds={orderedIds}>
+      <ClearOnEscape root={root} />
+      {bottom ? null : <SelectionBar actions={selection.bulkActions} />}
+      {children}
+      {bottom ? (
+        <SelectionBar actions={selection.bulkActions} placement="bottom" />
+      ) : null}
+    </MultiSelectProvider>
+  );
+}
+
+function ClearOnEscape({
+  root,
+}: {
+  root: RefObject<HTMLElement | null>;
+}): ReactNode {
+  useClearOnEscape(root);
+  return null;
+}
+
+/** The box's reveal: hidden (and click-through) at rest, shown while its row
+ *  is hovered or holds focus — the row box's `row-actions` group. */
+const BOX_REVEAL =
+  "opacity-0 pointer-events-none group-hover/row-actions:opacity-100 group-hover/row-actions:pointer-events-auto group-focus-within/row-actions:opacity-100 group-focus-within/row-actions:pointer-events-auto";
+/** The glyph under the box: shown at rest, hidden whenever the box shows. */
+const GLYPH_UNDER_BOX =
+  "transition-opacity group-hover/row-actions:opacity-0 group-focus-within/row-actions:opacity-0";
+
+/**
+ * A row's selection box in `Row`'s `lead` (outside the row's control, so the
+ * box is no nested button; the lead is click-through, so the box opts back in
+ * while shown). Revealed by the row's hover or focus, and on EVERY row while
+ * anything is selected. Over `glyph` (a `renderLeading` avatar) the two share
+ * one box and swap; without, the box takes a slot of its own whose width is
+ * always reserved, so revealing it never shifts the row.
+ */
+function SelectLead({
+  rowKey,
+  glyph,
+}: {
+  rowKey: string;
+  glyph: ReactNode;
+}): ReactNode {
+  const { isActive } = useMultiSelectItem(rowKey);
+  const box = (
+    <SelectionBox
+      id={rowKey}
+      label="Select row"
+      className={isActive ? "pointer-events-auto" : BOX_REVEAL}
+    />
+  );
+  if (glyph == null) return <Center as="span">{box}</Center>;
+  return (
+    <Center as="span" className="relative">
+      <Center
+        as="span"
+        aria-hidden={isActive ? true : undefined}
+        className={isActive ? "opacity-0" : GLYPH_UNDER_BOX}
+      >
+        {glyph}
+      </Center>
+      <Center as="span" className={layerClasses()}>
+        {box}
+      </Center>
+    </Center>
+  );
+}
+
+/** The checked row's tint behind it: the accent mixed thin into the row's
+ *  ground, under the row's own hover and selected fills. */
+function CheckedTint({
+  rowKey,
+  children,
+}: {
+  rowKey: string;
+  children: ReactNode;
+}): ReactNode {
+  const { isSelected } = useMultiSelectItem(rowKey);
+  return (
+    <div
+      data-checked={isSelected ? "" : undefined}
+      className={cn(
+        "rounded-md transition-colors",
+        isSelected && "bg-primary/8",
+      )}
+    >
+      {children}
+    </div>
+  );
 }

@@ -9,6 +9,7 @@ import {
   nativeMailboxId,
   providerQuery,
   roleMailboxId,
+  messageId,
   threadId,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { HISTORY_PAGES_PER_CALL, createGmailMailProvider } from "./provider";
@@ -568,16 +569,36 @@ describe("Gmail provider: writes", () => {
   const mime = (id: string) =>
     new TextEncoder().encode(`Message-ID: ${id}\r\nSubject: Hi\r\n\r\nbody`);
 
-  test("archive removes INBOX from each thread", async () => {
+  test("archive removes INBOX from every target message in one batchModify", async () => {
     const g = gmail((r) =>
-      r.path.endsWith("/modify")
-        ? json(200, { id: "x", historyId: "1" })
-        : undefined,
+      r.path.endsWith("/messages/batchModify") ? json(200, {}) : undefined,
     );
-    await g.provider.archive([threadId("t1"), threadId("t2")]);
+    await g.provider.archive([
+      { thread: threadId("t1"), messages: [messageId("m1"), messageId("m2")] },
+      { thread: threadId("t2"), messages: [messageId("m3")] },
+    ]);
     expect(g.sent.map((s) => [s.path, JSON.parse(s.body)])).toEqual([
-      [`${ME}/threads/t1/modify`, { removeLabelIds: ["INBOX"] }],
-      [`${ME}/threads/t2/modify`, { removeLabelIds: ["INBOX"] }],
+      [
+        `${ME}/messages/batchModify`,
+        { ids: ["m1", "m2", "m3"], removeLabelIds: ["INBOX"] },
+      ],
+    ]);
+  });
+
+  test("trash and move to inbox are label changes on the messages", async () => {
+    const g = gmail((r) =>
+      r.path.endsWith("/messages/batchModify") ? json(200, {}) : undefined,
+    );
+    const t = [{ thread: threadId("t1"), messages: [messageId("m1")] }];
+    await g.provider.trash(t);
+    await g.provider.moveToInbox(t);
+    expect(g.sent.map((s) => JSON.parse(s.body))).toEqual([
+      { ids: ["m1"], addLabelIds: ["TRASH"], removeLabelIds: ["INBOX"] },
+      {
+        ids: ["m1"],
+        addLabelIds: ["INBOX"],
+        removeLabelIds: ["TRASH", "SPAM"],
+      },
     ]);
   });
 

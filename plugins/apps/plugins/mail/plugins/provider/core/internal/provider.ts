@@ -3,6 +3,7 @@ import type {
   DraftId,
   ListCursor,
   MailboxId,
+  MessageId,
   ProviderQuery,
   ThreadId,
 } from "./ids";
@@ -77,6 +78,19 @@ export type MailChanges =
   | { kind: "reset" };
 
 export type MailFlags = { unread?: boolean; starred?: boolean };
+
+/**
+ * What a write acts on: a thread and the messages of it the caller knows
+ * (its summary's `messages`). A provider writes per message where it can
+ * (Gmail's `messages.batchModify`: one call for up to 1,000 messages, where a
+ * per-thread modify costs a call each; IMAP, JMAP and Outlook write messages
+ * anyway), so a message that arrived after the caller's summary is left as
+ * it is — as in a mail client, which acts on the messages it showed.
+ */
+export type MailWriteTarget = {
+  thread: ThreadId;
+  messages: readonly MessageId[];
+};
 
 /**
  * Where the provider's push stands in this process:
@@ -154,21 +168,34 @@ export interface MailProvider {
 
   // — writes: semantic, so a folder provider never fakes label math; each
   //   sets a target state, so a replay is harmless —
-  archive(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
-  moveToInbox(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
-  trash(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
-  untrash(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
+  archive(
+    targets: readonly MailWriteTarget[],
+    o?: MailCallOptions,
+  ): Promise<void>;
+  /** Back to the inbox, out of trash and spam. */
+  moveToInbox(
+    targets: readonly MailWriteTarget[],
+    o?: MailCallOptions,
+  ): Promise<void>;
+  trash(
+    targets: readonly MailWriteTarget[],
+    o?: MailCallOptions,
+  ): Promise<void>;
+  untrash(
+    targets: readonly MailWriteTarget[],
+    o?: MailCallOptions,
+  ): Promise<void>;
   // No permanent delete: the trash is emptied by the provider (Gmail after
   // 30 days), and Gmail's delete needs the full mail.google.com scope, which
   // Mail does not ask for (gmail.modify covers every write here).
   setFlags(
-    ids: readonly ThreadId[],
+    targets: readonly MailWriteTarget[],
     flags: MailFlags,
     o?: MailCallOptions,
   ): Promise<void>;
   /** Labels add / remove. On a folder provider, a move (one add, the current folder removed). */
   setMailboxes(
-    ids: readonly ThreadId[],
+    targets: readonly MailWriteTarget[],
     change: { add: readonly MailboxId[]; remove: readonly MailboxId[] },
     o?: MailCallOptions,
   ): Promise<void>;

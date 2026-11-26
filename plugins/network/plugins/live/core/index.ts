@@ -5,7 +5,7 @@ export type {
 } from "./internal/collection-row";
 // Whether a point id set can carry an id (non-empty, comma-free) — what
 // `useLive(c, { id })` answers `found: false` for instead of encoding.
-export { isPointId } from "./internal/window-descriptor";
+export { idKeyOf, isPointId } from "./internal/window-descriptor";
 export { LIVE_WEB_HOOKS } from "./internal/read-hooks";
 export type { LiveColumnRef, LiveColumnRefOwner } from "./internal/column-ref";
 export {

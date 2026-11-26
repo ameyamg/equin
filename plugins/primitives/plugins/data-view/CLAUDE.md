@@ -1726,6 +1726,26 @@ where a collection's (or arm's) rows go; every DataView listing the owner folds 
 - The list's own `rowActivation` / `onRowActivate` runs **after** (`afterOpen`),
   never instead.
 
+## Checkbox multi-select (`selection`)
+
+`selection?: SelectionConfig` — `{ bulkActions?, bar? }` — turns on checkbox
+multi-select. Honoured by the nested table and the list (data-table and list
+CLAUDE.md); other views ignore it. Gate on presence: `selection={{}}` selects.
+
+- The host adds `keep` (`ViewSelection`: `<storageKey>/<viewId>`), so a
+  remount or reload of the same place gives the selection back
+  (`MultiSelectProvider`'s kept state).
+- The view mounts ONE `MultiSelectProvider` over its rows as painted
+  (`orderedIds`), so ranges run down the screen and a row leaving the rows (a
+  filter, a page released, a delete) leaves the selection.
+- `bulkActions` render inside the provider, in the `SelectionBar`: a bulk
+  action reads the selection with `useMultiSelect()` from
+  `@plugins/primitives/plugins/multi-select/web` (`selectedIds`,
+  `selectedCount`, `clearAll`).
+- `bar`: `"top"` (default) — the strip pinned under the scroller's top edge;
+  `"bottom"` — a raised pill centred at the bottom of the viewport ("N
+  selected", the actions, a clear ✕).
+
 ## Row selection, and native row drag and drop
 
 Three props for Finder-class surfaces (file explorer), generic over `TRow`,

@@ -921,7 +921,11 @@ export function NestedTableView(
       { updateViewOptions, setSortDirection, hideField },
     ),
     selection: props.selection
-      ? { actions: props.selection.bulkActions, keep: props.selection.keep }
+      ? {
+          actions: props.selection.bulkActions,
+          keep: props.selection.keep,
+          bar: props.selection.bar,
+        }
       : undefined,
   };
 

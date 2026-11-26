@@ -574,6 +574,39 @@ state or limit change.
   has no `data` to collapse) and by `no-ready-negation` — never
   `status !== "ready"`.
 
+## Writes drawn on every read: the row overlay
+
+A write to rows of a collection read through windows (a thread marked Done in
+a mail list) moves the row out of some windows and changes it in others, and
+no one consumer holds every window. `optimistic-mutation`'s `writeRows(c, {
+ids, columns, apply, send })` pushes a **row patch** (`web/internal/row-overlay.ts`,
+module-level per collection key) that every `useLive` read of `c` draws at
+once — the paged window reads (`use-pages.ts`), id sets and row reads:
+
+- each named row as `apply` leaves it (pure — the same reducer the server
+  runs, from the consumer's `core/`);
+- in a window, a row whose predicted values put it out of the window's
+  filter is left out. The filter is re-decided on `columns` ONLY,
+  three-valued (a clause on any other column is unknown — the server may
+  evaluate it per message, by provider search), and a row leaves only when
+  the write is what moved it (its server row was not already out). A row
+  never ENTERS a window by prediction: the server's re-read brings it.
+- **Pending** (its send not acked) a patch applies to every row it names;
+  **acked**, only to rows this page received before the ack, so the
+  server's answer after the ack wins and an acked patch never masks a later
+  change. A paged read stamps each tuple FRAME (its `appliedSeq`, which
+  moves on every applied frame) — not the row object: structural sharing
+  hands a deep-equal frame back as the same objects, so a row the server put
+  back exactly as before would keep a pre-ack stamp. An id / row read stamps
+  the row object. Old acked patches are dropped past 200 per collection.
+- The window's filter is decoded (with the query's own column sets and
+  pinned clock) only when a patch applies to one of its rows.
+- A rejected send drops the patch and rethrows to the caller (who says so).
+- Sends ride the collection's send lane, so writes leave in order (an undo
+  after its write).
+- Residual: a frame computed before the write but delivered after its ack
+  shows the old row until the write's own re-read lands.
+
 ## Paged reads — key-range pages through `useLive`
 
 Each page is one bounded tuple `(after, until]` at a `limit`; pages tile the
@@ -1657,6 +1690,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveValueTupleRead`
     - `PagesTruncation`
     - `PresentationOwner`
+    - `RowPatch`
+    - `RowPatchHandle`
     - `RowViewProps`
     - `SendLaneKey`
     - `StoredClientFieldsResolution`
@@ -1679,6 +1714,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `optimisticDivergenceReportSink`
     - `optimisticRejectionSink`
     - `presentationOwnerKey`
+    - `pushRowPatch`
     - `REJECTION_MESSAGE_MAX`
     - `renderClientFieldsResolver`
     - `resourceSendLaneKey`
@@ -1977,6 +2013,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `followsDeferred`
     - `followsOf`
     - `followSubjectOf`
+    - `idKeyOf`
     - `isPointId`
     - `isRowUnknown`
     - `LIVE_CHILD_COUNT_KEY`

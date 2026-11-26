@@ -39,6 +39,7 @@ import type {
 } from "@plugins/network/plugins/live/core";
 import {
   COLLECTION_KIND_KEYS,
+  idKeyOf,
   isPointId,
   type CollectionKindKey,
   type CollectionRow,
@@ -62,6 +63,7 @@ import {
   type WithAncestors,
 } from "./use-pages";
 import { useRowAncestors } from "./use-ancestors";
+import { overlayRows, useRowPatches } from "./row-overlay";
 import type { LivePagesQuery } from "./page-source";
 import { useClockPin } from "./use-clock";
 
@@ -1871,7 +1873,30 @@ function useCollection<Row, F, S extends string>(
     }
   }, [growUnsettled, previous, current, limit, maxLimit, loadMore]);
 
-  if (shape === null) return current as ResourceResult<Row[]>;
+  // An id set draws the writes predicted on its rows (`./row-overlay`): no
+  // filter, so a row is only ever changed, never left out.
+  const patches = useRowPatches(collection.key);
+  const isIdSet = shape === null;
+  const idRows = useMemo((): ResourceResult<Row[]> => {
+    const read = current as ResourceResult<Row[]>;
+    if (!isIdSet || patches.length === 0) return read;
+    const over = (rows: Row[]) =>
+      overlayRows(patches, rows, idKeyOf(collection.id), null) as Row[];
+    switch (read.status) {
+      case "loading":
+        return read;
+      case "ready": {
+        const data = over(read.data);
+        return data === read.data ? read : { ...read, data };
+      }
+      case "error":
+        return read.stale === undefined
+          ? read
+          : { ...read, stale: over(read.stale) };
+    }
+  }, [current, patches, isIdSet, collection]);
+
+  if (shape === null) return idRows;
   return list;
 }
 
@@ -1903,7 +1928,20 @@ function useRow<Row>(
     () => (idsKey === null ? null : { ids: idsKey }),
     [idsKey],
   );
-  const result = useResource(collection.rows, params);
+  const served = useResource(collection.rows, params);
+  // The writes predicted on the row (`./row-overlay`).
+  const patches = useRowPatches(collection.key);
+  const result = useMemo((): typeof served => {
+    if (patches.length === 0) return served;
+    if (served.status === "loading" || served.status === "error") return served;
+    const data = overlayRows(
+      patches,
+      served.data,
+      idKeyOf(collection.id),
+      null,
+    );
+    return data === served.data ? served : { ...served, data: data as never };
+  }, [served, patches, collection]);
   // The result keeps its identity until what it is built from changes, like
   // the list result: consumers memoize on it. `useResource`'s own result
   // changes only with its status / data / error / stale.

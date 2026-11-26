@@ -46,7 +46,9 @@ function MailToolbar({
         <div className={MAIL_COLUMN}>
           <ControlSizeProvider size="sm">
             <Line className="@container/mail-search h-8.5 gap-smd rounded-lg bg-card pr-xs pl-md focus-within:ring-1 focus-within:ring-input">
-              <Fill className="h-full">{search}</Fill>
+              <Fill className="h-full" data-mail-search>
+                {search}
+              </Fill>
               <Center axis="horizontal" className="h-5 px-2xs">
                 <Separator orientation="vertical" className="bg-input" />
               </Center>

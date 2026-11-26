@@ -225,10 +225,10 @@ Absent `tree`, nothing changes.
 
 ## Checkbox multi-select (`selection`)
 
-`selection: { actions? }` turns on the `multi-select` primitive over the rows:
+`selection: { actions?, keep, bar? }` turns on the `multi-select` primitive over the rows:
 the table mounts a `MultiSelectProvider` (the range order is the painted rows'
 keys — a collapsed group's and a full-span line's excluded), a `SelectionBar`
-above the grid, and a `SelectionCheckbox` ahead of each row's first cell —
+above the grid (`bar: "bottom"`: the bottom pill, after the grid), and a `SelectionCheckbox` ahead of each row's first cell —
 inside the tree head when the rows nest, after the disclosure. The checkbox
 reveals on the row's `group/row-actions` hover and stops its own press from
 reaching the row (no activation, no drag start).

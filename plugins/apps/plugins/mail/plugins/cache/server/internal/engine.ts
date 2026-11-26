@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 import { writeAtomically, type Db } from "@plugins/database/server";
+import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
@@ -33,6 +34,7 @@ import {
   MailNotConnectedError,
   MailUnreachableError,
   providerQuery,
+  messageId as toMessageId,
   threadId as toThreadId,
   type AttachmentMeta,
   type ChangeCursor,
@@ -42,6 +44,7 @@ import {
   type MailProvider,
   type MailProviderDefinition,
   type MailQuery,
+  type MailWriteTarget,
   type ThreadContent,
   type ThreadId,
   type ThreadSummary,
@@ -62,7 +65,15 @@ import {
 import { loadSummary, storeSummary } from "./stored-summary";
 import { contentBytes, loadContent, storeContent } from "./stored-content";
 import { bodyAnswers, MAIL_BODY_BUDGET_BYTES, readerContent } from "./bodies";
-import { mailInboxView, type MailAccountStatus } from "../../core";
+import {
+  applyMailOp,
+  mailInboxView,
+  mailOpMoves,
+  undoMailOp,
+  type MailAccountStatus,
+  type MailOpUndo,
+  type MailThreadOp,
+} from "../../core";
 
 // The Mail cache's engine (design §3–4). It answers any DataView window of
 // `mail.threads` from per-query COVERAGE, filling it from the provider on
@@ -172,6 +183,20 @@ export type MailCacheDeps = {
    * prefetch (tests that count provider calls).
    */
   prefetch?: { perRun: () => number };
+  /**
+   * Hands a triage op to the durable queue (`mail.apply-op`), which calls
+   * `applyAtProvider` with it — after the cache already holds its prediction.
+   */
+  enqueueOp: (job: MailOpJob) => Promise<void>;
+};
+
+/** A triage op as the durable job carries it: the account, the op, what it acts on. */
+export type MailOpJob = {
+  accountId: string;
+  /** The op's own id: what its pending entry is dropped by once it lands. */
+  opId: string;
+  op: MailThreadOp;
+  targets: { thread: string; messages: string[] }[];
 };
 
 /** A decoded `mail.threads` window (the live API's LiveDecodedQuery, the fields the cache reads). */
@@ -645,7 +670,10 @@ export function createMailCache(deps: MailCacheDeps) {
     const results = await a.provider.getThreads(ids, o);
     const gone: string[] = [];
     for (const r of results) {
-      if (r.kind === "found") out.set(r.id, r.summary);
+      // An op still pending on the thread is laid over what the provider
+      // said (its write has not landed): what is stored and what the
+      // caller re-checks membership on.
+      if (r.kind === "found") out.set(r.id, withPending(r.summary));
       else if (r.kind === "gone") gone.push(r.id);
       else throw r.error;
     }
@@ -1755,7 +1783,382 @@ export function createMailCache(deps: MailCacheDeps) {
     };
   }
 
+  // ── triage (design §6) ──────────────────────────────────────────────────
+
+  /**
+   * Applies `op` to threads `ids` — the cache first, the provider after:
+   * each thread's summary is rewritten as the op leaves it (`applyMailOp`
+   * per message, the same reducer the browser predicts with), every locally
+   * maintained query re-checked on it (a thread archived leaves the Inbox,
+   * enters Done), every provider-evaluated query holding it unverified (its
+   * next read re-lists it), the windows notified — and the provider's write
+   * handed to the durable queue (`deps.enqueueOp`), which retries it through
+   * an outage and, should it fail for good, re-reads the threads from the
+   * provider (`restoreThreads`): the provider's state is the truth.
+   *
+   * A thread not cached is read first (its messages are what the write acts
+   * on); one gone at the provider is skipped.
+   */
+  async function apply(
+    ids: readonly string[],
+    op: MailThreadOp,
+  ): Promise<MailOpUndo[]> {
+    const a = await account();
+    const cachedIds = new Set(
+      (
+        await db
+          .select({ threadId: _mailThreads.threadId })
+          .from(_mailThreads)
+          .where(
+            and(
+              eq(_mailThreads.accountId, a.id),
+              inArray(_mailThreads.threadId, [...ids]),
+            ),
+          )
+      ).map((r) => r.threadId),
+    );
+    const missing = ids.filter((id) => !cachedIds.has(id)).map(toThreadId);
+    if (missing.length > 0) {
+      await orRefuse("the threads", () => fetchSummaries(a, missing, fg));
+    }
+    // Pending from here until the provider holds it: every summary the
+    // cache writes for these threads meanwhile (a sync step, a fill) has the
+    // op laid over it, so a re-read of the provider's pre-op state never
+    // undoes the prediction.
+    const opId = crypto.randomUUID();
+    for (const id of ids) {
+      pendingOps.set(id, [...(pendingOps.get(id) ?? []), { opId, op }]);
+    }
+    try {
+      // The prediction and the threads as they were, read and written in
+      // one transaction with the rows locked: a sync step's upsert of the
+      // same thread waits, then lays the pending op over what it read.
+      const { before, after } = await db.transaction(async (tx) => {
+        const rows = await tx
+          .select({
+            threadId: _mailThreads.threadId,
+            summary: _mailThreads.summary,
+          })
+          .from(_mailThreads)
+          .where(
+            and(
+              eq(_mailThreads.accountId, a.id),
+              inArray(_mailThreads.threadId, [...ids]),
+            ),
+          )
+          .for("update");
+        const before = rows.map((r) => loadSummary(r.summary));
+        const after = before.map((s) => predictSummary(s, op));
+        for (const s of after) {
+          await tx
+            .update(_mailThreads)
+            .set({ summary: storeSummary(s) })
+            .where(
+              and(
+                eq(_mailThreads.accountId, a.id),
+                eq(_mailThreads.threadId, s.id),
+              ),
+            );
+        }
+        return { before, after };
+      });
+      if (after.length === 0) {
+        dropPending(opId);
+        return [];
+      }
+      // Queued before anything is shown: a write the queue refused is a
+      // failed request (the browser says so), never a prediction alone.
+      await deps.enqueueOp({
+        accountId: a.id,
+        opId,
+        op,
+        targets: before.map((s) => ({
+          thread: s.id,
+          messages: s.messages.map((m) => m.id),
+        })),
+      });
+      await recheckMembership(a, after);
+      deps.notifyThreads(after.map((s) => s.id));
+      return undoMailOp(
+        op,
+        before.map((s) => ({
+          id: s.id,
+          facts: { mailboxes: s.mailboxes, unread: s.unread },
+        })),
+      );
+    } catch (err) {
+      dropPending(opId);
+      throw err;
+    }
+  }
+
+  /** Ops written to the cache whose provider write has not landed yet, per thread, oldest first. */
+  const pendingOps = new Map<string, { opId: string; op: MailThreadOp }[]>();
+
+  function dropPending(opId: string): void {
+    for (const [id, list] of pendingOps) {
+      const rest = list.filter((p) => p.opId !== opId);
+      if (rest.length === 0) pendingOps.delete(id);
+      else pendingOps.set(id, rest);
+    }
+  }
+
+  /** A summary read from the provider, with the ops still pending on it laid over. */
+  function withPending(s: ThreadSummary): ThreadSummary {
+    const list = pendingOps.get(s.id);
+    if (list === undefined) return s;
+    return list.reduce((acc, p) => predictSummary(acc, p.op), s);
+  }
+
+  /** A summary as `op` leaves it: each message's facts, then the thread's unions. */
+  function predictSummary(s: ThreadSummary, op: MailThreadOp): ThreadSummary {
+    const messages = s.messages.map((m) => {
+      const next = applyMailOp(
+        { mailboxes: m.mailboxes as string[], unread: m.unread },
+        op,
+      );
+      return {
+        ...m,
+        mailboxes: next.mailboxes as MailboxId[],
+        unread: next.unread,
+      };
+    });
+    return {
+      ...s,
+      messages,
+      mailboxes: [...new Set(messages.flatMap((m) => m.mailboxes))],
+      unread: messages.some((m) => m.unread),
+    };
+  }
+
+  /**
+   * Re-checks membership after the cache itself moved threads: every
+   * verified locally maintained query re-decided per message on them (in or
+   * out, its cursor kept — the provider has not reported this yet, and its
+   * report re-checks again); every other query holding one unverified.
+   * Measured before this was lock-free: a label click waited 43.6 s on the
+   * Done view's cold fill holding the query's lock.
+   */
+  async function recheckMembership(a: Account, list: ThreadSummary[]) {
+    const ids = list.map((s) => s.id);
+    const queries = await db
+      .select()
+      .from(_mailQueries)
+      .where(eq(_mailQueries.accountId, a.id));
+    const held = await db
+      .selectDistinct({ queryId: _mailQueryMembers.queryId })
+      .from(_mailQueryMembers)
+      .where(
+        and(
+          eq(_mailQueryMembers.accountId, a.id),
+          inArray(_mailQueryMembers.threadId, ids),
+        ),
+      );
+    const holding = new Set(held.map((r) => r.queryId));
+    const stale = queries
+      .filter((q) => !q.locallyMaintained && holding.has(q.queryId))
+      .map((q) => q.queryId);
+    if (stale.length > 0) {
+      await db
+        .update(_mailQueries)
+        .set({ verifiedCursor: null })
+        .where(inArray(_mailQueries.queryId, stale));
+    }
+    // NOT under the query's lock: a fill holds it across provider calls
+    // (seconds, more when the pacer waits), and a click must not wait on a
+    // background fill. Each write below is one idempotent statement. The one
+    // race left — a fill that read a thread's summary before the prediction
+    // re-adding it after this — is undone by the provider's own report of
+    // the write: the next sync step re-checks the thread under the lock.
+    for (const q of queries) {
+      if (!q.locallyMaintained || q.verifiedCursor === null) continue;
+      const filter =
+        q.filter === null
+          ? undefined
+          : (decodeFilter(q.filter, MAIL_QUERY_COLUMNS) as Filter);
+      const enter: { threadId: string; at: Date }[] = [];
+      const leave: string[] = [];
+      for (const s of list) {
+        const at = localMatchAt(s, filter);
+        const claimed =
+          at !== null &&
+          (q.exhausted ||
+            (q.floorAt !== null && at.getTime() > q.floorAt.getTime()));
+        if (claimed) enter.push({ threadId: s.id, at: at! });
+        else leave.push(s.id);
+      }
+      await writeAtomically(db, [
+        enter.length === 0
+          ? null
+          : db
+              .insert(_mailQueryMembers)
+              .values(
+                enter.map((e) => ({
+                  queryId: q.queryId,
+                  accountId: a.id,
+                  ...e,
+                })),
+              )
+              .onConflictDoUpdate({
+                target: [_mailQueryMembers.queryId, _mailQueryMembers.threadId],
+                set: { at: sql`excluded.at` },
+              }),
+        leave.length === 0
+          ? null
+          : db
+              .delete(_mailQueryMembers)
+              .where(
+                and(
+                  eq(_mailQueryMembers.queryId, q.queryId),
+                  inArray(_mailQueryMembers.threadId, leave),
+                ),
+              ),
+      ]);
+    }
+  }
+
+  /**
+   * The durable half of `apply` (the `mail.apply-op` job): the provider's
+   * write. Offline throws (the job retries). An op for an account the cache
+   * no longer serves (another mailbox connected since) is dropped.
+   */
+  async function applyAtProvider(job: MailOpJob): Promise<void> {
+    try {
+      await writeAtProvider(job);
+    } catch (err) {
+      // Offline or the grant: retried (the queue's attempts). Anything else
+      // the provider refused will be refused again: not retried, so it does
+      // not hold every later op (the queue is serial).
+      if (
+        err instanceof MailUnreachableError ||
+        err instanceof MailNotConnectedError
+      )
+        throw err;
+      throw new NonRetryableError(
+        `mail: the provider refused ${job.op.kind}: ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
+      );
+    }
+    dropPending(job.opId);
+  }
+
+  async function writeAtProvider(job: MailOpJob): Promise<void> {
+    const a = await account();
+    if (a.id !== job.accountId) return;
+    const targets: MailWriteTarget[] = job.targets.map((t) => ({
+      thread: toThreadId(t.thread),
+      messages: t.messages.map(toMessageId),
+    }));
+    const op = job.op;
+    const p = a.provider;
+    switch (op.kind) {
+      case "archive":
+        return p.archive(targets, fg);
+      case "move-to-inbox":
+        return p.moveToInbox(targets, fg);
+      case "trash":
+        return p.trash(targets, fg);
+      case "read":
+        return p.setFlags(targets, { unread: op.unread }, fg);
+      case "spam":
+      case "not-spam":
+      case "labels": {
+        const { add, remove } = mailOpMoves(op);
+        return p.setMailboxes(
+          targets,
+          { add: add as MailboxId[], remove: remove as MailboxId[] },
+          fg,
+        );
+      }
+    }
+  }
+
+  /**
+   * A triage op that failed for good: its threads re-read from the provider
+   * (the truth), their membership re-checked and the windows notified — the
+   * prediction gives way to what the provider holds.
+   */
+  async function restoreThreads(job: MailOpJob): Promise<void> {
+    dropPending(job.opId);
+    const ids = job.targets.map((t) => t.thread);
+    // Database only (it must work offline, the likely reason it gave up):
+    // the threads stale (re-read on their next listing or open), the
+    // queries unverified (re-listed on their next read).
+    await db
+      .update(_mailThreads)
+      .set({ stale: true })
+      .where(
+        and(
+          eq(_mailThreads.accountId, job.accountId),
+          inArray(_mailThreads.threadId, ids),
+        ),
+      );
+    // Every query unverified, not only those holding the threads: the
+    // prediction took them out of some (the Inbox an archive left), and only
+    // a re-list says where they are. Rare (an op the queue gave up on), and
+    // each re-list is one list call on that query's next read.
+    await db
+      .update(_mailQueries)
+      .set({ verifiedCursor: null })
+      .where(eq(_mailQueries.accountId, job.accountId));
+    deps.notifyThreads(ids);
+  }
+
+  // ── labels (mailboxes the user makes) ──────────────────────────────────
+
+  /**
+   * Makes the label at `path` ("Travel/Ski 2027"): each missing level created
+   * under the one before it, the existing ones kept; the mailboxes relisted.
+   * Answers the last level's id.
+   */
+  async function createLabel(path: string): Promise<MailboxId> {
+    const a = await account();
+    const names = path
+      .split("/")
+      .map((n) => n.trim())
+      .filter((n) => n !== "");
+    if (names.length === 0) throw new Error("mail: a label needs a name");
+    const all = await mailboxesOf(a);
+    let parent: MailboxId | null = null;
+    for (const name of names) {
+      const existing = all.find(
+        (m) => m.kind === "user" && m.parentId === parent && m.name === name,
+      );
+      if (existing) {
+        parent = existing.id;
+        continue;
+      }
+      const made = await a.provider.createMailbox(
+        { name, parentId: parent },
+        fg,
+      );
+      all.push(made);
+      parent = made.id;
+    }
+    await relistMailboxes(a, fg);
+    return parent!;
+  }
+
+  async function renameLabel(id: string, name: string): Promise<void> {
+    const a = await account();
+    await a.provider.renameMailbox(id as MailboxId, name.trim(), fg);
+    await relistMailboxes(a, fg);
+  }
+
+  /** Deletes a label (its sub-labels stay, as Gmail keeps them); threads keep their other labels. */
+  async function deleteLabel(id: string): Promise<void> {
+    const a = await account();
+    await a.provider.deleteMailbox(id as MailboxId, fg);
+    await relistMailboxes(a, fg);
+  }
+
   return {
+    apply,
+    applyAtProvider,
+    restoreThreads,
+    createLabel,
+    renameLabel,
+    deleteLabel,
     window,
     held,
     rows,

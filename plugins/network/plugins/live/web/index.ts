@@ -11,6 +11,8 @@ export { RowView } from "./internal/row-view";
 export { rowOrStale } from "./internal/row-or-stale";
 export type { RowViewProps } from "./internal/row-view";
 export { enqueueOnSendLane, resourceSendLaneKey } from "./internal/send-lane";
+export { pushRowPatch } from "./internal/row-overlay";
+export type { RowPatch, RowPatchHandle } from "./internal/row-overlay";
 export type { SendLaneKey } from "./internal/send-lane";
 export {
   optimisticDivergenceReportSink,

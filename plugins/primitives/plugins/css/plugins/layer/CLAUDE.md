@@ -82,9 +82,9 @@ has the vocabulary for it.
     - `Layer`
     - `layerClasses`
 - Cross-plugin:
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
-    - `primitives` ×8
+    - `primitives` ×9
     - `page` ×3
     - `apps-core/phone-actions`
     - `conversations/before-after`

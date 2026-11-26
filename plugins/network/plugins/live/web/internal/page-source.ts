@@ -9,6 +9,10 @@ import type {
   LiveWhere,
   LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
+import type {
+  Filter,
+  Filterable,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import type { Page } from "../../shared/page-plan";
 
 // The seam between the paged-read hook (`use-pages.ts`) and what it reads: a
@@ -62,6 +66,15 @@ export interface PageSource<Row, Q, P extends Record<string, string>> {
    * socket answer from what the server holds; a snapshot page is read whole).
    */
   snapshot: boolean;
+  /**
+   * How the row overlay (`./row-overlay`) re-decides a question's filter over
+   * a predicted row: a collection's window filter (canonical) over its
+   * filterable columns. `null` for a source with no row filter (a paged value).
+   */
+  overlay: {
+    filterable: Filterable;
+    filterOf(query: Q): Filter | undefined;
+  } | null;
 }
 
 /** A collection's page source: its window's tuples. */
@@ -142,6 +155,7 @@ function valueSource<Item, Q, QIn>(
     columnsOf: () => undefined,
     idField: value.paged.id,
     snapshot: (value as { snapshot?: true }).snapshot === true,
+    overlay: null,
   };
 }
 
@@ -174,6 +188,19 @@ function collectionSource<Row, F, S extends string>(
     columnsOf: (query) => query.columns,
     idField: collection.id,
     snapshot: false,
+    overlay: {
+      filterable: collection.filterable as Filterable,
+      // The canonical tree of the query as its page tuples carry it: the
+      // whole query encoded (its brought column sets and pinned clock with
+      // it — a `where` may name either) and decoded against those sets.
+      filterOf: (query) =>
+        query.where === undefined
+          ? undefined
+          : codec.decode(
+              codec.encode({ ...query, limit: codec.defaultLimit }),
+              query.columns,
+            ).where,
+    },
   };
 }
 
@@ -196,4 +223,5 @@ const DETACHED: CollectionPageSource<never, unknown, string> = {
   columnsOf: () => undefined,
   idField: "",
   snapshot: false,
+  overlay: null,
 };

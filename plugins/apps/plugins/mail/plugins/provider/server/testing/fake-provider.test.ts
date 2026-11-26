@@ -160,7 +160,7 @@ describe("fake mail provider", () => {
     // Per-message facts: bo's reply is the unread one.
     expect(s.summary.messages.map((m) => m.unread)).toEqual([false, true]);
     const cursor = await f.provider.currentCursor();
-    await f.provider.archive([threadId("t1")]);
+    await f.provider.archive(f.targets([threadId("t1")]));
     const changes = await f.provider.changesSince(cursor);
     expect(changes).toMatchObject({
       kind: "changes",

@@ -98,6 +98,7 @@ function harness(
       ticking: true,
     }),
     onBackgroundError: (_what, err) => background.push(err),
+    enqueueOp: async () => {},
     ...(deps.bodyBudgetBytes === undefined
       ? {}
       : { bodyBudgetBytes: () => deps.bodyBudgetBytes! }),
@@ -147,7 +148,9 @@ describe("mail cache: thread content", () => {
     expect(h.count("getThreadContent")).toBe(1);
     await h.cache.settled();
 
-    await h.f.provider.setFlags([threadId("t3")], { unread: false });
+    await h.f.provider.setFlags(h.f.targets([threadId("t3")]), {
+      unread: false,
+    });
     await h.cache.catchUp();
     h.resetCalls();
     const again = await h.cache.thread("t3");

@@ -1,4 +1,3 @@
-import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   GmailApiError,
   GmailOutcomeUnknownError,
@@ -23,6 +22,7 @@ import {
   type MailCallOptions,
   type MailChanges,
   type MailProvider,
+  type MailWriteTarget,
   type OutgoingMessage,
   type ThreadId,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
@@ -49,10 +49,12 @@ function resumeAfter(lastRecord: string | null): string {
 
 /** At most this many history pages per `changesSince` answer (500 records each); then `more`. */
 export const HISTORY_PAGES_PER_CALL = 10;
-/** Per-thread writes in flight at once: Google limits a user's concurrent requests beyond its quota. */
-const WRITE_CONCURRENCY = 8;
+
+/** `messages.batchModify`'s bound: message ids a call. */
+const BATCH_MODIFY_MAX = 1000;
 
 const INBOX = GMAIL_ROLE_LABELS.inbox.labelId;
+const TRASH = GMAIL_ROLE_LABELS.trash.labelId;
 const SPAM = GMAIL_ROLE_LABELS.spam.labelId;
 
 /** Google's refusals that mean the grant, not the request, is the problem. */
@@ -112,28 +114,25 @@ const isNotFound = (err: unknown) =>
  * the account's pacer; the definition holds the one client per account.
  */
 export function createGmailMailProvider(client: GmailClient): MailProvider {
-  const writes = createSemaphore(WRITE_CONCURRENCY);
-  async function eachThread(
-    ids: readonly ThreadId[],
-    fn: (id: ThreadId) => Promise<unknown>,
+  /**
+   * One label change on every target's messages: `messages.batchModify`, up
+   * to 1,000 messages a call (50 units — a per-thread `threads.modify` costs
+   * 10 a thread). Chunks run one after another, each idempotent (it sets
+   * labels, so a replay is harmless).
+   */
+  async function modifyMessages(
+    targets: readonly MailWriteTarget[],
+    change: { addLabelIds?: string[]; removeLabelIds?: string[] },
+    o: MailCallOptions | undefined,
   ): Promise<void> {
-    // Every write settles before the call answers, so a caller never re-reads
-    // while some are still landing.
-    const settled = await Promise.allSettled(
-      ids.map((id) => writes.run(() => fn(id))),
-    );
-    const failed = settled.flatMap((r, i) =>
-      r.status === "rejected"
-        ? [{ id: ids[i]!, error: r.reason as unknown }]
-        : [],
-    );
-    if (failed.length === 0) return;
-    // One failure is thrown as itself, so neutral() still types it.
-    if (failed.length === 1) throw failed[0]!.error;
-    throw new AggregateError(
-      failed.map((f) => f.error),
-      `mail: ${failed.length} of ${ids.length} threads were not changed: ${failed.map((f) => f.id).join(", ")}`,
-    );
+    const ids = targets.flatMap((t) => t.messages);
+    for (let i = 0; i < ids.length; i += BATCH_MODIFY_MAX) {
+      await client.batchModifyMessages(
+        ids.slice(i, i + BATCH_MODIFY_MAX),
+        change,
+        gmailOpts(o),
+      );
+    }
   }
 
   /**
@@ -347,33 +346,34 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
         },
       ),
 
-    archive: (ids, o) =>
+    archive: (targets, o) =>
       neutral("archive", () =>
-        eachThread(ids, (id) =>
-          client.modifyThread(id, { removeLabelIds: [INBOX] }, gmailOpts(o)),
+        modifyMessages(targets, { removeLabelIds: [INBOX] }, o),
+      ),
+    moveToInbox: (targets, o) =>
+      neutral("move to inbox", () =>
+        modifyMessages(
+          targets,
+          { addLabelIds: [INBOX], removeLabelIds: [TRASH, SPAM] },
+          o,
         ),
       ),
-    moveToInbox: (ids, o) =>
-      neutral("move to inbox", () =>
-        eachThread(ids, async (id) => {
-          await client.untrashThread(id, gmailOpts(o));
-          await client.modifyThread(
-            id,
-            { addLabelIds: [INBOX], removeLabelIds: [SPAM] },
-            gmailOpts(o),
-          );
-        }),
-      ),
-    trash: (ids, o) =>
+    // Gmail's trash is its TRASH label (what `messages.trash` sets, INBOX
+    // dropped with it); `batchModify` sets it for up to 1,000 messages a call.
+    trash: (targets, o) =>
       neutral("trash", () =>
-        eachThread(ids, (id) => client.trashThread(id, gmailOpts(o))),
+        modifyMessages(
+          targets,
+          { addLabelIds: [TRASH], removeLabelIds: [INBOX] },
+          o,
+        ),
       ),
-    untrash: (ids, o) =>
+    untrash: (targets, o) =>
       neutral("untrash", () =>
-        eachThread(ids, (id) => client.untrashThread(id, gmailOpts(o))),
+        modifyMessages(targets, { removeLabelIds: [TRASH] }, o),
       ),
 
-    setFlags: (ids, flags, o) =>
+    setFlags: (targets, flags, o) =>
       neutral("set flags", () => {
         const add: string[] = [];
         const remove: string[] = [];
@@ -383,27 +383,24 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
           (flags.starred ? add : remove).push(FLAG_LABELS.starred);
         if (add.length + remove.length === 0)
           throw new Error("mail: setFlags with no flag to set");
-        return eachThread(ids, (id) =>
-          client.modifyThread(
-            id,
-            { addLabelIds: add, removeLabelIds: remove },
-            gmailOpts(o),
-          ),
+        return modifyMessages(
+          targets,
+          { addLabelIds: add, removeLabelIds: remove },
+          o,
         );
       }),
 
-    setMailboxes: (ids, change, o) =>
-      neutral("set mailboxes", () => {
-        const add = change.add.map(labelIdOfMailbox);
-        const remove = change.remove.map(labelIdOfMailbox);
-        return eachThread(ids, (id) =>
-          client.modifyThread(
-            id,
-            { addLabelIds: add, removeLabelIds: remove },
-            gmailOpts(o),
-          ),
-        );
-      }),
+    setMailboxes: (targets, change, o) =>
+      neutral("set mailboxes", () =>
+        modifyMessages(
+          targets,
+          {
+            addLabelIds: change.add.map(labelIdOfMailbox),
+            removeLabelIds: change.remove.map(labelIdOfMailbox),
+          },
+          o,
+        ),
+      ),
 
     createMailbox: (m, o) =>
       neutral(`create label ${m.name}`, async () => {
@@ -464,14 +461,22 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
         if (label.type === "system")
           throw new Error(`mail: Gmail's ${label.name} cannot be renamed`);
         const slash = label.name.lastIndexOf("/");
-        await client.patchLabel(
-          label.id,
-          {
-            name:
-              slash === -1 ? name : `${label.name.slice(0, slash + 1)}${name}`,
-          },
-          gmailOpts(o),
+        const renamed =
+          slash === -1 ? name : `${label.name.slice(0, slash + 1)}${name}`;
+        // Gmail nests by name: a sub-label is "Parent/Child", so renaming a
+        // parent renames each label under it too (else they stay under the
+        // old name, which Gmail then shows as a parent of its own).
+        const under = (await client.listLabels(gmailOpts(o))).filter(
+          (l) => l.type === "user" && l.name.startsWith(`${label.name}/`),
         );
+        await client.patchLabel(label.id, { name: renamed }, gmailOpts(o));
+        for (const l of under) {
+          await client.patchLabel(
+            l.id,
+            { name: `${renamed}${l.name.slice(label.name.length)}` },
+            gmailOpts(o),
+          );
+        }
       }),
 
     deleteMailbox: (id, o) =>

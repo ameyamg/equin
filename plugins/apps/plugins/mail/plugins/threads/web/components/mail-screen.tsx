@@ -1,4 +1,6 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
+import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
   DataView,
   defineDataView,
@@ -35,6 +37,8 @@ import {
 import type { Mailbox } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { mailboxLabel, useMailboxes, userLabels } from "../internal/mailboxes";
 import { mailThreadPane } from "../panes";
+import { ThreadItemActions } from "../slots";
+import { MailBulkActions } from "./thread-triage";
 import { MailSidebar } from "./mail-sidebar";
 import { MAIL_MEASURE, mailToolbar } from "./mail-toolbar";
 import {
@@ -139,10 +143,48 @@ export function MailScreen(): ReactNode {
         lines: 1 as const,
         // Each day is one card, as in the prototype.
         frame: "section" as const,
+        // j / k open the next / previous thread (marked read as it opens).
+        stepKeys: true,
       },
     }),
     [rowCtx],
   );
+
+  // Checkbox selection, its actions in a bar at the foot of the list.
+  const inTrash = activeViewId === "trash";
+  const selection = useMemo(
+    () => ({
+      bulkActions: <MailBulkActions inTrash={inTrash} />,
+      bar: "bottom" as const,
+    }),
+    [inTrash],
+  );
+
+  // /: the search box (e and # are the open thread's: its pane's).
+  const root = useRef<HTMLDivElement>(null);
+  useSurfaceShortcuts([
+    {
+      id: "mail.search",
+      keys: "/",
+      label: "Search mail",
+      group: "Mail",
+      handler: () => focusSearch(),
+    },
+    {
+      // Where "/" is shifted (German layouts).
+      id: "mail.search-shifted",
+      keys: "shift+/",
+      label: "Search mail",
+      group: "Mail",
+      handler: () => focusSearch(),
+    },
+  ]);
+  function focusSearch() {
+    focusElement(
+      root.current?.querySelector<HTMLInputElement>("[data-mail-search] input"),
+      { reveal: true },
+    );
+  }
 
   // A label view named by the URL waits for the labels, rather than resolve
   // to the Inbox and rewrite the address.
@@ -153,6 +195,7 @@ export function MailScreen(): ReactNode {
   // one scroll: the DataView never owns one, and its sidebar is sized to it.
   return (
     <PaneScroll>
+      <div ref={root} className="contents">
     <DataView<MailThreadRow>
       source={threadsSource}
       overrides={overrides}
@@ -171,7 +214,10 @@ export function MailScreen(): ReactNode {
           openPane.to(mailThreadPane, { threadId: t.id }, { mode: "push" })
         }
       emptyState={<EmptyMail inbox={activeViewId === MAIL_INBOX_VIEW.id} />}
+          itemActions={ThreadItemActions}
+          selection={selection}
     />
+      </div>
     </PaneScroll>
   );
 }

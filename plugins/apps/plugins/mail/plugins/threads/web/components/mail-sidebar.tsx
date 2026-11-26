@@ -39,11 +39,22 @@ import {
 } from "../../core";
 import { userLabels, type MailboxesState } from "../internal/mailboxes";
 import { labelLines } from "../internal/label-lines";
+import { LabelNameForm, useNewLabel } from "../internal/actions";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import {
+  deleteMailLabel,
+  renameMailLabel,
+} from "@plugins/apps/plugins/mail/plugins/cache/core";
 
 const moreIcon = symbol("more-horiz");
 const copyIcon = symbol("content-copy");
 const expandIcon = symbol("expand-more");
 const collapseIcon = symbol("expand-less");
+const addIcon = symbol("add");
+const renameIcon = symbol("edit");
+const deleteIcon = symbol("delete");
 
 /** The sidebar's width, the prototype's column. */
 const SIDEBAR_WIDTH = "w-54";
@@ -87,6 +98,7 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
   }
   // "+ New view": the active view's filter as a view of the user's own,
   // named for renaming.
+  const newLabel = useNewLabel();
   const newView = () => {
     const id = drafts.saveAsNew(activeViewId, { name: "New view" });
     setRenamingId(id);
@@ -129,14 +141,18 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
               {more ? "Less" : "More"}
             </Text>
           </Row>
-          <Text
-            as="h2"
-            variant="caption"
-            tone="faint"
-            className="pt-lg pb-xs pl-lg"
-          >
-            Labels
-          </Text>
+          <Line className="pt-lg pb-xs pl-lg">
+            <Fill>
+              <Text as="h2" variant="caption" tone="faint">
+                Labels
+              </Text>
+            </Fill>
+            <IconButton
+              icon={addIcon}
+              label="New label"
+              onClick={() => void newLabel()}
+            />
+          </Line>
           <Labels mailboxes={mailboxes} />
         </Stack>
       </Scroll>
@@ -174,6 +190,36 @@ function LabelTree({ mailboxes }: { mailboxes: readonly Mailbox[] }) {
   const [folded, setFolded] = useState<ReadonlySet<MailboxId>>(new Set());
   const labels = useMemo(() => userLabels(mailboxes), [mailboxes]);
   const lines = useMemo(() => labelLines(labels, folded), [labels, folded]);
+  const fetchEndpoint = useFetchEndpoint();
+  const openDialog = useOpenDialog();
+  const confirm = useConfirmDialog();
+  const rename = (label: Mailbox) =>
+    openDialog((close) => (
+      <LabelNameForm
+        title="Rename label"
+        description="Its sub-labels move with it."
+        initial={label.name}
+        submit="Rename"
+        onSubmit={async (name) => {
+          await fetchEndpoint(
+            renameMailLabel,
+            { id: label.id },
+            { body: { name } },
+          );
+          close();
+        }}
+      />
+    ));
+  const remove = (label: Mailbox) =>
+    confirm({
+      title: `Delete the label “${label.name}”?`,
+      description:
+        "Its threads keep their other labels and stay in your mailbox; its sub-labels stay.",
+      confirmLabel: "Delete label",
+      onConfirm: async () => {
+        await fetchEndpoint(deleteMailLabel, { id: label.id });
+      },
+    });
   const toggle = (id: MailboxId) =>
     setFolded((prev) => {
       const next = new Set(prev);
@@ -220,6 +266,14 @@ function LabelTree({ mailboxes }: { mailboxes: readonly Mailbox[] }) {
                   >
                     <Icon icon={copyIcon} className="size-4" />
                     Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void rename(label)}>
+                    <Icon icon={renameIcon} className="size-4" />
+                    Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void remove(label)}>
+                    <Icon icon={deleteIcon} className="size-4" />
+                    Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

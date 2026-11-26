@@ -7151,7 +7151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/keyboard-party/isle-building`
     - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), the cache, the shell and the threads list.
       - Plugins:
-        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
           - Web:
             - Contributes:
               - `ConfigV2.WebRegister` "mail-cache"
@@ -7179,7 +7179,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/sql-column.parsedJson`
               - `ids.externalIdColumn`
               - `infra/background/timer.defineTimer`
+              - `infra/endpoints.implement`
               - `infra/jobs.defineJob`
+              - `infra/jobs.NonRetryableError`
               - `infra/retention.defineRetention`
               - `infra/retention.markCascadeBounded`
               - `network/live.serveCollection`
@@ -7205,6 +7207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('retention.mail_threads')`
               - `defineTimer('mail.sync-tick')`
               - `defineJob('mail.sync-idle')`
+              - `defineJob('mail.apply-op')`
             - Resources:
               - `mail.account-status` (push, notified)
               - `mail.mailboxes` (keyed)
@@ -7212,6 +7215,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mail.threads` (keyed, window)
               - `mail.threads:groups` (push)
               - `mail.threads:rows` (keyed, point)
+            - Routes:
+              - `POST /api/mail/threads/apply`
+              - `POST /api/mail/labels`
+              - `PATCH /api/mail/labels/:id`
+              - `DELETE /api/mail/labels/:id`
           - Core:
             - Uses:
               - `apps/mail/provider.MAIL_QUERY_OPS`
@@ -7229,6 +7237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/string-list/config.stringListField`
               - `fields/text/config.enumTextField`
               - `fields/text/config.textField`
+              - `infra/endpoints.defineEndpoint`
               - `network/live.liveCollection`
               - `network/live.LiveRowsCollection`
               - `network/live.liveValue`
@@ -7236,10 +7245,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `MailAccountStatus`
               - `MailMailboxRow`
+              - `MailOpFacts`
+              - `MailOpUndo`
+              - `MailPrimaryAction`
               - `MailPushStatus`
+              - `MailThreadOp`
               - `MailThreadRow`
               - `MailThreadsRefusal`
             - Exports (values):
+              - `applyMailOp`
+              - `applyMailThreadOp`
+              - `createMailLabel`
+              - `deleteMailLabel`
+              - `inMailTrash`
+              - `isMailRole`
               - `MAIL_THREADS_MAX_LIMIT`
               - `MAIL_THREADS_REFUSALS`
               - `mailAccountStatus`
@@ -7249,12 +7268,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailCacheConfig`
               - `mailInboxView`
               - `mailMailboxes`
+              - `mailOpColumns`
+              - `mailOpMoves`
+              - `MailOpUndoSchema`
+              - `MailThreadOpSchema`
               - `mailThreads`
               - `PARENT_VIEW_INCLUDES_SUB_LABELS`
+              - `primaryMailAction`
+              - `renameMailLabel`
+              - `undoMailOp`
           - Cross-plugin:
             - Imported by:
               - `apps/mail/reader`
               - `apps/mail/threads`
+            - Endpoint callers:
+              - `gmail`
+              - `reader`
           - Exemptions:
             - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/sync.ts` (sanctioned)
         - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one. Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
@@ -7299,6 +7328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailQueryColumn`
               - `MailQueryRefusal`
               - `MailQueryRefusalReason`
+              - `MailWriteTarget`
               - `MessageBody`
               - `MessageContent`
               - `MessageFacts`
@@ -7418,7 +7448,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens:
                   - `ui/tokens/color-palette --destructive`
                   - `ui/tokens/color-palette --muted-foreground`
-                - Endpoint callers: `reader`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-raw-content-disposition` — `server/internal/content.ts` (sanctioned)
         - **`reader`** — The Mail reader, web half: ThreadReader — one thread (mail.thread) as the reading pane draws it: the subject and message count, every message oldest first (the last and the unread open, the rest folded to a line), an HTML body in a fitted InlineFrame (an opaque origin, as tall as the message, under the mail policy: images only through this server's proxy and inline-part routes, no script of the body's, no form, frame or font load), a text body as text, each message's files opened in a tab or downloaded. Opening marks nothing read. The Mail reader, server half: mail.thread — one thread from the Mail cache (its stored body while it holds the thread's messages, else fetched from the provider), every HTML body rewritten to work inside the reader's frame policy (remote images through the image proxy, cid: images through the inline-part route, links opening a tab, refreshes and link prefetches cut), re-read when the cache learns the thread moved — and the routes the reader loads mail through: the signed image proxy and inline-part routes the opaque-origin frame reaches (public, each URL an HMAC of what it names), and the attachment route (open or download), both parts kept in infra/attachments under a name-derived id.
@@ -7544,26 +7573,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/mail/reader`
               - `apps/mail/threads`
-        - **`threads`** — Mail's index pane (/mail): one DataView over the live mail.threads window — rows are threads, newest first, grouped by received day, searched by the provider's own search (the query column) — whose views are the built-ins (Inbox, Sent, Drafts, Done, Spam, Trash: locked, copy-only, code-defined, the Inbox filter in one place for the boot preload), one per user label (a parent's includes its sub-labels) and the user's own saved views. The mail sidebar is the DataView's aside: the view name, one drag-reorderable list of views (Spam and Trash folded under More), + New view, and the label tree (folds roll unread up). The toolbar is the search box with Filter and Display inside it, and the view's rules as chips while it is the user's own or edited. A refused window renders by its code: not connected draws the provider's connect surface.
+        - **`threads`** — Mail's index pane (/mail): one DataView over the live mail.threads window — rows are threads, newest first, grouped by received day, searched by the provider's own search (the query column) — whose views are the built-ins (Inbox, Sent, Drafts, Done, Spam, Trash: locked, copy-only, code-defined, the Inbox filter in one place for the boot preload), one per user label (a parent's includes its sub-labels) and the user's own saved views. The mail sidebar is the DataView's aside: the view name, one drag-reorderable list of views (Spam and Trash folded under More), + New view, and the label tree (folds roll unread up). The toolbar is the search box with Filter and Display inside it, and the view's rules as chips while it is the user's own or edited. A refused window renders by its code: not connected draws the provider's connect surface. Triage: each row's hover actions (Label, Delete, Done — Restore in the trash, Not spam in spam, Move to Inbox elsewhere), checkbox selection with a bottom selection bar (Done, Label, Mark as read, Delete / Restore), the reader's bar (the same, plus Mark as unread), a thread marked read when opened, undo toasts, and the keys j / k (next / previous thread), e (the primary action), # (delete) and / (search) — every op drawn at once on every view through the live row overlay and written through the cache. Labels: Label as (the tree, checked when every thread has it, New label with a / path), and rename / delete in the sidebar's label menu.
           - Web:
             - Slots:
               - `mail.actions`
               - `mail-thread.actions`
+              - `thread-actions`
             - Slot contributors:
               - `mail.actions` ← `primitives.pane`
               - `mail-thread.actions` ← `primitives.pane`
+              - `thread-actions` ← `apps.mail.threads`
             - Contributes:
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
-            - Uses: 39 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
-              - `primitives/css/ui-kit` ×8
-              - `primitives/data-view` ×7
+              - `thread-actions` "triage" → `RowTriage`
+            - Uses: 56 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+              - `primitives/css/ui-kit` ×15
+              - `primitives/data-view` ×8
               - `primitives/pane` ×5
               - `network/live/live-state` ×2
+              - `network/live` ×2
               - `primitives/css/rigid` ×2
               - `apps/mail/provider.MailProviderConnect`
               - `apps/mail/reader.ThreadReader`
-              - `network/live.useLive`
+              - `infra/endpoints.useFetchEndpoint`
+              - `network/live/optimistic-mutation.writeRows`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -7572,9 +7606,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `primitives/multi-select.useMultiSelect`
+              - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
+              - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/tree.TreeRowChrome`
+              - `shell/notifications.useToast`
               - `ui/icons.Icon`
           - Core:
             - Uses:
@@ -39125,8 +39165,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 292 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×87
+        - Imported by: 294 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×89
           - `conversations` ×37
           - `infra` ×24
           - `tasks` ×24
@@ -45275,6 +45315,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveValueTupleRead`
           - `PagesTruncation`
           - `PresentationOwner`
+          - `RowPatch`
+          - `RowPatchHandle`
           - `RowViewProps`
           - `SendLaneKey`
           - `StoredClientFieldsResolution`
@@ -45297,6 +45339,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `optimisticDivergenceReportSink`
           - `optimisticRejectionSink`
           - `presentationOwnerKey`
+          - `pushRowPatch`
           - `REJECTION_MESSAGE_MAX`
           - `renderClientFieldsResolver`
           - `resourceSendLaneKey`
@@ -45595,6 +45638,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `followsDeferred`
           - `followsOf`
           - `followSubjectOf`
+          - `idKeyOf`
           - `isPointId`
           - `isRowUnknown`
           - `LIVE_CHILD_COUNT_KEY`
@@ -46153,11 +46197,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Server: `@plugins/network/plugins/live/plugins/live-state-snapshot/server/testing`
               - `pruneChangelog` — Prune the durable changelog, and record what it deleted in the SAME statement: the prune horizon (`max_pruned_xid`) moves to the highest xid this run deleted, never down.
-        - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
+        - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported. writeRows predicts a write on rows of a collection read through windows: every read draws it at once (the row changed, or gone from each window whose filter it no longer matches), ordered on the collection's send lane, giving way to the server's rows once acked, dropped and rethrown when rejected.
           - Web:
-            - Uses: 28 symbols — full list in [`plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md`](../plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md`](../plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md)
+              - `network/live` ×10
               - `network/live/live-state` ×9
-              - `network/live` ×9
               - `infra/endpoints` ×6
               - `primitives/networking` ×2
               - `primitives/latest-ref.useLatestRef`
@@ -46167,14 +46211,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OptimisticOptions`
               - `OptimisticResult`
               - `OptimisticSettled`
+              - `RowWrite`
             - Exports (values):
               - `enqueueDetachedWrite`
               - `enqueueResourceWrite`
               - `OpNoLongerApplies`
               - `useAwaitResourceWrite`
               - `useOptimisticResource`
+              - `writeRows`
           - Cross-plugin:
             - Imported by:
+              - `apps/mail/threads`
               - `apps/sonata/track-mixer`
               - `page/editor`
               - `ui/theme-engine/saved-themes`
@@ -47144,9 +47191,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `mulberry32`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
           - `infra` ×9
-          - `apps` ×5
+          - `apps` ×4
           - `debug` ×3
           - `framework` ×3
           - `conversations` ×2
@@ -53380,9 +53427,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 148 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 149 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×46
-              - `primitives` ×30
+              - `primitives` ×31
               - `page` ×18
               - `conversations` ×12
               - `debug` ×6
@@ -53804,9 +53851,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×16
-              - `primitives` ×8
+              - `primitives` ×9
               - `page` ×3
               - `apps-core/phone-actions`
               - `conversations/before-after`
@@ -54560,9 +54607,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/overlay --overlay-enter-duration`
               - `ui/tokens/overlay --overlay-enter-easing`
               - `ui/tokens/shadow --shadow`
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
               - `apps` ×15
-              - `primitives` ×8
+              - `primitives` ×9
               - `page` ×4
               - `infra` ×3
               - `companions` ×2
@@ -56054,9 +56101,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 87 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+            - Uses: 93 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
               - `primitives/data-view` ×50
               - `primitives/rank-reorder` ×9
+              - `primitives/multi-select` ×5
               - `primitives/tree` ×3
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
@@ -56066,6 +56114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/clip.clipClasses`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/layer.layerClasses`
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
@@ -57010,8 +57059,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×22
               - `primitives` ×17
               - `page` ×6
               - `conversations` ×4
@@ -57832,9 +57881,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 152 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 153 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×48
-          - `primitives` ×25
+          - `primitives` ×26
           - `conversations` ×20
           - `tasks` ×12
           - `page` ×7
@@ -57976,8 +58025,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 137 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
-          - `apps` ×38
+        - Imported by: 138 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+          - `apps` ×39
           - `primitives` ×28
           - `conversations` ×13
           - `fields` ×11
@@ -58235,10 +58284,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×22
           - `primitives` ×19
-          - `apps` ×16
+          - `apps` ×17
           - `tasks` ×8
           - `page` ×4
           - `apps-core` ×3
@@ -58832,25 +58881,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stackSegments`
               - `stackTotal`
               - `valueDomain`
-    - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
+    - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, the drawn SelectionBox, Escape-to-clear, and the SelectionBar (a top strip or a bottom pill) for list plugins.
       - Web:
         - Uses:
+          - `primitives/css/center.Center`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
+          - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
+          - `primitives/icon-button.IconButton`
           - `primitives/kept-state.defineKept`
           - `primitives/kept-state.useKept`
+          - `primitives/shortcuts.useSurfaceShortcuts`
+          - `ui/icons.Icon`
         - Exports (types):
           - `MultiSelectHandle`
           - `MultiSelectItemHandle`
           - `MultiSelectProviderProps`
           - `SelectionBarProps`
+          - `SelectionBoxProps`
           - `SelectionCheckboxProps`
         - Exports (values):
           - `MultiSelectProvider`
           - `SelectionBar`
+          - `SelectionBox`
           - `SelectionCheckbox`
+          - `useClearOnEscape`
           - `useMultiSelect`
           - `useMultiSelectItem`
       - Cross-plugin:
@@ -58860,8 +58917,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --primary-foreground`
           - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xs`
           - `ui/tokens/shadow --shadow-lg`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
@@ -58871,9 +58930,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
         - Imported by:
+          - `apps/mail/threads`
           - `conversations/agents`
           - `page/editor`
           - `primitives/data-table`
+          - `primitives/data-view/list`
     - **`networking`** — WebSocket / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Web:
         - Uses:
@@ -59402,6 +59463,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/wallpaper`
               - `apps/events/sources`
               - `apps/file-explorer/browser`
+              - `apps/mail/threads`
               - `apps/sonata/library`
               - `conversations/rename`
               - `primitives/overlay/imperative-dialog/confirm`
@@ -59428,6 +59490,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/deploy-history/rollback`
+                  - `apps/mail/threads`
                   - `apps/places/places-map`
                   - `apps/prototypes/canvas`
                   - `apps/website/landing/screenshot/chrome`
@@ -60805,9 +60868,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShortcuts`
           - `useSurfaceSignal`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
-          - `apps` ×15
-          - `primitives` ×11
+        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+          - `apps` ×16
+          - `primitives` ×12
           - `tasks` ×4
           - `apps-core` ×2
           - `companions/browser-extension`
@@ -62414,8 +62477,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 316 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×316
+    - Contributes: 317 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×317
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -62439,8 +62502,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 315 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×315
+    - Contributes: 316 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×316
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -64906,9 +64969,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/density` ×6
           - `ui/tokens/shape` ×2
-        - Imported by: 79 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×18
-          - `apps` ×13
+          - `apps` ×14
           - `tasks` ×11
           - `debug` ×5
           - `config_v2` ×4
@@ -69788,10 +69851,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 622 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 623 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×158
           - `conversations` ×123
-          - `primitives` ×56
+          - `primitives` ×57
           - `page` ×51
           - `fields` ×44
           - `debug` ×30

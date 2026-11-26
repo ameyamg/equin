@@ -1067,7 +1067,8 @@ export function DataTable<TRow>({
   );
 }
 
-/** The multi-select provider over the table's rows, with its bar above them. */
+/** The multi-select provider over the table's rows, with its bar above them
+ *  (or, `bar: "bottom"`, floating at the bottom after them). */
 function WithSelection({
   selection,
   orderedIds,
@@ -1079,8 +1080,14 @@ function WithSelection({
 }): ReactNode {
   return (
     <MultiSelectProvider keep={selection.keep} orderedIds={orderedIds}>
-      <SelectionBar actions={selection.actions} />
+      {selection.bar === "bottom" ? null : (
+        <SelectionBar actions={selection.actions} />
+      )}
       {children}
+      {/* A bottom bar sticks within the box it ends: after the rows. */}
+      {selection.bar === "bottom" ? (
+        <SelectionBar actions={selection.actions} placement="bottom" />
+      ) : null}
     </MultiSelectProvider>
   );
 }
