@@ -9,7 +9,7 @@ import { MessagesSection } from "./components/messages-section";
 import { investigateSiteMessages } from "./internal/investigate";
 import {
   useMessagesAvailable,
-  useRecentMessagesBadge,
+  useNewMessagesBadge,
 } from "./internal/use-messages-available";
 
 import { SiteVisitors } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web";
@@ -20,7 +20,7 @@ import {
 
 export default {
   description:
-    "Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card, the tab's 7-day badge and the health report's deployed-site row (\"N new messages\" since the tab was last opened, linking to it) read the same copy.",
+    "Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card, the tab's badge and the health report's deployed-site row (both \"N new messages\" since the tab was last opened, the row linking to it) read the same copy.",
   contributions: [
     investigateSiteMessages,
     // The health report's deployed-site row: "N new messages" after the
@@ -36,7 +36,7 @@ export default {
       icon: symbol("mail"),
       component: MessagesSection,
       useAvailable: useMessagesAvailable,
-      useBadge: useRecentMessagesBadge,
+      useBadge: useNewMessagesBadge,
     }),
     SiteOverview.Card({
       id: "messages",

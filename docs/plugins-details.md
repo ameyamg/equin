@@ -4274,19 +4274,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `saveSyndicationSettings`
         - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email, the site_messages mirror set) and the inbox half in the local deploy app (a live window over this computer's copy of the site's messages).
           - Plugins:
-            - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card, the tab's 7-day badge and the health report's deployed-site row ("N new messages" since the tab was last opened, linking to it) read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page. Owns the deploy_deployments_ext_messages_seen side-table — how far the user has read each site's messages, as the site's clock when they last opened the Messages tab — served by id (deploy-site-messages.seen) and moved forward by POST /api/deploy/deployments/:id/messages-seen.
+            - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card, the tab's badge and the health report's deployed-site row (both "N new messages" since the tab was last opened, the row linking to it) read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page. Owns the deploy_deployments_ext_messages_seen side-table — how far the user has read each site's messages, as the site's clock when they last opened the Messages tab — served by id (deploy-site-messages.seen) and moved forward by POST /api/deploy/deployments/:id/messages-seen.
               - Web:
                 - Contributes:
                   - `DataViewSlots.CollectionItemAction` "deploy-site-messages.inbox:investigate" → `CollectionInvestigate`
                   - `SiteVisitors.Note` "new-messages" → `NewMessagesNote`
                   - `SiteTabs.View` "Messages" → `MessagesSection`
                   - `SiteOverview.Card` "messages" → `MessagesCard`
-                - Uses: 36 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
+                - Uses: 35 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
                   - `apps/deploy/deployments` ×8
                   - `primitives/data-view` ×4
                   - `apps/deploy/host-query` ×3
                   - `network/live` ×3
-                  - `primitives/relative-time` ×2
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/dashboard.SiteVisitors`
                   - `apps/deploy/box-link/site-row.SiteLiveAside`
@@ -4302,6 +4301,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/launch/investigate.Investigate`
                   - `primitives/link-gesture.linkProps`
                   - `primitives/loading.Loading`
+                  - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
               - Server:
                 - Contributes:
