@@ -31894,20 +31894,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/text.Text`
               - `primitives/data-view.DataViewSlots`
-    - **`media`** — Media field type: identity, plus MediaThumb — one MediaRef as a small square (an image, a video's first frame, a file glyph) shared by the config renderer and the table cell.
+    - **`media`** — Media field type: identity, plus MediaThumb — one MediaRef as a small square (an image, a video's first frame, a file glyph) shared by the config renderer and the table cell; ViewableMediaThumb opens it (image or video) in the enclosing ImageGallery's viewer.
       - Web:
         - Contributes: `Fields.Identity` "media"
         - Uses:
           - `fields.Fields`
+          - `infra/endpoints.AssetSrc`
           - `infra/endpoints.useAssetSrc`
           - `primitives/css/center.Center`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/ui-kit.cn`
+          - `primitives/overlay/image-viewer.useImageViewerTrigger`
           - `ui/icons.Icon`
         - Exports (types):
           - `MediaMetadata`
           - `MediaThumbProps`
-        - Exports (values): `MediaThumb`
+        - Exports (values):
+          - `MediaThumb`
+          - `ViewableMediaThumb`
       - Core:
         - Uses:
           - `fields.defineFieldIdentity`
@@ -31960,7 +31964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `fields/media.MediaMetadata`
-              - `fields/media.MediaThumb`
+              - `fields/media.ViewableMediaThumb`
               - `infra/attachments.holdAttachments`
               - `infra/attachments.UploadedAttachment`
               - `infra/attachments/upload-dropzone.UploadDropzone`
@@ -31972,6 +31976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/overlay/image-viewer.ImageGallery`
               - `primitives/sortable-list.arrayMove`
               - `primitives/sortable-list.rectSortingStrategy`
               - `primitives/sortable-list.SortableItem`
@@ -44421,6 +44426,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/audio`
           - `page/video`
           - `primitives/file-viewer/media`
+          - `primitives/overlay/image-viewer`
       - Exemptions:
         - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/media-player.tsx` (debt)
 
@@ -56193,6 +56199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `media/media-session`
               - `media/player`
+              - `primitives/overlay/image-viewer`
           - Exemptions:
             - Exempts itself from:
               - `media-element/no-raw-media-play` — `web/internal/media-play.ts` (sanctioned)
@@ -58551,7 +58558,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 57 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 59 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/kept-state` ×3
               - `primitives/networking` ×3
@@ -58564,6 +58571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-fullscreen` ×2
               - `primitives/dom/scroll-reveal` ×2
               - `primitives/hover-reveal` ×2
+              - `media/player.MediaPlayer`
               - `primitives/announce.announce`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -58581,6 +58589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/yield.yieldClass`
               - `primitives/dom/auto-scroll.keepInPlace`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/media-element.playMedia`
               - `primitives/dom/render-mode.useBrowserValue`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
@@ -58621,25 +58630,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow` ×2
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by:
-              - `apps/pages/page-tree`
-              - `apps/places/places-map`
-              - `apps/website/pages/story/essay`
-              - `conversations/conversation-view/artifacts/screenshot`
-              - `conversations/conversation-view/jsonl-viewer`
-              - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
-              - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-              - `conversations/conversation-view/jsonl-viewer/user-image`
-              - `conversations/conversation-view/jsonl-viewer/user-text`
-              - `conversations/conversation-view/markdown-extensions`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+              - `conversations` ×7
+              - `primitives` ×4
+              - `apps` ×3
+              - `page` ×3
+              - `fields` ×2
               - `debug/browser-recordings`
-              - `page/bookmark`
-              - `page/image`
-              - `page/read-only-view`
-              - `primitives/diff-view`
-              - `primitives/diff-view/swipe-compare`
-              - `primitives/file-viewer/image`
-              - `primitives/text-editor/paste-images`
               - `tasks/task-attachments`
           - Core:
             - Exports (types):

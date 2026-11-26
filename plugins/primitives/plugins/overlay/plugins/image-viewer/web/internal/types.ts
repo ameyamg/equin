@@ -1,5 +1,11 @@
-/** One image the viewer can show. */
+/** One item the viewer can show: an image (the default), or a video. */
 export interface ViewerImage {
+  /**
+   * `"video"`: the stage plays it in the themed media player (no zoom, pan,
+   * minimap or copy); the strip and grid show its first frame with a play
+   * mark. Omitted: an image.
+   */
+  kind?: "image" | "video";
   /** A `data:`, `blob:` or http(s) URL. Decides the file actions — see
    *  `imageCapabilities` in this plugin's `core/`. */
   src: string;
@@ -31,4 +37,9 @@ export interface ViewerImage {
  *  `src` is a multi-megabyte data: URI.) */
 export function sameImage(a: ViewerImage, b: ViewerImage): boolean {
   return a.src === b.src && a.name === b.name;
+}
+
+/** Is this item a video (played, not zoomed)? */
+export function isVideo(image: ViewerImage): boolean {
+  return image.kind === "video";
 }

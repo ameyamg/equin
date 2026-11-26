@@ -55,14 +55,14 @@ export function useViewerMember<T extends Element>(
   // Re-join on a real change of the image, field by field: callers pass a
   // fresh object literal every render, and re-joining would re-sort for
   // nothing.
-  const { src, name, sourceLabel, alt, width, height } = image;
+  const { kind, src, name, sourceLabel, alt, width, height } = image;
   useLayoutEffect(() => {
     if (!element) return;
     return joinGallery(gallery, key, {
-      image: { src, name, sourceLabel, alt, width, height },
+      image: { kind, src, name, sourceLabel, alt, width, height },
       element,
     });
-  }, [gallery, element, key, src, name, sourceLabel, alt, width, height]);
+  }, [gallery, element, key, kind, src, name, sourceLabel, alt, width, height]);
 
   const open = useEventCallback(() => {
     if (element) openInGallery(gallery, key);

@@ -198,6 +198,47 @@ describe("useImageViewerTrigger", () => {
   });
 });
 
+function Video() {
+  const trigger = useImageViewerTrigger<HTMLButtonElement>({
+    kind: "video",
+    src: "/clip.mp4",
+    name: "clip.mp4",
+  });
+  return (
+    <button type="button" {...trigger}>
+      View video clip.mp4
+    </button>
+  );
+}
+
+describe("a video in the gallery", () => {
+  function Mixed() {
+    return (
+      <ImageGallery>
+        <ViewerThumbnail image={{ src: src("a"), name: "a" }} />
+        <Video />
+      </ImageGallery>
+    );
+  }
+
+  it("plays in the player on the stage, with no zoom, and steps like an image", () => {
+    render(<Mixed />);
+    open("a");
+    expect(screen.queryByRole("button", { name: "Zoom in" })).not.toBeNull();
+    press("ArrowRight");
+    showing("clip.mp4");
+    const stage = viewer().querySelector("video");
+    expect(stage?.getAttribute("src")).toBe("/clip.mp4");
+    expect(viewer().querySelector("img[data-viewer-stage]")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Zoom in" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy image" })).toBeNull();
+    // Back to the image: the video stays up until the image has decoded
+    // (never, in jsdom) — a step never passes through a blank.
+    press("ArrowLeft");
+    showing("a");
+  });
+});
+
 describe("an image that does not load", () => {
   afterEach(() => vi.unstubAllGlobals());
 

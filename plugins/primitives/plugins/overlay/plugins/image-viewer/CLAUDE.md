@@ -48,10 +48,25 @@ so `useImageLoad` asks the source once (`probeUrlStatus`, networking): 404 or 41
 attachment whose file left the disk), anything else is **unreadable** ("Couldn't load ·
 Retry"). With no `<img>` mounted the image also leaves its gallery, so ← / → skip it.
 
-`ViewerImage` is `{ src, name, sourceLabel?, alt?, width?, height?, resized? }`. `name` is the
+`ViewerImage` is `{ kind?, src, name, sourceLabel?, alt?, width?, height?, resized? }`. `name` is the
 top-bar title and the download's file name; `sourceLabel` is the small chip before
 it (`"Read"`, `"Pasted"`, `"Markdown"`, `"Attached"`). Pass `width` / `height` when
 you know them — otherwise they are measured on load.
+
+## Videos
+
+An item with `kind: "video"` joins the same gallery and steps with ← / → like
+any image. On the stage it plays in the themed `MediaPlayer`
+(`media/player`), fitted inside the room the controls leave, autoplaying,
+keeping no playhead (`keep: null` — the viewer is never reopened by a reload).
+It has no zoom, pan, minimap or copy: the zoom group and its hint leave the
+bottom bar, the zoom keys do nothing, the wheel is the player's. A click
+beside the player closes (in the slideshow: advances); the player's own
+clicks stop at its box. The viewer stops every keydown (below), so the
+player's page shortcuts do not reach it: Space is relayed to the video by the
+viewer itself. Strip and grid tiles show a video's first frame under a play
+mark (`ThumbImg`). Videos are not decoded ahead: the player takes the stage at
+once and shows its own loading.
 
 ## Large images: copies, and swaps that never go blank
 
@@ -129,7 +144,7 @@ handler, the `?` sheet and the button tooltips all read.
 
 - Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
 - Web:
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `primitives/kept-state` ×3
     - `primitives/networking` ×3
@@ -142,6 +157,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/dom/element-fullscreen` ×2
     - `primitives/dom/scroll-reveal` ×2
     - `primitives/hover-reveal` ×2
+    - `media/player.MediaPlayer`
     - `primitives/announce.announce`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -159,6 +175,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.keepInPlace`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/media-element.playMedia`
     - `primitives/dom/render-mode.useBrowserValue`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
@@ -199,25 +216,13 @@ handler, the `?` sheet and the button tooltips all read.
     - `ui/tokens/shadow` ×2
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by:
-    - `apps/pages/page-tree`
-    - `apps/places/places-map`
-    - `apps/website/pages/story/essay`
-    - `conversations/conversation-view/artifacts/screenshot`
-    - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-    - `conversations/conversation-view/jsonl-viewer/user-image`
-    - `conversations/conversation-view/jsonl-viewer/user-text`
-    - `conversations/conversation-view/markdown-extensions`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×7
+    - `primitives` ×4
+    - `apps` ×3
+    - `page` ×3
+    - `fields` ×2
     - `debug/browser-recordings`
-    - `page/bookmark`
-    - `page/image`
-    - `page/read-only-view`
-    - `primitives/diff-view`
-    - `primitives/diff-view/swipe-compare`
-    - `primitives/file-viewer/image`
-    - `primitives/text-editor/paste-images`
     - `tasks/task-attachments`
 - Core:
   - Exports (types):

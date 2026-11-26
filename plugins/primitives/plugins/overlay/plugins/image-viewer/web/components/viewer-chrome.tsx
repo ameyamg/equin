@@ -290,9 +290,12 @@ const HINT = "Click to close · Scroll to zoom · Drag to pan";
 export function BottomBar({
   ctl,
   count,
+  zoomable,
 }: {
   ctl: ViewController;
   count: number;
+  /** False for a video on the stage: no zoom group, no zoom hint. */
+  zoomable: boolean;
 }) {
   const hint = ViewStore.useSelector((s) => s.hint, []);
   const layout = ViewStore.useSelector((s) => s.layout, []);
@@ -312,7 +315,7 @@ export function BottomBar({
     >
       <Stack gap="sm" align="center">
         <Presence>{sheet ? <ShortcutSheet key="sheet" /> : null}</Presence>
-        {hint && !grid && (
+        {hint && !grid && zoomable && (
           <Text
             variant="label"
             className={cn(PANEL, "rounded-full px-md py-xs")}
@@ -378,10 +381,12 @@ export function BottomBar({
                 onClick={() => ctl.stepTile(1)}
               />
             </>
-          ) : (
+          ) : zoomable ? (
             <ZoomControls ctl={ctl} />
+          ) : null}
+          {(grid || zoomable) && (
+            <Separator orientation="vertical" className="h-4" />
           )}
-          <Separator orientation="vertical" className="h-4" />
           <IconButton
             icon={keyboardIcon}
             label="Keyboard shortcuts"

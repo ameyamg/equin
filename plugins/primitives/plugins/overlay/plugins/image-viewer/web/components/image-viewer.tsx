@@ -33,6 +33,7 @@ import {
   isZoomed,
   matchViewerKey,
   type GridMove,
+  type Area,
   type Rect,
   type Size,
   type ViewerAction,
@@ -47,7 +48,9 @@ import {
   shownEdge,
 } from "../internal/pick-src";
 import { createStageGestures } from "../internal/stage-gestures";
-import { sameImage, type ViewerImage } from "../internal/types";
+import { MediaPlayer } from "@plugins/media/plugins/player/web";
+import { playMedia } from "@plugins/primitives/plugins/dom/plugins/media-element/web";
+import { isVideo, sameImage, type ViewerImage } from "../internal/types";
 import { createViewController } from "../internal/view-controller";
 import { ViewStore, readMeta, type ViewState } from "../internal/view-store";
 import { writeViewPrefs } from "../internal/view-prefs";
@@ -154,12 +157,13 @@ interface Shown {
   url: string;
   edge: number;
   natural: Size | null;
-  via: "open" | "swap" | "sharper";
+  via: "open" | "swap" | "sharper" | "video";
 }
 
 /** The copy the stage draws `image` with, fitted to the window. A copy only
  *  when the original's size is known: the zoom is computed from it. */
 function stageCopy(image: ViewerImage): Pick<Shown, "image" | "url" | "edge"> {
+  if (isVideo(image)) return { image, url: image.src, edge: Infinity };
   const size = knownSize(image);
   if (!size) return { image, url: image.src, edge: Infinity };
   const edge = shownEdge(size, {
@@ -363,15 +367,22 @@ function ViewerFrame({
   // is the one shown.
   const [decoded] = useState(() => createDecodedCache(DECODED_MAX));
   const [shown, setShown] = useState<Shown>(() => {
+    if (isVideo(current)) return videoShown(current);
     const natural = knownSize(current) ?? loadedSize(originOf?.(index) ?? null);
     return { ...stageCopy(current), natural, via: "open" };
   });
+  // A video is not decoded ahead: the player takes the stage at once and
+  // shows its own loading (state adjusted during render, not in an effect).
+  if (isVideo(current) && !sameImage(current, shown.image)) {
+    setShown(videoShown(current));
+  }
   const swapping = !sameImage(current, shown.image);
   const currentRef = useEventCallback(() => current);
   const [slowSwap, setSlowSwap] = useState<string | null>(null);
   useEffect(() => {
     if (!swapping) return;
     const image = currentRef();
+    if (isVideo(image)) return;
     const copy = stageCopy(image);
     let live = true;
     const slow = later(() => setSlowSwap(image.src), SLOW_SWAP_MS);
@@ -405,6 +416,9 @@ function ViewerFrame({
   useLayoutEffect(() => {
     if (shown.via === "swap" && shown.natural) ctl.swapTo(shown.natural);
     else if (shown.via === "open") ctl.showImage(shown.natural);
+    // A video has no zoom view: open to the loading-free state, the player
+    // in the stage's area.
+    else if (shown.via === "video") ctl.showImage(null);
     // "sharper": the same image at more pixels, nothing to re-fit.
   }, [ctl, shown]);
 
@@ -459,7 +473,7 @@ function ViewerFrame({
     around.delete(index);
     for (const i of around) {
       const image = images[i];
-      if (!image) continue;
+      if (!image || isVideo(image)) continue;
       decoded.load(stageCopy(image).url).catch((err: unknown) => {
         // A neighbour that fails is found out when it is stepped to.
         if (!isLoadFailure(err)) throw err;
@@ -559,20 +573,28 @@ function ViewerFrame({
     };
   }, [firstOpen, ctl, later, cancel]);
 
+  const shownVideoRef = useEventCallback(() => isVideo(shownRef().image));
+
   // --- wheel (non-passive, so it can keep the page from scrolling) ---------
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
     const onWheel = (e: WheelEvent) => {
+      // A video has no zoom: the wheel is the player's (its volume) or nobody's.
+      if (shownVideoRef()) return;
       gestures.wheel(e, stage);
       wake();
     };
     stage.addEventListener("wheel", onWheel, { passive: false });
     return () => stage.removeEventListener("wheel", onWheel);
-  }, [gestures, wake]);
+  }, [gestures, wake, shownVideoRef]);
 
   // --- actions -------------------------------------------------------------
-  const capabilities = imageCapabilities(shown.image.src, pageOrigin);
+  const video = isVideo(shown.image);
+  // A video's frame is not an image to copy; open and download still apply.
+  const capabilities = video
+    ? { ...imageCapabilities(shown.image.src, pageOrigin), copy: false }
+    : imageCapabilities(shown.image.src, pageOrigin);
   const statusTimer = useRef<number | null>(null);
   const feedback = useEventCallback((message: string) => {
     cancel(statusTimer.current);
@@ -687,6 +709,17 @@ function ViewerFrame({
 
   const run = useEventCallback((action: ViewerAction) => {
     const grid = store.getState().layout === "grid";
+    // A video on the stage has no zoom view to step, fit or copy.
+    if (
+      video &&
+      !grid &&
+      (action === "zoom-in" ||
+        action === "zoom-out" ||
+        action === "fit" ||
+        action === "actual-size" ||
+        action === "copy")
+    )
+      return;
     switch (action) {
       case "close":
         if (store.getState().sheet) ctl.setSheet(false);
@@ -739,6 +772,21 @@ function ViewerFrame({
     if (store.getState().idle) flushSync(() => ctl.setIdle(false));
     if (e.key === "Tab") {
       if (rootRef.current) cycleFocus(e, rootRef.current);
+    } else if (
+      video &&
+      store.getState().layout === "single" &&
+      e.key === " " &&
+      !ownedByFocusedControl(e)
+    ) {
+      // The player's own keys are page shortcuts, which this overlay stops;
+      // Space, the one every video answers, is played through here.
+      e.preventDefault();
+      const el = stageRef.current?.querySelector("video");
+      if (el) {
+        // A refused play (no gesture yet) leaves it paused: nothing to say.
+        if (el.paused) void playMedia(el);
+        else el.pause();
+      }
     } else if (!ownedByFocusedControl(e)) {
       const action = matchViewerKey(e, modeOf(store.getState()));
       if (action) {
@@ -826,72 +874,88 @@ function ViewerFrame({
             "group-data-[slideshow=true]/viewer:cursor-none",
             !single && "invisible",
           )}
-          onPointerDown={(e) =>
-            gestures.pointerDown(e.nativeEvent, e.currentTarget, imgRef.current)
-          }
-          onPointerMove={(e) =>
-            gestures.pointerMove(e.nativeEvent, e.currentTarget)
-          }
+          onPointerDown={(e) => {
+            if (!video)
+              gestures.pointerDown(
+                e.nativeEvent,
+                e.currentTarget,
+                imgRef.current,
+              );
+          }}
+          onPointerMove={(e) => {
+            if (!video) gestures.pointerMove(e.nativeEvent, e.currentTarget);
+          }}
           onPointerUp={(e) => {
-            gestures.pointerUp(e.nativeEvent);
+            if (!video) gestures.pointerUp(e.nativeEvent);
             wake();
           }}
-          onPointerCancel={(e) => gestures.pointerCancel(e.nativeEvent)}
+          onPointerCancel={(e) => {
+            if (!video) gestures.pointerCancel(e.nativeEvent);
+          }}
+          // A video: a click beside the player closes (a slideshow's
+          // advances); the player's own clicks stop at its box.
+          onClick={video ? plainClick : undefined}
         >
-          {((natural === null && !failed) ||
-            (swapping && slowSwap === current.src)) && (
-            <Center className="size-full">
-              <Loading variant="spinner" />
-            </Center>
+          {video && (
+            <StageVideo key={shown.url} image={shown.image} area={area} />
           )}
-          {failed && (
+          {!video &&
+            ((natural === null && !failed) ||
+              (swapping && slowSwap === current.src)) && (
+              <Center className="size-full">
+                <Loading variant="spinner" />
+              </Center>
+            )}
+          {!video && failed && (
             <Center className="size-full">
               <Placeholder>Couldn&apos;t load this image.</Placeholder>
             </Center>
           )}
-          <img
-            ref={setImg}
-            data-viewer-stage
-            src={shown.url}
-            alt={shown.image.alt ?? shown.image.name}
-            draggable={false}
-            onLoad={(e) =>
-              // A copy's own pixels are fewer: the original's size is the truth.
-              ctl.loaded(
-                shown.url !== shown.image.src && shown.natural
-                  ? shown.natural
-                  : {
-                      width: e.currentTarget.naturalWidth,
-                      height: e.currentTarget.naturalHeight,
-                    },
-              )
-            }
-            onError={() => {
-              if (shown.url === shown.image.src) {
-                ctl.failedToLoad();
-                return;
+          {!video && (
+            <img
+              ref={setImg}
+              data-viewer-stage
+              src={shown.url}
+              alt={shown.image.alt ?? shown.image.name}
+              draggable={false}
+              onLoad={(e) =>
+                // A copy's own pixels are fewer: the original's size is the truth.
+                ctl.loaded(
+                  shown.url !== shown.image.src && shown.natural
+                    ? shown.natural
+                    : {
+                        width: e.currentTarget.naturalWidth,
+                        height: e.currentTarget.naturalHeight,
+                      },
+                )
               }
-              // A copy the server could not make: the original instead.
-              setShown({
-                ...shown,
-                url: shown.image.src,
-                edge: Infinity,
-                via: "open",
-              });
-            }}
-            className={cn(
-              placedClasses(),
-              "max-w-none origin-top-left cursor-zoom-out shadow-2xl will-change-transform",
-              "group-data-[zoomed=true]/viewer:cursor-grab group-data-[dragging=true]/viewer:cursor-grabbing",
-              "group-data-[slideshow=true]/viewer:cursor-none group-data-[slideshow=true]/viewer:shadow-none",
-            )}
-            style={{
-              ...placedStyle({ start: 0 }, { start: 0 }),
-              ...(natural
-                ? { width: natural.width, height: natural.height }
-                : {}),
-            }}
-          />
+              onError={() => {
+                if (shown.url === shown.image.src) {
+                  ctl.failedToLoad();
+                  return;
+                }
+                // A copy the server could not make: the original instead.
+                setShown({
+                  ...shown,
+                  url: shown.image.src,
+                  edge: Infinity,
+                  via: "open",
+                });
+              }}
+              className={cn(
+                placedClasses(),
+                "max-w-none origin-top-left cursor-zoom-out shadow-2xl will-change-transform",
+                "group-data-[zoomed=true]/viewer:cursor-grab group-data-[dragging=true]/viewer:cursor-grabbing",
+                "group-data-[slideshow=true]/viewer:cursor-none group-data-[slideshow=true]/viewer:shadow-none",
+              )}
+              style={{
+                ...placedStyle({ start: 0 }, { start: 0 }),
+                ...(natural
+                  ? { width: natural.width, height: natural.height }
+                  : {}),
+              }}
+            />
+          )}
         </Layer>
         {layout === "grid" && (
           <ImageGrid
@@ -930,12 +994,72 @@ function ViewerFrame({
               onNext={() => go(1)}
             />
           )}
-          <BottomBar ctl={ctl} count={images.length} />
-          {!compact && single && (
+          <BottomBar ctl={ctl} count={images.length} zoomable={!video} />
+          {!compact && single && !video && (
             <Minimap image={shown.image} ctl={ctl} lifted={stripShown} />
           )}
         </ControlSizeProvider>
       </ColorSchemeRegion>
     </ViewportOverlay>
+  );
+}
+
+function videoShown(image: ViewerImage): Shown {
+  return {
+    image,
+    url: image.src,
+    edge: Infinity,
+    natural: knownSize(image),
+    via: "video",
+  };
+}
+
+/**
+ * A video on the stage: the themed player, fitted inside the room the
+ * controls leave (the stage's `area`), playing as it opens. Its clicks stop
+ * at its own box, so the stage's "click beside to close" never sees them. A
+ * file the browser cannot play says so in place.
+ */
+function StageVideo({
+  image,
+  area,
+}: {
+  image: ViewerImage;
+  area: Area | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (area === null) return null;
+  return (
+    <Layer
+      className="opacity-0 transition-opacity duration-200 group-data-[phase=open]/viewer:opacity-100"
+      style={{
+        paddingTop: area.top,
+        paddingBottom: area.bottom,
+        paddingLeft: area.side,
+        paddingRight: area.side,
+      }}
+    >
+      <Center axis="both" className="size-full">
+        {failed ? (
+          <Placeholder>Couldn&apos;t play this video.</Placeholder>
+        ) : (
+          <div
+            className="contents"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <MediaPlayer
+              kind="video"
+              src={image.src}
+              label={image.name}
+              keep={null}
+              autoPlay
+              onError={() => setFailed(true)}
+              className="max-h-full max-w-full"
+            />
+          </div>
+        )}
+      </Center>
+    </Layer>
   );
 }

@@ -1,12 +1,16 @@
-import type { ReactNode } from "react";
+import type { MouseEventHandler, ReactNode, RefCallback } from "react";
 import { getAttachmentFile } from "@plugins/infra/plugins/attachments/core";
 import { assetPath } from "@plugins/infra/plugins/endpoints/core";
-import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useAssetSrc,
+  type AssetSrc,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useImageViewerTrigger } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import type { MediaRef } from "../../core";
 
 const fileIcon = symbol("draft");
@@ -33,18 +37,73 @@ export interface MediaThumbProps {
  * as a file glyph. The bytes come over the subtree's transport
  * (`useAssetSrc`); a failed load says so, with the reason on hover.
  */
-export function MediaThumb({
+export function MediaThumb(props: MediaThumbProps): ReactNode {
+  const src = useMediaSrc(props.media);
+  return <ThumbBody {...props} src={src} />;
+}
+
+/**
+ * A {@link MediaThumb} that opens its file in the enclosing `<ImageGallery>`'s
+ * viewer (← / → through the gallery's other files): an image to zoom, a
+ * video to play. A click on it opens it; anything else (a PDF) stays a plain
+ * thumbnail. Must render inside an `<ImageGallery>` — it throws outside one.
+ */
+export function ViewableMediaThumb(props: MediaThumbProps): ReactNode {
+  const src = useMediaSrc(props.media);
+  const viewable =
+    src.kind === "ready" &&
+    (props.media.mime.startsWith("image/") ||
+      props.media.mime.startsWith("video/"));
+  if (!viewable) return <ThumbBody {...props} src={src} />;
+  return <ViewerTrigger {...props} src={src} />;
+}
+
+function ViewerTrigger({
+  src,
+  ...props
+}: MediaThumbProps & {
+  src: Extract<AssetSrc, { kind: "ready" }>;
+}): ReactNode {
+  const { media } = props;
+  const trigger = useImageViewerTrigger<HTMLElement>({
+    kind: media.mime.startsWith("video/") ? "video" : "image",
+    src: src.src,
+    name: media.filename,
+    width: media.width,
+    height: media.height,
+  });
+  return (
+    <ThumbBody
+      {...props}
+      src={src}
+      open={{ ref: trigger.ref, onClick: trigger.onClick }}
+    />
+  );
+}
+
+function useMediaSrc(media: MediaRef): AssetSrc {
+  return useAssetSrc(assetPath(getAttachmentFile, { id: media.attachmentId }));
+}
+
+function ThumbBody({
   media,
   className,
   onMetadata,
-}: MediaThumbProps): ReactNode {
-  const src = useAssetSrc(
-    assetPath(getAttachmentFile, { id: media.attachmentId }),
-  );
+  src,
+  open,
+}: MediaThumbProps & {
+  src: AssetSrc;
+  /** Present: the thumbnail opens the viewer (a zoom-in cursor, a click). */
+  open?: {
+    ref: RefCallback<HTMLElement>;
+    onClick: MouseEventHandler<HTMLElement>;
+  };
+}): ReactNode {
   const box = cn(
     "size-16 rounded-md border border-border bg-muted",
     rigidClass(),
     className,
+    open && "cursor-zoom-in",
   );
   const isImage = media.mime.startsWith("image/");
   const isVideo = media.mime.startsWith("video/");
@@ -68,6 +127,9 @@ export function MediaThumb({
         title={media.filename}
         decoding="async"
         draggable={false}
+        ref={open?.ref}
+        onClick={open?.onClick}
+        aria-haspopup={open ? "dialog" : undefined}
         className={cn(box, "object-cover")}
         onLoad={(e) =>
           onMetadata?.({
@@ -85,6 +147,9 @@ export function MediaThumb({
         title={media.filename}
         aria-label={media.filename}
         preload="metadata"
+        ref={open?.ref}
+        onClick={open?.onClick}
+        aria-haspopup={open ? "dialog" : undefined}
         muted
         playsInline
         className={cn(box, "object-cover")}

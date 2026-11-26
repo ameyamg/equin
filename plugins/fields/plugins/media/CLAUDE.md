@@ -39,10 +39,15 @@ square (an image, a video's first frame through a muted
 `<video preload="metadata">`, else a file glyph), loaded over the subtree's
 transport (`useAssetSrc` on `getAttachmentFile`), reporting the file's
 metadata once the browser has read it. Shared by both capability children.
+`ViewableMediaThumb` is the same square, opening its file in the enclosing
+`<ImageGallery>`'s viewer (`primitives/overlay/image-viewer`) on click — an
+image to zoom, a video to play, ← / → through the gallery's other files; any
+other file stays a plain thumbnail. It throws outside a gallery.
 
 ## Children
 
-- `config` — the `Fields.Renderer` (a `block`: reorderable thumbnails, remove,
+- `config` — the `Fields.Renderer` (a `block`: reorderable thumbnails in one
+  gallery — click to open, drag to reorder — remove,
   then the `UploadDropzone` while there is room) and the `Fields.Sample`.
   Renders inside any `FieldsForm`. Each upload is **held** (holder
   `fields.media:<per mount>`, 24 h) so the orphan sweep cannot reap a file the
@@ -59,20 +64,24 @@ metadata once the browser has read it. Shared by both capability children.
 
 ## Plugin reference
 
-- Description: Media field type: identity, plus MediaThumb — one MediaRef as a small square (an image, a video's first frame, a file glyph) shared by the config renderer and the table cell.
+- Description: Media field type: identity, plus MediaThumb — one MediaRef as a small square (an image, a video's first frame, a file glyph) shared by the config renderer and the table cell; ViewableMediaThumb opens it (image or video) in the enclosing ImageGallery's viewer.
 - Web:
   - Contributes: `Fields.Identity` "media"
   - Uses:
     - `fields.Fields`
+    - `infra/endpoints.AssetSrc`
     - `infra/endpoints.useAssetSrc`
     - `primitives/css/center.Center`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/ui-kit.cn`
+    - `primitives/overlay/image-viewer.useImageViewerTrigger`
     - `ui/icons.Icon`
   - Exports (types):
     - `MediaMetadata`
     - `MediaThumbProps`
-  - Exports (values): `MediaThumb`
+  - Exports (values):
+    - `MediaThumb`
+    - `ViewableMediaThumb`
 - Core:
   - Uses:
     - `fields.defineFieldIdentity`

@@ -9,6 +9,7 @@
   - Imported by:
     - `media/media-session`
     - `media/player`
+    - `primitives/overlay/image-viewer`
 - Exemptions:
   - Exempts itself from:
     - `media-element/no-raw-media-play` — `web/internal/media-play.ts` (sanctioned)

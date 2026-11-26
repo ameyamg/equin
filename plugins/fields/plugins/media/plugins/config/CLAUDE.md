@@ -40,7 +40,7 @@ has), so its gallery row shows the dropzone.
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `fields/media.MediaMetadata`
-    - `fields/media.MediaThumb`
+    - `fields/media.ViewableMediaThumb`
     - `infra/attachments.holdAttachments`
     - `infra/attachments.UploadedAttachment`
     - `infra/attachments/upload-dropzone.UploadDropzone`
@@ -52,6 +52,7 @@ has), so its gallery row shows the dropzone.
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/sortable-list.arrayMove`
     - `primitives/sortable-list.rectSortingStrategy`
     - `primitives/sortable-list.SortableItem`

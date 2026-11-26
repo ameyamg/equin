@@ -7,9 +7,10 @@ import {
   type MediaRef,
 } from "@plugins/fields/plugins/media/core";
 import {
-  MediaThumb,
+  ViewableMediaThumb,
   type MediaMetadata,
 } from "@plugins/fields/plugins/media/web";
+import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import {
   holdAttachments,
   type UploadedAttachment,
@@ -46,7 +47,7 @@ const HOLD_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * A media field: its files as a row of reorderable thumbnails (drag to
- * reorder, × to remove), then the dropzone while there is room (`max`). Too
+ * reorder, click to open in the image viewer, × to remove), then the dropzone while there is room (`max`). Too
  * wide for a row, hence a `block`. Everything lives in {@link MediaEditor},
  * a component, because it holds per-mount state (the hold's holder).
  */
@@ -160,50 +161,56 @@ function MediaEditor({
   return (
     <Stack gap="sm">
       {value.length > 0 ? (
-        <SortableList
-          items={ids}
-          strategy={rectSortingStrategy}
-          onMove={(activeId, overId) => {
-            const from = ids.indexOf(activeId);
-            const to = ids.indexOf(overId);
-            if (from < 0 || to < 0 || from === to) return;
-            commit(arrayMove(value, from, to));
-          }}
-        >
-          <Stack direction="row" wrap gap="sm" data-testid="media-thumbs">
-            {value.map((ref) => (
-              <SortableItem
-                key={ref.attachmentId}
-                id={ref.attachmentId}
-                className={`${hoverRevealGroup} relative`}
-              >
-                {() => (
-                  <>
-                    <MediaThumb
-                      media={ref}
-                      onMetadata={(meta) => onMetadata(ref.attachmentId, meta)}
-                    />
-                    <Pin to="top-right" className={hoverRevealTarget}>
-                      <IconButton
-                        icon={removeIcon}
-                        label={`Remove ${ref.filename}`}
-                        glyph="small"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() =>
-                          commit(
-                            latest().filter(
-                              (r) => r.attachmentId !== ref.attachmentId,
-                            ),
-                          )
+        // One gallery: a click on a thumbnail opens it full window, ← / →
+        // step through the field's other images and videos.
+        <ImageGallery>
+          <SortableList
+            items={ids}
+            strategy={rectSortingStrategy}
+            onMove={(activeId, overId) => {
+              const from = ids.indexOf(activeId);
+              const to = ids.indexOf(overId);
+              if (from < 0 || to < 0 || from === to) return;
+              commit(arrayMove(value, from, to));
+            }}
+          >
+            <Stack direction="row" wrap gap="sm" data-testid="media-thumbs">
+              {value.map((ref) => (
+                <SortableItem
+                  key={ref.attachmentId}
+                  id={ref.attachmentId}
+                  className={`${hoverRevealGroup} relative`}
+                >
+                  {() => (
+                    <>
+                      <ViewableMediaThumb
+                        media={ref}
+                        onMetadata={(meta) =>
+                          onMetadata(ref.attachmentId, meta)
                         }
                       />
-                    </Pin>
-                  </>
-                )}
-              </SortableItem>
-            ))}
-          </Stack>
-        </SortableList>
+                      <Pin to="top-right" className={hoverRevealTarget}>
+                        <IconButton
+                          icon={removeIcon}
+                          label={`Remove ${ref.filename}`}
+                          glyph="small"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={() =>
+                            commit(
+                              latest().filter(
+                                (r) => r.attachmentId !== ref.attachmentId,
+                              ),
+                            )
+                          }
+                        />
+                      </Pin>
+                    </>
+                  )}
+                </SortableItem>
+              ))}
+            </Stack>
+          </SortableList>
+        </ImageGallery>
       ) : null}
       {room === undefined || room > 0 ? (
         <UploadDropzone
