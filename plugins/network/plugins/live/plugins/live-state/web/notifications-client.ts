@@ -326,9 +326,19 @@ type SocketKind = keyof typeof WS_URLS;
 /** One resource whose own push is stuck while the others flow: its key and how long its oldest owed change has waited. */
 export type StalledResource = { readonly key: string; readonly ms: number };
 
+/**
+ * One notification socket's status as the page sees it: the socket's own
+ * `WsStatus` once it exists, or `"unopened"` while nothing on the page has
+ * needed it — channels open lazily (see `NotificationsClient.channels`), and
+ * the central one only when a central-origin resource is observed, so a page
+ * that reads none never opens it. Never-opened is its own state, not
+ * `"connecting"`: a socket nobody is opening never finishes connecting.
+ */
+export type ChannelStatus = WsStatus | "unopened";
+
 export type ChannelStatuses = {
-  worktree: WsStatus;
-  central: WsStatus;
+  worktree: ChannelStatus;
+  central: ChannelStatus;
   /**
    * Per channel: how long EVERY push had been stopped at the server's latest
    * heartbeat ping (0 when nothing is owed that way, and 0 until the first
@@ -1193,10 +1203,8 @@ export class NotificationsClient {
 
   getChannelStatuses(): ChannelStatuses {
     return {
-      worktree:
-        this.channelStatuses.get(this.socketUrls.worktree) ?? "connecting",
-      central:
-        this.channelStatuses.get(this.socketUrls.central) ?? "connecting",
+      worktree: this.channelStatus("worktree"),
+      central: this.channelStatus("central"),
       serverPushStallMs: { ...this.serverPushStallMs },
       serverStalledResources: { ...this.serverStalledResources },
     };
@@ -1248,6 +1256,16 @@ export class NotificationsClient {
       channels,
     );
     this.emitDebug();
+  }
+
+  /**
+   * A channel's status: `"unopened"` while it was never created (nothing on
+   * the page needed it), else what its socket last reported — `"connecting"`
+   * from creation until the socket's first status event.
+   */
+  private channelStatus(kind: SocketKind): ChannelStatus {
+    if (!this.channels[kind]) return "unopened";
+    return this.channelStatuses.get(this.socketUrls[kind]) ?? "connecting";
   }
 
   subscribeChannelStatuses(fn: (s: ChannelStatuses) => void): () => void {
@@ -2515,7 +2533,8 @@ export class NotificationsClient {
    * one on every subsequent call — the single deliberate creation point, called
    * only by `connect()` (worktree), `observe()` and `requestAcks()`; every
    * read-only accessor reads `this.channels[kind]` directly and tolerates its
-   * absence (status reads "connecting" until a channel reports). Nothing opens
+   * absence (status reads "unopened" until it is created, then "connecting"
+   * until its socket reports). Nothing opens
    * at construction, and an app with no central resources never opens
    * /ws/central-notifications.
    */
@@ -2527,6 +2546,13 @@ export class NotificationsClient {
     this.bringUpStartedAt ??= performance.now();
     const channel = this.openChannel(kind);
     this.channels[kind] = channel;
+    // The channel leaves "unopened" now, whether or not its socket has
+    // reported a status yet.
+    fanOutMarked(
+      "channel-status listeners",
+      this.channelStatusListeners,
+      this.getChannelStatuses(),
+    );
     return channel;
   }
 

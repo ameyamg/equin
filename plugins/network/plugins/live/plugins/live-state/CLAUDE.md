@@ -816,6 +816,7 @@ Details:
     - `primitives/log-channels.clientLog`
     - `primitives/scope/tab-id.getTabId`
   - Exports (types):
+    - `ChannelStatus`
     - `ChannelStatuses`
     - `CombinedResources`
     - `DebugSnapshot`

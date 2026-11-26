@@ -1,13 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import type { ChannelStatuses } from "@plugins/network/plugins/live/plugins/live-state/web";
-import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
+import type {
+  ChannelStatus,
+  ChannelStatuses,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { PUSH_STALL_MS } from "@plugins/infra/plugins/health/web";
 import { connectionHealth } from "./connection-health";
 
 /** Both sockets' states, with each server's latest reported flush age (ms). */
 function sockets(
-  worktree: WsStatus,
-  central: WsStatus,
+  worktree: ChannelStatus,
+  central: ChannelStatus,
   pushStallMs: Partial<ChannelStatuses["serverPushStallMs"]> = {},
   stalledResources: Partial<ChannelStatuses["serverStalledResources"]> = {},
 ): ChannelStatuses {
@@ -74,6 +76,34 @@ describe("connectionHealth", () => {
       state: "attention",
       summary: "Reconnecting to server, connecting to central…",
       transitioning: true,
+    });
+  });
+});
+
+describe("connectionHealth — a socket the page never opened", () => {
+  test("central unopened is not pending: the row names only the server", () => {
+    expect(connectionHealth(sockets("open", "unopened"))).toEqual({
+      state: "ok",
+      summary: "Server connected",
+    });
+  });
+
+  test("central unopened leaves the server's own state", () => {
+    expect(connectionHealth(sockets("reconnecting", "unopened"))).toEqual({
+      state: "attention",
+      summary: "Reconnecting to server…",
+      transitioning: true,
+    });
+    expect(connectionHealth(sockets("closed", "unopened"))).toEqual({
+      state: "critical",
+      summary: "Server disconnected",
+    });
+  });
+
+  test("nothing opened yet is unknown, not connecting", () => {
+    expect(connectionHealth(sockets("unopened", "unopened"))).toEqual({
+      state: "unknown",
+      summary: "No live connection opened yet",
     });
   });
 });

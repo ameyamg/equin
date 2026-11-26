@@ -27917,8 +27917,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "live-state-health"
           - `DebugApp.Sidebar` "Live State"
-        - Uses: 26 symbols — full list in [`plugins/debug/plugins/live-state-health/REFERENCE.md`](../plugins/debug/plugins/live-state-health/REFERENCE.md)
-          - `network/live/live-state` ×7
+        - Uses: 27 symbols — full list in [`plugins/debug/plugins/live-state-health/REFERENCE.md`](../plugins/debug/plugins/live-state-health/REFERENCE.md)
+          - `network/live/live-state` ×8
           - `primitives/pane` ×3
           - `primitives/css/text` ×2
           - `primitives/css/ui-kit` ×2
@@ -27939,6 +27939,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/density --space-md`
@@ -45380,6 +45381,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/log-channels.clientLog`
               - `primitives/scope/tab-id.getTabId`
             - Exports (types):
+              - `ChannelStatus`
               - `ChannelStatuses`
               - `CombinedResources`
               - `DebugSnapshot`

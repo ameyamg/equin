@@ -4,12 +4,12 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   useNotificationsClient,
+  type ChannelStatus,
   type ChannelStatuses,
   type DebugSnapshot,
   type DebugSub,
   type TransportInfo,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 import {
   SectionLabel,
   Text,
@@ -20,7 +20,8 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ServerResourcesSection } from "./server-resources-section";
 
 /** Tailwind dot color per socket state — green=healthy, amber=transient, red=dead. */
-const SOCKET_DOT: Record<WsStatus, string> = {
+const SOCKET_DOT: Record<ChannelStatus, string> = {
+  unopened: "bg-muted-foreground",
   open: "bg-success",
   connecting: "bg-warning",
   reconnecting: "bg-warning",
@@ -74,7 +75,7 @@ function SocketRow({
   status,
 }: {
   label: string;
-  status: WsStatus;
+  status: ChannelStatus;
 }): ReactElement {
   return (
     <Stack direction="row" gap="sm" align="center">
@@ -84,7 +85,9 @@ function SocketRow({
       </Text>
       <Text
         variant="caption"
-        tone={status === "open" ? "muted" : "destructive"}
+        tone={
+          status === "open" || status === "unopened" ? "muted" : "destructive"
+        }
       >
         {status}
       </Text>

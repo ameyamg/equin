@@ -77,6 +77,7 @@ export type { ResourceContractMismatch } from "./resource-contract-store";
 export type { HttpStaleDropReport } from "./stale-drop-reporter";
 export type {
   ResourceKey,
+  ChannelStatus,
   ChannelStatuses,
   StalledResource,
   LiveStateSocketKind,

@@ -50,7 +50,12 @@ function joinKeys(keys: readonly string[]): string {
  *   for `PUSH_STALL_MS` or more while the rest flow → attention, naming the
  *   resources: only what reads them is frozen (2026-11-05: `host-fs.peek`
  *   hung on the filesystem read as the whole app stuck).
- * - both open and flowing → ok.
+ * - every opened socket open and flowing → ok, naming those ("Server
+ *   connected" when the page never needed central).
+ *
+ * A socket the page never opened (`"unopened"`: central, on a page that reads
+ * no central resource) is not part of the report: nothing is connecting to
+ * it, so it is neither pending nor down.
  *
  * Closed outranks stuck, and both outrank reconnecting: a socket that gave up
  * or a server that stopped pushing is worse than a socket that is still trying.
@@ -116,5 +121,12 @@ export function connectionHealth(statuses: ChannelStatuses): HealthStatus {
     };
   }
 
-  return { state: "ok", summary: "Server and central connected" };
+  const opened = CHANNELS.filter((c) => statuses[c.key] !== "unopened");
+  if (opened.length === 0) {
+    return { state: "unknown", summary: "No live connection opened yet" };
+  }
+  return {
+    state: "ok",
+    summary: `${capitalize(joinNames(opened.map((c) => c.name)))} connected`,
+  };
 }
