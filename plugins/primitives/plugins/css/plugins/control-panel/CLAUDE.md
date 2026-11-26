@@ -168,7 +168,9 @@ One edit from wrong:
 - **`fit` is required and sizes the CONTROL, not the track**:
   - `fit="inline"` sizes to itself (swatch, avatar, stepper);
   - `fit="field"` gets `--cp-value-col`, so every dropdown/input is the same
-    box.
+    box. It is 8rem (a menu's field); `ControlPanelPane` (`cp-pane`) makes the
+    panel an inline-size container and scales it to `clamp(8rem, 40cqi,
+    26rem)`, since a pane's width is the pane system's, not its content's.
   - The value track's existence is derived per panel from `data-cp-value`.
 - **A `Block` label is on the TEXT rail** (a field label, like `Row` / `Setting`
   labels), not the panel content edge.

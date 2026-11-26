@@ -1914,6 +1914,21 @@
   }
 }
 
+@utility cp-pane {
+  /* twmerge: standalone -- Re-declares the field width for a pane panel's subtree; no single-value built-in group to conflict with. */
+  /* THE PANE SURFACE (`ControlPanelPane`). `--cp-value-col` is sized for a
+     menu: 8rem is the right box in a 280px popover, and in a 1000px pane it is
+     a sliver at the far end of the row — a title cut after 15 characters with
+     the whole width empty beside it. A pane's width is the pane system's, never
+     its content's (the popover sizes to its content; a pane does not), so the
+     panel can be its own inline-size container and the field width can follow
+     it: still ONE width for every field in the panel, just a share of the
+     panel's instead of a constant. Floored at the menu width, capped so a very
+     wide pane does not stretch a number box across the screen. */
+  container-type: inline-size;
+  --cp-value-col: clamp(8rem, 40cqi, 26rem);
+}
+
 @utility cp-body {
   /* twmerge: standalone -- Composite band container (flex column + gap + the positioned first-rule mask); no single-value built-in group to conflict with. */
   /* THE BAND CONTAINER — half one of the separator mechanism (half two is

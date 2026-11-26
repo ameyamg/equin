@@ -40,7 +40,8 @@ export interface ControlPanelPaneProps {
  */
 export function ControlPanelPane({ label, children }: ControlPanelPaneProps) {
   return (
-    <ControlPanel aria-label={label}>
+    // `cp-pane`: the field width follows the pane's width (see app.css).
+    <ControlPanel aria-label={label} className="cp-pane">
       <ControlPanelHostProvider host={PANE_HOST}>
         <ControlPanelStack root={children} />
       </ControlPanelHostProvider>
