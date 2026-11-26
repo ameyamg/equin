@@ -497,11 +497,17 @@ describe("DataViewToolbar: the global floating bar's room", () => {
       arrangement: twoLines,
       reservesFloatingBar: true,
     });
+    // The band reserves (and names the anchor); the line names the anchor
+    // alone, never the class that marks a reserving header.
     const anchors = [
-      ...container.querySelectorAll(".anchor-floating-bar-band"),
+      ...container.querySelectorAll(
+        ".anchor-floating-bar-band, .anchor-floating-bar-line",
+      ),
     ];
     expect(anchors[0]).toBe(band(container));
+    expect(container.querySelectorAll(".anchor-floating-bar-band")).toHaveLength(1);
     const line = anchors.at(-1)!;
+    expect(line.className).toContain("anchor-floating-bar-line");
     expect(line.contains(screen.getByTestId("bar-line"))).toBe(true);
     expect(line.contains(screen.getByTestId("second-line"))).toBe(false);
   });
@@ -509,6 +515,7 @@ describe("DataViewToolbar: the global floating bar's room", () => {
   it("a ToolbarLine anchors nothing when the band does not reserve", () => {
     const { container } = renderToolbar({ arrangement: twoLines });
     expect(container.querySelector(".anchor-floating-bar-band")).toBeNull();
+    expect(container.querySelector(".anchor-floating-bar-line")).toBeNull();
   });
 
   it("not for an arrangement that is never the top bar (topBar: false)", () => {
