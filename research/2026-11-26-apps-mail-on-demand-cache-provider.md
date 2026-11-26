@@ -1,8 +1,9 @@
 # Mail (rebuild): on-demand loading with a cache, behind a generic provider
 
-**Status:** design; tasks 1 (Gmail client) and 2 (contract + Gmail provider) implemented.
-§1–2 below are as shipped (task 2); the corrections task 2 made to later sections are marked
-*Task 2 correction*.
+**Status:** design; tasks 1 (Gmail client), 2 (contract + Gmail provider) and 3a (the cache,
+server half) implemented. §1–2 below are as shipped; the corrections later tasks made to
+later sections are marked *Task 2 correction* / *Task 3a correction*. The live measurements
+are in *Measured on the real account (task 3a)* below.
 **Task:** task-1795696150-48l8i2, part of "Rebuild mail app from scratch with data views".
 **Siblings:** the old Mail app is being deleted (task-1795696132-6cmii2). The prototype
 `proto-1795656296-rtsmk5` is being cut down to its default variant (task-1795696140-tyzyan).
@@ -197,8 +198,8 @@ type CompiledMailQuery = { kind: "query"; providerQuery } | { kind: "nothing" } 
 
 interface MailProvider {
   // — reads —
-  listThreads(q: ProviderQuery, page: { olderThan: Date | null; limit: number; cursor: ListCursor | null })
-    : Promise<{ refs: { id: ThreadId; version: ThreadVersion }[]; next: ListCursor | null }>;
+  listMessages(q: ProviderQuery, page: { olderThan: Date | null; limit: number; cursor: ListCursor | null })
+    : Promise<{ hits: { thread: ThreadId; message: MessageId }[]; next: ListCursor | null }>;  // task 3a
   getThreads(ids): Promise<({ id; kind: "found"; summary } | { id; kind: "gone" } | { id; kind: "failed"; error })[]>;
   getThreadContent(id): Promise<{ kind: "found"; content } | { kind: "gone" }>;
   getAttachment(ref: AttachmentRef): Promise<Uint8Array>;
@@ -221,6 +222,18 @@ interface MailProvider {
 - **`changesSince` has no `removed` list.** No provider can say a thread is gone from a
   history record alone (a deleted message may leave others). The caller re-reads `threads`,
   and `getThreads` answers `gone` for those that are.
+- ***Task 3a correction:* the list answers messages, not threads.** `listThreads` (refs with
+  a version) became `listMessages`: the messages matching the query, newest first by the
+  provider's clock, each naming its thread. Measured: Gmail's `threads.list` orders a thread
+  by its FIRST message (thread id order), so no date cut can page it; `messages.list` orders
+  by message date. A thread's place is its latest MATCHING message — also what JMAP
+  `collapseThreads` and IMAP `SEARCH` give. The version skip moved from the list (Gmail's
+  `messages.list` carries no `historyId`) to the cache: a listed thread's cached summary is
+  re-read only when stale or missing the listed message.
+- ***Task 3a additions:*** `capabilities.listOrderSlackMs` (how far the provider's list order
+  and cut may stray from `MessageFacts.date`: Gmail 60 s, measured −9 s…+12 s);
+  `definition.connectedAccount()` (the account and its address, no mail call — the cache
+  never names Gmail); `ThreadSummary.recipients` (`To`, for the `to` column).
 - **`more`** follows JMAP's `hasMoreChanges`. Gmail reads at most 10 history pages
   (5,000 records) per call and resumes after the last record it read.
 - **Errors are the contract's.** `MailUnreachableError` (offline: a cached window still
@@ -356,12 +369,15 @@ else fill(query, from = q.after ?? head, until = limit rows found or exhausted):
 
 - **Key-range pages map onto Gmail.** Live windows page by key ranges, not tokens. Gmail has
   no cursor we can cut at, but it does have `before:<epoch>`.
-  - The sort key is (`lastMessageAt` desc, `id`), and `cut(after)` becomes
-    `providerQuery + " before:<sec+1>"`.
-  - The loader drops refs at or before the cut key and keeps paging with `pageToken` *within
-    one fill* until `limit` rows are found or the results are exhausted.
-  - Gmail's `before:` matches any message of a thread, so it can return threads newer than the
-    cut. The key filter removes them.
+  - ***Task 3a correction:*** the sort key is (`date` desc, `id`) where a row's `date` is the
+    thread's latest message MATCHING the window's filter (stored per query as
+    `mail_query_members.at`), not `lastMessageAt`: no provider can page threads by their
+    latest message overall under a per-message filter (a thread whose only unread message is
+    old would be found arbitrarily deep). Read by id, the row's `date` is `lastMessageAt`.
+  - A fill lists messages from `floor_at + listOrderSlackMs` (`before:` that second, rounded
+    up) with `pageToken` *within one fill*, places each hit by its message's date from the
+    summary, and moves the floor to the last placed date plus the slack. Hits newer than the
+    cut are members already. Coverage claims only what the slack makes safe.
 - **Sorting is by date only.** The only sortable field is `lastMessageAt` descending, which is
   the provider's own order.
   - Sort by sender or subject is **not offered**, because no provider can page it server-side
@@ -374,6 +390,10 @@ else fill(query, from = q.after ?? head, until = limit rows found or exhausted):
   - Sidebar badges come from `mail_mailboxes.counts` (Gmail `labels.get`: `threadsUnread` /
     `threadsTotal`), which are exact for mailbox views.
   - The DataView shows `N+` while the read can still grow.
+- ***Task 3a correction:* `date` is provider-evaluated.** Gmail's `after:` / `before:` compare
+  its own receipt clock, measured −9 s to +12 s from `internalDate` (12 messages; on this
+  account `internalDate` equals the `Date` header, ms always 0). So `date` is not among the
+  locally maintained columns (below): those are `mailboxes`, `unread`, `starred`.
 - ***Task 2 correction:* the date column.** The query's date column is `date`, a message's
   received time, and the row's is `lastMessageAt`. Task 3's DataView date filter must
   lower to `date`, not filter `lastMessageAt`. For `gte` / `gt` the two agree; for `lt` /
@@ -387,7 +407,7 @@ else fill(query, from = q.after ?? head, until = limit rows found or exhausted):
   - Each search is a query row with a 1-day LRU.
 - **Freshness of a covered query.** There are two classes, set when the query is compiled:
   - **Locally maintained.** The filter uses only columns the cache holds exactly *per
-    message*: `mailboxes`, `unread`, `starred`, `date`. These are every sidebar view, and
+    message*: `mailboxes`, `unread`, `starred` (*task 3a:* not `date`, see above). These are every sidebar view, and
     most user-built ones.
     - *Task 2 correction:* `hasAttachment` is NOT among them. The summary's
       `hasAttachments` is a header hint, and Gmail's `has:attachment` is its own test.
@@ -405,9 +425,13 @@ else fill(query, from = q.after ?? head, until = limit rows found or exhausted):
       `notify()` if anything moved.
     - Stale-while-revalidate is allowed here because the rows shown are real rows of the
       query as of a known cursor, never manufactured ones.
-- **Instant open.** `mailThreads` declares `preload: "boot"`, so the default window (the
-  Inbox's first page, from coverage) is hydrated before first paint. The code path passes
-  `preload` through `serve-on.ts`; task 3 verifies it end to end for an external collection.
+- **Instant open.** *Task 3a: not declared.* A collection's boot tuple is its param-less
+  default window — unfiltered (every message), not the Inbox — and the boot snapshot loads it
+  for EVERY app's first paint (blocking, `ifUnavailable: "block"`); an uncovered tuple would
+  wait on a Gmail fill, a disconnected account would refuse at boot. Preloading the Inbox
+  needs a live-API change: a declared preload tuple (a `where`), scoped to the Mail app's
+  composition, answered from the cache only. Without it, a reopen is the cache's SQL plus
+  one socket round trip (measured below).
 - **Thread content** is a param'd `liveValue("mail.thread", { id })`, external,
   `changes: "notified"`. Its loader returns the cached body when `version` matches the
   summary's, and otherwise fetches `full`, parses, stores and returns. While it fetches, the
@@ -562,12 +586,13 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
    `@grpc/grpc-js`) runs under Bun must be checked first.
    - If it does not, use the REST `subscriptions.pull` in a loop. That is a held request, not
      a timer.
-4. **A typed refusal on a collection window.** `unresolved(reason)` exists for values only.
-   A window that cannot be answered ("Gmail not connected" / "offline, not cached") needs a
-   typed error the DataView can render with an action, instead of a generic error.
-   - The likely shape is a loader error class that carries a kind, read through the window's
-     `error` arm.
-   - This needs the live owners' input; it is part of task 3.
+4. **A typed refusal on a collection window.** *Done in task 3a:* `liveCollection(key, {
+   refusals: [...] })` (window, lookup and `all` forms), thrown as `c.refuse(code, message)`
+   from an external source, read as the error arm's `kind: "refused"` with a typed `code` (no
+   Retry, never reported) — the same mechanism as `liveValue`'s refusals. DataView's
+   `errorState` may be a function of the failure, so the Mail list renders
+   `GmailAccessAction` for `not-connected`. `mail.threads` declares `not-connected`,
+   `offline-not-cached` and `filter-refused`.
 5. **Attachment ids.** `importAttachment` wants a UUID. We use a UUIDv5 of
    (account, message, attachment id), which is deterministic and keeps the import idempotent.
    The 20 MB default upload cap must be raised to 25 MB for mail, or made per caller.
@@ -592,10 +617,16 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
    - The client gained a 401 retry with a refreshed token: `accessToken({ refused })` →
      `getGmailToken({ refused })` → auth central refreshes the token it still holds. It
      also gained single-message `modify` / `trash` / `untrash` / `delete`.
-   - **Unverified until the live probe runs** (task 3 should check them first):
-     - `after:` is inclusive and `before:` exclusive at whole seconds;
-     - `label:"Parent/Child name"` names a nested label;
-     - top-level parentheses group terms in `q`.
+   - **Checked by the live probe in task 3a** (`scripts/q-probe.ts`):
+     - `after:` is inclusive and `before:` exclusive, but on Gmail's own clock, which strays
+       from `internalDate` (−9 s…+12 s): true only within that slack;
+     - `label:"Parent/Child name"` holds for every label measured except a name with
+       parentheses (0 matches). The hyphen form `label:Parent-Child-name-(x)` (spaces and
+       `/` as `-`, unquoted) matched every label (20/20). compileQuery quotes, and uses the
+       hyphen form for a parenthesised name (refusing unmeasured characters and two labels
+       with one spelling there). `label:Parent` never matches its sub-labels' messages;
+     - parentheses group as assumed: `(a OR b)` is the union, `-(a OR b)` the complement,
+       `(a) b` = `a b`.
    - Bulk writes cost 10 units a thread (`threads.modify`). Task 6 should do bulk triage with
      `messages.batchModify` over `ThreadSummary.messages` ids, about 50 units per 1,000
      messages.
@@ -622,6 +653,46 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
 
 Tasks 1, 2 and 3 are the critical path. Tasks 5, 6 and 7 can run in parallel after 4. Task 8
 is independent after 4.
+
+## Measured on the real account (task 3a, 2026-11-26)
+
+46,134 threads / 61,342 messages, 43 labels (28 user). `./equin run` scripts run at macOS
+background priority (darwinbg), so wall times are upper bounds.
+
+| Step (step 1's probe) | ms | units |
+|---|---|---|
+| `labels.list` / `labels.get` ×15 (batch) | 89 / 201 | 1 / 15 |
+| `threads.list` INBOX max 50 | 202 | 10 |
+| `threads.get` metadata ×50 (batch) | **1,898** | **2,760** (not 2,000) |
+| `history.list` | 75 | 2 |
+| `threads.get` full ×1 / an attachment | 90 / 927 | 120 / 20 |
+
+- **The metadata batch costs more than the price list.** 2,760 units for 50 threads means
+  about 19 parts were refused for rate inside the batch and re-sent (each re-send is charged
+  again). Google rate-limits concurrent batch parts per user; a smaller batch (10–20) or a
+  few in flight may be both faster and cheaper. A cold 50-row Inbox page is therefore ~2 s and
+  ~2,800 units today, over the 1.5 s target — the first lever is the batch shape (a follow-up
+  on the Gmail client), not the cache.
+- **Cache windows**, measured through the served collection (the resource HTTP read of
+  `mail.threads` on the worktree build, 50-row windows):
+
+  | Window | cold | warm (covered) |
+  |---|---|---|
+  | Inbox, page 1 | 2.18 s | 6–8 ms |
+  | Inbox, page 2 (key-range cut) | 0.39 s | 12 ms |
+  | Sent, page 1 / page 2 | 1.76 s / 1.50 s | 7 ms / 6 ms |
+  | Search `invoice` | 4.99 s | 12 ms |
+  | Search `has:attachment older_than:2y`, right after two cold Inbox pages | 48.7 s | 10 ms |
+  | `mail.mailboxes` (41, all with counts) | — | 4–5 ms |
+
+  - A cold page fetches about 53 summaries for 50 rows (the rows plus the slack's margin):
+    ~2,100 units before batch re-sends. Three cold views inside one minute exceed the
+    6,000-unit budget, and the pacer waits (the 48.7 s row: its 75 summaries took 3.3 s
+    once admitted). The design's "three cold views a minute" limit is real, and the batch
+    re-sends above make it worse.
+  - A covered window is Postgres alone (no provider call; a background `history.list`
+    follows it). Pages tile with no gap or overlap; a refused filter answers `422 refused`
+    with its code.
 
 ## Verification (per task, overall)
 

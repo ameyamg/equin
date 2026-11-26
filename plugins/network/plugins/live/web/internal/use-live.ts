@@ -176,6 +176,16 @@ type RefusalOf<V> = V extends { refusals?: readonly (infer C extends string)[] }
   : never;
 
 /**
+ * The refusal codes a collection declares (`liveCollection`'s `refusals`),
+ * as every read of it types its `refused` error's `code` — `string` for a
+ * collection that declares none (its error arm as it always was: it is never
+ * refused, so no code is ever there to read).
+ */
+type CollectionRefusalOf<D> = [RefusalOf<D>] extends [never]
+  ? string
+  : RefusalOf<D>;
+
+/**
  * One tuple's read in a list read of the plain value `V`
  * (`useLive(v, [p…])[i]`), typed by the declaration as that read types it —
  * its refusal codes, a snapshot's `refresh()`, and the unavailable arm of a
@@ -204,14 +214,14 @@ export interface LiveAllSelect<Row, S> {
  * One row by id (`useLive(c, { id })`): loading, failed, found, or
  * determinately absent — `ready` splits on `found`.
  */
-export type LiveRowResult<Row> =
+export type LiveRowResult<Row, C extends string = string> =
   | {
       status: "loading";
       refetch: () => Promise<void>;
     }
   | {
       status: "error";
-      error: ResourceError;
+      error: ResourceError<C>;
       /** The row as last seen, if it was ever seen. */
       stale?: Row;
       refetch: () => Promise<void>;
@@ -577,16 +587,26 @@ type QueryKindValues<D, I, Ids, C, G, R, N> = KindValues<
   D extends { all: object } ? R : undefined
 >;
 
-/** What a collection read returns, by the read its query names. */
-interface CollectionReads<D, Row, G, R> {
-  id: LiveRowResult<CollectionRow<Row>>;
-  ids: ResourceResult<CollectionRow<Row>[]>;
-  count: ResourceResult<number>;
-  groupBy: LiveListResult<LiveGroup<LiveGroupValue<Row, G & string>>>;
-  select: ResourceResult<R extends (rows: never) => infer T ? T : never>;
+/**
+ * What a collection read returns, by the read its query names — each error
+ * arm's `refused` code typed by the collection's declared refusals (`C`, see
+ * {@link CollectionRefusalOf}).
+ */
+interface CollectionReads<
+  D,
+  Row,
+  G,
+  R,
+  C extends string = CollectionRefusalOf<D>,
+> {
+  id: LiveRowResult<CollectionRow<Row>, C>;
+  ids: ResourceResult<CollectionRow<Row>[], C>;
+  count: ResourceResult<number, C>;
+  groupBy: LiveListResult<LiveGroup<LiveGroupValue<Row, G & string>>, C>;
+  select: ResourceResult<R extends (rows: never) => infer T ? T : never, C>;
   none: D extends { all: object }
-    ? ResourceResult<CollectionRow<Row>[]>
-    : LiveListResult<CollectionRow<Row>>;
+    ? ResourceResult<CollectionRow<Row>[], C>
+    : LiveListResult<CollectionRow<Row>, C>;
 }
 
 /**
@@ -751,9 +771,10 @@ export function useLive<
   F,
   S extends string,
   NM extends MachineFeature | undefined = undefined,
+  D extends object = object,
 >(
-  collection: LiveCollection<Row, F, S> & MachineDecl<NM>,
-): WithMachine<NM, LiveListResult<CollectionRow<Row>>>;
+  collection: LiveCollection<Row, F, S> & MachineDecl<NM> & D,
+): WithMachine<NM, LiveListResult<CollectionRow<Row>, CollectionRefusalOf<D>>>;
 /**
  * - `useLive(counted | null, { count: true, where? } | null)` — a count whose
  *   collection may be absent: `null` in place of the collection (or of the
@@ -819,8 +840,8 @@ export function useLive<
   NM,
   Included<
     O extends LiveListReadOptions
-      ? LiveListResult<CollectionRow<Row>>
-      : LivePagesResult<CollectionRow<Row>>,
+      ? LiveListResult<CollectionRow<Row>, CollectionRefusalOf<D>>
+      : LivePagesResult<CollectionRow<Row>, CollectionRefusalOf<D>>,
     In,
     Row
   >
@@ -850,9 +871,16 @@ export function useLive<
  * global, whatever the scope. The 2-argument forms are the collection
  * signature's (first).
  */
-export function useLive<Row, NM extends MachineFeature | undefined = undefined>(
-  collection: LiveAllCollection<Row> & MachineDecl<NM>,
-): WithMachine<NM, ResourceResult<CollectionRow<Row>[]>>;
+export function useLive<
+  Row,
+  NM extends MachineFeature | undefined = undefined,
+  D extends object = object,
+>(
+  collection: LiveAllCollection<Row> & MachineDecl<NM> & D,
+): WithMachine<
+  NM,
+  ResourceResult<CollectionRow<Row>[], CollectionRefusalOf<D>>
+>;
 /**
  * - `useLive(value)` / `useLive(value, params)` — a declared `liveValue`:
  *   `ResourceResult<T>` (pending, then settled; settled on its first render

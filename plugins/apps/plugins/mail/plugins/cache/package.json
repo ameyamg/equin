@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-cache",
+  "description": "The Mail app's cache: mail loaded on demand behind the provider contract, never a mirror — per-query coverage over Postgres tables, the mail.threads live window (filled from the provider's date-ordered message list, typed refusals when it cannot be answered) and mail.mailboxes with the provider's exact counts.",
+  "private": true,
+  "version": "0.0.1"
+}

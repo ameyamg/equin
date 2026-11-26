@@ -12,11 +12,21 @@ import {
   type Participant,
   type ThreadSummary,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
-import { decodeEncodedWords, header, parseMailbox } from "./headers";
+import {
+  decodeEncodedWords,
+  header,
+  parseAddressList,
+  parseMailbox,
+} from "./headers";
 import { FLAG_LABELS, mailboxesOfLabels } from "./labels";
 
 /** The headers a summary reads, asked for with `format=metadata`. */
-export const SUMMARY_HEADERS = ["From", "Subject", "Content-Type"] as const;
+export const SUMMARY_HEADERS = [
+  "From",
+  "To",
+  "Subject",
+  "Content-Type",
+] as const;
 
 const isDraft = (m: GmailMessage) => m.labelIds?.includes("DRAFT") ?? false;
 
@@ -37,6 +47,8 @@ export function summaryOfThread(t: GmailThread): ThreadSummary {
   const messages = t.messages;
   const participants: Participant[] = [];
   const seen = new Set<string>();
+  const recipients: Participant[] = [];
+  const seenTo = new Set<string>();
   const mailboxes = new Set<MailboxId>();
   for (const m of messages) {
     for (const b of mailboxesOfLabels(m.labelIds)) mailboxes.add(b);
@@ -49,6 +61,13 @@ export function summaryOfThread(t: GmailThread): ThreadSummary {
     ) {
       seen.add(p.address.toLowerCase());
       participants.push(p);
+    }
+    for (const r of parseAddressList(header(m.payload?.headers, "To"))) {
+      const key = r.address.toLowerCase();
+      if (seenTo.has(key) || recipients.length >= THREAD_PARTICIPANTS_MAX)
+        continue;
+      seenTo.add(key);
+      recipients.push(r);
     }
   }
   const sent = messages.filter((m) => !isDraft(m));
@@ -67,6 +86,7 @@ export function summaryOfThread(t: GmailThread): ThreadSummary {
     ),
     snippet: last.snippet ?? t.snippet ?? "",
     participants,
+    recipients,
     lastMessageAt,
     messageCount: messages.length,
     mailboxes: [...mailboxes].sort(),

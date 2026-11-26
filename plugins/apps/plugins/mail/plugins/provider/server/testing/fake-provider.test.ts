@@ -63,32 +63,70 @@ describe("fake mail provider", () => {
       f,
       and(clause("unread", "eq", true), clause("from", "contains", "ana")),
     );
-    const r = await f.provider.listThreads(q, page);
+    const r = await f.provider.listMessages(q, page);
     // t1 has an unread message (bo's) and a message from ana, but not one message that is both.
-    expect(r.refs.map((x) => x.id)).toEqual([threadId("t2")]);
+    expect(r.hits.map((x) => x.thread)).toEqual([threadId("t2")]);
   });
 
-  test("newest first, paged by cursor, cut per message", async () => {
+  test("messages newest first, each naming its thread, paged by cursor, cut per message", async () => {
     const f = fixture();
     const all = compiled(f, undefined);
-    const first = await f.provider.listThreads(all, { ...page, limit: 1 });
-    expect(first.refs.map((x) => x.id)).toEqual([threadId("t1")]);
-    const second = await f.provider.listThreads(all, {
-      ...page,
-      limit: 1,
-      cursor: first.next,
-    });
-    expect(second.refs.map((x) => x.id)).toEqual([threadId("t2")]);
-    expect(second.next).toBeNull();
-    // Before Jan 2 10:00:00 (its second included): t1's Jan 1 message and t2's own.
-    const cut = await f.provider.listThreads(all, {
-      ...page,
-      olderThan: new Date("2026-01-02T10:00:00Z"),
-    });
-    expect(cut.refs.map((x) => x.id).sort()).toEqual([
+    const first = await f.provider.listMessages(all, { ...page, limit: 2 });
+    // t1's Jan 3 reply, then t2's Jan 2 message: t1 placed by its latest message.
+    expect(first.hits.map((x) => x.thread)).toEqual([
       threadId("t1"),
       threadId("t2"),
     ]);
+    const second = await f.provider.listMessages(all, {
+      ...page,
+      limit: 2,
+      cursor: first.next,
+    });
+    expect(second.hits.map((x) => x.thread)).toEqual([threadId("t1")]);
+    expect(second.next).toBeNull();
+    // Strictly before Jan 2 10:00:00: only t1's Jan 1 message.
+    const cut = await f.provider.listMessages(all, {
+      ...page,
+      olderThan: new Date("2026-01-02T10:00:00Z"),
+    });
+    expect(cut.hits.map((x) => x.thread)).toEqual([threadId("t1")]);
+  });
+
+  test("a provider skew moves the list order and the cut, not the date", async () => {
+    const f = createFakeMailProvider({
+      listOrderSlackMs: 60_000,
+      threads: [
+        {
+          id: "a",
+          messages: [
+            {
+              date: "2026-01-01T10:00:00Z",
+              from: ana,
+              subject: "a",
+              providerSkewMs: 20_000,
+            },
+          ],
+        },
+        {
+          id: "b",
+          messages: [{ date: "2026-01-01T10:00:10Z", from: ana, subject: "b" }],
+        },
+      ],
+    });
+    const r = await f.provider.listMessages(compiled(f, undefined), page);
+    expect(r.hits.map((x) => x.thread)).toEqual([threadId("a"), threadId("b")]);
+    expect(f.definition.capabilities.listOrderSlackMs).toBe(60_000);
+  });
+
+  test("connectedAccount answers the account, or not-connected", async () => {
+    const f = fixture();
+    expect(await f.definition.connectedAccount()).toEqual({
+      kind: "connected",
+      accountId: "fake-account",
+      address: "fake@example.com",
+    });
+    f.setConnected(false);
+    expect((await f.definition.connectedAccount()).kind).toBe("not-connected");
   });
 
   test("an unknown mailbox and an undeclared operator are refused, or: [] is nothing", () => {

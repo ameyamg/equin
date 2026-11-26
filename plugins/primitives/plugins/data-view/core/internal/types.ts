@@ -2086,6 +2086,22 @@ interface DataViewPagedRows<TRow> {
   attach?: DataViewAttachConfig<TRow>;
 }
 
+/**
+ * What a function `errorState` is handed: the failure the body would
+ * otherwise render with `ResourceErrorInline`.
+ */
+export interface DataViewReadFailure {
+  /**
+   * The rows' read failing: a `ResourceError` (`kind`; a refusal's `code`).
+   * A field's values failing (`field` set): that field's error.
+   */
+  error: Error;
+  /** Re-read it — absent when the failure offers none. */
+  refetch?: () => Promise<void>;
+  /** The label of the field whose values failed; absent for the rows' own read. */
+  field?: string;
+}
+
 /** What every in-memory origin holds, tree or paged. */
 interface DataViewInMemoryRows<TRow> extends DataViewHeldRowProps<TRow> {
   /**
@@ -2678,11 +2694,23 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    */
   loadedFrame?: ComponentType<DataViewLoadedFrameProps<TRow>>;
   /**
-   * Override the render of a failed read (`readiness.status === "error"`);
-   * default `<ResourceErrorInline variant="block"/>` — the failure's message
-   * with Retry, or Reload when the tab is out of date. Never `emptyState`.
+   * Override the render of a failed read (`readiness.status === "error"`, a
+   * live `source`'s failed head page, a field the view is laid out by whose
+   * values failed); default `<ResourceErrorInline variant="block"/>` — the
+   * failure's message with Retry, or Reload when the tab is out of date, or
+   * a refusal's message alone (no Retry: the same question gets the same
+   * answer). Never `emptyState`.
+   *
+   * A function is handed the failure ({@link DataViewReadFailure}), so a host
+   * renders its own state for a refusal it expects — a source declared
+   * `refusals` (`liveCollection`) refused its read: `error` is a
+   * `ResourceError` with `kind: "refused"` and its `code`
+   * (`f.error instanceof ResourceError && f.error.code === "not-connected"`
+   * → a connect action), and the default rendering for anything else
+   * (return `undefined` for it).
    */
-  errorState?: ReactNode;
+  errorState?:
+    ReactNode | ((failure: DataViewReadFailure) => ReactNode | undefined);
   /**
    * A notice about the surface's data — something the user must act on that
    * no row can say (a source it cannot read). Drawn between the toolbar and

@@ -190,8 +190,8 @@ is reported by the schema file that exports it, which is where its plugin's
     - `parseKindLabel`
     - `storedIdSchema`
 - Cross-plugin:
-  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×18
+  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×19
     - `conversations` ×8
     - `tasks` ×7
     - `infra` ×4

@@ -54,6 +54,7 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
     - `apps/deploy/analytics/sessions`
     - `apps/deploy/deployments`
     - `apps/desktop/shell`
+    - `apps/mail/cache`
     - `build/run-ledger`
     - `page/links`
     - `plugin-meta/composition`

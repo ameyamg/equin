@@ -53,7 +53,14 @@ result). No `readiness` = static, ready rows.
 
 - **Body precedence** (`web/internal/body-state.ts`):
   `server error > failed read > failed field > rule error > loading > pending field > the view`.
-- `error` → `errorState` (default `<ResourceErrorInline variant="block"/>`).
+- `error` → `errorState` (default `<ResourceErrorInline variant="block"/>`;
+  a refused read — a live source whose collection declares `refusals` —
+  shows the server's message with no Retry). `errorState` may be a function
+  of the failure (`DataViewReadFailure`: `error`, `refetch?`, `field?` for a
+  field's values), for a host that renders its own state for a refusal it
+  expects (`f.error instanceof ResourceError && f.error.code ===
+  "not-connected"` → a connect action); its `undefined` keeps the default
+  (`web/components/body-fallback.tsx`).
 - `loading` → `loadingState`.
 - Only `ready` reaches the view — so `emptyState` means only "ready, zero rows".
 - **`emptyState` speaks about the data, never about a narrowing.** While a
@@ -2587,6 +2594,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewPaging`
     - `DataViewPagingTotal`
     - `DataViewProps`
+    - `DataViewReadFailure`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
     - `DataViewSection`
@@ -2830,6 +2838,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewPagingTotal`
     - `DataViewPart`
     - `DataViewProps`
+    - `DataViewReadFailure`
     - `DataViewReadOrder`
     - `DataViewRenderProps`
     - `DataViewReserve`

@@ -23,7 +23,7 @@ Registered as `MailProviders.Provider` (id `gmail`). Only this plugin imports
   - A 404 is `reset`.
   - Label definitions are not in history (`mailboxDefinitions: "relist"`).
 - **Summary.**
-  - `threads.get` metadata with From / Subject / Content-Type, batched.
+  - `threads.get` metadata with From / To / Subject / Content-Type, batched.
   - The subject is the first message's, the snippet the last's.
   - The date is the last non-draft message's `internalDate`.
   - `hasAttachments` means some message is `multipart/mixed`.
@@ -48,23 +48,26 @@ alone decides membership.
 
 | Clause | `q` |
 |---|---|
-| mailboxes hasAny / hasAll / hasNone | `(a OR b)` / `a b` / `-a -b`, where a role is `in:inbox` … `is:important`, a category `category:social`, a user label `label:"Work/Clients"` (its full name built from the mailboxes given; a missing parent is refused, never a shorter name) |
+| mailboxes hasAny / hasAll / hasNone | `(a OR b)` / `a b` / `-a -b`, where a role is `in:inbox` … `is:important`, a category `category:social`, a user label `label:"Work/Big clients"` (its full name built from the mailboxes given; a missing parent is refused), or for a name with parentheses `label:Work-Big-clients-(EU)` (spaces and `/` written `-`, unquoted; an unmeasured character, unbalanced parentheses or two labels with one spelling are refused). `label:Parent` never matches its sub-labels |
 | unread / starred / hasAttachment | `is:unread` / `is:starred` / `has:attachment`, `-` negated |
-| date gte / gt / lt / lte | `after:s` / `after:s+1` / `before:s` / `before:s+1` (whole seconds only) |
+| date gte / gt / lt / lte | `after:s` / `after:s+1` / `before:s` / `before:s+1` (whole seconds only; on Gmail's receipt clock, −9 s…+12 s from `internalDate`) |
 | from / to / subject | `from:"text"`, `-from:"text"` (no `"` in the text) |
 | query | the text, in parentheses (balanced, or refused) |
 | and / or | side by side / `(x OR (y z))` |
 
-The cut of one fill is `withCut(q, olderThan)`: `q before:<second + 1>`.
+The cut of one fill is `withCut(q, olderThan)`: `q before:<its second,
+rounded up>` — a superset, never fewer.
 
-**Unverified against a live account** (the probe has not run yet: no Gmail
-scope granted). These assume Gmail's documented behaviour:
+**Measured on a live account** (2026-11-26,
+`integrations/gmail/api/scripts/q-probe.ts`):
 
-- `after:` is inclusive and `before:` exclusive;
-- `label:"Name With Spaces/Child"` names a nested label;
-- parentheses group terms at the top level.
-
-The live probe should check all three before the cache relies on them.
+- `after:` / `before:` compare Gmail's receipt clock, −9 s…+12 s from
+  `internalDate`: the definition declares `listOrderSlackMs: 60_000`;
+- `threads.list` orders by a thread's first message, `messages.list` by
+  message date: `listMessages` lists messages;
+- the quoted `label:"Name With Spaces (x)/Child"` matches nothing (a quoted
+  name without parentheses is exact); the hyphen form matched every label;
+- parentheses group as assumed (`(a OR b)`, `-(a OR b)`, `(a) b`).
 
 ## Writes
 

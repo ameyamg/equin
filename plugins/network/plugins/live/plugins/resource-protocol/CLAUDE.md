@@ -191,6 +191,7 @@ live-state asks it when a sub goes unanswered. An HTTP body, not a frame:
     - `ResourceRefusal`
 - Cross-plugin:
   - Imported by:
+    - `apps/mail/cache`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/jsonl-viewer`
     - `framework/server-core`

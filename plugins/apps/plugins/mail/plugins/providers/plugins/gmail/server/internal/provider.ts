@@ -19,7 +19,6 @@ import {
   MailUnreachableError,
   messageId,
   threadId,
-  threadVersion,
   type Mailbox,
   type MailCallOptions,
   type MailChanges,
@@ -184,9 +183,12 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
   }
 
   return {
-    listThreads: (query, page, o) =>
-      neutral("threads.list", async () => {
-        const r = await client.listThreads(
+    listMessages: (query, page, o) =>
+      neutral("messages.list", async () => {
+        // messages.list, not threads.list: Gmail orders threads.list by a
+        // thread's FIRST message (measured), messages.list by each message's
+        // date — the order a date-sorted thread list pages in.
+        const r = await client.listMessages(
           {
             q: withCut(query, page.olderThan) || undefined,
             maxResults: Math.min(page.limit, 500),
@@ -196,9 +198,9 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
           gmailOpts(o),
         );
         return {
-          refs: (r.threads ?? []).map((t) => ({
-            id: threadId(t.id),
-            version: threadVersion(t.historyId),
+          hits: (r.messages ?? []).map((m) => ({
+            thread: threadId(m.threadId),
+            message: messageId(m.id),
           })),
           next: r.nextPageToken ? listCursor(r.nextPageToken) : null,
         };

@@ -28,6 +28,8 @@ export type ThreadSummary = {
   snippet: string;
   /** Senders in order of first message, deduped by address, at most THREAD_PARTICIPANTS_MAX. */
   participants: Participant[];
+  /** Every `To` address, in order of first message, deduped, at most THREAD_PARTICIPANTS_MAX. */
+  recipients: Participant[];
   /** The latest sent or received message's date (drafts only when the thread holds nothing else). */
   lastMessageAt: Date;
   messageCount: number;
@@ -60,11 +62,18 @@ export type MessageFacts = {
   isDraft: boolean;
 };
 
-/** The ref of a thread in a list answer: enough to skip a fetch when the version is cached. */
-export type ThreadRef = { id: ThreadId; version: ThreadVersion };
+/**
+ * One message a list matched, naming its thread. A list answers messages, not
+ * threads: a thread's place in a date-ordered list of threads is its latest
+ * MATCHING message (the query is per message), and only the message order
+ * says where that is — Gmail's `threads.list` orders by a thread's first
+ * message, JMAP `collapseThreads` and IMAP `SEARCH` by the matching message.
+ */
+export type ListedMessage = { thread: ThreadId; message: MessageId };
 
-export type ThreadListPage = {
-  refs: ThreadRef[];
+export type MessageListPage = {
+  /** Newest first by the provider's own clock (see `listOrderSlackMs`). */
+  hits: ListedMessage[];
   /** Where the list goes on, or null when the provider has no more. */
   next: ListCursor | null;
 };

@@ -179,6 +179,7 @@ export type {
   DataViewPaging,
   DataViewLoadedWindow,
   DataViewLoadedFrameProps,
+  DataViewReadFailure,
   DataViewPagingTotal,
   DataViewRowsComplete,
   DataViewReadOrder,

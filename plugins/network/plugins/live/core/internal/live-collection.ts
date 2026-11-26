@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ListShape } from "@plugins/packages/plugins/list-bound/core";
 import {
   registerResourceDescriptor,
+  resourceDescriptorByKey,
   type ResourceDescriptor,
   type ResourcePreload,
 } from "@plugins/network/plugins/live/plugins/live-state/core";
@@ -48,6 +49,12 @@ import {
   type LiveMachineBrand,
   type LiveMachineSpec,
 } from "./needs-machine";
+import {
+  refusalFields,
+  type LiveRefusals,
+  type LiveRefusalsBrand,
+  type LiveRefusalsSpec,
+} from "./refusals";
 import { createLiveQueryCodec } from "./query-codec";
 import type { ClockForm } from "./clock";
 import { mintColumnRef, type LiveColumnRef } from "./column-ref";
@@ -899,6 +906,7 @@ export function liveCollection<
     : RowKey<FieldsRow<E, P, CP, OF, CF>>) = [Al] extends [undefined]
     ? keyof FieldsRow<E, P, CP, OF, CF> & string
     : RowKey<FieldsRow<E, P, CP, OF, CF>>,
+  const C extends string = never,
 >(
   key: string,
   spec: Omit<
@@ -923,6 +931,7 @@ export function liveCollection<
     tree?: never;
   } & LiveFieldsForm<undefined, Al, never, undefined, R> &
     LiveMachineSpec<NM> &
+    LiveRefusalsSpec<C> &
     LiveCollectionAccessSpec,
 ): LiveNoWindowCollection<
   [Al] extends [undefined]
@@ -935,7 +944,8 @@ export function liveCollection<
   id: I;
   fields: LiveFields<P | (keyof OF & string)>;
   from: FromEntity<E>;
-} & LiveMachineBrand<NM>;
+} & LiveMachineBrand<NM> &
+  LiveRefusalsBrand<C>;
 export function liveCollection<
   const OF extends FieldsRecord,
   const CF extends FieldsRecord = Record<never, never>,
@@ -1002,6 +1012,7 @@ export function liveCollection<
   const Sc extends true | undefined = undefined,
   const I extends keyof FieldsRow<E, P, CP, OF, CF> & string = never,
   const Tr extends LiveTree | undefined = undefined,
+  const C extends string = never,
 >(
   key: string,
   spec: Omit<
@@ -1036,6 +1047,7 @@ export function liveCollection<
       >;
   } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
     LiveMachineSpec<NM> &
+    LiveRefusalsSpec<C> &
     LiveCollectionAccessSpec,
 ): LiveCollectionOf<
   FieldsRow<E, P, CP, OF, CF>,
@@ -1048,7 +1060,8 @@ export function liveCollection<
   LiveScopedColumnsOf<Sc> & {
     fields: LiveFields<P | (keyof OF & string)>;
     from: FromEntity<E>;
-  } & LiveMachineBrand<NM>;
+  } & LiveMachineBrand<NM> &
+  LiveRefusalsBrand<C>;
 export function liveCollection<Row, F, S extends string>(
   key: string,
   declared: LiveFieldsSpec<
@@ -1079,8 +1092,21 @@ export function liveCollection<Row, F, S extends string>(
       sortable?: readonly string[];
       needsMachine?: MachineFeature;
       access?: unknown;
+      refusals?: LiveRefusals<string>;
     };
     refuseCollectionAccess(key, fieldsSpec.access);
+    const refusals = refusalFields(
+      `liveCollection("${key}")`,
+      fieldsSpec.refusals,
+    );
+    if (refusals.refusals !== undefined && fieldsSpec.arms !== undefined) {
+      // Unreachable from typed code (the union overload takes none): a
+      // union's rows are compiled SQL over its arms' tables, which never
+      // refuse.
+      throw new Error(
+        `liveCollection("${key}"): \`refusals\` beside \`arms\` — a union collection is served from its arms' tables, whose compiled reads never refuse; declare refusals on a collection served \`source: "external"\`.`,
+      );
+    }
     // A union's rows are no entity's: its base fields are its own, and each
     // arm's are the arm's (`liveArm`).
     if (fieldsSpec.arms !== undefined) {
@@ -1121,6 +1147,7 @@ export function liveCollection<Row, F, S extends string>(
       carry: _carry,
       baseExposures: _baseExposures,
       needsMachine: _needsMachine,
+      refusals: _refusals,
       ...rest
     } = fieldsSpec;
     if (fieldsSpec.arms !== undefined && _needsMachine !== undefined) {
@@ -1157,6 +1184,9 @@ export function liveCollection<Row, F, S extends string>(
           ?.orderBy ?? []
       ).map(([f]) => f),
     ];
+    if (refusals.refusals !== undefined) {
+      stampRefusals(minted, refusals.refusals);
+    }
     const from = fieldsSpec.from;
     return {
       ...minted,
@@ -1168,7 +1198,35 @@ export function liveCollection<Row, F, S extends string>(
       // are its extension's).
       shape: declaredShape(`liveCollection("${key}")`, resolved.row, ""),
       ...machineFields(fieldsSpec),
+      ...refusals,
     };
+  }
+}
+
+/**
+ * Put a collection's declared refusal codes on EVERY descriptor it minted
+ * (the window, `:rows`, `:groups`, `:count`, `:ancestors`, the `all` set —
+ * each a property of the minted collection, registered under its key), so
+ * the runtime accepts a refusal from any of their loaders and the client
+ * types and checks it: one declaration, whichever read the loader answers.
+ * Stamped on the registered object itself before any read can name it (at
+ * module eval, in the declaring call).
+ */
+function stampRefusals(minted: object, codes: readonly string[]): void {
+  let stamped = 0;
+  for (const value of Object.values(minted)) {
+    if (typeof value !== "object" || value === null) continue;
+    const key = (value as { key?: unknown }).key;
+    if (typeof key !== "string" || resourceDescriptorByKey(key) !== value) {
+      continue;
+    }
+    (value as { refusals?: readonly string[] }).refusals = codes;
+    stamped += 1;
+  }
+  if (stamped === 0) {
+    throw new Error(
+      `liveCollection: declared \`refusals\` but minted no descriptor to carry them.`,
+    );
   }
 }
 

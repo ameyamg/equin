@@ -7101,6 +7101,84 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/keyboard-party/isle-building`
     - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), and later the cache, threads, reader and compose plugins.
       - Plugins:
+        - **`cache`** — The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), a background catch-up from the change cursor that re-checks locally maintained queries per message and re-lists the others, refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+          - Server:
+            - Contributes:
+              - `resource.declare` "mail.mailboxes"
+              - `resource.declare` "mail.mailboxes:rows"
+              - `resource.declare` "mail.threads"
+              - `resource.declare` "mail.threads:rows"
+              - `fork-data-exclusion` "mail_accounts"
+              - `fork-data-exclusion` "mail_mailboxes"
+              - `fork-data-exclusion` "mail_queries"
+              - `fork-data-exclusion` "mail_query_members"
+              - `fork-data-exclusion` "mail_threads"
+              - `backup-data-exclusion` "mail_accounts"
+              - `backup-data-exclusion` "mail_mailboxes"
+              - `backup-data-exclusion` "mail_queries"
+              - `backup-data-exclusion` "mail_query_members"
+              - `backup-data-exclusion` "mail_threads"
+              - `change-feed-exclusion` "mail_accounts"
+              - `change-feed-exclusion` "mail_mailboxes"
+              - `change-feed-exclusion` "mail_queries"
+              - `change-feed-exclusion` "mail_query_members"
+              - `change-feed-exclusion` "mail_threads"
+            - Uses:
+              - `apps/mail/provider.MailProviders`
+              - `database.db`
+              - `database.Db`
+              - `database.writeAtomically`
+              - `database/admin.ExcludeFromBackup`
+              - `database/admin.ExcludeFromFork`
+              - `database/sql-column.parsedJson`
+              - `ids.externalIdColumn`
+              - `infra/retention.defineRetention`
+              - `infra/retention.markCascadeBounded`
+              - `network/live.serveCollection`
+              - `network/live/change-feed.ExcludeFromChangeFeed`
+            - DB schema: `plugins/apps/plugins/mail/plugins/cache/server/internal/tables.ts`
+            - Exports (values):
+              - `_mailAccounts`
+              - `_mailMailboxes`
+              - `_mailQueries`
+              - `_mailQueryMembers`
+              - `_mailThreads`
+            - Register:
+              - `defineJob('retention.mail_queries')`
+              - `defineJob('retention.mail_threads')`
+            - Resources:
+              - `mail.mailboxes` (keyed)
+              - `mail.mailboxes:rows` (keyed, point)
+              - `mail.threads` (keyed, window)
+              - `mail.threads:groups` (push)
+              - `mail.threads:rows` (keyed, point)
+          - Core:
+            - Uses:
+              - `apps/mail/provider.MAILBOX_ROLES`
+              - `apps/mail/provider.THREAD_PARTICIPANTS_MAX`
+              - `fields.nullable`
+              - `fields/bool/config.boolField`
+              - `fields/date/config.dateField`
+              - `fields/int/config.intField`
+              - `fields/json/config.jsonField`
+              - `fields/string-list/config.stringListField`
+              - `fields/text/config.enumTextField`
+              - `fields/text/config.textField`
+              - `network/live.liveCollection`
+              - `network/live.LiveRowsCollection`
+              - `packages/list-bound.cappedList`
+            - Exports (types):
+              - `MailMailboxRow`
+              - `MailThreadRow`
+              - `MailThreadsRefusal`
+            - Exports (values):
+              - `MAIL_THREADS_MAX_LIMIT`
+              - `MAIL_THREADS_REFUSALS`
+              - `mailboxViewFilter`
+              - `mailboxViewIds`
+              - `mailMailboxes`
+              - `mailThreads`
+              - `PARENT_VIEW_INCLUDES_SUB_LABELS`
         - **`provider`** — Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
           - Core:
             - Uses:
@@ -7116,8 +7194,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AttachmentRef`
               - `ChangeCursor`
               - `CompiledMailQuery`
+              - `ConnectedMailAccount`
               - `FoundMessage`
               - `ListCursor`
+              - `ListedMessage`
               - `Mailbox`
               - `MailboxId`
               - `MailboxRole`
@@ -7134,6 +7214,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MessageBody`
               - `MessageContent`
               - `MessageFacts`
+              - `MessageListPage`
               - `OutgoingMessage`
               - `Participant`
               - `SavedDraft`
@@ -7141,8 +7222,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThreadContent`
               - `ThreadContentResult`
               - `ThreadId`
-              - `ThreadListPage`
-              - `ThreadRef`
               - `ThreadSummary`
               - `ThreadSummaryResult`
               - `ThreadVersion`
@@ -7167,7 +7246,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `threadId`
               - `threadVersion`
           - Cross-plugin:
-            - Imported by: `apps/mail/providers/gmail`
+            - Imported by:
+              - `apps/mail/cache`
+              - `apps/mail/providers/gmail`
           - Server:
             - Exports (values):
               - `mailProviderById`
@@ -25619,8 +25700,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 189 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×49
+    - Imported by: 190 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×50
       - `tasks` ×23
       - `conversations` ×22
       - `infra` ×19
@@ -25715,12 +25796,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×10
           - `infra` ×7
           - `database` ×5
+          - `apps` ×4
           - `framework` ×4
-          - `apps` ×3
           - `build` ×2
           - `network` ×2
           - `backup/sources/databases`
@@ -26569,8 +26650,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
-          - `apps` ×8
+        - Imported by: 37 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×9
           - `fields` ×6
           - `infra` ×6
           - `conversations` ×3
@@ -30668,9 +30749,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×36
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 150 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 151 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×66
-      - `apps` ×27
+      - `apps` ×28
       - `conversations` ×12
       - `tasks` ×9
       - `infra` ×6
@@ -30841,8 +30922,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 90 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
-              - `apps` ×29
+            - Imported by: 91 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+              - `apps` ×30
               - `debug` ×14
               - `backup` ×11
               - `conversations` ×7
@@ -31099,8 +31180,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 73 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 74 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×20
               - `conversations` ×12
               - `tasks` ×9
               - `infra` ×7
@@ -31782,8 +31863,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 67 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 68 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+              - `apps` ×20
               - `debug` ×14
               - `conversations` ×9
               - `infra` ×6
@@ -31856,8 +31937,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 48 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
-              - `apps` ×12
+            - Imported by: 49 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+              - `apps` ×13
               - `conversations` ×8
               - `debug` ×5
               - `infra` ×5
@@ -32695,6 +32776,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/sessions`
               - `apps/deploy/deployments`
               - `apps/desktop/shell`
+              - `apps/mail/cache`
               - `build/run-ledger`
               - `page/links`
               - `plugin-meta/composition`
@@ -32876,8 +32958,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 123 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×35
+            - Imported by: 124 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×36
               - `conversations` ×22
               - `tasks` ×18
               - `infra` ×8
@@ -34354,11 +34436,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 129 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 130 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
+          - `apps` ×14
           - `conversations` ×14
           - `debug` ×14
-          - `apps` ×13
           - `tasks` ×13
           - `database` ×10
           - `network` ×5
@@ -36894,8 +36976,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 59 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×18
+    - Imported by: 60 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×19
       - `conversations` ×8
       - `tasks` ×7
       - `infra` ×4
@@ -42299,8 +42381,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTableGrowthBounds`
           - `markCascadeBounded`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
-          - `apps` ×6
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
+          - `apps` ×7
           - `debug` ×6
           - `infra` ×4
           - `page` ×3
@@ -44826,11 +44908,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValue`
           - `sliceRange`
       - Core:
-        - Uses: 41 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Uses: 42 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `network/live/query-resource` ×8
           - `network/live/filter` ×7
+          - `network/live/live-state` ×7
           - `fields` ×6
-          - `network/live/live-state` ×6
           - `packages/zod-introspect` ×6
           - `packages/list-bound` ×3
           - `network/live/resource-protocol` ×2
@@ -45076,8 +45158,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 372 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×92
+        - Imported by: 373 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×93
           - `conversations` ×74
           - `debug` ×36
           - `tasks` ×36
@@ -45269,6 +45351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/collect`
               - `apps/deploy/site-messages/intake`
               - `apps/deploy/site-reports/intake`
+              - `apps/mail/cache`
               - `conversations/runtime-sdk`
               - `conversations/usage`
               - `database/table-mirror/replica`
@@ -45306,6 +45389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/collect`
               - `apps/deploy/analytics/sessions`
               - `apps/deploy/site-messages/inbox`
+              - `apps/mail/cache`
               - `apps/mail/provider`
               - `apps/mail/providers/gmail`
               - `fields/bool/filter`
@@ -45854,6 +45938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ResourceRefusal`
           - Cross-plugin:
             - Imported by:
+              - `apps/mail/cache`
               - `conversations/conversation-view/code`
               - `conversations/conversation-view/jsonl-viewer`
               - `framework/server-core`
@@ -46078,9 +46163,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createCoalescer`
           - `createKeyedCoalescer`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
           - `infra` ×11
-          - `apps` ×3
+          - `apps` ×4
           - `conversations` ×3
           - `debug` ×3
           - `database/migrations/schema-question`
@@ -46092,11 +46177,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 86 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×24
           - `debug` ×14
           - `framework` ×13
-          - `apps` ×10
+          - `apps` ×11
           - `conversations` ×5
           - `database` ×3
           - `integrations` ×2
@@ -46124,12 +46209,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×9
           - `database` ×6
           - `conversations` ×5
+          - `apps` ×4
           - `reports` ×4
-          - `apps` ×3
           - `debug` ×3
           - `framework` ×3
           - `network` ×2
@@ -46312,10 +46397,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installInflightJoinMeter`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex(name).run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×12
           - `conversations` ×5
-          - `apps` ×3
+          - `apps` ×4
           - `companions/browser-extension/recorder`
           - `config_v2`
           - `debug/sentinel/status-file`
@@ -46354,8 +46439,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 145 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×34
+        - Imported by: 146 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×35
           - `debug` ×21
           - `conversations` ×17
           - `infra` ×17
@@ -54828,6 +54913,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewPaging`
           - `DataViewPagingTotal`
           - `DataViewProps`
+          - `DataViewReadFailure`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
           - `DataViewSection`
@@ -55071,6 +55157,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewPagingTotal`
           - `DataViewPart`
           - `DataViewProps`
+          - `DataViewReadFailure`
           - `DataViewReadOrder`
           - `DataViewRenderProps`
           - `DataViewReserve`

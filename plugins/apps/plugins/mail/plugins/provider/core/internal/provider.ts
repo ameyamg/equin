@@ -12,9 +12,9 @@ import type {
   FoundMessage,
   OutgoingMessage,
   SavedDraft,
+  MessageListPage,
   SentMessage,
   ThreadContentResult,
-  ThreadListPage,
   ThreadSummaryResult,
 } from "./model";
 import type { CompiledMailQuery, MailQuery } from "./query";
@@ -40,7 +40,29 @@ export type MailProviderCapabilities = {
   mailboxDefinitions: "in-changes" | "relist";
   /** The push the provider can give (`none` until one is wired). */
   push: "pubsub" | "eventsource" | "idle" | "none";
+  /**
+   * How far the provider's list order and `olderThan` cut may stray from
+   * `MessageFacts.date`, in ms: a message listed after another is at most this
+   * much newer by `date`, and the cut decides by a clock at most half this
+   * far from it. 0 for a provider that orders and cuts by `date` itself.
+   * Gmail searches and orders by its own receipt time, which differs from
+   * `internalDate` by seconds (measured: −9 s to +12 s), so it declares a
+   * bound with headroom. The cache widens every cut and every coverage claim
+   * by it, so a skewed message is never missed.
+   */
+  listOrderSlackMs: number;
 };
+
+/**
+ * The account a provider kind is connected to, or why none can be named:
+ * `not-connected` — the user must connect or (re)consent; `unreachable` —
+ * the connection could not be checked now (offline: a token refresh failed),
+ * so a caller holding the account's cached mail may still serve it.
+ */
+export type ConnectedMailAccount =
+  | { kind: "connected"; accountId: string; address: string }
+  | { kind: "not-connected"; message: string }
+  | { kind: "unreachable"; message: string };
 
 /** What changed since a cursor, or the cursor is too old to say (resync). */
 export type MailChanges =
@@ -70,16 +92,19 @@ export type MailFlags = { unread?: boolean; starred?: boolean };
 export interface MailProvider {
   // — reads —
   /**
-   * One page of threads matching a compiled query, newest first. `olderThan`
-   * cuts the list: only threads with a matching message before that instant
-   * (inclusive of its second) — the provider may also return newer threads
-   * (Gmail matches any message of a thread), which the caller drops by key.
+   * One page of the messages matching a compiled query, newest first by the
+   * provider's clock, each naming its thread — so a thread's place is its
+   * latest matching message, exactly the order a date-sorted thread list
+   * pages in. `olderThan` keeps only messages before that instant (by the
+   * provider's clock, so within `listOrderSlackMs` of `date`); the answer may
+   * also hold newer ones, which the caller drops by key. `limit` counts
+   * messages, `cursor` is the previous page's `next` within one fill.
    */
-  listThreads(
+  listMessages(
     query: ProviderQuery,
     page: { olderThan: Date | null; limit: number; cursor: ListCursor | null },
     o?: MailCallOptions,
-  ): Promise<ThreadListPage>;
+  ): Promise<MessageListPage>;
   /** Summaries, one result per id in order (batched inside). */
   getThreads(
     ids: readonly ThreadId[],
@@ -157,6 +182,12 @@ export interface MailProviderDefinition {
     ctx: { mailboxes: readonly Mailbox[] },
   ): CompiledMailQuery;
   open(accountId: string): MailProvider;
+  /**
+   * The account this provider kind is connected to (v1: one), read from the
+   * provider's own connection — no mail call — so the cache can name the
+   * account before its first read, and say "not connected" without one.
+   */
+  connectedAccount(): Promise<ConnectedMailAccount>;
 }
 
 /** The provider cannot be reached (offline, DNS): a cached answer still stands, an uncached one cannot be given. */

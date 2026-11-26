@@ -7,6 +7,7 @@ import {
 import { MAIL_QUERY_OPS } from "@plugins/apps/plugins/mail/plugins/provider/server/testing";
 import {
   nativeMailboxId,
+  providerQuery,
   roleMailboxId,
   type Mailbox,
   type MailQuery,
@@ -206,10 +207,48 @@ describe("compileGmailQuery", () => {
     );
   });
 
-  test("a cut is ANDed as before:<second + 1>", () => {
+  test("a cut is ANDed as before:<its second, rounded up>: a superset, never fewer", () => {
     const at = new Date("2026-01-02T00:00:00.700Z");
     expect(withCut("", at)).toBe("before:1767312001");
     expect(withCut("(a OR b)", at)).toBe("(a OR b) before:1767312001");
+    // On a whole second, `before:` that second is already exclusive.
+    expect(withCut("x", new Date("2026-01-02T00:00:00.000Z"))).toBe(
+      "x before:1767312000",
+    );
     expect(withCut("x", null)).toBe("x");
+  });
+
+  test("a label is spelled as Gmail's search reads it: quoted, or the hyphen form once parenthesised", () => {
+    const label = (name: string, extra: Mailbox[] = []) => {
+      const m: Mailbox = { ...work, id: nativeMailboxId("Label_9"), name };
+      return compileGmailQuery(clause("mailboxes", "hasAny", [m.id]), {
+        mailboxes: [work, m, ...extra],
+      });
+    };
+    expect(label("Big clients (EU)")).toEqual({
+      kind: "query",
+      providerQuery: providerQuery("label:Big-clients-(EU)"),
+    });
+    expect(label("café & co")).toMatchObject({
+      providerQuery: 'label:"café & co"',
+    });
+    // A quote has no spelling either way; a parenthesised name only the measured characters.
+    for (const bad of ['say "hi"', "café (x)", "a(b", "x:(y)"]) {
+      const c = label(bad);
+      expect([bad, c.kind === "refused" && c.refusal.reason]).toEqual([
+        bad,
+        "unrepresentable-operand",
+      ]);
+    }
+    // Two labels Gmail's hyphen form spells alike: neither can be searched alone.
+    const twin: Mailbox = {
+      ...work,
+      id: nativeMailboxId("Label_8"),
+      name: "A-(B)",
+    };
+    const c = label("a (b)", [twin]);
+    expect(c.kind === "refused" && c.refusal.reason).toBe(
+      "unrepresentable-operand",
+    );
   });
 });

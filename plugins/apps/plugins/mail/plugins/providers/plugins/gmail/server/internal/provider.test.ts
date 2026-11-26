@@ -118,6 +118,7 @@ const msg = (o: {
   labels: string[];
   at: string;
   from: string;
+  to?: string;
   subject?: string;
   mime?: string;
   extra?: object;
@@ -134,6 +135,7 @@ const msg = (o: {
     filename: "",
     headers: [
       { name: "From", value: o.from },
+      ...(o.to === undefined ? [] : [{ name: "To", value: o.to }]),
       ...(o.subject === undefined
         ? []
         : [{ name: "Subject", value: o.subject }]),
@@ -153,6 +155,7 @@ const THREAD_A = {
       labels: ["INBOX", "CATEGORY_PERSONAL"],
       at: "1767312000000",
       from: "=?UTF-8?B?w4lsaWU=?= <elie@x.test>",
+      to: "Bo <bo@x.test>, cy@x.test",
       subject: "=?UTF-8?Q?Caf=C3=A9?=",
     }),
     msg({
@@ -161,6 +164,7 @@ const THREAD_A = {
       labels: ["INBOX", "UNREAD", "Label_7"],
       at: "1767315600000",
       from: "bo@x.test",
+      to: "CY@x.test",
       mime: "multipart/mixed",
     }),
     msg({
@@ -180,6 +184,7 @@ describe("Gmail provider: reads", () => {
         expect(r.query.get("format")).toBe("metadata");
         expect(r.query.getAll("metadataHeaders")).toEqual([
           "From",
+          "To",
           "Subject",
           "Content-Type",
         ]);
@@ -208,6 +213,11 @@ describe("Gmail provider: reads", () => {
         { name: "Élie", address: "elie@x.test" },
         { name: null, address: "bo@x.test" },
         { name: null, address: "me@x.test" },
+      ],
+      // To, deduped by address whatever its case.
+      recipients: [
+        { name: "Bo", address: "bo@x.test" },
+        { name: null, address: "cy@x.test" },
       ],
     });
     expect(a.summary.mailboxes).toEqual(
@@ -239,17 +249,17 @@ describe("Gmail provider: reads", () => {
     expect(g.sent).toHaveLength(1);
   });
 
-  test("listThreads: the compiled q with the cut, spam and trash included, the page token", async () => {
+  test("listMessages: the compiled q with the cut, spam and trash included, the page token", async () => {
     const g = gmail((r) => {
-      if (r.path === `${ME}/threads`) {
+      if (r.path === `${ME}/messages`) {
         return json(200, {
-          threads: [{ id: "ta", snippet: "", historyId: "501" }],
+          messages: [{ id: "ma", threadId: "ta" }],
           nextPageToken: "p2",
           resultSizeEstimate: 9,
         });
       }
     });
-    const page = await g.provider.listThreads(
+    const page = await g.provider.listMessages(
       providerQuery("in:inbox is:unread"),
       {
         olderThan: new Date("2026-01-02T00:00:00.400Z"),
@@ -258,10 +268,11 @@ describe("Gmail provider: reads", () => {
       },
     );
     expect(page).toEqual({
-      refs: [{ id: threadId("ta"), version: "501" as never }],
+      hits: [{ thread: threadId("ta"), message: "ma" as never }],
       next: "p2" as never,
     });
     const q = g.sent[0]!.query;
+    // The cut's second rounded up: a superset, never fewer.
     expect(q.get("q")).toBe("in:inbox is:unread before:1767312001");
     expect(q.get("includeSpamTrash")).toBe("true");
     expect(q.get("maxResults")).toBe("50");

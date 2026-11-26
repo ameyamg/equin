@@ -198,6 +198,21 @@ useLive(blocks, { where: { pageId } });
   schema with `packages/list-bound` and freezes `c.shape`; a bare
   `jsonField` array/record throws at declaration (`stringListField` /
   `tagsField` are marked whole by their factories).
+- **Refusals — `refusals: [...]`** (window, lookup-only and `all` forms; a
+  union takes none — tsc, and a throw): the codes an EXTERNAL source's
+  loaders may refuse a read with (`throw c.refuse("not-connected", msg)` from
+  `window` / `rows` / `all` / `groups` / `count`), the value spelling
+  (`core/internal/refusals.ts`, shared with `liveValue`). Stamped on every
+  descriptor the collection mints, so the runtime accepts a declared code
+  from any of their loaders and the client parses it. Every read of the
+  collection types its error arm's `code` by them (`LiveListResult<Row, C>`,
+  `LivePagesResult<Row, C>`, `ResourceResult<…, C>`, `LiveRowResult<Row, C>`;
+  `string` for a collection declaring none, as before). A refused head page
+  is the read's error arm (`kind: "refused"`, no Retry, never reported); a
+  refused later page is a `pageErrors` entry carrying it. A table-backed
+  `serveCollection` refuses a collection declaring them (compiled SQL never
+  refuses). Tests: `core/internal/serve-on-refusals.test.ts`,
+  `web/__tests__/use-live-collection-refusal.test.tsx`.
 - **Collection rows are marked** `CollectionRow<Row>` (type-only key). A
   DataView's hand-`fields` arm takes `NotCollectionRow` rows only, so a list
   over a collection derives its fields (`collection=`) instead of restating
@@ -359,6 +374,12 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
   // lookup: { source, changes, rows }
   ```
 
+  - **A source that cannot answer as asked refuses** — `throw
+    c.refuse(code, message)` with a code the collection declares in
+    `refusals` (an account needing consent, a window offline and not
+    cached): the reader's error arm is `kind: "refused"`, never a
+    misleading empty list nor a reported failure. An undeclared code is
+    `loader-failed`.
   - **Every answer is checked** (loud loader error): rows against the schema,
     string ids, no duplicates, ≤ `q.limit`, strictly ascending `$key` order
     within `(after, until]`; `keyText.<field>` must give text whose code-point
@@ -371,7 +392,7 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
   - Exposed fields read their defaults (`$columns: {}`); a source row carrying
     `$columns` throws. Refused: union, `scopedColumns`, a stray answer for the
     form, an empty `changes` reason.
-  - **`reads`** (Bun host, window form, `"notified"` only — tsc, and a throw):
+  - **`reads`** (Bun host, any form, `"notified"` only — tsc, and a throw):
     the Postgres reads its answers make beside its own truth, a static
     `ValueReads` compiled into every minted resource's reach plan exactly as an
     external value's (`serveValue`). Typically `reads.notified` — relations
@@ -1317,7 +1338,8 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   the read needs is held now.
 - **Refusals.** A loader that can't answer well-formed params (missing file,
   unknown id) throws `v.refuse(code, msg)` (`ResourceRefusal`) with a code the
-  `liveValue` declares in `refusals: [...]` (any form).
+  `liveValue` declares in `refusals: [...]` (any form). A collection takes the
+  same field (*Collection forms*, *Refusals*).
   - The reader's error arm is `kind: "refused"` with typed `error.code` — no
     Retry, never reported.
   - An undeclared code becomes `loader-failed` (server) / `contract-mismatch`
@@ -1688,11 +1710,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/query-resource` ×8
     - `network/live/filter` ×7
+    - `network/live/live-state` ×7
     - `fields` ×6
-    - `network/live/live-state` ×6
     - `packages/zod-introspect` ×6
     - `packages/list-bound` ×3
     - `network/live/resource-protocol` ×2
@@ -1938,8 +1960,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 372 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×92
+  - Imported by: 373 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×93
     - `conversations` ×74
     - `debug` ×36
     - `tasks` ×36

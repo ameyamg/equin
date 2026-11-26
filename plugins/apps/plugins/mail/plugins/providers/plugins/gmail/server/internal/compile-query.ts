@@ -31,12 +31,17 @@ import {
 //
 // Spellings:
 // - mailboxes: a role → `in:inbox` / `is:important` …; a Gmail category →
-//   `category:social`; a user label → `label:"Full/Name"`. hasAny is an OR,
+//   `category:social`; a user label → `label:"Full/Name"`, or for a name
+//   with parentheses `label:Full-Name-(x)` (see labelSearchToken). A parent label matches its own messages only,
+//   never its sub-labels' (measured). hasAny is an OR,
 //   hasAll an AND (one message carrying all), hasNone an AND of negations.
 // - unread / starred / hasAttachment: `is:unread`, `is:starred`,
 //   `has:attachment`, negated with `-`.
 // - date: `after:<epoch s>` (at or after) / `before:<epoch s>` (strictly
-//   before), so operands must fall on a whole second.
+//   before), so operands must fall on a whole second. Gmail compares its own
+//   receipt time, which differs from internalDate (MessageFacts.date) by
+//   seconds (measured −9 s to +12 s): the clause is provider-evaluated, never
+//   re-checked over cached rows.
 // - from / to / subject: `from:"text"` (Gmail's word match), `-from:"text"`.
 // - query: the search box's text, passed through in parentheses.
 // - and: terms side by side; or: `(a OR b)`.
@@ -154,7 +159,70 @@ function mailboxTerm(
       `The mailboxes given hold ${id} but not its parent, so its Gmail name is unknown`,
     );
   }
-  return atom(`label:${quoted("mailboxes", op, name)}`);
+  return atom(
+    `label:${labelSearchToken("mailboxes", op, mailbox, name, byId)}`,
+  );
+}
+
+/**
+ * A label's name as Gmail's search reads it. Measured on a real account
+ * (the api plugin's `scripts/q-probe.ts`): the quoted name
+ * (`label:"Work/Big clients"`) matches exactly — spaces, `/`, `_`, `-`, `[]`
+ * included — except once the name holds a parenthesis, when it matches
+ * nothing; the hyphen form (spaces and `/` as `-`, unquoted:
+ * `label:Work-Big-clients-(EU)`) matched every label, parentheses included.
+ * So: quoted, unless parenthesised. The hyphen form is refused, never
+ * guessed, for a character outside the ones measured with it, unbalanced
+ * parentheses, or a token another label of the account also spells (Gmail
+ * would match both).
+ */
+function labelSearchToken(
+  column: string,
+  op: string,
+  mailbox: Mailbox,
+  name: string,
+  byId: ReadonlyMap<MailboxId, Mailbox>,
+): string {
+  if (!/[()]/.test(name)) return quoted(column, op, name);
+  const token = gmailSearchToken(name);
+  if (!/^[A-Za-z0-9_\-[\]()]+$/.test(token) || !balancedParens(token)) {
+    throw new Refused(
+      column,
+      op,
+      "unrepresentable-operand",
+      `Gmail search has no verified spelling for the label ${JSON.stringify(name)} (a name with parentheses may hold only letters, digits, spaces, / _ - [ ] and balanced parentheses)`,
+    );
+  }
+  const lower = token.toLowerCase();
+  for (const other of byId.values()) {
+    if (other.id === mailbox.id || other.kind !== "user") continue;
+    const otherName = gmailLabelName(other, byId);
+    if (
+      otherName !== null &&
+      gmailSearchToken(otherName).toLowerCase() === lower
+    ) {
+      throw new Refused(
+        column,
+        op,
+        "unrepresentable-operand",
+        `Gmail search spells the labels ${JSON.stringify(name)} and ${JSON.stringify(otherName)} the same, so it cannot search one alone`,
+      );
+    }
+  }
+  return token;
+}
+
+function gmailSearchToken(name: string): string {
+  return name.replace(/[\s/]+/g, "-");
+}
+
+function balancedParens(text: string): boolean {
+  let depth = 0;
+  for (const c of text) {
+    if (c === "(") depth++;
+    else if (c === ")" && --depth < 0) return false;
+  }
+  return depth === 0;
 }
 
 /** Whether the search box's text keeps its parentheses and quotes balanced. */
@@ -279,9 +347,13 @@ export function compileGmailQuery(
   };
 }
 
-/** The query cut to messages before `olderThan` (its second included), for one list fill. */
+/**
+ * The query cut to messages before `olderThan` by Gmail's clock, for one list
+ * fill: `before:` the second after it, so the cut keeps a superset (messages
+ * up to a second newer — the caller drops them by key), never fewer.
+ */
 export function withCut(q: string, olderThan: Date | null): string {
   if (olderThan === null) return q;
-  const before = `before:${Math.floor(olderThan.getTime() / 1000) + 1}`;
+  const before = `before:${Math.ceil(olderThan.getTime() / 1000)}`;
   return q === "" ? before : `${q} ${before}`;
 }

@@ -15,6 +15,7 @@ come in the design's later steps. Only `providers/*` name a provider.
 
 - Description: Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), and later the cache, threads, reader and compose plugins.
 - Sub-plugins:
+  - **`cache`** — The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage…
   - **`provider`** [test helpers] — Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process…
   - **`providers`** [exempt] [1 sub-plugin] — Umbrella for the Mail app's providers — each a MailProvider behind the provider-neutral contract (mail/provider): Gmail first; IMAP, JMAP and Outlook later.
 

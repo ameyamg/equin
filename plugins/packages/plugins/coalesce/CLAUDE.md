@@ -48,9 +48,9 @@ is bounded by construction.
     - `createCoalescer`
     - `createKeyedCoalescer`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×11
-    - `apps` ×3
+    - `apps` ×4
     - `conversations` ×3
     - `debug` ×3
     - `database/migrations/schema-question`

@@ -54,6 +54,7 @@ export type {
   DataViewPaging,
   DataViewLoadedWindow,
   DataViewLoadedFrameProps,
+  DataViewReadFailure,
   DataViewPagingTotal,
   DataViewPageNotice,
   DataViewViewportSink,

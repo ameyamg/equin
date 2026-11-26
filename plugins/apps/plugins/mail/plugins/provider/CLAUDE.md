@@ -17,7 +17,8 @@ only this; each provider (`mail/providers/*`) implements it. Design: §1–2 of
 - **Flags are not mailboxes.** `unread` / `starred` are booleans (JMAP's
   `$seen` / `$flagged`), so Gmail's UNREAD and STARRED labels never appear as
   mailboxes.
-- **`ThreadSummary`** is one list row. Its facts are unions / "any" over the
+- **`ThreadSummary`** is one list row (senders in `participants`, `To` in
+  `recipients`). Its facts are unions / "any" over the
   thread's messages. `version` moves on any change, so a cached summary with
   the same version is current (the fetch is skipped). `hasAttachments` is a
   hint from headers; the content is exact. `messages` holds each message's
@@ -68,9 +69,13 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
 ## The provider (`MailProvider`, `MailProviderDefinition`)
 
 - **Reads:**
-  - `listThreads(query, { olderThan, limit, cursor })` lists refs (id +
-    version), newest first. `olderThan` cuts per message, and threads newer
-    than the cut may come back too (the caller drops them by key).
+  - `listMessages(query, { olderThan, limit, cursor })` lists the matching
+    MESSAGES, newest first by the provider's clock, each naming its thread —
+    so a thread's place is its latest matching message (Gmail's
+    `threads.list` orders by a thread's first message, so no date cut pages
+    it). `olderThan` cuts by the provider's clock; newer hits may come back
+    (the caller drops them by key). No version per hit: the cache decides
+    when a summary is current.
   - `getThreads(ids)` answers one `found` / `gone` / `failed` per id.
   - Also: `getThreadContent`, `getAttachment`, `listMailboxes` (with counts
     when known) and `findMessage(Message-ID)`.
@@ -92,26 +97,33 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
     reconciling did not find it. Ask `findMessage` again before any resend.
 - **`MailProviderDefinition`:** `id`, `label`, `capabilities`
   (`mailboxModel`, `mailboxDefinitions` (`relist` when changes carry no
-  mailbox create / rename), `push`), the pure `compileQuery(query,
-  { mailboxes })`, and `open(accountId)`. `open` answers the account's ONE
+  mailbox create / rename), `push`, `listOrderSlackMs` — how far the list
+  order and cut may stray from `MessageFacts.date`: Gmail 60 s), the pure
+  `compileQuery(query, { mailboxes })`, `open(accountId)`, and
+  `connectedAccount()` (the account id and address, `not-connected`, or
+  `unreachable` when the connection cannot be checked now — no mail call). `open` answers the account's ONE
   provider in the process, so there is one quota pacer per account.
 - **Registration (`server`):** `MailProviders.Provider(definition)` in
-  `contributions`. The cache finds a provider with
-  `mailProviderById(account.providerId)` and never names one.
+  `contributions`. The cache serves the one registered provider (v1: one
+  account) and never names one; `mailProviderById(id)` finds one by id.
 
 ## Testing (`server/testing`)
 
-`createFakeMailProvider({ mailboxes?, threads?, changesPageMax? })` is an
-in-memory label-model provider with the contract's semantics: per-message
-queries (its provider query is the canonical filter JSON), newest first, a
-per-message `before` cut, versions that move on change, a change log with
-`more`, and `expireHistory()` for a reset. It returns:
+`createFakeMailProvider({ mailboxes?, threads?, changesPageMax?,
+listOrderSlackMs?, account? })` is an in-memory label-model provider with the
+contract's semantics: per-message queries (its provider query is the
+canonical filter JSON), messages newest first, a per-message `before` cut, a
+per-message `providerSkewMs` (the provider's clock off `date`, as Gmail's),
+versions that move on change, a change log with `more`, and
+`expireHistory()` for a reset. It returns:
 
 - `definition` and `provider`;
 - `calls`, to count what a fill cost;
 - `deliver(thread, message)`, to add mail;
 - `failNext(method, error, { after })`. With `after: true` the write lands
-  and its answer is lost.
+  and its answer is lost;
+- `setConnected(false | "unreachable")`, so `connectedAccount()` answers
+  not-connected / unreachable.
 
 The cache and e2e tests run on it, never on Gmail.
 
@@ -134,8 +146,10 @@ The cache and e2e tests run on it, never on Gmail.
     - `AttachmentRef`
     - `ChangeCursor`
     - `CompiledMailQuery`
+    - `ConnectedMailAccount`
     - `FoundMessage`
     - `ListCursor`
+    - `ListedMessage`
     - `Mailbox`
     - `MailboxId`
     - `MailboxRole`
@@ -152,6 +166,7 @@ The cache and e2e tests run on it, never on Gmail.
     - `MessageBody`
     - `MessageContent`
     - `MessageFacts`
+    - `MessageListPage`
     - `OutgoingMessage`
     - `Participant`
     - `SavedDraft`
@@ -159,8 +174,6 @@ The cache and e2e tests run on it, never on Gmail.
     - `ThreadContent`
     - `ThreadContentResult`
     - `ThreadId`
-    - `ThreadListPage`
-    - `ThreadRef`
     - `ThreadSummary`
     - `ThreadSummaryResult`
     - `ThreadVersion`
@@ -185,7 +198,9 @@ The cache and e2e tests run on it, never on Gmail.
     - `threadId`
     - `threadVersion`
 - Cross-plugin:
-  - Imported by: `apps/mail/providers/gmail`
+  - Imported by:
+    - `apps/mail/cache`
+    - `apps/mail/providers/gmail`
 - Server:
   - Exports (values):
     - `mailProviderById`

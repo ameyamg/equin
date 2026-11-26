@@ -15,6 +15,7 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { FilterError } from "@plugins/network/plugins/live/plugins/filter/core";
+import type { DataViewReadFailure } from "../../core";
 import type { BodyState } from "../internal/body-state";
 import { UnavailableFilterRuleError } from "../internal/live-filter";
 
@@ -28,14 +29,21 @@ import { UnavailableFilterRuleError } from "../internal/live-filter";
  *   a renamed field id). It ignores the host's `errorState`, like
  *   `server-error`: a host's own failure UI would hide that way out;
  * - `error`: a failed read — the host's `errorState`, else the read's own
- *   failure with Retry (or Reload for an out-of-date tab);
+ *   failure with Retry (or Reload for an out-of-date tab; a refusal's
+ *   message alone, no Retry);
  * - `field-error`: a field the view is laid out by failed to load its values
- *   — the host's `errorState`, else that failure, naming the field;
+ *   — the host's `errorState`, else that failure, naming the field.
+ *
+ * A function `errorState` is handed the failure, and its `undefined` falls
+ * back to the default rendering.
  * - `loading`: the host's `loadingState`, else the view type's skeleton.
  */
 export function BodyFallback(props: {
   state: Exclude<BodyState, { kind: "view" }>;
-  errorState: ReactNode | undefined;
+  errorState:
+    | ReactNode
+    | ((failure: DataViewReadFailure) => ReactNode | undefined)
+    | undefined;
   loadingState: ReactNode | undefined;
   loadingVariant: LoadingVariant | undefined;
   loadingCount: number | undefined;
@@ -84,7 +92,10 @@ export function BodyFallback(props: {
     }
     case "error":
       return (
-        props.errorState ?? (
+        hostErrorState(props.errorState, {
+          error: state.error.error,
+          refetch: state.error.refetch,
+        }) ?? (
           <ResourceErrorInline
             error={state.error.error}
             refetch={state.error.refetch}
@@ -94,7 +105,11 @@ export function BodyFallback(props: {
       );
     case "field-error":
       return (
-        props.errorState ?? (
+        hostErrorState(props.errorState, {
+          error: state.error,
+          ...(state.refetch !== undefined ? { refetch: state.refetch } : {}),
+          field: state.field,
+        }) ?? (
           <ResourceErrorInline
             error={state.error}
             refetch={state.refetch}
@@ -113,4 +128,17 @@ export function BodyFallback(props: {
         )
       );
   }
+}
+
+/** The host's rendering of a failure: its node, or what its function draws for this one. */
+function hostErrorState(
+  errorState:
+    | ReactNode
+    | ((failure: DataViewReadFailure) => ReactNode | undefined)
+    | undefined,
+  failure: DataViewReadFailure,
+): ReactNode | undefined {
+  return typeof errorState === "function"
+    ? errorState(failure)
+    : (errorState ?? undefined);
 }

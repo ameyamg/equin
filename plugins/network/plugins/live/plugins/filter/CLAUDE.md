@@ -87,6 +87,7 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `apps/deploy/analytics/collect`
     - `apps/deploy/analytics/sessions`
     - `apps/deploy/site-messages/inbox`
+    - `apps/mail/cache`
     - `apps/mail/provider`
     - `apps/mail/providers/gmail`
     - `fields/bool/filter`

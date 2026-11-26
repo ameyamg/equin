@@ -826,6 +826,10 @@
       "name": "@equin/plugin-apps-mail",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/cache": {
+      "name": "@equin/plugin-apps-mail-cache",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/mail/plugins/provider": {
       "name": "@equin/plugin-apps-mail-provider",
       "version": "0.0.1",
@@ -8931,6 +8935,8 @@
     "@equin/plugin-apps-keyboard-party-shell": ["@equin/plugin-apps-keyboard-party-shell@workspace:plugins/apps/plugins/keyboard-party/plugins/shell"],
 
     "@equin/plugin-apps-mail": ["@equin/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
+
+    "@equin/plugin-apps-mail-cache": ["@equin/plugin-apps-mail-cache@workspace:plugins/apps/plugins/mail/plugins/cache"],
 
     "@equin/plugin-apps-mail-provider": ["@equin/plugin-apps-mail-provider@workspace:plugins/apps/plugins/mail/plugins/provider"],
 

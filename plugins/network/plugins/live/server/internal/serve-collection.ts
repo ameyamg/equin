@@ -410,7 +410,7 @@ export interface ServedAllResources<Row, B extends string = never> {
 }
 
 /**
- * The Postgres reads an external window collection's answers make beside its
+ * The Postgres reads an external collection's answers (any form) make beside its
  * own truth — only on a `changes: "notified"` one, as an external value's
  * `reads` (`serveValue`): a static list (every resource registers at once).
  * Typically `notified` relations — tables the source's own change signal
@@ -1277,11 +1277,13 @@ export function compileCollection<
 export interface ServeCollectionOverloads<H> {
   <Row, const C extends LiveCollectionChanges = "notified">(
     collection: ExternalAllCollection<Row> & H,
-    opts: ServeExternalAllOptions<NoInfer<Row>, C>,
+    opts: ServeExternalAllOptions<NoInfer<Row>, C> &
+      ExternalCollectionReadsOption<C>,
   ): DeclaredCollection<ServedExternalAll<Row, C>>;
   <Row, const C extends LiveCollectionChanges = "notified">(
     collection: ExternalLookupCollection<Row> & H,
-    opts: ServeExternalLookupOptions<NoInfer<Row>, C>,
+    opts: ServeExternalLookupOptions<NoInfer<Row>, C> &
+      ExternalCollectionReadsOption<C>,
   ): DeclaredCollection<ServedExternalLookup<Row, C>>;
   <
     Row,
@@ -1428,6 +1430,14 @@ export function serveAnyCollection<
       ...external,
       declare: external.resources.map((r) => ResourceContribution.Declare(r)),
     };
+  }
+  // A table-backed collection's reads are compiled SQL, which never throws a
+  // `ResourceRefusal`: declared refusals would type a reader's error arm for
+  // answers that cannot come.
+  if ((collection as { refusals?: readonly string[] }).refusals !== undefined) {
+    throw new Error(
+      `serveCollection("${(collection as { key: string }).key}"): the collection declares \`refusals\`, but a table-backed collection's compiled reads never refuse — serve it \`source: "external"\` (whose loaders throw \`c.refuse(code, message)\`), or drop \`refusals\`.`,
+    );
   }
   // A table-backed collection reads the rows it is declared `from` — never a
   // restatement of an entity's fields (`./collection-source`).

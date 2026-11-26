@@ -65,6 +65,12 @@ export type FakeMessageInput = {
   isDraft?: boolean;
   attachments?: FakeAttachment[];
   rfc822MessageId?: string;
+  /**
+   * How far the provider's own clock (its list order and `olderThan` cut)
+   * sits from `date`, in ms — Gmail's receipt time vs internalDate. Keep it
+   * within the fake's `listOrderSlackMs`.
+   */
+  providerSkewMs?: number;
 };
 
 type FakeMessage = {
@@ -82,6 +88,7 @@ type FakeMessage = {
   attachments: (FakeAttachment & { handle: string })[];
   rfc822MessageId: string;
   draftId: DraftId | null;
+  providerSkewMs: number;
 };
 
 type FakeThread = { id: ThreadId; version: number; messages: FakeMessage[] };
@@ -94,6 +101,10 @@ export type FakeMailProviderOptions = {
   threads?: { id?: string; messages: FakeMessageInput[] }[];
   /** At most this many changed threads per `changesSince` answer (then `more`). */
   changesPageMax?: number;
+  /** The fake's declared `listOrderSlackMs` (default 0: it lists and cuts by `date`). */
+  listOrderSlackMs?: number;
+  /** The connected account (default `fake-account`, `fake@example.com`). */
+  account?: { accountId: string; address: string };
 };
 
 const DEFAULT_ROLES = [
@@ -195,6 +206,15 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
   const calls: FakeCall[] = [];
   const failures = new Map<string, { error: Error; after: boolean }>();
   const changesPageMax = opts.changesPageMax ?? Number.POSITIVE_INFINITY;
+  let connection:
+    | { kind: "connected"; account: { accountId: string; address: string } }
+    | { kind: "not-connected" | "unreachable"; message: string } = {
+    kind: "connected",
+    account: opts.account ?? {
+      accountId: "fake-account",
+      address: "fake@example.com",
+    },
+  };
 
   for (const [role, name] of DEFAULT_ROLES) {
     const id = roleMailboxId(role);
@@ -230,6 +250,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
       })),
       rfc822MessageId: input.rfc822MessageId ?? `<${mint("rfc")}@fake>`,
       draftId: null,
+      providerSkewMs: input.providerSkewMs ?? 0,
     };
   }
 
@@ -283,6 +304,14 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
       if (!participants.some((p) => p.address === m.from.address))
         participants.push(m.from);
     }
+    const recipients: Participant[] = [];
+    for (const m of t.messages)
+      for (const r of m.to)
+        if (
+          recipients.length < THREAD_PARTICIPANTS_MAX &&
+          !recipients.some((x) => x.address === r.address)
+        )
+          recipients.push(r);
     const boxes = new Set<MailboxId>();
     for (const m of t.messages) for (const b of m.mailboxes) boxes.add(b);
     const last = t.messages[t.messages.length - 1]!;
@@ -292,6 +321,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
       subject: t.messages[0]!.subject,
       snippet: (last.text ?? "").slice(0, 120),
       participants,
+      recipients,
       lastMessageAt: lastAt(t),
       messageCount: t.messages.length,
       mailboxes: [...boxes].sort(),
@@ -400,39 +430,33 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
   }
 
   const provider: MailProvider = {
-    listThreads: (query, page, o) =>
-      call("listThreads", 0, o, () => {
+    listMessages: (query, page, o) =>
+      call("listMessages", 0, o, () => {
         const filter =
           query === "" ? undefined : decodeFilter(query, MAIL_QUERY_COLUMNS);
-        const cut =
-          page.olderThan === null
-            ? null
-            : (Math.floor(page.olderThan.getTime() / 1000) + 1) * 1000;
+        const providerAt = (m: FakeMessage) =>
+          m.date.getTime() + m.providerSkewMs;
+        const cut = page.olderThan === null ? null : page.olderThan.getTime();
         const hits = [...threads.values()]
-          .filter((t) =>
-            t.messages.some(
-              (m) =>
-                (cut === null || m.date.getTime() < cut) &&
-                (filter === undefined ||
-                  matchesFilter(
-                    row(m),
-                    filter as Filter<MailQueryColumns>,
-                    MAIL_QUERY_COLUMNS,
-                  )),
-            ),
+          .flatMap((t) => t.messages.map((m) => ({ t, m })))
+          .filter(
+            ({ m }) =>
+              (cut === null || providerAt(m) < cut) &&
+              (filter === undefined ||
+                matchesFilter(
+                  row(m),
+                  filter as Filter<MailQueryColumns>,
+                  MAIL_QUERY_COLUMNS,
+                )),
           )
           .sort(
             (a, b) =>
-              lastAt(b).getTime() - lastAt(a).getTime() ||
-              (a.id < b.id ? 1 : -1),
+              providerAt(b.m) - providerAt(a.m) || (a.m.id < b.m.id ? 1 : -1),
           );
         const offset = page.cursor === null ? 0 : Number(page.cursor);
         const slice = hits.slice(offset, offset + page.limit);
         return {
-          refs: slice.map((t) => ({
-            id: t.id,
-            version: threadVersion(String(t.version)),
-          })),
+          hits: slice.map(({ t, m }) => ({ thread: t.id, message: m.id })),
           next:
             offset + page.limit < hits.length
               ? listCursor(String(offset + page.limit))
@@ -641,9 +665,17 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
       mailboxModel: "labels",
       mailboxDefinitions: "in-changes",
       push: "none",
+      listOrderSlackMs: opts.listOrderSlackMs ?? 0,
     },
     compileQuery: (q, ctx) => fakeCompileQuery(q, ctx),
     open: () => provider,
+    connectedAccount: () => {
+      return Promise.resolve(
+        connection.kind === "connected"
+          ? { kind: "connected" as const, ...connection.account }
+          : connection,
+      );
+    },
   };
 
   return {
@@ -668,6 +700,28 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
       o: { after?: boolean } = {},
     ) {
       failures.set(method, { error, after: o.after ?? false });
+    },
+    /**
+     * Disconnects the account (`connectedAccount` answers not-connected),
+     * makes the connection uncheckable (`"unreachable"`: offline), or
+     * reconnects it.
+     */
+    setConnected(connected: boolean | "unreachable") {
+      connection =
+        connected === true
+          ? {
+              kind: "connected",
+              account: opts.account ?? {
+                accountId: "fake-account",
+                address: "fake@example.com",
+              },
+            }
+          : connected === "unreachable"
+            ? { kind: "unreachable", message: "the fake connection is offline" }
+            : {
+                kind: "not-connected",
+                message: "the fake account is disconnected",
+              };
     },
     /** A lost answer on a send / create, as a provider reports it. */
     outcomeUnknown: (what: string) =>
