@@ -119,7 +119,6 @@ function BottomBar({
     <Sticky edge="bottom" layer="float" className="h-0 w-full">
       <Pin
         to="bottom"
-        offset="md"
         layer="float"
         inert={!isActive}
         data-selection-bar="bottom"
@@ -135,7 +134,10 @@ function BottomBar({
         <Surface
           level="overlay"
           motion={false}
-          className={cn("rounded-xl", className)}
+          className={cn(
+            "rounded-selection-bar mb-selection-bar-lift",
+            className,
+          )}
         >
           <Stack
             direction="row"
@@ -143,9 +145,14 @@ function BottomBar({
             gap="sm"
             role="toolbar"
             aria-label="Selection"
-            className="whitespace-nowrap py-xs pr-xs pl-lg text-body"
+            // The controls in the muted ink, brightening under the pointer
+            // (a ghost IconButton hovers to the text colour): the count reads
+            // first.
+            className="whitespace-nowrap py-selection-bar pr-xs pl-lg text-body text-muted-foreground"
           >
-            <span className="font-medium">{selectedCount} selected</span>
+            <span className="font-medium text-foreground">
+              {selectedCount} selected
+            </span>
             {actions ? (
               <Stack direction="row" align="center" gap="2xs">
                 {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- bulk-selection bar actions, one per surface, not a per-row cluster */}

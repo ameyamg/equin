@@ -154,6 +154,8 @@ export function MailScreen(): ReactNode {
           <ThreadAvatar thread={t} ctx={rowCtx} />
         ),
         lines: 1 as const,
+        // A row restacked to three lines (the reader open) leads at its top.
+        leadAlign: "start" as const,
         // Each day is one card, as in the prototype.
         frame: "section" as const,
         // j / k open the next / previous thread (marked read as it opens).

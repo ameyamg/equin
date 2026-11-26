@@ -1244,8 +1244,10 @@ interface ToolbarParts {
   lines (Mail: the search line, then the view's rule chips) wraps its bar line
   in `ToolbarLine` (web barrel): while the band reserves, that line names
   itself the anchor too and wins (the innermost in tree order), so a row
-  growing above or under it never moves the bar. Outside a reserving band it
-  anchors nothing.
+  growing above or under it never moves the bar. It names the anchor alone
+  (`anchor-floating-bar-line`): the band stays the one box that reserves (the
+  safe area is published on `anchor-floating-bar-band`). Outside a reserving
+  band it anchors nothing.
 - **`switcher`**: render exactly one of `strip` / `chip` (both `null` when pinned) —
   it is the only way to manage views.
 - **`search` is always rendered** (a non-empty query must stay visible); placeholder

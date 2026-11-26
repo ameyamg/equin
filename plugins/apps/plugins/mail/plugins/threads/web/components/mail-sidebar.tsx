@@ -16,7 +16,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  DropdownMenuItem,
+  Separator,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   ResourceError,
@@ -45,8 +48,13 @@ const copyIcon = symbol("content-copy");
 const expandIcon = symbol("expand-more");
 const collapseIcon = symbol("expand-less");
 
-/** The sidebar's width, the prototype's column. */
-const SIDEBAR_WIDTH = "w-54";
+/**
+ * The sidebar's width, the prototype's column: 216px, and below 800px of the
+ * Mail surface (the `mail` container, `MailLayout`) a 52px icon rail. The
+ * sidebar is the `nav-rail` container its rows read (`rail:`): narrow, each
+ * draws its glyph alone.
+ */
+const SIDEBAR_WIDTH = "w-54 @max-[800px]/mail:w-13 @container/nav-rail";
 
 /**
  * The Mail surface's `aside`: the active view's name, ONE list of views — the
@@ -104,7 +112,8 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
       gap="none"
       className={`${SIDEBAR_WIDTH} h-full text-sidebar-foreground`}
     >
-      <Line className="h-12 gap-smd pr-lg pl-xl">
+      {/* The view's name; in the rail, the bar's empty corner. */}
+      <Line className="h-12 gap-smd pr-lg pl-xl rail:invisible">
         <span
           aria-hidden
           className="size-2.25 rounded-full"
@@ -121,10 +130,10 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
           </span>
         ) : null}
       </Line>
-      <Inset l="smd" r="smd" b="smd" className={rigidClass()}>
+      <Inset l="smd" r="smd" b="smd" className={`${rigidClass()} rail:px-xsm`}>
         <ComposeButton className="w-full" />
       </Inset>
-      <Scroll fill className="pr-smd pb-lg">
+      <Scroll fill className="pr-smd pb-lg rail:px-xsm">
         <Stack gap="none">
           <DataViewViewList
             newLabel="New view"
@@ -144,7 +153,8 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
               {more ? "Less" : "More"}
             </Text>
           </Row>
-          <Line className="px-sidebar-row pt-lg pb-xs">
+          {/* The Labels heading; in the rail, a hairline. */}
+          <Line className="px-sidebar-row pt-lg pb-xs rail:hidden">
             <Text
               as="h2"
               variant="caption"
@@ -154,6 +164,9 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
               Labels
             </Text>
           </Line>
+          <Inset y="sm" className="hidden rail:block">
+            <Separator />
+          </Inset>
           <Labels mailboxes={mailboxes} />
         </Stack>
       </Scroll>
@@ -171,7 +184,7 @@ function AccountFooter() {
   const address = status.data.address;
   return (
     <Line
-      className={`h-12 gap-smd px-sidebar-row pr-smd ${rigidClass()}`}
+      className={`h-12 gap-smd px-sidebar-row pr-smd ${rigidClass()} rail:pr-none rail:pl-md`}
       title={address}
     >
       <Center
@@ -184,7 +197,7 @@ function AccountFooter() {
           {address.slice(0, 1).toUpperCase()}
         </Text>
       </Center>
-      <Text variant="caption" tone="faint" className="truncate">
+      <Text variant="caption" tone="faint" className="truncate rail:hidden">
         {address}
       </Text>
     </Line>

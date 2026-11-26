@@ -157,6 +157,14 @@ export const densityGroup = defineTokenGroup("density", {
   // selected fill) rather than only its content. Default `0px`: every pill
   // spans the full width and only its content indents; at `--tree-indent` a
   // nested row's fill starts under its parent's icon. Never above the indent.
+  // The height (and width) of a tree row's hover actions (＋, ⋯): its action
+  // cluster's `xs` controls. Default = the `xs` control everywhere else; a
+  // theme whose list rows carry larger hover actions keeps the tree's small
+  // (Mail: 28px row actions, 22px label-tree actions).
+  treeActionH: {
+    default: "var(--control-height-xs)",
+    label: "Tree row action size",
+  },
   treePillIndent: { default: "0px", label: "Tree pill indent" },
   // Where an indent guide's hairline sits inside its indent step (its centre,
   // from the step's start). Default = the chevron box's centre: each level's

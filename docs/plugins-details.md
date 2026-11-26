@@ -7649,7 +7649,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GET /api/mail/inline/:sig`
               - `GET /api/mail/attachment/:threadId/:messageId/:partId`
           - Web:
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
+              - `primitives/css/fill` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
@@ -7660,7 +7661,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
-              - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
@@ -7723,6 +7723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/compose.ComposeProvider`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
+              - `primitives/css/spacing.Stack`
               - `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses:
@@ -7765,7 +7766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 55 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses: 54 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/data-view` ×9
               - `network/live/live-state` ×5
               - `primitives/css/ui-kit` ×5
@@ -7773,7 +7774,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/compose` ×2
               - `infra/endpoints` ×2
               - `network/live` ×2
-              - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `tag-tree/picker` ×2
               - `apps/mail/provider.MailProviderConnect`
@@ -7784,6 +7784,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/status-dot.StatusDot`
@@ -54655,8 +54656,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 481 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×116
+            - Imported by: 482 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×117
               - `conversations` ×79
               - `primitives` ×57
               - `debug` ×39
@@ -55206,13 +55207,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 394 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 397 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/data-view` ×106
               - `ui/tokens/density` ×92
               - `ui/tokens/color-palette` ×62
               - `ui/tokens/type-scale` ×44
+              - `ui/tokens/overlay` ×16
               - `ui/tokens/shape` ×16
-              - `ui/tokens/overlay` ×13
               - `ui/tokens/shadow` ×12
               - `ui/tokens/sidebar-metrics` ×12
               - `ui/tokens/categorical` ×11
@@ -59128,6 +59129,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
+          - `ui/tokens/overlay --selection-bar-lift`
+          - `ui/tokens/overlay --selection-bar-pad-y`
+          - `ui/tokens/overlay --selection-bar-radius`
           - `ui/tokens/shadow --shadow-lg`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
@@ -62099,8 +62103,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `subtreeIds`
           - `treeKeyMove`
       - Cross-plugin:
-        - Uses tokens: 24 vars — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
-          - `ui/tokens/density` ×9
+        - Uses tokens: 25 vars — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+          - `ui/tokens/density` ×10
           - `ui/tokens/color-palette` ×8
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
@@ -65924,7 +65928,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tagRowsOfOptions`
       - Cross-plugin:
         - Uses tokens:
-          - `ui/tokens/color-palette --background`
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --faint-foreground`
@@ -71872,7 +71875,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Tokens used by:
               - `primitives/css/surface`
               - `primitives/css/ui-kit`
+              - `primitives/multi-select`
             - Imported by:
+              - `apps/mail/shell`
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `media/player`

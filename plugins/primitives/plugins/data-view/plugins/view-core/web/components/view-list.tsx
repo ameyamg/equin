@@ -155,7 +155,8 @@ export function ViewList<T extends ViewTypeMeta>({
       {create ? (
         <Row
           size={form === "nav" ? "nav" : undefined}
-          className="rounded-nav-row"
+          // An icon rail (`rail:`) lists places to go, never "+ New view".
+          className="rounded-nav-row rail:hidden"
           icon={<Icon icon={addIcon} className="text-muted-foreground" />}
           onClick={create.onCreate}
         >

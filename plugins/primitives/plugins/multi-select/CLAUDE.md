@@ -20,7 +20,7 @@ Checkbox multi-select over one ordered list of ids.
 - **`SelectionBar({ actions, placement })`**:
   - `"top"` (default) — a strip pinned under the scroller's top edge ("N
     selected", Select all, Clear, the actions). Render it before the rows.
-  - `"bottom"` — a raised pill (`Surface level="overlay"`, `rounded-xl`)
+  - `"bottom"` — a raised pill (`Surface level="overlay"`; its corners, block padding and lift the overlay token group's `selectionBar*`, its controls in the muted ink)
     centred at the bottom of the scroller's viewport ("N selected", the
     actions, a divider, a clear ✕): a zero-height `Sticky edge="bottom"`
     holding a `Pin to="bottom"`, so it takes no layout room; it slides and
@@ -71,6 +71,9 @@ Checkbox multi-select over one ordered list of ids.
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
+    - `ui/tokens/overlay --selection-bar-lift`
+    - `ui/tokens/overlay --selection-bar-pad-y`
+    - `ui/tokens/overlay --selection-bar-radius`
     - `ui/tokens/shadow --shadow-lg`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

@@ -1,15 +1,9 @@
 import type { ReactNode } from "react";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import {
-  Rigid,
-  rigidClass,
-} from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -149,36 +143,38 @@ export function ThreadRow({
       {listTime(thread.date, ctx.now)}
     </Text>
   );
-  // One line on a wide list; below 640px (the reader open beside it) the
-  // prototype's stacked row: who and the time, the subject, the marks.
+  // ONE grid, the prototype's `.row`: one line on a wide list (who in 164px,
+  // the subject, the marks, the time in 76px); below 640px (the reader open
+  // beside it) the same cells restack — who and the time, the subject under
+  // them, the marks under that. A container query moves the cells; each is
+  // in the DOM once.
   return (
     <Stack
       gap="none"
       className="@container/thread w-full"
       data-unread={unread || undefined}
     >
-      <Line className="gap-md @max-[640px]/thread:hidden">
-        <Rigid as={Line} className="w-41 gap-xs">
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- the prototype's reflowing row grid: the same cells on one line or stacked by the list's width (a container query), which no flow primitive places */}
+      <div className="grid grid-cols-[10.25rem_minmax(0,1fr)_auto_4.75rem] items-center gap-x-md @max-[640px]/thread:grid-cols-[minmax(0,1fr)_auto] @max-[640px]/thread:gap-y-px">
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- a cell of the reflowing row grid above */}
+        <Line className="gap-xs @max-[640px]/thread:col-start-1 @max-[640px]/thread:row-start-1">
           {whoLine}
-        </Rigid>
-        <Fill>{subject}</Fill>
-        {marks === null ? null : <Rigid>{marks}</Rigid>}
-        {/* The time ends the row's 76px column (`.row` last track). */}
-        <Rigid as={Line} className="min-w-19">
+        </Line>
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- a cell of the reflowing row grid above */}
+        <div className="min-w-0 @max-[640px]/thread:col-span-2 @max-[640px]/thread:row-start-2">
+          <Line>{subject}</Line>
+        </div>
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- a cell of the reflowing row grid above */}
+        <div className="@max-[640px]/thread:col-span-2 @max-[640px]/thread:row-start-3 @max-[640px]/thread:empty:hidden @max-[640px]/thread:pt-xs">
+          {marks}
+        </div>
+        {/* The time ends the row (`.row` last track), right-aligned. */}
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- a cell of the reflowing row grid above */}
+        <Line className="@max-[640px]/thread:col-start-2 @max-[640px]/thread:row-start-1">
           <Fill />
           {time}
-        </Rigid>
-      </Line>
-      <Stack gap="none" className="@min-[640px]/thread:hidden">
-        <Line className="gap-md">
-          <Fill as={Line} className="gap-xs">
-            {whoLine}
-          </Fill>
-          <Rigid>{time}</Rigid>
         </Line>
-        {subject}
-        {marks === null ? null : <Inset t="xs">{marks}</Inset>}
-      </Stack>
+      </div>
     </Stack>
   );
 }

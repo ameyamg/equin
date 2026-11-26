@@ -18,7 +18,10 @@ export const BandAnchorsBarContext = createContext(false);
  * line would lower the bar to the middle of both. Wrapped in this, the line
  * names itself the anchor too, and the innermost one wins (the last anchor in
  * tree order), so the bar stays centred on this line whatever grows above or
- * under it. The band keeps reserving the bar's room.
+ * under it. The band keeps reserving the bar's room: the line names the
+ * anchor only (`anchor-floating-bar-line`), never the band's
+ * `anchor-floating-bar-band`, which is also what marks a header that
+ * reserves the room.
  *
  * Only while the band reserves the bar ({@link BandAnchorsBarContext}): a
  * DataView below a header, or nested in another, must never steal the anchor
@@ -28,7 +31,7 @@ export const BandAnchorsBarContext = createContext(false);
 export function ToolbarLine({ children }: { children: ReactNode }): ReactNode {
   const anchors = useContext(BandAnchorsBarContext);
   return (
-    <div className={anchors ? "anchor-floating-bar-band" : undefined}>
+    <div className={anchors ? "anchor-floating-bar-line" : undefined}>
       {children}
     </div>
   );

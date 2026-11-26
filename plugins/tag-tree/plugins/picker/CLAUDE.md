@@ -47,7 +47,6 @@
     - `tagRowsOfOptions`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --faint-foreground`

@@ -8,7 +8,10 @@ import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
 import { InlineFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  Fill,
+  fillClasses,
+} from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   Rigid,
@@ -91,9 +94,17 @@ export function ThreadReader({
     // Keyed by thread: another thread starts with its own folds.
     body = <ThreadBody key={read.data.id} thread={read.data} labels={labels} />;
   }
+  // The prototype's `.pane`: raised under the list's 48px bar (that band of
+  // the column is the page ground, the bar's empty end) as a card-toned
+  // surface ruled off the list, its toolbar row 46px (`.rbar`).
   return (
-    <Stack gap="none" className="h-full min-h-0 bg-card">
-      <Bar>
+    <Stack gap="none" className="h-full min-h-0">
+      <span aria-hidden className={`h-12 ${rigidClass()}`} />
+      <Stack
+        gap="none"
+        className={`${fillClasses("y")} border-l border-border bg-card`}
+      >
+        <Bar className="h-11.5">
         <Fill />
         {tools}
         {onClose === null ? null : (
@@ -108,6 +119,7 @@ export function ThreadReader({
       {footer !== undefined && read.status === "ready"
         ? footer(read.data)
         : null}
+      </Stack>
     </Stack>
   );
 }

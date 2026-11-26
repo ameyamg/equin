@@ -17,6 +17,12 @@ easing and scale but never the translate:
   also fades in from transparent. The exit plays the entry back in three
   quarters of its time. Off under `prefers-reduced-motion: reduce`.
 
+**Selection pill** — read by multi-select's bottom `SelectionBar`:
+`selectionBarRadius` (`rounded-selection-bar`, default the `rounded-xl` step),
+`selectionBarPadY` (`py-selection-bar`, default `xs`), `selectionBarLift`
+(`mb-selection-bar-lift`, its distance off the scroller's bottom edge, default
+`md`).
+
 **Tooltip chrome** — read by ui-kit's `TooltipContent` (the one-line label every
 control's `tooltip` prop draws; not the hover card, which is an `OverlayPanel`):
 
@@ -79,7 +85,9 @@ popover width roles (the `panel` padding role).
   - Tokens used by:
     - `primitives/css/surface`
     - `primitives/css/ui-kit`
+    - `primitives/multi-select`
   - Imported by:
+    - `apps/mail/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`
     - `media/player`

@@ -611,13 +611,13 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSingleLine`
     - `WithTooltip`
 - Cross-plugin:
-  - Uses tokens: 394 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 397 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×106
     - `ui/tokens/density` ×92
     - `ui/tokens/color-palette` ×62
     - `ui/tokens/type-scale` ×44
+    - `ui/tokens/overlay` ×16
     - `ui/tokens/shape` ×16
-    - `ui/tokens/overlay` ×13
     - `ui/tokens/shadow` ×12
     - `ui/tokens/sidebar-metrics` ×12
     - `ui/tokens/categorical` ×11

@@ -257,6 +257,8 @@ interface ListRowConfig {
   renderLeading: ListViewOptions<unknown>["renderLeading"];
   /** The action cluster is painted at rest (`ListViewOptions.actionsAtRest`). */
   actionsAtRest: boolean;
+  /** Where the leading glyph sits (`ListViewOptions.leadAlign`). */
+  leadAlign: "center" | "start";
   labelClassName: ((row: unknown) => ClassName | undefined) | undefined;
   detail: ListViewOptions<unknown>["detail"];
   /** Activating the row toggles its detail (`ListViewOptions.detailOnActivate`). */
@@ -470,6 +472,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     disclosureVariant,
   } = options;
   const actionsAtRest = options.actionsAtRest === true;
+  const leadAlign = options.leadAlign ?? "center";
   // Where every field goes (the surface's recipe and pins, the user's
   // Properties); the section pipeline above keeps using the full
   // `props.fields` for sort/filter/search.
@@ -669,6 +672,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       renderRow,
       renderLeading,
       actionsAtRest,
+      leadAlign,
       labelClassName,
       detail,
       detailOnActivate,
@@ -707,6 +711,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     renderRow,
     renderLeading,
     actionsAtRest,
+    leadAlign,
     labelClassName,
     detail,
     detailOnActivate,
@@ -1746,6 +1751,7 @@ function listRowNode(
       aria-expanded={config.detailOnActivate ? open : undefined}
       icon={disclosure || overGlyph ? undefined : glyph}
       lead={leadNode}
+      leadAlign={config.leadAlign}
       actions={
         detailInCluster ? (
           <>

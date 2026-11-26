@@ -33,6 +33,17 @@
    pointer-events cut-off) writes `[&:disabled]:`. */
 @custom-variant disabled (&:disabled, &[aria-disabled="true"]);
 
+/* `rail:` styles a navigation row drawn in an icon RAIL: inside a `nav-rail`
+   container (a sidebar) narrower than a rail is wide — the sidebar collapsed
+   to its glyphs (Mail below 800px). A row says how it reads there (glyph
+   alone, centred; its name, count and actions out of the way), the sidebar
+   only says how wide it is. Outside a `nav-rail` container it never matches. */
+@custom-variant rail {
+    @container nav-rail (width < 5rem) {
+        @slot;
+    }
+}
+
 @theme {
     --font-sans: 'Inter Variable', sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
@@ -687,6 +698,15 @@
  * composition, so its `ring-1` still draws beside it) and arrow square
  * (`--tooltip-arrow-size`, default 10px; `0px` draws none). */
 @utility rounded-tooltip { border-radius: var(--tooltip-radius); } /* twmerge: extend rounded */
+/* The bottom selection pill's chrome (multi-select's `SelectionBar
+ * placement="bottom"`), the overlay group's: its corners
+ * (`--selection-bar-radius`, default the `rounded-xl` step), its block
+ * padding (`--selection-bar-pad-y`, default the `xs` step) and how far it
+ * floats over the scroller's bottom edge (`--selection-bar-lift`, default
+ * the `md` step). */
+@utility rounded-selection-bar { border-radius: var(--selection-bar-radius); } /* twmerge: extend rounded */
+@utility py-selection-bar { padding-block: var(--selection-bar-pad-y); } /* twmerge: extend py */
+@utility mb-selection-bar-lift { margin-bottom: var(--selection-bar-lift); } /* twmerge: standalone -- the pill's own lift over its pin; no margin class sits beside it. */
 @utility p-tooltip { padding: var(--tooltip-pad-y) var(--tooltip-pad-x); } /* twmerge: extend p */
 @utility shadow-tooltip { --tw-shadow: var(--tooltip-shadow); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
 /* @twmerge group sg-tooltip-arrow excludes: size h w */
@@ -1679,6 +1699,11 @@
  * computed `visibility` still look normal), so on a surface with no top header
  * (Home) the bar vanished instead of reaching the fallbacks. */
 @utility anchor-floating-bar-band { anchor-name: --floating-bar-band; } /* twmerge: standalone -- Names this box as an anchor; no built-in group sets anchor-name. */
+/* The same anchor, named by one LINE of a reserving header (a DataView band
+ * drawn on several lines: `ToolbarLine`) — so the bar centres on that line,
+ * while the header around it stays the one box that reserves the bar's room
+ * (`anchor-floating-bar-band` is also what the safe area is published on). */
+@utility anchor-floating-bar-line { anchor-name: --floating-bar-band; } /* twmerge: standalone -- Names this box as an anchor; no built-in group sets anchor-name. */
 @utility floating-bar-band { top: anchor(--floating-bar-band top, 0.5rem); height: anchor-size(--floating-bar-band height, 0px); } /* twmerge: standalone -- Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor. */
 
 /* Floating-bar boundary — a box that is NOT the viewport's top-right corner (a

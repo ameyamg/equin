@@ -17,7 +17,10 @@ import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-rev
 
 /**
  * `nav`: a sidebar's place to go — the sidebar-metrics row (its height,
- * inline padding, glyph size and glyph-to-name gap) in the label role.
+ * inline padding, glyph size and glyph-to-name gap) in the label role. In an
+ * icon rail (a `nav-rail` container narrower than a rail, the `rail:`
+ * variant) it draws its glyph alone, centred: its name, count and actions
+ * stay in the DOM for its accessible name, out of the layout.
  */
 export type RowSize = "sm" | "md" | "nav";
 
@@ -135,6 +138,14 @@ export interface RowProps extends RowControlProps, Passthrough {
    * back in with `pointer-events-auto` (the tree's `TreeDisclosureToggle` does).
    */
   lead?: React.ReactNode;
+  /**
+   * Where the `lead` sits on a row taller than one line: `"center"`
+   * (default) on the row's middle, `"start"` at its top (beside a body that
+   * stacks several lines). The same on a one-line row. (`icon` is drawn
+   * inside the row's control, so it stays centred: a glyph that must move
+   * goes in `lead`.)
+   */
+  leadAlign?: "center" | "start";
   /** Trailing slot, rendered through the `row-actions` primitive; hover-revealed by default. */
   actions?: React.ReactNode;
   actionsAlwaysVisible?: boolean;
@@ -200,6 +211,7 @@ export function Row({
   indent,
   icon,
   lead,
+  leadAlign = "center",
   actions,
   actionsAlwaysVisible,
   ref,
@@ -332,6 +344,7 @@ export function Row({
     // A place to go reads in its sidebar's ink, brightening under the pointer.
     size === "nav" && "gap-sidebar-icon text-label",
     size === "nav" && !selected && "hover:text-foreground",
+    size === "nav" && "rail:justify-center rail:px-none rail:rounded-lg",
     // Each tint co-publishes itself as `--scrim` — the color the pinned action
     // cluster's mask paints so it hides the row instead of letting the label
     // show through the action icons. Same contract as a Surface publishing
@@ -393,11 +406,24 @@ export function Row({
   //
   // Either way they paint above the split path's `z-under` hit-area, so their
   // buttons stay clickable.
+  // A nav row's body (name, count, marks) as one box: in an icon rail it
+  // leaves the layout (`sr-only`, so it still names the row); else it is no
+  // box at all (`contents`), its children laid out in the row's own line.
+  const railBody =
+    size === "nav" ? (
+      <span className="contents rail:block rail:sr-only">{children}</span>
+    ) : (
+      children
+    );
+
   const actionsCluster = actions ? (
     <RowActions
       pin={actionsAlwaysVisible ? null : "right"}
       alwaysVisible={actionsAlwaysVisible}
-      className={actionsAlwaysVisible ? "ml-auto shrink-0" : undefined}
+      className={cn(
+        actionsAlwaysVisible && "ml-auto shrink-0",
+        size === "nav" && "rail:hidden",
+      )}
     >
       {actions}
     </RowActions>
@@ -407,7 +433,12 @@ export function Row({
   // (see `RowProps.lead`) so only the controls it holds take a press.
   const leadCell =
     lead != null ? (
-      <span className="pointer-events-none inline-flex shrink-0 items-center">
+      <span
+        className={cn(
+          "pointer-events-none inline-flex shrink-0 items-center",
+          leadAlign === "start" && "self-start",
+        )}
+      >
         {lead}
       </span>
     ) : null;
@@ -469,7 +500,7 @@ export function Row({
           )}
         >
           {icon}
-          {children}
+          {railBody}
           <span
             aria-hidden
             className={cn(
@@ -506,7 +537,7 @@ export function Row({
     >
       {leadCell}
       {icon}
-      {children}
+      {railBody}
       {actionsCluster}
     </Line>
   );

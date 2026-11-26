@@ -149,6 +149,7 @@ export function TreeRowChrome({
       // SECOND, separate group (`group/row-actions`) plus the positioning
       // context the pinned action cluster anchors to — the chevron/disclosure
       // reveal keeps reading `group/tree-row`.
+      // eslint-disable-next-line layout/no-adhoc-layout -- `rail:justify-center` below: the icon rail's centring is a container query on the sidebar (`rail:`), which Stack's static `justify` cannot say
       className={cn(
         // Row height, cell gap, lead inset and per-depth indent are density
         // tokens (`treeRowH`, `treeRowGap`, `treeRowPadStart`, `treeIndent`),
@@ -159,6 +160,10 @@ export function TreeRowChrome({
         // drag), never a text selection; an inline editor inside the row is a
         // form control and keeps its own.
         "select-none",
+        // In an icon rail (a narrow `nav-rail` sidebar) the row is its glyph,
+        // centred: no indent, no lead inset (the indent style reads these),
+        // no chevron box (`ChevronCell`), no actions.
+        "rail:justify-center rail:rounded-lg rail:px-none rail:[--tree-indent:0px] rail:[--tree-pill-indent:0px] rail:[--tree-row-pad-start:0px]",
         // A focusable row (one with an open gesture) is walked with the arrow
         // keys, so the row the keys are on must show it.
         onOpen && "focus-ring",
@@ -196,7 +201,13 @@ export function TreeRowChrome({
           identical hovered or not. The bespoke reveal this replaced changed
           LAYOUT (`w-0` → `w-auto`), which slid an open menu sideways whenever
           the row lost hover. */}
-      {actions && <RowActions>{actions}</RowActions>}
+      {actions && (
+        // Its `xs` controls are the tree's own size (`treeActionH`), which
+        // the cluster's buttons read as their `xs` control height.
+        <RowActions className="rail:hidden [--control-height-xs:var(--tree-action-h)]">
+          {actions}
+        </RowActions>
+      )}
     </Stack>
   );
 }

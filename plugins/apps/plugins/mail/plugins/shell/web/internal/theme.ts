@@ -7,6 +7,7 @@ import { shadowGroup } from "@plugins/ui/plugins/tokens/plugins/shadow/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
+import { overlayGroup } from "@plugins/ui/plugins/tokens/plugins/overlay/core";
 import { sidebarMetricsGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-metrics/core";
 
 // The approved Mail prototype's dark palette (proto-1795656296-rtsmk5 `:root`).
@@ -129,6 +130,8 @@ const density = densityGroup.fragment(
     treeChevronW: "0.875rem",
     treeRowGap: "0.5rem",
     treeIndent: "1rem",
+    // …and their ＋ / ⋯ hover actions 22px (`.side h6 button`, `.nav .more`).
+    treeActionH: "1.375rem",
   }),
 );
 
@@ -139,6 +142,15 @@ const sidebarMetrics = sidebarMetricsGroup.fragment(
     sidebarRowPadX: "1.25rem",
     sidebarIconSize: "1rem",
     sidebarIconGap: "0.75rem",
+  }),
+);
+
+/** The selection pill (`.selbar`): 12px corners, 40px tall (6px around 28px controls; the prototype pads 5px inside a 1px border), 20px off the bottom. */
+const overlay = overlayGroup.fragment(
+  both({
+    selectionBarRadius: "0.75rem",
+    selectionBarPadY: "0.375rem",
+    selectionBarLift: "1.25rem",
   }),
 );
 
@@ -185,6 +197,7 @@ export const mailTheme = defineTheme({
     density,
     sidebarMetrics,
     shadow,
+    overlay,
     dataView,
   ],
 });

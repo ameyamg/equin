@@ -1,3 +1,4 @@
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useRef, useState, type ReactNode } from "react";
 import {
   cn,
@@ -8,7 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -81,16 +81,12 @@ export function TagRowMenu<Row extends TagPickerRow>({
   return (
     <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
+        {/* The row cluster's own control, as ＋ beside it: the same size
+            (the cluster's `xs`, a tree's `treeActionH`) and hover. */}
         <DropdownMenuTrigger
           ref={triggerRef}
-          aria-label="More"
-          // `data-popup-open` is base-ui's open-state attribute.
-          className="size-5 rounded-md text-muted-foreground hover:bg-background/60 data-popup-open:bg-background/60"
-        >
-          <Center axis="both" className="size-full">
-            <Icon icon={moreIcon} className="size-4" />
-          </Center>
-        </DropdownMenuTrigger>
+          render={<IconButton icon={moreIcon} label="More" />}
+        />
         <DropdownMenuContent side="right" align="start">
           <DropdownMenuItem onClick={onRename}>
             <Icon icon={renameIcon} className="size-4" />

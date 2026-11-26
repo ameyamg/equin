@@ -69,6 +69,23 @@ export const overlayGroup = defineTokenGroup("overlay", {
   tooltipEmphasis: { default: "regular", label: "Tooltip emphasis" },
   // The arrow's square (`tooltip-arrow`); `0px` draws no arrow.
   tooltipArrowSize: { default: "0.625rem", label: "Tooltip arrow size" },
+  // The bottom selection pill (multi-select's `SelectionBar
+  // placement="bottom"`): its corners (`rounded-selection-bar`), its block
+  // padding (`py-selection-bar`) and how far it floats over the scroller's
+  // bottom edge (`mb-selection-bar-lift`). Defaults = the `rounded-xl`, `xs`
+  // and `md` steps it had before.
+  selectionBarRadius: {
+    default: "calc(var(--radius) * 1.4)",
+    label: "Selection bar radius",
+  },
+  selectionBarPadY: {
+    default: "var(--space-xs)",
+    label: "Selection bar block padding",
+  },
+  selectionBarLift: {
+    default: "var(--space-md)",
+    label: "Selection bar distance from the bottom",
+  },
   // The settings card's words (`ControlPanelCard`): the type each part picks
   // — a rung of the closed ladder, a shared weight, a family — read through
   // `<Text pick>` by var name (control-panel's `settings-picks.ts`, which

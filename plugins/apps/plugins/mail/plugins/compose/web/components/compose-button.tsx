@@ -23,11 +23,15 @@ export function ComposeButton({
     <ControlSizeProvider size="lg">
     <Button
         variant="secondary"
-        className={cn("font-semibold ring-1 ring-input ring-inset", className)}
+        // In the sidebar's icon rail (`rail:`) the pen alone.
+        className={cn(
+          "font-semibold ring-1 ring-input ring-inset rail:px-none",
+          className,
+        )}
       onClick={() => openCompose({ kind: "new" })}
     >
       <Icon icon={composeIcon} className="text-primary-text" />
-      Compose
+        <span className="rail:sr-only">Compose</span>
     </Button>
     </ControlSizeProvider>
   );

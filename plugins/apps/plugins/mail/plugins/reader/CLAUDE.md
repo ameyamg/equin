@@ -101,7 +101,8 @@ the painted body, prefetched vs cold.
     - `GET /api/mail/inline/:sig`
     - `GET /api/mail/attachment/:threadId/:messageId/:partId`
 - Web:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/fill` ×2
     - `primitives/css/rigid` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
@@ -112,7 +113,6 @@ the painted body, prefetched vs cold.
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`

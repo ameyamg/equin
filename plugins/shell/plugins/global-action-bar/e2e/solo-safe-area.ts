@@ -102,8 +102,13 @@ const measure = (page: Page) =>
         .filter((r) => r.bottom > barTop && r.top < barBottom)
         .map((r) => r.right),
     );
-    // The header the bar is anchored to: the box carrying the anchor name.
-    const anchors = [...document.querySelectorAll(".anchor-floating-bar-band")]
+    // The box the bar is anchored to: the last one naming the anchor (a
+    // reserving header, or one line of it).
+    const anchors = [
+      ...document.querySelectorAll(
+        ".anchor-floating-bar-band, .anchor-floating-bar-line",
+      ),
+    ]
       .map((el) => el.getBoundingClientRect())
       .filter((r) => r.width > 0 && r.height > 0);
     const header = anchors.at(-1);
@@ -163,7 +168,9 @@ await withBrowser(async (h) => {
   // Change the header's height and check the bar follows with no re-render.
   await page.evaluate(() => {
     const els = [
-      ...document.querySelectorAll<HTMLElement>(".anchor-floating-bar-band"),
+      ...document.querySelectorAll<HTMLElement>(
+        ".anchor-floating-bar-band, .anchor-floating-bar-line",
+      ),
     ];
     const last = els
       .filter((el) => el.getBoundingClientRect().height > 0)

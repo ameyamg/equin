@@ -105,7 +105,7 @@ Compose and account foot and the reader's reply box come from `mail/compose`.
     - `Pane.Register` "mail-thread"
     - `Pane.Register` "mail-threads"
     - `thread-actions` "triage" → `RowTriage`
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×9
     - `network/live/live-state` ×5
     - `primitives/css/ui-kit` ×5
@@ -113,7 +113,6 @@ Compose and account foot and the reader's reply box come from `mail/compose`.
     - `apps/mail/compose` ×2
     - `infra/endpoints` ×2
     - `network/live` ×2
-    - `primitives/css/rigid` ×2
     - `primitives/css/spacing` ×2
     - `tag-tree/picker` ×2
     - `apps/mail/provider.MailProviderConnect`
@@ -124,6 +123,7 @@ Compose and account foot and the reader's reply box come from `mail/compose`.
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/status-dot.StatusDot`

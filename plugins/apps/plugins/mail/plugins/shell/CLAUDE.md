@@ -24,6 +24,7 @@ groups without counts), selected in `config/ui/theme-engine/@app/mail/theme.json
     - `apps/mail/compose.ComposeProvider`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
+    - `primitives/css/spacing.Stack`
     - `ui/theme-engine.ThemeEngine`
 - Core:
   - Uses:

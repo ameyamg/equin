@@ -21,6 +21,7 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -265,7 +266,8 @@ export function TagPickerPanel<Row extends TagPickerRow>({
       </Stack>
       {searching || writes === undefined ? null : (
         <>
-          <Separator bleed />
+          {/* No "New tag" in an icon rail (`rail:`): a rail lists places. */}
+          <Separator bleed className="rail:hidden" />
           <FooterRow noun={noun} onClick={() => openDraft(null)} />
         </>
       )}
@@ -640,7 +642,13 @@ function TagTreeRow<Row extends TagPickerRow>({
       ) : null}
       {indicator === "checkbox" ? <MarkBox mark={mark} /> : null}
       <TagMark tag={tag} tags={tags} flat={flatMark} />
-      <Fill>
+      {/* In an icon rail (`rail:`, a narrow sidebar) the row is its mark: the
+          name leaves the layout (still the row's accessible name), the count
+          and the check go. */}
+      {/* A line, so the name truncates inside it (a bare `Text` is an
+          inline leaf, which a `truncate` cannot clip) and never runs over the
+          count after it. */}
+      <Fill as={Line} className="rail:sr-only">
         {renaming ? (
           <TagNameInput
             initial={tag.name}
@@ -657,7 +665,7 @@ function TagTreeRow<Row extends TagPickerRow>({
         )}
       </Fill>
       {showCount && !renaming ? (
-        <Text variant="count" tone="faint">
+        <Text variant="count" tone="faint" className="rail:hidden">
           {count ? String(count) : ""}
         </Text>
       ) : null}
@@ -862,6 +870,7 @@ function FooterRow({ noun, onClick }: { noun: string; onClick(): void }) {
       hasChildren={false}
       isOpen={false}
       onSelect={onClick}
+      className="rail:hidden"
     >
       <Icon icon={addIcon} className="size-4 text-muted-foreground" />
       <Fill>

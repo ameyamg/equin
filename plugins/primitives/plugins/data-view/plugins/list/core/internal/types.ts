@@ -128,6 +128,13 @@ export interface ListViewOptions<TRow> {
    */
   actionsAtRest?: boolean;
   /**
+   * Where the row's leading glyph sits on a row taller than one line:
+   * `"center"` (default) — centred on the row; `"start"` — at its top, beside
+   * the first line (a `renderRow` that restacks into several lines: Mail's
+   * threads beside the reader). On a one-line row the two are the same.
+   */
+  leadAlign?: "center" | "start";
+  /**
    * A caption row over the list: the title field's label on the left, each
    * trailing (trail / edge) field's label over its aligned slot. Default off.
    * Also the view type's `configSchema` option, so a user turns it on from the view's

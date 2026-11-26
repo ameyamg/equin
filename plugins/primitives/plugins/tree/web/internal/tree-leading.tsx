@@ -42,10 +42,14 @@ function ChevronCell({
     <TreeDisclosureToggle
       isOpen={isOpen}
       onToggle={onToggle}
-      className={TREE_CHEVRON_CLASS}
+      // In an icon rail (`rail:`) a row is its glyph alone: no chevron box.
+      className={`${TREE_CHEVRON_CLASS} rail:hidden`}
     />
   ) : (
-    <span className={`w-tree-chevron h-5 ${rigidClass()}`} aria-hidden />
+    <span
+      className={`w-tree-chevron h-5 ${rigidClass()} rail:hidden`}
+      aria-hidden
+    />
   );
 }
 
