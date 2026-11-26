@@ -7649,7 +7649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GET /api/mail/inline/:sig`
               - `GET /api/mail/attachment/:threadId/:messageId/:partId`
           - Web:
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
               - `primitives/css/fill` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
@@ -7662,6 +7662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/line.Line`
+              - `primitives/css/overlay.OverlayInteractive`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/text.Text`
@@ -44912,13 +44913,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: 34 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
           - `primitives/pane` ×12
           - `primitives/dom/auto-scroll` ×3
           - `primitives/dom/web-storage` ×3
           - `primitives/hover-reveal` ×2
           - `primitives/sortable-list` ×2
           - `layouts/route-fallback.DeferredRouteFallback`
+          - `primitives/css/layer.layerClasses`
           - `primitives/css/motion.prefersReducedMotion`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
@@ -54060,13 +54062,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×9
               - `page` ×3
               - `apps-core/phone-actions`
               - `conversations/before-after`
               - `integrations/youtube`
+              - `layouts/miller`
               - `map`
               - `shell/notifications`
         - **`layout-harness`** — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
@@ -54276,6 +54279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/omnibox`
               - `apps/browser/webview`
               - `apps/chord/trainer`
+              - `apps/mail/reader`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/mini-player`
               - `apps/sonata/rich/readout-keyboard`

@@ -1706,6 +1706,17 @@
 @utility anchor-floating-bar-line { anchor-name: --floating-bar-band; } /* twmerge: standalone -- Names this box as an anchor; no built-in group sets anchor-name. */
 @utility floating-bar-band { top: anchor(--floating-bar-band top, 0.5rem); height: anchor-size(--floating-bar-band height, 0px); } /* twmerge: standalone -- Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor. */
 
+/* Pane overlay start — where a pane laid OVER the column before it begins
+ * (`Pane.define({ chrome: { overlayBelow } })`, drawn by Miller): the column
+ * names the box the overlay must leave in view (a sidebar) with
+ * `anchor-pane-overlay-start`, and the overlay's left edge is that box's right
+ * edge. The overlay is positioned inside the column's own box, so only an
+ * anchor of that column is acceptable to it (another column's lies outside its
+ * containing block). No anchor: the column's left edge. Named in `anchor()`,
+ * never `position-anchor` (see the floating-bar band above). */
+@utility anchor-pane-overlay-start { anchor-name: --pane-overlay-start; } /* twmerge: standalone -- Names this box as an anchor; no built-in group sets anchor-name. */
+@utility pane-overlay-start { left: anchor(--pane-overlay-start right, 0px); } /* twmerge: standalone -- Anchor-derived left edge of a pane overlay; a later left-* would detach it from its anchor. */
+
 /* Floating-bar boundary — a box that is NOT the viewport's top-right corner (a
  * desktop window's content, an in-process app embed), though the surface inside
  * it believes it is. Headers inside it neither reserve the bar's safe area (the

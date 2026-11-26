@@ -85,6 +85,7 @@ header content inside is a `<Frame>`.
     - `apps/browser/omnibox`
     - `apps/browser/webview`
     - `apps/chord/trainer`
+    - `apps/mail/reader`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/mini-player`
     - `apps/sonata/rich/readout-keyboard`

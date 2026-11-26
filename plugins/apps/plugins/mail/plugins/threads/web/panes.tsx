@@ -50,6 +50,10 @@ export const mailThreadPane = Pane.define({
   app: mailApp,
   companion: true,
   useResolve: false,
+  // Below a 1080px row the reader lies over the list, right of the sidebar
+  // (its overlay-start anchor), as the prototype's `.pane` does — the list
+  // keeps the row's whole width under it.
+  chrome: { overlayBelow: 1080 },
   title: { useText: useThreadTitle, fallback: "Conversation" },
   component: MailThreadPaneView,
 });

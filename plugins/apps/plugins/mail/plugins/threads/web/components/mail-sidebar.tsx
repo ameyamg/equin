@@ -56,6 +56,9 @@ const collapseIcon = symbol("expand-less");
  */
 const SIDEBAR_WIDTH = "w-54 @max-[800px]/mail:w-13 @container/nav-rail";
 
+/** The box a reader laid over the list leaves in view (`overlayBelow`). */
+const OVERLAY_START = "anchor-pane-overlay-start";
+
 /**
  * The Mail surface's `aside`: the active view's name, ONE list of views — the
  * built-ins (Inbox, Sent, Drafts, Done; Spam and Trash folded under More
@@ -110,7 +113,7 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
     // The DataView sizes an in-flow aside to the scroller's viewport.
     <Stack
       gap="none"
-      className={`${SIDEBAR_WIDTH} h-full text-sidebar-foreground`}
+      className={`${SIDEBAR_WIDTH} ${OVERLAY_START} h-full text-sidebar-foreground`}
     >
       {/* The view's name; in the rail, the bar's empty corner. */}
       <Line className="h-12 gap-smd pr-lg pl-xl rail:invisible">

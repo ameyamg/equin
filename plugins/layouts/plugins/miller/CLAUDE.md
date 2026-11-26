@@ -157,6 +157,35 @@ what it decides. Prototype: `proto-1794189254-saewzy` (`open=balanced`).
   fades out over the remaining columns as they grow into its place. The row's
   scroll is MillerColumns' alone.
 
+## Overlay: a leaf over the column before it (`chrome.overlayBelow`)
+
+A reading pane beside its list wants half the row on a wide screen, and the
+list's whole width on a narrow one: `Pane.define({ chrome: { overlayBelow:
+1080 } })` (Mail's thread reader; prototype `proto-1795656296-rtsmk5`,
+`.pane` below 1080px).
+
+- **When**: the pane is the route's leaf, has a column before it, and the
+  row is narrower than `overlayBelow` — the row's width alone decides, like
+  how many columns show.
+- **Layout**: the columns are the route without the leaf (`layoutColumns`
+  never sees it), so the column before it takes the row's share alone and is
+  the surface's end (its band reserves the floating bar). The route key still
+  counts the leaf: opening or closing it ends a zoom.
+- **Where**: `OverlaidPane`, rendered inside that column's box — so it is
+  scoped to it (it scrolls with the column, never the row) and its left edge
+  is the column's own `anchor-pane-overlay-start` box's right edge (the
+  `pane-overlay-start` utility; no anchor: the column's left edge). Full
+  height, to the column's right edge, on the `nav` layer: above the column's
+  sticky chrome (same layer, later in the tree), below its floats — a
+  selection bar stays on top, as the prototype's `.selbar` over its `.pane`.
+- **Click-through and unpainted**: the layer is decorative and transparent
+  (the pane box's canvas is dropped); the pane paints and marks its own
+  surface (`OverlayInteractive`). What it leaves bare (the reader's strip over the
+  list's 48px bar) shows the column under it and passes its clicks.
+- **Motion**: it enters with the prototype's slide (16px from the right,
+  fading in, on the row's curve) and leaves at once. Crossing the threshold
+  is a route-shaped change for `ColumnMotion` (a column leaves or arrives).
+
 ## Collapse
 
 Each non-leaf column has a chevron button on its divider that collapses it
@@ -200,13 +229,14 @@ pane declares `chrome.keepMountedWhenCollapsed` (kept mounted, hidden).
 
 - Description: Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 - Web:
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×12
     - `primitives/dom/auto-scroll` ×3
     - `primitives/dom/web-storage` ×3
     - `primitives/hover-reveal` ×2
     - `primitives/sortable-list` ×2
     - `layouts/route-fallback.DeferredRouteFallback`
+    - `primitives/css/layer.layerClasses`
     - `primitives/css/motion.prefersReducedMotion`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`

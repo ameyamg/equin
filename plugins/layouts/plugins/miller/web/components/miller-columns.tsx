@@ -49,6 +49,7 @@ import {
 } from "../layout";
 import { Column } from "./column";
 import { COLUMN_ATTR, ColumnMotion } from "./column-motion";
+import { OverlaidPane, type Overlaid } from "./overlaid-pane";
 
 const revealBoundary = { [REVEAL_BOUNDARY_ATTR]: "" };
 
@@ -165,9 +166,22 @@ function MillerRow({
   const collapsed = useCollapsedColumns();
   const [zoomState, setZoom] = useColumnZoom();
 
-  const panes = match.panes;
+  const allPanes = match.panes;
+  // The leaf drawn over the column before it, below its pane's
+  // `overlayBelow` (the row width alone decides, like how many columns show):
+  // the columns are the rest, laid out as if it were not there.
+  const overlaid = useMemo(
+    () => overlaidLeaf(allPanes, rowWidth),
+    [allPanes, rowWidth],
+  );
+  const panes = useMemo(
+    () => (overlaid === null ? allPanes : allPanes.slice(0, -1)),
+    [allPanes, overlaid],
+  );
   const ids = useMemo(() => panes.map((e) => e.uuid), [panes]);
-  const route = routeKey(ids);
+  // The route is every pane, the overlaid one included: opening or closing
+  // it is a route change (it ends a zoom) even where no column moves.
+  const route = routeKey(allPanes.map((e) => e.uuid));
   const zoomed = effectiveZoom(zoomState, route, ids);
   const balanced = useMemo(
     () =>
@@ -397,21 +411,21 @@ function MillerRow({
     [store],
   );
 
-  const itemIds = match.panes.map((e) => String(e.instanceId));
+  const itemIds = panes.map((e) => String(e.instanceId));
   // Reordering only makes sense with 2+ columns. With a single pane there is
   // nowhere to drag it, so suppress the drag handle (and its grab cursor).
-  const canReorder = match.panes.length > 1;
+  const canReorder = panes.length > 1;
   const held = moving && hold?.key === motionKey ? hold.before : null;
 
   return (
-    <ColumnMotion rowRef={ref} panes={match.panes}>
+    <ColumnMotion rowRef={ref} panes={panes}>
       <SortableList
         items={itemIds}
         onMove={handleMove}
         orientation="horizontal"
       >
-        {match.panes.map((entry, i) => {
-          const isLast = i === match.panes.length - 1;
+        {panes.map((entry, i) => {
+          const isLast = i === panes.length - 1;
           const box = layout.columns[i]!;
           const before = held?.get(entry.uuid);
           const fadeIn =
@@ -447,7 +461,7 @@ function MillerRow({
                   <UiRegion
                     kind="pane"
                     id={entry.pane.id}
-                    label={`column ${i + 1} of ${match.panes.length}`}
+                    label={`column ${i + 1} of ${allPanes.length}`}
                     pluginId={paneOwnerFor(entry.pane)}
                   >
                     {/* Per-column boundary: a crash inside one pane is
@@ -483,6 +497,11 @@ function MillerRow({
                         dragHandleProps={
                           canReorder ? state.handleProps : undefined
                         }
+                        overlay={
+                          isLast && overlaid !== null ? (
+                            <OverlaidPane overlaid={overlaid} />
+                          ) : undefined
+                        }
                       />
                     </PluginErrorBoundary>
                   </UiRegion>
@@ -494,4 +513,20 @@ function MillerRow({
       </SortableList>
     </ColumnMotion>
   );
+}
+
+/**
+ * The route's leaf, when it is drawn over the column before it: its pane
+ * declares `chrome.overlayBelow`, the row is narrower than that, and it has a
+ * column to cover. Else `null` — every pane a column.
+ */
+function overlaidLeaf(
+  panes: readonly Match["panes"][number][],
+  rowWidth: number,
+): Overlaid | null {
+  const leaf = panes.at(-1);
+  if (leaf === undefined || panes.length < 2) return null;
+  const below = leaf.pane.chrome.overlayBelow;
+  if (below === null || rowWidth >= below) return null;
+  return { entry: leaf, index: panes.length - 1, count: panes.length };
 }

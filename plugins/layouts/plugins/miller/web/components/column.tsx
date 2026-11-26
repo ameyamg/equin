@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import {
   PaneBox,
   PaneLayoutContext,
@@ -34,6 +34,8 @@ interface ColumnProps {
   onResizeEnd: (dx: number) => void;
   onResetWidth: () => void;
   dragHandleProps?: Record<string, unknown>;
+  /** The leaf drawn over this column (`OverlaidPane`), inside its box. */
+  overlay?: ReactNode;
 }
 
 /**
@@ -59,6 +61,7 @@ export function Column({
   onResizeEnd,
   onResetWidth,
   dragHandleProps,
+  overlay,
 }: ColumnProps) {
   const id = entry.uuid;
   const paneLayout = useMemo(
@@ -159,6 +162,7 @@ export function Column({
           onCollapse={onCollapse}
         />
       )}
+      {overlay}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
 import { InlineFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { OverlayInteractive } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import {
   Fill,
   fillClasses,
@@ -96,12 +97,16 @@ export function ThreadReader({
   }
   // The prototype's `.pane`: raised under the list's 48px bar (that band of
   // the column is the page ground, the bar's empty end) as a card-toned
-  // surface ruled off the list, its toolbar row 46px (`.rbar`).
+  // surface ruled off the list, its toolbar row 46px (`.rbar`). Laid over
+  // the list (a narrow surface: the pane's `overlayBelow`) the strip above the
+  // card shows the list's own bar and passes its clicks: only the card is
+  // interactive.
   return (
     <Stack gap="none" className="h-full min-h-0">
       <span aria-hidden className={`h-12 ${rigidClass()}`} />
       <Stack
         gap="none"
+        as={OverlayInteractive}
         className={`${fillClasses("y")} border-l border-border bg-card`}
       >
         <Bar className="h-11.5">

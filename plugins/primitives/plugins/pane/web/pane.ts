@@ -332,6 +332,19 @@ export interface PaneChromeConfig {
    * connections (e.g. terminal) to avoid a reconnect cycle on re-expand.
    */
   keepMountedWhenCollapsed?: boolean;
+  /**
+   * Below this row width (px), a layout that lays panes side by side (Miller)
+   * draws the pane — when it is the route's leaf and has a column before it —
+   * OVER that column instead of beside it: a click-through layer from the
+   * column's `anchor-pane-overlay-start` box's right edge (a sidebar it keeps
+   * in view; the column's left edge when it names none) to its right edge,
+   * full height. The column before then takes the row's share alone. The
+   * layer is click-through, so the pane marks its own surface interactive
+   * (`OverlayInteractive`): what it leaves bare — a strip over the column's
+   * top bar — shows that bar and lets its clicks through. Unset: always a
+   * column.
+   */
+  overlayBelow?: number;
 }
 
 interface NormalizedChrome {
@@ -339,6 +352,7 @@ interface NormalizedChrome {
   close: boolean;
   promote: boolean;
   keepMountedWhenCollapsed: boolean;
+  overlayBelow: number | null;
 }
 
 export interface PaneInternal {
@@ -4131,6 +4145,7 @@ function normalizeChrome(
     close: chrome?.close ?? true,
     promote: chrome?.promote ?? true,
     keepMountedWhenCollapsed: chrome?.keepMountedWhenCollapsed ?? false,
+    overlayBelow: chrome?.overlayBelow ?? null,
   };
 }
 

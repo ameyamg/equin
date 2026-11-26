@@ -161,6 +161,8 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["pr-floating-bar"], extend: "pr" },
   { classes: ["anchor-floating-bar-band", "anchor-floating-bar-line"], standalone: true, reason: "Names this box as an anchor; no built-in group sets anchor-name." },
   { classes: ["floating-bar-band"], standalone: true, reason: "Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor." },
+  { classes: ["anchor-pane-overlay-start"], standalone: true, reason: "Names this box as an anchor; no built-in group sets anchor-name." },
+  { classes: ["pane-overlay-start"], standalone: true, reason: "Anchor-derived left edge of a pane overlay; a later left-* would detach it from its anchor." },
   { classes: ["floating-bar-boundary"], standalone: true, reason: "Scopes the floating-bar anchor name to this box (the bar's safe-area rule withdraws it from headers inside); no built-in group sets anchor-scope." },
   { classes: ["cp-panel"], extend: "p" },
   { classes: ["cp-surface"], extend: "w" },

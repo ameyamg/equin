@@ -5,6 +5,11 @@ window (`cache/core`), its views listed by the mail sidebar. Matches
 prototype `proto-1795656296-rtsmk5`. Triage (step 6) is here; the sidebar's
 Compose and account foot and the reader's reply box come from `mail/compose`.
 
+The open thread (`mailThreadPane`) is a column beside the list on a wide
+surface and, below a 1080px row, a layer over the list right of the sidebar
+(`chrome.overlayBelow`, Miller's "Overlay"; the sidebar names itself the
+overlay start), as the prototype's `.pane` does.
+
 ## Views
 
 - **Built-ins** (`core/internal/views.ts`, `MAIL_BUILT_IN_VIEWS`): Inbox,
