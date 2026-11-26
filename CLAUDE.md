@@ -32,7 +32,7 @@ How the vision unfolds: [`docs/vision.md`](docs/vision.md).
 4. Your build is served at `http://<worktree>.localhost:<port>` (`./equin url` prints the real port). Always write the `http://` so it's clickable.
 5. `./equin push -m "…"` once the user approves.
    - `push` first runs the tests your change affects and refuses a change that newly breaks one.
-   - A push fixing a report: `--fixes-report <report-id>` (repeatable) plus one `--fix-level`: when the next occurrence of that kind of bug is stopped — `designed-away` (the API has no way to write it), `refused-before-landing` (type error, lint, check), `caught-at-runtime` (loud assert), `documented`, or `one-off`. The "Fix the cause" ladder below; take the highest rung the fix actually reaches.
+   - A push fixing a report: `--fixes-report <report-id>` (repeatable) plus one `--fix-level`: when the next occurrence of that kind of bug is stopped — `designed-away` (the API has no way to write it), `refused-before-landing` (type error, lint, check), `caught-at-runtime` (loud assert), `documented`, or `one-off`. The "Fix the cause" ladder below; take the highest rung the fix actually reaches. A report already fixed by a landed commit: `./equin push --report-fixed-by <report-id>@<full-sha> -m "…"`.
 
 Without write access to the remote, `push` lands on local `main`. Main's auto-build watches it ([`git/remotes`](plugins/infra/plugins/git/plugins/remotes/CLAUDE.md)).
 

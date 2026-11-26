@@ -19,9 +19,11 @@ import { reportIdKind } from "@plugins/reports/core";
 // Appended to every report-filed task. The agent that picks one up is about to
 // debug, so point them at the debugging map first — it routes them to the right
 // surface (durable slow-op store, runtime profiler, pg_stat_activity) instead of
-// guessing.
+// guessing. It also says what to do when the report turns out to be fixed by a
+// commit that already landed (a claim-only push; nothing else closes the report).
 const DEBUG_SKILL_HINT =
-  "> Before debugging, read the `debug` skill (`.claude/skills/debug/SKILL.md`) — the map of logs, profiling, slow-ops, crashes, and DB surfaces.";
+  "> Before debugging, read the `debug` skill (`.claude/skills/debug/SKILL.md`) — the map of logs, profiling, slow-ops, crashes, and DB surfaces.\n" +
+  '> If an already-landed commit fixes this report, link it with `./equin push --report-fixed-by <report-id>@<full-sha> -m "…"` (a claim-only commit); otherwise the report stays open.';
 
 // Per-reportId in-process mutex. Serialising at the JS layer avoids DB row locks
 // saturating the connection pool, and lets a second concurrent caller observe
