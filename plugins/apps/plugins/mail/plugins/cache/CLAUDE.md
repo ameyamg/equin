@@ -28,6 +28,11 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
     offline), `filter-refused` (a rule the provider cannot run, named in the
     message). Never an empty list.
   - Sort is date only; no `count` (the provider gives estimates).
+  - **A page is 25 threads** (`MAIL_THREADS_PAGE`): one screen. A cold page
+    costs one provider summary per row (Gmail: 40 units each, 98% of a cold
+    page). So each row read past what is on screen takes room from the next
+    cold view's minute. A taller screen reads its next page at once; the rows
+    below it are read only when they are scrolled to.
   - **A read by id answers from the cache only**: a thread never listed (or
     evicted) is absent. Fine for rows a window just showed; the reader opens
     any thread id through `mailCache.thread` (below).
@@ -164,13 +169,13 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   on its next open. Bodies cascade with their thread (retention, gone).
 - **Prefetch** (`deps.prefetch`; Settings → Config `mail-cache` › Bodies
   prefetched per run, 25 — paced into Gmail's background share, what a minute
-  leaves after the provider's foreground reserve of two cold views;
+  leaves after the provider's foreground reserve of four cold views;
   0 turns it off): after every window read, thread open and
   sync step that moved mail, one coalesced run per account fetches, through
   the provider's **background** priority, the wanted bodies not stored, most
   wanted first: the open thread's ±3 neighbours in the view it was opened
   from (the most recently read query holding it), the Inbox's unread first
-  page (50), the head (25) of every view read in the last day. A stale
+  page (25), the head (25) of every view read in the last day. A stale
   summary is skipped (re-read when listed or opened).
 
 ## Triage: the cache first, the provider after (design §6)

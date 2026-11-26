@@ -74,6 +74,23 @@ const MAIL_THREAD_CARRIED = {
 export const MAIL_THREADS_MAX_LIMIT = 200;
 
 /**
+ * Threads per page of {@link mailThreads}: a DataView's first page, the step
+ * each scroll grows by, and the Inbox page preloaded on open.
+ *
+ * Sized to a screen, not beyond. A cold page costs one provider summary per
+ * row, and that is nearly all of it (Gmail, real account, 2026-11-26,
+ * `gmail/api/scripts/cold-page-probe.ts`: 50 rows → one `messages.list`,
+ * 5 units, plus 52 `threads.get` metadata, 2,080 units, of the account's
+ * 6,000 a minute). So the page size is what decides how many cold views fit
+ * in a minute before the next waits on the quota. A row is 37 px: a 900 px
+ * window shows ~22 rows, a 1,300 px one ~33. 25 rows (27 summaries,
+ * ~1,085 units) fill a laptop screen. On a taller one the list's tail is on
+ * screen, so the DataView reads the next page at once, and the rows past the
+ * first screen are read only once they are scrolled to.
+ */
+const MAIL_THREADS_PAGE = 25;
+
+/**
  * Why a window of {@link mailThreads} is not answered — typed, never an empty
  * list and never a server failure:
  *
@@ -103,7 +120,7 @@ export const mailThreads = liveCollection("mail.threads", {
   carry: { fields: MAIL_THREAD_CARRIED },
   id: "id",
   sortable: ["date"],
-  default: { orderBy: [["date", "desc"]], limit: 50 },
+  default: { orderBy: [["date", "desc"]], limit: MAIL_THREADS_PAGE },
   maxLimit: MAIL_THREADS_MAX_LIMIT,
   refusals: MAIL_THREADS_REFUSALS,
   // The provider contract's ops per column: the codec refuses any other, and

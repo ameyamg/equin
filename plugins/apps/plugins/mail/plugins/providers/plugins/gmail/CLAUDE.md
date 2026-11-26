@@ -107,9 +107,9 @@ rounded up>` — a superset, never fewer.
   pacer over the same Gmail budget, and only Google's 429 (which pauses the
   pacer) catches them overspending together.
 - **A foreground reserve** (`accounts.ts`, `FOREGROUND_RESERVE_UNITS`): the
-  pacer's background share is what a minute leaves after two cold 50-thread
-  views (`messages.list` + 50 `threads.get` metadata each, ~4,010 of 6,000
-  units). Background work (prefetch, re-lists, catch-ups) is paced into the
+  pacer's background share is what a minute leaves after four cold views
+  of one page each (`messages.list` + 27 `threads.get` metadata, ~4,340 of
+  6,000 units). Background work (prefetch, re-lists, catch-ups) is paced into the
   rest, never refused. At the pacer's default half, a background charge's
   minute in the window left a second cold view waiting up to a minute: a cold
   Inbox read waited 56 s on 2026-11-26 while 18 prefetched bodies held 36% of

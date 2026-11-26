@@ -126,7 +126,7 @@ const PREFETCH_NEIGHBOURS = 3;
 /** The head of each recently read view whose bodies are prefetched. */
 const PREFETCH_VIEW_TOP = 25;
 /** The Inbox's first page, whose unread threads' bodies are prefetched. */
-const PREFETCH_INBOX_PAGE = 50;
+const PREFETCH_INBOX_PAGE = 25;
 /** A view read this recently is prefetched (design §3: the last day). */
 const PREFETCH_RECENT_MS = 24 * 60 * 60 * 1000;
 

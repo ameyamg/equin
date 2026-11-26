@@ -19,9 +19,10 @@ export const GMAIL_PRIMARY_ACCOUNT = "primary";
 
 /**
  * The units of every minute background work (body prefetch, re-lists,
- * catch-ups) may never take: what a person asks in a minute's burst — two
- * cold views opened back to back, each a 50-thread page (one
- * `messages.list` page and 50 `threads.get` metadata summaries). A
+ * catch-ups) may never take: what a person asks in a minute's burst — four
+ * cold views opened back to back, each one page of mail/cache's
+ * (`MAIL_THREADS_PAGE`, 25 rows, read as 27 summaries with the fill's slack:
+ * one `messages.list` page and 27 `threads.get` metadata). A
  * background charge stays in Gmail's 60 s window for the whole minute, so
  * background admitted into HALF the budget (the pacer's default) left a
  * second cold view waiting up to a minute for it to age out: 18 prefetched
@@ -30,7 +31,7 @@ export const GMAIL_PRIMARY_ACCOUNT = "primary";
  * Background work is not refused, only paced into the rest.
  */
 const FOREGROUND_RESERVE_UNITS =
-  2 * (GMAIL_QUOTA["messages.list"] + 50 * GMAIL_QUOTA["threads.get"].metadata);
+  4 * (GMAIL_QUOTA["messages.list"] + 27 * GMAIL_QUOTA["threads.get"].metadata);
 
 const opened = new Map<
   string,
