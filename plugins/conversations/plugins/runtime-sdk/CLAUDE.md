@@ -292,6 +292,20 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `contextUsage`, once a second per open tab) failed as a loader crash every
   time. An agent started before it measured itself reports nothing until its
   next start (the ring says "No reading yet").
+- **The context nudge** (`core/context-nudge.ts`, `bin/agent.ts`): once the
+  main thread's context passes `firstAt` tokens (default 500k), and again
+  every `every` tokens past it (default 100k) — `contextNudgeConfig`,
+  Settings → Config, read into launch.json's `contextNudge` at every process
+  start — the agent's in-process `PostToolUse` hook (an SDK callback, no
+  spawn) adds a note to the next tool result: "Your context is XX / YY …
+  when you finish the step you are on, call `compact_context`". So the
+  compaction lands at a break between steps, not mid-step like Claude's
+  automatic one. The size is the last main-thread assistant message's input
+  tokens (fresh at every API call — the `context_usage` measure moves only
+  at turn end); the window is that measure's `rawMaxTokens`. One nudge per
+  threshold crossed; a compaction lowers the mark silently, so the sequence
+  starts over. Subagents' tool calls are never nudged. In memory: a
+  restarted agent still past a threshold is nudged once more.
 - `core/partial.ts` — token streaming: the agent folds the SDK's
   `stream_event`s (`includePartialMessages`) into frames — never written to
   `events.jsonl` — and streams them on `subscribe` connections; the backend
@@ -439,12 +453,13 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room — the computer's own login, the only plan account, and the API keys added — add an API key / remove / switch, auto-resume when a limit resets, and — for a developer only — Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and whether it was answered — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+- Description: The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room — the computer's own login, the only plan account, and the API keys added — add an API key / remove / switch, auto-resume when a limit resets, and — for a developer only — Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and whether it was answered — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets); the context-nudge thresholds (when an agent is asked to compact at its next clean break).
 - Web:
   - Contributes:
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
     - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
     - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
+    - `ConfigV2.WebRegister` "runtime-sdk-context-nudge"
   - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `infra/claude-cli/availability` ×4
@@ -484,6 +499,7 @@ Gotchas the spike hit:
     - `resource.declare` "runtime-sdk.error-stopped:rows"
     - `change-feed-exclusion` "conversations_ext_sdk_agent"
     - `ConfigV2.Register` "runtime-sdk-auto-resume"
+    - `ConfigV2.Register` "runtime-sdk-context-nudge"
     - `trigger` "runtime-sdk.attempt-ended"
     - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
     - `conversations.stop-waiver` "background-work"
@@ -549,6 +565,7 @@ Gotchas the spike hit:
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/int/config.intField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
@@ -573,6 +590,7 @@ Gotchas the spike hit:
     - `ClaudeUsageRefresh`
     - `ClaudeUsageWindow`
     - `CommandReply`
+    - `ContextNudgeThresholds`
     - `DisplayNameUnset`
     - `ErrorStoppedConversation`
     - `HelloReply`
@@ -610,10 +628,16 @@ Gotchas the spike hit:
     - `ClaudeUsageRefreshSchema`
     - `ClaudeUsageSchema`
     - `CommandReplySchema`
+    - `contextNudgeConfig`
+    - `contextNudgeText`
+    - `ContextNudgeThresholdsSchema`
     - `DismissReplySchema`
     - `errorStoppedConversations`
     - `HelloReplySchema`
     - `limitReached`
+    - `mainThreadContextTokens`
+    - `nextNudge`
+    - `nudgeBucket`
     - `OpenRequestSchema`
     - `partialFrameOf`
     - `PartialFrameSchema`

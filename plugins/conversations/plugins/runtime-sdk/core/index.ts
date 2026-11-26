@@ -88,3 +88,12 @@ export {
   planAutoResume,
 } from "./auto-resume";
 export type { AutoResumePlan } from "./auto-resume";
+export {
+  contextNudgeConfig,
+  contextNudgeText,
+  ContextNudgeThresholdsSchema,
+  mainThreadContextTokens,
+  nextNudge,
+  nudgeBucket,
+} from "./context-nudge";
+export type { ContextNudgeThresholds } from "./context-nudge";

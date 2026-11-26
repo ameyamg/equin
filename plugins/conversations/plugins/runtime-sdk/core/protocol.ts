@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SleepStampSchema } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/plugins/schema/core";
+import { ContextNudgeThresholdsSchema } from "./context-nudge";
 
 // The wire between a backend and one SDK agent process.
 //
@@ -423,6 +424,13 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      * those sessions carry their instructions in the transcript instead.
      */
     appendSystemPrompt: z.string().nullable().default(null),
+    /**
+     * When the agent's PostToolUse hook asks it to compact at its next clean
+     * break (`contextNudgeConfig`, core/context-nudge.ts). Read from the
+     * config at every process start, never carried over; null (an options
+     * file written before it existed) nudges nothing.
+     */
+    contextNudge: ContextNudgeThresholdsSchema.nullable().default(null),
   }),
 );
 export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
@@ -434,7 +442,8 @@ export type AgentStartFields =
   | "namedLauncher"
   | "namedBun"
   | "backgroundShell"
-  | "seqFloor";
+  | "seqFloor"
+  | "contextNudge";
 
 /** What a launch asks for — everything but the per-start fields. */
 export type AgentLaunchIntent = Omit<AgentLaunchOptions, AgentStartFields>;

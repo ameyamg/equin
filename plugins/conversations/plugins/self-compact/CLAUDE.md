@@ -2,7 +2,10 @@
 
 An agent compacting its own context, on purpose, after a major step — so a
 long-running agent (a supervisor) stays small without waiting
-for Claude's automatic compaction. Granted by the `context.compact` mandate
+for Claude's automatic compaction. Every agent has it: the supervisor and
+interactive presets grant it, and every automation's mandate gets it added
+(`tasks/automations` `mandates.ts`) — runtime-sdk's context nudge asks any
+agent past its threshold to call it. Granted by the `context.compact` mandate
 capability (the `capability` leaf sub-plugin, so mandate presets reached from
 `conversations` can grant it without a cycle); the tool names no workflow.
 

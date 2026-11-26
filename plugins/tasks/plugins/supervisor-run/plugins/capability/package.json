@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-supervisor-run-capability",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The mandate.escalate capability as plain data: an agent granted it may switch its own task to the supervisor mandate (become_supervisor). A leaf, so mandate-presets can grant it without a cycle through supervisor-run, which imports mandate-presets."
+}

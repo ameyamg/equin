@@ -7946,6 +7946,10 @@
       "name": "@equin/plugin-tasks-supervisor-run",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/supervisor-run/plugins/capability": {
+      "name": "@equin/plugin-tasks-supervisor-run-capability",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-attachments": {
       "name": "@equin/plugin-tasks-task-attachments",
       "version": "0.0.1",
@@ -12355,6 +12359,8 @@
     "@equin/plugin-tasks-supervisor-roles-spend": ["@equin/plugin-tasks-supervisor-roles-spend@workspace:plugins/tasks/plugins/supervisor-roles/plugins/spend"],
 
     "@equin/plugin-tasks-supervisor-run": ["@equin/plugin-tasks-supervisor-run@workspace:plugins/tasks/plugins/supervisor-run"],
+
+    "@equin/plugin-tasks-supervisor-run-capability": ["@equin/plugin-tasks-supervisor-run-capability@workspace:plugins/tasks/plugins/supervisor-run/plugins/capability"],
 
     "@equin/plugin-tasks-task-attachments": ["@equin/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
 

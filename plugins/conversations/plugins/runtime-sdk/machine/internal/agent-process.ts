@@ -24,8 +24,10 @@ import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { PGREP, PS } from "@plugins/infra/plugins/paths/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
+import { getConfig } from "@plugins/config_v2/server";
 import {
   AgentLaunchOptionsSchema,
+  contextNudgeConfig,
   type AgentLaunchIntent,
   type AgentLaunchOptions,
 } from "../../core";
@@ -219,6 +221,7 @@ export async function startAgentProcess(
     namedBun,
     backgroundShell: await agentBackgroundShell(agentBinDir(id)),
     seqFloor: await appliedSeq(id),
+    contextNudge: getConfig(contextNudgeConfig),
   };
   // Whole or not at all: the daily reclaim reads a running agent's file, and
   // a torn one would fail its pass.

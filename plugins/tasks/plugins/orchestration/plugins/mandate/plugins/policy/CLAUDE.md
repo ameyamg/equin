@@ -42,6 +42,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `tasks/outcome-report/capability`
     - `tasks/sidequest-autopilot`
     - `tasks/supervisor-roles`
+    - `tasks/supervisor-run/capability`
     - `tasks/task-mandate/manage-grant`
     - `tasks/tasks-core`
     - `upstream`

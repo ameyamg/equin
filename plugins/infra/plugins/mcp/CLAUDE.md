@@ -211,8 +211,8 @@ and without it no tool set can be computed.
     - `McpHealthSchema`
     - `mcpRequest`
 - Cross-plugin:
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks` ×9
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks` ×10
     - `conversations` ×7
     - `debug` ×6
     - `apps` ×4

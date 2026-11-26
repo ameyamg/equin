@@ -1,0 +1,7 @@
+// @hash 851c42105aec
+{
+  // When an agent's context passes this many tokens, it is asked to compact its context once it finishes the step it is on. Applies from each agent's next start.
+  "firstAt": 500000,
+  // After the first nudge, the agent is reminded each time its context grows by this many more tokens. Applies from each agent's next start.
+  "every": 100000
+}

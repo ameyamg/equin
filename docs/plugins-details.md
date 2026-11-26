@@ -25100,12 +25100,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room — the computer's own login, the only plan account, and the API keys added — add an API key / remove / switch, auto-resume when a limit resets, and — for a developer only — Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and whether it was answered — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room — the computer's own login, the only plan account, and the API keys added — add an API key / remove / switch, auto-resume when a limit resets, and — for a developer only — Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and whether it was answered — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets); the context-nudge thresholds (when an agent is asked to compact at its next clean break).
       - Web:
         - Contributes:
           - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
           - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
           - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
+          - `ConfigV2.WebRegister` "runtime-sdk-context-nudge"
         - Uses: 57 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `infra/claude-cli/availability` ×4
@@ -25145,6 +25146,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "runtime-sdk.error-stopped:rows"
           - `change-feed-exclusion` "conversations_ext_sdk_agent"
           - `ConfigV2.Register` "runtime-sdk-auto-resume"
+          - `ConfigV2.Register` "runtime-sdk-context-nudge"
           - `trigger` "runtime-sdk.attempt-ended"
           - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
           - `conversations.stop-waiver` "background-work"
@@ -25210,6 +25212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.nullable`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
+          - `fields/int/config.intField`
           - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
@@ -25234,6 +25237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClaudeUsageRefresh`
           - `ClaudeUsageWindow`
           - `CommandReply`
+          - `ContextNudgeThresholds`
           - `DisplayNameUnset`
           - `ErrorStoppedConversation`
           - `HelloReply`
@@ -25271,10 +25275,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClaudeUsageRefreshSchema`
           - `ClaudeUsageSchema`
           - `CommandReplySchema`
+          - `contextNudgeConfig`
+          - `contextNudgeText`
+          - `ContextNudgeThresholdsSchema`
           - `DismissReplySchema`
           - `errorStoppedConversations`
           - `HelloReplySchema`
           - `limitReached`
+          - `mainThreadContextTokens`
+          - `nextNudge`
+          - `nudgeBucket`
           - `OpenRequestSchema`
           - `partialFrameOf`
           - `PartialFrameSchema`
@@ -25351,6 +25361,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `conversations/self-compact`
+              - `tasks/automations`
               - `tasks/mandate-presets`
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Web:
@@ -42128,8 +42139,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
-          - `tasks` ×9
+        - Imported by: 32 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+          - `tasks` ×10
           - `conversations` ×7
           - `debug` ×6
           - `apps` ×4
@@ -65184,10 +65195,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/density` ×6
           - `ui/tokens/shape` ×2
-        - Imported by: 81 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×18
           - `apps` ×15
-          - `tasks` ×11
+          - `tasks` ×12
           - `debug` ×5
           - `config_v2` ×4
           - `reports` ×4
@@ -67197,6 +67208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/sessions`
               - `tasks/supervisor-roles/sessions/handoff`
+              - `tasks/supervisor-run`
               - `tasks/task-mandate/manage-grant`
           - Plugins:
             - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn (a side chat opened beside the agent running the task keeps its own mandate and is only told nothing changed for it; on conversation.runHandedOver, a side chat that takes over running its task once that agent closed gets the same refresh) — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none. The delivery is sendSectionNotice, which the owner of any other state a section renders (e.g. the supervisor roles list) calls with its own lead and its own section.
@@ -67275,6 +67287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/outcome-report/capability`
                   - `tasks/sidequest-autopilot`
                   - `tasks/supervisor-roles`
+                  - `tasks/supervisor-run/capability`
                   - `tasks/task-mandate/manage-grant`
                   - `tasks/tasks-core`
                   - `upstream`
@@ -68234,7 +68247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-title`
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/spend-detail.tsx` (debt)
-    - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
+    - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins). The become_supervisor MCP tool (granted by mandate.escalate, interactive only): the agent running an interactive task switches that task to the supervisor mandate itself, when its scope is too big for one context — change-notice then hands it the supervisor's tools and sections, and the user is notified with its reason.
       - Web:
         - Contributes: `TaskLaunch.Option` "Supervisor" → `SupervisorLaunchControl`
         - Uses:
@@ -68246,13 +68259,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `tasks/launch-options.TaskLaunch`
       - Server:
-        - Contributes: `taskLaunchServer` "supervisor"
+        - Contributes:
+          - `mandateCapability` "mandate.escalate"
+          - `taskLaunchServer` "supervisor"
         - Uses:
+          - `infra/mcp.Mcp`
+          - `shell/notifications.recordNotification`
           - `tasks/launch-options.TaskLaunchServer`
+          - `tasks/orchestration/mandate.conversationMandate`
+          - `tasks/orchestration/mandate.granted`
+          - `tasks/orchestration/mandate.Mandate`
+          - `tasks/tasks-core.getConversation`
+          - `tasks/tasks-core.getTask`
           - `tasks/tasks-core.setMandate`
+        - Register: `mcpTool('become_supervisor')`
       - Core:
         - Uses: `tasks/launch-options.defineLaunchOption`
         - Exports (values): `supervisorLaunchOption`
+      - Plugins:
+        - **`capability`** — The mandate.escalate capability as plain data: an agent granted it may switch its own task to the supervisor mandate (become_supervisor). A leaf, so mandate-presets can grant it without a cycle through supervisor-run, which imports mandate-presets.
+          - Core:
+            - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+            - Exports (values): `mandateEscalate`
+          - Cross-plugin:
+            - Imported by:
+              - `tasks/mandate-presets`
+              - `tasks/supervisor-run`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`

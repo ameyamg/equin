@@ -20,6 +20,7 @@ import {
 } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
 import { contextCompact } from "@plugins/conversations/plugins/self-compact/plugins/capability/core";
 import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/message/plugins/capability/core";
+import { mandateEscalate } from "@plugins/tasks/plugins/supervisor-run/plugins/capability/core";
 import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
 
 // What each preset grants — the bodies of their MandateDefinitions (server),
@@ -37,6 +38,10 @@ export function interactivePolicy(): MandatePolicy {
     pushPolicy.grant("on-request"),
     exitClean.grant("on-request"),
     flagRaise.grant(true),
+    // Asked to by the context nudge (runtime-sdk) once the context is large.
+    contextCompact.grant(true),
+    // May become a supervisor when the task outgrows one context.
+    mandateEscalate.grant(true),
   ]);
 }
 

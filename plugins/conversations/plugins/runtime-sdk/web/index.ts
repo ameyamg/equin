@@ -5,7 +5,7 @@ import { Shell } from "@plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { ClaudeCodeActions } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 import { ClaudeCodeSignInRemedy } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
-import { autoResumeConfig } from "../core";
+import { autoResumeConfig, contextNudgeConfig } from "../core";
 import { ClaudeAccountFoot } from "./components/claude-account-foot";
 import { ClaudeCodeRowDetail } from "./components/claude-code-row";
 import { ClaudeUsageGlance } from "./components/claude-usage-glance";
@@ -32,5 +32,6 @@ export default {
       component: ClaudeAccountFoot,
     }),
     ConfigV2.WebRegister({ descriptor: autoResumeConfig }),
+    ConfigV2.WebRegister({ descriptor: contextNudgeConfig }),
   ],
 } satisfies PluginDefinition;

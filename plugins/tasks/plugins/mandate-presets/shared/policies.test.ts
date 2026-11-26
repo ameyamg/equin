@@ -7,6 +7,8 @@ import {
 import { exitClean } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { tasksFile, tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
 import { decisionsOpen } from "@plugins/tasks/plugins/decisions/plugins/capability/core";
+import { contextCompact } from "@plugins/conversations/plugins/self-compact/plugins/capability/core";
+import { mandateEscalate } from "@plugins/tasks/plugins/supervisor-run/plugins/capability/core";
 import { interactivePolicy, supervisorPolicy } from "./policies";
 
 describe("exit.clean in the presets", () => {
@@ -95,5 +97,19 @@ describe("decisions.open in the presets", () => {
       [decisionsOpen.id]: true,
     });
     expect(policy[scopeKey("below")]).not.toHaveProperty(decisionsOpen.id);
+  });
+});
+
+describe("self-management in the presets", () => {
+  test("interactive may compact itself and become a supervisor", () => {
+    expect(interactivePolicy()[contextCompact.id]).toBe(true);
+    expect(interactivePolicy()[mandateEscalate.id]).toBe(true);
+  });
+
+  test("a supervisor cannot escalate again", () => {
+    const policy = supervisorPolicy();
+    expect(policy).not.toHaveProperty(mandateEscalate.id);
+    expect(policy[scopeKey("root")]).not.toHaveProperty(mandateEscalate.id);
+    expect(policy[scopeKey("below")]).not.toHaveProperty(mandateEscalate.id);
   });
 });

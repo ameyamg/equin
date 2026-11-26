@@ -25,6 +25,7 @@ import {
 // SIGTERM — and that exit always happens (see `shutdown`).
 import type {
   CanUseTool,
+  HookCallback,
   PermissionResult,
   SDKMessage,
   SDKUserMessage,
@@ -72,6 +73,9 @@ import {
   PROTOCOL_VERSION,
   agentPidFileText,
   claudeUsageOf,
+  contextNudgeText,
+  mainThreadContextTokens,
+  nextNudge,
   applyPartialFrame,
   partialFrameOf,
   type AgentAnswer,
@@ -230,6 +234,46 @@ function recordUsage(msg: SDKMessage, t: number): void {
   writeFileSync(tmp, JSON.stringify(usage));
   renameSync(tmp, usagePath);
 }
+
+// ── context nudge: compact at a clean break ─────────────────────────────────
+// Past `contextNudge.firstAt` tokens, and every `contextNudge.every` after,
+// the next tool result carries a note asking the agent to call
+// `compact_context` once the step it is on ends (core/context-nudge.ts) — so
+// the compaction lands between two steps, never mid-step like Claude's
+// automatic one. The size is the main thread's last API call (fresh inside a
+// long turn); the window is the last `getContextUsage` measure. In memory: a
+// restarted agent still past a threshold is nudged once more.
+let contextTokens: number | null = null;
+let contextWindow: number | null = null;
+let lastNudgedBucket = -1;
+function trackContextTokens(msg: SDKMessage): void {
+  let tokens;
+  try {
+    tokens = mainThreadContextTokens(msg);
+  } catch (err) {
+    if (!(err instanceof ZodError)) throw err;
+    log(`assistant usage did not parse (context nudge blind): ${err.message}`);
+    return;
+  }
+  if (tokens !== null) contextTokens = tokens;
+}
+const contextNudgeHook: HookCallback = (input) => {
+  const t = options.contextNudge;
+  // A subagent's tool result would put the note in the subagent's context.
+  if (t === null || contextTokens === null || input.agent_id !== undefined)
+    return Promise.resolve({});
+  const next = nextNudge(lastNudgedBucket, contextTokens, t);
+  lastNudgedBucket = next.lastBucket;
+  if (!next.nudge) return Promise.resolve({});
+  const text = contextNudgeText(contextTokens, contextWindow);
+  log(`● context nudge: ${text}`);
+  return Promise.resolve({
+    hookSpecificOutput: {
+      hookEventName: "PostToolUse" as const,
+      additionalContext: text,
+    },
+  });
+};
 
 // ── human log (agent.log) ──────────────────────────────────────────────────
 const clip = (s: string, n = 200) => (s.length > n ? `${s.slice(0, n)}…` : s);
@@ -516,6 +560,7 @@ const session = claudeQuery({
     permissionMode: "bypassPermissions",
     allowDangerouslySkipPermissions: true,
     canUseTool,
+    hooks: { PostToolUse: [{ hooks: [contextNudgeHook] }] },
     // Stream events carry the text as the model writes it (the partial
     // message); they are folded here and never written to events.jsonl.
     includePartialMessages: true,
@@ -664,6 +709,8 @@ function measureContext(): void {
     let payload: AgentLifecycle;
     try {
       const usage = await session.getContextUsage({ detail: "summary" });
+      contextWindow = usage.rawMaxTokens;
+      contextTokens = usage.totalTokens;
       payload = { event: "context_usage", usage };
     } catch (err) {
       payload = {
@@ -1018,6 +1065,7 @@ for await (const msg of session) {
   }
   followCliQueue(msg);
   recordUsage(msg, Date.now());
+  trackContextTokens(msg);
   logMessage(msg);
   // A failed turn's message never lands in the transcript. A successful one
   // does, a few ms later: its text stays until the page sees it there.
