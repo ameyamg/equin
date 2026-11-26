@@ -151,7 +151,7 @@ describe("mergeConfigDocument", () => {
       descriptor: renamed,
       base: { items: [{ label: "a" }] },
       // What setConfig saved: the same rows, with seeded ids.
-      yours: { items: [{ id: "auto-1", label: "a" }] },
+      yours: { items: [{ id: "auto-000000000001", label: "a" }] },
       theirs: { rows: [{ label: "b" }] },
     });
     expect(result.status).toBe("merged");
@@ -301,7 +301,7 @@ describe("mergeConfigDocument", () => {
     const yours = {
       ...base,
       enabled: true,
-      rows: [{ id: "auto-123", note: "x" }],
+      rows: [{ id: "auto-0123456789ab", note: "x" }],
     };
     const result = merge(base, yours, { ...base, prompt: "p2" });
     expect(result.status).toBe("merged");
@@ -309,6 +309,17 @@ describe("mergeConfigDocument", () => {
     expect(
       (result.document.rows as { note: string }[]).map((r) => r.note),
     ).toEqual(["x"]);
+  });
+
+  test("an authored id that starts with auto- is a key, not a seeded id", () => {
+    const base = { ...BASE, rows: [{ id: "auto-merged", note: "x" }] };
+    const yours = {
+      ...base,
+      rows: [{ id: "auto-merged", note: "mine" }],
+    };
+    const result = merge(base, yours, { ...base, prompt: "p2" });
+    expect(result.status).toBe("merged");
+    expect(result.document.rows).toEqual([{ id: "auto-merged", note: "mine" }]);
   });
 
   test("an input that is not a document fails loudly", () => {

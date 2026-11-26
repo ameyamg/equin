@@ -131,6 +131,26 @@ function mapFields(
 // Called on read (reloadValues) and on write (setConfig / mergeConflictByPath) —
 // by the server, and by a demo scope's in-browser backend (config_v2/web) —
 // idempotent, and returns a NEW doc object (never mutates the input).
+/**
+ * The id `normalizeCollectionItems` seeds on an id-less row: `auto-` and the
+ * 12-hex-digit `computeHash` of its position and content. `isSeededRowId` is
+ * the one test for it — an authored id that merely starts with `auto-` (the
+ * Config nav's `auto-merged` view) is not one.
+ */
+export function seededRowId(
+  index: number,
+  content: { [key: string]: unknown },
+): string {
+  return `auto-${computeHash([index, content] as unknown as JsonValue)}`;
+}
+
+const SEEDED_ROW_ID = /^auto-[0-9a-f]{12}$/;
+
+/** Whether `id` has the exact shape `seededRowId` mints. */
+export function isSeededRowId(id: unknown): boolean {
+  return typeof id === "string" && SEEDED_ROW_ID.test(id);
+}
+
 export function normalizeCollectionItems(
   doc: Record<string, unknown>,
   fields: FieldsRecord,
@@ -173,7 +193,7 @@ export function normalizeCollectionItems(
         // `mapConfigLists` seeds nested ids only AFTER this returns, which is what
         // keeps the hash identical to the pre-nesting one.
         const { id: _id, ...content } = out;
-        out.id = `auto-${computeHash([index, content] as unknown as JsonValue)}`;
+        out.id = seededRowId(index, content);
       }
       return out;
     });

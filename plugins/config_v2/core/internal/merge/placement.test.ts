@@ -89,11 +89,14 @@ describe("checkPlacement", () => {
 
 describe("merge paths into a written document", () => {
   // A written document carries seeded ids the merge compared rows without.
-  const COLUMNS: JsonValue[] = [{ item: "x" }, { id: "auto-2", item: "y" }];
+  const COLUMNS: JsonValue[] = [
+    { item: "x" },
+    { id: "auto-000000000002", item: "y" },
+  ];
   const doc: { [key: string]: JsonValue } = {
     views: [
       {
-        id: "auto-1",
+        id: "auto-000000000001",
         label: "Main",
         columns: COLUMNS,
       },
@@ -109,9 +112,9 @@ describe("merge paths into a written document", () => {
     const next = withListOrder(doc, path, ["item:y", "item:x"]);
     expect(next.views).toEqual([
       {
-        id: "auto-1",
+        id: "auto-000000000001",
         label: "Main",
-        columns: [{ id: "auto-2", item: "y" }, { item: "x" }],
+        columns: [{ id: "auto-000000000002", item: "y" }, { item: "x" }],
       },
     ]);
     expect(COLUMNS[0]).toEqual({ item: "x" });

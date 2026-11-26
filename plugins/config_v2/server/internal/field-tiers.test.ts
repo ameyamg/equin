@@ -72,7 +72,7 @@ describe("computeFieldTiers", () => {
       overrideContent: {
         enabled: false,
         name: "base",
-        items: [{ title: "a", id: "auto-deadbeef" }],
+        items: [{ title: "a", id: "auto-0000deadbeef" }],
       },
     });
     expect(tiers).toEqual({ enabled: "user", name: "default", items: "git" });
@@ -145,7 +145,11 @@ describe("configDocumentsAgree", () => {
   test("ignores synthesized row ids and key order", () => {
     expect(
       configDocumentsAgree(
-        { name: "base", items: [{ title: "a", id: "auto-1" }], enabled: true },
+        {
+          name: "base",
+          items: [{ title: "a", id: "auto-000000000001" }],
+          enabled: true,
+        },
         { enabled: true, name: "base", items: [{ title: "a" }] },
         fields,
       ),

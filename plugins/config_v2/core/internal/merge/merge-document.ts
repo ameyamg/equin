@@ -1,5 +1,9 @@
 import type { FieldsRecord } from "@plugins/fields/core";
-import { mapConfigLists, normalizeCollectionItems } from "../collections";
+import {
+  isSeededRowId,
+  mapConfigLists,
+  normalizeCollectionItems,
+} from "../collections";
 import type { ConfigV2ValidationIssue } from "../resource";
 import type { ConfigDescriptor, JsonValue } from "../types";
 import {
@@ -54,10 +58,9 @@ function asDocument(value: JsonValue, side: string): Doc {
 function withoutSeededIds(doc: Doc, fields: FieldsRecord): Doc {
   return mapConfigLists(doc, fields, (rows, field) => {
     if (field.stableIdentity) return;
-    if (!rows.some((r) => typeof r.id === "string" && r.id.startsWith("auto-")))
-      return;
+    if (!rows.some((r) => isSeededRowId(r.id))) return;
     return rows.map((row) => {
-      if (typeof row.id !== "string" || !row.id.startsWith("auto-")) return row;
+      if (!isSeededRowId(row.id)) return row;
       const { id: _seeded, ...rest } = row;
       return rest;
     });

@@ -1,3 +1,4 @@
+import { isSeededRowId } from "../collections";
 import type { ConfigMergeRecord } from "./merge-record";
 
 /**
@@ -52,7 +53,7 @@ export interface MergeReviewField {
 }
 
 /**
- * Drop the `auto-<hash>` row ids `normalizeCollectionItems` seeds: an override
+ * Drop the row ids `normalizeCollectionItems` seeds (`isSeededRowId`): an override
  * carries them and an origin does not, so a list nobody touched would read as
  * changed. Authored ids stay — they are what the rows are.
  */
@@ -61,7 +62,7 @@ export function withoutSeededIds(value: unknown): unknown {
   if (typeof value !== "object" || value === null) return value;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value)) {
-    if (k === "id" && typeof v === "string" && v.startsWith("auto-")) continue;
+    if (k === "id" && isSeededRowId(v)) continue;
     out[k] = withoutSeededIds(v);
   }
   return out;
