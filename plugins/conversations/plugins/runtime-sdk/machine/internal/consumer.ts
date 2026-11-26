@@ -20,6 +20,7 @@ import {
 } from "@plugins/packages/plugins/deadline/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   confirmTurn,
   dropTypedTurns,
@@ -53,6 +54,8 @@ import {
 } from "./agent-row-lease";
 import { requestAutoResume } from "./auto-resume";
 import { readEventsAfter } from "./event-reader";
+import { createBootTally, type BootTally } from "./boot-tally";
+import { createBootHold, releasedHold, type BootHold } from "./boot-hold";
 import type { ReadPosition } from "../../server/internal/read-position";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
@@ -146,6 +149,33 @@ const catchUps = createKeyedCoalescer<string>({
   name: "runtime-sdk.catch-ups",
   run: (id) => watchedCatchUp(id),
 });
+
+const triggerCatchUp = (id: string): void => catchUps.trigger(id);
+
+/**
+ * What the follows heard while the boot pass has not caught their agents up
+ * (boot-hold.ts). The boot pass owns every agent's first catch-up, a few at
+ * once ({@link BOOT_CATCH_UP_CONCURRENCY}). Before, each follow the boot's scan
+ * opened started its own catch-ups at once — unbounded, racing the pass,
+ * which then caught every agent up again (2026-11-26: two to three catch-ups
+ * per running agent at boot, the scan's charged to `follow-scan`: 494 ms of
+ * main's 705 ms onReady:conversations).
+ */
+let hold: BootHold = releasedHold(triggerCatchUp);
+
+/** The consumer's boot, measured (null outside a boot). */
+let bootTally: BootTally | null = null;
+
+const consumerBootLog = defineLogSink({
+  id: "runtime-sdk-consumer-boot",
+  description:
+    "SDK runtime consumer boots: one line per backend start — follows opened and their time, catch-ups run (summed and slowest), bytes and events read, and agents read from the start of their events files.",
+});
+
+/** A follow heard `id` (an append, its open's re-read, a loss, its close): catch it up. */
+function followHeard(id: string): void {
+  hold.heard(id);
+}
 
 // A catch-up runs a few idempotent effects and writes the row:
 // milliseconds, a few seconds on a loaded host. Far past that, it is parked on
@@ -248,6 +278,7 @@ async function applyNewLines(
     projection.cursorSeq,
     eventsPosition,
   );
+  bootTally?.read(id, read);
   const { state, effects, gaps, malformed, stalls } = reduceEvents(
     projection,
     read.events,
@@ -527,8 +558,12 @@ const closing = new Map<string, Promise<void>>();
 /**
  * Watch `id`'s directory (idempotent; registered at once, so a caller can pin
  * it before anything awaits), then catch up: lines the agent wrote before the
- * watch was open produced no event. Its `watch` rejects when the watch cannot
- * be opened, and the agent is then not followed.
+ * watch was open produced no event. That catch-up is the follow's own
+ * re-read: every open hands the follower an update for its file when it is on
+ * disk (file-watcher's `look`), heard as an `onChange` like any write — so no
+ * second trigger here (one was, and every follow ran two catch-ups). Its
+ * `watch` rejects when the watch cannot be opened, and the agent is then not
+ * followed.
  *
  * Only this namespace's agents are followed (their pid files, or this
  * backend's own launch), so every one is this DB's conversation.
@@ -552,7 +587,7 @@ function followAgent(id: string): Follow {
             // for a stalled consumer must hear the agent write even when
             // catch-up is wedged.
             for (const hear of appendListeners.get(id) ?? []) hear();
-            catchUps.trigger(id);
+            followHeard(id);
           },
           onLost: async (_dir, error) => {
             // Its directory went: this watch hears nothing more. The scan
@@ -562,20 +597,14 @@ function followAgent(id: string): Follow {
               followScan.trigger();
             }
             // Events may have been dropped: read what is on disk.
-            catchUps.trigger(id);
+            followHeard(id);
           },
         }),
       )
-      .then(
-        (watch) => {
-          catchUps.trigger(id);
-          return watch;
-        },
-        (err: unknown) => {
-          if (followed.get(id) === follow) followed.delete(id);
-          throw err;
-        },
-      ),
+      .catch((err: unknown) => {
+        if (followed.get(id) === follow) followed.delete(id);
+        throw err;
+      }),
   };
   followed.set(id, follow);
   return follow;
@@ -602,7 +631,7 @@ async function unfollowAgent(id: string, only?: Follow): Promise<void> {
   } finally {
     if (closing.get(id) === closed) closing.delete(id);
   }
-  catchUps.trigger(id);
+  followHeard(id);
 }
 
 /**
@@ -652,8 +681,10 @@ async function syncFollowed(): Promise<void> {
   }
   for (const id of running) {
     if (followed.has(id)) continue;
+    const startedAt = performance.now();
     try {
       await followAgent(id).watch;
+      bootTally?.opened(id, performance.now() - startedAt);
     } catch (err) {
       await reportFollowFailure(id, "could not be watched", err);
     }
@@ -701,6 +732,25 @@ export async function startConsumer(
 ): Promise<() => Promise<void>> {
   if (signal) throw new Error("runtime-sdk consumer: already started");
   signal = onSignal;
+  const booting = createBootHold(triggerCatchUp);
+  const tally = createBootTally();
+  hold = booting;
+  bootTally = tally;
+  try {
+    return await bootConsumer(step, booting, tally);
+  } finally {
+    // Whatever the boot did, the follows catch up on their own from here.
+    booting.release();
+    bootTally = null;
+    consumerBootLog.publish(tally.summary());
+  }
+}
+
+async function bootConsumer(
+  step: BootStep,
+  booting: BootHold,
+  tally: BootTally,
+): Promise<() => Promise<void>> {
   const pidsDir = ownAgentPidsDir();
   // An agent starting or exiting adds or removes its pid file; one killed
   // outright leaves it behind, which the reconciler's recount notices.
@@ -731,13 +781,21 @@ export async function startConsumer(
   // they are brought up together, a few at once: one after another, a boot
   // paid two round trips per agent in series, each queued behind the rest of
   // the boot.
+  // An agent a follow heard that neither list names (one launched meanwhile)
+  // is caught up by the same pass.
+  const toCatchUp = new Set([...atBoot, ...booting.pending()]);
   const gate = createSemaphore(BOOT_CATCH_UP_CONCURRENCY);
   await step("catch-up", () =>
     Promise.all(
-      [...atBoot].map((id) =>
+      [...toCatchUp].map((id) =>
         gate.run(async () => {
           ours.add(id);
+          // What it heard until now, this run reads; what it hears from
+          // here is held again and caught up once the boot is done.
+          booting.claim(id);
+          const startedAt = performance.now();
           await catchUps.run(id);
+          tally.caughtUp(id, performance.now() - startedAt);
           await resyncOpenRequests(id);
         }),
       ),

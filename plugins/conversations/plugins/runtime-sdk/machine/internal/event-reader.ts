@@ -54,9 +54,9 @@ async function openIfExists(path: AppPath): Promise<OpenFile | null> {
 async function readLinesFrom(
   file: OpenFile,
   offset: number,
-): Promise<{ lines: string[]; end: number }> {
+): Promise<{ lines: string[]; end: number; bytes: number }> {
   const length = file.size - offset;
-  if (length <= 0) return { lines: [], end: offset };
+  if (length <= 0) return { lines: [], end: offset, bytes: 0 };
   const buf = Buffer.alloc(length);
   let read = 0;
   while (read < length) {
@@ -70,11 +70,12 @@ async function readLinesFrom(
     read += n;
   }
   const lastNl = buf.lastIndexOf(0x0a, read - 1);
-  if (lastNl < 0) return { lines: [], end: offset };
+  if (lastNl < 0) return { lines: [], end: offset, bytes: read };
   const text = buf.subarray(0, lastNl).toString("utf8");
   return {
     lines: text.split("\n").filter((l) => l.length > 0),
     end: offset + lastNl + 1,
+    bytes: read,
   };
 }
 
@@ -88,6 +89,20 @@ function parseLine(path: string, line: string): AgentEvent {
   }
 }
 
+/** What one read of an agent's events file family found, and what it cost. */
+export interface EventsRead {
+  events: AgentEvent[];
+  /** Where the read stopped (null: no live file). */
+  position: ReadPosition | null;
+  /** Bytes read off disk. */
+  bytes: number;
+  /**
+   * Whether the whole family was read from its oldest generation — no
+   * position, or one no file holds any more — rather than on from a position.
+   */
+  whole: boolean;
+}
+
 /**
  * Every complete event line of the file family at `path` after `position`
  * (null: from the oldest generation), and where the read stopped.
@@ -95,7 +110,7 @@ function parseLine(path: string, line: string): AgentEvent {
 export async function readAgentEvents(
   path: AppPath,
   position: ReadPosition | null,
-): Promise<{ events: AgentEvent[]; position: ReadPosition | null }> {
+): Promise<EventsRead> {
   // Oldest first: <path>.keep … <path>.1, then the live file.
   const paths: AppPath[] = [
     ...Array.from({ length: SINK_KEEP }, (_, i) =>
@@ -110,6 +125,7 @@ export async function readAgentEvents(
     const live = files.at(-1) ?? null;
     let start = 0;
     let startOffset = 0;
+    let whole = true;
     if (position) {
       const at = files.findIndex(
         (f) => f?.ino === position.ino && f.size >= position.offset,
@@ -117,21 +133,21 @@ export async function readAgentEvents(
       if (at >= 0) {
         start = at;
         startOffset = position.offset;
+        whole = false;
       }
     }
     const events: AgentEvent[] = [];
     let next: ReadPosition | null = position;
+    let bytes = 0;
     for (let i = start; i < files.length; i++) {
       const file = files[i];
       if (!file) continue;
-      const { lines, end } = await readLinesFrom(
-        file,
-        i === start ? startOffset : 0,
-      );
-      for (const line of lines) events.push(parseLine(paths[i]!, line));
-      if (file === live) next = { ino: file.ino, offset: end };
+      const read = await readLinesFrom(file, i === start ? startOffset : 0);
+      bytes += read.bytes;
+      for (const line of read.lines) events.push(parseLine(paths[i]!, line));
+      if (file === live) next = { ino: file.ino, offset: read.end };
     }
-    return { events, position: live ? next : null };
+    return { events, position: live ? next : null, bytes, whole };
   } finally {
     for (const f of files) if (f) await f.handle.close();
   }
@@ -149,9 +165,10 @@ export async function readEventsAfter(
   path: AppPath,
   cursorSeq: number,
   from: ReadPosition | null,
-): Promise<{ events: AgentEvent[]; position: ReadPosition | null }> {
+): Promise<EventsRead> {
   const read = await readAgentEvents(path, from);
   const first = read.events[0];
   if (from === null || !first || first.seq <= cursorSeq + 1) return read;
-  return readAgentEvents(path, null);
+  const again = await readAgentEvents(path, null);
+  return { ...again, bytes: read.bytes + again.bytes };
 }

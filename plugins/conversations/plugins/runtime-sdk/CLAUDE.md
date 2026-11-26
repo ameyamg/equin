@@ -80,6 +80,17 @@ agents without tmux, per-namespace paths, the Claude Code health row:
     file with no row is reported (`SdkEventsWithoutRow`); only "no row, no
     file" (create has not prepared it) is silent. `isOurs` caches only a yes:
     a cached no would skip a conversation forever.
+  - **The boot catches each agent up once** (`boot-hold.ts`): while
+    `startConsumer` runs, what a follow hears (its open's re-read, an append,
+    a loss) only marks the agent, and the boot's `catch-up` step runs every
+    marked or live agent, 8 at a time; what is heard after the pass took an
+    agent is caught up when the boot ends. Before, each follow the boot's
+    scan opened started its own catch-ups at once, unbounded, and the pass
+    then ran them all again (2026-11-26: `follow-scan` 494 ms of a 705 ms
+    onReady). Each boot writes one line to the `runtime-sdk-consumer-boot`
+    log (`boot-tally.ts`): follows opened and their time,
+    catch-ups run, their summed and slowest time, bytes and events read, and
+    any agent read from the start of its file family.
 - **One writer per agent row** (`machine/internal/agent-row-lease.ts`). Every
   write of `conversations_ext_sdk_agent` — a catch-up's projection, a launch
   preparing the row (`prepareLaunchRow`), a relaunch naming its session

@@ -46,6 +46,8 @@ describe("readAgentEvents", () => {
     expect(await readAgentEvents(path, null)).toEqual({
       events: [],
       position: null,
+      bytes: 0,
+      whole: true,
     });
   });
 
@@ -109,7 +111,10 @@ describe("readEventsAfter", () => {
     append(path, 1, 2);
     const stored = (await readAgentEvents(path, null)).position;
     append(path, 3, 4);
-    expect(seqs(await readEventsAfter(path, 2, stored))).toEqual([3, 4]);
+    const read = await readEventsAfter(path, 2, stored);
+    expect(seqs(read)).toEqual([3, 4]);
+    expect(read.whole).toBe(false);
+    expect(read.bytes).toBe(statSync(path).size - stored!.offset);
   });
 
   test("nothing appended since: nothing to read", async () => {
@@ -123,7 +128,13 @@ describe("readEventsAfter", () => {
     const end = (await readAgentEvents(path, null)).position!;
     append(path, 4);
     // The cursor only reached 1, yet the position says 3: it is not this cursor's.
-    expect(seqs(await readEventsAfter(path, 1, end))).toEqual([1, 2, 3, 4]);
+    const read = await readEventsAfter(path, 1, end);
+    expect(seqs(read)).toEqual([1, 2, 3, 4]);
+    // The whole family, on top of the read from the position that told.
+    expect(read.whole).toBe(true);
+    expect(read.bytes).toBe(
+      statSync(path).size + (statSync(path).size - end.offset),
+    );
   });
 
   test("a position past the end of the file that has its inode: the whole family", async () => {
