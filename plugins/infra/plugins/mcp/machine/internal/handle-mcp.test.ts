@@ -13,24 +13,23 @@ import { createMcpHandler } from "./handle-mcp";
 import { Mcp, type McpToolContext } from "../../server";
 import { MCP_UNATTACHED_ID } from "../../core";
 import { registry, scopeRegistry } from "../../server/internal/registry";
+import type { ToolsListing } from "../../server/internal/listed";
 
 /** Every tools/list answer, as the request path recorded it. */
-const listings: { conversationId: string; tools: readonly string[] }[] = [];
+const listings: ({ conversationId: string } & ToolsListing)[] = [];
 const handleMcpRequest = createMcpHandler({
-  recordListing: (conversationId, tools) => {
-    listings.push({ conversationId, tools });
+  recordListing: (conversationId, listing) => {
+    listings.push({ conversationId, ...listing });
     return Promise.resolve();
   },
   readListing: (conversationId) => readListing(conversationId),
 });
 
 /** The port's read of a conversation's listing: by default its latest one. */
-let readListing: (conversationId: string) => Promise<readonly string[] | null>;
+let readListing: (conversationId: string) => Promise<ToolsListing | null>;
 
-function latestListing(conversationId: string): readonly string[] | null {
-  return (
-    listings.findLast((l) => l.conversationId === conversationId)?.tools ?? null
-  );
+function latestListing(conversationId: string): ToolsListing | null {
+  return listings.findLast((l) => l.conversationId === conversationId) ?? null;
 }
 
 /** The messages an answer carries, in order, whichever form it was sent in. */
@@ -233,7 +232,13 @@ describe("Mcp.tool when", () => {
     gate("shown", true);
     gate("hidden", false);
     const names = await listed();
-    expect(listings).toEqual([{ conversationId: CONVERSATION, tools: names }]);
+    expect(listings).toEqual([
+      {
+        conversationId: CONVERSATION,
+        tools: names,
+        fingerprint: expect.any(String) as string,
+      },
+    ]);
     expect([...names].sort()).toEqual(["echo", "shown"]);
     await call("shown");
     expect(listings).toHaveLength(1);
@@ -495,7 +500,7 @@ describe("a client whose tool list is stale", () => {
     let open = false;
     gated("granted", () => open);
     await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
-    expect(latestListing(CONVERSATION)).toEqual(["echo"]);
+    expect(latestListing(CONVERSATION)?.tools).toEqual(["echo"]);
     open = true;
     const res = await callEcho();
     expect(res.status).toBe(200);
@@ -521,11 +526,79 @@ describe("a client whose tool list is stale", () => {
     expect((await messagesOf(await callEcho()))[0]).toEqual(LIST_CHANGED);
   });
 
-  test("the same names in another order are no change", async () => {
+  test("the same tools mounted in another order are no change", async () => {
     gated("b", () => true);
-    readListing = () => Promise.resolve(["b", "echo"]);
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    // Re-registered in the other order: same tools, other mount order.
+    const [echo, b] = [registry.get("echo"), registry.get("b")];
+    if (!echo || !b) throw new Error("missing tools");
+    registry.clear();
+    registry.set("b", b);
+    registry.set("echo", echo);
     const res = await callEcho();
     expect(res.headers.get("content-type")).toStartWith("application/json");
+  });
+
+  /** Re-registers `echo` as the given declaration — a deploy that changed it. */
+  function redeclareEcho(change: {
+    description?: string;
+    inputSchema?: z.ZodRawShape;
+  }): void {
+    registry.delete("echo");
+    void Mcp.tool({
+      name: "echo",
+      description: change.description ?? "Echo",
+      inputSchema: change.inputSchema ?? { text: z.string() },
+      handler: (args) => ({
+        content: [{ type: "text", text: String(args.text) }],
+      }),
+    }).register();
+  }
+
+  // dbf4fa023a reworded turn_for and added a field: sessions connected before
+  // it kept the old text, and a call using the new field was refused.
+  test("a tool reworded since the listing streams it", async () => {
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    redeclareEcho({ description: "Echo, reworded" });
+    expect((await messagesOf(await callEcho()))[0]).toEqual(LIST_CHANGED);
+    await post({ jsonrpc: "2.0", id: 3, method: "tools/list" });
+    const after = await callEcho(21);
+    expect(after.headers.get("content-type")).toStartWith("application/json");
+  });
+
+  test("a tool whose input schema changed since the listing streams it", async () => {
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    redeclareEcho({
+      inputSchema: { text: z.string(), awaiting: z.string().optional() },
+    });
+    expect((await messagesOf(await callEcho()))[0]).toEqual(LIST_CHANGED);
+  });
+
+  test("the same declaration registered again is no change", async () => {
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    redeclareEcho({});
+    const res = await callEcho();
+    expect(res.headers.get("content-type")).toStartWith("application/json");
+  });
+
+  test("a live section that moved since the listing is no change", async () => {
+    let section = "one";
+    void Mcp.tool({
+      name: "vocab",
+      description: "vocab",
+      inputSchema: {},
+      liveDescription: () => Promise.resolve(section),
+      handler: () => ({ content: [{ type: "text", text: "ok" }] }),
+    }).register();
+    await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    section = "two";
+    const res = await callEcho();
+    expect(res.headers.get("content-type")).toStartWith("application/json");
+  });
+
+  test("a listing recorded before fingerprints streams it", async () => {
+    readListing = () => Promise.resolve({ tools: ["echo"], fingerprint: null });
+    expect((await messagesOf(await callEcho()))[0]).toEqual(LIST_CHANGED);
   });
 
   test("no recorded listing (connected before the record) streams it", async () => {

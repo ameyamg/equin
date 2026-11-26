@@ -5,32 +5,47 @@ import type { McpToolRegistration } from "./mcp";
 import { registry } from "./registry";
 import { _mcpListedTools } from "./tables";
 
-/** Records the tools a `tools/list` answer to `conversationId` held. */
+/**
+ * What a `tools/list` answer to a conversation held: the tools' names, and the
+ * fingerprint of everything it handed them with (names, descriptions, input
+ * schemas) — `null` for a listing recorded before the fingerprint was.
+ */
+export interface ToolsListing {
+  tools: readonly string[];
+  fingerprint: string | null;
+}
+
+/** Records what a `tools/list` answer to `conversationId` held. */
 export async function recordToolsListed(
   conversationId: string,
-  tools: readonly string[],
+  listing: { tools: readonly string[]; fingerprint: string },
 ): Promise<void> {
+  const tools = [...listing.tools];
+  const { fingerprint } = listing;
   await db
     .insert(_mcpListedTools)
-    .values({ conversationId, tools: [...tools] })
+    .values({ conversationId, tools, fingerprint })
     .onConflictDoUpdate({
       target: _mcpListedTools.conversationId,
-      set: { tools: [...tools], listedAt: sql`now()` },
+      set: { tools, fingerprint, listedAt: sql`now()` },
     });
 }
 
 /**
- * The tools last listed to `conversationId` — what its client holds — or
- * `null` when no listing is recorded (`never-listed` below).
+ * The listing last handed to `conversationId` — what its client holds — or
+ * `null` when none is recorded (`never-listed` below).
  */
 export async function readToolsListed(
   conversationId: string,
-): Promise<readonly string[] | null> {
+): Promise<ToolsListing | null> {
   const [row] = await db
-    .select({ tools: _mcpListedTools.tools })
+    .select({
+      tools: _mcpListedTools.tools,
+      fingerprint: _mcpListedTools.fingerprint,
+    })
     .from(_mcpListedTools)
     .where(eq(_mcpListedTools.conversationId, conversationId));
-  return row ? row.tools : null;
+  return row ?? null;
 }
 
 /**
@@ -58,7 +73,8 @@ export async function toolCallableBy(
   if (!tool) throw new Error(`MCP tool "${name}" is not registered here`);
   const listed = await readToolsListed(conversationId);
   if (!listed) return { callable: false, why: "never-listed" };
-  if (!listed.includes(name)) return { callable: false, why: "not-listed" };
+  if (!listed.tools.includes(name))
+    return { callable: false, why: "not-listed" };
   if (tool.when && !(await tool.when({ conversationId })))
     return { callable: false, why: "hidden" };
   return { callable: true };

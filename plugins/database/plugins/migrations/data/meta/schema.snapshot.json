@@ -1,6 +1,6 @@
 {
-  "id": "5ab9fe0f-d43a-42cf-b532-04966e6362cf",
-  "prevId": "fe38bf34-d57c-4cfa-b6dd-44e84090b0f0",
+  "id": "53faf749-fb2b-4e01-becd-758dee6b6de5",
+  "prevId": "5ab9fe0f-d43a-42cf-b532-04966e6362cf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13610,6 +13610,12 @@
           "type": "text[]",
           "primaryKey": false,
           "notNull": true
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "listed_at": {
           "name": "listed_at",

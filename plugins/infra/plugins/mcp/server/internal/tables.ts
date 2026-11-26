@@ -6,12 +6,20 @@ import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
  * keeps that list for the session — a tool added since, or one whose `when`
  * turned true since, is not in it (2026-11-26: every session started before
  * `turn_for` shipped was asked by the stop gate to call a tool it did not
- * have). Read by `toolCallableBy`. No FK: this plugin knows nothing of
+ * have). Read by `toolCallableBy`, and by the request path to tell a client
+ * whose list is stale to re-list. No FK: this plugin knows nothing of
  * conversations, so rows are bounded by `listedToolsRetention`.
  */
 export const _mcpListedTools = pgTable("mcp_listed_tools", {
   conversationId: text("conversation_id").primaryKey(),
   tools: text("tools").array().notNull(),
+  /**
+   * The listing's fingerprint (machine's `listingFingerprint`): each tool's
+   * name, fixed description and input schema, so a tool reworded or reshaped
+   * since is a change as much as one added. `null` for a listing recorded
+   * before the column — told to re-list, which records it.
+   */
+  fingerprint: text("fingerprint"),
   listedAt: timestamp("listed_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

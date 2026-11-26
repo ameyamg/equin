@@ -42,10 +42,12 @@ export type McpToolResult = {
 type McpToolOutcome = Promise<McpToolResult> | McpToolResult;
 
 interface McpToolBase<T extends z.ZodRawShape> {
-  name: string;
+  readonly name: string;
   /** The fixed text of the tool's description. */
-  description: string;
-  inputSchema: T;
+  readonly description: string;
+  /** Fixed once registered, as the name and description are: the request
+   * path memoizes each tool's listing fingerprint per tool object. */
+  readonly inputSchema: T;
 }
 
 /** A tool only a conversation equin launched sees (the default). */

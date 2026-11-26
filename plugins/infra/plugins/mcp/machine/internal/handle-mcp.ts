@@ -19,7 +19,9 @@ import { registry, scopeRegistry } from "../../server/internal/registry";
 import {
   readToolsListed,
   recordToolsListed,
+  type ToolsListing,
 } from "../../server/internal/listed";
+import { listingFingerprint } from "./fingerprint";
 import { toolsInScope } from "./scope";
 import { mcpSdk, type McpSdk } from "./sdk";
 
@@ -57,13 +59,13 @@ export function createMcpHandler(ports: McpPorts) {
 
 /** What the request path writes outside itself. */
 export interface McpPorts {
-  /** Records the tools a `tools/list` answer to a conversation held. */
+  /** Records what a `tools/list` answer to a conversation held. */
   recordListing(
     conversationId: string,
-    tools: readonly string[],
+    listing: { tools: readonly string[]; fingerprint: string },
   ): Promise<void>;
-  /** The tools last listed to a conversation, `null` when none is recorded. */
-  readListing(conversationId: string): Promise<readonly string[] | null>;
+  /** What was last listed to a conversation, `null` when none is recorded. */
+  readListing(conversationId: string): Promise<ToolsListing | null>;
 }
 
 export const handleMcpRequest = createMcpHandler({
@@ -212,8 +214,9 @@ function unattachedTools(): MountedTool[] {
 
 /**
  * A conversation's tools: its scope, then each tool's own `when` — and whether
- * its client's list is stale: the names it was last listed differ from these
- * (or none is recorded), so the answer tells it to re-list.
+ * its client's list is stale: what it was last listed (each tool's name, fixed
+ * description and input schema, as one fingerprint) differs from these, or
+ * none is recorded, so the answer tells it to re-list.
  */
 async function conversationTools(
   conversationId: string,
@@ -260,9 +263,10 @@ async function conversationTools(
   // served: the gates then read this conversation's previous listing, or
   // none (and spare it).
   const names = mounted.map((tool) => tool.name);
+  const fingerprint = listingFingerprint(mounted);
   if (listing) {
     await runContribution("listed-tools record", () =>
-      ports.recordListing(conversationId, names),
+      ports.recordListing(conversationId, { tools: names, fingerprint }),
     );
   }
   return {
@@ -272,8 +276,7 @@ async function conversationTools(
     })),
     // A gate that threw hid its tool from this request only: what the
     // conversation should see is unknown, so it is no reason to re-list.
-    stale:
-      gates.every((gate) => gate.ok) && sameNames(await held, names) === false,
+    stale: gates.every((gate) => gate.ok) && isStale(await held, fingerprint),
   };
 }
 
@@ -289,7 +292,7 @@ async function askHeldListing(
   conversationId: string,
   messages: readonly unknown[],
   ports: McpPorts,
-): Promise<readonly string[] | null | "skip"> {
+): Promise<ToolsListing | null | "skip"> {
   if (!hasRequest(messages) || hasToolsList(messages)) return "skip";
   if (hasInitialize(messages)) return "skip";
   const outcome = await runContribution("listed-tools read", () =>
@@ -298,17 +301,15 @@ async function askHeldListing(
   return outcome.ok ? outcome.value : "skip";
 }
 
-/** Whether the held listing names exactly `names`, as a set; `null` when
- * there is nothing to compare (skipped), `false` when none is recorded. */
-function sameNames(
-  held: readonly string[] | null | "skip",
-  names: readonly string[],
-): boolean | null {
-  if (held === "skip") return null;
-  if (held === null) return false;
-  const now = new Set(names);
-  const listed = new Set(held);
-  return now.size === listed.size && [...now].every((name) => listed.has(name));
+/** Whether the client holds another listing than `fingerprint`: none is
+ * recorded, or one recorded before fingerprints were (`null`), counts as
+ * another. Never when the read was skipped. */
+function isStale(
+  held: ToolsListing | null | "skip",
+  fingerprint: string,
+): boolean {
+  if (held === "skip") return false;
+  return held === null || held.fingerprint !== fingerprint;
 }
 
 /**

@@ -15,7 +15,7 @@ import { registry, scopeRegistry } from "../../server/internal/registry";
 /** Every tools/list answer, as the request path recorded it. */
 const listings: { conversationId: string; tools: readonly string[] }[] = [];
 const handleMcpRequest = createMcpHandler({
-  recordListing: (conversationId, tools) => {
+  recordListing: (conversationId, { tools }) => {
     listings.push({ conversationId, tools });
     return Promise.resolve();
   },
