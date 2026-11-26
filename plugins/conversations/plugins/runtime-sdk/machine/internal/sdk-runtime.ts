@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { BootStep } from "@plugins/framework/plugins/server-core/core";
 import { awakeClock } from "@plugins/packages/plugins/deadline/core";
 import type {
   ConversationRuntime,
@@ -687,9 +688,9 @@ export const sdkRuntime: ConversationRuntime = {
     }
   },
 
-  async subscribe(onSignal: (signal: RuntimeSignal) => void) {
-    await attachRunningAgents();
-    const stop = await startConsumer(onSignal);
+  async subscribe(onSignal: (signal: RuntimeSignal) => void, step: BootStep) {
+    await step("attach", () => attachRunningAgents());
+    const stop = await startConsumer(onSignal, step);
     return () => void stop();
   },
 

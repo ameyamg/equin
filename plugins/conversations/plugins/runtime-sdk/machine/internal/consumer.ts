@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import type { BootStep } from "@plugins/framework/plugins/server-core/core";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { recordContextUsage } from "@plugins/conversations/plugins/context-usage/server";
 import { markAgentLaunchPhase } from "@plugins/conversations/plugins/launch-timeline/server";
@@ -696,41 +697,50 @@ const BOOT_CATCH_UP_CONCURRENCY = 8;
  */
 export async function startConsumer(
   onSignal: (s: RuntimeSignal) => void,
+  step: BootStep,
 ): Promise<() => Promise<void>> {
   if (signal) throw new Error("runtime-sdk consumer: already started");
   signal = onSignal;
-  await mkdir(ownAgentsRoot(), { recursive: true });
   const pidsDir = ownAgentPidsDir();
-  await mkdir(pidsDir, { recursive: true });
   // An agent starting or exiting adds or removes its pid file; one killed
   // outright leaves it behind, which the reconciler's recount notices.
-  const releasePids = await acquireDirWatch({
-    dir: pidsDir,
-    scope: "children",
-    onChange: () => followScan.trigger(),
+  const releasePids = await step("watch-pids", async () => {
+    await mkdir(ownAgentsRoot(), { recursive: true });
+    await mkdir(pidsDir, { recursive: true });
+    return acquireDirWatch({
+      dir: pidsDir,
+      scope: "children",
+      onChange: () => followScan.trigger(),
+    });
   });
   const unrecount = onAgentProcessesRecount(() => followScan.trigger());
-  await followScan.run();
+  await step("follow-scan", () => followScan.run());
   const unlisten = onQuestionResolved(onResolved);
   // The rows expected live (an agent that exited while this backend was down
   // still has its last lines to read) and every agent actually running, whatever
   // its row says.
-  const atBoot = new Set([
-    ...(await liveSdkConversationIds()),
-    ...(await runningAgentIds()),
-  ]);
+  const atBoot = await step(
+    "boot-ids",
+    async () =>
+      new Set([
+        ...(await liveSdkConversationIds()),
+        ...(await runningAgentIds()),
+      ]),
+  );
   // Agents are independent (a catch-up is one at a time per agent only), so
   // they are brought up together, a few at once: one after another, a boot
   // paid two round trips per agent in series, each queued behind the rest of
   // the boot.
   const gate = createSemaphore(BOOT_CATCH_UP_CONCURRENCY);
-  await Promise.all(
-    [...atBoot].map((id) =>
-      gate.run(async () => {
-        ours.add(id);
-        await catchUps.run(id);
-        await resyncOpenRequests(id);
-      }),
+  await step("catch-up", () =>
+    Promise.all(
+      [...atBoot].map((id) =>
+        gate.run(async () => {
+          ours.add(id);
+          await catchUps.run(id);
+          await resyncOpenRequests(id);
+        }),
+      ),
     ),
   );
   return async () => {

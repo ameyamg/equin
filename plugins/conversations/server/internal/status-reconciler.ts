@@ -647,9 +647,9 @@ async function drain(): Promise<void> {
  * runtime whose signals cannot open would leave its conversations frozen.
  */
 export async function startStatusReconciler(step: BootStep): Promise<void> {
-  await step("subscribe", async () => {
+  await step("subscribe", async (inner) => {
     for (const runtime of Runtime.all()) {
-      await runtime.subscribe(onSignal);
+      await inner(runtime.id, (parts) => runtime.subscribe(onSignal, parts));
     }
   });
   // The one state no runtime signal carries: a refused session id's transcript

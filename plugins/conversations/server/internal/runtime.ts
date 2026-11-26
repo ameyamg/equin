@@ -1,4 +1,7 @@
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import type {
+  BootStep,
+  Registration,
+} from "@plugins/framework/plugins/server-core/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { getConversationRuntime } from "@plugins/tasks/plugins/tasks-core/server";
@@ -125,9 +128,13 @@ export interface ConversationRuntime {
    * Start delivering push signals (see {@link RuntimeSignal}). Resolves once the
    * runtime's signal sources are open — a source that cannot open rejects, so a
    * runtime that would leave its conversations' status frozen fails loudly at
-   * boot. Resolves to the unsubscribe.
+   * boot. Resolves to the unsubscribe. `step` times its named parts (the
+   * caller's boot hook).
    */
-  subscribe(onSignal: (signal: RuntimeSignal) => void): Promise<() => void>;
+  subscribe(
+    onSignal: (signal: RuntimeSignal) => void,
+    step: BootStep,
+  ): Promise<() => void>;
   /**
    * Send `turn` to the session as one user turn. Resolves once the agent
    * queued it — whether it took it is the agent's own `turn_started`, which
