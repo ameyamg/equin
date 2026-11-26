@@ -1,4 +1,5 @@
-import type { ReactElement } from "react";
+import type { MouseEvent, ReactElement } from "react";
+import { flushSync } from "react-dom";
 import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -6,6 +7,10 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import {
+  findScrollParent,
+  keepInPlace,
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useSideNote, type SideNoteRow } from "../internal/use-side-note";
 
@@ -57,7 +62,16 @@ export function SideNoteToggle({
         }
         active={isVisible}
         aria-pressed={isVisible}
-        onClick={toggleVisible}
+        onClick={(e: MouseEvent<HTMLElement>) => {
+          // The note opens (or closes) ABOVE its toggle, so the toggle would
+          // be pushed down — out from under the pointer, off screen at the
+          // bottom of a pane. Keep it where it is instead: the scroller takes
+          // the note's height, in the same frame.
+          const button = e.currentTarget;
+          keepInPlace(findScrollParent(button), button, () =>
+            flushSync(toggleVisible),
+          );
+        }}
       />
       {hasText && (
         <Pin to="top-right" offset="xs" decorative>

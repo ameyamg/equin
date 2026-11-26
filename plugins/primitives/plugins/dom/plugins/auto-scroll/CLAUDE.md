@@ -366,8 +366,8 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×10
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×11
     - `apps` ×8
     - `conversations` ×4
     - `apps-core/tab-surface`

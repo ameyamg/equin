@@ -56178,8 +56178,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
-              - `primitives` ×10
+            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+              - `primitives` ×11
               - `apps` ×8
               - `conversations` ×4
               - `apps-core/tab-surface`
@@ -60349,6 +60349,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Textarea`
+          - `primitives/dom/auto-scroll.findScrollParent`
+          - `primitives/dom/auto-scroll.keepInPlace`
           - `primitives/editable-field.useEditableField`
           - `primitives/icon-button.IconButton`
         - Exports (types):

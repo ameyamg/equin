@@ -33,6 +33,8 @@ component trees and share their open / draft state by it.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Textarea`
+    - `primitives/dom/auto-scroll.findScrollParent`
+    - `primitives/dom/auto-scroll.keepInPlace`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
   - Exports (types):
