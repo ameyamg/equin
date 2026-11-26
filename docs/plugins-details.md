@@ -4735,6 +4735,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (types):
                   - `SiteContext`
                   - `VisitorPayload`
+                  - `VisitorSplit`
                   - `VisitorStackFrame`
                   - `VisitorStall`
                   - `WebsiteVisitorError`
@@ -4745,6 +4746,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WEBSITE_VISITOR_SLOWNESS_KIND`
                   - `WebsiteVisitorErrorSchema`
                   - `websiteVisitorErrorSummary`
+                  - `websiteVisitorSplitSummary`
             - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, and the site_reports mirror set (the change stream the deploy app's site-reports/import reduces).
               - Server:
                 - Contributes:
@@ -4777,20 +4779,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `packages/list-bound.cappedList`
                   - `reports.CLIENT_REPORT_SOURCES`
                   - `reports.REPORT_CATEGORIES`
+                  - `reports/main-thread-stall.CLIENT_FAMILIES`
+                  - `reports/main-thread-stall.CLIENT_OSES`
+                  - `reports/main-thread-stall.StallClient`
                 - Exports (types):
                   - `PageDropReason`
                   - `SiteReportDropReason`
                   - `SiteReportEntry`
                   - `SiteReportRecord`
                   - `SiteReportsBody`
+                  - `SiteReportSplit`
                   - `SiteReportsResponse`
                 - Exports (values):
+                  - `EMPTY_SITE_REPORT_SPLIT`
+                  - `mergeSiteReportSplits`
                   - `PAGE_DROP_REASONS`
                   - `SITE_REPORT_DROP_REASONS`
                   - `SITE_REPORT_LIMITS`
                   - `SITE_REPORTS_MIRROR_SET_ID`
                   - `SiteReportRecordSchema`
                   - `siteReportsEndpoint`
+                  - `siteReportSplitOf`
+                  - `SiteReportSplitSchema`
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/site-reports`
@@ -63181,6 +63191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/site-reports/channel/slow-load`
           - `apps/deploy/site-reports/import`
+          - `apps/deploy/site-reports/intake`
       - Exemptions:
         - Exempts itself from: `web-locks/no-raw-navigator-locks` — `web/stall-watchdog.worker.ts` (sanctioned)
       - Plugins:

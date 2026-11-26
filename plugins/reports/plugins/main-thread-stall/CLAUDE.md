@@ -513,6 +513,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
   - Imported by:
     - `apps/deploy/site-reports/channel/slow-load`
     - `apps/deploy/site-reports/import`
+    - `apps/deploy/site-reports/intake`
 - Exemptions:
   - Exempts itself from: `web-locks/no-raw-navigator-locks` — `web/stall-watchdog.worker.ts` (sanctioned)
 - Sub-plugins:

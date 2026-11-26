@@ -28,6 +28,8 @@ export const SITE_REPORT_LIMITS = {
   maxPending: 500,
   /** Rows `site_reports` may hold; past it a NEW fingerprint is dropped (counted). */
   maxRows: 2_000,
+  /** Distinct page paths a row's split keeps (the most seen); the rest are counted together. */
+  maxSplitPaths: 20,
   /** How long a fingerprint unseen is kept, and a drop-count row. */
   retentionDays: 30,
 } as const;

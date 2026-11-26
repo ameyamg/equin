@@ -3,6 +3,7 @@ import { REPORT_CATEGORIES } from "@plugins/reports/core";
 import type { MirrorRow } from "@plugins/database/plugins/table-mirror/core";
 import {
   SiteReportRecordSchema,
+  SiteReportSplitSchema,
   type SiteReportRecord,
 } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 
@@ -24,6 +25,8 @@ const SiteReportRowSchema = z.object({
   build_id: z.string().nullable(),
   commit: z.string().nullable(),
   count: z.number().int(),
+  // Absent from a box released before the intake kept it.
+  split: SiteReportSplitSchema.nullable().optional(),
   first_seen_at: z.string().datetime({ offset: true }),
   last_seen_at: z.string().datetime({ offset: true }),
 });
@@ -47,6 +50,7 @@ export function siteReportRecordOfRow(row: MirrorRow): SiteReportRecord {
     buildId: r.build_id,
     commit: r.commit,
     count: r.count,
+    split: r.split ?? null,
     firstSeenAt: new Date(r.first_seen_at).toISOString(),
     lastSeenAt: new Date(r.last_seen_at).toISOString(),
   });

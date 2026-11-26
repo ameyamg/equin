@@ -26,6 +26,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { createFanOutGate } from "@plugins/reports/server";
+import type { StallClient } from "@plugins/reports/plugins/main-thread-stall/core";
 import {
   CrashPayloadSchema,
   crashFingerprint,
@@ -46,6 +47,8 @@ import { siteReportDrops, siteReports } from "./tables";
 import { createVisitorKey } from "./visitor-key";
 
 const FAN_OUT_PER_WINDOW = 20;
+const CHROME_WINDOWS: StallClient = { family: "chrome", os: "windows" };
+const SAFARI_IOS: StallClient = { family: "safari", os: "ios" };
 const WINDOW_MS = SITE_REPORT_LIMITS.windowMs;
 
 const crashKind: IntakeKind = {
@@ -120,10 +123,11 @@ async function submit(
   intake: ReturnType<typeof setup>["intake"],
   entries: SiteReportEntry[],
   ip: string,
+  client: StallClient = CHROME_WINDOWS,
 ): Promise<SiteReportsResponse> {
   // Decode exactly as the route does, so the body bounds are under test too.
   const body = SiteReportsBodySchema.parse({ reports: entries });
-  return intake.submit(body.reports, { kind: "visitor", ip });
+  return intake.submit(body.reports, { kind: "visitor", ip, client });
 }
 
 async function dropTotal(): Promise<number> {
@@ -269,6 +273,43 @@ describe("site-reports intake under load", () => {
     expect(rows[0]!.count).toBe(3);
   });
 
+  test("a row splits its occurrences by coarse browser and page, across flushes, its paths capped", async () => {
+    const { intake, advance } = setup();
+    await submit(intake, [{ ...crash("x", 3), path: "/a" }], "192.0.2.30");
+    await submit(
+      intake,
+      [{ ...crash("x"), path: "/b" }],
+      "192.0.2.31",
+      SAFARI_IOS,
+    );
+    await intake.flush();
+    advance(WINDOW_MS + 1_000);
+    await submit(intake, [{ ...crash("x", 2), path: "/a" }], "192.0.2.32");
+    // More distinct pages than a split keeps: the least seen fold together.
+    for (let i = 0; i < SITE_REPORT_LIMITS.maxSplitPaths; i++)
+      await submit(
+        intake,
+        [{ ...crash("x"), path: `/p${i}` }],
+        `192.0.2.${100 + i}`,
+      );
+    await intake.flush();
+    const [row] = await t.db.select().from(siteReports);
+    expect(row!.count).toBe(6 + SITE_REPORT_LIMITS.maxSplitPaths);
+    expect(row!.split.clients).toEqual([
+      { ...CHROME_WINDOWS, count: 5 + SITE_REPORT_LIMITS.maxSplitPaths },
+      { ...SAFARI_IOS, count: 1 },
+    ]);
+    expect(row!.split.paths).toHaveLength(SITE_REPORT_LIMITS.maxSplitPaths);
+    expect(row!.split.paths.slice(0, 2)).toEqual([
+      { path: "/a", count: 5 },
+      { path: "/b", count: 1 },
+    ]);
+    expect(row!.split.otherPaths).toBe(2);
+    const total =
+      row!.split.paths.reduce((n, p) => n + p.count, 0) + row!.split.otherPaths;
+    expect(total).toBe(row!.count);
+  });
+
   test("a bot's or an automated page's batch is counted, never stored, and spends no visitor budget", async () => {
     const { intake } = setup();
     const ip = "192.0.2.30";
@@ -306,14 +347,14 @@ describe("site-reports intake under load", () => {
     expect(
       await intake.submit(
         body.reports,
-        { kind: "visitor", ip: "192.0.2.40" },
+        { kind: "visitor", ip: "192.0.2.40", client: CHROME_WINDOWS },
         body.dropped,
       ),
     ).toEqual({ kind: "accepted", accepted: 0, dropped: 3 });
     expect(
       await intake.submit(
         [crash("kept")],
-        { kind: "visitor", ip: "192.0.2.41" },
+        { kind: "visitor", ip: "192.0.2.41", client: CHROME_WINDOWS },
         {
           "background-load": 1,
         },

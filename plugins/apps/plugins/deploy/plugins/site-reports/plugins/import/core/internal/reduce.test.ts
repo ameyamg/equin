@@ -26,6 +26,7 @@ function record(over: Partial<SiteReportRecord> = {}): SiteReportRecord {
     buildId: "b-123",
     commit: "0123456789abcdef",
     count: 7,
+    split: null,
     firstSeenAt: "2026-11-12T08:00:00.000Z",
     lastSeenAt: "2026-11-12T09:00:00.000Z",
     ...over,
@@ -42,6 +43,37 @@ function strings(value: unknown): string[] {
 }
 
 describe("reduceSiteReport", () => {
+  test("keeps the site's browser / page split: safe paths summed, the rest counted, what came before as unsplit", () => {
+    const r = reduceSiteReport(
+      record({
+        count: 10,
+        split: {
+          clients: [
+            { family: "chrome", os: "windows", count: 5 },
+            { family: "safari", os: "ios", count: 1 },
+          ],
+          paths: [
+            { path: "/places;view.main=abc", count: 3 },
+            { path: "/places", count: 2 },
+            { path: "/<script>", count: 1 },
+          ],
+          otherPaths: 0,
+        },
+      }),
+      SITE,
+    );
+    expect(r.split).toEqual({
+      clients: [
+        { family: "chrome", os: "windows", count: 5 },
+        { family: "safari", os: "ios", count: 1 },
+      ],
+      paths: [{ path: "/places", count: 5 }],
+      otherPaths: 1,
+      unsplit: 4,
+    });
+    expect(reduceSiteReport(record(), SITE).split).toBeNull();
+  });
+
   test("keeps the page's code-origin verdict, and only a known one", () => {
     const withOrigin = (codeOrigin: unknown) =>
       reduceSiteReport(record({ data: { ...record().data, codeOrigin } }), SITE)

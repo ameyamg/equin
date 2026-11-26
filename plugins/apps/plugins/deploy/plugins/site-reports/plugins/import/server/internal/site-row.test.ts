@@ -31,6 +31,7 @@ describe("siteReportRecordOfRow", () => {
       buildId: null,
       commit: "0123456789abcdef",
       count: 3,
+      split: null,
       firstSeenAt: "2026-11-12T01:00:00.500Z",
       lastSeenAt: "2026-11-12T03:00:00.000Z",
     });
@@ -42,6 +43,24 @@ describe("siteReportRecordOfRow", () => {
     );
     expect(siteReportRecordOfRow(row({ category: null })).category).toBe(null);
     expect(() => siteReportRecordOfRow(row({ category: "fast" }))).toThrow();
+  });
+
+  test("the box's browser / page split is kept; a box without it reads null", () => {
+    const split = {
+      clients: [
+        { family: "chrome" as const, os: "windows" as const, count: 3 },
+      ],
+      paths: [{ path: "/pricing", count: 3 }],
+      otherPaths: 0,
+    };
+    expect(siteReportRecordOfRow(row({ split })).split).toEqual(split);
+    expect(() =>
+      siteReportRecordOfRow(
+        row({
+          split: { ...split, clients: [{ family: "x", os: "y", count: 1 }] },
+        }),
+      ),
+    ).toThrow();
   });
 
   test("a column a newer box adds is dropped unread", () => {

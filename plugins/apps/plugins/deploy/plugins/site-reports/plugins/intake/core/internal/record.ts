@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { REPORT_CATEGORIES } from "@plugins/reports/core";
+import { SiteReportSplitSchema } from "./split";
 
 /** One aggregated report: a `site_reports` row, as the mirror's change stream carries it to site-reports/import. */
 export const SiteReportRecordSchema = z
@@ -19,6 +20,11 @@ export const SiteReportRecordSchema = z
     buildId: z.string().nullable(),
     commit: z.string().nullable(),
     count: z.number().int(),
+    /**
+     * How the occurrences split by browser and page (see
+     * SiteReportSplitSchema); null from a box released before it was kept.
+     */
+    split: SiteReportSplitSchema.nullable(),
     /** ISO instants. */
     firstSeenAt: z.string().datetime(),
     lastSeenAt: z.string().datetime(),

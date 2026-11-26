@@ -11,6 +11,7 @@ import {
   WEBSITE_VISITOR_SLOWNESS_KIND,
   WebsiteVisitorErrorSchema,
   type VisitorPayload,
+  type VisitorSplit,
   type VisitorStall,
   type WebsiteVisitorError,
 } from "../../core";
@@ -70,6 +71,31 @@ function stallLines(s: VisitorStall | null): string[] {
   return lines;
 }
 
+/** `n` as a share of `total`, for a split line. */
+const share = (n: number, total: number): string =>
+  `${n} (${total > 0 ? Math.round((n / total) * 100) : 0}%)`;
+
+/**
+ * Where the site's occurrences came from, as task lines: per coarse browser
+ * (family / OS) and per page — every value an enum, a number or a safe
+ * pathname. Says outright that distinct visits are not counted.
+ */
+export function splitLines(s: VisitorSplit | null): string[] {
+  if (s === null)
+    return [
+      "",
+      "**Split by browser and page:** not kept by this site's release — only the latest sample's page is known.",
+    ];
+  const total = s.clients.reduce((n, c) => n + c.count, 0);
+  const lines = [
+    "",
+    `**Split by browser and page** (${total} occurrence(s)${s.unsplit > 0 ? `; ${s.unsplit} more counted before the site kept a split` : ""}; distinct visits are not counted — the site keeps no visitor id):`,
+    `- **Browsers:** ${total === 0 ? "(none yet)" : s.clients.map((c) => `${c.family} on ${c.os} ${share(c.count, total)}`).join(", ")}`,
+    `- **Pages:** ${s.paths.length === 0 && s.otherPaths === 0 ? "(none yet)" : [...s.paths.map((p) => `\`${p.path}\` ${share(p.count, total)}`), ...(s.otherPaths > 0 ? [`other pages ${share(s.otherPaths, total)}`] : [])].join(", ")}`,
+  ];
+  return lines;
+}
+
 /**
  * The site's reduced kind payload as task lines: its JSON, indented — every
  * string in it already one sanitised plain line (no backtick, no markup, no
@@ -125,6 +151,7 @@ export function renderWebsiteVisitorTask(
       "",
       `**Stack (the site's own bundle, ${e.framesOmitted} other frame(s) omitted):**`,
       frames,
+      ...splitLines(e.split),
       ...stallLines(e.stall),
       ...payloadLines(e.payload),
     ].join("\n"),

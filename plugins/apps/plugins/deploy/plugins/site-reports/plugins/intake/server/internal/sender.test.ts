@@ -12,7 +12,11 @@ describe("siteReportSender", () => {
         userAgent: SAFARI_IOS,
         automated: false,
       }),
-    ).toEqual({ kind: "visitor", ip: "203.0.113.4" });
+    ).toEqual({
+      kind: "visitor",
+      ip: "203.0.113.4",
+      client: { family: "safari", os: "ios" },
+    });
   });
 
   test("a crawler or an HTTP library is a bot", () => {

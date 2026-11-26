@@ -10,6 +10,7 @@ import {
 } from "../../core";
 import {
   importedKindOf,
+  splitLines,
   websiteVisitorErrorKind,
   websiteVisitorSlownessKind,
 } from "./kind";
@@ -68,5 +69,27 @@ describe("importedKindOf", () => {
     expect(meta(WEBSITE_VISITOR_ERROR_KIND)?.category).toBe("error");
     expect(meta(WEBSITE_VISITOR_SLOWNESS_KIND)?.category).toBe("slow-op");
     expect(meta(WEBSITE_VISITOR_SLOWNESS_KIND)?.variant).toBe("warning");
+  });
+});
+
+describe("splitLines", () => {
+  test("names each browser's and page's share, and that visits are not counted", () => {
+    const text = splitLines({
+      clients: [
+        { family: "chrome", os: "windows", count: 3 },
+        { family: "safari", os: "ios", count: 1 },
+      ],
+      paths: [{ path: "/places", count: 3 }],
+      otherPaths: 1,
+      unsplit: 2,
+    }).join("\n");
+    expect(text).toContain("chrome on windows 3 (75%), safari on ios 1 (25%)");
+    expect(text).toContain("`/places` 3 (75%), other pages 1 (25%)");
+    expect(text).toContain("2 more counted before the site kept a split");
+    expect(text).toContain("distinct visits are not counted");
+  });
+
+  test("a site that keeps no split says so", () => {
+    expect(splitLines(null).join("\n")).toContain("not kept");
   });
 });

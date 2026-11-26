@@ -20,6 +20,7 @@ import {
   type VisitorPayload,
   type VisitorPayloadValue,
   type VisitorStackFrame,
+  type VisitorSplit,
   type VisitorStall,
   type WebsiteVisitorError,
 } from "./kind";
@@ -155,8 +156,8 @@ export function reduceStack(
   return { frames, omitted: Math.min(omitted, 10_000) };
 }
 
-function clampCount(n: number): number {
-  if (!Number.isFinite(n) || n < 1) return 1;
+function clampCount(n: number, min = 1): number {
+  if (!Number.isFinite(n) || n < min) return min;
   return Math.min(Math.floor(n), 1_000_000_000);
 }
 
@@ -456,5 +457,39 @@ export function reduceSiteReport(
     stall: record.kind === STALL_KIND ? reduceStall(record.data) : null,
     payload: reducePayload(record.data, hostnames),
     codeOrigin: CodeOriginSchema.safeParse(record.data.codeOrigin).data ?? null,
+    split: reduceSplit(record.split, record.count),
   });
+}
+
+/**
+ * The site's browser / page split, reduced: each path cut to a safe pathname
+ * as the sample's is (`reducePagePath` — paths that reduce alike are summed,
+ * one that is not safe is counted in `otherPaths`), counts clamped, and what
+ * the site counted before it kept a split (`count` minus its total) as
+ * `unsplit`. Null when the box does not keep one.
+ */
+export function reduceSplit(
+  split: SiteReportRecord["split"],
+  count: number,
+): VisitorSplit | null {
+  if (split === null) return null;
+  const paths = new Map<string, number>();
+  let otherPaths = clampCount(split.otherPaths, 0);
+  for (const p of split.paths) {
+    const path = reducePagePath(p.path);
+    if (path === null) otherPaths = clampCount(otherPaths + p.count, 0);
+    else paths.set(path, clampCount((paths.get(path) ?? 0) + p.count));
+  }
+  const ranked = [...paths].sort(([, a], [, b]) => b - a);
+  for (const [, n] of ranked.slice(L.maxSplitPaths))
+    otherPaths = clampCount(otherPaths + n, 0);
+  const total = split.clients.reduce((n, c) => n + c.count, 0);
+  return {
+    clients: split.clients.map((c) => ({ ...c, count: clampCount(c.count) })),
+    paths: ranked
+      .slice(0, L.maxSplitPaths)
+      .map(([path, n]) => ({ path, count: n })),
+    otherPaths,
+    unsplit: clampCount(Math.max(0, count - total), 0),
+  };
 }

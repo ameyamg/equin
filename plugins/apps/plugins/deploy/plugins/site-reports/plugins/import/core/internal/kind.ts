@@ -60,6 +60,8 @@ export const VISITOR_ERROR_LIMITS = {
   maxPayloadLeaves: 300,
   /** Characters over every string of the payload (the box holds a 4 KB payload). */
   maxPayloadChars: 8_000,
+  /** Distinct page paths a split keeps (the box keeps as many). */
+  maxSplitPaths: 20,
 } as const;
 
 /**
@@ -360,6 +362,41 @@ export const VisitorPayloadSchema = z
 export type VisitorPayload = z.infer<typeof VisitorPayloadSchema>;
 
 /**
+ * How the site counted a fingerprint's occurrences, coarsely (the intake's
+ * `split`): per browser family and OS — never the user agent — and per page
+ * path, the most seen first, each a safe pathname (a path that is not one is
+ * counted in `otherPaths`). `unsplit`: occurrences the site counted before it
+ * kept the split (its `count` minus the split's total). It cannot say how
+ * many distinct visits an error spans: the site keeps no per-visitor id.
+ */
+export const VisitorSplitSchema = z
+  .object({
+    clients: cappedList(
+      z
+        .object({
+          family: z.enum(CLIENT_FAMILIES),
+          os: z.enum(CLIENT_OSES),
+          count: z.number().int().min(1).max(1_000_000_000),
+        })
+        .strict(),
+      { max: CLIENT_FAMILIES.length * CLIENT_OSES.length },
+    ),
+    paths: cappedList(
+      z
+        .object({
+          path: z.string().regex(SAFE_PATHNAME),
+          count: z.number().int().min(1).max(1_000_000_000),
+        })
+        .strict(),
+      { max: VISITOR_ERROR_LIMITS.maxSplitPaths },
+    ),
+    otherPaths: z.number().int().min(0).max(1_000_000_000),
+    unsplit: z.number().int().min(0).max(1_000_000_000),
+  })
+  .strict();
+export type VisitorSplit = z.infer<typeof VisitorSplitSchema>;
+
+/**
  * One website visitor's error as stored on the computer — typed, clamped
  * fields only. Nothing the site sent is copied as-is: the site's kind payload
  * is never stored, the message is one sanitised plain line, the stack is
@@ -411,6 +448,11 @@ export const WebsiteVisitorErrorSchema = z
      * a crash without the verdict, and rows imported before it was kept.
      */
     codeOrigin: CodeOriginSchema.nullable().default(null),
+    /**
+     * The site's occurrences by coarse browser and page (VisitorSplitSchema);
+     * null from a box that does not keep it, and on rows imported before.
+     */
+    split: VisitorSplitSchema.nullable().default(null),
   })
   .strict();
 export type WebsiteVisitorError = z.infer<typeof WebsiteVisitorErrorSchema>;
@@ -420,4 +462,22 @@ export function websiteVisitorErrorSummary(e: WebsiteVisitorError): string {
   const what = e.errorType ? `${e.errorType}: ${e.message}` : e.message;
   const where = e.hostname ?? e.deploymentId;
   return `${where}${e.path ?? ""} — ${what || "(no message)"}`;
+}
+
+/**
+ * The split's most common browser and page in a few words
+ * (`mostly chrome on windows 92%, /places 60%`), or null when the site kept
+ * none.
+ */
+export function websiteVisitorSplitSummary(
+  e: WebsiteVisitorError,
+): string | null {
+  const s = e.split;
+  if (s === null) return null;
+  const total = s.clients.reduce((n, c) => n + c.count, 0);
+  const client = s.clients[0];
+  if (total === 0 || client === undefined) return null;
+  const pct = (n: number) => `${Math.round((n / total) * 100)}%`;
+  const page = s.paths[0];
+  return `mostly ${client.family} on ${client.os} ${pct(client.count)}${page ? `, ${page.path} ${pct(page.count)}` : ""}`;
 }

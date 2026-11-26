@@ -1,4 +1,5 @@
 import { isBotUserAgent } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/server";
+import { coarseClient } from "@plugins/reports/plugins/main-thread-stall/core";
 import type { SiteReportSender } from "./intake";
 
 /**
@@ -6,7 +7,8 @@ import type { SiteReportSender } from "./intake";
  * analytics counts visits by), a page under automation by its own word
  * (`navigator.webdriver`, sent as the body's `automated`), else a visitor. A
  * bot that lies about both is a visitor here — the admission budgets still
- * bound it. PURE: the user agent is read, never kept.
+ * bound it. PURE: the user agent is read, never kept — a visitor carries only
+ * its coarse browser family and OS (`coarseClient`).
  */
 export function siteReportSender(input: {
   ip: string;
@@ -15,5 +17,9 @@ export function siteReportSender(input: {
 }): SiteReportSender {
   if (isBotUserAgent(input.userAgent)) return { kind: "bot" };
   if (input.automated) return { kind: "automated" };
-  return { kind: "visitor", ip: input.ip };
+  return {
+    kind: "visitor",
+    ip: input.ip,
+    client: coarseClient(input.userAgent),
+  };
 }

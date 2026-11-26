@@ -12,12 +12,17 @@ import {
   parsedText,
 } from "@plugins/database/plugins/sql-column/server";
 import { REPORT_CATEGORIES } from "@plugins/reports/core";
-import { SITE_REPORT_DROP_REASONS } from "../../core";
+import {
+  EMPTY_SITE_REPORT_SPLIT,
+  SITE_REPORT_DROP_REASONS,
+  SiteReportSplitSchema,
+} from "../../core";
 
 /**
  * One row per error fingerprint a site's visitors hit — never one per
  * occurrence: a repeat adds to `count`, moves `last_seen_at` and replaces
- * the sample (message, payload, path, build) with its own — a fingerprint
+ * the sample (message, payload, path, build) with its own, and adds its
+ * browser and page to the coarse `split` — a fingerprint
  * need not key on the message, and the latest cause is what tells whether a
  * fix held. Nothing here names a
  * visitor: no IP, no client id, no user agent, the page's pathname only.
@@ -46,6 +51,15 @@ export const siteReports = pgTable(
     buildId: text("build_id"),
     commit: text("commit"),
     count: integer("count").notNull(),
+    /**
+     * How the occurrences split by coarse browser (family / OS) and page path
+     * — never a user agent, an IP or a visitor id (SiteReportSplitSchema).
+     * Counts only occurrences since it was kept: `count` minus its total is
+     * what came before.
+     */
+    split: parsedJson("split", SiteReportSplitSchema)
+      .notNull()
+      .default(EMPTY_SITE_REPORT_SPLIT),
     firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull(),
   },

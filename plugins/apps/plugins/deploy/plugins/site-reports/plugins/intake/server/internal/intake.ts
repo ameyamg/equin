@@ -1,10 +1,14 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { ReportCategory } from "@plugins/reports/core";
+import type { StallClient } from "@plugins/reports/plugins/main-thread-stall/core";
 import type { FanOutGate, ReportKindSpec } from "@plugins/reports/server";
 import {
+  mergeSiteReportSplits,
+  siteReportSplitOf,
   SITE_REPORT_LIMITS,
+  type SiteReportSplit,
   type PageDropReason,
   type SiteReportDropReason,
   type SiteReportEntry,
@@ -50,6 +54,8 @@ interface PendingRow {
   buildId: string | null;
   commit: string | null;
   count: number;
+  /** This window's occurrences by coarse browser and page (added to the row's). */
+  split: SiteReportSplit;
   firstSeenAt: number;
   lastSeenAt: number;
 }
@@ -73,11 +79,14 @@ export interface FlushStats {
 
 /**
  * Who sent a batch, as the route judged it (`sender.ts`): a visitor, by the
- * address the admission gate keys on, or something that is not one — counted
- * under its reason, never stored.
+ * address the admission gate keys on (never stored) and its browser's coarse
+ * family and OS (counted in the row's split), or something that is not one —
+ * counted under its reason, never stored.
  */
 export type SiteReportSender =
-  { kind: "visitor"; ip: string } | { kind: "bot" } | { kind: "automated" };
+  | { kind: "visitor"; ip: string; client: StallClient }
+  | { kind: "bot" }
+  | { kind: "automated" };
 
 /** What a page counted instead of filing, per reason (the body's `dropped`). */
 export type PageDrops = Partial<Record<PageDropReason, number>>;
@@ -161,7 +170,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
     let accepted = 0;
     let dropped = declaredCount;
     for (const entry of entries) {
-      const outcome = await take(entry, kinds, now);
+      const outcome = await take(entry, sender.client, kinds, now);
       if (outcome === "accepted") accepted += 1;
       else {
         dropped += 1;
@@ -174,6 +183,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
 
   async function take(
     entry: SiteReportEntry,
+    client: StallClient,
     kinds: readonly IntakeKind[],
     now: number,
   ): Promise<"accepted" | SiteReportDropReason> {
@@ -185,6 +195,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
       message: entry.message,
       source: entry.source,
     })}`;
+    const split = siteReportSplitOf(client, entry.path, entry.count);
     const held = pending.get(key);
     if (held) {
       // The latest occurrence is the sample: a fingerprint need not key on
@@ -192,6 +203,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
       // wrapper error carries shares one row), and what fired LAST is what
       // tells whether a fix held.
       held.count += entry.count;
+      held.split = mergeSiteReportSplits(held.split, split);
       held.lastSeenAt = now;
       held.message = entry.message;
       held.data = entry.data;
@@ -220,6 +232,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
       buildId: entry.buildId,
       commit: entry.commit,
       count: entry.count,
+      split,
       firstSeenAt: now,
       lastSeenAt: now,
     });
@@ -262,6 +275,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
       const held = pending.get(key);
       if (held) {
         held.count += r.count;
+        held.split = mergeSiteReportSplits(held.split, r.split);
         held.firstSeenAt = Math.min(held.firstSeenAt, r.firstSeenAt);
       } else if (pending.size < limits.maxPending) {
         pending.set(key, r);
@@ -286,11 +300,32 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
       .select({ n: sql`count(*)::int`.mapWith(Number) })
       .from(siteReports);
     let rowCount = counted?.n ?? 0;
+    // The rows' splits so far, in ONE read per flush: a split is merged here
+    // (summed per client and path, the paths capped), so the upsert writes
+    // the whole of it. Safe as read-then-write: this process's intake is the
+    // only writer of `site_reports` (the sweep only deletes), and its flushes
+    // run one at a time (`flushLock`).
+    const fingerprints = [...rows.keys()];
+    const heldSplits = new Map<string, SiteReportSplit>(
+      fingerprints.length === 0
+        ? []
+        : (
+            await deps.db
+              .select({
+                fingerprint: siteReports.fingerprint,
+                split: siteReports.split,
+              })
+              .from(siteReports)
+              .where(inArray(siteReports.fingerprint, fingerprints))
+          ).map((h) => [h.fingerprint, h.split]),
+    );
 
     for (const [fingerprint, r] of [...rows]) {
       stats.rowStatements += 1;
       const lastSeenAt = new Date(r.lastSeenAt);
       const count = sql`least(${siteReports.count}::bigint + ${r.count}, ${COUNT_MAX})::int`;
+      const held = heldSplits.get(fingerprint);
+      const split = held ? mergeSiteReportSplits(held, r.split) : r.split;
       if (rowCount < limits.maxRows) {
         const [written] = await deps.db
           .insert(siteReports)
@@ -305,6 +340,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
             buildId: r.buildId,
             commit: r.commit,
             count: r.count,
+            split,
             firstSeenAt: new Date(r.firstSeenAt),
             lastSeenAt,
           })
@@ -312,6 +348,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
             target: siteReports.fingerprint,
             set: {
               count,
+              split,
               lastSeenAt,
               category: r.category,
               message: r.message,
@@ -333,6 +370,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
           .update(siteReports)
           .set({
             count,
+            split,
             lastSeenAt,
             category: r.category,
             message: r.message,

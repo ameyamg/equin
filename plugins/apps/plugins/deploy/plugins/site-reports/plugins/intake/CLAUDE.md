@@ -38,6 +38,26 @@ Every number is `SITE_REPORT_LIMITS` (`core/internal/limits.ts`).
      dropped. A known one still counts up.
    - Rows unseen for 30 days are swept.
 
+## A coarse split per row
+
+Each row's `split` (`core/internal/split.ts`) counts its occurrences per
+browser family and OS and per page path, so a visitor report can be told
+apart (one Safari occurrence against 300 from one Chrome extension):
+
+- The family and OS come from the request's user agent through the stall
+  kind's own `coarseClient` (`reports/main-thread-stall`) in `sender.ts`. The
+  user agent itself is never kept.
+- Paths: the 20 most seen (`maxSplitPaths`); the rest are summed in
+  `otherPaths`.
+- A flush reads the pending rows' splits in one statement, merges them
+  (`mergeSiteReportSplits`) and writes the whole split in each row's upsert.
+  That is safe because this intake is the table's only writer and its flushes
+  run one at a time.
+- It counts occurrences, never visits. A count of distinct visits would need
+  a per-visitor id, which the site does not keep.
+- Occurrences counted before the column existed are `count` minus the split's
+  total.
+
 Every refusal is counted in `site_report_drops` per (window, reason), written
 in the same flush. Nothing is queued past the bounds.
 
@@ -50,7 +70,8 @@ stream over SSH through its reduce step (never copying rows). There is no
 route that lists the reports: the mirror's change stream is the only way they
 leave the box.
 
-Only anonymous data is stored: no IP, client id or user agent. The page sends
+Only anonymous data is stored: no IP, client id or user agent, only the
+coarse browser family and OS in `split`. The page sends
 its pathname and fits every report to these bounds (`channel`'s `toSiteReport`,
 over reports/core's `fitReportBody`): an oversized report arrives trimmed,
 saying so, never dropped.
@@ -101,20 +122,28 @@ saying so, never dropped.
     - `packages/list-bound.cappedList`
     - `reports.CLIENT_REPORT_SOURCES`
     - `reports.REPORT_CATEGORIES`
+    - `reports/main-thread-stall.CLIENT_FAMILIES`
+    - `reports/main-thread-stall.CLIENT_OSES`
+    - `reports/main-thread-stall.StallClient`
   - Exports (types):
     - `PageDropReason`
     - `SiteReportDropReason`
     - `SiteReportEntry`
     - `SiteReportRecord`
     - `SiteReportsBody`
+    - `SiteReportSplit`
     - `SiteReportsResponse`
   - Exports (values):
+    - `EMPTY_SITE_REPORT_SPLIT`
+    - `mergeSiteReportSplits`
     - `PAGE_DROP_REASONS`
     - `SITE_REPORT_DROP_REASONS`
     - `SITE_REPORT_LIMITS`
     - `SITE_REPORTS_MIRROR_SET_ID`
     - `SiteReportRecordSchema`
     - `siteReportsEndpoint`
+    - `siteReportSplitOf`
+    - `SiteReportSplitSchema`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/site-reports`

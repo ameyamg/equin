@@ -4,6 +4,7 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import {
   WebsiteVisitorErrorSchema,
   websiteVisitorErrorSummary,
+  websiteVisitorSplitSummary,
 } from "../../core";
 
 /**
@@ -21,7 +22,13 @@ export function WebsiteVisitorSummary({ report }: { report: Report }) {
       )}
       <span>
         {parsed.success
-          ? `${websiteVisitorErrorSummary(parsed.data)} · ${parsed.data.siteCount.toLocaleString("en-US")}× on the site`
+          ? [
+              websiteVisitorErrorSummary(parsed.data),
+              `${parsed.data.siteCount.toLocaleString("en-US")}× on the site`,
+              websiteVisitorSplitSummary(parsed.data),
+            ]
+              .filter((part) => part !== null)
+              .join(" · ")
           : report.message}
       </span>
     </Cluster>

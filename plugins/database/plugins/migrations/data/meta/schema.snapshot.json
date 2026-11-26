@@ -1,6 +1,6 @@
 {
-  "id": "1d4997c7-ddcc-4dc1-8f1b-43f8f0f5b7de",
-  "prevId": "490eacf5-660e-47b6-94e9-89beb8442578",
+  "id": "18dd8cce-aa4c-441c-9eef-ef83d496c7c2",
+  "prevId": "1d4997c7-ddcc-4dc1-8f1b-43f8f0f5b7de",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3373,6 +3373,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "split": {
+          "name": "split",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"clients\":[],\"paths\":[],\"otherPaths\":0}'::jsonb"
         },
         "first_seen_at": {
           "name": "first_seen_at",

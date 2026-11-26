@@ -4,10 +4,12 @@ export {
   VISITOR_ERROR_LIMITS,
   WebsiteVisitorErrorSchema,
   websiteVisitorErrorSummary,
+  websiteVisitorSplitSummary,
 } from "./internal/kind";
 export type {
   VisitorPayload,
   VisitorStackFrame,
+  VisitorSplit,
   VisitorStall,
   WebsiteVisitorError,
 } from "./internal/kind";
