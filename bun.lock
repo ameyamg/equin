@@ -5250,6 +5250,10 @@
       "name": "@equin/plugin-integrations-gmail",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/gmail/plugins/api": {
+      "name": "@equin/plugin-integrations-gmail-api",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/google-maps": {
       "name": "@equin/plugin-integrations-google-maps",
       "version": "0.0.1",
@@ -11020,6 +11024,8 @@
     "@equin/plugin-integrations-github-issues": ["@equin/plugin-integrations-github-issues@workspace:plugins/integrations/plugins/github-issues"],
 
     "@equin/plugin-integrations-gmail": ["@equin/plugin-integrations-gmail@workspace:plugins/integrations/plugins/gmail"],
+
+    "@equin/plugin-integrations-gmail-api": ["@equin/plugin-integrations-gmail-api@workspace:plugins/integrations/plugins/gmail/plugins/api"],
 
     "@equin/plugin-integrations-google-maps": ["@equin/plugin-integrations-google-maps@workspace:plugins/integrations/plugins/google-maps"],
 

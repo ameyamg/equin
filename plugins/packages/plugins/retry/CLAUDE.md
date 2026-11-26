@@ -12,6 +12,7 @@
     - `infra/events-test`
     - `infra/launcher`
     - `infra/launcher/login-services`
+    - `integrations/gmail/api`
     - `primitives/networking`
 - Core:
   - Exports (types): `DelayStrategy`

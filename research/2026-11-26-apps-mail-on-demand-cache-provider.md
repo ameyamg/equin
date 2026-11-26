@@ -239,7 +239,18 @@ v1-singular but costs nothing.
 **Prefetch policy.**
 
 - **Metadata** is never fetched for its own sake. It arrives as part of answering a window.
-- **Bodies** are prefetched by a low-priority job:
+- **What a cold page costs** (Google's published prices; task 1 has not yet confirmed them
+  live):
+  - A cold 50-thread metadata page is `threads.list` (10) plus 50 × `threads.get` metadata
+    (40), which is **2,010 units**, a third of the per-minute budget. Three cold views in a
+    minute use it all up.
+  - Revalidating a covered page whose threads did not move costs 10.
+  - So the `historyId` version skip in `fill` is not an optimisation. It is what keeps the
+    app inside quota.
+  - `threads.get` is never called for a thread whose `version` is cached.
+- **Bodies** are prefetched by a low-priority job, through the pacer's background half
+  (3,000 units a minute). A `full` thread costs 120, so that is **25 bodies a minute** at
+  most. The list below is in priority order, and a minute's prefetch covers only its head:
   - the top 25 threads of every view read in the last day;
   - every unread thread on the Inbox's first page;
   - ±3 neighbours of the thread being read.
@@ -407,9 +418,20 @@ provider signal (push) ──► sync step: changesSince(cursor) ──► write
     resumable upload above 5 MB) and deletes the provider draft.
   - The thread then arrives through the next change sync, and an optimistic "Sent" row covers
     the gap.
-- **Quota.** All provider calls for an account go through one pacer: a token bucket of 6,000
-  units per minute with two priorities (foreground reads and writes, then prefetch).
-  - Gmail's 403/429 triggers exponential backoff (`packages/retry`), shared across callers.
+- **Quota.** All provider calls for an account go through one pacer
+  (`integrations/gmail/api`'s `createQuotaPacer`, built in task 1). It keeps a **sliding 60 s
+  window** of 6,000 units, which is exactly Gmail's "per user per minute". A token bucket
+  would let a full bucket plus a minute's refill through in one minute. It has two FIFO
+  priorities: foreground reads and writes, then background.
+  - Background (prefetch, revalidation) is admitted only while no foreground call waits, and
+    only into half the window.
+  - Gmail's 403 (`rateLimitExceeded` / `userRateLimitExceeded`) or 429 **pauses the pacer**
+    for `Retry-After` or the backoff delay, so every caller backs off, not only the one that
+    was refused.
+  - 5xx and unreachable calls are retried with a private exponential backoff, at most 5
+    attempts.
+  - **One pacer per account per process.** Two processes over one account (main and a
+    worktree build) each spend the full budget. The 429 pause is what catches that.
 
 ### 7. Plugin layout
 
@@ -453,9 +475,10 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
 
 ### 9. Primitive gaps
 
-1. **A paced, batched Google HTTP client.** Today nothing does token-bucket quota pacing or
-   multipart batching. Places only counts SKUs. This is built in `integrations/gmail/api`,
-   generic enough to lift to `integrations/google` later.
+1. **A paced, batched Google HTTP client.** Today nothing does quota pacing or multipart
+   batching. Places only counts SKUs. This is built in `integrations/gmail/api` (task 1,
+   done): a sliding-window pacer, the batch codec and a bounded backoff. The pacer and the
+   codec are pure `core`, generic enough to lift to `integrations/google` later.
 2. **MIME.** There is no RFC 5322/2045 builder for send, and nothing walks a `full` payload
    (charsets, quoted-printable, `cid:`). It needs a small `packages/mime` plugin (or a vetted
    dependency such as `postal-mime` / `mimetext`).
@@ -480,6 +503,10 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
 1. **Gmail API client** (`integrations/gmail/plugins/api`). Typed calls, HTTP batch, quota
    pacer with priorities, and backoff. Tests replay recorded fixtures.
    *Ships:* a library with tests, and a `./equin run` probe script.
+   *Done*, except the live probe run. The connected account had no Gmail scope yet, so the
+   latency and quota of a real 50-thread page were not measured. The probe
+   (`integrations/gmail/plugins/api/scripts/probe.ts`) prints them once access is granted.
+   Task 3 should run it first.
 2. **Provider contract + Gmail provider** (`mail/plugins/provider`,
    `mail/plugins/providers/plugins/gmail`). Covers the neutral model, `compileQuery`
    (Filter → `q`, a total function over the declared operators, table-tested) and the

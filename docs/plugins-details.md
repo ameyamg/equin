@@ -43414,6 +43414,90 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
+      - Plugins:
+        - **`api`** — Stateless typed Gmail REST client: createGmailClient({ accessToken, pacer }) — profile, labels, threads, messages, history (an expired cursor is a typed outcome), drafts, send (multipart upload), attachments, modify and watch; reads batched ≤50 per HTTP request with a per-id result; every call charged on the account's quota pacer before it is sent and retried within a bound on Google's 429 / 5xx / rate-limit 403; every answer zod-parsed.
+          - Server:
+            - Exports (types):
+              - `GmailBatchResult`
+              - `GmailCallOptions`
+              - `GmailClient`
+              - `GmailHistoryPage`
+              - `GmailHistoryType`
+              - `GmailLabelChange`
+              - `GmailLabelInput`
+              - `GmailListQuery`
+              - `GmailOutgoing`
+              - `GmailReadFormat`
+              - `GmailThreadFormat`
+              - `GmailTransportOptions`
+            - Exports (values):
+              - `createGmailClient`
+              - `GMAIL_API_ROOT`
+          - Core:
+            - Exports (types):
+              - `BatchRequestPart`
+              - `BatchResponsePart`
+              - `GmailDraft`
+              - `GmailDraftRef`
+              - `GmailFormat`
+              - `GmailHeader`
+              - `GmailHistoryRecord`
+              - `GmailLabel`
+              - `GmailMessage`
+              - `GmailMessageList`
+              - `GmailMessagePart`
+              - `GmailMessageRef`
+              - `GmailMethod`
+              - `GmailPriority`
+              - `GmailProfile`
+              - `GmailSentMessage`
+              - `GmailThread`
+              - `GmailThreadLabels`
+              - `GmailThreadList`
+              - `GmailThreadRef`
+              - `GmailWatch`
+              - `QuotaPacer`
+              - `QuotaPacerOptions`
+              - `QuotaPacerStats`
+            - Exports (values):
+              - `AttachmentSchema`
+              - `createQuotaPacer`
+              - `decodeBase64Url`
+              - `decodeBatch`
+              - `DraftListSchema`
+              - `DraftRefSchema`
+              - `DraftSchema`
+              - `EmptySchema`
+              - `encodeBase64Url`
+              - `encodeBatch`
+              - `encodeRelatedUpload`
+              - `ErrorEnvelopeSchema`
+              - `GMAIL_BATCH_MAX`
+              - `GMAIL_QUOTA`
+              - `GMAIL_USER_UNITS_PER_MINUTE`
+              - `GmailApiError`
+              - `GmailBatchFormatError`
+              - `GmailOutcomeUnknownError`
+              - `GmailResponseShapeError`
+              - `GmailUnreachableError`
+              - `HeaderSchema`
+              - `HistoryIdSchema`
+              - `HistoryListSchema`
+              - `HistoryRecordSchema`
+              - `LabelListSchema`
+              - `LabelSchema`
+              - `MessageListSchema`
+              - `MessagePartSchema`
+              - `MessageRefSchema`
+              - `MessageSchema`
+              - `newBatchBoundary`
+              - `ProfileSchema`
+              - `SentMessageSchema`
+              - `ThreadLabelsSchema`
+              - `ThreadListSchema`
+              - `ThreadRefSchema`
+              - `ThreadSchema`
+              - `WatchResponseSchema`
     - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot).
       - Web:
         - Slots: `LiveMapSetup.MapIdPreview`
@@ -45885,13 +45969,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 84 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×24
           - `debug` ×14
           - `framework` ×13
           - `apps` ×10
           - `conversations` ×5
           - `database` ×3
+          - `integrations` ×2
           - `network` ×2
           - `packages` ×2
           - `tasks` ×2
@@ -45901,7 +45986,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/browser-extension/recorder`
           - `config_v2`
           - `installer/waits`
-          - `integrations/youtube`
           - `plugin-meta/plugin-records`
           - `shell/notifications`
       - Core:
@@ -46376,6 +46460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/events-test`
           - `infra/launcher`
           - `infra/launcher/login-services`
+          - `integrations/gmail/api`
           - `primitives/networking`
       - Core:
         - Exports (types): `DelayStrategy`

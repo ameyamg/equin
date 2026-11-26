@@ -75,13 +75,14 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
 
 - Description: Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
 - Cross-plugin:
-  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 85 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×24
     - `debug` ×14
     - `framework` ×13
     - `apps` ×10
     - `conversations` ×5
     - `database` ×3
+    - `integrations` ×2
     - `network` ×2
     - `packages` ×2
     - `tasks` ×2
@@ -91,7 +92,6 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
     - `companions/browser-extension/recorder`
     - `config_v2`
     - `installer/waits`
-    - `integrations/youtube`
     - `plugin-meta/plugin-records`
     - `shell/notifications`
 - Core:
