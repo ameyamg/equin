@@ -6533,7 +6533,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
-              - `primitives/css/center.Center`
               - `primitives/css/column.Column`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -53043,8 +53042,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 148 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×46
+            - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×45
               - `primitives` ×30
               - `page` ×18
               - `conversations` ×12

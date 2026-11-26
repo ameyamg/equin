@@ -23,7 +23,6 @@ App shell for the Home launcher. Registers the `/home` app entry and defines the
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`
-    - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

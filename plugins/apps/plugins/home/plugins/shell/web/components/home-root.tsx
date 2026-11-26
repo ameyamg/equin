@@ -1,6 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 
 import { Home } from "../slots";
@@ -21,11 +20,20 @@ export function HomeRoot() {
         body={
           // The container the page margin's query reads: the tab's width, not
           // the viewport's, so a narrow floating window gets the tighter margin.
-          <Center axis="horizontal" className="@container/home">
+          //
+          // A block box, the column centred in it by `mx-auto` — never a grid
+          // (`Center`): a grid's `auto` track grows to its content's
+          // min-content width, so the column's `100%` would be the CONTENT's
+          // width, not the tab's. The app grid's toolbar picks its layout from
+          // its measured width, and the compact fold's min-content (its
+          // sideways-scrolling views pill counts its full chip row) is wider
+          // than the wide capsule's: on a ~400px tab the track flipped
+          // 310 ↔ 382px every frame (report-1795711185-g5kpk7).
+          <div className="@container/home">
             <Stack
               gap="xl"
               // eslint-disable-next-line spacing/no-adhoc-spacing -- the launcher's page margin (64px, 40px under 760px) and its column measure (seven 116px cells + 16px gaps + 24px, 20px gutters) are page geometry above the spacing ramp's largest step
-              className="w-[min(932px,calc(100%-40px))] py-[64px] @max-[760px]/home:py-[40px]"
+              className="mx-auto w-[min(932px,calc(100%-40px))] py-[64px] @max-[760px]/home:py-[40px]"
             >
               <Stack
                 as="header"
@@ -44,7 +52,7 @@ export function HomeRoot() {
               </Stack>
               <Home.Section.Render />
             </Stack>
-          </Center>
+          </div>
         }
       />
     </Stack>
