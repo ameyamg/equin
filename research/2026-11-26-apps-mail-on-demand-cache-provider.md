@@ -1,6 +1,8 @@
 # Mail (rebuild): on-demand loading with a cache, behind a generic provider
 
-**Status:** design. Nothing implemented yet.
+**Status:** design; tasks 1 (Gmail client) and 2 (contract + Gmail provider) implemented.
+§1–2 below are as shipped (task 2); the corrections task 2 made to later sections are marked
+*Task 2 correction*.
 **Task:** task-1795696150-48l8i2, part of "Rebuild mail app from scratch with data views".
 **Siblings:** the old Mail app is being deleted (task-1795696132-6cmii2). The prototype
 `proto-1795656296-rtsmk5` is being cut down to its default variant (task-1795696140-tyzyan).
@@ -138,86 +140,151 @@ Sources: the quota, sync, push and batch guides on developers.google.com/workspa
 
 ### 1. Data model: provider-neutral, JMAP-shaped
 
-`mail/plugins/provider/core`:
+`apps/mail/plugins/provider/core` (as shipped; its `CLAUDE.md` is the reference):
 
 ```ts
 type MailboxRole = "inbox" | "sent" | "drafts" | "trash" | "spam" | "archive" | "important" | "all";
 type Mailbox = { id: MailboxId; name: string; role: MailboxRole | null; kind: "system" | "user";
-                 parentId: MailboxId | null; counts: { threads: number; unread: number } | null };
+                 parentId: MailboxId | null; counts: { threads: number; unread: number } | null;
+                 color: { text: string; background: string } | null };
 
 type ThreadSummary = {                       // one list row
-  id: ThreadId; version: string;             // Gmail: thread historyId; JMAP: state; IMAP: max modseq
+  id: ThreadId; version: ThreadVersion;      // Gmail: thread historyId; JMAP: state; IMAP: max modseq
   subject: string; snippet: string;
-  participants: Participant[];               // capped list
+  participants: Participant[];               // senders, ≤ 10
   lastMessageAt: Date; messageCount: number;
-  mailboxIds: MailboxId[];                   // Gmail labels; IMAP: the folder(s)
+  mailboxes: MailboxId[];                    // union over the messages
   unread: boolean; starred: boolean; hasAttachments: boolean; hasDraft: boolean;
+  messages: MessageFacts[];                  // per message: id, date, mailboxes, unread, starred, isDraft
 };
-type ThreadContent = { id; version; messages: MessageContent[] };   // headers, text, html, attachment metas
+type ThreadContent = { id; version; messages: MessageContent[] };   // headers, text/html, attachment metas
+type OutgoingMessage = { mime: Uint8Array; threadId: ThreadId | null; rfc822MessageId: string };
 ```
 
-- **Gmail labels map to `mailboxIds`.** `UNREAD` becomes `unread: true`, and
-  `STARRED` becomes `starred: true`. Neither is a mailbox, as in JMAP keywords.
+- **A role mailbox's id is its role** (`role:inbox`) on every provider, so the authored
+  views (`{ "mailboxes": { "hasAny": ["role:inbox"] } }`) mean the same mailbox whichever
+  provider serves them. Every other mailbox keeps the provider's own id. A provider lists
+  only the roles it has: Gmail has no `archive` and no `all`, so neither is listed, and a
+  query naming one is refused.
+- **Gmail labels map to `mailboxes`.** `UNREAD` and `STARRED` are flags (JMAP keywords),
+  never mailboxes. DRAFT is `role:drafts` (and `hasDraft`).
 - **IMAP folders are mailboxes too.** A message is in exactly one, and the provider says so
-  through its capabilities.
+  (`capabilities.mailboxModel: "folders"`).
+- **Outgoing mail is RFC 5322 bytes**, built by the app (task 7's MIME builder). Every
+  provider takes the same bytes: Gmail uploads them, IMAP APPENDs them, JMAP imports a blob,
+  Outlook sends MIME. The bytes must carry `rfc822MessageId`. It is what reconciles a send
+  whose outcome is unknown.
 - **Rows are threads in v1** (Gmail's conversation view). A message-row view is a later
   addition, not a redesign: `MessageSummary` would come through the same coverage machinery
   under a second collection.
 
 ### 2. The provider interface
 
-`mail/plugins/provider/core` holds the contract. The server half registers implementations.
+`provider/core` holds the contract. `provider/server` registers implementations
+(`MailProviders.Provider`). As shipped:
 
 ```ts
-interface MailProvider {
-  readonly id: ProviderId;                                  // "gmail"
-  readonly capabilities: { mailboxModel: "labels" | "folders"; serverSearch: true;
-                           threadVersion: boolean; push: "pubsub" | "eventsource" | "idle" | "none" };
+interface MailProviderDefinition {                       // registered once per provider kind
+  id: string; label: string;                             // "gmail"
+  capabilities: { mailboxModel: "labels" | "folders";
+                  mailboxDefinitions: "in-changes" | "relist";   // Gmail/IMAP changes carry no label create/rename
+                  push: "pubsub" | "eventsource" | "idle" | "none" };
+  compileQuery(q: MailQuery, ctx: { mailboxes: readonly Mailbox[] }): CompiledMailQuery;  // pure
+  open(accountId: string): MailProvider;                 // the account's ONE provider in this process
+}
+type CompiledMailQuery = { kind: "query"; providerQuery } | { kind: "nothing" }   // or: [] — no call
+                       | { kind: "refused"; refusal: { column; op; reason; message } };
 
+interface MailProvider {
   // — reads —
-  compileQuery(q: MailQuery): { ok: true; providerQuery: string }
-                            | { ok: false; unsupported: FilterClausePath };  // refusal, never a guess
-  listThreads(providerQuery: string, page: { olderThan: SortCut | null; limit: number })
-    : Promise<{ refs: { id: ThreadId; version: string }[]; exhausted: boolean }>;
-  getThreads(ids: ThreadId[]): Promise<ThreadSummary[]>;   // batched inside
-  getThreadContent(id: ThreadId): Promise<ThreadContent>;
+  listThreads(q: ProviderQuery, page: { olderThan: Date | null; limit: number; cursor: ListCursor | null })
+    : Promise<{ refs: { id: ThreadId; version: ThreadVersion }[]; next: ListCursor | null }>;
+  getThreads(ids): Promise<({ id; kind: "found"; summary } | { id; kind: "gone" } | { id; kind: "failed"; error })[]>;
+  getThreadContent(id): Promise<{ kind: "found"; content } | { kind: "gone" }>;
   getAttachment(ref: AttachmentRef): Promise<Uint8Array>;
   listMailboxes(): Promise<Mailbox[]>;
-
+  findMessage(rfc822MessageId): Promise<{ kind: "found"; messageId; threadId } | { kind: "absent" }>;
   // — changes —
   currentCursor(): Promise<ChangeCursor>;
-  changesSince(c: ChangeCursor): Promise<
-    | { kind: "changes"; threads: { changed: ThreadId[]; removed: ThreadId[] }; mailboxesChanged: boolean; next: ChangeCursor }
-    | { kind: "reset" }>;                                   // 404 / cannotCalculateChanges / UIDVALIDITY
-  watch?(onSignal: () => void): Promise<Disposable>;       // push; absent ⇒ fallback (§6)
-
-  // — writes: semantic, so IMAP never fakes label math —
-  archive(ids): Promise<void>;  moveToInbox(ids); trash(ids); untrash(ids); deleteForever(ids);
-  setFlags(ids, { unread?: boolean; starred?: boolean });
-  setMailboxes(ids, { add: MailboxId[]; remove: MailboxId[] });
-  createMailbox / renameMailbox / deleteMailbox;
-  saveDraft(d: DraftInput, existing: ProviderDraftId | null): Promise<ProviderDraftId>;
+  changesSince(c): Promise<
+    | { kind: "changes"; threads: ThreadId[]; mailboxes: "changed" | "unchanged"; next: ChangeCursor; more: boolean }
+    | { kind: "reset" }>;                                // 404 / cannotCalculateChanges / UIDVALIDITY
+  // — writes: semantic, idempotent (each sets a target state) —
+  archive / moveToInbox / trash / untrash / deleteForever(ids);
+  setFlags(ids, { unread?, starred? }); setMailboxes(ids, { add, remove });
+  createMailbox({ name, parentId }) / renameMailbox(id, name) / deleteMailbox(id);
+  saveDraft(m: OutgoingMessage, existing: DraftId | null): Promise<{ draftId; messageId; threadId }>;
   deleteDraft(id); send(m: OutgoingMessage): Promise<{ messageId; threadId }>;
-}
+}   // every method takes { priority?: "foreground" | "background"; signal? } last
 ```
 
+- **`changesSince` has no `removed` list.** No provider can say a thread is gone from a
+  history record alone (a deleted message may leave others). The caller re-reads `threads`,
+  and `getThreads` answers `gone` for those that are.
+- **`more`** follows JMAP's `hasMoreChanges`. Gmail reads at most 10 history pages
+  (5,000 records) per call and resumes after the last record it read.
+- **Errors are the contract's.** `MailUnreachableError` (offline: a cached window still
+  answers, an uncovered one fails typed), `MailNotConnectedError` (needs reconsent: the UI
+  shows `GmailAccessAction`), and `MailOutcomeUnknownError`. The last is a send, draft
+  create or label create that may have happened: the Gmail provider has already searched
+  `rfc822msgid:` (or the label name) and not found it. Never resend on it alone; ask
+  `findMessage` again first.
 - **`MailQuery`** is the live filter language's `Filter` tree, from
-  `network/live/plugins/filter`, over the `ThreadSummary` fields, plus a free-text `query`
-  term. Every provider compiles the same tree:
-  - Gmail builds a `q` string;
+  `network/live/plugins/filter`, over `MAIL_QUERY_COLUMNS`:
+  - `mailboxes` (stringArray), with `hasAny` / `hasAll` / `hasNone`;
+  - `unread` / `starred` / `hasAttachment`, with `eq` / `ne`;
+  - `date`, with `lt` / `lte` / `gt` / `gte`, at whole seconds;
+  - `from` / `to` / `subject`, with `contains` / `notContains`;
+  - `query`, with `contains`: the search box, in provider syntax.
+
+  The operator table `MAIL_QUERY_OPS` is the contract. Every provider compiles every
+  pair, and its compile test walks the table.
+  - Gmail builds a `q` string (task 2, table-tested);
   - JMAP builds an `Email/query` FilterCondition;
   - IMAP builds a `SEARCH` key list.
+- ***Task 2 correction:* the query is evaluated per message.** A thread matches when ONE of
+  its messages matches the WHOLE filter. That is what Gmail search, JMAP `Email/query` with
+  `collapseThreads`, IMAP `SEARCH` and Outlook's message `$filter` all compute, so it is the
+  only semantics every provider can answer exactly. `and(unread, from ana)` needs one unread
+  message from Ana. `mailboxes hasNone [inbox]` is a thread with a message outside the
+  inbox. Re-evaluating a filter over the thread unions (`ThreadSummary.unread`, `.mailboxes`)
+  gives a *different* answer. Hence `ThreadSummary.messages` (per-message facts), and the
+  change to §4's locally maintained class below.
 - **A clause the provider cannot express is refused.** It surfaces as the DataView's
-  `UnavailableFilterRuleError` for that rule. We never post-filter it locally over partial
-  data.
-- **The filter UI offers only what can be compiled.** Each field declares only the operators
-  that every registered provider compiles, so an unsupported rule normally has no spelling at
-  all (rung 1). The refusal is the guard for saved views.
+  `UnavailableFilterRuleError` for that rule, and is never post-filtered locally over
+  partial data. The reasons are typed: `unsupported-op`, `unknown-mailbox`,
+  `unsupported-mailbox` (Gmail's `role:archive`), and `unrepresentable-operand` (a `"` in
+  a label or name, a date between seconds, an unbalanced search).
+- **The filter UI offers only what can be compiled.** Each field declares only
+  `MAIL_QUERY_OPS`, so an unsupported rule normally has no spelling at all (rung 1). The
+  refusal is the guard for saved views and stale mailbox ids.
 - **Writes are semantic.** "Archive" removes `INBOX` on Gmail and moves the thread to the
   Archive mailbox on IMAP. The UI calls `archive`, never the label math.
-- **Registration.** Providers are an open set: a `MailProviders.Provider` server contribution,
-  with the account row naming its `providerId`. The cache and the UI use only the interface
+- **Registration.** Providers are an open set: a `MailProviders.Provider` server
+  contribution, with the account row naming its `providerId`
+  (`mailProviderById(id)`). The cache and the UI use only the interface
   (collection–consumer separation). v1 registers one provider.
+- **One pacer per account per process**, for every caller that goes through the contract:
+  `open(accountId)` memoizes, so they share one client and one pacer. The Gmail client and
+  pacer stay exported for the probe script, so code outside the contract could still build a
+  second pacer.
+
+**How the other providers map, without a contract change:**
+
+| | IMAP (CONDSTORE/QRESYNC) | JMAP (RFC 8620/8621) | Outlook (Graph) |
+|---|---|---|---|
+| mailboxes | folders (`mailboxModel: "folders"`), SPECIAL-USE → roles | `Mailbox` + `role` | `mailFolders` + well-known names |
+| version / cursor | max MODSEQ of the thread / `HIGHESTMODSEQ` per folder (cursor = encoded per-folder map), changed UIDVALIDITY → `reset` | `Email` state / `Email/changes`, `cannotCalculateChanges` → `reset`, `hasMoreChanges` → `more` | `@odata.deltaLink` per folder, a 410 → `reset` |
+| compileQuery | `SEARCH` keys per message (`SEEN`, `FLAGGED`, `SINCE`/`BEFORE` are dates only → `date` refused below a day, or post-cut) and a folder per mailbox clause (`hasAll` of two folders → `nothing`) | `FilterCondition` (`inMailbox`, `hasKeyword`, `after`/`before`, `from`, `text`) + `collapseThreads` | `$filter` / `$search` on messages, grouped by `conversationId` |
+| listThreads cut | `SEARCH … BEFORE` + local key drop, as Gmail | `Email/query` sorted `receivedAt` + `anchor` | `receivedDateTime lt` |
+| threads | `THREAD=REFERENCES` or References/In-Reply-To grouping | `Thread/get` | `conversationId` |
+| archive | MOVE to the `\Archive` folder | `Email/set` mailboxIds | `move` to `archive` |
+| send | SMTP submit + APPEND to Sent; `findMessage` = `SEARCH HEADER Message-ID` | `EmailSubmission/set`; `Email/query` header filter | `sendMail` (MIME); `internetMessageId eq` |
+| push | IDLE (`push: "idle"`) | EventSource (`"eventsource"`) | change notifications (webhook) or delta polling |
+
+IMAP's one wrinkle is a cursor over several folders. `ChangeCursor` is opaque, so it can
+encode one `HIGHESTMODSEQ` per selected folder. `date` at second precision is refused (or
+widened, then cut by key) where `SEARCH` only knows days. Both stay inside the contract.
 
 ### 3. What is stored
 
@@ -307,6 +374,10 @@ else fill(query, from = q.after ?? head, until = limit rows found or exhausted):
   - Sidebar badges come from `mail_mailboxes.counts` (Gmail `labels.get`: `threadsUnread` /
     `threadsTotal`), which are exact for mailbox views.
   - The DataView shows `N+` while the read can still grow.
+- ***Task 2 correction:* the date column.** The query's date column is `date`, a message's
+  received time, and the row's is `lastMessageAt`. Task 3's DataView date filter must
+  lower to `date`, not filter `lastMessageAt`. For `gte` / `gt` the two agree; for `lt` /
+  `lte` they differ (any message before X vs the last message before X).
 - **Search.** The search box is the `query` column. `searchable: ["query"]` lowers it to a
   `contains(query, text)` clause, which Gmail compiles to raw `q` text. So the full Gmail
   operator language works (`from:ana has:attachment older_than:1y`), over the **whole mailbox,
@@ -315,11 +386,16 @@ else fill(query, from = q.after ?? head, until = limit rows found or exhausted):
     misleading-partial answer we are avoiding.
   - Each search is a query row with a 1-day LRU.
 - **Freshness of a covered query.** There are two classes, set when the query is compiled:
-  - **Locally maintained.** The filter uses only fields the cache holds exactly (mailboxes,
-    unread, starred, hasAttachments, a date range): every sidebar view, and most user-built
-    ones.
-    - The sync engine (§5) re-evaluates membership itself with `matchesFilter` on each changed
-      thread. It inserts the thread above the floor, or removes it.
+  - **Locally maintained.** The filter uses only columns the cache holds exactly *per
+    message*: `mailboxes`, `unread`, `starred`, `date`. These are every sidebar view, and
+    most user-built ones.
+    - *Task 2 correction:* `hasAttachment` is NOT among them. The summary's
+      `hasAttachments` is a header hint, and Gmail's `has:attachment` is its own test.
+    - The sync engine (§5) re-evaluates membership itself on each changed thread: the
+      thread is in when **some entry of `ThreadSummary.messages` matches the whole filter**
+      (`matchesFilter` per message, the query being per message, §2). It is never
+      evaluated over the thread-level unions. It inserts the thread above the floor, or
+      removes it.
     - These queries stay fresh with **zero** provider calls, so reopening the Inbox is pure
       SQL.
   - **Provider-evaluated.** Free text, `from:`/`subject:` contains, and other provider
@@ -511,6 +587,20 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
    `mail/plugins/providers/plugins/gmail`). Covers the neutral model, `compileQuery`
    (Filter → `q`, a total function over the declared operators, table-tested) and the
    label/role mapping. *Ships:* the contract and adapter with tests.
+   *Done.* As shipped in §1–2, with the per-message query semantics, `ThreadSummary.messages`,
+   and the fake provider (`provider/server/testing`: `createFakeMailProvider`).
+   - The client gained a 401 retry with a refreshed token: `accessToken({ refused })` →
+     `getGmailToken({ refused })` → auth central refreshes the token it still holds. It
+     also gained single-message `modify` / `trash` / `untrash` / `delete`.
+   - **Unverified until the live probe runs** (task 3 should check them first):
+     - `after:` is inclusive and `before:` exclusive at whole seconds;
+     - `label:"Parent/Child name"` names a nested label;
+     - top-level parentheses group terms in `q`.
+   - Bulk writes cost 10 units a thread (`threads.modify`). Task 6 should do bulk triage with
+     `messages.batchModify` over `ThreadSummary.messages` ids, about 50 units per 1,000
+     messages.
+   - **Main and a worktree** each have their own pacer over one Gmail budget. Only Google's
+     429 (which pauses a pacer) catches them overspending together. Unchanged.
 3. **Cache + on-demand windows** (`mail/plugins/cache`, `mail/plugins/threads`). Covers the
    tables, coverage and fill, `mail.threads`, `mail.mailboxes`, the authored sidebar views,
    search via the `query` column, boot preload, the typed window refusal, and eviction.

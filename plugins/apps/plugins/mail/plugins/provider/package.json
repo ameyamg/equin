@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-provider",
+  "description": "The provider-neutral mail contract: the JMAP-shaped model (mailboxes with roles, thread summaries and contents, attachments), the MailQuery filter vocabulary every provider compiles (message-level semantics, a declared operator table, typed refusals), MailProvider (reads, a change cursor with a reset outcome, semantic writes) and the MailProviders.Provider registration; an in-memory fake provider for cache and e2e tests.",
+  "private": true,
+  "version": "0.0.1"
+}

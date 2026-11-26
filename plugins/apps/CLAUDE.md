@@ -17,6 +17,7 @@
   - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
   - **`isle`** — Isle — the island launcher: every installed app is a building on an illustrated archipelago you walk around; new apps get a generated building and are placed append-only, districts fill, then new…
   - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
+  - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), and later the cache, threads, reader and compose plugins.
   - **`pages`** — Notion-like pages app.
   - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
   - **`plugin-studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.

@@ -9,6 +9,7 @@ import {
   HistoryListSchema,
   LabelListSchema,
   LabelSchema,
+  MessageLabelsSchema,
   MessageListSchema,
   MessageSchema,
   newBatchBoundary,
@@ -24,6 +25,7 @@ import {
   type GmailHistoryRecord,
   type GmailLabel,
   type GmailMessage,
+  type GmailMessageLabels,
   type GmailMessageList,
   type GmailProfile,
   type GmailSentMessage,
@@ -419,6 +421,71 @@ export function createGmailClient(opts: GmailTransportOptions) {
           units: GMAIL_QUOTA["messages.get"][f.format],
         })),
         MessageSchema,
+        o,
+      );
+    },
+    /** Label changes on one message (a thread's other messages keep theirs). */
+    modifyMessage(
+      id: string,
+      change: GmailLabelChange,
+      o?: GmailCallOptions,
+    ): Promise<GmailMessageLabels> {
+      return t.call(
+        {
+          what: `messages.modify ${id}`,
+          units: GMAIL_QUOTA["messages.modify"],
+          replay: "safe",
+          method: "POST",
+          path: `${ME}/messages/${seg(id)}/modify`,
+          body: { kind: "json", value: change },
+          schema: MessageLabelsSchema,
+        },
+        o,
+      );
+    },
+    trashMessage(
+      id: string,
+      o?: GmailCallOptions,
+    ): Promise<GmailMessageLabels> {
+      return t.call(
+        {
+          what: `messages.trash ${id}`,
+          units: GMAIL_QUOTA["messages.trash"],
+          replay: "safe",
+          method: "POST",
+          path: `${ME}/messages/${seg(id)}/trash`,
+          schema: MessageLabelsSchema,
+        },
+        o,
+      );
+    },
+    untrashMessage(
+      id: string,
+      o?: GmailCallOptions,
+    ): Promise<GmailMessageLabels> {
+      return t.call(
+        {
+          what: `messages.untrash ${id}`,
+          units: GMAIL_QUOTA["messages.untrash"],
+          replay: "safe",
+          method: "POST",
+          path: `${ME}/messages/${seg(id)}/untrash`,
+          schema: MessageLabelsSchema,
+        },
+        o,
+      );
+    },
+    /** Permanent: the message skips the trash and cannot be recovered. */
+    async deleteMessage(id: string, o?: GmailCallOptions): Promise<void> {
+      await t.call(
+        {
+          what: `messages.delete ${id}`,
+          units: GMAIL_QUOTA["messages.delete"],
+          replay: "safe",
+          method: "DELETE",
+          path: `${ME}/messages/${seg(id)}`,
+          schema: EmptySchema,
+        },
         o,
       );
     },

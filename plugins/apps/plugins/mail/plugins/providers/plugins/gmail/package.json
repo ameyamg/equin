@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-providers-gmail",
+  "description": "The Gmail mail provider: MailProvider over integrations/gmail/api — compileQuery (a MailQuery filter to Gmail's q, total over the contract's operators, refusing what it cannot say exactly), label ↔ mailbox / role mapping, thread historyId as the version, history.list as the change cursor (404 = reset), semantic writes as label changes, and send / draft / label create reconciled by Message-ID or name when their outcome is unknown.",
+  "private": true,
+  "version": "0.0.1"
+}

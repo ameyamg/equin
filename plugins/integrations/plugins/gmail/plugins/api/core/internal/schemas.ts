@@ -251,3 +251,11 @@ export const ThreadLabelsSchema = z.object({
     .optional(),
 });
 export type GmailThreadLabels = z.infer<typeof ThreadLabelsSchema>;
+
+/** What `messages.modify` / `trash` / `untrash` answer: the message's ids and labels after the change. */
+export const MessageLabelsSchema = z.object({
+  id: z.string().min(1),
+  threadId: z.string().min(1),
+  labelIds: z.array(z.string()).optional(),
+});
+export type GmailMessageLabels = z.infer<typeof MessageLabelsSchema>;

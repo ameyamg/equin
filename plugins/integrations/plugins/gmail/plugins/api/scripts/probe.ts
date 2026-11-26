@@ -28,8 +28,8 @@ const label = flag("label", "INBOX");
 
 const pacer = createQuotaPacer();
 const gmail = createGmailClient({
-  accessToken: async () => {
-    const t = await getGmailToken();
+  accessToken: async (o?: { refused?: string }) => {
+    const t = await getGmailToken({ refused: o?.refused });
     if (!t.ok) throw new Error(`No Gmail token: ${t.message}`);
     return t.accessToken;
   },

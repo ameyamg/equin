@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-providers",
+  "description": "Umbrella for the Mail app's providers — each a MailProvider behind the provider-neutral contract (mail/provider): Gmail first; IMAP, JMAP and Outlook later.",
+  "private": true,
+  "version": "0.0.1"
+}

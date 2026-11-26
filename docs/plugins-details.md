@@ -7099,6 +7099,96 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `keyboardPartyApp`
           - Cross-plugin:
             - Imported by: `apps/keyboard-party/isle-building`
+    - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), and later the cache, threads, reader and compose plugins.
+      - Plugins:
+        - **`provider`** — Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
+          - Core:
+            - Uses:
+              - `network/live/filter.Filter`
+              - `network/live/filter.Filterable`
+              - `network/live/filter.FilterColumn`
+              - `network/live/filter.FilterOpId`
+              - `network/live/filter.liveBoolean`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveText`
+            - Exports (types):
+              - `AttachmentMeta`
+              - `AttachmentRef`
+              - `ChangeCursor`
+              - `CompiledMailQuery`
+              - `FoundMessage`
+              - `ListCursor`
+              - `Mailbox`
+              - `MailboxId`
+              - `MailboxRole`
+              - `MailCallOptions`
+              - `MailChanges`
+              - `MailFlags`
+              - `MailProvider`
+              - `MailProviderCapabilities`
+              - `MailProviderDefinition`
+              - `MailQuery`
+              - `MailQueryColumn`
+              - `MailQueryRefusal`
+              - `MailQueryRefusalReason`
+              - `MessageBody`
+              - `MessageContent`
+              - `MessageFacts`
+              - `OutgoingMessage`
+              - `Participant`
+              - `SavedDraft`
+              - `SentMessage`
+              - `ThreadContent`
+              - `ThreadContentResult`
+              - `ThreadId`
+              - `ThreadListPage`
+              - `ThreadRef`
+              - `ThreadSummary`
+              - `ThreadSummaryResult`
+              - `ThreadVersion`
+            - Exports (values):
+              - `assertOutgoingMessageId`
+              - `changeCursor`
+              - `draftId`
+              - `isDeclaredMailOp`
+              - `listCursor`
+              - `MAIL_QUERY_COLUMNS`
+              - `MAILBOX_ROLES`
+              - `mailboxRoleOf`
+              - `MailNotConnectedError`
+              - `MailOutcomeUnknownError`
+              - `MailUnreachableError`
+              - `messageId`
+              - `mimeMessageId`
+              - `nativeMailboxId`
+              - `providerQuery`
+              - `roleMailboxId`
+              - `THREAD_PARTICIPANTS_MAX`
+              - `threadId`
+              - `threadVersion`
+          - Cross-plugin:
+            - Imported by: `apps/mail/providers/gmail`
+          - Server:
+            - Exports (values):
+              - `mailProviderById`
+              - `MailProviders`
+          - Test helpers:
+            - Server: `@plugins/apps/plugins/mail/plugins/provider/server/testing`
+              - `createFakeMailProvider`
+              - `fakeCompileQuery` — The fake's compile: the canonical filter JSON is its provider query.
+              - `MAIL_QUERY_OPS` — The operators each column offers — the contract, not one provider's reach: every registered provider compiles every pair here (its compile test walks this table), so the filter UI offers exactly these and an unsupported rule has no spelling.
+              - Types: `FakeAttachment`, `FakeCall`, `FakeMailProvider`, `FakeMailProviderOptions`, `FakeMessageInput`
+        - **`providers`** — Umbrella for the Mail app's providers — each a MailProvider behind the provider-neutral contract (mail/provider): Gmail first; IMAP, JMAP and Outlook later.
+          - Plugins:
+            - **`gmail`** — Registers the Gmail mail provider: MailProvider over integrations/gmail/api, one client and quota pacer per account, Gmail's q compiled from the contract's filter.
+              - Server:
+                - Contributes: `mail.provider` "Gmail"
+                - Uses:
+                  - `apps/mail/provider.MailProviders`
+                  - `integrations/gmail.getGmailToken`
+                  - `integrations/gmail/api.createGmailClient`
+              - Exemptions:
+                - Exempts itself from: `endpoints/no-raw-content-disposition` — `server/internal/content.ts` (sanctioned)
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
@@ -34253,12 +34343,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 128 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 129 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `conversations` ×14
           - `debug` ×14
+          - `apps` ×13
           - `tasks` ×13
-          - `apps` ×12
           - `database` ×10
           - `network` ×5
           - `reports` ×5
@@ -38569,6 +38659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `networking/no-request-guard-capability` — `web/internal/asset-url.ts`, `web/internal/asset-src.ts` (sanctioned)
           - `endpoints/no-raw-content-disposition` — `core/content-disposition.ts`, `lint/no-raw-content-disposition.ts` (sanctioned)
         - Exempted by:
+          - `apps/mail/providers/gmail` (0 debt)
           - `apps/pages/page-tree` (0 debt)
           - `apps/sonata/playback-history` (0 debt)
           - `apps/sonata/rich/key-mode` (0 debt)
@@ -43419,6 +43510,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `getGmailToken`
           - `isGmailEnabled`
+      - Cross-plugin:
+        - Imported by: `apps/mail/providers/gmail`
       - Core:
         - Exports (types): `GmailTokenResult`
         - Exports (values):
@@ -43426,6 +43519,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GOOGLE_PROVIDER_ID`
       - Plugins:
         - **`api`** — Stateless typed Gmail REST client: createGmailClient({ accessToken, pacer }) — profile, labels, threads, messages, history (an expired cursor is a typed outcome), drafts, send (multipart upload), attachments, modify and watch; reads batched ≤50 per HTTP request with a per-id result; every call charged on the account's quota pacer before it is sent and retried within a bound on Google's 429 / 5xx / rate-limit 403; every answer zod-parsed.
+          - Cross-plugin:
+            - Imported by: `apps/mail/providers/gmail`
           - Server:
             - Exports (types):
               - `GmailBatchResult`
@@ -43454,6 +43549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GmailHistoryRecord`
               - `GmailLabel`
               - `GmailMessage`
+              - `GmailMessageLabels`
               - `GmailMessageList`
               - `GmailMessagePart`
               - `GmailMessageRef`
@@ -43496,6 +43592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HistoryRecordSchema`
               - `LabelListSchema`
               - `LabelSchema`
+              - `MessageLabelsSchema`
               - `MessageListSchema`
               - `MessagePartSchema`
               - `MessageRefSchema`
@@ -45197,6 +45294,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/collect`
               - `apps/deploy/analytics/sessions`
               - `apps/deploy/site-messages/inbox`
+              - `apps/mail/provider`
+              - `apps/mail/providers/gmail`
               - `fields/bool/filter`
               - `fields/date/filter`
               - `fields/enum/filter`
@@ -46493,9 +46592,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `mulberry32`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
           - `infra` ×9
-          - `apps` ×4
+          - `apps` ×5
           - `debug` ×3
           - `framework` ×3
           - `conversations` ×2

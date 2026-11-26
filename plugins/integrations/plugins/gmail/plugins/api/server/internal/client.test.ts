@@ -390,6 +390,101 @@ describe("createGmailClient", () => {
     expect(c.sent).toHaveLength(2);
   });
 
+  test("a 401 is sent once more with a token refreshed past the refused one", async () => {
+    const asked: (string | undefined)[] = [];
+    const r = replay([
+      json(401, { error: { code: 401, message: "Invalid Credentials" } }),
+      json(200, {
+        emailAddress: "a@x",
+        messagesTotal: 1,
+        threadsTotal: 1,
+        historyId: "7",
+      }),
+    ]);
+    const gmail = createGmailClient({
+      accessToken: async (o) => {
+        asked.push(o?.refused);
+        return o?.refused ? "fresh" : "old";
+      },
+      pacer: createQuotaPacer(),
+      fetch: r.fetch,
+    });
+    const p = await gmail.getProfile();
+    expect(p.historyId).toBe("7");
+    expect(asked).toEqual([undefined, "old"]);
+    expect(r.sent.map((s) => s.headers.Authorization)).toEqual([
+      "Bearer old",
+      "Bearer fresh",
+    ]);
+  });
+
+  test("a second 401 throws: the grant is gone", async () => {
+    const r = replay([
+      json(401, { error: { code: 401, message: "Invalid Credentials" } }),
+      json(401, { error: { code: 401, message: "Invalid Credentials" } }),
+    ]);
+    const gmail = createGmailClient({
+      accessToken: async () => "tok",
+      pacer: createQuotaPacer(),
+      fetch: r.fetch,
+    });
+    const err = await gmail.getProfile().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(GmailApiError);
+    expect((err as GmailApiError).status).toBe(401);
+    expect(r.sent).toHaveLength(2);
+  });
+
+  test("batch parts refused with 401 go once more, alone, with a token asked past the refused one", async () => {
+    const asked: (string | undefined)[] = [];
+    const unauthorized = {
+      status: 401,
+      statusText: "Unauthorized",
+      body: { error: { code: 401, message: "Invalid Credentials" } },
+    };
+    const r = replay([
+      batchReply((i, path) =>
+        i === 0
+          ? {
+              status: 200,
+              statusText: "OK",
+              body: metadataThread(path.split("/")[5]!.split("?")[0]!, "1"),
+            }
+          : unauthorized,
+      ),
+      batchReply((_i, path) => ({
+        status: 200,
+        statusText: "OK",
+        body: metadataThread(path.split("/")[5]!.split("?")[0]!, "2"),
+      })),
+    ]);
+    const gmail = createGmailClient({
+      accessToken: async (o) => {
+        asked.push(o?.refused);
+        return o?.refused ? "fresh" : "old";
+      },
+      pacer: createQuotaPacer(),
+      fetch: r.fetch,
+    });
+    const out = await gmail.getThreads(["a", "b", "c"], { format: "metadata" });
+    expect(out.map((x) => x.ok && x.value.historyId)).toEqual(["1", "2", "2"]);
+    expect(asked).toEqual([undefined, "old"]);
+    expect(r.sent).toHaveLength(2);
+    // Only the two refused parts were sent again.
+    expect(String(r.sent[1]!.body).match(/GET /g)).toHaveLength(2);
+  });
+
+  test("messages.modify / trash: one message, 5 units each", async () => {
+    const labels = { id: "m1", threadId: "t1", labelIds: ["STARRED"] };
+    const c = client([json(200, labels), json(200, labels)]);
+    await c.gmail.modifyMessage("m1", { addLabelIds: ["STARRED"] });
+    await c.gmail.trashMessage("m1");
+    expect(c.sent.map((s) => `${s.method} ${s.url}`)).toEqual([
+      "POST https://gmail.googleapis.com/gmail/v1/users/me/messages/m1/modify",
+      "POST https://gmail.googleapis.com/gmail/v1/users/me/messages/m1/trash",
+    ]);
+    expect(c.pacer.stats().spentUnits).toBe(10);
+  });
+
   test("an abort cuts a backoff sleep short", async () => {
     const ac = new AbortController();
     const r = replay([

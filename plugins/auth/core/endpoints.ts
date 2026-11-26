@@ -52,6 +52,7 @@ export const GetTokenBodySchema = z.object({
   providerId: z.string(),
   accountId: z.string().optional(),
   scopes: z.array(z.string()).optional(),
+  refused: z.string().optional(),
 });
 export type GetTokenBody = z.infer<typeof GetTokenBodySchema>;
 

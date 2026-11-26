@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail",
+  "description": "Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), and later the cache, threads, reader and compose plugins.",
+  "private": true,
+  "version": "0.0.1"
+}

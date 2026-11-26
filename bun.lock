@@ -822,6 +822,22 @@
       "name": "@equin/plugin-apps-keyboard-party-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail": {
+      "name": "@equin/plugin-apps-mail",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/provider": {
+      "name": "@equin/plugin-apps-mail-provider",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/providers": {
+      "name": "@equin/plugin-apps-mail-providers",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/providers/plugins/gmail": {
+      "name": "@equin/plugin-apps-mail-providers-gmail",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages": {
       "name": "@equin/plugin-apps-pages",
       "version": "0.0.1",
@@ -8905,6 +8921,14 @@
     "@equin/plugin-apps-keyboard-party-party": ["@equin/plugin-apps-keyboard-party-party@workspace:plugins/apps/plugins/keyboard-party/plugins/party"],
 
     "@equin/plugin-apps-keyboard-party-shell": ["@equin/plugin-apps-keyboard-party-shell@workspace:plugins/apps/plugins/keyboard-party/plugins/shell"],
+
+    "@equin/plugin-apps-mail": ["@equin/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
+
+    "@equin/plugin-apps-mail-provider": ["@equin/plugin-apps-mail-provider@workspace:plugins/apps/plugins/mail/plugins/provider"],
+
+    "@equin/plugin-apps-mail-providers": ["@equin/plugin-apps-mail-providers@workspace:plugins/apps/plugins/mail/plugins/providers"],
+
+    "@equin/plugin-apps-mail-providers-gmail": ["@equin/plugin-apps-mail-providers-gmail@workspace:plugins/apps/plugins/mail/plugins/providers/plugins/gmail"],
 
     "@equin/plugin-apps-pages": ["@equin/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 

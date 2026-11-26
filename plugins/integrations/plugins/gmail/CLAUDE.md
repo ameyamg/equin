@@ -14,7 +14,7 @@ it and **never** import `@plugins/auth/*` directly or name the Gmail scope strin
   - `GOOGLE_PROVIDER_ID` — the auth provider the Gmail scope is granted on. Named once so this plugin's scope requirement, access hook, and access action cannot drift onto different providers.
   - `GmailTokenResult` (type) — Gmail-owned token-request result: `{ ok: true; accessToken; expiresAt; scopes; email }` or `{ ok: false; needsConsent; message }`. The `email` is the connected Google account address (from the OAuth identity, known without a Gmail API call) — it lets consumers establish state before their first API call. Deliberately not a re-export of auth's `TokenResponse`.
 - **`server`** (`@plugins/integrations/plugins/gmail/server`)
-  - `getGmailToken(): Promise<GmailTokenResult>` — fetches a Gmail-scoped Google token via the shared auth/central store. Lets `AuthCentralOfflineError` propagate (fail loudly).
+  - `getGmailToken({ refused? }): Promise<GmailTokenResult>` — fetches a Gmail-scoped Google token via the shared auth/central store. `refused` is the token Gmail just answered 401 to: central refreshes it if it still holds that one (a burst of 401s costs one refresh). Lets `AuthCentralOfflineError` propagate (fail loudly).
   - `isGmailEnabled(): boolean` — whether the Settings toggle is on.
 - **`web`** (`@plugins/integrations/plugins/gmail/web`)
   - `useGmailAccess(): GmailAccess` — reactive `{ enabled, connected, scopesGranted, ready, loading, blocker }` derived from the config toggle + the Google account status.
@@ -71,6 +71,8 @@ for themselves.
   - Exports (values):
     - `getGmailToken`
     - `isGmailEnabled`
+- Cross-plugin:
+  - Imported by: `apps/mail/providers/gmail`
 - Core:
   - Exports (types): `GmailTokenResult`
   - Exports (values):

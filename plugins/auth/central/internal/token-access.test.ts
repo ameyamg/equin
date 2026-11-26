@@ -96,3 +96,24 @@ test("concurrent callers share one refresh, and the next call after a failure re
   await getAccessTokenInternal({ providerId: descriptor.id });
   expect(patches).toHaveLength(2);
 });
+
+test("a refused token is refreshed even before it expires; an older refused token is not", async () => {
+  account = {
+    ...account,
+    accessToken: "live",
+    expiresAt: Date.now() + 3_600_000,
+  };
+
+  const older = await getAccessTokenInternal({
+    providerId: descriptor.id,
+    refused: "already-replaced",
+  });
+  expect(older.ok && older.accessToken).toBe("live");
+  expect(patches).toHaveLength(0);
+
+  await getAccessTokenInternal({ providerId: descriptor.id, refused: "live" });
+  await settle();
+  // The refresh ran (and failed here: the token endpoint is unreachable).
+  expect(patches).toHaveLength(1);
+  expect(unhandled).toEqual([]);
+});

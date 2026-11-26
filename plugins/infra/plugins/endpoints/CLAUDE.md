@@ -653,6 +653,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `networking/no-request-guard-capability` — `web/internal/asset-url.ts`, `web/internal/asset-src.ts` (sanctioned)
     - `endpoints/no-raw-content-disposition` — `core/content-disposition.ts`, `lint/no-raw-content-disposition.ts` (sanctioned)
   - Exempted by:
+    - `apps/mail/providers/gmail` (0 debt)
     - `apps/pages/page-tree` (0 debt)
     - `apps/sonata/playback-history` (0 debt)
     - `apps/sonata/rich/key-mode` (0 debt)

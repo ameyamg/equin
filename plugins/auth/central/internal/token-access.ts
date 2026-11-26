@@ -217,7 +217,13 @@ export async function getAccessTokenInternal(
   }
 
   const expiresAt = account.expiresAt ?? 0;
-  if (account.accessToken && expiresAt > Date.now() + REFRESH_LEAD_MS) {
+  const refused =
+    args.refused !== undefined && args.refused === account.accessToken;
+  if (
+    account.accessToken &&
+    !refused &&
+    expiresAt > Date.now() + REFRESH_LEAD_MS
+  ) {
     return {
       ok: true,
       accessToken: account.accessToken,

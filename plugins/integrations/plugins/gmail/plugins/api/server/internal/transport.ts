@@ -32,9 +32,13 @@ export type GmailCallOptions = {
 export type GmailTransportOptions = {
   /**
    * A valid Gmail-scoped access token, asked for once per HTTP request (a
-   * token can expire between two pages; the broker caches it).
+   * token can expire between two pages; the broker caches it). When Google
+   * answers 401 the request is sent once more with a token asked for with
+   * `{ refused }` — the token Google just refused, so the broker refreshes it
+   * if it still holds that one (another caller may have refreshed already). A
+   * second 401 throws: the grant itself is gone.
    */
-  accessToken: () => Promise<string>;
+  accessToken: (o?: { refused?: string }) => Promise<string>;
   /** The account's ONE pacer (`createQuotaPacer`), shared by all its callers. */
   pacer: QuotaPacer;
   /** Tests replay recorded answers through this. Default: global `fetch`. */
@@ -259,22 +263,34 @@ export function createGmailTransport(
     headers: Record<string, string>,
     body: BodyInit | undefined,
     signal: AbortSignal | undefined,
-  ): Promise<{ res: Response; text: string }> {
-    const token = await opts.accessToken();
-    try {
-      const res = await doFetch(`${GMAIL_API_ROOT}${path}`, {
-        method,
-        headers: { Authorization: `Bearer ${token}`, ...headers },
-        body,
-        signal,
-      });
-      // Read here: a connection reset mid-body is the same failure as one
-      // before the headers.
-      return { res, text: await res.text() };
-    } catch (err) {
-      if (signal?.aborted) throw err;
-      throw new GmailUnreachableError(what, err);
-    }
+    /** A token Google refused inside an earlier answer (a batch part's 401): ask past it. */
+    refused?: string,
+  ): Promise<{ res: Response; text: string; token: string }> {
+    const once = async (token: string) => {
+      try {
+        const res = await doFetch(`${GMAIL_API_ROOT}${path}`, {
+          method,
+          headers: { Authorization: `Bearer ${token}`, ...headers },
+          body,
+          signal,
+        });
+        // Read here: a connection reset mid-body is the same failure as one
+        // before the headers.
+        return { res, text: await res.text(), token };
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        throw new GmailUnreachableError(what, err);
+      }
+    };
+    const token = await opts.accessToken(
+      refused === undefined ? undefined : { refused },
+    );
+    const first = await once(token);
+    // A 401 means Google did nothing (it never read the request), so even a
+    // send may go again — with a token the broker refreshed. Not a retry of a
+    // failing op: the token's lifetime is Google's, not ours to predict.
+    if (first.res.status !== 401) return first;
+    return once(await opts.accessToken({ refused: token }));
   }
 
   async function callOutcome<T>(
@@ -350,6 +366,11 @@ export function createGmailTransport(
       items.length,
     );
     let pending = items.map((_, i) => i);
+    // A batch whose envelope Google accepted can still refuse its parts with
+    // 401 (the token lapsed): those parts go once more, with a token asked
+    // past the refused one — as `send` does for a whole request.
+    let refusedToken: string | undefined;
+    let authRetried = false;
     for (let attempt = 0; pending.length > 0; attempt++) {
       const last = attempt + 1 >= attempts;
       const units = pending.reduce((sum, i) => sum + items[i]!.units, 0);
@@ -358,8 +379,9 @@ export function createGmailTransport(
       const label = `${what} (batch of ${pending.length})`;
       let res: Response;
       let text: string;
+      let token: string;
       try {
-        ({ res, text } = await send(
+        ({ res, text, token } = await send(
           label,
           "POST",
           "/batch/gmail/v1",
@@ -369,7 +391,9 @@ export function createGmailTransport(
             boundary,
           ),
           callOpts.signal,
+          refusedToken,
         ));
+        refusedToken = undefined;
       } catch (err) {
         if (!(err instanceof GmailUnreachableError) || last) throw err;
         await backoff(attempt, false, null, callOpts.signal);
@@ -392,11 +416,16 @@ export function createGmailTransport(
         pending.length,
       );
       const retry: number[] = [];
+      const unauthorized: number[] = [];
       let rateLimited = false;
       let retryAfter: number | null = null;
       for (const part of parts) {
         const index = pending[part.index]!;
         const itemWhat = `${what} ${items[index]!.part.path}`;
+        if (part.status === 401 && !authRetried) {
+          unauthorized.push(index);
+          continue;
+        }
         if (part.status >= 200 && part.status < 300) {
           try {
             results[index] = {
@@ -421,6 +450,15 @@ export function createGmailTransport(
         } else {
           results[index] = { ok: false, error };
         }
+      }
+      if (unauthorized.length > 0) {
+        // Not a backoff: Google did nothing, the token is what changes.
+        authRetried = true;
+        refusedToken = token;
+        pending = [...unauthorized, ...retry];
+        if (retry.length > 0)
+          await backoff(attempt, rateLimited, retryAfter, callOpts.signal);
+        continue;
       }
       pending = retry;
       if (pending.length > 0)

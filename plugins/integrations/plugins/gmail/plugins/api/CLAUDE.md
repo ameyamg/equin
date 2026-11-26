@@ -16,7 +16,9 @@ task 1), which gets the token from the parent plugin (`getGmailToken`).
     `getThread` / `getThreads` (batch) in `minimal` | `metadata` | `full`,
     `modifyThread`, `trashThread` / `untrashThread`, `deleteThread`;
   - messages: `listMessages`, `getMessage` / `getMessages` (batch, `raw`
-    too), `batchModifyMessages` (≤ 1,000 ids), `getAttachment` (bytes),
+    too), `modifyMessage` / `trashMessage` / `untrashMessage` /
+    `deleteMessage` (one message, its thread's others untouched),
+    `batchModifyMessages` (≤ 1,000 ids), `getAttachment` (bytes),
     `sendMessage` (RFC 2822 bytes);
   - `listHistory` — one page, or `{ kind: "expired" }` when Gmail answers
     404 for a cursor older than its history (the caller resyncs);
@@ -81,6 +83,13 @@ that account. Two pacers over one account would each spend the whole budget.
   - A dropped connection or a 5xx on a `rate-only` call throws
     `GmailOutcomeUnknownError`. The caller reconciles (Sent, history) instead
     of sending again.
+- **A 401 is sent once more with a refreshed token.** The getter is asked
+  again with `{ refused: <the token Google refused> }`, and the broker
+  (`getGmailToken({ refused })` → auth central) refreshes if it still holds
+  that token. A 401 means Google did nothing, so even a send may go again. A
+  second 401 throws `GmailApiError` (status 401): the grant is gone. Batch
+  parts refused with 401 inside an accepted batch go once more the same way
+  (only those parts).
 - An abort cuts a backoff wait short.
 - The pacer runs on a monotonic clock (`performance.now`).
 - A 2xx answer whose shape Gmail does not document throws
@@ -104,6 +113,8 @@ that account. Two pacers over one account would each spend the whole budget.
 ## Plugin reference
 
 - Description: Stateless typed Gmail REST client: createGmailClient({ accessToken, pacer }) — profile, labels, threads, messages, history (an expired cursor is a typed outcome), drafts, send (multipart upload), attachments, modify and watch; reads batched ≤50 per HTTP request with a per-id result; every call charged on the account's quota pacer before it is sent and retried within a bound on Google's 429 / 5xx / rate-limit 403; every answer zod-parsed.
+- Cross-plugin:
+  - Imported by: `apps/mail/providers/gmail`
 - Server:
   - Exports (types):
     - `GmailBatchResult`
@@ -132,6 +143,7 @@ that account. Two pacers over one account would each spend the whole budget.
     - `GmailHistoryRecord`
     - `GmailLabel`
     - `GmailMessage`
+    - `GmailMessageLabels`
     - `GmailMessageList`
     - `GmailMessagePart`
     - `GmailMessageRef`
@@ -174,6 +186,7 @@ that account. Two pacers over one account would each spend the whole budget.
     - `HistoryRecordSchema`
     - `LabelListSchema`
     - `LabelSchema`
+    - `MessageLabelsSchema`
     - `MessageListSchema`
     - `MessagePartSchema`
     - `MessageRefSchema`
