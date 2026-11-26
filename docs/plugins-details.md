@@ -7759,7 +7759,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 54 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses: 55 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/data-view` ×9
               - `network/live/live-state` ×5
               - `primitives/css/ui-kit` ×5
@@ -7773,6 +7773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/provider.MailProviderConnect`
               - `apps/mail/reader.ThreadReader`
               - `network/live/optimistic-mutation.writeRows`
+              - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
@@ -53311,11 +53312,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×15
           - `ui` ×12
-          - `apps` ×10
-          - `primitives` ×9
+          - `apps` ×11
+          - `primitives` ×10
           - `plugin-meta` ×4
           - `review` ×3
           - `tasks` ×2
@@ -56421,7 +56422,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Contributes: `IdKinds.Kind` "view"
-            - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `primitives/css/ui-kit` ×16
               - `primitives/dom/web-storage` ×4
               - `config_v2` ×3
@@ -56432,6 +56433,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/sortable-list` ×2
               - `config_v2/fields.FieldRenderer`
               - `ids.IdKinds`
+              - `primitives/collapsible.FoldMotion`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/rigid.rigidClass`

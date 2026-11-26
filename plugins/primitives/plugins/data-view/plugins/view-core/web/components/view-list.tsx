@@ -19,6 +19,7 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import { ViewGlyph } from "./view-glyph";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
@@ -62,6 +63,12 @@ export interface ViewListProps<T extends ViewTypeMeta> {
    * `nav` — a sidebar's places to go (`Row` nav: the sidebar metrics).
    */
   form?: "menu" | "nav";
+  /**
+   * Views listed but folded away — behind a "More" the host draws. A row
+   * whose answer flips folds with motion in its place (it stays in the list
+   * and its drag order), never mounting or unmounting in one frame.
+   */
+  folded?: (view: { id: string; locked: boolean }) => boolean;
 }
 
 /**
@@ -86,6 +93,7 @@ export function ViewList<T extends ViewTypeMeta>({
   renaming: controlledRenaming,
   create,
   form = "menu",
+  folded,
 }: ViewListProps<T>): ReactNode {
   const [ownRenamingId, setOwnRenamingId] = useState<string | null>(null);
   const renaming = controlledRenaming ?? {
@@ -113,27 +121,31 @@ export function ViewList<T extends ViewTypeMeta>({
             return (
               <SortableItem key={id} id={id} disabled={isHome || isRenaming}>
                 {() => (
-                  <ViewListRow
-                    form={form}
-                    instance={r}
-                    active={id === activeId}
-                    count={countFor?.(id)}
-                    dirty={dirtyFor?.(id) ?? false}
-                    renaming={isRenaming}
-                    menu={
-                      !editable || isHome ? "none" : isLocked ? "copy" : "all"
-                    }
-                    onSelect={() => onSelect(id)}
-                    onRename={(name) => {
-                      renaming.set(null);
-                      if (name !== null && name !== r.instance.name) {
-                        actions.renameView(id, name);
+                  <FoldMotion
+                    open={folded?.({ id, locked: isLocked }) !== true}
+                  >
+                    <ViewListRow
+                      form={form}
+                      instance={r}
+                      active={id === activeId}
+                      count={countFor?.(id)}
+                      dirty={dirtyFor?.(id) ?? false}
+                      renaming={isRenaming}
+                      menu={
+                        !editable || isHome ? "none" : isLocked ? "copy" : "all"
                       }
-                    }}
-                    onStartRename={() => renaming.set(id)}
-                    onDuplicate={() => actions.duplicateView(id)}
-                    onDelete={() => actions.deleteView(id)}
-                  />
+                      onSelect={() => onSelect(id)}
+                      onRename={(name) => {
+                        renaming.set(null);
+                        if (name !== null && name !== r.instance.name) {
+                          actions.renameView(id, name);
+                        }
+                      }}
+                      onStartRename={() => renaming.set(id)}
+                      onDuplicate={() => actions.duplicateView(id)}
+                      onDelete={() => actions.deleteView(id)}
+                    />
+                  </FoldMotion>
                 )}
               </SortableItem>
             );

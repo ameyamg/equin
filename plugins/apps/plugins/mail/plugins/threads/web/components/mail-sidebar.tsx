@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { TagPickerPanel } from "@plugins/tag-tree/plugins/picker/web";
 import {
   DataViewViewList,
@@ -58,7 +59,10 @@ const SIDEBAR_WIDTH = "w-54";
 export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
   const { viewModel, activeViewId } = useDataViewControls();
   const { drafts, setRenamingId, dirtyFor, instances } = viewModel;
-  const [more, setMore] = useState(false);
+  // More is a disclosure: it folds Spam and Trash open in their places.
+  // Its rows sit among the other views (no one region to point
+  // `aria-controls` at), so the trigger reports its state and toggles only.
+  const { open: more, toggle: toggleMore } = useCollapsible();
   const active = instances.find((r) => r.instance.id === activeViewId);
 
   const countFor = useCallback(
@@ -74,9 +78,12 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
     [mailboxes],
   );
   const include = useCallback(
+    (v: { id: string }) => labelOfView(v.id) === null,
+    [],
+  );
+  const folded = useCallback(
     (v: { id: string }) =>
-      labelOfView(v.id) === null &&
-      (more || !MAIL_TUCKED_VIEWS.has(v.id) || v.id === activeViewId),
+      !more && MAIL_TUCKED_VIEWS.has(v.id) && v.id !== activeViewId,
     [more, activeViewId],
   );
   if (drafts === null) {
@@ -123,13 +130,15 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
             newLabel="New view"
             onNew={newView}
             include={include}
+            folded={folded}
             countFor={countFor}
           />
           <Row
             size="nav"
             className="rounded-nav-row"
             icon={<Icon icon={more ? collapseIcon : expandIcon} />}
-            onClick={() => setMore((m) => !m)}
+            aria-expanded={more}
+            onClick={toggleMore}
           >
             <Text variant="label" tone="faint">
               {more ? "Less" : "More"}

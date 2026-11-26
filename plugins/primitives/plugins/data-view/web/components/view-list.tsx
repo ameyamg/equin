@@ -34,8 +34,14 @@ export function DataViewViewList(props: {
    * `undefined` for a view draws none. Default `useViewRowCounts`.
    */
   countFor?: (id: string) => number | undefined;
+  /**
+   * Which listed views are folded away behind a disclosure the surface draws
+   * (a sidebar's "More") — default none. Unlike `include`, a folded view
+   * keeps its row, which folds open and shut with motion as this flips.
+   */
+  folded?: (instance: { id: string; locked: boolean }) => boolean;
 }): ReactNode {
-  const { newLabel, onNew, include } = props;
+  const { newLabel, onNew, include, folded } = props;
   const { viewModel, activeViewId } = useDataViewControls();
   const rowCounts = useViewRowCounts();
   const countFor = props.countFor ?? rowCounts;
@@ -95,6 +101,7 @@ export function DataViewViewList(props: {
       renaming={{ id: viewModel.renamingId, set: viewModel.setRenamingId }}
       create={{ label: newLabel, onCreate: create }}
       form="nav"
+      folded={folded}
     />
   );
 }
