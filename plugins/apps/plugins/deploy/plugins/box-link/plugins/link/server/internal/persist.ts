@@ -1,6 +1,7 @@
 import { db } from "@plugins/database/server";
 import type { BoxLink } from "@plugins/apps/plugins/deploy/plugins/box-link/core";
-import { deploymentBoxLink } from "./tables";
+import type { ProbedPublicPath } from "../../core";
+import { deploymentBoxLink, deploymentPublicPath } from "./tables";
 
 /** What a link keeps across a restart of this computer (its state starts over). */
 export type KeptBoxLink = Pick<
@@ -34,4 +35,20 @@ export async function writeBoxLinkState(link: BoxLink): Promise<void> {
     lastError: link.lastError,
     hello: link.hello,
   });
+}
+
+/** Every deployment's public path as last persisted, for the probe's boot. */
+export async function readKeptPublicPaths(): Promise<
+  Map<string, ProbedPublicPath>
+> {
+  const rows = await db.select().from(deploymentPublicPath.table);
+  return new Map(rows.map((r) => [r.deploymentId, r.path]));
+}
+
+/** Write a public path's record — called when a probe changed it only. */
+export async function writePublicPath(
+  deploymentId: string,
+  path: ProbedPublicPath,
+): Promise<void> {
+  await deploymentPublicPath.upsert(deploymentId, { path });
 }

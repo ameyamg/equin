@@ -47,6 +47,20 @@ export default [
     load: () => import("./internal/failed"),
   }),
   appExhibit({
+    id: "site-row/public-failing",
+    label: "Deployed site row — public site not answering (box up)",
+    home: "chrome",
+    widths: [380],
+    load: () => import("./internal/public-failing"),
+  }),
+  appExhibit({
+    id: "site-row/public-down",
+    label: "Deployed site row — public site down (box up)",
+    home: "chrome",
+    widths: [380],
+    load: () => import("./internal/public-down"),
+  }),
+  appExhibit({
     id: "site-row/two-sites",
     label: "Deployed site rows — two sites",
     home: "chrome",

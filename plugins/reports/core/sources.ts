@@ -81,6 +81,11 @@ export const SERVER_REPORT_SOURCES = [
   // main's backend from GitHub's own delivery (or the catch-up listing of a
   // forwarder start). Another system's verdict, not an error anyone caught.
   "server-github-events",
+  // A deployed site's public URL failed main's once-a-minute probe through
+  // Cloudflare (apps/deploy/box-link/link's public-path probe) for several
+  // minutes running. A scheduled observation of the public path, not an
+  // error anyone caught.
+  "server-site-probe",
   // A report filed by a process with NO server — a CLI run, a supervised child —
   // through the report outbox (plugins/reports/plugins/outbox), and recorded by
   // main's drain. Server-only so the browser endpoint cannot claim it: nothing

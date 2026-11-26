@@ -34,6 +34,7 @@ import {
 import {
   onLinkTargetsChanged,
   readKeptBoxLinks,
+  readKeptPublicPaths,
   writeBoxLinkState,
   type KeptBoxLink,
 } from "@plugins/apps/plugins/deploy/plugins/box-link/plugins/link/server";
@@ -51,7 +52,14 @@ import {
 } from "./stream-client";
 import { createTunnelEvidence, type TunnelEvidence } from "./tunnel-evidence";
 import { dispatchBoxHello, dispatchBoxSignal } from "../../shared/signals";
-import { dropLink, linkOf, linkedDeploymentIds, setLink } from "./store";
+import {
+  dropLink,
+  linkOf,
+  linkedDeploymentIds,
+  setLink,
+  setPublicPath,
+  setRealBox,
+} from "./store";
 import { boxLinksServed, siteHealthServed } from "./served";
 
 // The driver of every link this instance holds: it opens what the targets
@@ -257,6 +265,7 @@ function refusalOf(kind: SshTunnelFailureKind): LinkRefusal {
 async function openServer(target: LinkTarget): Promise<void> {
   const at = Date.now();
   for (const d of target.deployments) {
+    setRealBox(d.deploymentId, target.kind !== "stand-in");
     const existing = linkOf(d.deploymentId);
     if (existing === undefined) {
       setLink(
@@ -470,6 +479,9 @@ export async function retryLink(deploymentId: string): Promise<RetryOutcome> {
 /** Open every link this instance holds, and follow what changes them. */
 export async function startBoxLinks(): Promise<void> {
   kept = await readKeptBoxLinks();
+  // The public-path probe's records, so a restart mid-outage keeps its miss
+  // count (the probe itself is the scheduled public-probe job).
+  for (const [id, path] of await readKeptPublicPaths()) setPublicPath(id, path);
   started = true;
   stops = [
     await onLinkTargetsChanged(() => reconcile.trigger()),

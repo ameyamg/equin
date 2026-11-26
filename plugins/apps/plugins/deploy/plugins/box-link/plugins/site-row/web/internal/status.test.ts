@@ -9,7 +9,15 @@ const T = Date.parse("2026-11-19T18:00:00Z");
 
 function site(
   state: LinkState | "main-only",
-  { run = null, behind = 0 }: { run?: RunStatus | null; behind?: number } = {},
+  {
+    run = null,
+    behind = 0,
+    publicPath = { kind: "ok", since: T },
+  }: {
+    run?: RunStatus | null;
+    behind?: number;
+    publicPath?: SiteHealth["publicPath"];
+  } = {},
 ): SiteHealth {
   return {
     deploymentId: "dpl-1",
@@ -49,6 +57,7 @@ function site(
       behindMain: behind,
       mainSha: "f".repeat(40),
     },
+    publicPath,
   };
 }
 
@@ -172,5 +181,64 @@ describe("siteAlert on a refused link", () => {
       lead: "Can't connect: forwarding is disabled on the server",
       rest: "run the install command from the server's SSH key section again (it now allows the link's loopback forward), then Retry now",
     });
+  });
+});
+
+describe("the public path", () => {
+  const failing = (misses: number): SiteHealth["publicPath"] => ({
+    kind: "failing",
+    since: T,
+    lastAt: T,
+    misses,
+    failure: { kind: "edge", status: 522 },
+  });
+
+  it("is attention, transitioning, below the threshold", () => {
+    expect(siteStatus(site(LIVE, { publicPath: failing(1) }))).toMatchObject({
+      state: "attention",
+      transitioning: true,
+    });
+    expect(siteAlert(site(LIVE, { publicPath: failing(1) }))).toMatchObject({
+      tone: "warning",
+      lead: "Public site: Cloudflare can't reach the server (522)",
+    });
+  });
+
+  it("is critical from the threshold, and says where it broke", () => {
+    const s = site(LIVE, { publicPath: failing(3) });
+    expect(siteStatus(s).state).toBe("critical");
+    expect(siteStatus(s).summary).toStartWith("Public site down since");
+    expect(siteAlert(s)?.tone).toBe("critical");
+  });
+
+  it("yields to the link's own state: a box that does not answer reads as that", () => {
+    const s = site({ kind: "down" }, { publicPath: failing(5) });
+    expect(siteStatus(s).summary).toStartWith("Not answering since");
+    expect(siteAlert(s)?.lead).toBe(
+      "The server answers SSH, but equin is not running on it",
+    );
+  });
+
+  it("yields to a deploy in progress", () => {
+    const s = site(LIVE, { run: "running", publicPath: failing(5) });
+    expect(siteStatus(s).state).toBe("info");
+    expect(siteAlert(s)).toBeNull();
+  });
+
+  it("says nothing of an uncounted miss, or while the link is not live", () => {
+    expect(siteStatus(site(LIVE, { publicPath: failing(0) })).state).toBe("ok");
+    expect(siteAlert(site(LIVE, { publicPath: failing(0) }))).toBeNull();
+    const connecting = site({ kind: "connecting" }, { publicPath: failing(5) });
+    expect(siteStatus(connecting).state).toBe("unknown");
+    expect(siteAlert(connecting)).toBeNull();
+  });
+
+  it("is ok while ok, pending or unwatched", () => {
+    for (const publicPath of [
+      { kind: "pending" },
+      { kind: "unwatched" },
+    ] as const) {
+      expect(siteStatus(site(LIVE, { publicPath })).state).toBe("ok");
+    }
   });
 });

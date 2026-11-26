@@ -5,6 +5,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { BoxLinkSchema } from "@plugins/apps/plugins/deploy/plugins/box-link/core";
 import { DeployRunSchema } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { RunningCommitSchema } from "@plugins/apps/plugins/deploy/plugins/remote-deploy/core";
+import { PublicPathSchema } from "./public-path";
 
 /**
  * Whether this instance holds the deployment's link: `linked` with its
@@ -33,8 +34,9 @@ export type SiteRun = z.infer<typeof SiteRunSchema>;
  * One deployed site's health, folded on the server from three owners:
  * the link (`deploy.box-links`), its newest deploy run (deployments' live
  * view: deploying / failed) and what it runs against main
- * (remote-deploy's running commit: behind by N). `hostname` is the first
- * public hostname, `null` when it has none.
+ * (remote-deploy's running commit: behind by N) — plus the public path,
+ * probed through Cloudflare once a minute (`publicPath`). `hostname` is the
+ * first public hostname, `null` when it has none.
  */
 export const SiteHealthSchema = z.object({
   deploymentId: z.string(),
@@ -44,6 +46,8 @@ export const SiteHealthSchema = z.object({
   /** `null`: never deployed. */
   run: SiteRunSchema.nullable(),
   release: RunningCommitSchema,
+  /** The site's public URL as visitors reach it (Cloudflare → Caddy → app). */
+  publicPath: PublicPathSchema,
 });
 export type SiteHealth = z.infer<typeof SiteHealthSchema>;
 
@@ -51,7 +55,7 @@ export type SiteHealth = z.infer<typeof SiteHealthSchema>;
  * Every deployment's health, keyed by deployment id — ONE value, so the
  * health report's row set reads every site with one `useLive`. Recomputed
  * when a link changes state (never on a beat), a deploy run moves, a
- * deployment changes, or main advances.
+ * deployment changes, main advances, or the public path's probe changes.
  */
 export const siteHealth = liveValue("deploy.site-health", {
   schema: wholeRecord(SiteHealthSchema, {

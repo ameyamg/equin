@@ -113,11 +113,14 @@ Watches this page's connection to its backends and says so.
     - `HealthResponseSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/box-link/link`
     - `framework/cli/build`
     - `infra/health/connection-row`
     - `infra/launcher`
     - `reports/crash`
-  - Endpoint callers: `backend-liveness`
+  - Endpoint callers:
+    - `backend-liveness`
+    - `link`
 - Exemptions:
   - Exempts itself from:
     - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)

@@ -4,12 +4,13 @@ import { boxLinksServed, siteHealthServed } from "./internal/served";
 import { boxLinkSocketWatcher, boxLinkTunnelDaemon } from "./internal/tunnel";
 import { handleBoxLinkRetry } from "./internal/retry";
 import { startBoxLinks, stopBoxLinks } from "./internal/link-manager";
+import { publicPathProbeJob } from "./internal/public-probe";
 
 export default {
   description:
-    "The permanent link from this computer to each deployed site's box. Real boxes are linked from main only — one SSH tunnel per server (a deploy.box-link.tunnel daemon, respawned forever 2 s → 2 min, ready once its forwards' sockets appear, stopped on a refusal no respawn can fix), one forward per deployment — and a demo's stand-in boxes from every namespace, through this instance's own gateway. One stream client per deployment reads the box's host-only NDJSON stream (45 s watchdog, bounded reconnect backoff) into the pure reducer (connecting / live / reconnecting with its cause and a 2 min grace / down / unreachable / refused / outdated), served from memory as deploy.box-links and persisted on a state change only. Folds each deployment's link, newest deploy run and running commit into the one deploy.site-health value. A wake respawns every tunnel and reconnects every stream; POST /api/box-link/:deploymentId/retry does it for one link. What it links follows the targets NOTIFY.",
+    "The permanent link from this computer to each deployed site's box. Real boxes are linked from main only — one SSH tunnel per server (a deploy.box-link.tunnel daemon, respawned forever 2 s → 2 min, ready once its forwards' sockets appear, stopped on a refusal no respawn can fix), one forward per deployment — and a demo's stand-in boxes from every namespace, through this instance's own gateway. One stream client per deployment reads the box's host-only NDJSON stream (45 s watchdog, bounded reconnect backoff) into the pure reducer (connecting / live / reconnecting with its cause and a 2 min grace / down / unreachable / refused / outdated), served from memory as deploy.box-links and persisted on a state change only. Probes each real site's public URL through Cloudflare once a minute (the deploy.box-link.public-probe job, main only: GET https://<hostname>/api/health — edge 52x / proxy 502-504 via Caddy / another status / no answer), keeps the public path's record (ok, or failing with its counted misses) and files a site-public-path report after three counted misses running. Folds each deployment's link, newest deploy run, running commit and public path into the one deploy.site-health value. A wake respawns every tunnel and reconnects every stream; POST /api/box-link/:deploymentId/retry does it for one link. What it links follows the targets NOTIFY.",
   contributions: [...boxLinksServed.declare, ...siteHealthServed.declare],
-  register: [boxLinkTunnelDaemon, boxLinkSocketWatcher],
+  register: [boxLinkTunnelDaemon, boxLinkSocketWatcher, publicPathProbeJob],
   httpRoutes: {
     [boxLinkRetryEndpoint.route]: handleBoxLinkRetry,
   },

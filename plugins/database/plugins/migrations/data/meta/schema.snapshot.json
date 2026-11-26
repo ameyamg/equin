@@ -1,6 +1,6 @@
 {
-  "id": "4c2859b5-8da6-4f66-b0be-65ca4c4d03e1",
-  "prevId": "8d3b0d68-c3a0-423f-845d-f8cf4304457f",
+  "id": "9893f5a7-b468-41d6-8b37-238a6d0a44e6",
+  "prevId": "4c2859b5-8da6-4f66-b0be-65ca4c4d03e1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1908,6 +1908,59 @@
         "deploy_deployments_ext_box_link_parent_id_deploy_deployments_id_fk": {
           "name": "deploy_deployments_ext_box_link_parent_id_deploy_deployments_id_fk",
           "tableFrom": "deploy_deployments_ext_box_link",
+          "tableTo": "deploy_deployments",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.deploy_deployments_ext_public_path": {
+      "name": "deploy_deployments_ext_public_path",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "deploy_deployments_ext_public_path_parent_id_deploy_deployments_id_fk": {
+          "name": "deploy_deployments_ext_public_path_parent_id_deploy_deployments_id_fk",
+          "tableFrom": "deploy_deployments_ext_public_path",
           "tableTo": "deploy_deployments",
           "columnsFrom": [
             "parent_id"

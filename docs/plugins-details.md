@@ -2630,10 +2630,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Exports (types): `BoxSignalSpec`
                 - Exports (values): `BoxSignal`
-            - **`link`** — The box link's portable half: onBoxSignal(source, fn) — a linked box's signals, the payload the source's own vocabulary — and onBoxHello(fn) — every (re)connect, the catch-up cue; the deploy_deployments_ext_box_link side-table (a link's record at its last state change, read back at boot: readKeptBoxLinks / writeBoxLinkState); and onLinkTargetsChanged(fn), a NOTIFY rung by a statement trigger on the deployments, servers, server-health (pinned host key) and stand-in tables. The links themselves live in the machine half.
+            - **`link`** — The box link's portable half: onBoxSignal(source, fn) — a linked box's signals, the payload the source's own vocabulary — and onBoxHello(fn) — every (re)connect, the catch-up cue; the deploy_deployments_ext_box_link side-table (a link's record at its last state change, read back at boot: readKeptBoxLinks / writeBoxLinkState); and onLinkTargetsChanged(fn), a NOTIFY rung by a statement trigger on the deployments, servers, server-health (pinned host key) and stand-in tables; the deploy_deployments_ext_public_path side-table (the public-path probe's record, readKeptPublicPaths / writePublicPath) and the site-public-path report kind (one row per deployment, filed once per outage). The links themselves live in the machine half.
               - Server:
                 - Contributes:
                   - `db-trigger` "box-link.targets"
+                  - `report-kind` "site-public-path"
                   - `resource.declare` "deploy.box-links"
                   - `resource.declare` "deploy.site-health"
                 - Uses:
@@ -2647,8 +2648,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database/db-triggers.DbTrigger`
                   - `database/db-triggers.defineDbTriggers`
                   - `infra/entity-extensions.defineExtension`
+                  - `reports.ReportKind`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/box-link/plugins/link/server/internal/tables.ts`
-                - Entity extension of: `apps/deploy/deployments` (table `deploy_deployments_ext_box_link`)
+                - Entity extension of:
+                  - `apps/deploy/deployments` (table `deploy_deployments_ext_box_link`)
+                  - `apps/deploy/deployments` (table `deploy_deployments_ext_public_path`)
                 - Exports (types):
                   - `BoxHelloHandler`
                   - `BoxSignalHandler`
@@ -2658,7 +2662,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `onBoxSignal`
                   - `onLinkTargetsChanged`
                   - `readKeptBoxLinks`
+                  - `readKeptPublicPaths`
                   - `writeBoxLinkState`
+                  - `writePublicPath`
                 - Resources:
                   - `deploy.box-links` (push, notified, whole: one entry per linked deployment — a handful)
                   - `deploy.site-health` (push, notified, whole: one entry per deployment row — a handful)
@@ -2669,6 +2675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Register:
                   - `defineDaemon('deploy.box-link.tunnel')`
                   - `defineFileWatcher('deploy.box-link.tunnel-sockets')`
+                  - `defineJob('deploy.box-link.public-probe')`
                 - Routes: `POST /api/box-link/:deploymentId/retry`
               - Core:
                 - Uses:
@@ -2679,11 +2686,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.liveValue`
                   - `packages/list-bound.wholeRecord`
                 - Exports (types):
+                  - `ProbedPublicPath`
+                  - `PublicPath`
+                  - `PublicPathFailure`
                   - `SiteHealth`
                   - `SiteLink`
                   - `SiteRun`
                 - Exports (values):
                   - `boxLinkRetryEndpoint`
+                  - `ProbedPublicPathSchema`
+                  - `PUBLIC_PATH_DOWN_MISSES`
+                  - `PUBLIC_PATH_GAP_MS`
+                  - `PUBLIC_PATH_PROBE_PATH`
+                  - `PublicPathFailureSchema`
+                  - `PublicPathSchema`
                   - `siteHealth`
                   - `SiteHealthSchema`
                   - `SiteLinkSchema`
@@ -3275,6 +3291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Extended by:
               - `apps/deploy/box-link/link` (table `deploy_deployments_ext_box_link`)
               - `apps/deploy/site-messages/inbox` (table `deploy_deployments_ext_messages_seen`)
+              - `apps/deploy/box-link/link` (table `deploy_deployments_ext_public_path`)
             - Endpoint callers: `inbox`
           - Exemptions:
             - Exempts itself from:
@@ -39561,11 +39578,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthResponseSchema`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/box-link/link`
           - `framework/cli/build`
           - `infra/health/connection-row`
           - `infra/launcher`
           - `reports/crash`
-        - Endpoint callers: `backend-liveness`
+        - Endpoint callers:
+          - `backend-liveness`
+          - `link`
       - Exemptions:
         - Exempts itself from:
           - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
@@ -40493,8 +40513,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 97 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×23
+        - Imported by: 98 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×24
           - `conversations` ×18
           - `infra` ×16
           - `debug` ×13
@@ -61922,12 +61942,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 95 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 96 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×34
       - `debug` ×21
       - `conversations` ×7
       - `infra` ×7
-      - `apps` ×4
+      - `apps` ×5
       - `build` ×4
       - `database` ×4
       - `framework` ×3
@@ -62226,13 +62246,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×14
           - `conversations` ×5
           - `infra` ×4
           - `database` ×3
           - `reports` ×3
-          - `apps/deploy/site-reports/import`
+          - `apps` ×2
           - `backup`
           - `build/failure-report`
           - `framework/cli/push`

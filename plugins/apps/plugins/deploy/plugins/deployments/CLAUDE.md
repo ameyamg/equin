@@ -707,6 +707,7 @@ default, a left rail revealing each (`useRevealSection`).
   - Extended by:
     - `apps/deploy/box-link/link` (table `deploy_deployments_ext_box_link`)
     - `apps/deploy/site-messages/inbox` (table `deploy_deployments_ext_messages_seen`)
+    - `apps/deploy/box-link/link` (table `deploy_deployments_ext_public_path`)
   - Endpoint callers: `inbox`
 - Exemptions:
   - Exempts itself from:

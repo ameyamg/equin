@@ -8,6 +8,7 @@ import {
   BoxHelloInfoSchema,
   LinkStateSchema,
 } from "@plugins/apps/plugins/deploy/plugins/box-link/core";
+import { ProbedPublicPathSchema } from "../core";
 
 /**
  * The row of `deploy_deployments_ext_box_link`: a deployment's link as it
@@ -25,5 +26,17 @@ export const boxLinkRowShape = defineExtensionShape({
     lastBeat: nullable(jsonField({ schema: BoxBeatSchema })),
     lastError: nullable(textField()),
     hello: nullable(jsonField({ schema: BoxHelloInfoSchema })),
+  },
+});
+
+/**
+ * The row of `deploy_deployments_ext_public_path`: a deployment's public
+ * path as its last CHANGED probe left it (an ok probe after an ok one writes
+ * nothing), read back at boot so a restart mid-outage keeps its miss count.
+ */
+export const publicPathRowShape = defineExtensionShape({
+  key: "deploymentId",
+  fields: {
+    path: jsonField({ schema: ProbedPublicPathSchema }),
   },
 });

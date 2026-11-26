@@ -1,6 +1,10 @@
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { LinkRefusal } from "@plugins/apps/plugins/deploy/plugins/box-link/core";
-import type { SiteHealth } from "@plugins/apps/plugins/deploy/plugins/box-link/plugins/link/core";
+import {
+  PUBLIC_PATH_DOWN_MISSES,
+  type PublicPathFailure,
+  type SiteHealth,
+} from "@plugins/apps/plugins/deploy/plugins/box-link/plugins/link/core";
 import { shortSha } from "@plugins/apps/plugins/deploy/plugins/remote-deploy/core";
 
 /** A site's name on its row: its first public hostname, else its composition. */
@@ -73,6 +77,7 @@ const REFUSAL_FIX: Record<LinkRefusal, string> = {
  * | deploying | `info`, transitioning |
  * | restarting (a Restart site run, even while down) | `info`, transitioning |
  * | reconnecting | `attention`, transitioning |
+ * | public site failing, box up | `attention`, transitioning; `critical` from `PUBLIC_PATH_DOWN_MISSES` misses |
  * | deploy failed / outdated | `attention` |
  * | down / unreachable / refused | `critical` |
  *
@@ -137,6 +142,21 @@ export function siteStatus(site: SiteHealth): HealthStatus {
       summary: `Deploying · since ${clockTime(run.startedAt)}`,
     };
   }
+  // The box answers (the link is live), but visitors may not reach it: the
+  // public path, probed through Cloudflare once a minute.
+  const publicPath = flaggedPublicPath(site);
+  if (publicPath !== null) {
+    return publicPath.misses >= PUBLIC_PATH_DOWN_MISSES
+      ? {
+          state: "critical",
+          summary: `Public site down since ${clockTime(publicPath.since)}`,
+        }
+      : {
+          state: "attention",
+          transitioning: true,
+          summary: `${prefix} · ${releaseName(site)} · public site not answering…`,
+        };
+  }
   if (run?.status === "failed") {
     return {
       state: "attention",
@@ -188,6 +208,52 @@ const RECONNECT_WHY = {
   network: "retrying",
 } as const;
 
+/**
+ * The public path the row speaks of, if any: failing with a COUNTED miss
+ * (a miss the probe did not count — during a deploy, or with no answer while
+ * this computer may be offline — says nothing about the site yet) while the
+ * box answers SSH (otherwise the link's own state is the story).
+ */
+function flaggedPublicPath(
+  site: SiteHealth,
+): Extract<SiteHealth["publicPath"], { kind: "failing" }> | null {
+  const { publicPath, link } = site;
+  return publicPath.kind === "failing" &&
+    publicPath.misses > 0 &&
+    link.kind === "linked" &&
+    link.link.state.kind === "live"
+    ? publicPath
+    : null;
+}
+
+/** Where the public path broke, as the alert says it (the box answers SSH). */
+function publicPathAlert(
+  failure: PublicPathFailure,
+): Pick<SiteAlert, "lead" | "rest"> {
+  switch (failure.kind) {
+    case "edge":
+      return {
+        lead: `Public site: Cloudflare can't reach the server (${String(failure.status)})`,
+        rest: "the server answers SSH — Caddy or its firewall is not letting Cloudflare in",
+      };
+    case "proxy":
+      return {
+        lead: `Public site: Caddy answers, but equin behind it does not (${String(failure.status)})`,
+        rest: "the server answers SSH",
+      };
+    case "status":
+      return {
+        lead: `Public site: its health check answered ${String(failure.status)}`,
+        rest: failure.detail,
+      };
+    case "no-answer":
+      return {
+        lead: "Public site: no answer through Cloudflare",
+        rest: failure.error,
+      };
+  }
+}
+
 /** The row's alert, or `null` when nothing needs saying beyond the summary. */
 export function siteAlert(site: SiteHealth): SiteAlert | null {
   if (site.link.kind === "linked") {
@@ -229,6 +295,15 @@ export function siteAlert(site: SiteHealth): SiteAlert | null {
     }
   }
   const { run } = site;
+  const publicPath = flaggedPublicPath(site);
+  // Deploying explains a failing public path (a restart): no alert for it.
+  if (publicPath !== null && run?.status !== "running") {
+    return {
+      tone:
+        publicPath.misses >= PUBLIC_PATH_DOWN_MISSES ? "critical" : "warning",
+      ...publicPathAlert(publicPath.failure),
+    };
+  }
   if (run?.status === "failed") {
     return {
       tone: "warning",

@@ -9,7 +9,14 @@ import type { SiteHealth } from "@plugins/apps/plugins/deploy/plugins/box-link/p
  * fixture, so the row can be looked at without a live box.
  */
 export type SiteExhibitState =
-  "live" | "deploying" | "behind" | "reconnecting" | "down" | "failed";
+  | "live"
+  | "deploying"
+  | "behind"
+  | "reconnecting"
+  | "down"
+  | "failed"
+  | "public-failing"
+  | "public-down";
 
 /**
  * What every part of a site's row is handed: the deployment, and its health

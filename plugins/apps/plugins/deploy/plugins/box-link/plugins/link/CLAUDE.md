@@ -97,6 +97,46 @@ and whether a deploy run of the deployment is active). Grace is 2 min:
 
 Table-driven tests: `shared/reducer.test.ts`.
 
+## The public-path probe (`machine/internal/public-probe.ts`)
+
+The link proves the box answers SSH, not that visitors reach it: a 522 (Cloudflare
+cannot reach the origin) while SSH works left the row green (report-1795457134-or3rra).
+`deploy.box-link.public-probe`, a `defineJob` every minute (main only), GETs
+`https://<first hostname>/api/health` for each deployment on a REAL box this
+instance links (`store`'s `realBoxDeploymentIds` — never a stand-in), 30 s
+awake bound, `user-agent: equin-public-path-probe/1`. **Polling is the documented
+exception**: a site that does not answer sends no change signal. It is not a
+visitor: the site's analytics count only the tracker's JS beacons, and visitor
+reports come from browser JS — a server GET runs neither. Cost: one ~114 B
+answer, ~0.1 s, per site per minute; a row write only when the record changes.
+
+Pure judgement in `shared/public-probe.ts` (table-tested):
+
+- `classifyProbe` — 200 + a health body → ok; 520–527 → `edge`; 502/503/504
+  with `via: … Caddy` → `proxy`; another answer → `status`; none → `no-answer`.
+- `reducePublicPath(prev, outcome, { linkLive, deployRunning })` → `ok { since }`
+  or `failing { since, lastAt, misses, failure }`. A miss COUNTS only when it
+  says something about the site: never while a deploy run is active at either
+  end of the probe; an HTTP answer always; no answer only while the link is
+  live (otherwise it may be this computer's own network, or a probe right
+  after a wake). Misses are CONSECUTIVE probes: a gap past
+  `PUBLIC_PATH_GAP_MS` (2.5 intervals — main stopped, the computer slept)
+  starts a new outage.
+- Down = `PUBLIC_PATH_DOWN_MISSES` (3) counted misses (~3 min — the link's own
+  critical bound, 2 min grace + its 45 s watchdog). The probe that crosses it
+  files ONE `site-public-path` report (`server-site-probe`, fingerprint per
+  deployment: its count is the number of outages), naming where it broke and
+  whether the box answered SSH.
+
+Records live in memory (`store`), persisted to `deploy_deployments_ext_public_path`
+on a change only (an ok record is written once; a failing one each probe, its
+`lastAt`) and read back at boot (a restart mid-outage keeps its count); a
+change notifies `deploy.site-health`. Per probe: report, then write, then
+remember — a report or write that throws leaves the record as it was, so the
+next probe crosses the threshold again and retries. Each site runs on its own
+(`allSettled`); a site's failure is rethrown after the others are pushed. **Known limit:** it runs on this
+computer, so it watches only while the computer is awake and main runs.
+
 ## Storage
 
 - In memory (`machine/internal/store.ts`), served as `deploy.box-links`
@@ -121,12 +161,15 @@ SiteHealth = {
   run: { id, verb, phase, status, startedAt, finishedAt, message } | null,
                                            // deployments' live view (deploy.runs)
   release: RunningCommit,                  // remote-deploy: sha, subject, behindMain
+  publicPath: unwatched | pending | ok { since }
+            | failing { since, misses, failure },  // the public-path probe
 }
 ```
 
 Recomputed on a link STATE change (the manager's own notify — never a
 beat), a deploy run moving (`deployRunsServed`), a deployment or run row
-written (`reads`), and `main` advancing (`refHeadServed`). Per-deployment
+written (`reads`), `main` advancing (`refHeadServed`), and the public-path
+probe changing a record. Per-deployment
 reads (visitors, meters) stay in the row's own components.
 
 ## API
@@ -148,10 +191,11 @@ Tests: `./equin test plugins/apps/plugins/deploy/plugins/box-link/plugins/link`.
 
 ## Plugin reference
 
-- Description: The box link's portable half: onBoxSignal(source, fn) — a linked box's signals, the payload the source's own vocabulary — and onBoxHello(fn) — every (re)connect, the catch-up cue; the deploy_deployments_ext_box_link side-table (a link's record at its last state change, read back at boot: readKeptBoxLinks / writeBoxLinkState); and onLinkTargetsChanged(fn), a NOTIFY rung by a statement trigger on the deployments, servers, server-health (pinned host key) and stand-in tables. The links themselves live in the machine half.
+- Description: The box link's portable half: onBoxSignal(source, fn) — a linked box's signals, the payload the source's own vocabulary — and onBoxHello(fn) — every (re)connect, the catch-up cue; the deploy_deployments_ext_box_link side-table (a link's record at its last state change, read back at boot: readKeptBoxLinks / writeBoxLinkState); and onLinkTargetsChanged(fn), a NOTIFY rung by a statement trigger on the deployments, servers, server-health (pinned host key) and stand-in tables; the deploy_deployments_ext_public_path side-table (the public-path probe's record, readKeptPublicPaths / writePublicPath) and the site-public-path report kind (one row per deployment, filed once per outage). The links themselves live in the machine half.
 - Server:
   - Contributes:
     - `db-trigger` "box-link.targets"
+    - `report-kind` "site-public-path"
     - `resource.declare` "deploy.box-links"
     - `resource.declare` "deploy.site-health"
   - Uses:
@@ -165,8 +209,11 @@ Tests: `./equin test plugins/apps/plugins/deploy/plugins/box-link/plugins/link`.
     - `database/db-triggers.DbTrigger`
     - `database/db-triggers.defineDbTriggers`
     - `infra/entity-extensions.defineExtension`
+    - `reports.ReportKind`
   - DB schema: `plugins/apps/plugins/deploy/plugins/box-link/plugins/link/server/internal/tables.ts`
-  - Entity extension of: `apps/deploy/deployments` (table `deploy_deployments_ext_box_link`)
+  - Entity extension of:
+    - `apps/deploy/deployments` (table `deploy_deployments_ext_box_link`)
+    - `apps/deploy/deployments` (table `deploy_deployments_ext_public_path`)
   - Exports (types):
     - `BoxHelloHandler`
     - `BoxSignalHandler`
@@ -176,7 +223,9 @@ Tests: `./equin test plugins/apps/plugins/deploy/plugins/box-link/plugins/link`.
     - `onBoxSignal`
     - `onLinkTargetsChanged`
     - `readKeptBoxLinks`
+    - `readKeptPublicPaths`
     - `writeBoxLinkState`
+    - `writePublicPath`
   - Resources:
     - `deploy.box-links` (push, notified, whole: one entry per linked deployment — a handful)
     - `deploy.site-health` (push, notified, whole: one entry per deployment row — a handful)
@@ -187,6 +236,7 @@ Tests: `./equin test plugins/apps/plugins/deploy/plugins/box-link/plugins/link`.
   - Register:
     - `defineDaemon('deploy.box-link.tunnel')`
     - `defineFileWatcher('deploy.box-link.tunnel-sockets')`
+    - `defineJob('deploy.box-link.public-probe')`
   - Routes: `POST /api/box-link/:deploymentId/retry`
 - Core:
   - Uses:
@@ -197,11 +247,20 @@ Tests: `./equin test plugins/apps/plugins/deploy/plugins/box-link/plugins/link`.
     - `network/live.liveValue`
     - `packages/list-bound.wholeRecord`
   - Exports (types):
+    - `ProbedPublicPath`
+    - `PublicPath`
+    - `PublicPathFailure`
     - `SiteHealth`
     - `SiteLink`
     - `SiteRun`
   - Exports (values):
     - `boxLinkRetryEndpoint`
+    - `ProbedPublicPathSchema`
+    - `PUBLIC_PATH_DOWN_MISSES`
+    - `PUBLIC_PATH_GAP_MS`
+    - `PUBLIC_PATH_PROBE_PATH`
+    - `PublicPathFailureSchema`
+    - `PublicPathSchema`
     - `siteHealth`
     - `SiteHealthSchema`
     - `SiteLinkSchema`

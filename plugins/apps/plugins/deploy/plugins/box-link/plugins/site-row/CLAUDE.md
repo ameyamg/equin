@@ -17,6 +17,8 @@ key = deployment id, title = hostname ?? composition, status = `siteStatus`
 | behind main | `ok` | Live · a1b2c3d · 142 commits behind main |
 | deploying | `info`, transitioning | Deploying · since 7:01 PM |
 | reconnecting | `attention`, transitioning | Live · a1b2c3d · reconnecting… |
+| public site failing, box up | `attention`, transitioning | Live · a1b2c3d · public site not answering… |
+| public site down, box up | `critical` | Public site down since … |
 | deploy failed | `attention` | Live · a1b2c3d · deploy failed |
 | outdated | `attention` | a1b2c3d · … · too old for the live link |
 | down / unreachable / refused | `critical` | Not answering since … / Unreachable since … / Can't connect · why |
@@ -33,6 +35,23 @@ Deviation from the design table, for the prototype's sake: the title stays
 the hostname in every state (the design's "N commits behind main" is the
 summary). Behind main and deploying are the report's `info` level — the
 prototype's blue dot (pulsing while deploying): worth knowing, not a problem.
+
+## The public path
+
+The link sees the box over SSH only; visitors come through Cloudflare →
+Caddy → the app. `site.publicPath` is that path as main's once-a-minute
+probe saw it ([`link`](../link/CLAUDE.md) § *The public-path probe*). Only
+while the link is live (otherwise the link's own state is the story), once a
+miss has counted, and below a deploy in progress, a failing public path is
+`attention` until
+`PUBLIC_PATH_DOWN_MISSES` (3) counted misses, `critical` from there, and the
+alert says where it broke: Cloudflare can't reach the server (520–527 —
+Caddy, its firewall), Caddy answers but equin behind it does not (502–504),
+another answer, or no answer at all.
+
+**Known limit:** the probe runs on this computer — it watches only while
+the computer is awake and main runs. A site seen from a worktree, a demo's
+stand-in and a site without a hostname are `unwatched`.
 
 ## The parts — three render slots, contributed by their owners
 
@@ -69,7 +88,8 @@ site is up, settled and current.
 
 ## Exhibits — `site-row/<state>`
 
-`live`, `deploying`, `behind`, `reconnecting`, `down`, `failed`, `two-sites`
+`live`, `deploying`, `behind`, `reconnecting`, `down`, `failed`,
+`public-failing`, `public-down`, `two-sites`
 (app exhibits, `home: "chrome"`, 380 px): the row expanded, drawn through
 health-report's own `HealthLineView` — the line the report draws, never a
 lookalike — on a fixture `SiteHealth` per state (`exhibits/internal/

@@ -54,7 +54,10 @@ function link(
 function site(
   id: string,
   hostname: string,
-  parts: Pick<SiteHealth, "link" | "run"> & { behind?: number },
+  parts: Pick<SiteHealth, "link" | "run"> & {
+    behind?: number;
+    publicPath?: SiteHealth["publicPath"];
+  },
 ): SiteHealth {
   return {
     deploymentId: id,
@@ -68,6 +71,10 @@ function site(
       subject: "Ship the visitors sparkline",
       behindMain: parts.behind ?? 0,
       mainSha: MAIN_SHA,
+    },
+    publicPath: parts.publicPath ?? {
+      kind: "ok",
+      since: Date.now() - 6 * 86_400_000,
     },
   };
 }
@@ -84,7 +91,7 @@ const DONE_RUN = {
 
 const ID = "dpl-1795000000001-exh1";
 
-/** The deployed site in each of the row's six states — the prototype's. */
+/** The deployed site in each of the row's states — the prototype's six, and the public path's two. */
 export function siteIn(state: SiteExhibitState): SiteHealth {
   const now = Date.now();
   switch (state) {
@@ -156,6 +163,20 @@ export function siteIn(state: SiteExhibitState): SiteHealth {
           finishedAt: new Date(now - 3 * MIN).toISOString(),
           message:
             "The new version failed its health check — reverted to the previous one",
+        },
+      });
+    case "public-failing":
+    case "public-down":
+      // The box answers SSH; Cloudflare answers 522 (the 2026-11-23/24 outages).
+      return site(ID, "equin.ai", {
+        link: { kind: "linked", link: link(ID, { kind: "live" }) },
+        run: DONE_RUN,
+        publicPath: {
+          kind: "failing",
+          since: now - (state === "public-down" ? 4 : 1) * MIN,
+          lastAt: now,
+          misses: state === "public-down" ? 4 : 1,
+          failure: { kind: "edge", status: 522 },
         },
       });
   }

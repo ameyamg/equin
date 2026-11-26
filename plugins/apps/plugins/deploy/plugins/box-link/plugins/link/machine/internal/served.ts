@@ -9,8 +9,8 @@ import {
   latestDeployRun,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { readRunningCommit } from "@plugins/apps/plugins/deploy/plugins/remote-deploy/server";
-import { siteHealth, type SiteHealth } from "../../core";
-import { currentLinks, linkOf } from "./store";
+import { siteHealth, type PublicPath, type SiteHealth } from "../../core";
+import { currentLinks, isRealBox, linkOf, publicPathOf } from "./store";
 
 /**
  * `deploy.box-links`: the links this instance holds, from memory. The link
@@ -22,6 +22,20 @@ export const boxLinksServed = serveValue(boxLinks, {
   readCost: "memory",
   loader: () => currentLinks(),
 });
+
+/**
+ * A site's public path: probed only for a real box this instance links that
+ * has a public hostname (the probe's own rule, `public-probe.ts`) — its last
+ * record, or `pending` before its first probe.
+ */
+function publicPathFor(
+  deploymentId: string,
+  hostname: string | null,
+): PublicPath {
+  if (hostname === null || !isRealBox(deploymentId))
+    return { kind: "unwatched" };
+  return publicPathOf(deploymentId) ?? { kind: "pending" };
+}
 
 async function loadSiteHealth(): Promise<Record<string, SiteHealth>> {
   const rows = await db
@@ -35,12 +49,13 @@ async function loadSiteHealth(): Promise<Record<string, SiteHealth>> {
     rows.map(async (r): Promise<[string, SiteHealth]> => {
       const link = linkOf(r.id);
       const run = latestDeployRun(r.id);
+      const hostname = r.hostnames[0] ?? null;
       return [
         r.id,
         {
           deploymentId: r.id,
           compositionId: r.compositionId,
-          hostname: r.hostnames[0] ?? null,
+          hostname,
           link:
             link === undefined
               ? { kind: "main-only" }
@@ -58,6 +73,7 @@ async function loadSiteHealth(): Promise<Record<string, SiteHealth>> {
                   message: run.message,
                 },
           release: await readRunningCommit(r.id),
+          publicPath: publicPathFor(r.id, hostname),
         },
       ];
     }),
@@ -70,7 +86,8 @@ async function loadSiteHealth(): Promise<Record<string, SiteHealth>> {
  * commit, folded here so the health report reads ONE value. Its changes:
  * a deployment or run row written (`reads`), the live run view moving
  * (`deployRunsServed`), `main` advancing (`refHeadServed`), and a link
- * changing STATE — the link manager's own `notify()`, never a beat.
+ * changing STATE — the link manager's own `notify()`, never a beat — and a
+ * probe changing a public path (the probe's own `notify()`).
  */
 export const siteHealthServed = serveValue(siteHealth, {
   source: "external",
