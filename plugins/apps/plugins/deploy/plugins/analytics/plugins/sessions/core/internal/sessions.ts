@@ -56,6 +56,13 @@ const SESSION_FIELDS = {
   pages: stringListField({ label: "Pages" }),
   /** The distinct custom events it sent (the report's `event` dimension). */
   eventNames: stringListField({ label: "Events" }),
+  /**
+   * The visit's text as the list's search matches it — collect's one
+   * definition (`visitSearchText`: country code and name, source, channel,
+   * device, OS, browser, pages), run by its SQL. The list searches it, never
+   * shows it.
+   */
+  search: textField({ label: "Search text" }),
 };
 
 const SESSION_CARRIED = {
@@ -117,19 +124,33 @@ export function parseSessionKey(key: string): {
   return { deploymentId: key.slice(0, slash), visitId: key.slice(slash + 1) };
 }
 
-/** A collect visit as a row of {@link deploymentSessions}. */
-export function sessionRowOf(deploymentId: string, s: Session): SessionRow {
+/**
+ * A collect visit as a row of {@link deploymentSessions}, with its search
+ * text (collect's `ListedVisit.search` for a site's visit).
+ */
+export function sessionRowOf(
+  deploymentId: string,
+  s: Session,
+  search: string,
+): SessionRow {
   return {
     ...s,
     key: sessionKey(deploymentId, s.id),
     deploymentId,
     startedAt: new Date(s.startedAt),
+    search,
   };
 }
 
 /** A row as the collect visit the lane and the timeline draw. */
 export function sessionOf(row: SessionRow): Session {
-  const { key: _key, deploymentId: _site, startedAt, ...rest } = row;
+  const {
+    key: _key,
+    deploymentId: _site,
+    search: _search,
+    startedAt,
+    ...rest
+  } = row;
   return { ...rest, startedAt: startedAt.toISOString() };
 }
 

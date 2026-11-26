@@ -2492,6 +2492,38 @@ export interface DataViewSearchSuggestions {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * What a surface has loaded, as its {@link DataViewBaseProps.loadedFrame}
+ * reads it.
+ */
+export interface DataViewLoadedWindow<TRow> {
+  /**
+   * `loading` while nothing is known yet (no rows to derive from — never an
+   * empty window), `error` when the read failed, `ready` otherwise.
+   */
+  status: "loading" | "error" | "ready";
+  /**
+   * The rows loaded: a live source's as its read answered them (already the
+   * view's — filtered and searched on the server), in memory the rows given.
+   * Empty unless `ready`.
+   */
+  rows: readonly TRow[];
+  /**
+   * How many rows the active view matches, when that is known: the read's
+   * total (`paging.total`, a live source's count) while no search or filter
+   * could hide read rows, or a complete live read's row count; else `null`
+   * — `rows` is then a lower bound.
+   */
+  total: number | null;
+}
+
+/** The props of a {@link DataViewBaseProps.loadedFrame}. */
+export interface DataViewLoadedFrameProps<TRow> {
+  loaded: DataViewLoadedWindow<TRow>;
+  /** The surface: drawn as it is. */
+  children: ReactNode;
+}
+
 export interface DataViewBaseProps<TRow> extends PlacementSpec {
   /** Changes to derived fields, by id (`fieldOverrides(collection, { … })`). */
   overrides?: FieldOverrides<TRow>;
@@ -2635,6 +2667,16 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
   emptyState?: ReactNode;
   /** Override the loading render; default is each view's own skeleton shape. */
   loadingState?: ReactNode;
+  /**
+   * A component wrapped around the whole surface — band and body — handed
+   * the surface's LOADED window ({@link DataViewLoadedWindow}): for what a
+   * list derives from the rows it holds and shares between its toolbar and
+   * its rows (a shared axis, a summary over the loaded rows), through its
+   * own context. The one way a live `source`'s loaded rows reach the
+   * surface's consumer; in memory it is handed the rows given. It draws its
+   * `children` (the surface) as they are — a frame, never a second view.
+   */
+  loadedFrame?: ComponentType<DataViewLoadedFrameProps<TRow>>;
   /**
    * Override the render of a failed read (`readiness.status === "error"`);
    * default `<ResourceErrorInline variant="block"/>` — the failure's message

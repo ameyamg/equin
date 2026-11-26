@@ -34,6 +34,7 @@ import {
   type DataViewFoldLines,
   type DataViewRowEntry,
   type DataViewPaging,
+  type DataViewLoadedWindow,
   type DataViewSectioning,
   type DataViewPageNotice,
   type DataViewViewportSink,
@@ -440,6 +441,7 @@ function DataViewBodyInner<TRow>(
     selectedRowId,
     emptyState,
     loadingState,
+    loadedFrame: LoadedFrame,
     readiness,
     paging: heldPaging,
     errorState,
@@ -1551,6 +1553,33 @@ function DataViewBodyInner<TRow>(
     [pagingComplete, pagedRows, totalShown, pagingTotal, readOrder],
   );
 
+  // What the surface has loaded, for its `loadedFrame`: one object while
+  // its parts hold, so a frame deriving from it memoizes on it.
+  const loadedStatus =
+    bodyState.kind === "loading"
+      ? "loading"
+      : bodyState.kind === "view"
+        ? "ready"
+        : "error";
+  // A complete FLAT live read holds every row the view matches; a sectioned
+  // one holds only its open sections' reads (its groups read is what is
+  // complete), so its count is not its rows'.
+  const loadedTotal =
+    origin?.kind === "flat" && pagingComplete
+      ? loadedRows.length
+      : totalShown && pagingTotal !== null
+        ? pagingTotal.count
+        : null;
+  const loadedWindow = useMemo(
+    (): DataViewLoadedWindow<TRow> => ({
+      status: loadedStatus,
+      rows:
+        loadedStatus === "ready" ? loadedRows : (NO_ROWS as readonly TRow[]),
+      total: loadedStatus === "ready" ? loadedTotal : null,
+    }),
+    [loadedStatus, loadedRows, loadedTotal],
+  );
+
   // The active view's expand-all, as the view last reported it — filed under
   // the instance that reported it, so a report from a view switched away from
   // is never offered for the next one. The toolbar reads the bound form off
@@ -1608,8 +1637,16 @@ function DataViewBodyInner<TRow>(
 
   // A hidden section still runs a sectioned origin's reads: whether it has
   // any section is what those reads answer.
+  // The `loadedFrame` around whatever the surface draws — on every path, so a
+  // section hiding and showing again keeps one element tree (no remount).
+  const framed = (node: ReactNode): ReactNode =>
+    LoadedFrame === undefined ? (
+      node
+    ) : (
+      <LoadedFrame loaded={loadedWindow}>{node}</LoadedFrame>
+    );
   if (sectionHidden) {
-    return (
+    return framed(
       <>
         {rowOrderReader}
         {treeView
@@ -1617,7 +1654,7 @@ function DataViewBodyInner<TRow>(
           : origin?.kind === "sectioned"
             ? origin.readers
             : null}
-      </>
+      </>,
     );
   }
 
@@ -1630,7 +1667,7 @@ function DataViewBodyInner<TRow>(
   // The fold takes the RAW rows and derives the ordered set itself, but only when
   // `enabled` — deriving it here would cost EVERY DataView (tree, gallery,
   // server-paginated) an extra `useFlatRows` pass per render for a set it discards.
-  return (
+  const surface = (
     <>
       {rowOrderReader}
       {(() => {
@@ -2123,6 +2160,7 @@ function DataViewBodyInner<TRow>(
       })()}
     </>
   );
+  return framed(surface);
 }
 
 /**

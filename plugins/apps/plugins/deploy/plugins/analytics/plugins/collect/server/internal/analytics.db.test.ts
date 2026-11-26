@@ -117,6 +117,7 @@ const FILTERABLE = {
   pageviews: { domain: "number" },
   pages: { domain: "stringArray" },
   eventNames: { domain: "stringArray" },
+  search: liveText(),
 } as const;
 
 const canonicalVisitors = (rows: VisitorRow[]) =>
@@ -969,6 +970,34 @@ describe("sessions", () => {
     );
     expect(entries(await ask({ where: stacked }))).toEqual(["/@12:00"]);
     expect(await countOf(stacked)).toBe(1);
+  });
+
+  test("search: one text per visit — country name, source, software, pages — matched as the list carries it", async () => {
+    const all = await ask({});
+    const a1 = all[3]!;
+    // A's first visit: from France, by a Hacker News link, through /harness.
+    for (const part of ["FR France", "news.ycombinator.com/item", "/harness"])
+      expect(a1.search).toContain(part);
+    for (const needle of [
+      "france",
+      "HARNESS",
+      "ycombinator",
+      "Direct",
+      "/apps",
+    ]) {
+      const where = narrowed(clause("search", "contains", needle));
+      const found = await ask({ where });
+      // Exactly the visits whose carried text holds it (ASCII case folded).
+      expect(found.map((s) => s.id)).toEqual(
+        all
+          .filter((s) => s.search.toLowerCase().includes(needle.toLowerCase()))
+          .map((s) => s.id),
+      );
+      expect(await countOf(where)).toBe(found.length);
+    }
+    expect(
+      await ask({ where: narrowed(clause("search", "contains", "Atlantis")) }),
+    ).toEqual([]);
   });
 
   test("one filter definition: the list, its count and the report keep the same visits", async () => {

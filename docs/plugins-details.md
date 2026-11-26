@@ -2045,6 +2045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AnalyticsReadDb`
                   - `CollectContext`
                   - `CountryLookup`
+                  - `ListedVisit`
                   - `VisitFilterable`
                   - `VisitPage`
                   - `VisitPageCut`
@@ -55169,6 +55170,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewDensity`
           - `DataViewFoldLines`
           - `DataViewId`
+          - `DataViewLoadedFrameProps`
+          - `DataViewLoadedWindow`
           - `DataViewPageNotice`
           - `DataViewPaging`
           - `DataViewPagingTotal`
@@ -55407,6 +55410,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewId`
           - `DataViewInMemoryOrigin`
           - `DataViewLiveOrigin`
+          - `DataViewLoadedFrameProps`
+          - `DataViewLoadedWindow`
           - `DataViewPageNotice`
           - `DataViewPagePlaceholder`
           - `DataViewPagePlaceholders`

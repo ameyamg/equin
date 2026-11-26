@@ -50,7 +50,8 @@ export type VisitCut = z.infer<typeof VisitCutSchema>;
  * The visit fields a visit list may filter on, each run by collect's own SQL
  * (`server/internal/sessions.ts`): the visit's columns, its duration (the
  * report's one definition) and its memberships — `pages` and `eventNames`,
- * the report's `page` / `event` dimensions.
+ * the report's `page` / `event` dimensions — and `search`, the visit's text
+ * as a list searches it (`visitSearchText`).
  */
 export const VISIT_FILTER_COLUMNS = [
   "country",
@@ -73,6 +74,7 @@ export const VISIT_FILTER_COLUMNS = [
   "startedAt",
   "pages",
   "eventNames",
+  "search",
 ] as const;
 export type VisitFilterColumn = (typeof VISIT_FILTER_COLUMNS)[number];
 

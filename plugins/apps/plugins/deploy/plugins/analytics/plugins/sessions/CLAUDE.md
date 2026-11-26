@@ -50,13 +50,16 @@ Served `source: "external"` (`server/internal/served.ts`) on this computer's
   N ago · Sync now, copying…, a failed pull in host-query's words); opening
   the tab asks for a pull when the copy is missing or a few minutes old.
 - **List**: a `DataViewSwitcher` (`deploy-sessions`) over ONE contributed
-  source, `visits` (`SessionsSources`), so the loaded rows are in hand: the
-  source reads `useLivePagesPaging(deploymentSessions, { where: clause("deploymentId", "eq", id) },
-  { narrowBy: view, total: true })` — the active view's filter runs on the
-  server (collect's SQL on the copy), its count is the summary's total — and
-  derives the `LaneWindowContext` from the loaded window before handing the
-  bundle on. The exhibit feeds the same source made-up rows
-  (`SessionsHostProps.kind: "fixture"`).
+  source, `visits` (`SessionsSources`). A site's visits are a live `source`
+  (`liveDataSource(deploymentSessions, { searchable: ["search"] })`, scoped
+  by `deploymentId`): the active view's filter, sort and search all run on
+  the server (collect's SQL on the copy), its count is the summary's total
+  (not read under a search: the summary then says "N+"). What every lane
+  shares is derived from the LOADED window through data-view's
+  `loadedFrame` (`LaneFrame`, `LaneWindowContext`); the site and the focused
+  pages it needs besides ride `LaneScope` around the bundle. The exhibit
+  feeds the same source made-up rows held in memory
+  (`SessionsHostProps.kind: "fixture"`), through the same frame.
 - **Views = the shapes** (`config/apps/deploy/analytics/sessions/deploy-sessions.jsonc`):
   All / With actions (`events > 0`) / 2+ pages (`pageviews ≥ 2`) / Bounced
   (`pageviews = 1`, the report's bounce), each a saved filter that also starts
@@ -66,8 +69,13 @@ Served `source: "external"` (`server/internal/served.ts`) on this computer's
   is a draft of the view, and the drafted view rides in the URL
   (`;view.deploy-sessions=<id>~<draft>`, view-core's addressable drafts).
   The active view is in the URL too.
-- **Search** filters the loaded rows in memory (country, source, software,
-  pages).
+- **Search** runs on the copy: the hidden `search` field is collect's
+  `visitSearchText` (country code and English name, source, channel,
+  device, OS, browser, pages — one SQL definition, carried on each row), and
+  the search box lowers to `search contains q`. So a rare value is found
+  among every visit, not only the loaded ones. Country names are English
+  (the server's Intl), whatever the reader's locale. The exhibit's made-up
+  rows carry `madeUpSearchText` and search in memory.
 - **Toolbar**: its own arrangement (`sessionsToolbar`): the summary on its
   own line (sessions = the view's count; median duration, median load and
   "with actions" over the LOADED visits), then the standard DataView toolbar

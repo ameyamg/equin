@@ -194,6 +194,13 @@ tables are; nothing reads visits over SSH any more (the old host-only
   exactly the visits a report row counts — pinned against the report in
   `analytics.db.test.ts`. A caller passes the columns it declares
   (`filterable`), each a subset of these.
+- **Search — the `search` column** (`visitSearchText`): one text per visit —
+  the country's code and English name ("Unknown location" without one; the
+  names from the server's Intl, as a jsonb literal), where it came from (the
+  referrer host and path, else its utm source, else "Direct"), channel,
+  device, OS, browser and every page it hit. A list searches it with
+  `search contains q`; each listed visit carries it (`ListedVisit.search`),
+  so what a row says it matched is what the SQL matched.
 - **A page costs the page, not the range.** The window walks
   `(started_at, id)` from its cut, checks each visit's filter against its own
   row and hits (`memberships`' `one` scope), and stops at the `limit`-th
@@ -415,6 +422,7 @@ dropped and re-copied.
     - `AnalyticsReadDb`
     - `CollectContext`
     - `CountryLookup`
+    - `ListedVisit`
     - `VisitFilterable`
     - `VisitPage`
     - `VisitPageCut`

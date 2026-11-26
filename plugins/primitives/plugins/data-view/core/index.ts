@@ -177,6 +177,8 @@ export type {
   FieldOverride,
   FieldOverrides,
   DataViewPaging,
+  DataViewLoadedWindow,
+  DataViewLoadedFrameProps,
   DataViewPagingTotal,
   DataViewRowsComplete,
   DataViewReadOrder,

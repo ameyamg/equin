@@ -38,6 +38,7 @@ export {
   readVisitWindow,
 } from "./internal/sessions";
 export type {
+  ListedVisit,
   VisitFilterable,
   VisitPage,
   VisitPageCut,

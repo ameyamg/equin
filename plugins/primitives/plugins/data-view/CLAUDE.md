@@ -1119,6 +1119,22 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {});
     shown — a search or filter hiding the true tail only keeps more sections
     a lower bound. "None" keeps its lower bound.
 
+## The loaded window (`loadedFrame`)
+
+A list that derives something from the rows it has loaded and shares it
+between its toolbar and its rows (the Sessions tab's shared time axis and
+its summary over the loaded visits) passes `loadedFrame` — a component
+wrapped around the whole surface (band and body), handed
+`loaded: DataViewLoadedWindow` (`status` loading / error / ready, `rows`,
+`total`) and drawing its `children` as they are; it provides its own
+context. The ONE way a live `source`'s loaded rows reach the consumer — so
+a list needing them stays a live source (server search, sort, count)
+instead of holding rows in memory. In memory it is handed the rows given.
+`rows` is empty unless `ready` (not known yet is never an empty window);
+`total` is the read's total while no search or filter could hide read rows
+(or a complete live read's row count), else `null`. Keep the component's
+identity stable (module level): a new one remounts the surface.
+
 ## Create affordances (`creators`)
 
 `creators?: CreateOption[]` (`{ id, label, icon?, description?, onSelect, views? }`,
@@ -2565,6 +2581,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewDensity`
     - `DataViewFoldLines`
     - `DataViewId`
+    - `DataViewLoadedFrameProps`
+    - `DataViewLoadedWindow`
     - `DataViewPageNotice`
     - `DataViewPaging`
     - `DataViewPagingTotal`
@@ -2803,6 +2821,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewId`
     - `DataViewInMemoryOrigin`
     - `DataViewLiveOrigin`
+    - `DataViewLoadedFrameProps`
+    - `DataViewLoadedWindow`
     - `DataViewPageNotice`
     - `DataViewPagePlaceholder`
     - `DataViewPagePlaceholders`

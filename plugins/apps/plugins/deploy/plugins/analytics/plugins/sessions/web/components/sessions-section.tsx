@@ -1,4 +1,10 @@
-import { useMemo, type ReactElement, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import {
   ANALYTICS_MIRROR_SET_ID,
   COLLECT_PLUGIN_ID,
@@ -23,8 +29,8 @@ import {
   defineDataView,
   defineDataViewSources,
   fieldOverrides,
-  useLivePagesPaging,
-  type DataViewPaging,
+  liveDataSource,
+  type DataViewLoadedFrameProps,
   type DataViewSourceProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -48,8 +54,7 @@ import {
   type SessionRow,
 } from "../../core";
 import { axisMaxS } from "../internal/axis";
-import { sourceOf } from "../internal/facts";
-import { countryName, median } from "../internal/format";
+import { median } from "../internal/format";
 import { journeyOf, sectionsByPath, type Journey } from "../internal/journey";
 import { visitLoad } from "../internal/load";
 import { LaneWindowContext, type LaneWindow } from "../internal/lane-context";
@@ -67,9 +72,10 @@ const SUBJECT: HostQuerySubject = {
 
 /**
  * Where the Sessions surface's rows come from: one source, `visits` — a
- * site's live visits, or (the exhibit) made-up ones. A source so the rows are
- * in hand: every lane shares one axis and one section estimate, derived from
- * the loaded window.
+ * site's live visits (a live source: paged, filtered and searched by
+ * collect's SQL on the copy), or (the exhibit) made-up ones held in memory.
+ * Either way every lane shares one axis and one section estimate, derived
+ * from the loaded window (`loadedFrame`).
  */
 export type SessionsHostProps =
   | { kind: "site"; deploymentId: string }
@@ -182,7 +188,11 @@ export function VisitsSource(
   props: DataViewSourceProps<SessionsHostProps>,
 ): ReactElement {
   return props.hostProps.kind === "site" ? (
-    <SiteVisits {...props} deploymentId={props.hostProps.deploymentId} />
+    <SiteVisits
+      deploymentId={props.hostProps.deploymentId}
+      render={props.render}
+      filter={props.view.filter}
+    />
   ) : (
     <ExhibitVisits
       rows={props.hostProps.rows}
@@ -191,6 +201,8 @@ export function VisitsSource(
     />
   );
 }
+
+type RenderBundle = DataViewSourceProps<SessionsHostProps>["render"];
 
 const READY: ResourceReadiness = { status: "ready" };
 
@@ -201,7 +213,7 @@ function ExhibitVisits({
   filter,
 }: {
   rows: readonly SessionRow[];
-  render: DataViewSourceProps<SessionsHostProps>["render"];
+  render: RenderBundle;
   filter: FilterGroup | null;
 }): ReactElement {
   const pageOptions = useMemo<FieldOptionsResult>(() => {
@@ -217,16 +229,23 @@ function ExhibitVisits({
         .map(pageOptionOf),
     };
   }, [rows]);
+  const overrides = useMemo(
+    () => overridesOf({ optionsResult: pageOptions }),
+    [pageOptions],
+  );
   return (
-    <VisitsBundle
-      deploymentId={null}
-      render={render}
-      rows={rows}
-      readiness={READY}
-      paging={undefined}
-      pageOptions={{ optionsResult: pageOptions }}
-      filter={filter}
-    />
+    <LaneScope deploymentId={null} filter={filter}>
+      {render<SessionRow>({
+        rows,
+        rowKey: rowKeyOf,
+        collection: deploymentSessions,
+        overrides,
+        readiness: READY,
+        // Each made-up row carries its search text, as a site's does.
+        searchAccessor: searchTextOfRow,
+        ...SHARED_BUNDLE,
+      })}
+    </LaneScope>
   );
 }
 
@@ -257,46 +276,45 @@ function sitePagesWindow(deploymentId: string): FieldOptionsWindow {
 type PageOptions =
   { optionsResult: FieldOptionsResult } | { optionsWindow: FieldOptionsWindow };
 const rowKeyOf = (row: SessionRow): string => row.key;
-const NO_ROWS: readonly SessionRow[] = [];
+const searchTextOfRow = (row: SessionRow): string => row.search;
 
 /**
- * A site's visits as live key-range pages of its copy, paged by the active
- * view's filter (`narrowBy`: the shape, whose visits, the device — run by
- * collect's SQL on the copy), with the total it matches.
+ * A site's visits, live: key-range pages of its copy, filtered, sorted and
+ * searched by collect's SQL there (`search`, its one search text), with the
+ * total the view matches.
  */
+const visitsSource = liveDataSource(deploymentSessions, {
+  surface: SESSIONS_VIEW,
+  searchable: ["search"],
+  unscoped: {
+    reason:
+      "a site's visits, read from its copy of the site's own tables: the copy holds no custom column",
+  },
+});
+
 function SiteVisits({
   deploymentId,
-  view,
   render,
-}: DataViewSourceProps<SessionsHostProps> & {
+  filter,
+}: {
   deploymentId: string;
+  render: RenderBundle;
+  filter: FilterGroup | null;
 }): ReactElement {
-  // The filter language's own clause: the paged read ANDs the view's filter
-  // into it (`narrowBy`), so it is spelled as the language, not shorthand.
-  const query = useMemo(
-    () => ({ where: clause("deploymentId", "eq", deploymentId) }),
+  const source = useMemo(
+    () => visitsSource.scoped({ where: { deploymentId } }),
     [deploymentId],
   );
-  const { pages, paging } = useLivePagesPaging(deploymentSessions, query, {
-    narrowBy: view,
-    total: true,
-  });
   // The Pages filter offers the site's visited paths, not just the loaded
   // window's: the list pages through time, the filter runs on the copy.
-  const pageOptions = useMemo(
-    (): PageOptions => ({ optionsWindow: sitePagesWindow(deploymentId) }),
+  const overrides = useMemo(
+    () => overridesOf({ optionsWindow: sitePagesWindow(deploymentId) }),
     [deploymentId],
   );
   return (
-    <VisitsBundle
-      deploymentId={deploymentId}
-      render={render}
-      rows={pages.status === "ready" ? pages.rows : NO_ROWS}
-      readiness={pages.status === "ready" ? READY : pages}
-      paging={paging === null ? undefined : paging}
-      pageOptions={pageOptions}
-      filter={view.filter}
-    />
+    <LaneScope deploymentId={deploymentId} filter={filter}>
+      {render<SessionRow>({ source, overrides, ...SHARED_BUNDLE })}
+    </LaneScope>
   );
 }
 
@@ -307,6 +325,8 @@ function SiteVisits({
 function overridesOf(pageOptions: PageOptions) {
   return fieldOverrides(deploymentSessions, {
     deploymentId: { visible: false, filterable: false },
+    // Searched, never shown, filtered or grouped by hand.
+    search: { visible: false, filterable: false, groupable: false },
     pages: pageOptions,
   });
 }
@@ -320,19 +340,6 @@ function sessionOfRow(row: SessionRow): Session {
     SESSIONS.set(row, s);
   }
   return s;
-}
-
-function searchText(row: SessionRow): string {
-  const s = sessionOfRow(row);
-  return [
-    countryName(s.country),
-    sourceOf(s),
-    s.channel,
-    s.device,
-    s.os,
-    s.browser,
-    ...s.pages,
-  ].join(" ");
 }
 
 /** The Pages quick filter's operator: a visit that hit any of the picked paths. */
@@ -419,61 +426,57 @@ const VIEW_OPTIONS = {
   },
 } as const;
 
-/** The loaded window handed to the surface, with what every lane shares. */
-function VisitsBundle({
+/** What both sources hand the surface besides their rows. */
+const SHARED_BUNDLE = {
+  quickFilters: QUICK_FILTERS,
+  viewOptions: VIEW_OPTIONS,
+  emptyState: <>No visit matches this view.</>,
+  loadedFrame: LaneFrame,
+} as const;
+
+/** What the lanes share that is no part of the loaded rows: the site, and the pages the view asks for. */
+interface LaneScopeValue {
+  deploymentId: string | null;
+  focusPages: ReadonlySet<string> | null;
+}
+const LaneScopeContext = createContext<LaneScopeValue | null>(null);
+
+function LaneScope({
   deploymentId,
-  render,
-  rows,
-  readiness,
-  paging,
-  pageOptions,
   filter,
+  children,
 }: {
   deploymentId: string | null;
-  render: DataViewSourceProps<SessionsHostProps>["render"];
-  rows: readonly SessionRow[];
-  readiness: ResourceReadiness;
-  paging: Omit<DataViewPaging<SessionRow>, "isPaged"> | undefined;
-  pageOptions: PageOptions;
   /** The active view's filter — which pages it asks for. */
   filter: FilterGroup | null;
-}): ReactElement {
-  const overrides = useMemo(() => overridesOf(pageOptions), [pageOptions]);
-  const laneWindow = useLaneWindow(
-    deploymentId,
-    rows,
-    readiness.status === "ready",
-    paging?.total?.count ?? null,
-    filter,
+  children: ReactNode;
+}): ReactNode {
+  const focusPages = useMemo(() => focusPagesOf(filter), [filter]);
+  const value = useMemo(
+    () => ({ deploymentId, focusPages }),
+    [deploymentId, focusPages],
   );
   return (
-    <LaneWindowContext.Provider value={laneWindow}>
-      {render<SessionRow>({
-        rows,
-        rowKey: rowKeyOf,
-        collection: deploymentSessions,
-        overrides,
-        readiness,
-        ...(paging !== undefined ? { paging } : {}),
-        searchAccessor: searchText,
-        quickFilters: QUICK_FILTERS,
-        viewOptions: VIEW_OPTIONS,
-        emptyState: <>No visit matches this view.</>,
-      })}
-    </LaneWindowContext.Provider>
+    <LaneScopeContext.Provider value={value}>
+      {children}
+    </LaneScopeContext.Provider>
   );
 }
 
-/** Everything the rows share, derived once per loaded window. */
-function useLaneWindow(
-  deploymentId: string | null,
-  rows: readonly SessionRow[],
-  known: boolean,
-  total: number | null,
-  filter: FilterGroup | null,
-): LaneWindow {
-  const focusPages = useMemo(() => focusPagesOf(filter), [filter]);
-  return useMemo<LaneWindow>(() => {
+/**
+ * Around the surface (its `loadedFrame`): everything the rows share, derived
+ * once per loaded window and provided to the rows and the toolbar band.
+ */
+function LaneFrame({
+  loaded,
+  children,
+}: DataViewLoadedFrameProps<SessionRow>): ReactNode {
+  const scope = useContext(LaneScopeContext);
+  if (scope === null)
+    throw new Error("[sessions] the surface rendered outside its LaneScope");
+  const { deploymentId, focusPages } = scope;
+  const { rows, status, total } = loaded;
+  const laneWindow = useMemo<LaneWindow>(() => {
     const sessions = rows.map(sessionOfRow);
     const journeys = new Map<string, Journey>(
       sessions.map((s) => [s.id, journeyOf(s)]),
@@ -486,22 +489,28 @@ function useLaneWindow(
       sections: sectionsByPath(all),
       axisMaxS: axisMaxS(Math.max(0, ...all.map((j) => j.barS))),
       // Not known yet is no figure at all, never "0 sessions".
-      summary: !known
-        ? null
-        : {
-            total,
-            loaded: sessions.length,
-            // The time a visit was used, as its row's headline says.
-            medianS: median(all.map((j) => j.activeS ?? j.durationS)),
-            // Over the visits whose load got ready on screen; none such → no figure.
-            medianLoadMs: median(
-              sessions.flatMap((s) => {
-                const ready = visitLoad(s)?.readyMs ?? null;
-                return ready === null ? [] : [ready];
-              }),
-            ),
-            withActions: all.filter((j) => j.actionCount > 0).length,
-          },
+      summary:
+        status !== "ready"
+          ? null
+          : {
+              total,
+              loaded: sessions.length,
+              // The time a visit was used, as its row's headline says.
+              medianS: median(all.map((j) => j.activeS ?? j.durationS)),
+              // Over the visits whose load got ready on screen; none such → no figure.
+              medianLoadMs: median(
+                sessions.flatMap((s) => {
+                  const ready = visitLoad(s)?.readyMs ?? null;
+                  return ready === null ? [] : [ready];
+                }),
+              ),
+              withActions: all.filter((j) => j.actionCount > 0).length,
+            },
     };
-  }, [deploymentId, rows, known, total, focusPages]);
+  }, [deploymentId, focusPages, rows, status, total]);
+  return (
+    <LaneWindowContext.Provider value={laneWindow}>
+      {children}
+    </LaneWindowContext.Provider>
+  );
 }

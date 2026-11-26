@@ -172,7 +172,7 @@ export const deploymentSessionsServed = serveCollection(deploymentSessions, {
         asOf,
       ),
     );
-    return visits.map((s) => sessionRowOf(deploymentId, s));
+    return visits.map((s) => sessionRowOf(deploymentId, s, s.search));
   },
   rows: async (keys) => {
     const bySite = new Map<string, string[]>();
@@ -185,7 +185,7 @@ export const deploymentSessionsServed = serveCollection(deploymentSessions, {
         const visits = await onCopy(deploymentId, (tx, asOf) =>
           readVisitsById(tx, ids, asOf),
         );
-        return visits.map((s) => sessionRowOf(deploymentId, s));
+        return visits.map((s) => sessionRowOf(deploymentId, s, s.search));
       }),
     );
     return rows.flat();

@@ -45,6 +45,57 @@ import { liveVisitCutoff } from "./visit-grouping";
 /** Anything a read can run on: the database, or a transaction (a replica's read). */
 export type VisitReads = AnalyticsReadDb;
 
+/**
+ * Every ISO 3166 region code with its English name, as one jsonb object —
+ * so the search finds a visit by the country a list shows it from (rows
+ * hold the code). Read from the runtime's own Intl data once: a code it
+ * names nothing for is left out (the code itself still matches).
+ */
+const COUNTRY_NAMES_JSON: string = (() => {
+  const names = new Intl.DisplayNames(["en"], { type: "region" });
+  const out: Record<string, string> = {};
+  const A = "A".charCodeAt(0);
+  for (let i = 0; i < 26; i++)
+    for (let j = 0; j < 26; j++) {
+      const code = String.fromCharCode(A + i, A + j);
+      let name: string | undefined;
+      try {
+        name = names.of(code);
+      } catch (err) {
+        // A code the runtime refuses outright names no region.
+        if (!(err instanceof RangeError)) throw err;
+      }
+      if (name !== undefined && name !== code) out[code] = name;
+    }
+  return JSON.stringify(out);
+})();
+
+/**
+ * A visit's text, as a visit list searches it (the filter column `search`):
+ * where it was from (the country's code and English name, "Unknown location"
+ * without one), where it came from (the referring host and path — the path
+ * dropped when it is the root — else its utm source, else "Direct"), its
+ * channel, device, OS and browser, and every page it hit — space-separated.
+ * The one definition: the list's search runs it in SQL, and each listed
+ * visit carries it (`ListedVisit.search`).
+ */
+export function visitSearchText(alias: string): SQL {
+  const v = (column: string) => sql.raw(`${alias}.${column}`);
+  return sql`concat_ws(' ',
+    coalesce(${v("country")} || ' ' || coalesce(${COUNTRY_NAMES_JSON}::jsonb ->> ${v("country")}, ''), 'Unknown location'),
+    CASE WHEN ${v("referrer_host")} IS NOT NULL
+      THEN ${v("referrer_host")} || CASE WHEN ${v("referrer_path")} IS NULL OR ${v("referrer_path")} = '/' THEN '' ELSE ${v("referrer_path")} END
+      ELSE coalesce(${v("utm_source")}, 'Direct') END,
+    ${v("channel")}, ${v("device")}, ${v("os")}, ${v("browser")},
+    array_to_string(${visitMembershipValues(alias, "page")}, ' '))`;
+}
+
+/** A visit as a list reads it: its fields and hits, and its search text. */
+export type ListedVisit = Session & {
+  /** {@link visitSearchText}: what the list's search matches. */
+  search: string;
+};
+
 /** Each filterable visit column, as the SQL over `v` reads it. */
 const VISIT_FILTER_TARGETS: Readonly<Record<VisitFilterColumn, SQL>> = {
   country: sql`v.country`,
@@ -68,6 +119,7 @@ const VISIT_FILTER_TARGETS: Readonly<Record<VisitFilterColumn, SQL>> = {
   // The filter language's string arrays are jsonb arrays.
   pages: sql`to_jsonb(${visitMembershipValues("v", "page")})`,
   eventNames: sql`to_jsonb(${visitMembershipValues("v", "event")})`,
+  search: visitSearchText("v"),
 };
 
 /** The filterable visit columns that are numbers. */
@@ -136,7 +188,7 @@ export async function readVisitWindow<F extends VisitFilterable>(
   dbx: VisitReads,
   q: VisitWindowQuery<F>,
   now: Date,
-): Promise<Session[]> {
+): Promise<ListedVisit[]> {
   const desc = q.direction === "desc";
   const where = sql.join(
     [
@@ -165,7 +217,7 @@ export async function readVisitsById(
   dbx: VisitReads,
   ids: readonly string[],
   now: Date,
-): Promise<Session[]> {
+): Promise<ListedVisit[]> {
   const uuids = ids.filter((id) => UUID.test(id));
   if (uuids.length === 0) return [];
   return withHits(
@@ -366,6 +418,7 @@ const VisitRow = z.object({
   os: OsFamilySchema,
   pages: z.array(z.string()),
   eventNames: z.array(z.string()),
+  search: z.string(),
 });
 type VisitRow = z.infer<typeof VisitRow>;
 
@@ -395,7 +448,8 @@ function visitRows(
         v.utm_campaign AS "utmCampaign",
         v.country, v.language, v.device, v.browser, v.os,
         ${visitMembershipValues("v", "page")} AS "pages",
-        ${visitMembershipValues("v", "event")} AS "eventNames"
+        ${visitMembershipValues("v", "event")} AS "eventNames",
+        ${visitSearchText("v")} AS "search"
       FROM (${selected}) v
       ORDER BY ${order}`,
   });
@@ -405,7 +459,7 @@ function visitRows(
 async function withHits(
   dbx: VisitReads,
   visits: VisitRow[],
-): Promise<Session[]> {
+): Promise<ListedVisit[]> {
   const hits = await hitsOf(
     dbx,
     visits.map((v) => v.id),

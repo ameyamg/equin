@@ -52,6 +52,8 @@ export type {
   FieldOverride,
   FieldOverrides,
   DataViewPaging,
+  DataViewLoadedWindow,
+  DataViewLoadedFrameProps,
   DataViewPagingTotal,
   DataViewPageNotice,
   DataViewViewportSink,
