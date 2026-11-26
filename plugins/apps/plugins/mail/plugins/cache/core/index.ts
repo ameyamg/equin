@@ -11,3 +11,8 @@ export {
   mailboxViewIds,
   PARENT_VIEW_INCLUDES_SUB_LABELS,
 } from "./internal/mailbox-view";
+export {
+  mailAccountStatus,
+  MailAccountStatusSchema,
+  type MailAccountStatus,
+} from "./internal/account-status";

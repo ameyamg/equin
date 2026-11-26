@@ -60,8 +60,9 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   placed message plus the slack. The slack (Gmail: 60 s; measured −9 s…+12 s
   between Gmail's search clock and `internalDate`) is why a skewed message is
   never missed. Each batch commits, so a fill cut short resumes at its cut.
-- **Freshness.** Summaries are current at the account's change cursor. After
-  each read a background **catch-up** (coalesced per account) reads
+- **Freshness.** Summaries are current at the account's change cursor. A
+  background **catch-up** (the sync step below: after each read, and on the
+  change signal) reads
   `changesSince`, re-reads the changed threads (bounded: past 200 cached ones
   they are marked stale, past 50 new ones the local queries re-list) and
   re-checks every **locally maintained** query per message
@@ -87,10 +88,49 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
 - **Eviction** (`server/internal/retention.ts`): queries unread 30 days
   (searches: 1), threads no query holds and unused 30 days.
 
+## How changes arrive (`server/internal/sync.ts`, design §5)
+
+- **One sync step per account**, coalesced (`createKeyedCoalescer`: one
+  running, one trailing) and serialised: `changesSince(cursor)` applied as
+  the catch-up above — changed threads re-read, locally maintained queries
+  re-checked per message (in / out), the others unverified (their next read
+  re-lists them), `reset` marking everything stale — then
+  `mail.threads` notified with the changed ids and, when the provider says
+  mailboxes moved (Gmail: any change; `relist`), `mail.mailboxes` relisted
+  with fresh counts.
+- **The change signal is the no-polling rule's documented exception**: the
+  provider gives none until push (Gmail Pub/Sub, design step 8).
+  - `mail.sync-tick` (a `defineTimer`, exempted in `exempt/index.ts`): every
+    30 s while anyone is subscribed to `mail.threads` (`whileSubscribed`
+    starts and stops it). Cost when nothing moved: one `history.list`, 2
+    units.
+  - `mail.sync-idle` (a `defineJob`, every 10 min, main only): with nobody
+    watching, keeps the cursor inside Gmail's history window.
+  - A read still triggers a step, so a view opened between ticks is current.
+  - Push will not retire the tick: worktrees never consume the subscription,
+    and Google says push may drop notifications.
+- **A step's effects land before its page's cursor** (the mailbox relist
+  included), so a step failing mid-way re-reads that page next time; the
+  threads it already moved are notified whatever fails after. Cost: a step
+  where nothing moved is one `history.list` (2 units); one where mail moved
+  adds the changed threads' summaries (`threads.get` metadata, 40 units
+  each) and, Gmail reporting counts moved on every change, the mailbox
+  relist (`labels.list` + one `labels.get` per label: ~44 units on a
+  43-label account).
+- **`mail.account-status`** (`core`), read from the account row alone —
+  the connection AS THE LAST STEP FOUND IT (the connection has no change
+  signal; the next read, tick or idle job records a reconnect or a
+  revocation): `none` (no account read yet — the health row is absent),
+  `not-connected` (needs reconsent), or `account` (connected / offline,
+  the change signal and whether it ticks, `syncedAt`, and the later step's
+  `syncFailure`: offline and not-connected recorded, a fault recorded and
+  reported). Pushed on every step and tick start / stop.
+- **The health report's Mail row** (`web`): attention while not connected
+  or a step faulted, grey while offline, ok once synced.
+
 ## Not yet (later steps of the design)
 
-- No change signal of its own: a view refreshes when read (task 4 adds the
-  push / fallback tick and `mail.account-status`).
+- No push (step 8). No thread value to notify yet (step 5's `mail.thread`).
 - No `preload: "boot"`: a collection's boot tuple is its param-less default
   window (unfiltered, not the Inbox), loaded for every app's first paint, and
   an uncovered one would wait on the provider.
@@ -106,9 +146,15 @@ summaries, membership re-check, reset, refusals.
 
 ## Plugin reference
 
-- Description: The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), a background catch-up from the change cursor that re-checks locally maintained queries per message and re-lists the others, refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting or the last sync step failed, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (the fallback tick, until push). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, a 30 s tick while any mail view is subscribed — the documented no-polling exception, the provider giving no change signal until push — and a 10-min job on main with nobody watching) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal, last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+- Web:
+  - Contributes: `HealthReport.Row` "Mail"
+  - Uses:
+    - `network/live.useLive`
+    - `shell/health-report.HealthReport`
 - Server:
   - Contributes:
+    - `resource.declare` "mail.account-status"
     - `resource.declare` "mail.mailboxes"
     - `resource.declare` "mail.mailboxes:rows"
     - `resource.declare` "mail.threads"
@@ -137,9 +183,12 @@ summaries, membership re-check, reset, refusals.
     - `database/admin.ExcludeFromFork`
     - `database/sql-column.parsedJson`
     - `ids.externalIdColumn`
+    - `infra/background/timer.defineTimer`
+    - `infra/jobs.defineJob`
     - `infra/retention.defineRetention`
     - `infra/retention.markCascadeBounded`
     - `network/live.serveCollection`
+    - `network/live.serveValue`
     - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/apps/plugins/mail/plugins/cache/server/internal/tables.ts`
   - Exports (values):
@@ -151,7 +200,10 @@ summaries, membership re-check, reset, refusals.
   - Register:
     - `defineJob('retention.mail_queries')`
     - `defineJob('retention.mail_threads')`
+    - `defineTimer('mail.sync-tick')`
+    - `defineJob('mail.sync-idle')`
   - Resources:
+    - `mail.account-status` (push, notified)
     - `mail.mailboxes` (keyed)
     - `mail.mailboxes:rows` (keyed, point)
     - `mail.threads` (keyed, window)
@@ -171,18 +223,24 @@ summaries, membership re-check, reset, refusals.
     - `fields/text/config.textField`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
+    - `network/live.liveValue`
     - `packages/list-bound.cappedList`
   - Exports (types):
+    - `MailAccountStatus`
     - `MailMailboxRow`
     - `MailThreadRow`
     - `MailThreadsRefusal`
   - Exports (values):
     - `MAIL_THREADS_MAX_LIMIT`
     - `MAIL_THREADS_REFUSALS`
+    - `mailAccountStatus`
+    - `MailAccountStatusSchema`
     - `mailboxViewFilter`
     - `mailboxViewIds`
     - `mailMailboxes`
     - `mailThreads`
     - `PARENT_VIEW_INCLUDES_SUB_LABELS`
+- Exemptions:
+  - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/sync.ts` (sanctioned)
 
 <!-- AUTOGENERATED:END -->

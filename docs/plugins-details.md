@@ -7101,9 +7101,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/keyboard-party/isle-building`
     - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), and later the cache, threads, reader and compose plugins.
       - Plugins:
-        - **`cache`** — The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), a background catch-up from the change cursor that re-checks locally maintained queries per message and re-lists the others, refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting or the last sync step failed, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (the fallback tick, until push). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, a 30 s tick while any mail view is subscribed — the documented no-polling exception, the provider giving no change signal until push — and a 10-min job on main with nobody watching) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal, last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+          - Web:
+            - Contributes: `HealthReport.Row` "Mail"
+            - Uses:
+              - `network/live.useLive`
+              - `shell/health-report.HealthReport`
           - Server:
             - Contributes:
+              - `resource.declare` "mail.account-status"
               - `resource.declare` "mail.mailboxes"
               - `resource.declare` "mail.mailboxes:rows"
               - `resource.declare` "mail.threads"
@@ -7132,9 +7138,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin.ExcludeFromFork`
               - `database/sql-column.parsedJson`
               - `ids.externalIdColumn`
+              - `infra/background/timer.defineTimer`
+              - `infra/jobs.defineJob`
               - `infra/retention.defineRetention`
               - `infra/retention.markCascadeBounded`
               - `network/live.serveCollection`
+              - `network/live.serveValue`
               - `network/live/change-feed.ExcludeFromChangeFeed`
             - DB schema: `plugins/apps/plugins/mail/plugins/cache/server/internal/tables.ts`
             - Exports (values):
@@ -7146,7 +7155,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `defineJob('retention.mail_queries')`
               - `defineJob('retention.mail_threads')`
+              - `defineTimer('mail.sync-tick')`
+              - `defineJob('mail.sync-idle')`
             - Resources:
+              - `mail.account-status` (push, notified)
               - `mail.mailboxes` (keyed)
               - `mail.mailboxes:rows` (keyed, point)
               - `mail.threads` (keyed, window)
@@ -7166,19 +7178,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/text/config.textField`
               - `network/live.liveCollection`
               - `network/live.LiveRowsCollection`
+              - `network/live.liveValue`
               - `packages/list-bound.cappedList`
             - Exports (types):
+              - `MailAccountStatus`
               - `MailMailboxRow`
               - `MailThreadRow`
               - `MailThreadsRefusal`
             - Exports (values):
               - `MAIL_THREADS_MAX_LIMIT`
               - `MAIL_THREADS_REFUSALS`
+              - `mailAccountStatus`
+              - `MailAccountStatusSchema`
               - `mailboxViewFilter`
               - `mailboxViewIds`
               - `mailMailboxes`
               - `mailThreads`
               - `PARENT_VIEW_INCLUDES_SUB_LABELS`
+          - Exemptions:
+            - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/sync.ts` (sanctioned)
         - **`provider`** — Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
           - Core:
             - Uses:
@@ -37393,6 +37411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineBackgroundKind('central-timer')`
           - Cross-plugin:
             - Imported by:
+              - `apps/mail/cache`
               - `auth`
               - `debug/backend-liveness`
               - `debug/health-monitor`
@@ -37405,6 +37424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
             - Exempted by:
+              - `apps/mail/cache` (0 debt)
               - `auth` (0 debt)
               - `debug/backend-liveness` (0 debt)
               - `debug/health-monitor` (0 debt)
@@ -40713,8 +40733,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 99 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×24
+        - Imported by: 100 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×25
           - `conversations` ×18
           - `infra` ×16
           - `debug` ×13
@@ -42414,12 +42434,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×17
           - `debug` ×16
           - `build` ×9
           - `conversations` ×9
-          - `apps` ×6
+          - `apps` ×7
           - `database` ×4
           - `tasks` ×4
           - `framework` ×3
@@ -64102,6 +64122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `HealthReport.Row`
         - Slot contributors:
           - `HealthReport.Row` ← `apps.deploy.box-link.site-row`
+          - `HealthReport.Row` ← `apps.mail.cache`
           - `HealthReport.Row` ← `build`
           - `HealthReport.Row` ← `conversations.runtime-sdk`
           - `HealthReport.Row` ← `database.query-deadline`
@@ -64171,6 +64192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
           - `apps/deploy/box-link/site-row`
+          - `apps/mail/cache`
           - `build`
           - `conversations/runtime-sdk`
           - `database/query-deadline`

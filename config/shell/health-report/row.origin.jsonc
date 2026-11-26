@@ -1,4 +1,4 @@
-// @hash cd5b74409447
+// @hash c39d07a5c872
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.deploy.box-link.site-row:sites",
+    "apps.mail.cache:mail",
     "build:build-out-of-memory",
     "conversations.runtime-sdk:claude-code",
     "database.query-deadline:database",

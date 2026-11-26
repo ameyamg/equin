@@ -76,6 +76,7 @@ implementation site.
   - Register: `defineBackgroundKind('central-timer')`
 - Cross-plugin:
   - Imported by:
+    - `apps/mail/cache`
     - `auth`
     - `debug/backend-liveness`
     - `debug/health-monitor`
@@ -88,6 +89,7 @@ implementation site.
 - Exemptions:
   - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
   - Exempted by:
+    - `apps/mail/cache` (0 debt)
     - `auth` (0 debt)
     - `debug/backend-liveness` (0 debt)
     - `debug/health-monitor` (0 debt)

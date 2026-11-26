@@ -1810,6 +1810,7 @@
   {"list":"shell.action-bar.view-option","plugin":"fullscreen","fact":{"audience":"developer","component":{"$code":true},"id":"fullscreen-toggle"}},
   {"list":"shell.action-bar.view-option","plugin":"phone-window","fact":{"audience":"developer","component":{"$code":true},"id":"open-phone-window"}},
   {"list":"shell.health-report.row","plugin":"apps.deploy.box-link.site-row","fact":{"actions":{"$code":true},"component":{"$code":true},"id":"sites","kind":"set","title":"Deployed sites","useRows":{"$code":true}}},
+  {"list":"shell.health-report.row","plugin":"apps.mail.cache","fact":{"id":"mail","kind":"status","title":"Mail","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"build","fact":{"id":"build-out-of-memory","kind":"status","title":"Update not deployed","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"conversations.runtime-sdk","fact":{"actions":{"$code":true},"component":{"$code":true},"glance":{"$code":true},"id":"claude-code","kind":"status","remedy":{"$code":true},"title":"Claude Code","useStatus":{"$code":true}}},
   {"list":"shell.health-report.row","plugin":"database.query-deadline","fact":{"id":"database","kind":"status","title":"Database","useStatus":{"$code":true}}},

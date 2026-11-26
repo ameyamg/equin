@@ -1,4 +1,4 @@
-// @hash cd5b74409447
+// @hash c39d07a5c872
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -38,6 +38,8 @@
     "infra.host.io-health:host-io",
     // The socket is up and the server reaches its database, and yet a read can still fail.
     "reports.resource-errors:live-reads",
+    // An app's own account: whether Mail's changes reach this server (absent until Mail is used).
+    "apps.mail.cache:mail",
     // The infrastructure the page runs on, ending with the front door's own currency.
     "infra.launcher.gateway-drift:gateway",
     // The database daemons' binaries the gateway runs, against what main declares.

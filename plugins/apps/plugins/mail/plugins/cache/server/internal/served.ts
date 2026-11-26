@@ -1,10 +1,13 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { db } from "@plugins/database/server";
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { MailProviders } from "@plugins/apps/plugins/mail/plugins/provider/server";
 import type { MailProviderDefinition } from "@plugins/apps/plugins/mail/plugins/provider/core";
-import { mailMailboxes, mailThreads } from "../../core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { mailAccountStatus, mailMailboxes, mailThreads } from "../../core";
+import { mailChangeSignal, SYNC_IDLE_MS, SYNC_TICK_MS } from "./sync";
 import { createMailCache } from "./engine";
 import {
   _mailAccounts,
@@ -29,14 +32,25 @@ export const mailCache = createMailCache({
   db,
   definition: soleProvider,
   refuse: (code, message) => mailThreads.refuse(code, message),
-  notifyThreads: () => mailThreadsServed.notify(),
+  notifyThreads: (ids) =>
+    mailThreadsServed.notify(ids === undefined ? undefined : { ids: [...ids] }),
   notifyMailboxes: () => mailMailboxesServed.notify(),
+  notifyStatus: () => mailAccountStatusServed.notify(),
+  changeSignal: () => ({
+    kind: "tick",
+    everyMs: SYNC_TICK_MS,
+    idleEveryMs: isMain() ? SYNC_IDLE_MS : null,
+    watching: mailSync.tick.running,
+  }),
   onBackgroundError: (what, err) =>
     reportServerError({
       message: `mail cache ${what} failed: ${err instanceof Error ? err.message : String(err)}`,
       ...crashFieldsOf(err, "mail-cache"),
     }),
 });
+
+/** The change signal: the fallback tick while a view is open, the idle job otherwise (`sync.ts`). */
+export const mailSync = mailChangeSignal(() => mailCache.sync());
 
 const CACHE_READS = {
   tables: [],
@@ -66,6 +80,15 @@ export const mailThreadsServed = serveCollection(mailThreads, {
   window: (q) => mailCache.window(q),
   rows: (ids) => mailCache.rows(ids),
   keyText: { date: (d: Date) => d.toISOString() },
+  // ONE watcher for every open mail view: the fallback tick runs while any is.
+  whileSubscribed: () => {
+    mailSync.tick.start();
+    mailAccountStatusServed.notify();
+    return () => {
+      mailSync.tick.stop();
+      mailAccountStatusServed.notify();
+    };
+  },
   throttleMs: 500,
 });
 
@@ -80,4 +103,20 @@ export const mailMailboxesServed = serveCollection(mailMailboxes, {
     return (await mailCache.mailboxes()).filter((m) => want.has(m.id));
   },
   throttleMs: 500,
+});
+
+/** The account's connection and last sync, pushed on every sync step and tick start / stop. */
+export const mailAccountStatusServed = serveValue(mailAccountStatus, {
+  source: "external",
+  changes: "notified",
+  reads: {
+    tables: [],
+    reason: "the cache's own account row, which only the cache writes",
+    notified: {
+      relations: [_mailAccounts],
+      reason:
+        "the account row's sync outcome, written only by the cache's sync step, which notifies this value itself",
+    },
+  },
+  loader: () => mailCache.status(),
 });

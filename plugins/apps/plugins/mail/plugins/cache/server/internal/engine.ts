@@ -5,6 +5,7 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   lt,
   notInArray,
   or,
@@ -52,6 +53,7 @@ import {
   _mailThreads,
 } from "./tables";
 import { loadSummary, storeSummary } from "./stored-summary";
+import type { MailAccountStatus } from "../../core";
 
 // The Mail cache's engine (design §3–4). It answers any DataView window of
 // `mail.threads` from per-query COVERAGE, filling it from the provider on
@@ -103,10 +105,17 @@ export type MailCacheDeps = {
   /** The provider kind the account is on (v1: the one registered). */
   definition: () => MailProviderDefinition;
   refuse: (code: MailThreadsRefusal, message: string) => Error;
-  /** Every subscribed `mail.threads` tuple re-reads. */
-  notifyThreads: () => void;
+  /** Every subscribed `mail.threads` window re-reads (`ids`: the threads that changed, for the by-id tuples). */
+  notifyThreads: (ids?: readonly string[]) => void;
   /** Every subscribed `mail.mailboxes` tuple re-reads. */
   notifyMailboxes: () => void;
+  /** `mail.account-status` re-reads (a sync step ended, the tick started or stopped). */
+  notifyStatus: () => void;
+  /** How changes reach the cache now (the fallback tick, and whether it runs). */
+  changeSignal: () => Extract<
+    MailAccountStatus,
+    { kind: "account" }
+  >["changeSignal"];
   /** A background run's failure that is not "offline": surfaced, never dropped. */
   onBackgroundError: (what: string, err: unknown) => void;
 };
@@ -822,62 +831,74 @@ export function createMailCache(deps: MailCacheDeps) {
 
   // ── catch-up: the account's changes since its cursor ───────────────────
 
-  async function catchUp(accountId: string) {
+  /**
+   * The account's changes since its cursor, applied. Answers whether it ran
+   * for `accountId` (false: the connected account is another one now).
+   * Each page's cursor is saved only once all its effects are written — the
+   * mailbox relist included — so a step failing mid-way re-reads that page;
+   * the threads already moved are notified whatever happens after.
+   */
+  async function catchUp(accountId: string): Promise<boolean> {
     const a = await account();
-    if (a.id !== accountId) return;
+    if (a.id !== accountId) return false;
     let cursor = a.cursor;
-    let movedThreads = false;
-    for (;;) {
-      const changes = await a.provider.changesSince(cursor, bg);
-      if (changes.kind === "reset") {
-        const next = await a.provider.currentCursor(bg);
-        await writeAtomically(db, [
-          db
-            .update(_mailThreads)
-            .set({ stale: true })
-            .where(eq(_mailThreads.accountId, a.id)),
-          db
+    const moved = new Set<string>();
+    try {
+      for (;;) {
+        const changes = await a.provider.changesSince(cursor, bg);
+        if (changes.kind === "reset") {
+          const next = await a.provider.currentCursor(bg);
+          await writeAtomically(db, [
+            db
+              .update(_mailThreads)
+              .set({ stale: true })
+              .where(eq(_mailThreads.accountId, a.id)),
+            db
+              .update(_mailQueries)
+              .set({ verifiedCursor: null })
+              .where(eq(_mailQueries.accountId, a.id)),
+            db
+              .update(_mailAccounts)
+              .set({ cursor: next })
+              .where(eq(_mailAccounts.id, a.id)),
+          ]);
+          moved.clear();
+          deps.notifyThreads();
+          // Counts may have moved in the history lost: relisted now.
+          await relistMailboxes(a, bg);
+          return true;
+        }
+        const ids = changes.threads;
+        if (ids.length > 0) {
+          await applyThreadChanges({ ...a, cursor: changes.next }, ids, cursor);
+          for (const id of ids) moved.add(id);
+        } else {
+          // Nothing moved: every query verified at the old cursor stays so.
+          await db
             .update(_mailQueries)
-            .set({ verifiedCursor: null })
-            .where(eq(_mailQueries.accountId, a.id)),
-          db
-            .update(_mailAccounts)
-            .set({ cursor: next })
-            .where(eq(_mailAccounts.id, a.id)),
-        ]);
-        deps.notifyThreads();
-        return;
-      }
-      const ids = changes.threads;
-      if (ids.length > 0) {
-        movedThreads = true;
-        await applyThreadChanges({ ...a, cursor: changes.next }, ids, cursor);
-      } else {
-        // Nothing moved: every query verified at the old cursor stays so.
+            .set({ verifiedCursor: changes.next })
+            .where(
+              and(
+                eq(_mailQueries.accountId, a.id),
+                eq(_mailQueries.verifiedCursor, cursor),
+              ),
+            );
+        }
+        // Counts move with mail on every provider, and only a relist reads
+        // them (and, `mailboxDefinitions: "relist"`, the definitions) — per
+        // page, before its cursor (a page is up to 5,000 records: rare).
+        if (changes.mailboxes === "changed") await relistMailboxes(a, bg);
         await db
-          .update(_mailQueries)
-          .set({ verifiedCursor: changes.next })
-          .where(
-            and(
-              eq(_mailQueries.accountId, a.id),
-              eq(_mailQueries.verifiedCursor, cursor),
-            ),
-          );
+          .update(_mailAccounts)
+          .set({ cursor: changes.next })
+          .where(eq(_mailAccounts.id, a.id));
+        cursor = changes.next;
+        if (!changes.more) break;
       }
-      if (
-        changes.mailboxes === "changed" &&
-        a.definition.capabilities.mailboxDefinitions === "relist"
-      ) {
-        await relistMailboxes(a, bg);
-      }
-      await db
-        .update(_mailAccounts)
-        .set({ cursor: changes.next })
-        .where(eq(_mailAccounts.id, a.id));
-      cursor = changes.next;
-      if (!changes.more) break;
+    } finally {
+      if (moved.size > 0) deps.notifyThreads([...moved]);
     }
-    if (movedThreads) deps.notifyThreads();
+    return true;
   }
 
   /**
@@ -1022,9 +1043,56 @@ export function createMailCache(deps: MailCacheDeps) {
     };
   }
 
+  /**
+   * One sync step of an account (design §5): its changes since the cursor
+   * applied (`catchUp`), the outcome recorded on the account row — what
+   * `mail.account-status` reads, so the status is as of the last step (a
+   * read's, the tick's, the idle job's). Not connected and offline are
+   * recorded, not reported; any other failure is recorded AND reported.
+   */
+  async function syncStep(accountId: string) {
+    let failure: {
+      kind: "offline" | "not-connected" | "fault";
+      message: string;
+    } | null = null;
+    let recorded = true;
+    try {
+      recorded = await catchUp(accountId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (
+        err instanceof MailNotConnectedError ||
+        err instanceof ResourceRefusal
+      ) {
+        // `account()` refuses not-connected (and offline with nothing held,
+        // which a held account with a cursor never is).
+        failure = { kind: "not-connected", message };
+      } else if (err instanceof MailUnreachableError) {
+        failure = { kind: "offline", message };
+      } else {
+        failure = { kind: "fault", message };
+        deps.onBackgroundError("sync", err);
+      }
+    }
+    if (recorded) {
+      const now = new Date();
+      await db
+        .update(_mailAccounts)
+        .set(
+          failure === null
+            ? { syncedAt: now, syncFailure: null }
+            : { syncFailure: { at: now.toISOString(), ...failure } },
+        )
+        .where(eq(_mailAccounts.id, accountId));
+    }
+    deps.notifyStatus();
+  }
+
+  // The account's sync step, serialised and coalesced per account: a read's
+  // catch-up, the fallback tick and the idle job fold into one trailing run.
   const catchUps = createKeyedCoalescer<string>({
     name: "mail-cache-catch-up",
-    run: (accountId) => background("catch-up", () => catchUp(accountId))(),
+    run: (accountId) => syncStep(accountId),
   });
   const relists = createKeyedCoalescer<number>({
     name: "mail-cache-relist",
@@ -1107,10 +1175,61 @@ export function createMailCache(deps: MailCacheDeps) {
     }));
   }
 
+  /**
+   * One sync step of every account the cache holds (v1: one) — the change
+   * signal's entry (the fallback tick, the idle job). An account never read
+   * (no cursor) has nothing to catch up. (When the connected account is
+   * another address, the step is `account()`'s: the old cache is dropped
+   * and the new account's row made, as any read would.)
+   */
+  async function sync(): Promise<void> {
+    const held = await db
+      .select({ id: _mailAccounts.id })
+      .from(_mailAccounts)
+      .where(isNotNull(_mailAccounts.cursor));
+    for (const r of held) await catchUps.run(r.id);
+  }
+
+  /**
+   * `mail.account-status`, read from the account row alone: the connection
+   * as the last sync step found it (no connection read here — it has no
+   * change signal; the next step, at the latest the next read or tick,
+   * records a reconnect or a revocation).
+   */
+  async function status(): Promise<MailAccountStatus> {
+    const definition = deps.definition();
+    const [row] = await db
+      .select()
+      .from(_mailAccounts)
+      .where(eq(_mailAccounts.providerId, definition.id))
+      .orderBy(desc(_mailAccounts.createdAt))
+      .limit(1);
+    if (!row || row.cursor === null) return { kind: "none" };
+    const f = row.syncFailure;
+    if (f?.kind === "not-connected") {
+      return {
+        kind: "not-connected",
+        address: row.address,
+        message: f.message,
+      };
+    }
+    return {
+      kind: "account",
+      address: row.address,
+      connection: f?.kind === "offline" ? "offline" : "connected",
+      changeSignal: deps.changeSignal(),
+      syncedAt: row.syncedAt?.toISOString() ?? null,
+      syncFailure:
+        f === null ? null : { at: f.at, kind: f.kind, message: f.message },
+    };
+  }
+
   return {
     window,
     rows,
     mailboxes,
+    sync,
+    status,
     /** Test seams: run a catch-up / settle the background work. */
     catchUp: async () => catchUps.run((await account()).id),
     settled: async () => {

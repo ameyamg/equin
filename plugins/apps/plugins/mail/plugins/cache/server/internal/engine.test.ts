@@ -66,19 +66,35 @@ function inboxThreads(n: number) {
 function harness(opts: FakeMailProviderOptions) {
   const f = createFakeMailProvider(opts);
   let notified = 0;
+  let mailboxesNotified = 0;
+  let statusNotified = 0;
+  const notifiedIds: string[][] = [];
   const background: unknown[] = [];
   const cache = createMailCache({
     db: t.db,
     definition: () => f.definition,
     refuse: (code, message) => mailThreads.refuse(code, message),
-    notifyThreads: () => notified++,
-    notifyMailboxes: () => {},
+    notifyThreads: (ids) => {
+      notified++;
+      if (ids) notifiedIds.push([...ids].sort());
+    },
+    notifyMailboxes: () => mailboxesNotified++,
+    notifyStatus: () => statusNotified++,
+    changeSignal: () => ({
+      kind: "tick",
+      everyMs: 30_000,
+      idleEveryMs: 600_000,
+      watching: true,
+    }),
     onBackgroundError: (_what, err) => background.push(err),
   });
   return {
     f,
     cache,
     notified: () => notified,
+    notifiedIds,
+    mailboxesNotified: () => mailboxesNotified,
+    statusNotified: () => statusNotified,
     background,
     /** The provider calls of `method` since the last `reset()`. */
     count: (method: string) =>
@@ -338,6 +354,169 @@ describe("mail cache: catch-up", () => {
       "t1",
     ]);
     await settle(h);
+  });
+});
+
+describe("mail cache: the sync step (the change signal's entry)", () => {
+  const unread: Filter = clause("unread", "eq", true) as Filter;
+
+  test("an account never read has nothing to sync: no provider call, no account made", async () => {
+    const h = harness({ threads: inboxThreads(3) });
+    await h.cache.sync();
+    expect(h.f.calls).toEqual([]);
+    expect(await h.cache.status()).toEqual({ kind: "none" });
+  });
+
+  test("a tick with no read applies the changes, notifies the changed threads and refreshes the counts", async () => {
+    const h = harness({ threads: inboxThreads(4) });
+    await h.cache.window(win({ limit: 10 }));
+    await settle(h);
+    const boxes = h.mailboxesNotified();
+    await h.f.provider.archive([threadId("t2")]);
+    h.f.deliver("t9", {
+      id: "m9",
+      date: "2026-01-02T08:00:00Z",
+      from: ana,
+      subject: "new",
+    });
+    h.notifiedIds.splice(0);
+    h.resetCalls();
+    await h.cache.sync();
+    expect(h.notifiedIds).toEqual([["t2", "t9"]]);
+    // The mailbox counts moved with them: relisted, notified.
+    expect(h.count("listMailboxes")).toBe(1);
+    expect(h.mailboxesNotified()).toBeGreaterThan(boxes);
+    h.resetCalls();
+    expect(ids(await h.cache.window(win({ limit: 10 })))).toEqual([
+      "t9",
+      "t4",
+      "t3",
+      "t1",
+    ]);
+    expect(h.count("listMessages")).toBe(0);
+    await settle(h);
+    // A tick where nothing moved: one change read, nothing re-read or notified.
+    h.resetCalls();
+    const before = h.notified();
+    await h.cache.sync();
+    expect(h.f.calls.map((c) => c.method)).toEqual(["changesSince"]);
+    expect(h.notified()).toBe(before);
+  });
+
+  test("unread is kept per message: read leaves the Unread view, marked unread enters it", async () => {
+    const h = harness({
+      threads: inboxThreads(3).map((t) => ({
+        ...t,
+        messages: t.messages.map((m) => ({ ...m, unread: true })),
+      })),
+    });
+    const view = win({ where: unread, limit: 10 });
+    expect(ids(await h.cache.window(view))).toEqual(["t3", "t2", "t1"]);
+    await settle(h);
+    await h.f.provider.setFlags([threadId("t2")], { unread: false });
+    await h.cache.sync();
+    h.resetCalls();
+    expect(ids(await h.cache.window(view))).toEqual(["t3", "t1"]);
+    expect(h.count("listMessages")).toBe(0);
+    await settle(h);
+    await h.f.provider.setFlags([threadId("t2")], { unread: true });
+    await h.cache.sync();
+    h.resetCalls();
+    expect(ids(await h.cache.window(view))).toEqual(["t3", "t2", "t1"]);
+    expect(h.count("listMessages")).toBe(0);
+    await settle(h);
+  });
+
+  test("a step failing after it applied changes still notifies them, and keeps the cursor so the next step re-reads the page", async () => {
+    const h = harness({ threads: inboxThreads(3) });
+    await h.cache.window(win({ limit: 10 }));
+    await settle(h);
+    await h.f.provider.archive([threadId("t1")]);
+    h.f.failNext("listMailboxes", new Error("labels down"));
+    h.notifiedIds.splice(0);
+    await h.cache.sync();
+    expect(h.notifiedIds).toEqual([["t1"]]);
+    expect(h.background.length).toBe(1);
+    h.resetCalls();
+    await h.cache.sync();
+    // The page is read again: the counts relisted this time.
+    expect(h.count("listMailboxes")).toBe(1);
+    expect(await h.cache.status()).toMatchObject({ syncFailure: null });
+  });
+
+  test("a burst of signals folds: one step running, one trailing", async () => {
+    const h = harness({ threads: inboxThreads(2) });
+    await h.cache.window(win({ limit: 10 }));
+    await settle(h);
+    h.resetCalls();
+    await Promise.all(Array.from({ length: 8 }, () => h.cache.sync()));
+    expect(h.count("changesSince")).toBeLessThanOrEqual(2);
+    expect(h.count("changesSince")).toBeGreaterThanOrEqual(1);
+  });
+
+  test("a reset from a tick re-reads what a view holds on its next read", async () => {
+    const h = harness({ threads: inboxThreads(3) });
+    await h.cache.window(win({ limit: 10 }));
+    await settle(h);
+    h.f.expireHistory();
+    const before = h.notified();
+    await h.cache.sync();
+    expect(h.notified()).toBeGreaterThan(before);
+    await h.f.provider.archive([threadId("t3")]);
+    // The read answers the cache, the re-list it starts fixes it.
+    await h.cache.window(win({ limit: 10 }));
+    await settle(h);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(ids(await h.cache.window(win({ limit: 10 })))).toEqual(["t2", "t1"]);
+    await settle(h);
+  });
+
+  test("the status: synced, an offline step recorded (not reported), a fault recorded and reported, not connected recorded, each cleared by a success", async () => {
+    const h = harness({ threads: inboxThreads(2) });
+    await h.cache.window(win({ limit: 10 }));
+    await settle(h);
+    const synced = await h.cache.status();
+    expect(synced).toMatchObject({
+      kind: "account",
+      address: "fake@example.com",
+      connection: "connected",
+      syncFailure: null,
+    });
+    expect(synced.kind === "account" && synced.syncedAt).toBeTruthy();
+    const pushed = h.statusNotified();
+    h.f.failNext(
+      "changesSince",
+      new MailUnreachableError("history", new Error("ENETDOWN")),
+    );
+    await h.cache.sync();
+    expect(h.statusNotified()).toBeGreaterThan(pushed);
+    expect(await h.cache.status()).toMatchObject({
+      syncFailure: { kind: "offline" },
+    });
+    expect(h.background).toEqual([]);
+    h.f.failNext("changesSince", new Error("boom"));
+    await h.cache.sync();
+    expect(await h.cache.status()).toMatchObject({
+      syncFailure: { kind: "fault", message: "boom" },
+    });
+    expect(h.background.length).toBe(1);
+    await h.cache.sync();
+    expect(await h.cache.status()).toMatchObject({ syncFailure: null });
+    // The connection as the last step found it: a revocation is recorded by
+    // the next step, a reconnect cleared by the one after.
+    h.f.setConnected(false);
+    await h.cache.sync();
+    expect(await h.cache.status()).toMatchObject({
+      kind: "not-connected",
+      address: "fake@example.com",
+    });
+    expect(h.background.length).toBe(1);
+    h.f.setConnected(true);
+    await h.cache.sync();
+    expect(await h.cache.status()).toMatchObject({
+      kind: "account",
+      syncFailure: null,
+    });
   });
 });
 

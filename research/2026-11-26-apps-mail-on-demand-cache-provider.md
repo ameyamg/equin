@@ -640,6 +640,32 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
 4. **Change sync.** `changesSince` apply, locally maintained membership, reset handling,
    `notify`, the documented fallback tick plus the background job, `mail.account-status` and
    the health row. *Ships:* views that stay live.
+   *Done* (`mail/cache`, `server/internal/sync.ts`):
+   - One sync step per account (keyed coalescer over the catch-up: one running, one
+     trailing). Each page's effects (summaries, per-message membership in / out,
+     unverifying provider-evaluated queries, the mailbox relist) land before its cursor
+     is saved, so a step failing mid-way re-reads that page; the moved threads are
+     notified whatever fails after. Reset: everything stale, mailboxes relisted.
+   - Counts: Gmail reports `mailboxes: "changed"` on every change, and only a relist
+     reads counts, so a tick where mail moved relists (`labels.list` + one
+     `labels.get` per label). The relist now runs whatever `mailboxDefinitions` says
+     (counts move on every provider).
+   - Signal: `mail.sync-tick` (`defineTimer`, sanctioned exemption) every 30 s while
+     `mail.threads` is subscribed (`whileSubscribed`), `mail.sync-idle` (`defineJob`,
+     `*/10`, main only) otherwise. A read still triggers a step.
+   - `mail.account-status` is read from the account row alone (`synced_at`,
+     `sync_failure`: offline / not-connected / fault): the connection as the last step
+     found it, since the connection has no change signal. The health report's Mail row
+     is absent until an account is read.
+   - No `mail.thread` value to notify yet (step 5).
+   - **Measured on the real account** (2026-11-26, a probe subscribed to Inbox ∧ unread
+     over the live socket, one single-message thread marked read then unread through
+     the Gmail API): left the window after **28.4 s**, came back after **29.0 s**;
+     ticks observed 29.2 s apart. Quota (from `GMAIL_QUOTA`; the pacer's spend is not
+     exported): an idle tick is one `history.list`, **2 units** (~4 units/min while
+     Mail is open, 0.07% of the 6,000/min budget); a tick where one thread moved is
+     ~**86 units** (2 history + 40 `threads.get` metadata + 1 `labels.list` + 43
+     `labels.get`), plus 2 for the catch-up the notified windows' re-read triggers.
 5. **Reader.** `mail.thread` fetch on open, the body cache, prefetch, `InlineFrame`
    rendering, `cid:` and the remote-image proxy, and attachment open/download.
    *Ships:* reading mail.

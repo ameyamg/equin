@@ -129,6 +129,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/isle/plugins/renderer",
   "apps/plugins/isle/plugins/world-view",
   "apps/plugins/keyboard-party/plugins/isle-building",
+  "apps/plugins/mail/plugins/cache",
   "apps/plugins/pages/plugins/agent-origin",
   "apps/plugins/pages/plugins/content-search",
   "apps/plugins/pages/plugins/copy-id",

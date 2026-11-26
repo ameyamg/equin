@@ -14,6 +14,13 @@ import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import { externalIdColumn } from "@plugins/ids/server";
 import { StoredSummarySchema } from "./stored-summary";
 
+/** Why the account's last sync step failed: `offline` (the provider unreachable), `not-connected` (needs reconsent) or a `fault`. */
+export const SyncFailureSchema = z.object({
+  at: z.string(),
+  kind: z.enum(["offline", "not-connected", "fault"]),
+  message: z.string(),
+});
+
 // The Mail cache (design §3: research/2026-11-26-apps-mail-on-demand-cache-provider.md).
 // A CACHE of the provider's mail, loaded on demand: left out of worktree
 // forks, backups and the change feed (the cache announces its own changes
@@ -30,6 +37,10 @@ export const _mailAccounts = pgTable("mail_accounts", {
   address: text("address").notNull(),
   /** The cursor every cached summary is current at; null before the first read. */
   cursor: text("cursor"),
+  /** The last sync step that read the provider's changes through to the end. */
+  syncedAt: timestamp("synced_at", { withTimezone: true }),
+  /** The last sync step failed (offline, or a fault) since `syncedAt`; null once one succeeds. */
+  syncFailure: parsedJson("sync_failure", SyncFailureSchema),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

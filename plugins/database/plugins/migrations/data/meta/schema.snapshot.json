@@ -1,6 +1,6 @@
 {
-  "id": "2e7b53bf-e2ed-485a-9b63-a66f3a3ac350",
-  "prevId": "1478afcc-b7b2-4ef4-9404-a8181695b9ed",
+  "id": "48b502df-ad3b-477e-b7f4-c3977f283cc7",
+  "prevId": "2e7b53bf-e2ed-485a-9b63-a66f3a3ac350",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4126,6 +4126,18 @@
         "cursor": {
           "name": "cursor",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sync_failure": {
+          "name": "sync_failure",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
