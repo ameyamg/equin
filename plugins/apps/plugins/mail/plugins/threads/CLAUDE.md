@@ -49,16 +49,23 @@ compose (later steps of the design).
 
 - Description: Mail's index pane (/mail): one DataView over the live mail.threads window — rows are threads, newest first, grouped by received day, searched by the provider's own search (the query column) — whose views are the built-ins (Inbox, Sent, Drafts, Done, Spam, Trash: locked, copy-only, code-defined, the Inbox filter in one place for the boot preload), one per user label (a parent's includes its sub-labels) and the user's own saved views. The mail sidebar is the DataView's aside: the view name, one drag-reorderable list of views (Spam and Trash folded under More), + New view, and the label tree (folds roll unread up). The toolbar is the search box with Filter and Display inside it, and the view's rules as chips while it is the user's own or edited. A refused window renders by its code: not connected draws the provider's connect surface.
 - Web:
-  - Slots: `mail.actions`
-  - Slot contributors: `mail.actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "mail-threads"
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slots:
+    - `mail.actions`
+    - `mail-thread.actions`
+  - Slot contributors:
+    - `mail.actions` ← `primitives.pane`
+    - `mail-thread.actions` ← `primitives.pane`
+  - Contributes:
+    - `Pane.Register` "mail-thread"
+    - `Pane.Register` "mail-threads"
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×7
-    - `primitives/pane` ×4
+    - `primitives/pane` ×5
     - `network/live/live-state` ×2
     - `primitives/css/rigid` ×2
-    - `apps/mail/provider.MailProviderUi`
+    - `apps/mail/provider.MailProviderConnect`
+    - `apps/mail/reader.ThreadReader`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -70,7 +77,6 @@ compose (later steps of the design).
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/slot-render.renderIsolated`
     - `primitives/tree.TreeRowChrome`
     - `ui/icons.Icon`
 - Core:

@@ -128,9 +128,9 @@ scrollers, 13 losses in two days).
     - `useScrollsSideways`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --space-sm`
-  - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 105 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×30
-    - `apps` ×22
+    - `apps` ×23
     - `primitives` ×17
     - `debug` ×10
     - `page` ×5

@@ -91,24 +91,12 @@ nothing to call here.
 
 - Description: In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
 - Cross-plugin:
-  - Imported by:
-    - `apps/chord/video-availability`
-    - `apps/places/place-details`
-    - `apps/sonata/covers`
-    - `apps/sonata/sources/midi/folders`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×8
+    - `apps` ×5
+    - `conversations` ×2
+    - `network` ×2
     - `auth`
-    - `conversations/conversation-view/commits-graph`
-    - `conversations/runtime-sdk`
-    - `infra/asset-mirror`
-    - `infra/claude-cli/availability`
-    - `infra/endpoints`
-    - `infra/git/git-read-cache`
-    - `infra/host-fs`
-    - `infra/host-fs/image`
-    - `infra/launcher/gateway-drift`
-    - `infra/runtime-profiler`
-    - `network/live/live-state`
-    - `network/live/resource-runtime`
     - `packages/watched-memo`
     - `plugin-meta/plugin-tree`
     - `tasks/orchestration/mandate`

@@ -926,8 +926,8 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 330 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×86
+  - Imported by: 331 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×87
     - `conversations` ×49
     - `debug` ×31
     - `tasks` ×30

@@ -13,6 +13,7 @@ import {
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import { externalIdColumn } from "@plugins/ids/server";
 import { StoredSummarySchema } from "./stored-summary";
+import { StoredContentSchema } from "./stored-content";
 
 /** Why the account's last sync step failed: `offline` (the provider unreachable), `not-connected` (needs reconsent) or a `fault`. */
 export const SyncFailureSchema = z.object({
@@ -149,5 +150,43 @@ export const _mailQueryMembers = pgTable(
       t.threadId,
     ),
     index("mail_query_members_thread_idx").on(t.accountId, t.threadId),
+  ],
+);
+
+/**
+ * A thread's content (the reader's bodies, design §3): one per cached thread,
+ * good while it holds exactly the thread's messages (`ThreadSummary.messages`
+ * ids) — a flag or label change moves the thread's version but not a byte of
+ * a message, so the reader overlays the summary's per-message facts and never
+ * re-fetches for it. Evicted least recently opened first past the byte budget
+ * (`MAIL_BODY_BUDGET_BYTES`); deleted with its thread.
+ */
+export const _mailThreadBodies = pgTable(
+  "mail_thread_bodies",
+  {
+    accountId: text("account_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    /** The provider's thread version the content was read at. */
+    version: text("version").notNull(),
+    /** The messages it holds, oldest first: good while the summary lists exactly these. */
+    messageIds: text("message_ids").array().notNull(),
+    content: parsedJson("content", StoredContentSchema).notNull(),
+    /** What it weighs against the byte budget (`contentBytes`). */
+    bytes: integer("bytes").notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
+    /** Last opened in the reader; null while only prefetched. Eviction keeps the most recent. */
+    openedAt: timestamp("opened_at", { withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.threadId] }),
+    foreignKey({
+      columns: [t.accountId, t.threadId],
+      foreignColumns: [_mailThreads.accountId, _mailThreads.threadId],
+    }).onDelete("cascade"),
+    index("mail_thread_bodies_used_idx").on(
+      t.accountId,
+      t.openedAt,
+      t.fetchedAt,
+    ),
   ],
 );

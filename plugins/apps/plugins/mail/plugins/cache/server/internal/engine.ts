@@ -11,7 +11,9 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { z } from "zod";
 import { writeAtomically, type Db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   canonicalizeFilter,
@@ -24,12 +26,15 @@ import type { LiveCutKey } from "@plugins/network/plugins/live/core";
 import { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import {
   changeCursor,
   MAIL_QUERY_COLUMNS,
   MailNotConnectedError,
   MailUnreachableError,
   providerQuery,
+  threadId as toThreadId,
+  type AttachmentMeta,
   type ChangeCursor,
   type Mailbox,
   type MailboxId,
@@ -37,6 +42,7 @@ import {
   type MailProvider,
   type MailProviderDefinition,
   type MailQuery,
+  type ThreadContent,
   type ThreadId,
   type ThreadSummary,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
@@ -50,10 +56,13 @@ import {
   _mailMailboxes,
   _mailQueries,
   _mailQueryMembers,
+  _mailThreadBodies,
   _mailThreads,
 } from "./tables";
 import { loadSummary, storeSummary } from "./stored-summary";
-import type { MailAccountStatus } from "../../core";
+import { contentBytes, loadContent, storeContent } from "./stored-content";
+import { bodyAnswers, MAIL_BODY_BUDGET_BYTES, readerContent } from "./bodies";
+import { mailInboxView, type MailAccountStatus } from "../../core";
 
 // The Mail cache's engine (design §3–4). It answers any DataView window of
 // `mail.threads` from per-query COVERAGE, filling it from the provider on
@@ -99,6 +108,42 @@ const CATCH_UP_REFETCH_MAX = 200;
 const CATCH_UP_NEW_MAX = 50;
 /** A thread's `last_used_at` is written at most this often. */
 const USED_TOUCH_MS = 60 * 60 * 1000;
+/** Threads either side of the one being read whose bodies are prefetched. */
+const PREFETCH_NEIGHBOURS = 3;
+/** The head of each recently read view whose bodies are prefetched. */
+const PREFETCH_VIEW_TOP = 25;
+/** The Inbox's first page, whose unread threads' bodies are prefetched. */
+const PREFETCH_INBOX_PAGE = 50;
+/** A view read this recently is prefetched (design §3: the last day). */
+const PREFETCH_RECENT_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Why a thread cannot be read: `gone` (deleted at the provider, or no such
+ * thread), `not-connected` (the account needs reconnecting), or
+ * `offline-not-cached` (the provider cannot be reached and the cache holds
+ * no current body for it). The reader's value refuses with the reason.
+ */
+export class MailThreadUnavailableError extends Error {
+  override name = "MailThreadUnavailableError";
+  constructor(
+    readonly reason: "gone" | "not-connected" | "offline-not-cached",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * One thread as the reader reads it: its summary (current at the account's
+ * change cursor) and its content, the summary's per-message facts over it.
+ */
+export type MailThreadRead = {
+  summary: ThreadSummary;
+  content: ThreadContent;
+};
+
+/** One attachment's description and bytes, from the provider. */
+export type MailAttachmentRead = { meta: AttachmentMeta; bytes: Uint8Array };
 
 export type MailCacheDeps = {
   db: Db;
@@ -118,6 +163,15 @@ export type MailCacheDeps = {
   >["changeSignal"];
   /** A background run's failure that is not "offline": surfaced, never dropped. */
   onBackgroundError: (what: string, err: unknown) => void;
+  /** The stored bodies' byte budget, read per store (default {@link MAIL_BODY_BUDGET_BYTES}). */
+  bodyBudgetBytes?: () => number;
+  /**
+   * Body prefetch (design §3), through the provider's background priority:
+   * at most `perRun()` bodies a run (read per run; 0: none), a run after each
+   * window read, thread open and sync step that moved mail. Absent: no
+   * prefetch (tests that count provider calls).
+   */
+  prefetch?: { perRun: () => number };
 };
 
 /** A decoded `mail.threads` window (the live API's LiveDecodedQuery, the fields the cache reads). */
@@ -136,6 +190,14 @@ type Account = {
 };
 
 type QueryRow = typeof _mailQueries.$inferSelect;
+
+/** Postgres' foreign_key_violation (23503), on the error or its cause (drizzle wraps). */
+function isForeignKeyViolation(err: unknown): boolean {
+  for (let e: unknown = err; e instanceof Error; e = e.cause) {
+    if ((e as { code?: unknown }).code === "23503") return true;
+  }
+  return false;
+}
 
 /** A cut key `[at ISO text, thread id]`, decoded. */
 function cutOf(key: LiveCutKey): { at: Date; id: string } {
@@ -904,7 +966,10 @@ export function createMailCache(deps: MailCacheDeps) {
         if (!changes.more) break;
       }
     } finally {
-      if (moved.size > 0) deps.notifyThreads([...moved]);
+      if (moved.size > 0) {
+        deps.notifyThreads([...moved]);
+        prefetches.trigger(a.id);
+      }
     }
     return true;
   }
@@ -1108,6 +1173,416 @@ export function createMailCache(deps: MailCacheDeps) {
       background("re-list", async () => relist(await account(), queryId))(),
   });
 
+  // ── thread content (the reader, design §3–4) ───────────────────────────
+
+  const budget = deps.bodyBudgetBytes ?? (() => MAIL_BODY_BUDGET_BYTES);
+  const contentFlights = createInflight("mail-thread-content");
+  /** The thread each account last opened: whose neighbours are prefetched. */
+  const lastOpened = new Map<string, string>();
+
+  /** `id`'s summary, current: cached and not stale, else re-read (null: gone). */
+  async function currentSummary(
+    a: Account,
+    id: string,
+    o: MailCallOptions,
+  ): Promise<ThreadSummary | null> {
+    const [r] = await db
+      .select({ summary: _mailThreads.summary, stale: _mailThreads.stale })
+      .from(_mailThreads)
+      .where(
+        and(eq(_mailThreads.accountId, a.id), eq(_mailThreads.threadId, id)),
+      );
+    if (r && !r.stale) return loadSummary(r.summary);
+    try {
+      const fetched = await fetchSummaries(a, [toThreadId(id)], o);
+      return fetched.get(id) ?? null;
+    } catch (err) {
+      // Offline, a summary not known current still answers (a cached
+      // answer stands while the provider cannot be reached; the next read
+      // online re-reads it).
+      if (err instanceof MailUnreachableError && r) {
+        return loadSummary(r.summary);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Fetches `id`'s content from the provider and stores it (one flight per
+   * thread: an open joins the prefetch of the same thread), its summary read
+   * again when the two disagree on the messages (the thread moved between
+   * the reads). Null: gone.
+   */
+  function fetchBody(
+    a: Account,
+    id: string,
+    o: MailCallOptions,
+  ): Promise<MailThreadRead | null> {
+    // Keyed by priority too: an open never waits on a prefetch's
+    // background-priority fetch of the same thread.
+    return contentFlights.run(`${a.id}\0${id}\0${o.priority}`, async () => {
+      let summary = await currentSummary(a, id, o);
+      if (summary === null) return null;
+      const r = await a.provider.getThreadContent(toThreadId(id), o);
+      if (r.kind === "gone") {
+        await deleteThreads(a.id, [id]);
+        return null;
+      }
+      const ids = r.content.messages.map((m) => m.id as string);
+      if (!bodyAnswers(ids, summary)) {
+        const fresh = await fetchSummaries(a, [toThreadId(id)], o);
+        summary = fresh.get(id) ?? null;
+        if (summary === null) return null;
+        // The list showed the thread as it was: it re-reads it.
+        deps.notifyThreads([id]);
+      }
+      const now = new Date();
+      try {
+        await db
+          .insert(_mailThreadBodies)
+          .values({
+            accountId: a.id,
+            threadId: id,
+            version: r.content.version,
+            messageIds: ids,
+            content: storeContent(r.content),
+            bytes: contentBytes(r.content),
+            fetchedAt: now,
+            openedAt: null,
+          })
+          .onConflictDoUpdate({
+            target: [_mailThreadBodies.accountId, _mailThreadBodies.threadId],
+            set: {
+              version: sql`excluded.version`,
+              messageIds: sql`excluded.message_ids`,
+              content: sql`excluded.content`,
+              bytes: sql`excluded.bytes`,
+              fetchedAt: now,
+            },
+          });
+      } catch (err) {
+        // Its thread was deleted meanwhile (a sync step found it gone, the
+        // retention sweep): gone, as the provider would say.
+        if (isForeignKeyViolation(err)) return null;
+        throw err;
+      }
+      await evictBodies(a.id, id);
+      return { summary, content: r.content };
+    });
+  }
+
+  /**
+   * Holds the stored bodies under the byte budget: the least recently opened
+   * (a prefetched one by when it was fetched) go first, never `keep` (the
+   * body just stored). An evicted body is fetched again on its next open.
+   */
+  async function evictBodies(accountId: string, keep: string) {
+    const over = await executeRows(db, {
+      row: z.object({ thread_id: z.string() }),
+      query: sql`
+        select thread_id from (
+          select thread_id, sum(bytes) over (
+            order by coalesce(opened_at, fetched_at) desc, thread_id collate "C"
+          ) as running
+          from ${_mailThreadBodies} where account_id = ${accountId}
+        ) r
+        where r.running > ${budget()} and r.thread_id <> ${keep}`,
+    });
+    if (over.length === 0) return;
+    await db.delete(_mailThreadBodies).where(
+      and(
+        eq(_mailThreadBodies.accountId, accountId),
+        inArray(
+          _mailThreadBodies.threadId,
+          over.map((r) => r.thread_id),
+        ),
+      ),
+    );
+  }
+
+  /** The provider's typed failures as the thread's reasons; anything else as is. */
+  function unavailable(err: unknown): unknown {
+    if (err instanceof MailThreadUnavailableError) return err;
+    if (err instanceof MailNotConnectedError) {
+      return new MailThreadUnavailableError("not-connected", err.message);
+    }
+    if (err instanceof MailUnreachableError) {
+      return new MailThreadUnavailableError(
+        "offline-not-cached",
+        `Offline: this conversation is not cached (${err.message})`,
+      );
+    }
+    // `account()` refuses as the threads window does (not connected, or
+    // offline with nothing held).
+    if (err instanceof ResourceRefusal) {
+      return new MailThreadUnavailableError(
+        err.code === "not-connected" ? "not-connected" : "offline-not-cached",
+        err.message,
+      );
+    }
+    return err;
+  }
+
+  /** `id` as the reader reads it, its body from the store when it still answers, else fetched. */
+  async function readThread(
+    id: string,
+    open: boolean,
+  ): Promise<{ a: Account; read: MailThreadRead }> {
+    try {
+      const a = await account();
+      const summary = await currentSummary(a, id, fg);
+      if (summary === null) {
+        throw new MailThreadUnavailableError(
+          "gone",
+          "This conversation is no longer in the mailbox.",
+        );
+      }
+      const [b] = await db
+        .select({
+          messageIds: _mailThreadBodies.messageIds,
+          content: _mailThreadBodies.content,
+        })
+        .from(_mailThreadBodies)
+        .where(
+          and(
+            eq(_mailThreadBodies.accountId, a.id),
+            eq(_mailThreadBodies.threadId, id),
+          ),
+        );
+      let read: MailThreadRead | null =
+        b && bodyAnswers(b.messageIds, summary)
+          ? { summary, content: loadContent(b.content) }
+          : null;
+      read ??= await fetchBody(a, id, fg);
+      if (read === null) {
+        throw new MailThreadUnavailableError(
+          "gone",
+          "This conversation is no longer in the mailbox.",
+        );
+      }
+      if (open) {
+        const now = new Date();
+        await writeAtomically(db, [
+          db
+            .update(_mailThreadBodies)
+            .set({ openedAt: now })
+            .where(
+              and(
+                eq(_mailThreadBodies.accountId, a.id),
+                eq(_mailThreadBodies.threadId, id),
+              ),
+            ),
+          db
+            .update(_mailThreads)
+            .set({ lastUsedAt: now })
+            .where(
+              and(
+                eq(_mailThreads.accountId, a.id),
+                eq(_mailThreads.threadId, id),
+              ),
+            ),
+        ]);
+      }
+      return {
+        a,
+        read: {
+          summary: read.summary,
+          content: readerContent(read.content, read.summary),
+        },
+      };
+    } catch (err) {
+      throw unavailable(err);
+    }
+  }
+
+  /**
+   * One thread as the reader opens it (the `mail.thread` value): from the
+   * stored body while it holds exactly the thread's messages, else fetched
+   * from the provider (foreground). Opening records the thread's neighbours
+   * for prefetch. Marks nothing read.
+   */
+  async function thread(id: string): Promise<MailThreadRead> {
+    const { a, read } = await readThread(id, true);
+    lastOpened.set(a.id, id);
+    prefetches.trigger(a.id);
+    return read;
+  }
+
+  /** One attachment of a message of `id`: its description from the body, its bytes from the provider. */
+  async function attachment(
+    id: string,
+    message: string,
+    partId: string,
+  ): Promise<MailAttachmentRead> {
+    const { a, read } = await readThread(id, false);
+    const meta = read.content.messages
+      .find((m) => m.id === message)
+      ?.attachments.find((x) => x.ref.partId === partId);
+    if (meta === undefined) {
+      throw new MailThreadUnavailableError(
+        "gone",
+        `This conversation has no attachment ${partId} on message ${message}.`,
+      );
+    }
+    try {
+      return { meta, bytes: await a.provider.getAttachment(meta.ref, fg) };
+    } catch (err) {
+      throw unavailable(err);
+    }
+  }
+
+  /**
+   * The threads whose bodies prefetch wants, most wanted first: the open
+   * thread's neighbours in the view it was opened from (the most recently
+   * read query holding it), the Inbox's unread first page, then the head of
+   * every view read in the last day.
+   */
+  async function prefetchCandidates(a: Account): Promise<string[]> {
+    const m = _mailQueryMembers;
+    const q = _mailQueries;
+    const out = new Set<string>();
+    const opened = lastOpened.get(a.id);
+    if (opened !== undefined) {
+      const [home] = await db
+        .select({ queryId: m.queryId, at: m.at })
+        .from(m)
+        .innerJoin(q, eq(q.queryId, m.queryId))
+        .where(and(eq(m.accountId, a.id), eq(m.threadId, opened)))
+        .orderBy(desc(q.lastReadAt))
+        .limit(1);
+      if (home) {
+        const near = (newer: boolean) =>
+          db
+            .select({ threadId: m.threadId })
+            .from(m)
+            .where(
+              and(
+                eq(m.queryId, home.queryId),
+                newer
+                  ? or(
+                      gt(m.at, home.at),
+                      and(
+                        eq(m.at, home.at),
+                        sql`${collateC(m.threadId)} < ${opened}`,
+                      ),
+                    )
+                  : or(
+                      lt(m.at, home.at),
+                      and(
+                        eq(m.at, home.at),
+                        sql`${collateC(m.threadId)} > ${opened}`,
+                      ),
+                    ),
+              ),
+            )
+            .orderBy(
+              newer ? asc(m.at) : desc(m.at),
+              newer ? sql`${collateC(m.threadId)} desc` : collateC(m.threadId),
+            )
+            .limit(PREFETCH_NEIGHBOURS);
+        const [older, newer] = await Promise.all([near(false), near(true)]);
+        for (let i = 0; i < PREFETCH_NEIGHBOURS; i++) {
+          if (older[i]) out.add(older[i]!.threadId);
+          if (newer[i]) out.add(newer[i]!.threadId);
+        }
+      }
+    }
+    const mailboxes = await cachedMailboxes(a.id);
+    if (mailboxes.length > 0) {
+      const inbox = a.definition.compileQuery(
+        canonicalizeFilter(
+          mailInboxView.where as MailQuery,
+          MAIL_QUERY_COLUMNS,
+        ) as MailQuery,
+        { mailboxes },
+      );
+      if (inbox.kind === "query") {
+        const unread = await db
+          .select({ threadId: m.threadId })
+          .from(m)
+          .innerJoin(q, eq(q.queryId, m.queryId))
+          .innerJoin(
+            _mailThreads,
+            and(
+              eq(_mailThreads.accountId, m.accountId),
+              eq(_mailThreads.threadId, m.threadId),
+            ),
+          )
+          .where(
+            and(
+              eq(q.accountId, a.id),
+              eq(q.providerQuery, inbox.providerQuery),
+              sql`(${_mailThreads.summary}->>'unread')::boolean`,
+            ),
+          )
+          .orderBy(desc(m.at), collateC(m.threadId))
+          .limit(PREFETCH_INBOX_PAGE);
+        for (const r of unread) out.add(r.threadId);
+      }
+    }
+    const heads = await executeRows(db, {
+      row: z.object({ thread_id: z.string() }),
+      query: sql`
+      select thread_id from (
+        select m.thread_id, q.last_read_at,
+          row_number() over (partition by m.query_id order by m.at desc, m.thread_id collate "C") as rn
+        from ${m} m join ${q} q on q.query_id = m.query_id
+        where q.account_id = ${a.id}
+          and q.last_read_at > ${new Date(wallNow("retention") - PREFETCH_RECENT_MS)}
+      ) h where rn <= ${PREFETCH_VIEW_TOP}
+      order by last_read_at desc, rn`,
+    });
+    for (const r of heads) out.add(r.thread_id);
+    return [...out];
+  }
+
+  /** One prefetch run: the wanted bodies not stored (or stale), at most `perRun`, background priority. */
+  async function prefetchRun(accountId: string) {
+    const perRun = deps.prefetch?.perRun() ?? 0;
+    if (perRun === 0) return;
+    const a = await account();
+    if (a.id !== accountId) return;
+    const wanted = await prefetchCandidates(a);
+    if (wanted.length === 0) return;
+    const rows = await db
+      .select({
+        threadId: _mailThreads.threadId,
+        summary: _mailThreads.summary,
+        stale: _mailThreads.stale,
+        messageIds: _mailThreadBodies.messageIds,
+      })
+      .from(_mailThreads)
+      .leftJoin(
+        _mailThreadBodies,
+        and(
+          eq(_mailThreadBodies.accountId, _mailThreads.accountId),
+          eq(_mailThreadBodies.threadId, _mailThreads.threadId),
+        ),
+      )
+      .where(
+        and(
+          eq(_mailThreads.accountId, a.id),
+          inArray(_mailThreads.threadId, wanted),
+        ),
+      );
+    const byId = new Map(rows.map((r) => [r.threadId, r]));
+    const need = wanted.filter((id) => {
+      const r = byId.get(id);
+      // A stale summary is re-read when the thread is listed or opened.
+      if (!r || r.stale) return false;
+      return (
+        r.messageIds === null ||
+        !bodyAnswers(r.messageIds, loadSummary(r.summary))
+      );
+    });
+    for (const id of need.slice(0, perRun)) await fetchBody(a, id, bg);
+  }
+
+  const prefetches = createKeyedCoalescer<string>({
+    name: "mail-cache-prefetch",
+    run: (accountId) => background("prefetch", () => prefetchRun(accountId))(),
+  });
+
   // ── the served answers ──────────────────────────────────────────────────
 
   async function window(w: MailWindowQuery): Promise<MailThreadRow[]> {
@@ -1147,6 +1622,7 @@ export function createMailCache(deps: MailCacheDeps) {
     });
     const rows = await answer(a, qr, w);
     catchUps.trigger(a.id);
+    prefetches.trigger(a.id);
     if (qr.verifiedCursor !== a.cursor) relists.trigger(qr.queryId);
     return rows;
   }
@@ -1284,6 +1760,8 @@ export function createMailCache(deps: MailCacheDeps) {
     held,
     rows,
     mailboxes,
+    thread,
+    attachment,
     sync,
     status,
     /** Test seams: run a catch-up / settle the background work. */
@@ -1293,6 +1771,10 @@ export function createMailCache(deps: MailCacheDeps) {
       await catchUps.settled(a.id);
     },
     relistSettled: (queryId: number) => relists.settled(queryId),
+    prefetchSettled: async () => {
+      const a = await account();
+      await prefetches.settled(a.id);
+    },
   };
 }
 

@@ -547,6 +547,12 @@
       "parent": "logs"
     },
     {
+      "paneId": "mail-thread",
+      "segment": "thread/:threadId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "mail-threads",
       "segment": "",
       "appIndex": true,

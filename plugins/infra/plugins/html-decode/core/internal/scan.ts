@@ -287,6 +287,85 @@ export function rewriteStartTag(
   return { kind: "edited", html: out };
 }
 
+/** A start tag being rewritten by {@link rewriteStartTags}: set, or remove, its attributes. */
+export interface StartTagRewriter extends StartTagEditor {
+  /**
+   * Drop the attribute as the browser reads it: its first occurrence (a later
+   * repeat of the name would then take effect — set a value instead where
+   * one must not).
+   */
+  removeAttribute(name: string): void;
+}
+
+/**
+ * Edit the attributes of EVERY start tag named in `edits` (lower-cased tag
+ * names), in one pass: the editor of each tag's name is called once per tag,
+ * in document order, and only the attributes it sets or removes change —
+ * every other byte comes back as written. A set attribute is rewritten where
+ * it stands (the author's spelling of its name kept) or appended after the
+ * last; a removed one is cut with the whitespace before it. Tags inside
+ * `<script>`, `<style>`, `<textarea>`, a `<title>` or a comment are text, so
+ * never edited.
+ */
+export function rewriteStartTags(
+  html: string,
+  edits: Readonly<Record<string, (el: StartTagRewriter) => void>>,
+): string {
+  const splices: { start: number; end: number; text: string }[] = [];
+  walk(html, {
+    onStartTag(tag) {
+      if (!Object.hasOwn(edits, tag.name)) return;
+      const set = new Map<string, string>();
+      const removed = new Set<string>();
+      edits[tag.name]!({
+        ...scannedElement(tag),
+        setAttribute(name, value) {
+          removed.delete(name.toLowerCase());
+          set.set(name.toLowerCase(), value);
+        },
+        removeAttribute(name) {
+          set.delete(name.toLowerCase());
+          removed.add(name.toLowerCase());
+        },
+      });
+      const appended: string[] = [];
+      for (const [name, value] of set) {
+        const existing = tag.attributes.find((a) => a.name === name);
+        if (existing === undefined) {
+          appended.push(` ${name}="${escapeAttribute(value)}"`);
+        } else {
+          splices.push({
+            start: existing.start,
+            end: existing.end,
+            text: `${existing.sourceName}="${escapeAttribute(value)}"`,
+          });
+        }
+      }
+      for (const name of removed) {
+        const existing = tag.attributes.find((a) => a.name === name);
+        if (existing === undefined) continue;
+        // The whitespace before it goes too, so `<a x="1" y>` reads `<a y>`.
+        let start = existing.start;
+        while (start > 0 && /\s/.test(html[start - 1]!)) start--;
+        splices.push({ start, end: existing.end, text: "" });
+      }
+      if (appended.length > 0) {
+        const at = tag.attributes.at(-1)?.end ?? tag.nameEnd;
+        splices.push({ start: at, end: at, text: appended.join("") });
+      }
+    },
+  });
+  // Applied from the end so earlier indices stay valid; an append at an
+  // attribute's end sorts after that attribute's own rewrite (same start
+  // never happens: an append starts where a rewrite ends).
+  splices.sort((a, b) => b.start - a.start || b.end - a.end);
+  let out = html;
+  for (const s of splices) {
+    out = out.slice(0, s.start) + s.text + out.slice(s.end);
+  }
+  return out;
+}
+
 /**
  * Replace the content of the document's FIRST `<tagName>` with `text` (plain
  * text — escaped on the way in); every other byte is returned as written.

@@ -18,3 +18,4 @@ export {
   type MailAccountStatus,
   type MailPushStatus,
 } from "./internal/account-status";
+export { mailCacheConfig } from "./internal/config";

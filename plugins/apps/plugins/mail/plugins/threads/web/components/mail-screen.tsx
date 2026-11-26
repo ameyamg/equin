@@ -12,15 +12,14 @@ import type {
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   PaneScroll,
+  useOpenPane,
   usePaneViewParam,
 } from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { MailProviderUi } from "@plugins/apps/plugins/mail/plugins/provider/web";
+import { MailProviderConnect } from "@plugins/apps/plugins/mail/plugins/provider/web";
 import {
   mailThreads,
   type MailThreadRow,
@@ -35,6 +34,7 @@ import {
 } from "../../core";
 import type { Mailbox } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { mailboxLabel, useMailboxes, userLabels } from "../internal/mailboxes";
+import { mailThreadPane } from "../panes";
 import { MailSidebar } from "./mail-sidebar";
 import { MAIL_MEASURE, mailToolbar } from "./mail-toolbar";
 import {
@@ -83,6 +83,9 @@ export function MailScreen(): ReactNode {
   // The active view, as the pane URL names it (absent: the Inbox, the
   // surface's default) — the URL is derived from what is on screen.
   const viewParam = usePaneViewParam(THREADS_VIEW)?.value;
+  // The thread open beside the list is the selected row; a row opens its thread.
+  const openPane = useOpenPane();
+  const openThreadId = mailThreadPane.useRouteEntry()?.params.threadId;
   const activeViewId = viewParam?.split("~")[0] ?? MAIL_INBOX_VIEW.id;
 
   // The label views change only when a label does (name, nesting, colour) —
@@ -163,6 +166,10 @@ export function MailScreen(): ReactNode {
       aside={<MailSidebar mailboxes={mailboxes} />}
         measure={MAIL_MEASURE}
       errorState={refusalState}
+      selectedRowId={openThreadId}
+      rowActivation={(t) =>
+        openPane.to(mailThreadPane, { threadId: t.id }, { mode: "push" })
+      }
       emptyState={<EmptyMail inbox={activeViewId === MAIL_INBOX_VIEW.id} />}
     />
     </PaneScroll>
@@ -196,23 +203,7 @@ function refusalState(failure: DataViewReadFailure): ReactNode | undefined {
   if (!(error instanceof ResourceError)) return undefined;
   const code = error.code as MailThreadsRefusal | null;
   if (code !== "not-connected") return undefined;
-  return <ProviderConnect message={error.message} />;
-}
-
-/** The registered provider's connect surface (v1: one provider). */
-function ProviderConnect({ message }: { message: string }): ReactNode {
-  const providers = MailProviderUi.Connect.useContributions();
-  const provider = providers[0];
-  if (provider === undefined || providers.length !== 1) {
-    throw new Error(
-      `Mail: v1 serves one mail provider, ${providers.length} contribute a connect surface`,
-    );
-  }
-  return renderIsolated(
-    MailProviderUi.Connect,
-    provider as unknown as Contribution,
-    { message },
-  );
+  return <MailProviderConnect message={error.message} />;
 }
 
 /** Ready, and no thread: the Inbox is done; any other view is empty. */

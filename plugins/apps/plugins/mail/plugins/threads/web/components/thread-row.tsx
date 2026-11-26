@@ -19,7 +19,7 @@ import {
   listTime,
   oneLine,
   shortName,
-} from "../internal/present";
+} from "@plugins/apps/plugins/mail/plugins/shell/core";
 
 const attachIcon = symbol("attach-file");
 

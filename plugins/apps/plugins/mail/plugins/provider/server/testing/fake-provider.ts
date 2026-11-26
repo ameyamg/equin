@@ -94,7 +94,12 @@ type FakeMessage = {
 
 type FakeThread = { id: ThreadId; version: number; messages: FakeMessage[] };
 
-export type FakeCall = { method: string; ids: number };
+/** One provider call: its method, how many ids it carried, and the priority it asked for (`foreground` when unsaid). */
+export type FakeCall = {
+  method: string;
+  ids: number;
+  priority: "foreground" | "background";
+};
 
 export type FakeMailProviderOptions = {
   /** Mailboxes besides the default roles (inbox, sent, drafts, trash, spam, important). */
@@ -380,7 +385,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     run: () => T,
   ): Promise<T> {
     o?.signal?.throwIfAborted();
-    calls.push({ method, ids });
+    calls.push({ method, ids, priority: o?.priority ?? "foreground" });
     const fail = failures.get(method);
     if (fail) {
       failures.delete(method);

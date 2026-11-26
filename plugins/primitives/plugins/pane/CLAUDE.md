@@ -930,7 +930,7 @@ out of the way: **what it opens takes its column**.
   - Slots: `Pane.Register`
   - Slot contributors: 104 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×104
-  - Contributes: 134 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 135 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -1005,6 +1005,7 @@ out of the way: **what it opens takes its column**.
     - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
     - `logChannelPane.Actions` "title" → `PaneTitleItem`
     - `logsPane.Actions` "title" → `PaneTitleItem`
+    - `mail-thread.actions` "title" → `PaneTitleItem`
     - `mail.actions` "title" → `PaneTitleItem`
     - `mcp-tool.actions` "title" → `PaneTitleItem`
     - `mcp-tools.actions` "title" → `PaneTitleItem`

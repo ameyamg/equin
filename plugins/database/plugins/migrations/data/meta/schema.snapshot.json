@@ -1,6 +1,6 @@
 {
-  "id": "18dd8cce-aa4c-441c-9eef-ef83d496c7c2",
-  "prevId": "1d4997c7-ddcc-4dc1-8f1b-43f8f0f5b7de",
+  "id": "c50f1db5-e803-4c6a-b48e-4cec136b7aad",
+  "prevId": "18dd8cce-aa4c-441c-9eef-ef83d496c7c2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4504,6 +4504,119 @@
           "name": "mail_query_members_query_id_thread_id_pk",
           "columns": [
             "query_id",
+            "thread_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.mail_thread_bodies": {
+      "name": "mail_thread_bodies",
+      "schema": "",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message_ids": {
+          "name": "message_ids",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bytes": {
+          "name": "bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "mail_thread_bodies_used_idx": {
+          "name": "mail_thread_bodies_used_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "opened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fetched_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "mail_thread_bodies_account_id_thread_id_mail_threads_account_id_thread_id_fk": {
+          "name": "mail_thread_bodies_account_id_thread_id_mail_threads_account_id_thread_id_fk",
+          "tableFrom": "mail_thread_bodies",
+          "tableTo": "mail_threads",
+          "columnsFrom": [
+            "account_id",
+            "thread_id"
+          ],
+          "columnsTo": [
+            "account_id",
+            "thread_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "mail_thread_bodies_account_id_thread_id_pk": {
+          "name": "mail_thread_bodies_account_id_thread_id_pk",
+          "columns": [
+            "account_id",
             "thread_id"
           ]
         }

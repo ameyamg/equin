@@ -1,6 +1,6 @@
 /**
- * How a thread row says who and when — pure, so the list and its tests read
- * one answer.
+ * How Mail says who and when — pure, shared by the thread list and the reader,
+ * so both (and their tests) read one answer.
  */
 
 /** The avatar palette: six data colours, picked per sender (the prototype's `--k1…6`). */

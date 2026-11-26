@@ -16,12 +16,27 @@ boundaries, Phase 3 — design: [`research/2026-10-29-global-content-isolation.m
 |---|---|---|---|
 | `ContentFrame` | a `ReadyContentUrl` (`useContentUrl(contentPath)`) | `allow-scripts allow-same-origin allow-forms allow-popups allow-modals` — on the content host's origin, never `top`'s | untrusted content: prototypes |
 | `ForeignFrame` | a URL, classified by `classifyFrameUrl` | the third-party set (a player keeps its own storage) | a pasted embed |
-| `InlineFrame` | an HTML string | opaque `srcdoc` — no `allow-same-origin`, ever | file-viewer HTML |
+| `InlineFrame` | an HTML string | opaque `srcdoc` — no `allow-same-origin`, ever | file-viewer HTML, mail bodies (`fit`) |
 | `PdfFrame` | an `AssetPath` | none (the PDF viewer needs it) | file-viewer PDF |
 | `AppFrame` | a namespace + an in-app path (never a URL) | none — it is the app | worktree preview, compare "Real app" |
 
 `allow-same-origin` is spelled only for a URL the frame built (content) or
 classified as another site (foreign).
+
+**`InlineFrame fit`** — a document laid out in the page's flow (a mail message
+among others) is as tall as it is: the frame never scrolls, its height is the
+document's root height, posted by a reporter script `fitDocument` (core)
+places first under `script-src 'nonce-<per document>'`. The sandbox allows
+scripts, the policy allows only the reporter: the markup's own scripts,
+handlers and `javascript:` URLs stay blocked, so `fit` never takes the
+`scripts` allowance (tsc). A caller's own policy must leave `script-src` to
+this one (a second policy only narrows: its `default-src` would block the
+reporter). A message counts only from the frame's own window, its height
+clamped (`reportedHeight`, `FIT_MAX_HEIGHT`). The height is the root's, so
+the document must not size its root by the viewport (`height:100%`, `100vh`
+would report the viewport back — the mail frame forces `height:auto`). A
+frame that navigates away from its srcdoc (a link or refresh the caller let
+through) is given its document back: no other page runs with its sandbox.
 
 ## Content: the content host
 
@@ -115,10 +130,17 @@ must be the new one (`./equin start --force`).
     - `infra/namespace.isContentHost`
     - `infra/namespace.namespaceFromHost`
   - Exports (types): `FrameUrlClass`
-  - Exports (values): `classifyFrameUrl`
+  - Exports (values):
+    - `classifyFrameUrl`
+    - `FIT_HEIGHT_MESSAGE`
+    - `FIT_MAX_HEIGHT`
+    - `fitDocument`
+    - `mintNonce`
+    - `reportedHeight`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/sessions`
+    - `apps/mail/reader`
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/present`

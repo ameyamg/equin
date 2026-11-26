@@ -5,5 +5,11 @@ export type {
   ScanHandlers,
   ScannedElement,
   StartTagEditor,
+  StartTagRewriter,
 } from "./internal/scan";
-export { replaceElementText, rewriteStartTag, scanHtml } from "./internal/scan";
+export {
+  replaceElementText,
+  rewriteStartTag,
+  rewriteStartTags,
+  scanHtml,
+} from "./internal/scan";

@@ -9,6 +9,7 @@ import {
   _mailMailboxes,
   _mailQueries,
   _mailQueryMembers,
+  _mailThreadBodies,
   _mailThreads,
 } from "./tables";
 
@@ -17,6 +18,8 @@ import {
 
 markCascadeBounded(_mailMailboxes, _mailAccounts);
 markCascadeBounded(_mailQueryMembers, _mailQueries);
+// Also held under the byte budget, evicted least recently opened first (engine).
+markCascadeBounded(_mailThreadBodies, _mailThreads);
 
 const CACHE_TABLES = [
   _mailAccounts,
@@ -24,6 +27,7 @@ const CACHE_TABLES = [
   _mailThreads,
   _mailQueries,
   _mailQueryMembers,
+  _mailThreadBodies,
 ];
 
 export const cacheTableExclusions = CACHE_TABLES.flatMap((table) => [

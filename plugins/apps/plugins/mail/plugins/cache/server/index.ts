@@ -1,4 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { ConfigV2 } from "@plugins/config_v2/server";
+import { mailCacheConfig } from "../core";
 import { cacheTableExclusions } from "./internal/declarations";
 import {
   listenToPush,
@@ -7,6 +9,14 @@ import {
   mailSync,
   mailThreadsServed,
 } from "./internal/served";
+
+export { mailCache, onMailThreadsChanged } from "./internal/served";
+export {
+  MailThreadUnavailableError,
+  type MailAttachmentRead,
+  type MailCache,
+  type MailThreadRead,
+} from "./internal/engine";
 import {
   mailQueriesRetention,
   mailThreadsRetention,
@@ -17,6 +27,7 @@ export {
   _mailMailboxes,
   _mailQueries,
   _mailQueryMembers,
+  _mailThreadBodies,
   _mailThreads,
 } from "./internal/tables";
 
@@ -28,6 +39,7 @@ export default {
     ...mailMailboxesServed.declare,
     ...mailAccountStatusServed.declare,
     ...cacheTableExclusions,
+    ConfigV2.Register({ descriptor: mailCacheConfig }),
   ],
   register: [
     mailQueriesRetention,

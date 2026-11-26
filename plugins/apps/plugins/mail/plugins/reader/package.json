@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-reader",
+  "description": "The Mail app's reader: one thread as the reader shows it (mail.thread), its bodies rendered safely, its images and attachments served.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -1,7 +1,7 @@
 # Mail (rebuild): on-demand loading with a cache, behind a generic provider
 
-**Status:** design; tasks 1 (Gmail client), 2 (contract + Gmail provider) and 3a (the cache,
-server half) implemented. §1–2 below are as shipped; the corrections later tasks made to
+**Status:** design; tasks 1 (Gmail client), 2 (contract + Gmail provider), 3a (the cache,
+server half), 3b, 4 and 5 (reader) implemented. §1–2 below are as shipped; the corrections later tasks made to
 later sections are marked *Task 2 correction* / *Task 3a correction*. The live measurements
 are in *Measured on the real account (task 3a)* below.
 **Task:** task-1795696150-48l8i2, part of "Rebuild mail app from scratch with data views".
@@ -669,6 +669,38 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
 5. **Reader.** `mail.thread` fetch on open, the body cache, prefetch, `InlineFrame`
    rendering, `cid:` and the remote-image proxy, and attachment open/download.
    *Ships:* reading mail.
+   *Done* (`mail/reader`, `mail/cache` bodies; the reader opens beside the list as a
+   `companion` pane, Mail now on the column layout):
+   - `mail.thread` (by id, any thread): the stored body while it holds exactly the
+     summary's messages — a flag or label moves Gmail's version but no message
+     byte, so a read or relabelled thread is never re-fetched (the summary's
+     per-message facts are laid over it); a reply / deleted message / saved draft
+     re-fetches. Opening marks nothing read.
+   - Bodies under a byte budget (least recently opened out first) and prefetch
+     (25 a run, background priority: the open thread's ±3 neighbours, the Inbox's
+     unread first page, the top 25 of each view read in the last day), both in
+     Settings → Config (`mail-cache`). No cap on the summary count yet (~50k in
+     §3): summaries go by retention only.
+   - Rendering: each HTML body its own `InlineFrame fit` (opaque origin, as tall
+     as the message — a nonce'd height reporter is its only script) under the mail
+     policy (images only from this server's routes or `data:`; no stylesheet, font,
+     frame, form, connection, base). The server rewrite proxies remote images
+     (`/api/mail/image/:sig`, SSRF-guarded, 10 MB, HMAC-signed so only URLs it
+     rendered are served — the frame's requests are anonymous), routes `cid:`
+     through the signed inline-part route, opens every link in a tab, cuts
+     refreshes and `<link>`s; a frame that still navigates is given its document
+     back. Attachments: an owner route (open or download; anything a browser
+     would render as a page is downloaded), parts kept in `infra/attachments`
+     under a v5 UUID of (thread, message, part).
+   - **Measured on the real account** (2026-11-26, `reader/e2e/open-speed.ts`,
+     host load 17–20, click → first painted frame with the body): prefetched
+     158–473 ms (median ~290, n=8); cold — body fetched at the click, checked in
+     `mail_thread_bodies.fetched_at` — 221, 231, 267, 507 ms (n=4). Gmail's
+     `threads.get` full is fast; most of the time is rendering, so prefetch saves
+     ~100–200 ms, not seconds. Prefetch stored 27 bodies in the first minute after
+     a cold Inbox open (paced by the background half).
+   - For later steps: the reader has no label chips, actions (6) or reply bar (7);
+     the image-signing key is per process (a restart re-renders open bodies).
 6. **Actions.** Archive/done, star, read/unread, labels (apply, create, rename, delete),
    trash/delete and move to inbox. Optimistic, durable ops with undo toasts and bulk
    selection. *Ships:* triage.

@@ -7,7 +7,7 @@ import { mailTheme } from "./internal/theme";
 
 export default {
   description:
-    "The Mail app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer (the threads list is the index pane), and the app's own dark theme from the approved prototype.",
+    "The Mail app's rail entry and frame: the standard sidebar-less app shell around the column renderer (the threads list is the index pane, the thread being read the column beside it), and the app's own dark theme from the approved prototype.",
   contributions: [
     ThemeEngine.Theme(mailTheme),
     Apps.App({ app: mailApp, component: MailLayout }),

@@ -1,6 +1,8 @@
 import {
   useEffect,
+  useMemo,
   useRef,
+  useState,
   type CSSProperties,
   type ReactNode,
   type Ref,
@@ -22,7 +24,12 @@ import {
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-import { classifyFrameUrl } from "../../core";
+import {
+  classifyFrameUrl,
+  fitDocument,
+  mintNonce,
+  reportedHeight,
+} from "../../core";
 import { connectFrame, type FrameChannel } from "../internal/channel";
 
 // THE ONE FILE that renders an <iframe>. Every frame in the app is one of the
@@ -145,26 +152,106 @@ export function ForeignFrame({
 }
 
 /** What an {@link InlineFrame}'s document may do — never `allow-same-origin`. */
-export type InlineFrameAllowance = "scripts" | "popups" | "forms" | "modals";
+export type InlineFrameAllowance =
+  "scripts" | "popups" | "popups-to-escape-sandbox" | "forms" | "modals";
 
 /**
- * An HTML STRING (a host file previewed) in an opaque origin: a `srcdoc`
- * sandbox WITHOUT `allow-same-origin`, so whatever it runs can neither read
- * nor reach the app. Scripts and the rest only as `allow` grants them.
+ * An HTML STRING (a host file previewed, a mail body) in an opaque origin: a
+ * `srcdoc` sandbox WITHOUT `allow-same-origin`, so whatever it runs can
+ * neither read nor reach the app. Scripts and the rest only as `allow` grants
+ * them.
+ *
+ * `fit`: the frame is as tall as its document (it never scrolls itself — the
+ * page around it does), for a document laid out in the page's flow (a mail
+ * message among others). Its height comes from a reporter script admitted by
+ * a per-document nonce (`fitDocument`): the markup's own scripts stay
+ * blocked, so `fit` never takes the `scripts` allowance (tsc). The caller's
+ * box gives the width; its height is the document's root, so the document
+ * must not size its root by the viewport (`height:100%`, `100vh`). A frame
+ * that navigates away from its document is given it back (re-mounted): no
+ * page but the caller's runs with the reporter's script allowance.
  */
-export function InlineFrame({
-  html,
-  allow = [],
-  ...box
-}: FrameBoxProps & {
-  html: string;
-  allow?: readonly InlineFrameAllowance[];
-}) {
+export function InlineFrame(
+  props: FrameBoxProps &
+    (
+      | { html: string; allow?: readonly InlineFrameAllowance[]; fit?: false }
+      | {
+          html: string;
+          allow?: readonly Exclude<InlineFrameAllowance, "scripts">[];
+          fit: true;
+        }
+    ),
+) {
+  if (props.fit === true) return <FittedInlineFrame {...props} />;
+  const { html, allow = [], fit: _fit, ...box } = props;
   return (
     <iframe
       {...box}
       srcDoc={html}
       sandbox={allow.map((a) => `allow-${a}`).join(" ")}
+    />
+  );
+}
+
+function FittedInlineFrame({
+  html,
+  allow = [],
+  fit: _fit,
+  style,
+  ref: outerRef,
+  ...box
+}: FrameBoxProps & {
+  html: string;
+  allow?: readonly Exclude<InlineFrameAllowance, "scripts">[];
+  fit: true;
+}) {
+  // A nonce per document: a markup that names one cannot have guessed it.
+  // `generation` re-mints it — a new srcdoc — when the frame navigated away.
+  const [generation, setGeneration] = useState(0);
+  const doc = useMemo(
+    () => (generation >= 0 ? fitDocument(html, mintNonce()) : ""),
+    [html, generation],
+  );
+  const frame = useRef<HTMLIFrameElement | null>(null);
+  // Loads seen of the current srcdoc: its own is the first; any later one is
+  // the frame navigating itself (a link or refresh a caller let through),
+  // and a page navigated in would run with this frame's sandbox — so the
+  // document is put back.
+  const loads = useRef<{ doc: string; count: number }>({ doc: "", count: 0 });
+  const [height, setHeight] = useState<number | null>(null);
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      // Only this frame's document (an opaque origin: matched by its window).
+      if (e.source === null || e.source !== frame.current?.contentWindow) {
+        return;
+      }
+      const h = reportedHeight(e.data);
+      if (h !== null) setHeight(h);
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  return (
+    <iframe
+      {...box}
+      ref={(el) => {
+        frame.current = el;
+        if (typeof outerRef === "function") outerRef(el);
+        else if (outerRef) outerRef.current = el;
+      }}
+      srcDoc={doc}
+      onLoad={() => {
+        const seen = loads.current;
+        if (seen.doc !== doc) {
+          loads.current = { doc, count: 1 };
+          return;
+        }
+        seen.count++;
+        setGeneration((g) => g + 1);
+      }}
+      scrolling="no"
+      style={{ ...style, height: height ?? 0 }}
+      sandbox={["scripts", ...allow].map((a) => `allow-${a}`).join(" ")}
     />
   );
 }

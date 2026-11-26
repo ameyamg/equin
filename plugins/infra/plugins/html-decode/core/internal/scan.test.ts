@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   replaceElementText,
   rewriteStartTag,
+  rewriteStartTags,
   scanHtml,
   type ScannedElement,
 } from "./scan";
@@ -135,5 +136,31 @@ describe("replaceElementText", () => {
     expect(() => replaceElementText("<div>x", "div", "y")).toThrow(
       /no <\/div>/,
     );
+  });
+});
+
+describe("rewriteStartTags", () => {
+  test("edits every tag of each name, leaving the rest as written", () => {
+    const html = `<p><img src="a.png" alt=x><IMG SRC='b.png'></p><script><img src="no"></script><a href="h">`;
+    const out = rewriteStartTags(html, {
+      img: (el) => el.setAttribute("src", `/p?u=${el.attr("src")}&x`),
+      a: (el) => el.setAttribute("target", "_blank"),
+    });
+    expect(out).toBe(
+      `<p><img src="/p?u=a.png&amp;x" alt=x><IMG SRC="/p?u=b.png&amp;x"></p><script><img src="no"></script><a href="h" target="_blank">`,
+    );
+  });
+
+  test("removes an attribute with the whitespace before it", () => {
+    expect(
+      rewriteStartTags(`<meta http-equiv="refresh" content="0"><b>`, {
+        meta: (el) => el.removeAttribute("http-equiv"),
+      }),
+    ).toBe(`<meta content="0"><b>`);
+  });
+
+  test("an editor that changes nothing returns the document unchanged", () => {
+    const html = `<img  src = "a" ><!-- <img src=b> -->`;
+    expect(rewriteStartTags(html, { img: () => {} })).toBe(html);
   });
 });

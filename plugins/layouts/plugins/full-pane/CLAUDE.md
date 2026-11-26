@@ -55,7 +55,6 @@ declared on the pane.**
     - `apps/chord/shell`
     - `apps/home/shell`
     - `apps/isle/shell`
-    - `apps/mail/shell`
     - `apps/places/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`

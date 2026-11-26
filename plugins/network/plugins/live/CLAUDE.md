@@ -2002,8 +2002,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `sliceRange`
     - `windowAppPreload`
 - Cross-plugin:
-  - Imported by: 376 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×95
+  - Imported by: 377 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×96
     - `conversations` ×74
     - `tasks` ×37
     - `debug` ×36

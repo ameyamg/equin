@@ -29,8 +29,8 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
     message). Never an empty list.
   - Sort is date only; no `count` (the provider gives estimates).
   - **A read by id answers from the cache only**: a thread never listed (or
-    evicted) is absent. Fine for rows a window just showed; a reader opening
-    an arbitrary thread id wants the thread value of step 5.
+    evicted) is absent. Fine for rows a window just showed; the reader opens
+    any thread id through `mailCache.thread` (below).
 - **`mailMailboxes`** (`mail.mailboxes`) — every mailbox, whole (`all`), with
   the provider's exact counts (`threadsTotal`, `threadsUnread`): the sidebar.
   Refused like `mail.threads` (`not-connected`, `offline-not-cached`).
@@ -47,7 +47,9 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   change cursor), `mail_mailboxes`, `mail_threads` (one `ThreadSummary` each,
   `stale`, `last_used_at`), `mail_queries` (one per compiled query: coverage
   `floor_at` / `exhausted`, `verified_cursor`, `locally_maintained`,
-  `is_search`), `mail_query_members` (`query`, `thread`, `at`).
+  `is_search`), `mail_query_members` (`query`, `thread`, `at`),
+  `mail_thread_bodies` (a thread's content, its message ids, its weight,
+  `fetched_at` / `opened_at`: below).
 - **Coverage.** A query's members are complete for every thread whose latest
   matching message is after `floor_at` (all once `exhausted`). A window inside
   it is answered from Postgres alone.
@@ -133,6 +135,38 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   synced, saying how changes arrive (instant updates, or the fallback and
   why).
 
+## Thread content: the reader's bodies (`server/internal/bodies.ts`, design §3)
+
+- **`mailCache.thread(id)`** (server barrel; the reader's `mail.thread`
+  serves it): the thread's summary (cached and not stale, else re-read — so
+  any id, listed or not) and its content. The content comes from
+  `mail_thread_bodies` while it holds **exactly the summary's messages**
+  (`bodyAnswers`): a flag or label moves Gmail's thread version but no byte
+  of a message, so a read or relabelled thread is never re-fetched — the
+  summary's per-message facts are laid over the stored content
+  (`readerContent`). A reply, a deleted message or a saved draft (a new
+  message id) makes it stale: fetched again (`getThreadContent`,
+  foreground). One flight per thread (`createInflight`): an open joins the
+  prefetch of the same thread.
+- Unavailable is typed (`MailThreadUnavailableError`): `gone`,
+  `not-connected`, `offline-not-cached` (offline with no current stored body;
+  a stored one still answers offline).
+- **`mailCache.attachment(thread, message, part)`**: the part's description
+  from the body, its bytes from the provider.
+- **Byte budget**: Settings → Config `mail-cache` › Message body budget (500 MB, the user's call; `MAIL_BODY_BUDGET_BYTES` without config), read per store. Each
+  store evicts the least recently opened bodies past it (a prefetched,
+  never-opened one by when it was fetched); an evicted body is fetched again
+  on its next open. Bodies cascade with their thread (retention, gone).
+- **Prefetch** (`deps.prefetch`; Settings → Config `mail-cache` › Bodies
+  prefetched per run, 25 — a minute of the background half of Gmail's budget;
+  0 turns it off): after every window read, thread open and
+  sync step that moved mail, one coalesced run per account fetches, through
+  the provider's **background** priority, the wanted bodies not stored, most
+  wanted first: the open thread's ±3 neighbours in the view it was opened
+  from (the most recently read query holding it), the Inbox's unread first
+  page (50), the head (25) of every view read in the last day. A stale
+  summary is skipped (re-read when listed or opened).
+
 ## Opening Mail: the Inbox in the first frame
 
 `mailThreadsServed` declares `preloadWindows` (network/live): the Inbox's
@@ -150,7 +184,7 @@ DataView's one-rule Inbox filter encodes to the preloaded tuple.
 
 ## Not yet (later steps of the design)
 
-- No thread value to notify yet (step 5's `mail.thread`).
+- No cap on the number of cached summaries yet (design: ~50k): threads go by retention (30 days unused, no query holding them).
 - No `preload: "boot"` (its boot tuple would be the unfiltered default
   window, on every app's boot): the Inbox is preloaded instead (above).
 
@@ -159,42 +193,34 @@ DataView's one-rule Inbox filter encodes to the preloaded tuple.
 `server/internal/engine.test.ts` drives the engine on a throwaway database
 (`createTestDb` + the real migrations) over the fake provider
 (`provider/server/testing`): cut mapping, exhaustion, the skip of current
-summaries, membership re-check, reset, refusals.
+summaries, membership re-check, reset, refusals. `bodies.test.ts`: the
+reader's bodies — stored and reused across flag changes, stale on a reply,
+offline, the byte budget, prefetch (background priority, neighbours first).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
 - Web:
-  - Contributes: `HealthReport.Row` "Mail"
+  - Contributes:
+    - `ConfigV2.WebRegister` "mail-cache"
+    - `HealthReport.Row` "Mail"
   - Uses:
+    - `config_v2.ConfigV2`
     - `network/live.useLive`
     - `shell/health-report.HealthReport`
 - Server:
-  - Contributes:
-    - `resource.declare` "mail.account-status"
-    - `resource.declare` "mail.mailboxes"
-    - `resource.declare` "mail.mailboxes:rows"
-    - `resource.declare` "mail.threads"
-    - `resource.declare` "mail.threads:rows"
-    - `fork-data-exclusion` "mail_accounts"
-    - `fork-data-exclusion` "mail_mailboxes"
-    - `fork-data-exclusion` "mail_queries"
-    - `fork-data-exclusion` "mail_query_members"
-    - `fork-data-exclusion` "mail_threads"
-    - `backup-data-exclusion` "mail_accounts"
-    - `backup-data-exclusion` "mail_mailboxes"
-    - `backup-data-exclusion` "mail_queries"
-    - `backup-data-exclusion` "mail_query_members"
-    - `backup-data-exclusion` "mail_threads"
-    - `change-feed-exclusion` "mail_accounts"
-    - `change-feed-exclusion` "mail_mailboxes"
-    - `change-feed-exclusion` "mail_queries"
-    - `change-feed-exclusion` "mail_query_members"
-    - `change-feed-exclusion` "mail_threads"
+  - Contributes: 24 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `backup-data-exclusion` ×6
+    - `change-feed-exclusion` ×6
+    - `fork-data-exclusion` ×6
+    - `resource.declare` ×5
+    - `ConfigV2.Register` "mail-cache"
   - Uses:
     - `apps/mail/provider.MailProviders`
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
     - `database.db`
     - `database.Db`
     - `database.writeAtomically`
@@ -210,12 +236,20 @@ summaries, membership re-check, reset, refusals.
     - `network/live.serveValue`
     - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/apps/plugins/mail/plugins/cache/server/internal/tables.ts`
+  - Exports (types):
+    - `MailAttachmentRead`
+    - `MailCache`
+    - `MailThreadRead`
   - Exports (values):
     - `_mailAccounts`
     - `_mailMailboxes`
     - `_mailQueries`
     - `_mailQueryMembers`
+    - `_mailThreadBodies`
     - `_mailThreads`
+    - `mailCache`
+    - `MailThreadUnavailableError`
+    - `onMailThreadsChanged`
   - Register:
     - `defineJob('retention.mail_queries')`
     - `defineJob('retention.mail_threads')`
@@ -236,6 +270,7 @@ summaries, membership re-check, reset, refusals.
     - `apps/mail/provider.MailboxId`
     - `apps/mail/provider.roleMailboxId`
     - `apps/mail/provider.THREAD_PARTICIPANTS_MAX`
+    - `config_v2.defineConfig`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
@@ -261,12 +296,15 @@ summaries, membership re-check, reset, refusals.
     - `MailAccountStatusSchema`
     - `mailboxViewFilter`
     - `mailboxViewIds`
+    - `mailCacheConfig`
     - `mailInboxView`
     - `mailMailboxes`
     - `mailThreads`
     - `PARENT_VIEW_INCLUDES_SUB_LABELS`
 - Cross-plugin:
-  - Imported by: `apps/mail/threads`
+  - Imported by:
+    - `apps/mail/reader`
+    - `apps/mail/threads`
 - Exemptions:
   - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/sync.ts` (sanctioned)
 

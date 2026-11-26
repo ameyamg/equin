@@ -6,8 +6,10 @@ import { serveCollection } from "@plugins/network/plugins/live/server";
 import { MailProviders } from "@plugins/apps/plugins/mail/plugins/provider/server";
 import type { MailProviderDefinition } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
+import { getConfig } from "@plugins/config_v2/server";
 import {
   mailAccountStatus,
+  mailCacheConfig,
   mailInboxView,
   mailMailboxes,
   mailThreads,
@@ -34,12 +36,29 @@ function soleProvider(): MailProviderDefinition {
   return all[0]!;
 }
 
+/** Who hears that threads changed (the reader's `mail.thread` value): `undefined` is "maybe any". */
+const threadListeners = new Set<(ids: readonly string[] | undefined) => void>();
+
+/**
+ * Hear every change the cache learns of a thread (a sync step, a fill, a
+ * reset — `undefined`: any thread may have moved). The reader's served
+ * `mail.thread` re-reads its subscribed threads on it. Returns the unsubscribe.
+ */
+export function onMailThreadsChanged(
+  listener: (ids: readonly string[] | undefined) => void,
+): () => void {
+  threadListeners.add(listener);
+  return () => threadListeners.delete(listener);
+}
+
 export const mailCache = createMailCache({
   db,
   definition: soleProvider,
   refuse: (code, message) => mailThreads.refuse(code, message),
-  notifyThreads: (ids) =>
-    mailThreadsServed.notify(ids === undefined ? undefined : { ids: [...ids] }),
+  notifyThreads: (ids) => {
+    mailThreadsServed.notify(ids === undefined ? undefined : { ids: [...ids] });
+    for (const l of threadListeners) l(ids);
+  },
   notifyMailboxes: () => mailMailboxesServed.notify(),
   notifyStatus: () => mailAccountStatusServed.notify(),
   changeSignal: () => ({
@@ -49,6 +68,9 @@ export const mailCache = createMailCache({
     watching,
     ticking: mailSync.tick.running,
   }),
+  // Settings → Config (`mail-cache`), read per use: a change applies at once.
+  bodyBudgetBytes: () => getConfig(mailCacheConfig).bodyBudgetMb * 1024 * 1024,
+  prefetch: { perRun: () => getConfig(mailCacheConfig).prefetchPerRun },
   onBackgroundError,
 });
 
