@@ -22,6 +22,11 @@ it knows nothing about who calls or why. First consumer: Gmail push
     maxMessages, signal })` (a **held** pull: Pub/Sub answers when messages
     arrive; `gone` on 404) and `acknowledge`. `topicName` /
     `subscriptionName` spell the resource names, `messageText` decodes data.
+  - `PUBSUB_METHODS` — every REST method the client calls (verb, path, takes
+    a body), as Google's discovery document declares it; a call names only
+    its method, and `client.test.ts` pins the table against the discovery
+    entries. A wrong verb is no Pub/Sub error: Google answers an HTML 404
+    page, which a refusal summarizes by its title.
 - **`web`** — `usePubSubAccess()` (granted / missing / disconnected, a read)
   and `PubSubGrantButton` (the scope-grant popup), so a consumer never
   imports auth.

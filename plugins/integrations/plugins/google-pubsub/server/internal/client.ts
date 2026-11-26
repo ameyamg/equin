@@ -45,6 +45,83 @@ export function subscriptionName(
   return `projects/${project}/subscriptions/${subscription}`;
 }
 
+/**
+ * Every Pub/Sub REST method this client calls, as Google's discovery document
+ * declares it (`https://pubsub.googleapis.com/$discovery/rest?version=v1`):
+ * its HTTP method, its path under `/v1/` (`{+…}` is the one resource name)
+ * and whether it takes a request body. A call names its method here and
+ * nothing else, so it cannot be sent with another verb; `client.test.ts`
+ * pins this table against the discovery entries. A wrong verb is not refused
+ * as a Pub/Sub error: Google answers an HTML 404 page.
+ */
+export const PUBSUB_METHODS = {
+  "topics.create": { httpMethod: "PUT", path: "{+name}", request: true },
+  "topics.getIamPolicy": {
+    httpMethod: "GET",
+    path: "{+resource}:getIamPolicy",
+    request: false,
+  },
+  "topics.setIamPolicy": {
+    httpMethod: "POST",
+    path: "{+resource}:setIamPolicy",
+    request: true,
+  },
+  "subscriptions.create": { httpMethod: "PUT", path: "{+name}", request: true },
+  "subscriptions.get": {
+    httpMethod: "GET",
+    path: "{+subscription}",
+    request: false,
+  },
+  "subscriptions.delete": {
+    httpMethod: "DELETE",
+    path: "{+subscription}",
+    request: false,
+  },
+  "subscriptions.pull": {
+    httpMethod: "POST",
+    path: "{+subscription}:pull",
+    request: true,
+  },
+  "subscriptions.acknowledge": {
+    httpMethod: "POST",
+    path: "{+subscription}:acknowledge",
+    request: true,
+  },
+} as const satisfies Record<
+  string,
+  {
+    httpMethod: "GET" | "PUT" | "POST" | "PATCH" | "DELETE";
+    path: string;
+    request: boolean;
+  }
+>;
+
+export type PubSubMethod = keyof typeof PUBSUB_METHODS;
+
+/** The request URL of `method` on the resource `name`. */
+export function pubsubUrl(method: PubSubMethod, name: string): string {
+  return `${PUBSUB_API_ROOT}/v1/${PUBSUB_METHODS[method].path.replace(/\{\+\w+\}/, () => name)}`;
+}
+
+/**
+ * A body that is not what Pub/Sub's API answers, in a few words: an HTML page
+ * by its title (Google's front end answers one for a URL or verb no API
+ * serves — a 404 — and for its own outages, a 502 / 503), anything else by
+ * its first 200 characters.
+ */
+function bodySummary(text: string, status: number): string {
+  const trimmed = text.trim();
+  if (trimmed === "") return "no body";
+  if (trimmed.startsWith("<")) {
+    const title = /<title>([^<]*)<\/title>/i.exec(trimmed)?.[1]?.trim();
+    const page = `an HTML page${title ? ` ("${title}")` : ""} instead of a Pub/Sub answer`;
+    return status === 404
+      ? `${page}: no Pub/Sub method serves this URL and verb`
+      : page;
+  }
+  return trimmed.length > 200 ? `${trimmed.slice(0, 200)}…` : trimmed;
+}
+
 /** Google's refusal as a typed error, from its JSON error envelope. */
 function apiError(what: string, status: number, text: string): PubSubApiError {
   let json: unknown = null;
@@ -59,7 +136,7 @@ function apiError(what: string, status: number, text: string): PubSubApiError {
       what,
       status,
       null,
-      text.slice(0, 300) || "no body",
+      bodySummary(text, status),
       null,
     );
   const details = env.data.error.details ?? [];
@@ -77,13 +154,21 @@ function apiError(what: string, status: number, text: string): PubSubApiError {
   );
 }
 
-function parseBody<T>(what: string, text: string, schema: z.ZodType<T>): T {
+function parseBody<T>(
+  what: string,
+  status: number,
+  text: string,
+  schema: z.ZodType<T>,
+): T {
   let json: unknown;
   try {
     json = text.trim() === "" ? {} : JSON.parse(text);
   } catch (err) {
     if (!(err instanceof SyntaxError)) throw err;
-    throw new PubSubResponseShapeError(what, `not JSON: ${text.slice(0, 300)}`);
+    throw new PubSubResponseShapeError(
+      what,
+      `not JSON: ${bodySummary(text, status)}`,
+    );
   }
   const parsed = schema.safeParse(json);
   if (!parsed.success)
@@ -102,15 +187,15 @@ export function createPubSubClient(opts: PubSubClientOptions) {
 
   async function send(
     what: string,
-    method: "GET" | "PUT" | "POST" | "PATCH" | "DELETE",
-    path: string,
+    url: string,
+    httpMethod: (typeof PUBSUB_METHODS)[PubSubMethod]["httpMethod"],
     body: unknown,
     signal: AbortSignal | undefined,
   ): Promise<{ status: number; text: string }> {
     const once = async (token: string) => {
       try {
-        const res = await doFetch(`${PUBSUB_API_ROOT}/v1/${path}`, {
-          method,
+        const res = await doFetch(url, {
+          method: httpMethod,
           headers: {
             Authorization: `Bearer ${token}`,
             ...(body === undefined
@@ -132,37 +217,40 @@ export function createPubSubClient(opts: PubSubClientOptions) {
     return once(await opts.accessToken({ refused: first.token }));
   }
 
-  /** The parsed answer, or `null` for a status the caller expects (`expect`). */
-  async function call<T>(
+  /**
+   * `method` on the resource `name`: the parsed answer, or `{ ok: false }`
+   * for a status the caller expects (`expect`). A method that takes a request
+   * must be given its `body`; one that takes none cannot be.
+   */
+  async function call<M extends PubSubMethod, T>(
     spec: {
-      what: string;
-      method: "GET" | "PUT" | "POST" | "PATCH" | "DELETE";
-      path: string;
-      body?: unknown;
+      method: M;
+      name: string;
       schema: z.ZodType<T>;
       expect?: readonly number[];
-    },
+    } & ((typeof PUBSUB_METHODS)[M]["request"] extends true
+      ? { body: unknown }
+      : { body?: never }),
     signal?: AbortSignal,
   ): Promise<{ ok: true; value: T } | { ok: false; status: number }> {
+    const what = `${spec.method} ${spec.name}`;
     const { status, text } = await send(
-      spec.what,
-      spec.method,
-      spec.path,
+      what,
+      pubsubUrl(spec.method, spec.name),
+      PUBSUB_METHODS[spec.method].httpMethod,
       spec.body,
       signal,
     );
     if (status >= 200 && status < 300)
-      return { ok: true, value: parseBody(spec.what, text, spec.schema) };
+      return { ok: true, value: parseBody(what, status, text, spec.schema) };
     if (spec.expect?.includes(status)) return { ok: false, status };
-    throw apiError(spec.what, status, text);
+    throw apiError(what, status, text);
   }
 
   async function getTopicPolicy(topic: string): Promise<IamPolicy> {
     const r = await call({
-      what: `topics.getIamPolicy ${topic}`,
-      method: "POST",
-      path: `${topic}:getIamPolicy`,
-      body: {},
+      method: "topics.getIamPolicy",
+      name: topic,
       schema: IamPolicySchema,
     });
     if (!r.ok) throw new Error("unreachable: getIamPolicy expects no status");
@@ -173,9 +261,8 @@ export function createPubSubClient(opts: PubSubClientOptions) {
     /** Creates the topic; `existed` when it was already there (409). */
     async ensureTopic(name: string): Promise<{ existed: boolean }> {
       const r = await call({
-        what: `topics.create ${name}`,
-        method: "PUT",
-        path: name,
+        method: "topics.create",
+        name,
         body: {},
         schema: TopicSchema,
         expect: [409],
@@ -210,9 +297,8 @@ export function createPubSubClient(opts: PubSubClientOptions) {
           : [...bindings, { role, members: [member] }],
       };
       await call({
-        what: `topics.setIamPolicy ${topic}`,
-        method: "POST",
-        path: `${topic}:setIamPolicy`,
+        method: "topics.setIamPolicy",
+        name: topic,
         body: { policy: next },
         schema: IamPolicySchema,
       });
@@ -236,9 +322,8 @@ export function createPubSubClient(opts: PubSubClientOptions) {
       },
     ): Promise<{ existed: boolean }> {
       const r = await call({
-        what: `subscriptions.create ${name}`,
-        method: "PUT",
-        path: name,
+        method: "subscriptions.create",
+        name,
         body: {
           topic: s.topic,
           ackDeadlineSeconds: s.ackDeadlineSeconds,
@@ -252,9 +337,8 @@ export function createPubSubClient(opts: PubSubClientOptions) {
       });
       if (r.ok) return { existed: false };
       const existing = await call({
-        what: `subscriptions.get ${name}`,
-        method: "GET",
-        path: name,
+        method: "subscriptions.get",
+        name,
         schema: SubscriptionSchema,
       });
       if (existing.ok && existing.value.topic !== s.topic)
@@ -270,9 +354,8 @@ export function createPubSubClient(opts: PubSubClientOptions) {
 
     async deleteSubscription(name: string): Promise<void> {
       await call({
-        what: `subscriptions.delete ${name}`,
-        method: "DELETE",
-        path: name,
+        method: "subscriptions.delete",
+        name,
         schema: EmptySchema,
         expect: [404],
       });
@@ -295,9 +378,8 @@ export function createPubSubClient(opts: PubSubClientOptions) {
         );
       const r = await call(
         {
-          what: `subscriptions.pull ${subscription}`,
-          method: "POST",
-          path: `${subscription}:pull`,
+          method: "subscriptions.pull",
+          name: subscription,
           body: { maxMessages: p.maxMessages },
           schema: PullResponseSchema,
           expect: [404],
@@ -314,9 +396,8 @@ export function createPubSubClient(opts: PubSubClientOptions) {
     ): Promise<void> {
       if (ackIds.length === 0) return;
       await call({
-        what: `subscriptions.acknowledge ${subscription}`,
-        method: "POST",
-        path: `${subscription}:acknowledge`,
+        method: "subscriptions.acknowledge",
+        name: subscription,
         body: { ackIds },
         schema: EmptySchema,
       });

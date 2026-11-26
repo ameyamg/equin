@@ -1,10 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { PubSubApiError } from "../../core";
-import { createPubSubClient, messageText } from "./client";
+import {
+  createPubSubClient,
+  messageText,
+  PUBSUB_METHODS,
+  pubsubUrl,
+} from "./client";
 
 type Seen = { method: string; url: string; body: unknown; auth: string };
 
-function fake(answers: Array<{ status: number; body?: unknown }>) {
+/**
+ * A replay of Google's answers, each pinned to the exact request it answers
+ * (`"<VERB> <url>"`): a request with another verb or URL fails the test.
+ */
+function fake(
+  answers: Array<{ req: string; status: number; body?: unknown; raw?: string }>,
+) {
   const seen: Seen[] = [];
   const tokens: Array<{ refused?: string } | undefined> = [];
   let n = 0;
@@ -21,10 +32,14 @@ function fake(answers: Array<{ status: number; body?: unknown }>) {
         auth: (init.headers as Record<string, string>).Authorization!,
       });
       const a = answers[n++];
-      if (!a) throw new Error(`unexpected request ${init.method} ${url}`);
-      return new Response(a.body === undefined ? "" : JSON.stringify(a.body), {
-        status: a.status,
-      });
+      const req = `${init.method} ${url}`;
+      if (!a) throw new Error(`unexpected request ${req}`);
+      if (a.req !== req)
+        throw new Error(`expected request ${a.req}, got ${req}`);
+      return new Response(
+        a.raw ?? (a.body === undefined ? "" : JSON.stringify(a.body)),
+        { status: a.status },
+      );
     },
   });
   return { client, seen, tokens };
@@ -32,12 +47,77 @@ function fake(answers: Array<{ status: number; body?: unknown }>) {
 
 const T = "projects/p/topics/equin-gmail";
 const S = "projects/p/subscriptions/equin-gmail-main";
+const V1 = "https://pubsub.googleapis.com/v1";
+
+/**
+ * Google's own declaration of each method, copied from the discovery document
+ * (`https://pubsub.googleapis.com/$discovery/rest?version=v1`, fetched
+ * 2026-11-26): `httpMethod`, `path`, and whether it has a `request`.
+ */
+const DISCOVERY: Record<string, [string, string, boolean]> = {
+  "pubsub.projects.topics.create": ["PUT", "v1/{+name}", true],
+  "pubsub.projects.topics.getIamPolicy": [
+    "GET",
+    "v1/{+resource}:getIamPolicy",
+    false,
+  ],
+  "pubsub.projects.topics.setIamPolicy": [
+    "POST",
+    "v1/{+resource}:setIamPolicy",
+    true,
+  ],
+  "pubsub.projects.subscriptions.create": ["PUT", "v1/{+name}", true],
+  "pubsub.projects.subscriptions.get": ["GET", "v1/{+subscription}", false],
+  "pubsub.projects.subscriptions.delete": [
+    "DELETE",
+    "v1/{+subscription}",
+    false,
+  ],
+  "pubsub.projects.subscriptions.pull": [
+    "POST",
+    "v1/{+subscription}:pull",
+    true,
+  ],
+  "pubsub.projects.subscriptions.acknowledge": [
+    "POST",
+    "v1/{+subscription}:acknowledge",
+    true,
+  ],
+};
 
 describe("the Pub/Sub client", () => {
+  test("every method is sent as Google's discovery document declares it", () => {
+    expect(
+      Object.fromEntries(
+        Object.entries(PUBSUB_METHODS).map(([m, d]) => [
+          `pubsub.projects.${m}`,
+          [d.httpMethod, `v1/${d.path}`, d.request],
+        ]),
+      ),
+    ).toEqual(DISCOVERY);
+    expect(pubsubUrl("topics.getIamPolicy", T)).toBe(`${V1}/${T}:getIamPolicy`);
+  });
+
+  test("an HTML answer is refused in a few words, not as the page", async () => {
+    const f = fake([
+      {
+        req: `PUT ${V1}/${T}`,
+        status: 404,
+        raw: "<!DOCTYPE html>\n<html lang=en><meta charset=utf-8><title>Error 404 (Not Found)!!1</title><style>*{margin:0}</style><p>The requested URL was not found on this server.</p>",
+      },
+    ]);
+    const err = await f.client.ensureTopic(T).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PubSubApiError);
+    expect((err as PubSubApiError).message).toBe(
+      `Pub/Sub refused topics.create ${T} (HTTP 404): an HTML page ("Error 404 (Not Found)!!1") instead of a Pub/Sub answer: no Pub/Sub method serves this URL and verb`,
+    );
+  });
+
   test("ensureTopic creates, and answers existed on 409", async () => {
     const f = fake([
-      { status: 200, body: { name: T } },
+      { req: `PUT ${V1}/${T}`, status: 200, body: { name: T } },
       {
+        req: `PUT ${V1}/${T}`,
         status: 409,
         body: {
           error: { code: 409, message: "exists", status: "ALREADY_EXISTS" },
@@ -55,6 +135,7 @@ describe("the Pub/Sub client", () => {
   test("a disabled API is typed, with its activation link", async () => {
     const f = fake([
       {
+        req: `PUT ${V1}/${T}`,
         status: 403,
         body: {
           error: {
@@ -86,14 +167,16 @@ describe("the Pub/Sub client", () => {
   test("grantOnTopic adds the member under the policy's etag, once", async () => {
     const f = fake([
       {
+        req: `GET ${V1}/${T}:getIamPolicy`,
         status: 200,
         body: {
           etag: "BwX",
           bindings: [{ role: "roles/pubsub.viewer", members: ["user:a@x"] }],
         },
       },
-      { status: 200, body: {} },
+      { req: `POST ${V1}/${T}:setIamPolicy`, status: 200, body: {} },
       {
+        req: `GET ${V1}/${T}:getIamPolicy`,
         status: 200,
         body: {
           etag: "BwY",
@@ -131,8 +214,16 @@ describe("the Pub/Sub client", () => {
 
   test("ensureSubscription refuses a same-named subscription on another topic", async () => {
     const f = fake([
-      { status: 409, body: { error: { code: 409, message: "exists" } } },
-      { status: 200, body: { name: S, topic: "projects/p/topics/other" } },
+      {
+        req: `PUT ${V1}/${S}`,
+        status: 409,
+        body: { error: { code: 409, message: "exists" } },
+      },
+      {
+        req: `GET ${V1}/${S}`,
+        status: 200,
+        body: { name: S, topic: "projects/p/topics/other" },
+      },
     ]);
     const refused = await f.client
       .ensureSubscription(S, {
@@ -159,6 +250,7 @@ describe("the Pub/Sub client", () => {
     );
     const f = fake([
       {
+        req: `POST ${V1}/${S}:pull`,
         status: 200,
         body: {
           receivedMessages: [
@@ -173,8 +265,9 @@ describe("the Pub/Sub client", () => {
           ],
         },
       },
-      { status: 200, body: {} },
+      { req: `POST ${V1}/${S}:pull`, status: 200, body: {} },
       {
+        req: `POST ${V1}/${S}:pull`,
         status: 404,
         body: { error: { code: 404, message: "no sub", status: "NOT_FOUND" } },
       },
@@ -197,8 +290,12 @@ describe("the Pub/Sub client", () => {
 
   test("a 401 is sent once more with a token asked past the refused one", async () => {
     const f = fake([
-      { status: 401, body: { error: { code: 401, message: "expired" } } },
-      { status: 200, body: {} },
+      {
+        req: `POST ${V1}/${S}:acknowledge`,
+        status: 401,
+        body: { error: { code: 401, message: "expired" } },
+      },
+      { req: `POST ${V1}/${S}:acknowledge`, status: 200, body: {} },
     ]);
     await f.client.acknowledge(S, ["a1"]);
     expect(f.tokens).toEqual([undefined, { refused: "stale" }]);
