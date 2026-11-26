@@ -13982,7 +13982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/type-scale --font-weight-normal`
-        - **`live-demo`** — The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, Maximize and Back running as the morph view transition. The demo page always shows a draggable site bar at its bottom centre — Back to equin.ai (into the frame after a Maximize, else the homepage) and the LiveDemo.BarLink links (Download) — however the visitor got there; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
+        - **`live-demo`** — The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, Maximize and Back running as the morph view transition. The demo page always shows a draggable site bar hanging from its top edge, centred — Back to equin.ai (into the frame after a Maximize, else the homepage) and the LiveDemo.BarLink links (Download) — however the visitor got there; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
             - Slots:
               - `demoPane.Actions`
@@ -13993,17 +13993,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Website.Resident` "Live demo" → `DemoResident`
               - `Pane.Register` "website-demo"
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
               - `apps/website/landing/screenshot/chrome` ×4
               - `primitives/pane` ×4
               - `apps-core/app-embed` ×2
               - `apps-core/tabs` ×2
               - `apps/website/shell` ×2
-              - `primitives/css/ui-kit` ×2
               - `primitives/scope/scoped-store` ×2
               - `apps/deploy/analytics/collect.track`
               - `framework/browser-server/demo/scope.DemoScope`
               - `primitives/css/inline.Inline`
+              - `primitives/css/ui-kit.Button`
               - `primitives/dom/movable.Movable`
               - `primitives/pane/route-prefix.withActiveRoutePrefix`
               - `primitives/slot-render.defineRenderSlot`
@@ -14029,12 +14029,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
-              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --card`
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary`
-              - `ui/tokens/shadow --shadow-lg`
-              - `ui/tokens/type-scale --font-weight-semibold`
+              - `ui/tokens/color-palette --secondary`
+              - `ui/tokens/color-palette --secondary-foreground`
             - Imported by:
               - `apps/website`
               - `apps/website/landing/screenshot`
@@ -35863,8 +35863,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isE2eScriptPath`
               - `MANUAL_REASONS`
           - Cross-plugin:
-            - Imported by: 212 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×65
+            - Imported by: 213 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×66
               - `primitives` ×30
               - `conversations` ×26
               - `page` ×26
@@ -71257,8 +71257,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ShadowParamsSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --popover`
-            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×24
+            - Tokens used by: 60 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×23
               - `primitives` ×13
               - `ui` ×5
               - `framework` ×4
@@ -71528,8 +71528,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 241 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×63
+            - Tokens used by: 240 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×62
               - `conversations` ×40
               - `primitives` ×38
               - `debug` ×15

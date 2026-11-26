@@ -229,7 +229,7 @@ await withBrowser(async (h) => {
   );
   await snap(page, OUT, "4-maximized");
 
-  // The bar (bottom centre) moves out of the way, and stays clickable. Once the Maximize
+  // The bar (top centre) moves out of the way, and stays clickable. Once the Maximize
   // morph has ended: during a view transition nothing on the page is hit.
   await page.waitForFunction(
     () => !document.documentElement.hasAttribute("data-demo-morph"),
@@ -239,7 +239,7 @@ await withBrowser(async (h) => {
   if (home !== null) {
     await page.mouse.move(home.x + 12, home.y + home.height / 2);
     await page.mouse.down();
-    await page.mouse.move(home.x + 12 + 200, home.y + home.height / 2 - 300, {
+    await page.mouse.move(home.x + 12 + 200, home.y + home.height / 2 + 300, {
       steps: 8,
     });
     await page.mouse.up();

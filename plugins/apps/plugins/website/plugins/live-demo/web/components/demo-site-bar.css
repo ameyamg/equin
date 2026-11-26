@@ -1,32 +1,80 @@
-/* The demo page's site bar (demo-site-bar.tsx): one small pill over the demo
-   — the site's tokens, a hairline, a soft shadow and a faint glow of the
-   brand so it reads above any app it covers. */
+/* The demo page's site bar (demo-site-bar.tsx), measured off its mockup
+   (proto-1795644492-p8e9ne): one small pill over the demo — the site's
+   tokens, a hairline, a soft shadow and a faint glow of the brand so it
+   reads above any app it covers. Its sizes are the mockup's own (a 30px
+   control, 13px type), not the density ramp's: the bar is a corner piece
+   over another app, not a control row of the site. Unlayered, so they win
+   over the button's utility classes. */
 .demo-site-bar {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 4px;
   border-radius: 9999px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--background) 92%, transparent);
+  /* A hairline a step brighter than the page's rules: it outlines a piece
+     floating over another app. */
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  /* The site's raised panel (`card`), as the mockup's bar. */
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  /* Grayscale antialiasing, as the mockup draws its type: the default
+     subpixel rendering reads a weight heavier on macOS. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   box-shadow:
-    var(--shadow-lg),
+    /* Cast below in the page's near-black, as the mockup's. */
+    0 16px 36px -16px var(--background),
     0 0 44px -22px color-mix(in srgb, var(--primary) 36%, transparent);
   backdrop-filter: blur(14px);
   cursor: grab;
   white-space: nowrap;
 }
-/* Back: a plain text link, no box of its own until the pointer is on it. */
-.demo-site-bar-back {
-  color: var(--muted-foreground);
+.demo-site-bar .demo-site-bar-link {
+  height: 30px;
+  gap: 5px;
+  /* No hairline: the button's transparent border would widen each by 2px. */
+  border: 0;
+  padding: 0 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
 }
-.demo-site-bar-back:hover {
+.demo-site-bar .demo-site-bar-link svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+/* Back: a plain text link, no box of its own until the pointer is on it. */
+.demo-site-bar .demo-site-bar-back {
+  padding: 0 12px 0 9px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+.demo-site-bar .demo-site-bar-back:hover {
   color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+.demo-site-bar .demo-site-bar-back:hover svg {
+  transform: translateX(-3px);
+}
+/* The call to action: the site's inverted fill (`secondary`), ringed in the
+   brand on hover. */
+.demo-site-bar .demo-site-bar-cta {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+.demo-site-bar .demo-site-bar-cta:hover {
+  background: var(--secondary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 36%, transparent);
 }
 .demo-site-bar-short {
   display: none;
 }
-@media (max-width: 640px) {
+@media (max-width: 560px) {
   .demo-site-bar-long {
     display: none;
   }

@@ -19,8 +19,8 @@ whichever page asks for it. Design:
   equin gate: its URL says the visitor is in (`DemoScope`'s `resume`, passed
   live — also when the homepage mounted the scope first, at its gate). The
   gate is only ever the homepage frame's.
-- **The site bar** (`DemoSiteBar`: a small draggable pill, bottom centre —
-  the corners hold the cookie prompt and toasts, and the apps' sidebar footers —
+- **The site bar** (`DemoSiteBar`: a small draggable pill hanging from
+  the top edge, centred — between the demo's launcher and its action bar —
   `dom/movable`) is drawn on the demo page for every visitor, however they
   got there: Back to equin.ai — into the homepage's frame by the morph when
   the visitor came by Maximize (`viaMaximize`, set by Maximize and cleared
@@ -55,7 +55,7 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
 
 ## Plugin reference
 
-- Description: The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, Maximize and Back running as the morph view transition. The demo page always shows a draggable site bar at its bottom centre — Back to equin.ai (into the frame after a Maximize, else the homepage) and the LiveDemo.BarLink links (Download) — however the visitor got there; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
+- Description: The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, Maximize and Back running as the morph view transition. The demo page always shows a draggable site bar hanging from its top edge, centred — Back to equin.ai (into the frame after a Maximize, else the homepage) and the LiveDemo.BarLink links (Download) — however the visitor got there; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots:
     - `demoPane.Actions`
@@ -66,17 +66,17 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
   - Contributes:
     - `Website.Resident` "Live demo" → `DemoResident`
     - `Pane.Register` "website-demo"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/landing/screenshot/chrome` ×4
     - `primitives/pane` ×4
     - `apps-core/app-embed` ×2
     - `apps-core/tabs` ×2
     - `apps/website/shell` ×2
-    - `primitives/css/ui-kit` ×2
     - `primitives/scope/scoped-store` ×2
     - `apps/deploy/analytics/collect.track`
     - `framework/browser-server/demo/scope.DemoScope`
     - `primitives/css/inline.Inline`
+    - `primitives/css/ui-kit.Button`
     - `primitives/dom/movable.Movable`
     - `primitives/pane/route-prefix.withActiveRoutePrefix`
     - `primitives/slot-render.defineRenderSlot`
@@ -102,12 +102,12 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
-    - `ui/tokens/shadow --shadow-lg`
-    - `ui/tokens/type-scale --font-weight-semibold`
+    - `ui/tokens/color-palette --secondary`
+    - `ui/tokens/color-palette --secondary-foreground`
   - Imported by:
     - `apps/website`
     - `apps/website/landing/screenshot`
