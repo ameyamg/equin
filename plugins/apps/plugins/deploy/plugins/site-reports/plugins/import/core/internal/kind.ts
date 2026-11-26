@@ -405,7 +405,9 @@ export const WebsiteVisitorErrorSchema = z
     /**
      * Whose code a crash's stack ran in, as the visitor's page judged it
      * (reports/crash's stackCodeOrigin): `foreign` — every frame outside what
-     * the page serves, a browser extension most likely. Null for other kinds,
+     * the page serves, a browser extension most likely, or a window error the
+     * browser muted as a cross-origin script's on a page that loaded no
+     * cross-origin library. Null for other kinds,
      * a crash without the verdict, and rows imported before it was kept.
      */
     codeOrigin: CodeOriginSchema.nullable().default(null),

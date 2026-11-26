@@ -34,7 +34,10 @@ export const CrashPayloadSchema = z.object({
   resizeLoop: ResizeLoopTraceSchema.nullable().optional(),
   // For a window error / unhandled rejection: whose code its stack ran in
   // (./code-origin.ts) — `foreign` when every frame is provably outside what
-  // the page serves (a browser extension). Not part of the fingerprint.
+  // the page serves (a browser extension), or for a window error the browser
+  // muted as a cross-origin script's while the page had loaded no
+  // cross-origin library (web/internal/muted-error.ts).
+  // Not part of the fingerprint.
   codeOrigin: CodeOriginSchema.optional(),
 });
 export type CrashPayload = z.infer<typeof CrashPayloadSchema>;

@@ -12,6 +12,7 @@ import { isContextTeardown } from "../internal/context-teardown";
 import { fileUnlessOffline } from "../internal/fetch-no-answer";
 import { takeShellReports } from "../internal/shell-reports";
 import { crashFieldsWithOrigin } from "../internal/code-origin";
+import { isForeignMutedError } from "../internal/muted-error";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the two browser crash signals that are window
@@ -41,10 +42,14 @@ export function CrashCollector() {
         url: window.location.href,
         userAgent: navigator.userAgent,
         // No Error object: no type either, so the message is the identity.
+        // Muted by the browser with no library of the page's to blame: an
+        // extension's script, not ours (`internal/muted-error.ts`).
         data:
-          err === null
-            ? { errorType: null, stack: null }
-            : crashFieldsWithOrigin(err),
+          err !== null
+            ? crashFieldsWithOrigin(err)
+            : isForeignMutedError(e)
+              ? { errorType: null, stack: null, codeOrigin: "foreign" }
+              : { errorType: null, stack: null },
       });
     };
 

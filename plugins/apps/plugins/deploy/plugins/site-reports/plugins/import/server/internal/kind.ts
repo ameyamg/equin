@@ -114,7 +114,7 @@ export function renderWebsiteVisitorTask(
       `- **Message:** \`${e.message}\``,
       ...(e.codeOrigin === "foreign"
         ? [
-            "- **Code origin:** not the site's code — the visitor's page found every frame of the stack outside what it serves (another origin, an extension's scheme, or the document at a function none of its inline scripts names): a browser extension, most likely.",
+            "- **Code origin:** not the site's code — the visitor's page found every frame of the stack outside what it serves (another origin, an extension's scheme, or the document at a function none of its inline scripts names), or the browser muted the error as a cross-origin script's (`Script error.`) while the page had loaded no cross-origin library: a browser extension, most likely.",
           ]
         : []),
       `- **Error type:** ${e.errorType ? `\`${e.errorType}\`` : "(unknown)"}`,

@@ -69,7 +69,7 @@ function renderDescription(row: ReportRow): string {
   }
   if (data.codeOrigin === "foreign") {
     lines.push(
-      `**Origin:** not this page's code — every frame of the stack is outside what the page serves (another origin, an extension's scheme, or the document itself at a function none of its inline scripts names): a browser extension's page script, most likely. Nothing of ours to fix unless our page provoked it.`,
+      `**Origin:** not this page's code — every frame of the stack is outside what the page serves (another origin, an extension's scheme, or the document itself at a function none of its inline scripts names), or the browser muted the error as a cross-origin script's (\`Script error.\`) while the page had loaded no cross-origin library: a browser extension's page script, most likely. Nothing of ours to fix unless our page provoked it.`,
     );
     lines.push("");
   }

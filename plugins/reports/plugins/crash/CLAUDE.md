@@ -72,6 +72,17 @@ carries `codeOrigin` (`core/code-origin.ts`, `stackCodeOrigin`):
   scheme, or the document at a function no inline script names);
 - `unknown`: anything undecidable.
 
+A window error the browser **muted** can be `foreign` too. An error raised in
+a classic script whose response is not CORS-same-origin reaches the page as
+`"Script error."`, line 0, no error object (the HTML spec's muted errors).
+equin's own scripts never raise one: each is a module (muted flag always
+false) or the document's own inline script. But a cross-origin library the
+page loads (YouTube's iframe API, Google Maps) throwing on a call of ours
+reaches us muted too, so the verdict is `foreign` only while the document
+holds no cross-origin http(s) `<script src>`. Otherwise the error is left
+unjudged. equin.ai: 344 of them, 2026-11-18 → 11-26, all with no stack
+(report-1795714186-8inqlu). `web/internal/muted-error.ts`.
+
 The verdict never mutes anything. A `foreign` crash is still filed; its task
 title reads `[not our code]` and the website-visitor import keeps the
 verdict as a typed field with a "Not our code" badge.
