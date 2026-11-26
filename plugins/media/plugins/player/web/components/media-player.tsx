@@ -39,10 +39,13 @@ export interface MediaPlayerProps {
   /** What is playing, for assistive tech: the file's or the block's name. */
   label: string;
   /**
-   * Start playing when opened (a browser that refuses unprompted playback
-   * leaves it paused). Not when it comes back — see `keep`.
+   * `true`: start playing when opened (a browser that refuses unprompted
+   * playback leaves it paused). `"in-view"`: muted and looping, playing while
+   * at least half of it is on screen and pausing when it leaves — a page of
+   * clips (the website's tips) — until the user plays or pauses it
+   * themselves. Neither when it comes back — see `keep`.
    */
-  autoPlay?: boolean;
+  autoPlay?: boolean | "in-view";
   /**
    * The playhead's key among this place's players (the ambient `KeepScope`:
    * the pane, else the tab) — stable across a reload, and naming the media

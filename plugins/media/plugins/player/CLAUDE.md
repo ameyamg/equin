@@ -34,6 +34,17 @@ reload. The key names the media (a file's location, an attachment id) —
 another media under the same key would be sought to its time; `null` keeps
 nothing (exhibits, tests).
 
+## Autoplay in view
+
+`autoPlay="in-view"` is for a page of clips (the website's tips): the media
+starts **muted** (the one autoplay browsers allow without a gesture) and
+**looping**, plays while at least half the player is on screen and pauses
+when it leaves (`internal/use-in-view-play.ts`, over `dom/in-view`). A clip
+below the fold fetches only its metadata until it is scrolled to. Once the
+user plays or pauses it themselves, visibility stops driving it; unmuting
+does not count. In its own picture-in-picture window it is never paused for
+being off the page. Like `autoPlay`, it does nothing for a resumed player.
+
 ## What it draws
 
 - **Video**: the picture (the `poster` until the first play, if given — else
@@ -170,7 +181,7 @@ so a size or glass option later is one set switched as a whole.
     - `ThemeEngine.FixedTheme` "Media player controls"
     - `ThemeEngine.SubTheme` "Media player settings panel"
     - `ThemeEngine.SubTheme` "Media player volume"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/shortcuts` ×3
     - `primitives/dom/media-element` ×2
@@ -181,6 +192,7 @@ so a size or glass option later is one set switched as a whole.
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/dom/element-fullscreen.fullscreenSupport`
+    - `primitives/dom/in-view.useInView`
     - `primitives/dom/render-mode.useMediaQuery`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`

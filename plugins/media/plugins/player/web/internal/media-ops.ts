@@ -25,6 +25,10 @@ export function setMediaVolume(el: HTMLMediaElement, v: number): void {
   el.muted = t.muted;
 }
 
+export function muteMedia(el: HTMLMediaElement): void {
+  el.muted = true;
+}
+
 export function toggleMediaMute(el: HTMLMediaElement): void {
   const t = toggleMute(el.volume, el.muted);
   el.volume = t.volume;

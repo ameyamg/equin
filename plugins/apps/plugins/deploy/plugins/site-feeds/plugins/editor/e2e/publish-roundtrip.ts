@@ -327,6 +327,22 @@ await withBrowser(async (h) => {
     { timeoutMs: 30_000 },
   );
   r.ok("its video loads (4 s)", duration.ok, String(duration.value));
+  // On screen, it plays by itself: muted and looping (autoPlay="in-view").
+  await video.scrollIntoViewIfNeeded();
+  const autoplayed = await waitFor(
+    () =>
+      video.evaluate((el) => {
+        const v = el as HTMLVideoElement;
+        return { playing: !v.paused, muted: v.muted, loop: v.loop };
+      }),
+    (s) => s.playing && s.muted && s.loop,
+    { timeoutMs: 15_000 },
+  );
+  r.ok(
+    "on screen, its video autoplays muted and looping",
+    autoplayed.ok,
+    JSON.stringify(autoplayed.value),
+  );
   await video.evaluate((el) => {
     (el as HTMLVideoElement).currentTime = 3;
   });

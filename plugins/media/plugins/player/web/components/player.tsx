@@ -70,6 +70,7 @@ import {
 } from "../internal/media-ops";
 import { useMediaState } from "../internal/use-media-state";
 import { useKeptPlayhead } from "../internal/kept-playhead";
+import { useInViewPlay } from "../internal/use-in-view-play";
 import { ControlPill } from "./control-pill";
 import { SettingsPanel } from "./settings-panel";
 import { VolumeCapsule } from "./volume-capsule";
@@ -97,7 +98,7 @@ export interface PlayerProps {
   kind: "video" | "audio";
   src: string;
   label: string;
-  autoPlay: boolean;
+  autoPlay: boolean | "in-view";
   /** The kept playhead's key (`MediaPlayerProps.keep`). */
   keep: string | null;
   poster?: string;
@@ -234,11 +235,13 @@ export function Player({
   // A player given back its playhead (a reload, a remount) resumes paused
   // there: autoplay is for opening, never for coming back.
   const { resumed } = useKeptPlayhead(el, keep);
-  const autoPlay = autoPlayAsked && !resumed;
+  const autoPlay = autoPlayAsked === true && !resumed;
+  const inView = autoPlayAsked === "in-view" && !resumed;
   const volume = audibleVolume(media.volume, media.muted);
   const [rate, setRateState] = useState(1);
   const [settle, setSettle] = useState(false);
-  const [loop, setLoop] = useState(false);
+  // A clip that plays as it is read loops, like the GIF it stands for.
+  const [loop, setLoop] = useState(inView);
   const [remaining, setRemaining] = useState(true);
   const [settings, setSettings] = useState<CSSProperties | null>(null);
   const [volumeAt, setVolumeAt] = useState<CSSProperties | null>(null);
@@ -310,8 +313,11 @@ export function Player({
     if (el) setMediaVolume(el, v);
   };
 
+  const inViewPlay = useInViewPlay(inView, el, root, pip?.open === true);
   const toggle = () => {
-    if (el) togglePlayback(el);
+    if (!el) return;
+    inViewPlay.takeOver();
+    togglePlayback(el);
   };
 
   const toggleFullscreen = () => {

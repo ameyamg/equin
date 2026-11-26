@@ -92,6 +92,7 @@ allowlisting a copy.
     - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`
     - `hints`
+    - `media/player`
     - `primitives/css/working-dots`
     - `primitives/cursor-pagination`
     - `primitives/data-view`

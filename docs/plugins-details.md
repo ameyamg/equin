@@ -44489,7 +44489,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.FixedTheme` "Media player controls"
           - `ThemeEngine.SubTheme` "Media player settings panel"
           - `ThemeEngine.SubTheme` "Media player volume"
-        - Uses: 29 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/shortcuts` ×3
           - `primitives/dom/media-element` ×2
@@ -44500,6 +44500,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/element-fullscreen.fullscreenSupport`
+          - `primitives/dom/in-view.useInView`
           - `primitives/dom/render-mode.useMediaQuery`
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
@@ -56276,6 +56277,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
               - `hints`
+              - `media/player`
               - `primitives/css/working-dots`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
