@@ -6,7 +6,7 @@
 
 - Description: Renders read_page MCP tool calls: the page the read was scoped to as a clickable chip, and the markdown it returned.
 - Web:
-  - Contributes: `renderer` "read_page$" → `ParsedToolView`
+  - Contributes: `renderer` "^mcp__equin__read_page$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

@@ -8,7 +8,9 @@ export default {
     "Renders read_page MCP tool calls: the page the read was scoped to as a clickable chip, and the markdown it returned.",
   contributions: [
     JsonlViewerTool.Renderer({
-      match: /read_page$/,
+      // Namespaced: the Claude-in-Chrome extension also has a `read_page`
+      // (ref / filter inputs, no block), which this card's schema rightly rejects.
+      match: /^mcp__equin__read_page$/,
       icon: symbol("article"),
       input: ReadPageInputSchema,
       component: ReadPageView,
