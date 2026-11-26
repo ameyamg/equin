@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: <UploadDropzone>: click, drop or paste one or several files into the attachments store — mime (accept), size (maxBytes) and count (maxFiles) checked before upload, uploading / error state, one onUploaded per file. Owns no focus: a host opens the picker through handleRef (a page block's Enter / Space) and arms paste (pasteArmed).
+- Description: <UploadDropzone>: click, drop or paste one or several files into the attachments store — mime (accept), size (maxBytes) and count (maxFiles) checked before upload, uploading / error state, one onUploaded per file. Focus is owned by the host (a page block opens the picker through handleRef and arms a window paste listener while its caret is on it) or by the dropzone itself (a form field: Tab to it, Enter / Space open the picker, Cmd+V while it is focused uploads).
 - Web:
   - Uses:
     - `infra/attachments.uploadAttachment`
@@ -17,6 +17,7 @@
     - `ui/icons.Icon`
   - Exports (types):
     - `UploadAccept`
+    - `UploadDropzoneFocus`
     - `UploadDropzoneHandle`
     - `UploadDropzoneProps`
   - Exports (values): `UploadDropzone`
@@ -26,6 +27,7 @@
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --ring`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-xs`

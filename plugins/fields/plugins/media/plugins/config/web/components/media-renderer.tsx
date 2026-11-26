@@ -213,7 +213,7 @@ function MediaEditor({
           multiple={room === undefined || room > 1}
           maxFiles={room}
           maxBytes={field.maxBytes}
-          pasteArmed={false}
+          focus={{ owner: "self" }}
           onUploaded={onUploaded}
         />
       ) : null}

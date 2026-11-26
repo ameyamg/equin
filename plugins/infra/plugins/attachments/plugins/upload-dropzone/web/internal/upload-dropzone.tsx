@@ -4,6 +4,8 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  type ClipboardEvent as ReactClipboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type Ref,
 } from "react";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -21,6 +23,19 @@ import {
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { inputAccept, matchesAccept, type UploadAccept } from "./accept";
+
+/**
+ * Who owns the dropzone's focus — and so which keyboard reaches it:
+ * - `host`: a surrounding focus target (a page block's caret host) answers the
+ *   keyboard and opens the picker through `handleRef`; it arms the window
+ *   `paste` listener (`pasteArmed`) while it is focused, so at most one
+ *   dropzone answers a paste.
+ * - `self`: the dropzone is its own focus target (a form field): Tab reaches
+ *   it, Enter / Space open the picker, and Cmd+V while it is focused (also
+ *   after a click) uploads the clipboard's files.
+ */
+export type UploadDropzoneFocus =
+  { owner: "host"; pasteArmed: boolean } | { owner: "self" };
 
 /** What a host drives a dropzone with: the file picker, as its own action. */
 export interface UploadDropzoneHandle {
@@ -42,12 +57,8 @@ export interface UploadDropzoneProps {
    * nothing is uploaded that the host would have to drop.
    */
   maxFiles?: number;
-  /**
-   * Arm the window `paste` listener: Cmd+V uploads the clipboard's files.
-   * The host decides when (a page block: while the caret is on it), so at
-   * most one dropzone answers a paste.
-   */
-  pasteArmed: boolean;
+  /** Who owns focus, and so the keyboard and paste. */
+  focus: UploadDropzoneFocus;
   /** One call per uploaded file, in order. The host persists it. */
   onUploaded: (res: UploadedAttachment) => void;
   /** The host's handle on the picker (a page block's Enter / Space). */
@@ -87,6 +98,23 @@ async function uploadInTurn(
   return null;
 }
 
+/**
+ * The clipboard's files `accept` takes. With one file wanted, a PNG is
+ * preferred (a screenshot pastes as several renditions).
+ */
+function clipboardFiles(
+  data: DataTransfer | null,
+  accept: UploadAccept,
+  multiple: boolean,
+): File[] {
+  const files = Array.from(data?.items ?? [])
+    .filter((it) => it.kind === "file" && matchesAccept(accept, it.type))
+    .map((it) => it.getAsFile())
+    .filter((f): f is File => f !== null);
+  if (multiple || files.length === 0) return files;
+  return [files.find((f) => f.type === "image/png") ?? files[0]!];
+}
+
 function megabytes(bytes: number): string {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
@@ -105,7 +133,7 @@ export function UploadDropzone({
   multiple = false,
   maxBytes = ATTACHMENT_DEFAULT_MAX_BYTES,
   maxFiles,
-  pasteArmed,
+  focus,
   onUploaded,
   handleRef,
 }: UploadDropzoneProps) {
@@ -162,24 +190,23 @@ export function UploadDropzone({
     [accept, multiple, maxBytes, maxFiles, onUploaded, fetchEndpoint],
   );
 
+  const ownsFocus = focus.owner === "self";
+  const windowPasteArmed = focus.owner === "host" && focus.pasteArmed;
   useEffect(() => {
-    if (!pasteArmed) return;
+    if (!windowPasteArmed) return;
     function onPaste(e: ClipboardEvent) {
-      const files = Array.from(e.clipboardData?.items ?? [])
-        .filter((it) => it.kind === "file" && matchesAccept(accept, it.type))
-        .map((it) => it.getAsFile())
-        .filter((f): f is File => f !== null);
+      const files = clipboardFiles(e.clipboardData, accept, multiple);
       if (files.length === 0) return;
       e.preventDefault();
-      // One file: prefer a PNG (a screenshot pastes as several renditions).
-      const picked = multiple
-        ? files
-        : [files.find((f) => f.type === "image/png") ?? files[0]!];
-      void ingest(picked);
+      void ingest(files);
     }
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [pasteArmed, accept, multiple, ingest]);
+  }, [windowPasteArmed, accept, multiple, ingest]);
+
+  const openPicker = () => {
+    if (!uploading) inputRef.current?.click();
+  };
 
   const status =
     progress === null
@@ -209,9 +236,25 @@ export function UploadDropzone({
         direction="row"
         align="center"
         gap="sm"
-        onClick={() => {
-          if (!uploading) inputRef.current?.click();
-        }}
+        onClick={openPicker}
+        {...(ownsFocus
+          ? {
+              role: "button",
+              tabIndex: 0,
+              "aria-label": `${label} — click, drop or paste`,
+              onKeyDown: (e: ReactKeyboardEvent) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                openPicker();
+              },
+              onPaste: (e: ReactClipboardEvent) => {
+                const files = clipboardFiles(e.clipboardData, accept, multiple);
+                if (files.length === 0) return;
+                e.preventDefault();
+                void ingest(files);
+              },
+            }
+          : {})}
         onDragOver={(e) => {
           e.preventDefault();
           // Claim the drag: the dropzone takes the files in place, so the event
@@ -220,7 +263,11 @@ export function UploadDropzone({
           e.stopPropagation();
           setDragOver(true);
         }}
-        onDragLeave={() => setDragOver(false)}
+        onDragLeave={(e) => {
+          // Moving onto the icon or label is not leaving the zone.
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setDragOver(false);
+        }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -229,11 +276,16 @@ export function UploadDropzone({
         }}
         className={cn(
           "cursor-pointer rounded-md border border-dashed border-border px-md py-lg text-body text-muted-foreground transition-colors hover:bg-muted",
+          ownsFocus &&
+            "outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring",
           dragOver && "border-primary bg-muted",
         )}
       >
         <Icon icon={icon} className="size-4" />
         <span>{status}</span>
+        {uploading ? null : (
+          <span className="text-muted-foreground/70">· drop or paste</span>
+        )}
       </Stack>
     </div>
   );

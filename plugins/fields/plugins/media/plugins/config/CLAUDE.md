@@ -8,8 +8,10 @@ The renderer is a `block` shape whose control is one component
 `MediaThumb`s in a wrapping `SortableList` (drag to reorder, × to remove),
 then the shared `UploadDropzone` while there is room — `accept` and
 `maxBytes` from the field, `maxFiles` the room `max` leaves (more files are
-refused before any upload). Paste is not armed: a form has no caret to say
-which dropzone a paste is for.
+refused before any upload). The dropzone owns its focus (`focus={{ owner:
+"self" }}`): Tab or a click focuses it, Enter / Space open the picker and
+Cmd+V while it is focused uploads the clipboard's files — focus says which
+dropzone a paste is for.
 
 - **Uploads in turn.** The dropzone hands each file over from one async loop,
   so every commit builds on the latest committed value (`useLatestRef`), not

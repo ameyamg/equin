@@ -44,7 +44,7 @@ export function AttachmentUpload({
       accept={accept}
       label={label}
       icon={icon}
-      pasteArmed={isFocused}
+      focus={{ owner: "host", pasteArmed: isFocused }}
       onUploaded={onUploaded}
     />
   );
