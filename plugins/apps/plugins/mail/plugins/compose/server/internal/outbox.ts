@@ -28,10 +28,12 @@ import {
   formatAddressList,
   isDraftEmpty,
   messageIdsIn,
+  messageText,
   MAIL_ATTACHMENTS_MAX_BYTES,
   mailDraftIdKind,
   parseAddressList,
   plainTextOf,
+  signatureText,
   startFrom,
   type DraftAttachment,
   type DraftContent,
@@ -118,9 +120,6 @@ function draftRecipients(field: string): Participant[] {
 }
 
 /** The text a message carries: the body, then (a reply) the quote of what it answers. */
-function messageText(body: string, quote: string | null): string {
-  return quote === null ? body : `${body.replace(/\s+$/, "")}\n\n${quote}\n`;
-}
 
 export function createOutbox(deps: OutboxDeps) {
   const { db } = deps;
@@ -447,8 +446,11 @@ export function createOutbox(deps: OutboxDeps) {
     o: { messageId: string; strict: boolean },
   ): Promise<Uint8Array> {
     const read = o.strict ? recipients : (f: string) => draftRecipients(f);
+    // Read per message (the provider's settings have no change signal): a
+    // name or signature changed there applies to the next save or send.
+    const identity = await sender.provider.sendIdentity(sender.address);
     return buildMimeMessage({
-      from: { name: null, address: sender.address },
+      from: { name: identity.displayName, address: sender.address },
       to: read(r.content.to, "To"),
       cc: read(r.content.cc, "Cc"),
       bcc: read(r.content.bcc, "Bcc"),
@@ -457,7 +459,11 @@ export function createOutbox(deps: OutboxDeps) {
       messageId: o.messageId,
       inReplyTo: r.inReplyTo,
       references: r.references,
-      text: messageText(r.content.body, r.quote),
+      text: messageText(
+        r.content.body,
+        signatureText(identity.signature),
+        r.quote,
+      ),
       attachments: await files(r.content),
     });
   }

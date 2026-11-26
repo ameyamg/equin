@@ -23,6 +23,7 @@ export async function getGmailToken(
       expiresAt: res.expiresAt,
       scopes: res.scopes,
       email: res.identity.email ?? null,
+      name: res.identity.displayName ?? null,
     };
   }
   if (res.needsConsent) {

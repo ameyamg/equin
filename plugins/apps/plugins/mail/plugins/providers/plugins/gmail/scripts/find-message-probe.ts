@@ -27,6 +27,7 @@ const provider = createGmailMailProvider(
     },
     pacer,
   }),
+  { name: async () => null },
 );
 const t0 = performance.now();
 const found = await provider.findMessage(id);

@@ -113,6 +113,25 @@ export const ProfileSchema = z.object({
 });
 export type GmailProfile = z.infer<typeof ProfileSchema>;
 
+/**
+ * A send-as identity (`users.settings.sendAs`): an address mail can be sent
+ * from, with the display name and signature Gmail writes it with. Gmail
+ * omits an unset `displayName` / `signature` (or answers it empty).
+ */
+export const SendAsSchema = z.object({
+  sendAsEmail: z.string().min(1),
+  displayName: z.string().optional(),
+  /** HTML, as set in Gmail's settings. */
+  signature: z.string().optional(),
+  isPrimary: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+});
+export type GmailSendAs = z.infer<typeof SendAsSchema>;
+
+export const SendAsListSchema = z.object({
+  sendAs: z.array(SendAsSchema).optional(),
+});
+
 export const LabelColorSchema = z.object({
   textColor: z.string(),
   backgroundColor: z.string(),

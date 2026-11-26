@@ -11,6 +11,7 @@ import type { Mailbox, MailboxColor } from "./mailbox";
 import type {
   AttachmentRef,
   FoundDraft,
+  SendIdentity,
   FoundMessage,
   OutgoingMessage,
   SavedDraft,
@@ -247,6 +248,13 @@ export interface MailProvider {
   /** Deletes a draft; one already gone is no error (a replay is harmless). */
   deleteDraft(id: DraftId, o?: MailCallOptions): Promise<void>;
   send(m: OutgoingMessage, o?: MailCallOptions): Promise<SentMessage>;
+  /**
+   * Who mail from `address` (the account's own) is written as — its send-as
+   * identity's name and signature — read from the provider on each call (its
+   * settings have no change signal), so a name or signature changed there
+   * applies to the next message. Sending from an alias is not offered yet.
+   */
+  sendIdentity(address: string, o?: MailCallOptions): Promise<SendIdentity>;
 }
 
 /**

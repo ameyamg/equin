@@ -73,6 +73,7 @@ export const mailCache = createMailCache({
   }),
   // Settings → Config (`mail-cache`), read per use: a change applies at once.
   bodyBudgetBytes: () => getConfig(mailCacheConfig).bodyBudgetMb * 1024 * 1024,
+  summaryCap: () => getConfig(mailCacheConfig).summaryCap,
   prefetch: { perRun: () => getConfig(mailCacheConfig).prefetchPerRun },
   onBackgroundError,
   enqueueOp: async (job) => {

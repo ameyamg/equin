@@ -27,6 +27,7 @@ export const GMAIL_QUOTA = {
   "users.getProfile": 1,
   "users.watch": 100,
   "users.stop": 50,
+  "settings.sendAs.list": 1,
   "labels.list": 1,
   "labels.get": 1,
   "labels.create": 5,

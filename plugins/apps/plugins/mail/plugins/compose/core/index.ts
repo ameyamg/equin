@@ -30,10 +30,13 @@ export {
   type MailDraft,
 } from "./internal/draft";
 export {
+  htmlToPlainText,
   messageIdsIn,
+  messageText,
   plainTextOf,
   prefixedSubject,
   quoteOf,
+  signatureText,
   startFrom,
   type DraftStartContent,
 } from "./internal/reply";

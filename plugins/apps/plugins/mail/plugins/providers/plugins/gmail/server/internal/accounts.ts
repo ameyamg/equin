@@ -10,6 +10,7 @@ import {
 import { getGmailToken } from "@plugins/integrations/plugins/gmail/server";
 import {
   MailNotConnectedError,
+  MailUnreachableError,
   type MailProvider,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { createGmailMailProvider } from "./provider";
@@ -59,7 +60,22 @@ function openAccount(accountId: string) {
         1 - FOREGROUND_RESERVE_UNITS / GMAIL_USER_UNITS_PER_MINUTE,
     }),
   });
-  const entry = { client, provider: createGmailMailProvider(client) };
+  const entry = {
+    client,
+    provider: createGmailMailProvider(client, {
+      name: async () => {
+        const t = await getGmailToken();
+        if (t.ok) return t.name;
+        if (t.needsConsent) throw new MailNotConnectedError(t.message, true);
+        // The connection could not be checked now (a refresh that could not
+        // reach Google): as a provider call that cannot reach it.
+        throw new MailUnreachableError(
+          "the Google account's name",
+          new Error(t.message),
+        );
+      },
+    }),
+  };
   opened.set(accountId, entry);
   return entry;
 }

@@ -35,6 +35,7 @@ import {
   type MessageContent,
   type OutgoingMessage,
   type Participant,
+  type SendIdentity,
   type ThreadId,
   type ThreadSummary,
 } from "../../core";
@@ -116,6 +117,8 @@ export type FakeMailProviderOptions = {
   account?: { accountId: string; address: string };
   /** The provider's push (default none: the cache's fallback tick). */
   push?: MailPush;
+  /** The send-as identity's name and signature (default: none set; its address is the account's). */
+  identity?: Pick<SendIdentity, "displayName" | "signature">;
 };
 
 const DEFAULT_ROLES = [
@@ -230,6 +233,8 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     { reached: () => void; released: Promise<void> }
   >();
   const changesPageMax = opts.changesPageMax ?? Number.POSITIVE_INFINITY;
+  let identity: Pick<SendIdentity, "displayName" | "signature"> =
+    opts.identity ?? { displayName: null, signature: null };
   let connection:
     | { kind: "connected"; account: { accountId: string; address: string } }
     | { kind: "not-connected" | "unreachable"; message: string } = {
@@ -724,6 +729,12 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
         const r = store(m, false, null);
         return { messageId: r.messageId, threadId: r.threadId };
       }),
+    sendIdentity: (address, o) =>
+      call("sendIdentity", 0, o, () => ({
+        address,
+        displayName: identity.displayName,
+        signature: identity.signature,
+      })),
   };
 
   const definition: MailProviderDefinition = {
@@ -750,6 +761,10 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
   return {
     definition,
     provider,
+    /** Changes the send-as identity's name and signature (as if edited in the provider's settings). */
+    setIdentity(next: Pick<SendIdentity, "displayName" | "signature">) {
+      identity = next;
+    },
     /** Every call made, in order: the method and how many thread ids it carried. */
     calls,
     deliver,

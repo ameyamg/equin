@@ -7,6 +7,9 @@ import {
   inArray,
   isNotNull,
   lt,
+  lte,
+  max,
+  notExists,
   notInArray,
   or,
   sql,
@@ -66,7 +69,12 @@ import {
 } from "./tables";
 import { loadSummary, storeSummary } from "./stored-summary";
 import { contentBytes, loadContent, storeContent } from "./stored-content";
-import { bodyAnswers, MAIL_BODY_BUDGET_BYTES, readerContent } from "./bodies";
+import {
+  bodyAnswers,
+  MAIL_BODY_BUDGET_BYTES,
+  MAIL_SUMMARY_CAP,
+  readerContent,
+} from "./bodies";
 import {
   applyMailOp,
   mailInboxView,
@@ -121,6 +129,14 @@ const CATCH_UP_REFETCH_MAX = 200;
 const CATCH_UP_NEW_MAX = 50;
 /** A thread's `last_used_at` is written at most this often. */
 const USED_TOUCH_MS = 60 * 60 * 1000;
+/**
+ * A summary fetched or used this recently is never evicted by the cap: one
+ * shown in the last 10 minutes (its `last_used_at` is written at most every
+ * {@link USED_TOUCH_MS}, so that much older again), or fetched in the last 10.
+ */
+const SUMMARY_EVICT_GRACE_MS = USED_TOUCH_MS + 10 * 60 * 1000;
+/** Summaries evicted per statement of a cap sweep. */
+const SUMMARY_EVICT_BATCH = 1_000;
 /** Threads either side of the one being read whose bodies are prefetched. */
 const PREFETCH_NEIGHBOURS = 3;
 /** The head of each recently read view whose bodies are prefetched. */
@@ -178,6 +194,8 @@ export type MailCacheDeps = {
   onBackgroundError: (what: string, err: unknown) => void;
   /** The stored bodies' byte budget, read per store (default {@link MAIL_BODY_BUDGET_BYTES}). */
   bodyBudgetBytes?: () => number;
+  /** The cached thread summaries' cap, read per sweep (default {@link MAIL_SUMMARY_CAP}). */
+  summaryCap?: () => number;
   /**
    * Body prefetch (design §3), through the provider's background priority:
    * at most `perRun()` bodies a run (read per run; 0: none), a run after each
@@ -654,6 +672,7 @@ export function createMailCache(deps: MailCacheDeps) {
           fetchedAt: now,
         },
       });
+    summaryEvictions.trigger(accountId);
   }
 
   async function deleteThreads(accountId: string, ids: readonly string[]) {
@@ -668,14 +687,251 @@ export function createMailCache(deps: MailCacheDeps) {
       );
   }
 
-  /** Re-reads `ids` from the provider: found upserted, gone deleted; a per-thread failure thrown. */
+  // ── summaries in use (what the cap never deletes) ──────────────────────
+
+  /**
+   * The summaries an operation of this process has read or is about to read
+   * and will write rows referencing (a membership, a body, a triage op), by
+   * account — what the cap's sweep never deletes. `add` registers ids BEFORE
+   * the caller reads them, through the same gate the sweep deletes in: a
+   * delete already running finishes first (the read then finds the thread
+   * gone and re-reads it from the provider), and a delete that comes later
+   * skips them. Released when the operation ends, whatever happens.
+   */
+  type SummaryHold = { add: (ids: readonly string[]) => Promise<void> };
+  const inUse = new Map<string, number>();
+  const summaryGate = createKeyedMutex("mail-cache-summary-gate");
+  const inUseKey = (accountId: string, id: string) => `${accountId}\0${id}`;
+
+  async function holding<T>(
+    accountId: string,
+    run: (hold: SummaryHold) => Promise<T>,
+  ): Promise<T> {
+    const mine = new Set<string>();
+    const hold: SummaryHold = {
+      add: (ids) =>
+        summaryGate.run(accountId, async () => {
+          for (const id of ids) {
+            const k = inUseKey(accountId, id);
+            if (mine.has(k)) continue;
+            mine.add(k);
+            inUse.set(k, (inUse.get(k) ?? 0) + 1);
+          }
+        }),
+    };
+    try {
+      return await run(hold);
+    } finally {
+      for (const k of mine) {
+        const n = inUse.get(k)! - 1;
+        if (n === 0) inUse.delete(k);
+        else inUse.set(k, n);
+      }
+    }
+  }
+
+  // ── the summary cap (design §3: LRU, ~50k) ─────────────────────────────
+
+  const summaryCap = deps.summaryCap ?? (() => MAIL_SUMMARY_CAP);
+
+  /** `(id, id, …)`, one param each (never empty). */
+  const idList = (ids: readonly string[]) =>
+    sql`(${sql.join(
+      ids.map((id) => sql`${id}`),
+      sql`, `,
+    )})`;
+
+  /**
+   * Holds the cached summaries under the cap, least recently used first
+   * (`last_used_at`): threads no query holds go first; only past them are
+   * threads a covered query holds evicted, each such query's coverage cut
+   * back above the evicted threads (its floor raised just past their latest `at`,
+   * its members at or below the floor dropped, no longer exhausted) — a
+   * covered range never misses a member, a window reaching below the new
+   * floor fills from the provider again. Never a thread fetched or used in
+   * the last {@link SUMMARY_EVICT_GRACE_MS}, nor one with a triage op not yet
+   * at the provider. Open windows are not notified: what they show is still
+   * true, their next read answers from what is left.
+   */
+  async function evictSummaries(accountId: string) {
+    const cap = summaryCap();
+    const [c] = await executeRows(db, {
+      row: z.object({ n: z.coerce.number() }),
+      query: sql`select count(*) as n from ${_mailThreads} where account_id = ${accountId}`,
+    });
+    let excess = c!.n - cap;
+    if (excess <= 0) return;
+    const graceFloor = new Date(wallNow("retention") - SUMMARY_EVICT_GRACE_MS);
+    const evictable = sql`
+      t.account_id = ${accountId}
+      and t.last_used_at < ${graceFloor} and t.fetched_at < ${graceFloor}`;
+    const held = sql`exists (
+      select 1 from ${_mailQueryMembers} m
+      where m.account_id = t.account_id and m.thread_id = t.thread_id)`;
+    /** The ids this process keeps now: in use, or with a triage op pending. */
+    const kept = () => [
+      ...new Set([
+        ...[...inUse.keys()]
+          .filter((k) => k.startsWith(`${accountId}\0`))
+          .map((k) => k.slice(accountId.length + 1)),
+        ...pendingOps.keys(),
+      ]),
+    ];
+    /** The least recently used evictable threads a query holds (or none holds). */
+    const pick = async (byHeld: boolean) => {
+      const keep = kept();
+      return (
+        await executeRows(db, {
+          row: z.object({ thread_id: z.string() }),
+          query: sql`
+            select t.thread_id from ${_mailThreads} t
+            where ${evictable} and ${byHeld ? held : sql`not ${held}`}
+              ${keep.length === 0 ? sql`` : sql`and t.thread_id not in ${idList(keep)}`}
+            order by t.last_used_at, t.thread_id collate "C"
+            limit ${Math.min(excess, SUMMARY_EVICT_BATCH)}`,
+        })
+      ).map((r) => r.thread_id);
+    };
+    /**
+     * Deletes those of `ids` no query holds now: one placed meanwhile (a
+     * fill of another query) stays, its membership whole. Answers how many went.
+     */
+    const deleteUnheld = (ids: string[]) =>
+      summaryGate.run(accountId, async () => {
+        // In use now (an operation registered it since the pick), or with
+        // a triage op on its way to the provider: kept.
+        const free = ids.filter(
+          (id) => !inUse.has(inUseKey(accountId, id)) && !pendingOps.has(id),
+        );
+        if (free.length === 0) return 0;
+        const gone = await db
+          .delete(_mailThreads)
+          .where(
+            and(
+              eq(_mailThreads.accountId, accountId),
+              inArray(_mailThreads.threadId, free),
+              lt(_mailThreads.lastUsedAt, graceFloor),
+              lt(_mailThreads.fetchedAt, graceFloor),
+              notExists(
+                db
+                  .select({ one: sql`1` })
+                  .from(_mailQueryMembers)
+                  .where(
+                    and(
+                      eq(_mailQueryMembers.accountId, _mailThreads.accountId),
+                      eq(_mailQueryMembers.threadId, _mailThreads.threadId),
+                    ),
+                  ),
+              ),
+            ),
+          )
+          .returning({ id: _mailThreads.threadId });
+        return gone.length;
+      });
+    // Threads no query holds: deleted outright.
+    while (excess > 0) {
+      const ids = await pick(false);
+      if (ids.length === 0) break;
+      const n = await deleteUnheld(ids);
+      excess -= n;
+      if (n === 0) break;
+    }
+    // Threads a query holds: its coverage cut back first, under its lock (a
+    // fill, re-list or catch-up of it may be moving its floor).
+    while (excess > 0) {
+      const victims = await pick(true);
+      if (victims.length === 0) return;
+      const queries = await db
+        .selectDistinct({ queryId: _mailQueryMembers.queryId })
+        .from(_mailQueryMembers)
+        .where(
+          and(
+            eq(_mailQueryMembers.accountId, accountId),
+            inArray(_mailQueryMembers.threadId, victims),
+          ),
+        );
+      for (const { queryId } of queries) {
+        await queryMutex.run(String(queryId), async () => {
+          // Read again under the lock (it may have waited on a fill): only
+          // victims still evictable — not used, fetched or taken in use
+          // meanwhile — at their places now.
+          const keep = new Set(kept());
+          const still = victims.filter((id) => !keep.has(id));
+          if (still.length === 0) return;
+          const [top] = await db
+            .select({ at: max(_mailQueryMembers.at) })
+            .from(_mailQueryMembers)
+            .innerJoin(
+              _mailThreads,
+              and(
+                eq(_mailThreads.accountId, _mailQueryMembers.accountId),
+                eq(_mailThreads.threadId, _mailQueryMembers.threadId),
+              ),
+            )
+            .where(
+              and(
+                eq(_mailQueryMembers.queryId, queryId),
+                inArray(_mailQueryMembers.threadId, still),
+                lt(_mailThreads.lastUsedAt, graceFloor),
+                lt(_mailThreads.fetchedAt, graceFloor),
+              ),
+            );
+          if (!top?.at) return;
+          const [q] = await db
+            .select({ floorAt: _mailQueries.floorAt })
+            .from(_mailQueries)
+            .where(eq(_mailQueries.queryId, queryId));
+          if (!q) return;
+          // Just above the latest victim: a member AT the floor is not
+          // claimed, and a fill lists from `floor` down (exclusive), so the
+          // floor must sit above the victim for the next fill to place it.
+          const cut = top.at.getTime() + 1;
+          const floor =
+            q.floorAt !== null && q.floorAt.getTime() > cut
+              ? q.floorAt
+              : new Date(cut);
+          await writeAtomically(db, [
+            db
+              .update(_mailQueries)
+              .set({ floorAt: floor, exhausted: false })
+              .where(eq(_mailQueries.queryId, queryId)),
+            db
+              .delete(_mailQueryMembers)
+              .where(
+                and(
+                  eq(_mailQueryMembers.queryId, queryId),
+                  lte(_mailQueryMembers.at, floor),
+                ),
+              ),
+          ]);
+        });
+      }
+      const n = await deleteUnheld(victims);
+      excess -= n;
+      if (n === 0) return;
+    }
+  }
+
+  const summaryEvictions = createKeyedCoalescer<string>({
+    name: "mail-cache-summary-cap",
+    run: (accountId) =>
+      background("summary cap", () => evictSummaries(accountId))(),
+  });
+
+  /**
+   * Re-reads `ids` from the provider: found upserted, gone deleted; a
+   * per-thread failure thrown. `hold`: the caller's operation, which keeps
+   * them from the summary cap until it ends.
+   */
   async function fetchSummaries(
     a: Account,
     ids: readonly ThreadId[],
     o: MailCallOptions,
+    hold: SummaryHold,
   ): Promise<Map<string, ThreadSummary>> {
     const out = new Map<string, ThreadSummary>();
     if (ids.length === 0) return out;
+    await hold.add(ids);
     const results = await a.provider.getThreads(ids, o);
     const gone: string[] = [];
     for (const r of results) {
@@ -700,8 +956,12 @@ export function createMailCache(deps: MailCacheDeps) {
     a: Account,
     hits: readonly { thread: ThreadId; message: string }[],
     o: MailCallOptions,
+    hold: SummaryHold,
   ): Promise<Map<string, ThreadSummary>> {
     const ids = [...new Set(hits.map((h) => h.thread))];
+    // Held before it is read: the summary cap never deletes one between this
+    // read and the membership the caller writes for it.
+    await hold.add(ids);
     const cached = new Map<string, ThreadSummary>();
     const rows = await db
       .select({
@@ -723,7 +983,7 @@ export function createMailCache(deps: MailCacheDeps) {
       const s = cached.get(h.thread);
       if (!s || !s.messages.some((m) => m.id === h.message)) need.add(h.thread);
     }
-    const fetched = await fetchSummaries(a, [...need], o);
+    const fetched = await fetchSummaries(a, [...need], o, hold);
     for (const id of need) {
       const s = fetched.get(id);
       if (s) cached.set(id, s);
@@ -745,6 +1005,16 @@ export function createMailCache(deps: MailCacheDeps) {
     queryId: number,
     missingOf: (qr: QueryRow) => Promise<number>,
     o: MailCallOptions,
+  ): Promise<QueryRow> {
+    return holding(a.id, (hold) => fillHeld(a, queryId, missingOf, o, hold));
+  }
+
+  async function fillHeld(
+    a: Account,
+    queryId: number,
+    missingOf: (qr: QueryRow) => Promise<number>,
+    o: MailCallOptions,
+    hold: SummaryHold,
   ): Promise<QueryRow> {
     const slack = a.definition.capabilities.listOrderSlackMs;
     let qr = await queryById(queryId);
@@ -785,7 +1055,7 @@ export function createMailCache(deps: MailCacheDeps) {
         batch.push(h);
       }
       pending = pending.slice(batch.length);
-      const summaries = await summariesFor(a, batch, o);
+      const summaries = await summariesFor(a, batch, o, hold);
       let floor = qr.floorAt?.getTime() ?? Infinity;
       const placed = new Map<string, number>();
       for (const h of batch) {
@@ -845,7 +1115,11 @@ export function createMailCache(deps: MailCacheDeps) {
    * triage op's re-check moves members without touching those, so a thread
    * with an op still pending keeps its membership as it stands.
    */
-  async function relist(a: Account, queryId: number) {
+  function relist(a: Account, queryId: number): Promise<void> {
+    return holding(a.id, (hold) => relistHeld(a, queryId, hold));
+  }
+
+  async function relistHeld(a: Account, queryId: number, hold: SummaryHold) {
     const [before] = await db
       .select()
       .from(_mailQueries)
@@ -870,7 +1144,7 @@ export function createMailCache(deps: MailCacheDeps) {
       let i = 0;
       for (; i < page.hits.length && floor > oldFloor; i += 25) {
         const batch = page.hits.slice(i, i + 25);
-        const summaries = await summariesFor(a, batch, bg);
+        const summaries = await summariesFor(a, batch, bg, hold);
         for (const h of batch) {
           const m = summaries
             .get(h.thread)
@@ -974,7 +1248,14 @@ export function createMailCache(deps: MailCacheDeps) {
    * mailbox relist included — so a step failing mid-way re-reads that page;
    * the threads already moved are notified whatever happens after.
    */
-  async function catchUp(accountId: string): Promise<boolean> {
+  function catchUp(accountId: string): Promise<boolean> {
+    return holding(accountId, (hold) => catchUpHeld(accountId, hold));
+  }
+
+  async function catchUpHeld(
+    accountId: string,
+    hold: SummaryHold,
+  ): Promise<boolean> {
     const a = await account();
     if (a.id !== accountId) return false;
     let cursor = a.cursor;
@@ -1006,7 +1287,12 @@ export function createMailCache(deps: MailCacheDeps) {
         }
         const ids = changes.threads;
         if (ids.length > 0) {
-          await applyThreadChanges({ ...a, cursor: changes.next }, ids, cursor);
+          await applyThreadChanges(
+            { ...a, cursor: changes.next },
+            ids,
+            cursor,
+            hold,
+          );
           for (const id of ids) moved.add(id);
         } else {
           // Nothing moved: every query verified at the old cursor stays so.
@@ -1048,6 +1334,7 @@ export function createMailCache(deps: MailCacheDeps) {
     a: Account,
     ids: readonly ThreadId[],
     from: ChangeCursor,
+    hold: SummaryHold,
   ) {
     const cachedRows = await db
       .select({ threadId: _mailThreads.threadId })
@@ -1088,7 +1375,7 @@ export function createMailCache(deps: MailCacheDeps) {
       else toRead = [...toRead, ...fresh];
     }
     // A thread gone at the provider is deleted here, its memberships with it.
-    const summaries = await fetchSummaries(a, toRead, bg);
+    const summaries = await fetchSummaries(a, toRead, bg, hold);
     // Each query re-checked under its own lock (a fill or re-list of it may
     // be moving its floor), its row read again inside. Only a query verified
     // exactly at `from` stays verified, at `a.cursor`: one that missed an
@@ -1251,7 +1538,9 @@ export function createMailCache(deps: MailCacheDeps) {
     a: Account,
     id: string,
     o: MailCallOptions,
+    hold: SummaryHold,
   ): Promise<ThreadSummary | null> {
+    await hold.add([id]);
     const [r] = await db
       .select({ summary: _mailThreads.summary, stale: _mailThreads.stale })
       .from(_mailThreads)
@@ -1260,7 +1549,7 @@ export function createMailCache(deps: MailCacheDeps) {
       );
     if (r && !r.stale) return loadSummary(r.summary);
     try {
-      const fetched = await fetchSummaries(a, [toThreadId(id)], o);
+      const fetched = await fetchSummaries(a, [toThreadId(id)], o, hold);
       return fetched.get(id) ?? null;
     } catch (err) {
       // Offline, a summary not known current still answers (a cached
@@ -1286,8 +1575,19 @@ export function createMailCache(deps: MailCacheDeps) {
   ): Promise<MailThreadRead | null> {
     // Keyed by priority too: an open never waits on a prefetch's
     // background-priority fetch of the same thread.
-    return contentFlights.run(`${a.id}\0${id}\0${o.priority}`, async () => {
-      let summary = await currentSummary(a, id, o);
+    return contentFlights.run(`${a.id}\0${id}\0${o.priority}`, () =>
+      holding(a.id, (hold) => fetchBodyHeld(a, id, o, hold)),
+    );
+  }
+
+  async function fetchBodyHeld(
+    a: Account,
+    id: string,
+    o: MailCallOptions,
+    hold: SummaryHold,
+  ): Promise<MailThreadRead | null> {
+    {
+      let summary = await currentSummary(a, id, o, hold);
       if (summary === null) return null;
       const r = await a.provider.getThreadContent(toThreadId(id), o);
       if (r.kind === "gone") {
@@ -1296,7 +1596,7 @@ export function createMailCache(deps: MailCacheDeps) {
       }
       const ids = r.content.messages.map((m) => m.id as string);
       if (!bodyAnswers(ids, summary)) {
-        const fresh = await fetchSummaries(a, [toThreadId(id)], o);
+        const fresh = await fetchSummaries(a, [toThreadId(id)], o, hold);
         summary = fresh.get(id) ?? null;
         if (summary === null) return null;
         // The list showed the thread as it was: it re-reads it.
@@ -1334,7 +1634,7 @@ export function createMailCache(deps: MailCacheDeps) {
       }
       await evictBodies(a.id, id);
       return { summary, content: r.content };
-    });
+    }
   }
 
   /**
@@ -1396,7 +1696,23 @@ export function createMailCache(deps: MailCacheDeps) {
   ): Promise<{ a: Account; read: MailThreadRead }> {
     try {
       const a = await account();
-      const summary = await currentSummary(a, id, fg);
+      return await holding(a.id, async (hold) => ({
+        a,
+        read: await readHeld(a, id, open, hold),
+      }));
+    } catch (err) {
+      throw unavailable(err);
+    }
+  }
+
+  async function readHeld(
+    a: Account,
+    id: string,
+    open: boolean,
+    hold: SummaryHold,
+  ): Promise<MailThreadRead> {
+    {
+      const summary = await currentSummary(a, id, fg, hold);
       if (summary === null) {
         throw new MailThreadUnavailableError(
           "gone",
@@ -1450,14 +1766,9 @@ export function createMailCache(deps: MailCacheDeps) {
         ]);
       }
       return {
-        a,
-        read: {
-          summary: read.summary,
-          content: readerContent(read.content, read.summary),
-        },
+        summary: read.summary,
+        content: readerContent(read.content, read.summary),
       };
-    } catch (err) {
-      throw unavailable(err);
     }
   }
 
@@ -1680,16 +1991,30 @@ export function createMailCache(deps: MailCacheDeps) {
     }
     if (compiled.kind === "nothing") return [];
     const qr0 = await queryRow(a, compiled.providerQuery, canonical);
-    const qr = await queryMutex.run(
+    // Answered under the query's lock too: the coverage it reads is the
+    // coverage the fill left (the summary cap cuts coverage under this lock).
+    const { qr, rows } = await queryMutex.run(
       String(qr0.queryId),
       async () => {
-        const current = await queryById(qr0.queryId);
+        const covered = await queryAnswered(qr0.queryId);
+        return { qr: covered, rows: await answer(a, covered, w) };
+      },
+      signal === undefined ? undefined : { signal },
+    );
+    catchUps.trigger(a.id);
+    prefetches.trigger(a.id);
+    if (qr.verifiedCursor !== a.cursor) relists.trigger(qr.queryId);
+    return rows;
+
+    /** The query's coverage once it answers `w` (filled from the provider if it did not). */
+    async function queryAnswered(queryId: number): Promise<QueryRow> {
+      const current = await queryById(queryId);
         if ((await missing(current, w)) === 0) return current;
         // Left while it read the coverage: nothing to fill for.
         signal?.throwIfAborted();
         const uncovered = current.floorAt === null && !current.exhausted;
         const filled = await orRefuse("this view", () =>
-          fill(a, qr0.queryId, (q) => missing(q, w), { ...fg, signal }),
+        fill(a, queryId, (q) => missing(q, w), { ...fg, signal }),
         );
         if (!uncovered) return filled;
         // Listed from the head just now: the provider's answer as of (at least)
@@ -1697,16 +2022,9 @@ export function createMailCache(deps: MailCacheDeps) {
         await db
           .update(_mailQueries)
           .set({ verifiedCursor: a.cursor })
-          .where(eq(_mailQueries.queryId, qr0.queryId));
-        return queryById(qr0.queryId);
-      },
-      signal === undefined ? undefined : { signal },
-    );
-    const rows = await answer(a, qr, w);
-    catchUps.trigger(a.id);
-    prefetches.trigger(a.id);
-    if (qr.verifiedCursor !== a.cursor) relists.trigger(qr.queryId);
-    return rows;
+        .where(eq(_mailQueries.queryId, queryId));
+      return queryById(queryId);
+    }
   }
 
   /**
@@ -1865,6 +2183,20 @@ export function createMailCache(deps: MailCacheDeps) {
     op: MailThreadOp,
   ): Promise<MailOpUndo[]> {
     const a = await account();
+    // Held for the whole op (read, predicted, then pending — which the
+    // summary cap skips too): the cap never deletes a thread it acts on.
+    return holding(a.id, async (hold) => {
+      await hold.add(ids);
+      return applyHeld(a, ids, op, hold);
+    });
+  }
+
+  async function applyHeld(
+    a: Account,
+    ids: readonly string[],
+    op: MailThreadOp,
+    hold: SummaryHold,
+  ): Promise<MailOpUndo[]> {
     const cachedIds = new Set(
       (
         await db
@@ -1880,7 +2212,7 @@ export function createMailCache(deps: MailCacheDeps) {
     );
     const missing = ids.filter((id) => !cachedIds.has(id)).map(toThreadId);
     if (missing.length > 0) {
-      await orRefuse("the threads", () => fetchSummaries(a, missing, fg));
+      await orRefuse("the threads", () => fetchSummaries(a, missing, fg, hold));
     }
     // Pending from here until the provider holds it: every summary the
     // cache writes for these threads meanwhile (a sync step, a fill) has the
@@ -2311,6 +2643,8 @@ export function createMailCache(deps: MailCacheDeps) {
       await catchUps.settled(a.id);
     },
     relistSettled: (queryId: number) => relists.settled(queryId),
+    /** Test seam: one summary-cap sweep, run now. */
+    enforceSummaryCap: async () => summaryEvictions.run((await account()).id),
     prefetchSettled: async () => {
       const a = await account();
       await prefetches.settled(a.id);

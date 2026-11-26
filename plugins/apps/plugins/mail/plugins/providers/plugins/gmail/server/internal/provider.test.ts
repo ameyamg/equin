@@ -76,7 +76,7 @@ function batch(req: Req, route: (r: Req) => Response): Response {
 
 function gmail(
   route: (r: Req) => Response | undefined,
-  o: { refusedToken?: boolean } = {},
+  o: { refusedToken?: boolean; accountName?: string } = {},
 ) {
   const sent: Req[] = [];
   const answer = (r: Req): Response => {
@@ -110,7 +110,12 @@ function gmail(
     fetch,
     retry: { attempts: 1 },
   });
-  return { provider: createGmailMailProvider(client), sent };
+  return {
+    provider: createGmailMailProvider(client, {
+      name: async () => o.accountName ?? null,
+    }),
+    sent,
+  };
 }
 
 const ME = "/gmail/v1/users/me";
@@ -745,7 +750,7 @@ describe("Gmail provider: writes", () => {
       },
       retry: { attempts: 1 },
     });
-    const e = await createGmailMailProvider(client)
+    const e = await createGmailMailProvider(client, { name: async () => null })
       .send({
         mime: mime("<s3@x.test>"),
         threadId: null,
@@ -941,7 +946,7 @@ describe("Gmail provider: failures in the contract's words", () => {
       fetch: () => Promise.reject(new TypeError("fetch failed")),
       retry: { attempts: 1 },
     });
-    const e = await createGmailMailProvider(client)
+    const e = await createGmailMailProvider(client, { name: async () => null })
       .currentCursor()
       .catch((x: unknown) => x);
     expect(e).toBeInstanceOf(MailUnreachableError);
@@ -955,5 +960,68 @@ describe("Gmail provider: failures in the contract's words", () => {
     const e = await g.provider.currentCursor().catch((x: unknown) => x);
     expect(e).toBeInstanceOf(MailNotConnectedError);
     expect((e as MailNotConnectedError).needsConsent).toBe(true);
+  });
+});
+
+describe("Gmail provider: the send-as identity", () => {
+  const sendAs = (list: unknown[]) => (r: Req) =>
+    r.method === "GET" && r.path === "/gmail/v1/users/me/settings/sendAs"
+      ? json(200, { sendAs: list })
+      : undefined;
+
+  test("the address's own identity (not the default alias): its own name, its HTML signature; an unknown address is loud", async () => {
+    const { provider } = gmail(
+      sendAs([
+        { sendAsEmail: "me@x.test", isPrimary: true, displayName: "" },
+        {
+          sendAsEmail: "alias@x.test",
+          isDefault: true,
+          displayName: " Mia M. ",
+          signature: "<b>Mia</b>",
+        },
+      ]),
+      { accountName: "Mia Moreau" },
+    );
+    expect(await provider.sendIdentity("Alias@x.test")).toEqual({
+      address: "alias@x.test",
+      displayName: "Mia M.",
+      signature: { html: "<b>Mia</b>" },
+    });
+    // The primary, its name left empty: the Google account's.
+    expect(await provider.sendIdentity("me@x.test")).toEqual({
+      address: "me@x.test",
+      displayName: "Mia Moreau",
+      signature: null,
+    });
+    expect(provider.sendIdentity("other@x.test")).rejects.toThrow(
+      /no send-as identity for other@x\.test/,
+    );
+  });
+
+  test("a primary address with no name of its own goes out under the Google account's name; nothing set: none", async () => {
+    const named = gmail(
+      sendAs([{ sendAsEmail: "me@x.test", isPrimary: true, isDefault: true }]),
+      { accountName: "Mia Moreau" },
+    );
+    expect(await named.provider.sendIdentity("me@x.test")).toEqual({
+      address: "me@x.test",
+      displayName: "Mia Moreau",
+      signature: null,
+    });
+    const bare = gmail(
+      sendAs([
+        {
+          sendAsEmail: "me@x.test",
+          isPrimary: true,
+          isDefault: true,
+          signature: " ",
+        },
+      ]),
+    );
+    expect(await bare.provider.sendIdentity("me@x.test")).toEqual({
+      address: "me@x.test",
+      displayName: null,
+      signature: null,
+    });
   });
 });

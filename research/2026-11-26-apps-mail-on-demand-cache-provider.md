@@ -679,8 +679,10 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
    - Bodies under a byte budget (least recently opened out first) and prefetch
      (25 a run, background priority: the open thread's ±3 neighbours, the Inbox's
      unread first page, the top 25 of each view read in the last day), both in
-     Settings → Config (`mail-cache`). No cap on the summary count yet (~50k in
-     §3): summaries go by retention only.
+     Settings → Config (`mail-cache`). Summaries are capped too (50k,
+     `mail-cache` › Conversations kept in the list cache): least recently used
+     out, threads no covered query holds first, a held one's query coverage cut
+     back above it (`mail/cache` CLAUDE.md, Summary cap).
    - Rendering: each HTML body its own `InlineFrame fit` (opaque origin, as tall
      as the message — a nonce'd height reporter is its only script) under the mail
      policy (images only from this server's routes or `data:`; no stylesheet, font,

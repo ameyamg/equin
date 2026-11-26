@@ -207,6 +207,7 @@ The cache and e2e tests run on it, never on Gmail.
     - `OutgoingMessage`
     - `Participant`
     - `SavedDraft`
+    - `SendIdentity`
     - `SentMessage`
     - `ThreadContent`
     - `ThreadContentResult`

@@ -99,6 +99,23 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   should.
 - **Eviction** (`server/internal/retention.ts`): queries unread 30 days
   (searches: 1), threads no query holds and unused 30 days.
+- **Summary cap** (engine, `evictSummaries`): Settings → Config `mail-cache` ›
+  Conversations kept in the list cache (50k, the user's call;
+  `MAIL_SUMMARY_CAP` without config), swept after every summary write
+  (coalesced per account). Least recently used (`last_used_at`) first:
+  threads no query holds, then threads a query holds — each such query's
+  coverage cut back above them (floor raised just past their latest `at`,
+  its members at or below dropped, no longer exhausted), so a covered range
+  never misses a member and a window below the new floor fills again. Never
+  a thread in use: every operation that reads a summary and then writes a
+  row referencing it (a fill or re-list's memberships, a catch-up, a body, a
+  triage op) holds its ids first (`holding` / `SummaryHold`, a required
+  parameter of `summariesFor` / `fetchSummaries` / `currentSummary`), through
+  the gate the sweep deletes in; nor one with a pending op, fetched in the
+  last 10 minutes or shown in the last 10 (`last_used_at` is written at most
+  hourly, so the grace is 70 minutes of it). A window is answered under its
+  query's lock, so a cut never lands between its fill and its rows. Open
+  windows are not notified.
 
 ## How changes arrive (`server/internal/sync.ts`, design §5)
 
@@ -252,7 +269,6 @@ DataView's one-rule Inbox filter encodes to the preloaded tuple.
 
 ## Not yet (later steps of the design)
 
-- No cap on the number of cached summaries yet (design: ~50k): threads go by retention (30 days unused, no query holding them).
 - No `preload: "boot"` (its boot tuple would be the unfiltered default
   window, on every app's boot): the Inbox is preloaded instead (above).
 
@@ -269,7 +285,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
 
 ## Plugin reference
 
-- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
+- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, conversations kept in the list cache, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, the eviction sweeps and the summary cap (least recently used out, threads no query holds first, a held one's query coverage cut back above it) — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "mail-cache"

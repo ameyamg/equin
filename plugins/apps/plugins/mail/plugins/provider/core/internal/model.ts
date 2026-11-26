@@ -168,6 +168,17 @@ export type SavedDraft = {
 
 export type SentMessage = { messageId: MessageId; threadId: ThreadId };
 
+/**
+ * Who an address writes as: its send-as identity at the provider — the
+ * address, the display name its mail goes out under (null: none set) and the
+ * signature it adds (null: none), as the provider holds it.
+ */
+export type SendIdentity = {
+  address: string;
+  displayName: string | null;
+  signature: { html: string } | { text: string } | null;
+};
+
 export type FoundDraft =
   { kind: "found"; draftId: DraftId } | { kind: "absent" };
 

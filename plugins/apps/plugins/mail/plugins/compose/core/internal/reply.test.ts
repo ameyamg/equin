@@ -4,7 +4,14 @@ import {
   type MessageContent,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { formatAddressList, parseAddressList } from "./addresses";
-import { messageIdsIn, plainTextOf, prefixedSubject, startFrom } from "./reply";
+import {
+  messageIdsIn,
+  messageText,
+  plainTextOf,
+  prefixedSubject,
+  signatureText,
+  startFrom,
+} from "./reply";
 
 const ME = "me@example.com";
 
@@ -198,4 +205,33 @@ test("odd threading headers keep only their Message-IDs", () => {
   );
   expect(c.inReplyTo).toBe("<p2@x.com>");
   expect(c.references).toEqual(["<p1@x.com>", "<p0@x.com>", "<p2@x.com>"]);
+});
+
+describe("signature and message text", () => {
+  test("an HTML signature as plain text; empty is none", () => {
+    expect(
+      signatureText({ html: "<div>Mia <b>M.</b><br>Paris &amp; Lyon</div>" }),
+    ).toBe("Mia M.\nParis & Lyon");
+    expect(signatureText({ text: "Mia\r\nM." })).toBe("Mia\nM.");
+    expect(signatureText({ html: "<div><br></div>" })).toBeNull();
+    expect(signatureText(null)).toBeNull();
+  });
+
+  test("the body, then the signature under `-- `, then the quote", () => {
+    expect(messageText("Hi", null, null)).toBe("Hi");
+    expect(messageText("Hi\n\n", "Mia", null)).toBe("Hi\n\n-- \nMia\n");
+    expect(messageText("", "Mia", null)).toBe("-- \nMia\n");
+    expect(messageText("Hi", "Mia", "> q")).toBe("Hi\n\n-- \nMia\n\n> q\n");
+    expect(messageText("Hi", null, "> q")).toBe("Hi\n\n> q\n");
+    // Already signed (written in the provider's editor): not again, even
+    // when its signature rendered otherwise; a word of it in the body is no
+    // signature.
+    expect(messageText("Hi\n\n-- \nMia", "Mia", null)).toBe("Hi\n\n-- \nMia");
+    expect(messageText("Hi\n-- \nMia\u00a0M.", "Mia M.", null)).toBe(
+      "Hi\n-- \nMia\u00a0M.",
+    );
+    expect(messageText("Thanks Mia", "Mia", null)).toBe(
+      "Thanks Mia\n\n-- \nMia\n",
+    );
+  });
 });

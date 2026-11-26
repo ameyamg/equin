@@ -9,7 +9,8 @@ task 1), which gets the token from the parent plugin (`getGmailToken`).
 ## Public API
 
 - **`server`** — `createGmailClient({ accessToken, pacer, fetch?, retry? })`:
-  - account and labels: `getProfile`, `listLabels` (no counts), `getLabel` /
+  - account and labels: `getProfile`, `listSendAs` (the send-as identities:
+    display name, HTML signature, default), `listLabels` (no counts), `getLabel` /
     `getLabels` (batch; exact `threadsTotal` / `threadsUnread`),
     `createLabel` / `patchLabel` / `deleteLabel`;
   - threads: `listThreads` (ids with each thread's `historyId`),
@@ -166,6 +167,7 @@ that account. Two pacers over one account would each spend the whole budget.
     - `GmailMethod`
     - `GmailPriority`
     - `GmailProfile`
+    - `GmailSendAs`
     - `GmailSentMessage`
     - `GmailThread`
     - `GmailThreadLabels`
@@ -210,6 +212,8 @@ that account. Two pacers over one account would each spend the whole budget.
     - `MessageSchema`
     - `newBatchBoundary`
     - `ProfileSchema`
+    - `SendAsListSchema`
+    - `SendAsSchema`
     - `SentMessageSchema`
     - `ThreadLabelsSchema`
     - `ThreadListSchema`

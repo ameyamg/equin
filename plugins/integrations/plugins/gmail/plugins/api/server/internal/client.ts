@@ -15,6 +15,7 @@ import {
   MessageSchema,
   newBatchBoundary,
   ProfileSchema,
+  SendAsListSchema,
   SentMessageSchema,
   ThreadLabelsSchema,
   ThreadListSchema,
@@ -23,6 +24,7 @@ import {
   type GmailDraft,
   type GmailDraftRef,
   type GmailFormat,
+  type GmailSendAs,
   type GmailHistoryRecord,
   type GmailLabel,
   type GmailMessage,
@@ -170,6 +172,22 @@ export function createGmailClient(opts: GmailTransportOptions) {
         },
         o,
       );
+    },
+
+    /** The addresses mail can be sent from (`users.settings.sendAs.list`), the default among them. */
+    async listSendAs(o?: GmailCallOptions): Promise<GmailSendAs[]> {
+      const r = await t.call(
+        {
+          what: "settings.sendAs.list",
+          units: GMAIL_QUOTA["settings.sendAs.list"],
+          replay: "safe",
+          method: "GET",
+          path: `${ME}/settings/sendAs`,
+          schema: SendAsListSchema,
+        },
+        o,
+      );
+      return r.sendAs ?? [];
     },
 
     // — labels —

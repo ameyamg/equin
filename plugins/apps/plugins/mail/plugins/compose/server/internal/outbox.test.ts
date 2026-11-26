@@ -13,7 +13,10 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { createFakeMailProvider } from "@plugins/apps/plugins/mail/plugins/provider/server/testing";
+import {
+  createFakeMailProvider,
+  type FakeMailProviderOptions,
+} from "@plugins/apps/plugins/mail/plugins/provider/server/testing";
 import {
   MailUnreachableError,
   roleMailboxId,
@@ -44,8 +47,9 @@ beforeEach(async () => {
   await t.db.execute(sql`delete from mail_drafts`);
 });
 
-function harness() {
+function harness(o: Pick<FakeMailProviderOptions, "identity"> = {}) {
   const f = createFakeMailProvider({
+    ...o,
     account: { accountId: "acct", address: "me@x.test" },
     threads: [
       {
@@ -69,12 +73,25 @@ function harness() {
   const mirrors: string[] = [];
   const sends: { id: string; at: Date }[] = [];
   const files = new Map<string, Uint8Array>();
+  /** Every message handed to the provider (drafts saved, sends), as its bytes. */
+  const written: { method: "saveDraft" | "send"; mime: string }[] = [];
+  const provider: typeof f.provider = {
+    ...f.provider,
+    saveDraft: (m, existing, o) => {
+      written.push({ method: "saveDraft", mime: decodeMime(m.mime) });
+      return f.provider.saveDraft(m, existing, o);
+    },
+    send: (m, o) => {
+      written.push({ method: "send", mime: decodeMime(m.mime) });
+      return f.provider.send(m, o);
+    },
+  };
   const outbox = createOutbox({
     db: t.db,
     sender: async () => ({
       accountId: "acct",
       address: "me@x.test",
-      provider: f.provider,
+      provider,
     }),
     thread: async (id) => {
       const c = await f.provider.getThreadContent(threadId(id));
@@ -128,6 +145,7 @@ function harness() {
   return {
     f,
     outbox,
+    written,
     mirrors,
     sends,
     files,
@@ -141,6 +159,16 @@ function harness() {
       clock = new Date(clock.getTime() + ms);
     },
   };
+}
+
+/** A message's bytes as text, quoted-printable undone (enough to read a plain text message's header and body). */
+function decodeMime(bytes: Uint8Array): string {
+  return new TextDecoder()
+    .decode(bytes)
+    .replace(/=\r\n/g, "")
+    .replace(/=([0-9A-F]{2})/g, (_, h: string) =>
+      String.fromCharCode(parseInt(h, 16)),
+    );
 }
 
 const content = (over: Partial<DraftContent> = {}): DraftContent => ({
@@ -275,6 +303,66 @@ describe("reply", () => {
     );
     expect(thread.kind).toBe("found");
     expect((await h.row(id))!.sentThreadId).toBe("t1");
+  });
+});
+
+describe("the send-as identity", () => {
+  test("drafts and sends go out under its display name, signed, the signature above the quote", async () => {
+    const h = harness({
+      identity: {
+        displayName: "Mia Moreau",
+        signature: { html: "<div><b>Mia</b><br>Paris &amp; Lyon</div>" },
+      },
+    });
+    const id = newId();
+    const d = await h.outbox.start(id, {
+      kind: "reply",
+      threadId: "t1",
+      messageId: "m1",
+    });
+    // The editor holds only what the person writes: an untouched reply is empty.
+    expect(d.content.body).toBe("");
+    await h.outbox.save(id, { ...d.content, body: "Thanks!" });
+    await h.outbox.mirror(id);
+    await h.outbox.send(id, { ...d.content, body: "Thanks!" });
+    h.advance(10_000);
+    await h.due(id);
+    expect(h.written.map((w) => w.method)).toEqual(["saveDraft", "send"]);
+    for (const { mime } of h.written) {
+      expect(mime).toMatch(/^From: "?Mia Moreau"? <me@x\.test>\r$/m);
+      expect(mime).toContain(
+        "Thanks!\r\n\r\n-- \r\nMia\r\nParis & Lyon\r\n\r\nOn ",
+      );
+    }
+  });
+
+  test("a name or signature changed at the provider applies to the next message; none set: the bare address, unsigned", async () => {
+    const h = harness();
+    const id = newId();
+    await h.outbox.start(id, { kind: "new" });
+    await h.outbox.save(id, content());
+    await h.outbox.mirror(id);
+    expect(h.written[0]!.mime).toMatch(/^From: me@x\.test\r$/m);
+    expect(h.written[0]!.mime).not.toContain("-- ");
+    h.f.setIdentity({ displayName: "Mia", signature: { text: "Mia M." } });
+    await h.outbox.send(id, content());
+    h.advance(10_000);
+    await h.due(id);
+    expect(h.written[1]!.mime).toMatch(/^From: "?Mia"? <me@x\.test>\r$/m);
+    expect(h.written[1]!.mime).toContain("Hi Bob\r\n\r\n-- \r\nMia M.");
+  });
+
+  test("a body already signed (a draft written in the provider's editor) is not signed twice", async () => {
+    const h = harness({
+      identity: { displayName: null, signature: { text: "Mia M." } },
+    });
+    const id = newId();
+    await h.outbox.start(id, { kind: "new" });
+    await h.outbox.send(id, content({ body: "Hi Bob\n\n-- \nMia Moreau" }));
+    h.advance(10_000);
+    await h.due(id);
+    expect(h.written[0]!.mime.split("-- ")).toHaveLength(2);
+    expect(h.written[0]!.mime).not.toContain("Mia M.");
   });
 });
 

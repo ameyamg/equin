@@ -10,6 +10,9 @@ import type {
 /** The default byte budget of the stored bodies (the user's call: 500 MB). */
 export const MAIL_BODY_BUDGET_BYTES = 500 * 1024 * 1024;
 
+/** The default cap on cached thread summaries (the user's call, design §3: about 50k, ~50 MB). */
+export const MAIL_SUMMARY_CAP = 50_000;
+
 /**
  * Whether content holding `messageIds` answers `summary`: exactly the same
  * messages, in order. A flag or a label moves the thread's version (Gmail's

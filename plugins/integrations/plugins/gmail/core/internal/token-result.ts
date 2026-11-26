@@ -10,5 +10,9 @@ export type GmailTokenResult =
       /** Connected Google account email (from the OAuth identity), available
        *  without a Gmail API call. `null` if the connection surfaced none. */
       email: string | null;
+      /** The Google account's own name (the OAuth identity's), what Gmail
+       *  writes as when the primary address sets no display name. `null` if
+       *  the connection surfaced none. */
+      name: string | null;
     }
   | { ok: false; needsConsent: boolean; message: string };

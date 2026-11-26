@@ -2,6 +2,7 @@ import { decodeHtmlText } from "@plugins/infra/plugins/html-decode/core";
 import type {
   MessageContent,
   Participant,
+  SendIdentity,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { formatAddressList } from "./addresses";
 import type { DraftAttachment, DraftKind } from "./draft";
@@ -26,8 +27,13 @@ export type DraftStartContent = {
 export function plainTextOf(m: Pick<MessageContent, "text" | "html">): string {
   if (m.text !== null) return m.text.content.replace(/\r\n?/g, "\n");
   if (m.html === null) return "";
+  return htmlToPlainText(m.html.content);
+}
+
+/** HTML as plain text: the tags taken out, line breaks kept at `<br>` and block ends. */
+export function htmlToPlainText(html: string): string {
   return decodeHtmlText(
-    m.html.content
+    html
       .replace(/<(style|script|head|title)\b[\s\S]*?<\/\1\s*>/gi, "")
       .replace(/<!--[\s\S]*?-->/g, "")
       .replace(/<br\s*\/?>/gi, "\n")
@@ -198,4 +204,37 @@ export function startFrom(
       date: source.date.toISOString(),
     },
   };
+}
+
+/** A send-as identity's signature as plain text (null: none, or nothing left once the tags are out). */
+export function signatureText(
+  signature: SendIdentity["signature"],
+): string | null {
+  if (signature === null) return null;
+  const text = (
+    "text" in signature
+      ? signature.text.replace(/\r\n?/g, "\n")
+      : htmlToPlainText(signature.html)
+  ).trim();
+  return text === "" ? null : text;
+}
+
+/**
+ * The text a message goes out with: the body as written, then the signature
+ * under the `-- ` delimiter (RFC 3676) — unless the body is signed already (a
+ * line that is the delimiter: a draft written in the provider's own editor
+ * and adopted, whatever its signature then rendered as) — then the quote a
+ * reply answers. Nothing added: the body exactly as written.
+ */
+export function messageText(
+  body: string,
+  signature: string | null,
+  quote: string | null,
+): string {
+  const signs = signature !== null && !/(^|\n)-- \r?(\n|$)/.test(body);
+  if (!signs && quote === null) return body;
+  let text = body.replace(/\s+$/, "");
+  if (signs)
+    text = text === "" ? `-- \n${signature}` : `${text}\n\n-- \n${signature}`;
+  return quote === null ? `${text}\n` : `${text}\n\n${quote}\n`;
 }

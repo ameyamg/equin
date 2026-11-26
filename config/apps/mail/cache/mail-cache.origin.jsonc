@@ -1,7 +1,9 @@
-// @hash 0b18a5ffc65b
+// @hash dee1fc478d2c
 {
   // How much opened and prefetched mail content the Mail cache keeps. Past it, the bodies opened longest ago are dropped; one dropped is fetched again from the mail provider when it is next opened.
   "bodyBudgetMb": 500,
+  // How many conversations' list entries (sender, subject, snippet, labels; about 1 KB each) the Mail cache keeps. Past it, the ones used longest ago are dropped — first those no cached view holds, then the oldest a view holds, that view's cached part cut back above them; a view reaching them again reads them from the mail provider. Conversations shown or fetched in the last 10 minutes, or in use, are always kept.
+  "summaryCap": 50000,
   // How many threads' content Mail fetches ahead of you each time a view is read, a thread opened or new mail arrives — the open thread's neighbours first, then the Inbox's unread, then the top of each view read today. Fetched at the provider's background priority, in what its per-minute quota leaves after a reserve for the views you open (Gmail: about a third); 0 turns prefetch off.
   "prefetchPerRun": 25
 }

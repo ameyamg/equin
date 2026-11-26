@@ -38,6 +38,7 @@ export {
   type OutgoingMessage,
   type Participant,
   type SavedDraft,
+  type SendIdentity,
   type SentMessage,
   type ThreadContent,
   type ThreadContentResult,

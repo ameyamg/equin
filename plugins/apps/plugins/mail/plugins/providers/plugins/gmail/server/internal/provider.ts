@@ -167,7 +167,16 @@ const isNotFound = (err: unknown) =>
  * The contract over one account's Gmail client. Stateless: the client holds
  * the account's pacer; the definition holds the one client per account.
  */
-export function createGmailMailProvider(client: GmailClient): MailProvider {
+export function createGmailMailProvider(
+  client: GmailClient,
+  account: {
+    /**
+     * The Google account's own name (null: none known): what Gmail writes
+     * the primary address as when it sets no display name of its own.
+     */
+    name: () => Promise<string | null>;
+  },
+): MailProvider {
   /**
    * One label change on every target's messages: `messages.batchModify`, up
    * to 1,000 messages a call (50 units — a per-thread `threads.modify` costs
@@ -805,6 +814,34 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
               : null;
           });
         }
+      }),
+
+    sendIdentity: (address, o) =>
+      neutral(`read the send-as identity of ${address}`, async () => {
+        const all = await client.listSendAs(gmailOpts(o));
+        const d = all.find(
+          (x) => x.sendAsEmail.toLowerCase() === address.toLowerCase(),
+        );
+        if (!d) {
+          throw new Error(
+            `mail: Gmail has no send-as identity for ${address} (it answered ${all.map((x) => x.sendAsEmail).join(", ") || "none"})`,
+          );
+        }
+        const own = d.displayName?.trim() ?? "";
+        // Gmail's rule: a primary address with no display name of its own
+        // goes out under the Google account's name.
+        const name =
+          own !== ""
+            ? own
+            : d.isPrimary === true
+              ? ((await account.name())?.trim() ?? "")
+              : "";
+        const signature = d.signature?.trim() ?? "";
+        return {
+          address: d.sendAsEmail,
+          displayName: name === "" ? null : name,
+          signature: signature === "" ? null : { html: signature },
+        };
       }),
   } satisfies MailProvider;
 }

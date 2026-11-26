@@ -7152,7 +7152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/keyboard-party/isle-building`
     - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), the cache, the shell and the threads list.
       - Plugins:
-        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
+        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, conversations kept in the list cache, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, the eviction sweeps and the summary cap (least recently used out, threads no query holds first, a held one's query coverage cut back above it) — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
           - Web:
             - Contributes:
               - `ConfigV2.WebRegister` "mail-cache"
@@ -7401,6 +7401,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DraftStartSchema`
               - `EMPTY_DRAFT_CONTENT`
               - `formatAddressList`
+              - `htmlToPlainText`
               - `isDraftEmpty`
               - `MAIL_ATTACHMENTS_MAX_BYTES`
               - `MAIL_DRAFT_ATTACHMENTS_MAX`
@@ -7412,12 +7413,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailDraftIdKind`
               - `MailDraftSchema`
               - `messageIdsIn`
+              - `messageText`
               - `parseAddressList`
               - `plainTextOf`
               - `prefixedSubject`
               - `quoteOf`
               - `saveMailDraft`
               - `sendMailDraft`
+              - `signatureText`
               - `startFrom`
               - `startMailDraft`
               - `undoSendMailDraft`
@@ -7492,6 +7495,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OutgoingMessage`
               - `Participant`
               - `SavedDraft`
+              - `SendIdentity`
               - `SentMessage`
               - `ThreadContent`
               - `ThreadContentResult`
@@ -44276,6 +44280,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GmailMethod`
               - `GmailPriority`
               - `GmailProfile`
+              - `GmailSendAs`
               - `GmailSentMessage`
               - `GmailThread`
               - `GmailThreadLabels`
@@ -44320,6 +44325,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MessageSchema`
               - `newBatchBoundary`
               - `ProfileSchema`
+              - `SendAsListSchema`
+              - `SendAsSchema`
               - `SentMessageSchema`
               - `ThreadLabelsSchema`
               - `ThreadListSchema`
