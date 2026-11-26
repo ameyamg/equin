@@ -47,7 +47,7 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
       .string()
       .optional()
       .describe(
-        "Target database: a worktree name, or \"equin\" for main. Defaults to the conversation's own worktree DB (main's for a session equin did not launch).",
+        'Target database: a worktree name, "<composition>.<worktree>" for a composition build, or "equin" for main. Defaults to the conversation\'s own worktree DB (main\'s for a session equin did not launch).',
       ),
   },
   async handler({ sql, database }, { conversationId }) {
@@ -63,9 +63,11 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
       dbName = basename(conv.worktreePath);
     }
 
-    if (!/^[a-zA-Z0-9_-]+$/.test(dbName)) {
-      throw new Error(`Unsafe database name: "${dbName}"`);
-    }
+    // `databaseExists` refuses a name that is not a namespace (a worktree,
+    // main, or a dotted `<composition>.<worktree>`) or an internal database,
+    // before the name reaches a query or a connection string. That one check
+    // is the authority: a second character class here drifted from it and
+    // refused composition builds' databases.
     if (!(await databaseExists(dbName))) {
       throw new Error(`Database not found: "${dbName}"`);
     }
