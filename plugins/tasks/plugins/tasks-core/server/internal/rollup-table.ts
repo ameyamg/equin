@@ -54,7 +54,8 @@ export const _attemptConvAgg = pgTable(ATTEMPT_CONV_AGG_TABLE, {
 export const _attemptPushAgg = pgTable(ATTEMPT_PUSH_AGG_TABLE, {
   attemptId: text("attempt_id").primaryKey(),
   hasPush: boolean("has_push").notNull(),
-  // Some landing is a recorded DELIVERY (a scratch workspace's), not a push.
+  // Some hand-over is a recorded DELIVERY (a scratch workspace's, or a finished
+  // run with nothing to land — `recordDelivery`), not a push.
   // A delivery completes the attempt once no agent is working on it, open
   // conversation or not (derived.ts).
   hasDelivery: boolean("has_delivery").notNull(),

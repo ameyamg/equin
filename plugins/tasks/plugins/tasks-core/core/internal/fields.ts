@@ -113,8 +113,15 @@ export const pushFields = {
   createdAt: dateField(),
 } satisfies FieldsRecord;
 
-// An attempt's DELIVERY that is not a push: a workspace with no git (a scratch
-// dir) records the moment its agent handed its work over. One row per attempt
+// Why an attempt recorded a delivery instead of a push. `scratch`: a workspace
+// with no git handed its work over — its landed fact, permanent.
+// `nothing-to-land`: the agent closed its run as finished (exit_clean) with a
+// measured `none` git standing — finished non-code work, which lasts only until
+// a new run begins on the task (the tasks.finished-run trigger deletes it).
+export const DELIVERY_BASES = ["scratch", "nothing-to-land"] as const;
+export type DeliveryBasis = (typeof DELIVERY_BASES)[number];
+
+// An attempt's DELIVERY that is not a push (see `DELIVERY_BASES`). One row per attempt
 // (the first delivery's instant; a later one replaces the summary). With the
 // pushes it is the "landed" fact `attempts_v` reads (rollup-spec.ts) — a fact,
 // never a claimed status (I6).
@@ -123,6 +130,7 @@ export const attemptDeliveryFields = {
   // Soft attribution to the conversation that delivered (no FK), like pushes.
   conversationId: textField(),
   summary: textField(),
+  basis: enumTextField(DELIVERY_BASES),
   deliveredAt: dateField(),
 } satisfies FieldsRecord;
 

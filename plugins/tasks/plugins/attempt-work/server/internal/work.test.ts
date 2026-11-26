@@ -91,7 +91,7 @@ describe("attempt facts", () => {
       attempt: [scratch],
       convIds: [],
       pushIds: [],
-      delivery: [{ attemptId: ATTEMPT }],
+      delivery: [{ basis: "scratch" }],
     });
     expect(contextFrom(ATTEMPT, delivered)).toEqual({
       kind: "no-git",
@@ -104,6 +104,24 @@ describe("attempt facts", () => {
       delivery: [],
     });
     expect(contextFrom(ATTEMPT, none)).toEqual({
+      kind: "no-git",
+      delivered: false,
+    });
+  });
+
+  test("a finished run with nothing to land is not landed work", () => {
+    const scratch = {
+      ...followedAttempt,
+      workspace: { kind: "scratch" as const },
+      worktreePath: null,
+    };
+    const finished = attemptFactsFrom({
+      attempt: [scratch],
+      convIds: [],
+      pushIds: [],
+      delivery: [{ basis: "nothing-to-land" }],
+    });
+    expect(contextFrom(ATTEMPT, finished)).toEqual({
       kind: "no-git",
       delivered: false,
     });

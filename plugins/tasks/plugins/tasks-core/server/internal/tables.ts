@@ -191,6 +191,8 @@ const attemptDeliveriesEntity = defineEntity(attemptDeliveriesEntityRef, {
         onDelete: "cascade",
       },
     },
+    // Rows written before the basis existed were all scratch deliveries.
+    basis: { default: "scratch" },
     deliveredAt: { default: defaultNow() },
   },
 });

@@ -435,7 +435,9 @@ export const attemptPushIds = liveCollection("attempt-push-ids", {
 // summary rewrite reaches no follower.
 export const attemptDeliveries = liveCollection("attempt-deliveries", {
   from: attemptDeliveriesEntityRef,
-  carry: { pick: ["attemptId"] },
+  // `basis` grew additively: only a `scratch` delivery is a landed fact
+  // (attempt-work's standing); a `nothing-to-land` one is a finished run.
+  carry: { pick: ["attemptId", "basis"] },
   baseExposures: false,
   id: "attemptId",
 });

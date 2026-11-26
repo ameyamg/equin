@@ -1,3 +1,3 @@
 export { dropAndExit } from "./endpoints";
-export { dropsTask } from "./drop-policy";
-export type { DropPolicy } from "./drop-policy";
+export { exitSettlement } from "./drop-policy";
+export type { ExitClose, ExitSettlement } from "./drop-policy";

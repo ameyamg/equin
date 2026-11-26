@@ -87,13 +87,15 @@ export function attemptFactsFrom(followed: {
   readonly attempt: readonly NonNullable<AttemptFacts["attempt"]>[];
   readonly convIds: readonly { readonly id: string }[];
   readonly pushIds: readonly unknown[];
-  readonly delivery: readonly unknown[];
+  readonly delivery: readonly { readonly basis: string }[];
 }): AttemptFacts {
   return {
     attempt: followed.attempt[0] ?? null,
     convIds: followed.convIds.map((c) => c.id),
     ledgerPushes: followed.pushIds.length,
-    delivered: followed.delivery.length > 0,
+    // Only a scratch delivery is landed work; a finished run with nothing to
+    // land (`nothing-to-land`) is not, so the standing stays `none`.
+    delivered: followed.delivery.some((d) => d.basis === "scratch"),
   };
 }
 

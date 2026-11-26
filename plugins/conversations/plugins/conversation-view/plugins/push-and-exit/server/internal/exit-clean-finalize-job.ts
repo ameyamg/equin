@@ -5,7 +5,7 @@ import {
   getConversation,
   markConversationClosed,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { dropTaskOnExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
+import { settleTaskOnExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -30,7 +30,7 @@ export const exitCleanFinalizeJob = defineJob({
   // seconds — and NOT `minutes`, despite FINALIZE_TIMEOUT_MS being 60s: that
   // number bounds a `ctx.waitFor`, which RETURNS from `run` and releases the
   // slot. The wait costs no hold at all. What this classifies is the resumed
-  // dispatch: `dropTaskOnExit` (git-measured attempt standing) plus one untimed
+  // dispatch: `settleTaskOnExit` (git-measured attempt standing) plus one untimed
   // agent stop, both bounded local operations.
   hold: "seconds",
   input: z.object({ conversationId: z.string() }),
@@ -41,25 +41,25 @@ export const exitCleanFinalizeJob = defineJob({
   run: async ({ input: { conversationId }, ctx }) => {
     await afterTurn(ctx, conversationId, { timeoutMs: FINALIZE_TIMEOUT_MS });
     await ctx.step("close-conversation", async () => {
-      // An agent that exits without landing any work should return its task to
-      // `dropped` rather than leaving it stranded as `attempted`. Stricter than
-      // the manual "Drop & Close" (which drops anything not yet in `main`): no
-      // human chose to drop here, so it never drops when the attempt's
-      // git-measured standing shows any work at stake (pending included) or
-      // cannot be measured at all. This is the path that used to drop the
-      // task of an agent that pushed and then called `exit_clean`, because the
-      // guard read the lagging pushes ledger.
+      // The agent closed its run as finished, so its task is settled, never
+      // dropped (no person chose to drop): nothing to land is finished
+      // non-code work — the attempt records a delivery and the task reads
+      // `done`; landed work already reads `done`; pending work (or a standing
+      // that cannot be measured) stays `attempted`. See drop-and-exit's
+      // `ExitClose`. It used to drop on nothing to land, which read every
+      // finished investigation, filing and design as abandoned
+      // (task-1795653352-zsoo64).
       const conversation = await getConversation(conversationId);
-      const dropped = conversation
-        ? await dropTaskOnExit(conversation, "only-if-no-work")
-        : false;
+      const settled = conversation
+        ? await settleTaskOnExit(conversation, "exit-clean")
+        : "kept";
 
       await markConversationClosed(conversationId);
       await deleteConversation(conversationId);
       // Server-side terminus of the clean push-and-exit flow: persist the
       // close notification exactly once (the client used to fire this toast
       // from a per-tab effect, duplicating the row per open tab). The copy
-      // reflects whether work actually landed.
+      // says when the run finished with nothing to land.
       //
       // TODO(§4, research/2026-10-25-global-notifications-in-user-terms.md):
       // both are sent only while the user is not watching the conversation
@@ -69,26 +69,26 @@ export const exitCleanFinalizeJob = defineJob({
         type: "conversation",
         category: "conversations",
         icon: finishedIcon,
-        title: dropped ? "Finished without changes" : "Conversation finished",
+        title:
+          settled === "delivered"
+            ? "Finished without changes"
+            : "Conversation finished",
         description: "",
         subjectId: conversationId,
         subjectName: conversation ? conversationName(conversation) : null,
-        detail: dropped
-          ? "exit_clean with no work landed — task marked dropped"
-          : "exit_clean — branch pushed and conversation closed",
+        detail:
+          settled === "delivered"
+            ? "exit_clean with nothing to land — task marked done"
+            : "exit_clean — conversation closed",
         variant: "info",
-        // Nothing to open once nothing landed: the conversation is closed and
-        // its task dropped.
-        action: dropped
-          ? null
-          : {
-              kind: "open",
-              payload: {
-                to: conversationRoute.link(agentManagerApp, {
-                  convId: conversationId,
-                }),
-              },
-            },
+        action: {
+          kind: "open",
+          payload: {
+            to: conversationRoute.link(agentManagerApp, {
+              convId: conversationId,
+            }),
+          },
+        },
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });
     });

@@ -1,6 +1,7 @@
 import type { Conversation } from "../schema";
 import { listActiveConversations } from "../queries/conversations";
 import { dropTaskTree, updateTask } from "./tasks";
+import { recordFinishedRun } from "./deliveries";
 
 // ONE HALF of the exit-drop policy, and named for exactly the half it is: does
 // any sibling conversation on this task remain active? If one does, another
@@ -15,7 +16,7 @@ import { dropTaskTree, updateTask } from "./tasks";
 // wedged queue) and is still false for an attempt whose commits are not pushed
 // yet. An agent that pushed and then exited cleanly got its task dropped. That fact is now git-measured by `tasks/attempt-work`, and the whole
 // policy lives in the plugin named for it, `conversation-view/drop-and-exit`,
-// as `dropTaskOnExit` — the only thing callers should reach for. tasks-core has
+// as `settleTaskOnExit` — the only thing callers should reach for. tasks-core has
 // no business guessing at an attempt's standing, and an honest name here cannot
 // be mistaken for the whole policy.
 // Design: research/2026-08-17-global-attempt-work-git-derived-standing.md.
@@ -26,6 +27,24 @@ export async function dropTaskIfNoActiveSibling(
 ): Promise<boolean> {
   if (await hasActiveSibling(conversation)) return false;
   await updateTask(conversation.taskId, { drop: true });
+  return true;
+}
+
+// The same sibling rule for the agent-driven close's other outcome: an agent
+// that closed its run as finished with nothing to land (exit_clean over a
+// measured `none` standing) finished its attempt (`recordFinishedRun`), so the
+// task reads `done` until a new run begins on it. Kept to the closing
+// conversation's turn alone: while a sibling is still active another
+// conversation is doing the work, and `done` would outrank its `in_progress`.
+// Called only by drop-and-exit's `settleTaskOnExit`, which measured the standing.
+//
+// Returns whether the delivery was recorded.
+export async function deliverTaskIfNoActiveSibling(
+  conversation: Conversation,
+  summary: string,
+): Promise<boolean> {
+  if (await hasActiveSibling(conversation)) return false;
+  await recordFinishedRun(conversation, { summary });
   return true;
 }
 

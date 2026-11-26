@@ -183,6 +183,21 @@ not caught up*, and it is `false` for every hibernated (`gone`) attempt too.
 
 Consequence: `attempts_v.status` cannot contradict `standingOf` — its only
 landed-claiming arm is backed by the same rows `standingOf` ORs into `"landed"`.
+One fact completes an attempt without a push: a **delivery**
+(`attempt_deliveries`), of one of two `basis` values. A `scratch` delivery
+(`recordScratchDelivery`) is a workspace with no git's landed fact, and
+`standingOf` reads it as such. A `nothing-to-land` delivery
+(`recordFinishedRun`, reached only through drop-and-exit's `settleTaskOnExit`
+when an agent's `exit_clean` finds a measured `none`) is a **finished run**:
+non-code work (an investigation, a filed issue, a design). It makes the
+attempt `completed` and the task `done` while the standing stays `"none"`
+(nothing is in `main`, so the outcome report says "No changes"). Finished is not
+the same claim as landed. It is a claim about THAT run, so the
+`tasks.finished-run` trigger (`server/internal/finished-run-triggers.ts`)
+deletes it the moment a new run begins on the task (a conversation inserted,
+a closed one reopened, or one moved onto it — never a status rewrite of a run
+that is still open). A resumed run reads `in_progress`, never `done` over uncommitted work.
+`views.test.ts` pins both.
 The three compose: **I5** completeness, **I3** interpretation, **I6** the derived
 status. `views.test.ts` pins the truth table and the coherence assertion.
 
@@ -427,13 +442,13 @@ serves them.
     - `useTaskCluster`
     - `useTaskConversations`
 - Server:
-  - Contributes: 60 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 61 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `resource.declare` ×41
     - `derived-table` ×7
     - `derived-view` ×4
     - `ids.kind` ×3
     - `attachments.link` ×2
-    - `db-trigger` "tasks.cluster"
+    - `db-trigger` ×2
     - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
     - `live.columns.expose` "tasks ← tasks_ext_mandate"
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -537,6 +552,7 @@ serves them.
     - `createTask`
     - `deleteAttempt`
     - `deleteConversationRow`
+    - `deliverTaskIfNoActiveSibling`
     - `DependencyCycleError`
     - `dropTaskIfNoActiveSibling`
     - `dropTaskTreeIfNoActiveSibling`

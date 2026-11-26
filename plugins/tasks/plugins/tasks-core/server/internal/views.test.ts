@@ -45,6 +45,7 @@ import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/co
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 import { attemptConvAgg, attemptPushAgg } from "./rollup-spec";
+import { finishedRunTriggers } from "./finished-run-triggers";
 import { eq } from "drizzle-orm";
 import { attempts, taskBlocking, tasks } from "./views";
 import { isSettled, TaskStatusSchema } from "../../core";
@@ -78,6 +79,13 @@ beforeAll(async () => {
   // attempts_v LEFT JOINs the two trigger-maintained rollups; without them the
   // view compiles but every attempt reads as 'pending'.
   await installRollups(t.db, [attemptConvAgg, attemptPushAgg]);
+
+  // A finished run (a `nothing-to-land` delivery) lasts until an agent works
+  // on its attempt again.
+  for (const f of finishedRunTriggers.functions)
+    await t.db.execute(sql.raw(f.ddl));
+  for (const tr of finishedRunTriggers.triggers)
+    await t.db.execute(sql.raw(tr.ddl));
 
   // Dependency order: attempts_v → task_blocking_v → tasks_v.
   for (const [name, view] of [
@@ -815,5 +823,121 @@ describe("attempt_deliveries — a delivery lands like a push", () => {
     const conv = await seedConversation(attemptId, "done");
     await seedDelivery(attemptId, conv);
     expect((await taskStatus(taskId)).status).toBe("held");
+  });
+});
+
+// ── a finished run with nothing to land (exit_clean, non-code work) ─────────
+// `recordFinishedRun`: a `nothing-to-land` delivery. The task reads `done`
+// once the conversation closes, and the claim is dropped (tasks.finished-run
+// trigger) the moment an agent works on the attempt again.
+
+async function seedFinishedRun(attemptId: string, conversationId: string) {
+  await t.db.execute(sql`
+    INSERT INTO attempt_deliveries (attempt_id, conversation_id, summary, basis)
+    VALUES (${attemptId}, ${conversationId}, ${"finished"}, 'nothing-to-land')
+  `);
+}
+
+async function deliveryBasis(attemptId: string): Promise<string | null> {
+  const { rows } = await t.db.execute(
+    sql`SELECT basis FROM attempt_deliveries WHERE attempt_id = ${attemptId}`,
+  );
+  return (rows[0] as { basis: string } | undefined)?.basis ?? null;
+}
+
+describe("a finished run — done until a new run begins on the task", () => {
+  test("exit_clean with nothing to land: the closed attempt is `completed`, its task `done`", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "waiting");
+    await seedFinishedRun(attemptId, conv);
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'done', ended_at = now() WHERE id = ${conv}
+    `);
+    expect((await attemptRow(attemptId)).status).toBe("completed");
+    expect((await taskStatus(taskId)).status).toBe("done");
+  });
+
+  test("resumed: the claim is dropped — `in_progress`, never `done` or `pushed`, and a drop then reads `dropped`", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "waiting");
+    await seedFinishedRun(attemptId, conv);
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'done', ended_at = now() WHERE id = ${conv}
+    `);
+    expect((await taskStatus(taskId)).status).toBe("done");
+
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'working', ended_at = NULL WHERE id = ${conv}
+    `);
+    expect(await deliveryBasis(attemptId)).toBeNull();
+    expect((await attemptRow(attemptId)).status).toBe("in_progress");
+    expect((await taskStatus(taskId)).status).toBe("in_progress");
+
+    // Its turn ends with uncommitted work: not done.
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'waiting' WHERE id = ${conv}
+    `);
+    expect((await taskStatus(taskId)).status).not.toBe("done");
+
+    // The user's Drop & Close now drops it.
+    await t.db.execute(sql`
+      UPDATE tasks SET dropped_at = now() WHERE id = ${taskId}
+    `);
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'done', ended_at = now() WHERE id = ${conv}
+    `);
+    expect((await taskStatus(taskId)).status).toBe("dropped");
+  });
+
+  test("a new conversation on the attempt drops the claim too", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "done");
+    await seedFinishedRun(attemptId, conv);
+    await seedConversation(attemptId, "starting");
+    expect(await deliveryBasis(attemptId)).toBeNull();
+  });
+
+  test("a status rewrite of a conversation that never closed keeps the claim (exit_clean's own window)", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "waiting");
+    await seedFinishedRun(attemptId, conv);
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'working' WHERE id = ${conv}
+    `);
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'working' WHERE id = ${conv}
+    `);
+    expect(await deliveryBasis(attemptId)).toBe("nothing-to-land");
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'done', ended_at = now() WHERE id = ${conv}
+    `);
+    expect((await taskStatus(taskId)).status).toBe("done");
+  });
+
+  test("a relaunch on a new attempt of the task drops the claim", async () => {
+    const taskId = await seedTask();
+    const first = await seedAttempt(taskId);
+    const conv = await seedConversation(first, "done");
+    await seedFinishedRun(first, conv);
+    expect((await taskStatus(taskId)).status).toBe("done");
+    const second = await seedAttempt(taskId);
+    await seedConversation(second, "starting");
+    expect(await deliveryBasis(first)).toBeNull();
+    expect((await taskStatus(taskId)).status).toBe("in_progress");
+  });
+
+  test("a scratch delivery is landed work: a follow-up turn keeps it", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "waiting");
+    await seedDelivery(attemptId, conv);
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'working' WHERE id = ${conv}
+    `);
+    expect(await deliveryBasis(attemptId)).toBe("scratch");
   });
 });

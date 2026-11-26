@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Exit-menu entry that marks the top task as dropped and closes the conversation; droppedNotification, the Conversation dropped notification every drop surface sends. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close endpoint (its machine half) and the agent-driven exit_clean finalize.
+- Description: Exit-menu entry that marks the top task as dropped and closes the conversation; droppedNotification, the Conversation dropped notification every drop surface sends. The one exit-settlement policy every conversation-close path shares (settleTaskOnExit): the Drop & Close endpoint (its machine half) drops a task whose work has not landed; the agent-driven exit_clean finalize never drops, and delivers an attempt with nothing to land so the task reads done.
 - Web:
   - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
   - Uses:
@@ -23,17 +23,21 @@
 - Server:
   - Uses:
     - `tasks/attempt-work.getAttemptStanding`
+    - `tasks/tasks-core.deliverTaskIfNoActiveSibling`
     - `tasks/tasks-core.dropTaskIfNoActiveSibling`
-  - Exports (values): `dropTaskOnExit`
+  - Exports (types): `ExitSettled`
+  - Exports (values): `settleTaskOnExit`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/drop-and-exit`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports (types): `DropPolicy`
+  - Exports (types):
+    - `ExitClose`
+    - `ExitSettlement`
   - Exports (values):
     - `dropAndExit`
-    - `dropsTask`
+    - `exitSettlement`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:

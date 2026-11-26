@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import type { Conversation } from "../schema";
 import { db } from "@plugins/database/server";
 import { _attemptDeliveries, _attempts, _conversations } from "../tables";
 import { withTaskStatusChange } from "../status-scope";
@@ -38,12 +39,62 @@ export async function recordScratchDelivery(
   await withTaskStatusChange(row.taskId, db, async () => {
     await db
       .insert(_attemptDeliveries)
-      .values({ attemptId: row.attemptId, conversationId, summary })
+      .values({
+        attemptId: row.attemptId,
+        conversationId,
+        summary,
+        basis: "scratch",
+      })
       .onConflictDoUpdate({
         target: _attemptDeliveries.attemptId,
         set: {
           conversationId: sql`excluded.conversation_id`,
           summary: sql`excluded.summary`,
+          basis: sql`excluded.basis`,
+        },
+      });
+  });
+}
+
+/**
+ * Record that `conversation`'s agent closed its run as finished with nothing
+ * to land — non-code work (an investigation, a filed issue, a design): the
+ * run itself is the outcome. Like a scratch delivery, once the conversation
+ * closes the attempt reads `completed` and its task `done`.
+ *
+ * Unlike one, it lasts only until a new run begins on the task: the
+ * `tasks.finished-run` trigger (finished-run-triggers.ts) deletes it the
+ * moment a new run begins on the task (a conversation inserted, a closed one
+ * reopened, one moved onto it), so a resumed, forked or relaunched run reads
+ * `in_progress` (never `done` over uncommitted
+ * work, never a `pushed` it did not make) and a later Drop & Close can drop
+ * it. Kept in the database, so no resume path can forget it.
+ *
+ * The caller vouches the attempt's git standing was MEASURED `none` — tasks-core
+ * cannot read git (attempt-work sits above it). Not exported from the barrel:
+ * its one route is `deliverTaskIfNoActiveSibling`, which only drop-and-exit's
+ * `settleTaskOnExit` calls, after measuring. No flaw: the measurement is a git
+ * read the layer below git cannot make.
+ */
+export async function recordFinishedRun(
+  conversation: Conversation,
+  { summary }: { summary: string },
+): Promise<void> {
+  await withTaskStatusChange(conversation.taskId, db, async () => {
+    await db
+      .insert(_attemptDeliveries)
+      .values({
+        attemptId: conversation.attemptId,
+        conversationId: conversation.id,
+        summary,
+        basis: "nothing-to-land",
+      })
+      .onConflictDoUpdate({
+        target: _attemptDeliveries.attemptId,
+        set: {
+          conversationId: sql`excluded.conversation_id`,
+          summary: sql`excluded.summary`,
+          basis: sql`excluded.basis`,
         },
       });
   });

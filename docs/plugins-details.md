@@ -20531,7 +20531,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/badge.Badge`
               - `tasks.useActiveDependentCount`
-        - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation; droppedNotification, the Conversation dropped notification every drop surface sends. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close endpoint (its machine half) and the agent-driven exit_clean finalize.
+        - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation; droppedNotification, the Conversation dropped notification every drop surface sends. The one exit-settlement policy every conversation-close path shares (settleTaskOnExit): the Drop & Close endpoint (its machine half) drops a task whose work has not landed; the agent-driven exit_clean finalize never drops, and delivers an attempt with nothing to land so the task reads done.
           - Web:
             - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
             - Uses:
@@ -20550,17 +20550,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Uses:
               - `tasks/attempt-work.getAttemptStanding`
+              - `tasks/tasks-core.deliverTaskIfNoActiveSibling`
               - `tasks/tasks-core.dropTaskIfNoActiveSibling`
-            - Exports (values): `dropTaskOnExit`
+            - Exports (types): `ExitSettled`
+            - Exports (values): `settleTaskOnExit`
           - Machine:
             - Uses: `infra/endpoints.implementMachine`
             - Routes: `POST /api/conversations/:id/drop-and-exit`
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
-            - Exports (types): `DropPolicy`
+            - Exports (types):
+              - `ExitClose`
+              - `ExitSettlement`
             - Exports (values):
               - `dropAndExit`
-              - `dropsTask`
+              - `exitSettlement`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
@@ -23558,7 +23562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids` ×2
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2
-              - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
+              - `conversations/conversation-view/drop-and-exit.settleTaskOnExit`
               - `conversations/conversation-view/push-and-exit/exit-precondition.exitCleanRefusals`
               - `database/sql-column.parsedJson`
               - `database.db`
@@ -68749,13 +68753,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskCluster`
           - `useTaskConversations`
       - Server:
-        - Contributes: 60 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Contributes: 61 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `resource.declare` ×41
           - `derived-table` ×7
           - `derived-view` ×4
           - `ids.kind` ×3
           - `attachments.link` ×2
-          - `db-trigger` "tasks.cluster"
+          - `db-trigger` ×2
           - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
           - `live.columns.expose` "tasks ← tasks_ext_mandate"
         - Uses: 23 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
@@ -68859,6 +68863,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTask`
           - `deleteAttempt`
           - `deleteConversationRow`
+          - `deliverTaskIfNoActiveSibling`
           - `DependencyCycleError`
           - `dropTaskIfNoActiveSibling`
           - `dropTaskTreeIfNoActiveSibling`

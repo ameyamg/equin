@@ -49,7 +49,7 @@
     - `ids` ×2
     - `infra/endpoints` ×2
     - `tasks/orchestration/mandate` ×2
-    - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
+    - `conversations/conversation-view/drop-and-exit.settleTaskOnExit`
     - `conversations/conversation-view/push-and-exit/exit-precondition.exitCleanRefusals`
     - `database/sql-column.parsedJson`
     - `database.db`

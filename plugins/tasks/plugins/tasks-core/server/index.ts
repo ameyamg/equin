@@ -3,6 +3,7 @@ import { View } from "@plugins/database/plugins/derived-views/server";
 import { IdKinds } from "@plugins/ids/server";
 import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
 import { taskClusterTriggers } from "./internal/cluster-triggers";
+import { finishedRunTriggers } from "./internal/finished-run-triggers";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { TASK_ROLLUPS } from "./internal/task-rollups";
 import {
@@ -338,6 +339,7 @@ export type { OrphanedAttempt } from "./internal/sweep-orphaned-attempts";
 export type { DbExecutor } from "./internal/status-batch";
 
 export {
+  deliverTaskIfNoActiveSibling,
   dropTaskIfNoActiveSibling,
   dropTaskTreeIfNoActiveSibling,
 } from "./internal/mutations/cross-table";
@@ -377,6 +379,9 @@ export default {
     // every edge write unions, no label write leaves an edge across clusters, no
     // cluster outgrows TASK_CLUSTER_MAX.
     DbTrigger(taskClusterTriggers),
+    // A finished run with nothing to land (exit_clean) lasts until an agent
+    // begins a new run on the task.
+    DbTrigger(finishedRunTriggers),
     View({ view: attempts }),
     View({ view: conversations }),
     View({ view: taskBlocking, dependsOn: ["attempts_v"] }),

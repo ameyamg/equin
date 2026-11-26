@@ -22,7 +22,7 @@ import {
   standingOf,
   type AttemptWorkPayload,
 } from "@plugins/tasks/plugins/attempt-work/core";
-import { dropAndExit, dropsTask } from "../../core";
+import { dropAndExit, exitSettlement } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { droppedNotification } from "../internal/dropped-notification";
 
@@ -77,8 +77,8 @@ function DropAndExitEntry({
   // `standingOf` is the only thing consulted here: a discriminated
   // "none" | "pending" | "landed", never a length compared to zero (invariant
   // I4), so there is no array whose emptiness this component could misread.
-  // The label follows the server's own rule for this action (`dropsTask` under
-  // "unless-landed"): only work already in `main` reads as Complete; unmerged
+  // The label follows the server's own rule for this action (`exitSettlement` under
+  // "drop-and-close"): only work already in `main` reads as Complete; unmerged
   // commits (a push that never finished) still read — and act — as Drop.
   const standing = useMemo(
     () =>
@@ -89,7 +89,8 @@ function DropAndExitEntry({
       }),
     [decision],
   );
-  const landed = standing !== null && !dropsTask(standing, "unless-landed");
+  const landed =
+    standing !== null && exitSettlement(standing, "drop-and-close") === "keep";
 
   const toast = useToast();
   const subject = {

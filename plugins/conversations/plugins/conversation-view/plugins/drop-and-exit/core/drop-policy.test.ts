@@ -1,14 +1,14 @@
 import { test, expect } from "bun:test";
-import { dropsTask } from "./drop-policy";
+import { exitSettlement } from "./drop-policy";
 
 test("the manual Drop & Close drops unmerged commits, keeps landed work", () => {
-  expect(dropsTask("none", "unless-landed")).toBe(true);
-  expect(dropsTask("pending", "unless-landed")).toBe(true);
-  expect(dropsTask("landed", "unless-landed")).toBe(false);
+  expect(exitSettlement("none", "drop-and-close")).toBe("drop");
+  expect(exitSettlement("pending", "drop-and-close")).toBe("drop");
+  expect(exitSettlement("landed", "drop-and-close")).toBe("keep");
 });
 
-test("the agent-driven close drops only when there is no work at all", () => {
-  expect(dropsTask("none", "only-if-no-work")).toBe(true);
-  expect(dropsTask("pending", "only-if-no-work")).toBe(false);
-  expect(dropsTask("landed", "only-if-no-work")).toBe(false);
+test("the agent-driven close never drops: nothing to land is delivered work", () => {
+  expect(exitSettlement("none", "exit-clean")).toBe("deliver");
+  expect(exitSettlement("pending", "exit-clean")).toBe("keep");
+  expect(exitSettlement("landed", "exit-clean")).toBe("keep");
 });

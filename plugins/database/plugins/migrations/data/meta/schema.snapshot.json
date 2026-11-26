@@ -1,6 +1,6 @@
 {
-  "id": "023d623c-9052-4d38-bf14-87efe7f46bc8",
-  "prevId": "9b3d7987-b1bc-4ab2-9a4a-b4b1f6102161",
+  "id": "fe38bf34-d57c-4cfa-b6dd-44e84090b0f0",
+  "prevId": "023d623c-9052-4d38-bf14-87efe7f46bc8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -18940,6 +18940,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "basis": {
+          "name": "basis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'scratch'"
         },
         "delivered_at": {
           "name": "delivered_at",

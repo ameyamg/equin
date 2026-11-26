@@ -1,16 +1,23 @@
 import { getAttemptStanding } from "@plugins/tasks/plugins/attempt-work/server";
-import { dropTaskIfNoActiveSibling } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  deliverTaskIfNoActiveSibling,
+  dropTaskIfNoActiveSibling,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
-import { dropsTask, type DropPolicy } from "../../core/drop-policy";
+import { exitSettlement, type ExitClose } from "../../core/drop-policy";
+
+/** What a close did to its task: what `exitSettlement` asked, or `"kept"`. */
+export type ExitSettled = "dropped" | "delivered" | "kept";
 
 /**
- * The one exit-drop policy, shared by every conversation-close path that can set
- * `task.dropped`: the manual "Drop & Close" exit-menu action and the
- * agent-driven `exit_clean` flow. A conversation that closes without landing any
- * work returns its task to `dropped` rather than leaving it stranded as
- * `attempted`.
+ * The one exit-settlement policy, shared by every conversation-close path that
+ * can settle a task: the manual "Drop & Close" exit-menu action drops a task
+ * whose work has not landed; the agent-driven `exit_clean` never drops, and
+ * delivers an attempt with nothing to land (finished non-code work — the task
+ * reads `done`; see `ExitClose`). Either way a task does not stay stranded as
+ * `attempted` with nothing at stake.
  *
- * Never drop when work is at stake OR unmeasurable:
+ * Never drop or deliver when work is at stake OR unmeasurable:
  *
  * - **Unknown state is not a licence to drop a task.** `getAttemptStanding` returns a
  *   `Resolvable`, and its unresolved arm means the standing could not be
@@ -30,9 +37,11 @@ import { dropsTask, type DropPolicy } from "../../core/drop-policy";
  *   held for review lives only there.
  * - **`standingOf` is a discriminated value, not a count.** There is no array
  *   here whose emptiness could be misread, and the drop is reachable only from a
- *   measured standing that `policy` allows (see `DropPolicy`): the manual action
- *   drops anything not yet in `main`, the agent-driven close only a measured
- *   `"none"`. Required, so each caller states which close it is.
+ *   measured standing that `close` allows (see `exitSettlement`): the manual
+ *   action drops anything not yet in `main`; the agent-driven close delivers
+ *   only a measured `"none"`. Required, so each caller states which close it is.
+ * - **A sibling still working keeps the task as it is**: another conversation
+ *   may land the work (tasks-core's `…IfNoActiveSibling`).
  *
  * Design: research/2026-08-17-global-attempt-work-git-derived-standing.md.
  *
@@ -40,14 +49,27 @@ import { dropsTask, type DropPolicy } from "../../core/drop-policy";
  * "conversation without an attempt" case to route around — a missing attempt ROW
  * surfaces as the unresolved arm above, which is already non-droppable.
  *
- * Returns whether the task was dropped.
+ * Returns what it did to the task.
  */
-export async function dropTaskOnExit(
+export async function settleTaskOnExit(
   conversation: Conversation,
-  policy: DropPolicy,
-): Promise<boolean> {
+  close: ExitClose,
+): Promise<ExitSettled> {
   const standing = await getAttemptStanding(conversation.attemptId);
-  if (!standing.resolved) return false;
-  if (!dropsTask(standing.value, policy)) return false;
-  return dropTaskIfNoActiveSibling(conversation);
+  if (!standing.resolved) return "kept";
+  switch (exitSettlement(standing.value, close)) {
+    case "keep":
+      return "kept";
+    case "drop":
+      return (await dropTaskIfNoActiveSibling(conversation))
+        ? "dropped"
+        : "kept";
+    case "deliver":
+      return (await deliverTaskIfNoActiveSibling(
+        conversation,
+        "Closed with exit_clean: finished with nothing to land.",
+      ))
+        ? "delivered"
+        : "kept";
+  }
 }

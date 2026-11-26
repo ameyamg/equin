@@ -6,7 +6,7 @@ import {
   markConversationClosed,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { dropAndExit } from "../../core/endpoints";
-import { dropTaskOnExit } from "../../server/internal/drop-task-on-exit";
+import { settleTaskOnExit } from "../../server/internal/settle-task-on-exit";
 
 export const handleDropAndExit = implementMachine(
   dropAndExit,
@@ -19,7 +19,8 @@ export const handleDropAndExit = implementMachine(
     }
 
     // The user chose Drop from the exit menu: anything not yet in `main` drops.
-    const dropped = await dropTaskOnExit(conversation, "unless-landed");
+    const dropped =
+      (await settleTaskOnExit(conversation, "drop-and-close")) === "dropped";
 
     await markConversationClosed(id);
     await deleteConversation(id);

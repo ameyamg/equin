@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _attemptDeliveries, _attempts, _tasks } from "../tables";
 import { attempts } from "../views";
@@ -114,14 +114,20 @@ export async function listAttemptsForTask(
 
 /**
  * Whether a scratch attempt recorded its delivery (`recordScratchDelivery`) —
- * the "landed" fact of a workspace with no git. Reads the `attempt_deliveries`
+ * the "landed" fact of a workspace with no git. A `nothing-to-land` row (a
+ * finished run, `recordFinishedRun`) is not landed work and does not count. Reads the `attempt_deliveries`
  * TABLE alone, so a live loader's read-set stays that table.
  */
 export async function hasAttemptDelivery(attemptId: string): Promise<boolean> {
   const [row] = await db
     .select({ attemptId: _attemptDeliveries.attemptId })
     .from(_attemptDeliveries)
-    .where(eq(_attemptDeliveries.attemptId, attemptId))
+    .where(
+      and(
+        eq(_attemptDeliveries.attemptId, attemptId),
+        eq(_attemptDeliveries.basis, "scratch"),
+      ),
+    )
     .limit(1);
   return row !== undefined;
 }
