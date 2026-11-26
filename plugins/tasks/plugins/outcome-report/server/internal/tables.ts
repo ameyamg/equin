@@ -20,6 +20,11 @@ export const _taskOutcomeReportsExt = taskOutcomeReports.table;
  * turn is for once the user has talked to it. Only the latest counts — the
  * stop gate asks whether it came after the user's latest word, and the
  * turn-end capture whether it says `supervisor`.
+ * - `awaiting` — with `user`, the reply or decision it waits on;
+ * - `usedAt` — the end of the turn it was for, set by the hand-back (null:
+ *   not used yet, so it still counts). A used `user` row with no word from
+ *   the user since is the recorded verdict "its last turn rests on the user"
+ *   the digest shows a supervisor.
  */
 export const _turnAddressees = pgTable("outcome_report_turn_addressees", {
   conversationId: text("conversation_id")
@@ -29,4 +34,6 @@ export const _turnAddressees = pgTable("outcome_report_turn_addressees", {
   declaredAt: timestamp("declared_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  awaiting: text("awaiting"),
+  usedAt: timestamp("used_at", { withTimezone: true }),
 });

@@ -80,9 +80,12 @@ export function handBackTurn(
         body: turn.text,
       });
     }
+    // Used up, not deleted: a used `user` row is the turn's recorded verdict
+    // (it rests on the user), read by the digest's `waiting on the user`.
     if (state.declaredAt !== undefined)
       await db
-        .delete(_turnAddressees)
+        .update(_turnAddressees)
+        .set({ usedAt: turn.endedAt })
         .where(
           and(
             eq(_turnAddressees.conversationId, conversationId),

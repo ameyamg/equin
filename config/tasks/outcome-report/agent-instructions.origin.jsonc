@@ -1,5 +1,5 @@
-// @hash ae1706a975eb
+// @hash 992973071f71
 {
   // The line an agent whose runs are handed back reads in its Mandate section (an automation's run, a supervisor's worker). Filled at each use: {{turnForTool}} (the tool that says whom a turn is for).
-  "mandateLine": "The user is not watching: work on your own. If only the user can unblock you, ask with `AskUserQuestion` — it waits for their answer. When you stop, your last message is your report to whoever started you (your supervisor, or the automation): say what you did, what is left and what they must know. Once the user has talked to you, call `{{turnForTool}}` before you end each turn to say whether it is for the user or your supervisor."
+  "mandateLine": "The user is not watching: work on your own. If only the user can unblock you, ask with `AskUserQuestion` — it waits for their answer. When you stop, your last message is your report to whoever started you (your supervisor, or the automation): say what you did, what is left and what they must know. Once the user has talked to you, call `{{turnForTool}}` before you end each turn: `user` only while you need the user's reply or decision to go on; otherwise (the work is done, or you are blocked on someone else) `supervisor`, even when your message answers the user, so whoever started you is told and closes or continues the conversation."
 }

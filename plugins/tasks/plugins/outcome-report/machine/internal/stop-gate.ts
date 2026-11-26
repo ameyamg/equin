@@ -8,9 +8,9 @@ import { readRunState, userInRun } from "./run-state";
 
 /**
  * Once the user has talked to an agent whose runs are handed back, each of
- * its turns is for the user or for whoever started it — and only the agent
- * knows which. So it may not stop until it said (`turn_for`, after the user's
- * latest word). A run nobody but its starter is in needs no call: its end is
+ * its turns either waits on the user (their reply or decision) or is handed
+ * back to whoever started it — and only the agent knows which. So it may
+ * not stop until it said (`turn_for`, after the user's latest word). A run nobody but its starter is in needs no call: its end is
  * handed back as is. No flaw: who a reply is meant for is the agent's call,
  * and no API can derive it.
  */
@@ -26,7 +26,7 @@ export const turnForStopGate = StopGate({
     if (!userInRun(state) || state.addressee !== null) return { kind: "allow" };
     return {
       kind: "block",
-      reason: `The user has talked to you in this run, so say whom this turn is for before you stop: call \`${TURN_FOR_TOOL}\` with \`user\` (your reply is theirs; nobody else is told) or \`supervisor\` (your last message is handed back as your report to whoever started you).`,
+      reason: `The user has talked to you in this run, so before you stop call \`${TURN_FOR_TOOL}\` to say what happens next. \`supervisor\` when nothing is pending on the user (the work is done, or you are blocked on someone else), even if your message answers them: your last message becomes your report, and whoever started you is told and closes or continues the conversation. \`user\` only when you cannot go on without the user's reply or decision; name it in \`awaiting\`.`,
     };
   },
 });

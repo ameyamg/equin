@@ -50,7 +50,8 @@ export function runEnd(
   return wakeReasons.length > 0 ? "none" : "hand-back";
 }
 
-function latest(a: Date | null, b: Date | null): Date | null {
+/** The later of two optional instants. */
+export function latest(a: Date | null, b: Date | null): Date | null {
   if (a === null) return b;
   if (b === null) return a;
   return a > b ? a : b;
@@ -81,6 +82,7 @@ export async function readRunState(
       : null;
   const counts =
     declared !== undefined &&
+    declared.usedAt === null &&
     (userSpokeAt === null || declared.declaredAt > userSpokeAt) &&
     (asOf === undefined || declared.declaredAt <= asOf);
   return counts

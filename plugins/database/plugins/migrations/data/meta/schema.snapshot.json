@@ -1,6 +1,6 @@
 {
-  "id": "fe38bf34-d57c-4cfa-b6dd-44e84090b0f0",
-  "prevId": "023d623c-9052-4d38-bf14-87efe7f46bc8",
+  "id": "5ab9fe0f-d43a-42cf-b532-04966e6362cf",
+  "prevId": "fe38bf34-d57c-4cfa-b6dd-44e84090b0f0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17483,6 +17483,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "awaiting": {
+          "name": "awaiting",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},

@@ -35,7 +35,8 @@ Decisions (`tasks/decisions`) are the supervisor root's, not a worker's.
   (`getAttemptStanding`; unmeasurable fails the job, never a guess), the
   upsert (stamped with the turn's end, keyed by its message id so one message
   is handed back once), then `outcomeReport.submitted`. The turn's
-  `turn_for` is used up either way: every turn the user is in says again.
+  `turn_for` is used up either way (marked `used_at`, kept as the turn's
+  recorded verdict): every turn the user is in says again.
   Two callers, serialized per conversation: `outcome-report.hand-back` on
   `conversation.turn-completed` (the live path; its payload carries the
   final message), and `outcome-report.hand-back-backstop` on every stop
@@ -45,12 +46,26 @@ Decisions (`tasks/decisions`) are the supervisor root's, not a worker's.
   conversation).
 - `turn-for.ts` — the `turn_for` MCP tool (visible only under the grant):
   records the agent's latest addressee in `outcome_report_turn_addressees`.
+  The choice is by what is pending, not by whom the message answers:
+  `supervisor` when nothing waits on the user (done, or blocked on someone
+  else), even when the message answers them; `user` only while the agent
+  needs their reply or decision, and it must name it (`awaiting`, stored) or
+  nothing is recorded. Incident: conv-1795650215-x3qqxv answered the user's request,
+  said `user`, and sat open ~10 h with nobody told.
 - `stop-gate.ts` — blocks a stop only while the user is in the run and the
   agent has not said whom the turn is for.
 - `question-bell.ts` — the bell when such an agent starts waiting on its
   AskUserQuestion (`agent-question:<conversationId>`, re-alerting).
 - `watch-source.ts` — `reported` (a hand-back) and `asking` (waiting on an
   AskUserQuestion). The automations' slot watcher releases on either.
+- `annotation.ts` — the digest words on each task line: `report: <first
+  sentence>`, and `waiting on the user: <awaiting>` (its latest conversation
+  at rest, its latest `turn_for` said `user`, the user silent since) or
+  `asking the user` (on its AskUserQuestion). Read from the recorded
+  declaration, never inferred from "not handed back yet" (a stop the gate
+  let through undeclared, a crash, a held turn would all read alike). A supervisor's
+  `quiet` turn carries the digest, so it tells "the user is
+  mid-conversation" from "done, close it".
 - The Mandate line is config (`core/prompts.ts`, `outcomeReportPromptsConfig`,
   `{{turnForTool}}`), pinned by `machine/internal/prompts-unchanged.test.ts`.
 
