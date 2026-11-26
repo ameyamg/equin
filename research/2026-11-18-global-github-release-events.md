@@ -268,3 +268,108 @@ afterwards.
   - A failed pg-client-embedded run (or its catch-up listing) files the same
     kind.
 - `./equin check` and `./equin test plugins/integrations/plugins/github-events plugins/upstream plugins/installer`.
+
+## Follow-up (2026-11-26): should a forwarder outlive backend restarts?
+
+Asked after the publisher's releases row was seen grey ("Connecting to
+GitHub…"). Today each of main's backend starts spawns one forwarder per watched
+repo, and each stop kills them. Main's backend started 78 times in the 24 h
+before 11-25 13:55, and 93 times in the 24 h before this writing.
+
+### What a restart actually costs (measured 2026-11-26)
+
+- **The connecting window is about 3 s.** In one observed hot restart (ready
+  at 18:11:20 UTC), `equinai/equin`'s forwarder hook changed straight from the
+  old id to the new one at about 18:11:23. Sampling every 1.5 s showed no hook
+  flapping, even though the gateway's hot restart runs the old and new
+  backends side by side for a moment. The current hooks of all three repos
+  were created 3 s after the previous ready. So the grey row lasts a few
+  seconds per restart. It is noticeable only because main restarts every few
+  minutes on busy days.
+- **Hook churn costs nothing measurable.** About 3 hook creates per restart,
+  plus about 5 catch-up `gh api` reads. That is roughly 300 to 800 REST calls
+  a day, against a budget of 5000 an hour. GitHub sets no limit on hook
+  creation.
+- **Catch-up failures are already fixed.** The `[github-events] catching up …
+  failed` reports stop on 2026-11-22. From then on a catch-up cut by a machine
+  sleep is retried and logged on the `github-events` channel, not reported
+  (`catch-up-owed.ts`). The `connection reset by peer` and SIGTERM timeout
+  lines in `logs/github-events.jsonl` are those logged retries.
+- **Correction to the spike notes.** `cli/gh-webhook` v0.2.0 has no signal
+  handling and never deletes its own hook (`webhook/forward.go`,
+  `create_webhook.go`). GitHub's forwarder service deletes the hook when the
+  WebSocket closes. A SIGTERM to the extension works because it closes the
+  socket. A SIGTERM to the `gh` wrapper does not, because the orphaned
+  extension keeps the socket open. Inside one process the extension retries
+  an abnormal WebSocket close 3 times, 5 s apart, on the same hook, then
+  exits. A normal close exits 0.
+
+### Option A: a forwarder that outlives backends (detached and adopted)
+
+One forwarder process per repo per machine, launched by main's backend through
+`launchDetached`, and adopted by the next backend through its pid file. It
+would need:
+
+1. **A state file per repo**, mode 0600 in a `data-dirs` folder: the secret,
+   the digest of its argv (repo, events, delivery URL, extension path) and the
+   incarnation's pid. Both backends of a hot restart would verify with the same
+   secret, so no delivery would get a 401 during the swap.
+2. **A pid-writing bootstrap**: the current `/bin/sh` script runs
+   `echo $$ > pid` before its `exec`.
+3. **Adoption on boot**: if a forwarder is alive and its argv digest matches,
+   attach to it. Otherwise SIGTERM it and launch a new one.
+4. **Respawn with backoff.** The extension exits on any lasting disconnect,
+   such as each machine sleep or a network change, so it must be brought back
+   with backoff. The daemon primitive refuses this today: `launchDetached` /
+   `attach` exist only on `restart: never`, because "nothing here can respawn
+   what it is not the parent of". So either the plugin writes its own
+   relaunch-and-backoff loop (a second supervision loop, which the primitive
+   exists to prevent), or the primitive gains a new arm: a detached instance
+   that any backend adopts and relaunches through the supervise loop. That
+   second choice is a new primitive capability.
+5. **"Connected" across restarts.** A re-attached forwarder sends no new ping.
+   The state file would record the ping time of the current incarnation, and
+   a successor would trust it only while the pid is the same.
+6. **Failure explanation.** A detached process's stderr goes to a file, not
+   to `onStderrLine`. The health row's "why it stopped" would read that file's
+   last line.
+7. **Deliveries while no backend serves.** The extension logs `error
+   forwarding event` and does not answer GitHub, so the delivery is lost. A
+   boot catch-up is still owed (cheaper: no hook churn, only the reads).
+
+Gains: no grey seconds after a restart, no hook churn, and no 401 during the
+hot-restart overlap.
+Costs: a new capability in the daemon primitive (adopt and relaunch a detached
+instance), a secret persisted on disk, a second notion of "connected", and
+reading stderr from a file. The secret on disk is minor (main's DB and gh's
+token sit beside it).
+
+### Option B: keep the per-backend lifecycle, and make the connect honest but quiet
+
+Leave the transport as it is. Only the presentation changes: while a
+forwarder is `connecting` for the first time after its backend started, the
+publication row shows the stored state from the previous connection, marked
+"checking GitHub…", instead of going grey. It turns `unknown` only if the
+connect has not finished within a short bound, or the forwarder is
+`reconnecting` / `failed`. This bends the rule "never claims published on
+stale news", but only for the few seconds before the catch-up rereads the
+newest runs and releases. A run that ended while no backend was up is then
+corrected within seconds.
+
+Cost: one view rule in `upstream/web/internal/releases-view.ts` and a
+`connecting` publication that carries the stored rows
+(`upstream/machine/internal/publication.ts`). No new primitive.
+
+### Option C: change nothing
+
+The window is about 3 s, the churn costs nothing measurable, and the catch-up
+noise is gone since 11-22.
+
+### Recommendation
+
+**C now, A only if a second consumer needs a process that survives backend
+restarts and respawns.** With today's numbers, A's gain is a few grey seconds
+per restart and some hook churn nobody pays for. Its price is a new primitive
+capability plus a persisted secret. If the grey seconds still bother the user,
+B removes them in a small UI change. The real driver is how often main
+restarts, which is restart-skip's territory, not this plugin's.
