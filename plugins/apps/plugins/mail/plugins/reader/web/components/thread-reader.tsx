@@ -58,7 +58,7 @@ const downloadIcon = symbol("download");
  * one). An HTML body is framed (`InlineFrame fit`: an opaque origin under the
  * mail policy, as tall as the message); a text body is text. Each message
  * lists its files (open in a tab, or download). The bar carries the caller's
- * `tools` (the thread's triage) at its end.
+ * `tools` (the thread's triage) at its end, then the close.
  */
 export function ThreadReader({
   threadId,
@@ -94,6 +94,8 @@ export function ThreadReader({
   return (
     <Stack gap="none" className="h-full min-h-0 bg-card">
       <Bar>
+        <Fill />
+        {tools}
         {onClose === null ? null : (
           <IconButton
             icon={closeIcon}
@@ -101,8 +103,6 @@ export function ThreadReader({
             onClick={(e) => onClose(gestureOf(e))}
           />
         )}
-        <Fill />
-        {tools}
       </Bar>
       {body}
       {footer !== undefined && read.status === "ready"
