@@ -2,5 +2,5 @@
   "name": "@equin/plugin-fields-tags-inline",
   "version": "0.0.1",
   "private": true,
-  "description": "Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover)."
+  "description": "Tags (multi-value) field type: data-view inline cell editor — the shared tag picker (read-only) over the field's options in a popover, a click toggling a tag, fixed options neither offered nor removed."
 }

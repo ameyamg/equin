@@ -13,6 +13,7 @@ import {
   listCursor,
   MAIL_QUERY_COLUMNS,
   MailOutcomeUnknownError,
+  MailRefusedError,
   messageId as toMessageId,
   nativeMailboxId,
   providerQuery,
@@ -22,6 +23,7 @@ import {
   threadVersion,
   type CompiledMailQuery,
   type Mailbox,
+  type MailboxColor,
   type MailboxId,
   type MailCallOptions,
   type MailChanges,
@@ -138,6 +140,13 @@ function clausesOf(f: Filter): Extract<Filter, { column: string }>[] {
   return [f];
 }
 
+/** The fake provider's label colours: three pairs, clearable. */
+export const FAKE_MAILBOX_COLORS: readonly MailboxColor[] = [
+  { background: "#fb4c2f", text: "#ffffff" },
+  { background: "#16a766", text: "#ffffff" },
+  { background: "#4a86e8", text: "#ffffff" },
+];
+
 /**
  * The fake's compile: the canonical filter JSON is its provider query. It
  * refuses what every provider must refuse (a pair outside MAIL_QUERY_OPS, a
@@ -212,6 +221,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
   const log: { at: number; thread: ThreadId | null }[] = [];
   const threads = new Map<ThreadId, FakeThread>();
   const mailboxes = new Map<MailboxId, Omit<Mailbox, "counts" | "color">>();
+  const colors = new Map<MailboxId, MailboxColor>();
   const calls: FakeCall[] = [];
   const failures = new Map<string, { error: Error; after: boolean }>();
   /** Held calls (`holdNext`), by `method` and priority: each awaits its gate. */
@@ -544,7 +554,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
               unread: inBox.filter((t) => t.messages.some((m) => m.unread))
                 .length,
             },
-            color: null,
+            color: colors.get(mb.id) ?? null,
           };
         }),
       ),
@@ -644,9 +654,41 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
         mailboxes.set(id, { ...mb, name });
         touch(null);
       }),
+    moveMailbox: (id, parentId, o) =>
+      call("moveMailbox", 0, o, () => {
+        const mb = mailboxes.get(id);
+        if (!mb) throw new Error(`fake mail: no mailbox ${id}`);
+        for (
+          let at = parentId;
+          at !== null;
+          at = mailboxes.get(at)?.parentId ?? null
+        ) {
+          if (at === id)
+            throw new MailRefusedError(
+              `fake mail: ${id} cannot move under itself`,
+            );
+        }
+        mailboxes.set(id, { ...mb, parentId });
+        touch(null);
+      }),
+    setMailboxColor: (id, color, o) =>
+      call("setMailboxColor", 0, o, () => {
+        if (!mailboxes.has(id)) throw new Error(`fake mail: no mailbox ${id}`);
+        if (color === null) colors.delete(id);
+        else colors.set(id, color);
+        touch(null);
+      }),
     deleteMailbox: (id, o) =>
       call("deleteMailbox", 0, o, () => {
+        const gone = mailboxes.get(id);
+        if (!gone) throw new Error(`fake mail: no mailbox ${id}`);
+        // Its sub-mailboxes move up to its parent (the contract).
+        for (const mb of mailboxes.values()) {
+          if (mb.parentId === id)
+            mailboxes.set(mb.id, { ...mb, parentId: gone.parentId });
+        }
         mailboxes.delete(id);
+        colors.delete(id);
         for (const t of threads.values())
           for (const m of t.messages) m.mailboxes.delete(id);
         touch(null);
@@ -683,6 +725,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
       mailboxModel: "labels",
       mailboxDefinitions: "in-changes",
       listOrderSlackMs: opts.listOrderSlackMs ?? 0,
+      mailboxColors: { palette: FAKE_MAILBOX_COLORS, clearable: true },
     },
     push: opts.push ?? null,
     compileQuery: (q, ctx) => fakeCompileQuery(q, ctx),

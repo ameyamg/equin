@@ -649,6 +649,13 @@ export interface FieldOption {
    * row holds draws no section.
    */
   alwaysGroup?: true;
+  /**
+   * A value rows carry that is set by other means than this field's editor (a
+   * mail role — Inbox, Trash — which triage moves, not a label edit): an
+   * editor neither offers it nor removes it from a row, while filters, cells
+   * and sections still name it by its option.
+   */
+  fixed?: true;
   /** The option's own colour (`#rrggbb`, user data — a tag's): a grouping that
    *  carries it to its bucket (`GroupBucket.swatch`) has the section header draw
    *  it as a dot before the label. */
@@ -2210,6 +2217,11 @@ export type FieldOverride<TRow> = Partial<
    * `cell`.
    */
   onEdit?(row: TRow, next: FieldValue): void | Promise<void>;
+  /**
+   * The list's multi-value inline-edit write-back (`FieldDefBase.onEditValues`)
+   * — the twin of `onEdit` for a `values` field; a method, like `cell`.
+   */
+  onEditValues?(row: TRow, next: string[]): void | Promise<void>;
   /** What a text edit starts with selected (`FieldDefBase.editSelection`) — a method, like `cell`. */
   editSelection?(row: TRow, value: string): readonly [number, number];
   /**

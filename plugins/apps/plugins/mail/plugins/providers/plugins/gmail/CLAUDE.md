@@ -79,9 +79,15 @@ rounded up>` — a superset, never fewer.
     nearly a minute's budget. Bulk triage (task 6) should use
     `messages.batchModify` over the summary's message ids, about 50 units per
     1,000 messages.
-  - Renaming a parent label renames only that label. Whether Gmail renames
-    `Parent/Child` with it is unverified (probe); until then the children
-    keep their old prefix.
+  - Labels nest by name (`Parent/Child`), so renaming or moving a label
+    renames every label under it too (one `labels.patch` each), and deleting
+    one first moves its sub-labels up to its parent (Gmail would keep
+    `Parent/Child` as a root of that name).
+  - A label's colour is one of `GMAIL_LABEL_COLORS` (18 of Gmail's palette
+    pairs; `labels.patch` refuses any other colour), and `color: null` clears
+    it — measured on a real account 2026-11-26. `labels.create` and
+    `labels.patch` answer without the label's `type` (it is always `user`;
+    the api client's `LabelWriteAnswerSchema`).
 - **Outcome unknown is reconciled, never retried:**
   - `send`: `rfc822msgid:` search. Found → the sent message; else
     `MailOutcomeUnknownError`.

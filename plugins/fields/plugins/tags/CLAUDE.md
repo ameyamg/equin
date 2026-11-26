@@ -61,7 +61,7 @@ server.
 - Sub-plugins:
   - **`config`** — Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
   - **`filter`** [test helpers] — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
-  - **`inline`** — Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).
+  - **`inline`** — Tags (multi-value) field type: data-view inline cell editor — the shared tag picker (read-only) over the field's options in a popover, a click toggling a tag, fixed options neither offered nor…
   - **`storage`** — Tags field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so its string[] is derived rather than asserted.
   - **`table`** — Tags (multi-value) field type: data-view table cell (read-only tag chips).
 

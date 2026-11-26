@@ -5,9 +5,10 @@ import {
   createMailLabel,
   deleteMailLabel,
   mailCacheConfig,
-  renameMailLabel,
+  updateMailLabel,
 } from "../core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { refusedAs400 } from "./internal/label-routes";
 import { cacheTableExclusions } from "./internal/declarations";
 import {
   listenToPush,
@@ -48,14 +49,14 @@ export default {
       applyMailThreadOp,
       async ({ body }) => ({ undo: await cache.apply(body.ids, body.op) }),
     ),
-    [createMailLabel.route]: implement(createMailLabel, async ({ body }) => ({
-      id: await cache.createLabel(body.path),
-    })),
-    [renameMailLabel.route]: implement(renameMailLabel, ({ params, body }) =>
-      cache.renameLabel(params.id, body.name),
+    [createMailLabel.route]: implement(createMailLabel, ({ body }) =>
+      refusedAs400(async () => ({ id: await cache.createLabel(body) })),
+    ),
+    [updateMailLabel.route]: implement(updateMailLabel, ({ params, body }) =>
+      refusedAs400(() => cache.updateLabel(params.id, body)),
     ),
     [deleteMailLabel.route]: implement(deleteMailLabel, ({ params }) =>
-      cache.deleteLabel(params.id),
+      refusedAs400(() => cache.deleteLabel(params.id)),
     ),
   },
   contributions: [

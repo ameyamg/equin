@@ -9,6 +9,7 @@ import {
   HistoryListSchema,
   LabelListSchema,
   LabelSchema,
+  LabelWriteAnswerSchema,
   MessageLabelsSchema,
   MessageListSchema,
   MessageSchema,
@@ -86,7 +87,8 @@ export type GmailLabelInput = {
   name?: string;
   labelListVisibility?: "labelShow" | "labelShowIfUnread" | "labelHide";
   messageListVisibility?: "show" | "hide";
-  color?: { textColor: string; backgroundColor: string };
+  /** One of Gmail's palette pairs (any other is a 400), or null to clear it (measured 2026-11-26). */
+  color?: { textColor: string; backgroundColor: string } | null;
 };
 
 export type GmailLabelChange = {
@@ -227,7 +229,7 @@ export function createGmailClient(opts: GmailTransportOptions) {
           method: "POST",
           path: `${ME}/labels`,
           body: { kind: "json", value: input },
-          schema: LabelSchema,
+          schema: LabelWriteAnswerSchema,
         },
         o,
       );
@@ -245,7 +247,7 @@ export function createGmailClient(opts: GmailTransportOptions) {
           method: "PATCH",
           path: `${ME}/labels/${seg(id)}`,
           body: { kind: "json", value: input },
-          schema: LabelSchema,
+          schema: LabelWriteAnswerSchema,
         },
         o,
       );

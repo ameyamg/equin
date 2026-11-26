@@ -138,6 +138,17 @@ export const LabelSchema = z.object({
 });
 export type GmailLabel = z.infer<typeof LabelSchema>;
 
+/**
+ * A label as `labels.create` / `labels.patch` answer it: the label, but with no
+ * `type` (measured 2026-11-26: a create's answer carries id, name and the two
+ * visibilities only, while `labels.get` of the same label says
+ * `type: "user"`). Only a user label can be created or renamed, so the
+ * absent type IS "user".
+ */
+export const LabelWriteAnswerSchema = LabelSchema.extend({
+  type: z.enum(["system", "user"]).default("user"),
+});
+
 export const LabelListSchema = z.object({
   labels: z.array(LabelSchema),
 });

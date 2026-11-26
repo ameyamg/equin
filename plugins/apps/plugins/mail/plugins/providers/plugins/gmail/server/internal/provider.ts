@@ -15,10 +15,12 @@ import {
   listCursor,
   MailNotConnectedError,
   MailOutcomeUnknownError,
+  MailRefusedError,
   MailUnreachableError,
   messageId,
   threadId,
   type Mailbox,
+  type MailboxId,
   type MailCallOptions,
   type MailChanges,
   type MailProvider,
@@ -32,6 +34,7 @@ import {
   FLAG_LABELS,
   GMAIL_ROLE_LABELS,
   gmailLabelName,
+  isGmailLabelColor,
   labelIdOfMailbox,
   mailboxesOfGmailLabels,
 } from "./labels";
@@ -157,6 +160,86 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
     }
     if (found === null) throw new MailOutcomeUnknownError(what, cause);
     return found;
+  }
+
+  /** A listing's user label by mailbox id, with the tree the mailbox model reads; a system or missing one is refused. */
+  function userLabelIn(
+    labels: readonly GmailLabel[],
+    id: MailboxId,
+  ): { label: GmailLabel; mailbox: Mailbox; byId: Map<MailboxId, Mailbox> } {
+    const native = labelIdOfMailbox(id);
+    const label = labels.find((l) => l.id === native);
+    if (!label) throw new MailRefusedError(`Gmail has no label ${native}`);
+    if (label.type === "system") {
+      throw new MailRefusedError(
+        `Gmail's ${label.name} cannot be renamed, moved or deleted`,
+      );
+    }
+    const mailboxes = mailboxesOfGmailLabels(labels);
+    const byId = new Map(mailboxes.map((m) => [m.id, m]));
+    const mailbox = byId.get(id);
+    if (!mailbox)
+      throw new Error(`mail: Gmail label ${native} is not a mailbox`);
+    return { label, mailbox, byId };
+  }
+
+  /**
+   * The full-name prefix of a mailbox's children-to-be under `parentId`:
+   * the parent's full Gmail name and "/", or "" for a root. Read from the
+   * mailbox model, never by cutting a name at its last "/": a root may hold
+   * "/" in its own name (Gmail lists "a/b" with no "a" as a root named so).
+   */
+  function prefixUnder(
+    parentId: MailboxId | null,
+    byId: ReadonlyMap<MailboxId, Mailbox>,
+  ): string {
+    if (parentId === null) return "";
+    const parent = byId.get(parentId);
+    const full = parent ? gmailLabelName(parent, byId) : null;
+    if (full === null) {
+      throw new MailRefusedError(
+        `Gmail has no label ${parentId} to nest under`,
+      );
+    }
+    return `${full}/`;
+  }
+
+  /**
+   * Renames labels to new full names, each label under one renamed with it
+   * (Gmail nests by name, so a label left with the old prefix would stay
+   * under the old name). Every new name is checked against the listing first
+   * — Gmail's names are unique regardless of case — so a clash refuses before
+   * anything is written; then one labels.patch each.
+   */
+  async function renameLabels(
+    labels: readonly GmailLabel[],
+    renames: readonly { label: GmailLabel; to: string }[],
+    o: MailCallOptions | undefined,
+  ): Promise<void> {
+    const plan = new Map<string, string>();
+    for (const { label, to } of renames) {
+      if (to === label.name) continue;
+      plan.set(label.id, to);
+      for (const l of labels) {
+        if (l.type === "user" && l.name.startsWith(`${label.name}/`)) {
+          plan.set(l.id, `${to}${l.name.slice(label.name.length)}`);
+        }
+      }
+    }
+    const kept = new Set(
+      labels.filter((l) => !plan.has(l.id)).map((l) => l.name.toLowerCase()),
+    );
+    const taking = new Set<string>();
+    for (const to of plan.values()) {
+      const key = to.toLowerCase();
+      if (kept.has(key) || taking.has(key)) {
+        throw new MailRefusedError(`a Gmail label is already named “${to}”`);
+      }
+      taking.add(key);
+    }
+    for (const [id, to] of plan) {
+      await client.patchLabel(id, { name: to }, gmailOpts(o));
+    }
   }
 
   /** The mailbox label `id` is, read among `labels` (its parent is found by name). */
@@ -454,35 +537,87 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
     renameMailbox: (id, name, o) =>
       neutral(`rename label ${id}`, async () => {
         if (name.includes("/"))
-          throw new Error(
-            `mail: a Gmail label name may not contain "/": ${name}`,
+          throw new MailRefusedError(
+            `a Gmail label name may not contain "/": ${name}`,
           );
-        const label = await client.getLabel(labelIdOfMailbox(id), gmailOpts(o));
-        if (label.type === "system")
-          throw new Error(`mail: Gmail's ${label.name} cannot be renamed`);
-        const slash = label.name.lastIndexOf("/");
-        const renamed =
-          slash === -1 ? name : `${label.name.slice(0, slash + 1)}${name}`;
-        // Gmail nests by name: a sub-label is "Parent/Child", so renaming a
-        // parent renames each label under it too (else they stay under the
-        // old name, which Gmail then shows as a parent of its own).
-        const under = (await client.listLabels(gmailOpts(o))).filter(
-          (l) => l.type === "user" && l.name.startsWith(`${label.name}/`),
+        const labels = await client.listLabels(gmailOpts(o));
+        const { label, mailbox, byId } = userLabelIn(labels, id);
+        await renameLabels(
+          labels,
+          [{ label, to: `${prefixUnder(mailbox.parentId, byId)}${name}` }],
+          o,
         );
-        await client.patchLabel(label.id, { name: renamed }, gmailOpts(o));
-        for (const l of under) {
-          await client.patchLabel(
-            l.id,
-            { name: `${renamed}${l.name.slice(label.name.length)}` },
-            gmailOpts(o),
+      }),
+
+    moveMailbox: (id, parentId, o) =>
+      neutral(`move label ${id}`, async () => {
+        const labels = await client.listLabels(gmailOpts(o));
+        const { label, mailbox, byId } = userLabelIn(labels, id);
+        for (
+          let at = parentId;
+          at !== null;
+          at = byId.get(at)?.parentId ?? null
+        ) {
+          if (at === id) {
+            throw new MailRefusedError(
+              `a label cannot move under itself (${label.name})`,
+            );
+          }
+        }
+        if (parentId !== null && mailbox.name.includes("/")) {
+          // A root named "a/b" nested would read as "P/a/b": a label "b"
+          // under a missing "P/a", not this one under P.
+          throw new MailRefusedError(
+            `“${mailbox.name}” holds a "/", so Gmail cannot nest it: rename it first`,
           );
         }
+        await renameLabels(
+          labels,
+          [{ label, to: `${prefixUnder(parentId, byId)}${mailbox.name}` }],
+          o,
+        );
+      }),
+
+    setMailboxColor: (id, color, o) =>
+      neutral(`colour label ${id}`, async () => {
+        if (color !== null && !isGmailLabelColor(color)) {
+          throw new MailRefusedError(
+            `${color.background} on ${color.text} is not on Gmail's label palette`,
+          );
+        }
+        await client.patchLabel(
+          labelIdOfMailbox(id),
+          {
+            color:
+              color === null
+                ? null
+                : { backgroundColor: color.background, textColor: color.text },
+          },
+          gmailOpts(o),
+        );
       }),
 
     deleteMailbox: (id, o) =>
-      neutral(`delete label ${id}`, () =>
-        client.deleteLabel(labelIdOfMailbox(id), gmailOpts(o)),
-      ),
+      neutral(`delete label ${id}`, async () => {
+        // Gmail nests by name and keeps a deleted parent's sub-labels as
+        // they are ("Work/Clients" would stay, a root named with its old
+        // path): each moves up to the deleted label's parent first, as the
+        // contract says (and the tag picker's Delete does) — all checked
+        // for clashes before the first write.
+        const labels = await client.listLabels(gmailOpts(o));
+        const { label, mailbox, byId } = userLabelIn(labels, id);
+        const prefix = prefixUnder(mailbox.parentId, byId);
+        const children = [...byId.values()].filter((m) => m.parentId === id);
+        await renameLabels(
+          labels,
+          children.map((child) => ({
+            label: labels.find((l) => l.id === labelIdOfMailbox(child.id))!,
+            to: `${prefix}${child.name}`,
+          })),
+          o,
+        );
+        await client.deleteLabel(label.id, gmailOpts(o));
+      }),
 
     saveDraft: (m, existing, o) =>
       neutral("save draft", async () => {

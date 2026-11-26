@@ -8,8 +8,10 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 
 /** Read-only tags cell: each tag as a chip on one truncating line, tinted and
- *  explained by its own option (default muted — see the enum twin); quiet (a
- *  row view's term, `TableCellProps.presentation`), each a dot and its label. */
+ *  explained by its own option (default muted — see the enum twin), led by a
+ *  dot of its `swatch` (a tag tree's colour); an option marked `quiet` draws
+ *  nothing; quiet presentation (a row view's term,
+ *  `TableCellProps.presentation`), each a dot and its label. */
 export function TagsCell(props: TableCellProps): ReactNode {
   const tags = props.values ?? [];
   if (tags.length === 0) return null;
@@ -20,6 +22,7 @@ export function TagsCell(props: TableCellProps): ReactNode {
       <Stack direction="row" gap="xs">
         {tags.map((t) => {
           const option = optionFor(t);
+          if (option?.quiet) return null;
           if (props.presentation === "quiet") {
             return (
               <QuietOption key={t} option={option} label={option?.label ?? t} />
@@ -31,6 +34,15 @@ export function TagsCell(props: TableCellProps): ReactNode {
               variant={option?.variant ?? "muted"}
               tooltip={option?.hint}
             >
+              {option?.swatch !== undefined ? (
+                // A tag's own colour (user data, `#rrggbb`): the one thing
+                // painted through `style`.
+                <span
+                  aria-hidden
+                  className="size-1.5 rounded-full"
+                  style={{ backgroundColor: option.swatch }}
+                />
+              ) : null}
               {option?.label ?? t}
             </Badge>
           );

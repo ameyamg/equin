@@ -99,6 +99,14 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
   - `MailNotConnectedError`: the account needs (re)consent.
   - `MailOutcomeUnknownError`: a send or create may have happened and
     reconciling did not find it. Ask `findMessage` again before any resend.
+  - `MailRefusedError`: the write is refused as asked (a mailbox name
+    taken, a move under itself, a colour off the palette) and nothing was
+    written — the caller's 400.
+- **Mailboxes as a tree:** `createMailbox`, `renameMailbox` (its own name),
+  `moveMailbox` (a new parent, everything under it moving along),
+  `setMailboxColor` (one of `capabilities.mailboxColors.palette`, or null
+  where `clearable`), `deleteMailbox` (its sub-mailboxes move up to its
+  parent).
 - **`MailProviderDefinition`:** `id`, `label`, `capabilities`
   (`mailboxModel`, `mailboxDefinitions` (`relist` when changes carry no
   mailbox create / rename), `listOrderSlackMs` — how far the list
@@ -168,6 +176,7 @@ The cache and e2e tests run on it, never on Gmail.
     - `ListCursor`
     - `ListedMessage`
     - `Mailbox`
+    - `MailboxColor`
     - `MailboxId`
     - `MailboxRole`
     - `MailCallOptions`
@@ -209,6 +218,7 @@ The cache and e2e tests run on it, never on Gmail.
     - `mailboxRoleOf`
     - `MailNotConnectedError`
     - `MailOutcomeUnknownError`
+    - `MailRefusedError`
     - `MailUnreachableError`
     - `messageId`
     - `mimeMessageId`

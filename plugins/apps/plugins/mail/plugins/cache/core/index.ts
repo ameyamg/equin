@@ -38,5 +38,7 @@ export {
   applyMailThreadOp,
   createMailLabel,
   deleteMailLabel,
-  renameMailLabel,
+  MailLabelChangeSchema,
+  updateMailLabel,
+  type MailLabelChange,
 } from "./internal/endpoints";

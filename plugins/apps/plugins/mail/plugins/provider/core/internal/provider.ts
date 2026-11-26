@@ -7,7 +7,7 @@ import type {
   ProviderQuery,
   ThreadId,
 } from "./ids";
-import type { Mailbox } from "./mailbox";
+import type { Mailbox, MailboxColor } from "./mailbox";
 import type {
   AttachmentRef,
   FoundMessage,
@@ -50,6 +50,15 @@ export type MailProviderCapabilities = {
    * by it, so a skewed message is never missed.
    */
   listOrderSlackMs: number;
+  /**
+   * The colours a mailbox may take, or null when the provider colours none:
+   * `palette` the pairs `setMailboxColor` accepts (Gmail's label palette — it
+   * refuses any other), `clearable` whether a colour can be taken off again.
+   */
+  mailboxColors: {
+    palette: readonly MailboxColor[];
+    clearable: boolean;
+  } | null;
 };
 
 /**
@@ -203,11 +212,25 @@ export interface MailProvider {
     m: { name: string; parentId: MailboxId | null },
     o?: MailCallOptions,
   ): Promise<Mailbox>;
+  /** A mailbox's own name; its sub-mailboxes stay under it. */
   renameMailbox(
     id: MailboxId,
     name: string,
     o?: MailCallOptions,
   ): Promise<void>;
+  /** Nests a mailbox (and everything under it) under `parentId` (null: a root). */
+  moveMailbox(
+    id: MailboxId,
+    parentId: MailboxId | null,
+    o?: MailCallOptions,
+  ): Promise<void>;
+  /** A mailbox's colour: one of `capabilities.mailboxColors.palette`, or null to clear it (`clearable`). */
+  setMailboxColor(
+    id: MailboxId,
+    color: MailboxColor | null,
+    o?: MailCallOptions,
+  ): Promise<void>;
+  /** Deletes a mailbox: its sub-mailboxes move up to its parent; its threads keep their other mailboxes. */
   deleteMailbox(id: MailboxId, o?: MailCallOptions): Promise<void>;
   /** Creates (existing null) or replaces a draft. */
   saveDraft(
@@ -254,6 +277,16 @@ export class MailUnreachableError extends Error {
       { cause },
     );
   }
+}
+
+/**
+ * The provider refuses a write as asked, and nothing was written: a mailbox
+ * name already taken, a move under itself, a colour off its palette, a system
+ * mailbox renamed. The caller's request is wrong (an HTTP 400), not the
+ * provider's state.
+ */
+export class MailRefusedError extends Error {
+  override name = "MailRefusedError";
 }
 
 /** The account is not usable: not connected, consent missing or revoked. */

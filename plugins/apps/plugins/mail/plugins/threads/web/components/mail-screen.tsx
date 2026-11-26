@@ -39,6 +39,7 @@ import { mailboxLabel, useMailboxes, userLabels } from "../internal/mailboxes";
 import { mailThreadPane } from "../panes";
 import { ThreadItemActions } from "../slots";
 import { MailBulkActions } from "./thread-triage";
+import { useMailActions } from "../internal/actions";
 import { MailSidebar } from "./mail-sidebar";
 import { MAIL_MEASURE, mailToolbar } from "./mail-toolbar";
 import {
@@ -84,6 +85,7 @@ const RECIPIENT_VIEWS = new Set(["sent", "drafts"]);
  */
 export function MailScreen(): ReactNode {
   const { state: mailboxes, options } = useMailboxes();
+  const { run } = useMailActions();
   // The active view, as the pane URL names it (absent: the Inbox, the
   // surface's default) — the URL is derived from what is on screen.
   const viewParam = usePaneViewParam(THREADS_VIEW)?.value;
@@ -124,14 +126,25 @@ export function MailScreen(): ReactNode {
         from: { width: "12rem" },
         to: { visible: false },
         date: { label: "Received", width: "6rem" },
-        mailboxes: { label: "Labels", optionsResult: options },
+        mailboxes: {
+          label: "Labels",
+          optionsResult: options,
+          // The standard tags editor (the tag picker over the labels): the
+          // labels it added and removed, as one labels op. Roles are `fixed`
+          // options, which it neither offers nor removes.
+          onEditValues: (row, next) => {
+            const add = next.filter((id) => !row.mailboxes.includes(id));
+            const remove = row.mailboxes.filter((id) => !next.includes(id));
+            run([row.id], { kind: "labels", add, remove }, { toast: false });
+          },
+        },
         unread: { visible: false },
         // No starring in Mail (the user's call): never shown, never a rule.
         starred: { visible: false, filterable: false, groupable: false },
         hasAttachment: { label: "Attachment", visible: false },
         query: { visible: false, filterable: false, groupable: false },
       }),
-    [options],
+    [options, run],
   );
   const viewOptions = useMemo(
     () => ({

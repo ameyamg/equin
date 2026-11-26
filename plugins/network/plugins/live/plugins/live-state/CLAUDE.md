@@ -940,7 +940,7 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 331 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 332 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×87
     - `conversations` ×49
     - `debug` ×31
@@ -972,6 +972,7 @@ Details:
     - `reorder`
     - `screenshot`
     - `search/quick-find`
+    - `tag-tree/picker`
     - `upstream`
 - Exemptions:
   - Exempts itself from:

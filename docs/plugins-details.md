@@ -7180,6 +7180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/sql-column.parsedJson`
               - `ids.externalIdColumn`
               - `infra/background/timer.defineTimer`
+              - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
@@ -7245,6 +7246,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/list-bound.cappedList`
             - Exports (types):
               - `MailAccountStatus`
+              - `MailLabelChange`
               - `MailMailboxRow`
               - `MailOpFacts`
               - `MailOpUndo`
@@ -7268,6 +7270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailboxViewIds`
               - `mailCacheConfig`
               - `mailInboxView`
+              - `MailLabelChangeSchema`
               - `mailMailboxes`
               - `mailOpColumns`
               - `mailOpMoves`
@@ -7276,8 +7279,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailThreads`
               - `PARENT_VIEW_INCLUDES_SUB_LABELS`
               - `primaryMailAction`
-              - `renameMailLabel`
               - `undoMailOp`
+              - `updateMailLabel`
           - Cross-plugin:
             - Imported by:
               - `apps/mail/reader`
@@ -7315,6 +7318,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ListCursor`
               - `ListedMessage`
               - `Mailbox`
+              - `MailboxColor`
               - `MailboxId`
               - `MailboxRole`
               - `MailCallOptions`
@@ -7356,6 +7360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailboxRoleOf`
               - `MailNotConnectedError`
               - `MailOutcomeUnknownError`
+              - `MailRefusedError`
               - `MailUnreachableError`
               - `messageId`
               - `mimeMessageId`
@@ -7575,7 +7580,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/mail/reader`
               - `apps/mail/threads`
-        - **`threads`** — Mail's index pane (/mail): one DataView over the live mail.threads window — rows are threads, newest first, grouped by received day, searched by the provider's own search (the query column) — whose views are the built-ins (Inbox, Sent, Drafts, Done, Spam, Trash: locked, copy-only, code-defined, the Inbox filter in one place for the boot preload), one per user label (a parent's includes its sub-labels) and the user's own saved views. The mail sidebar is the DataView's aside: the view name, one drag-reorderable list of views (Spam and Trash folded under More), + New view, and the label tree (folds roll unread up). The toolbar is the search box with Filter and Display inside it, and the view's rules as chips while it is the user's own or edited. A refused window renders by its code: not connected draws the provider's connect surface. Triage: each row's hover actions (Label, Delete, Done — Restore in the trash, Not spam in spam, Move to Inbox elsewhere), checkbox selection with a bottom selection bar (Done, Label, Mark as read, Delete / Restore), the reader's bar (the same, plus Mark as unread), a thread marked read when opened, undo toasts, and the keys j / k (next / previous thread), e (the primary action), # (delete) and / (search) — every op drawn at once on every view through the live row overlay and written through the cache. Labels: Label as (the tree, checked when every thread has it, New label with a / path), and rename / delete in the sidebar's label menu.
+        - **`threads`** — Mail's index pane (/mail): one DataView over the live mail.threads window — rows are threads, newest first, grouped by received day, searched by the provider's own search (the query column) — whose views are the built-ins (Inbox, Sent, Drafts, Done, Spam, Trash: locked, copy-only, code-defined, the Inbox filter in one place for the boot preload), one per user label (a parent's includes its sub-labels) and the user's own saved views. The mail sidebar is the DataView's aside: the view name, one drag-reorderable list of views (Spam and Trash folded under More), + New view, and the label tree. The toolbar is the search box with Filter and Display inside it, and the view's rules as chips while it is the user's own or edited. A refused window renders by its code: not connected draws the provider's connect surface. Triage: each row's hover actions (Label, Delete, Done — Restore in the trash, Not spam in spam, Move to Inbox elsewhere), checkbox selection with a bottom selection bar (Done, Label, Mark as read, Delete / Restore), the reader's bar (the same, plus Mark as unread), a thread marked read when opened, undo toasts, and the keys j / k (next / previous thread), e (the primary action), # (delete) and / (search) — every op drawn at once on every view through the live row overlay and written through the cache. Labels: the shared tag picker over the account's labels (useMailLabelSource — create, nest, rename, recolour in the provider's palette, delete; no manual order or icons, which the provider has not) as the row, reader and selection bar's Label popover and as the sidebar's label tree, and the mailboxes field's options a tag forest (roles fixed) so the standard tags editor edits a thread's labels.
           - Web:
             - Slots:
               - `mail.actions`
@@ -7589,16 +7594,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 56 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
-              - `primitives/css/ui-kit` ×15
+            - Uses: 49 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/data-view` ×8
+              - `primitives/css/ui-kit` ×5
               - `primitives/pane` ×5
-              - `network/live/live-state` ×2
+              - `network/live/live-state` ×4
+              - `infra/endpoints` ×2
               - `network/live` ×2
               - `primitives/css/rigid` ×2
+              - `tag-tree/picker` ×2
               - `apps/mail/provider.MailProviderConnect`
               - `apps/mail/reader.ThreadReader`
-              - `infra/endpoints.useFetchEndpoint`
               - `network/live/optimistic-mutation.writeRows`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
@@ -7613,9 +7619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/multi-select.useMultiSelect`
               - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
-              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/shortcuts.useSurfaceShortcuts`
-              - `primitives/tree.TreeRowChrome`
               - `shell/notifications.useToast`
               - `ui/icons.Icon`
           - Core:
@@ -7642,11 +7646,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MAIL_INBOX_VIEW`
               - `MAIL_TUCKED_VIEWS`
           - Cross-plugin:
-            - Uses tokens: 25 vars — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses tokens: 24 vars — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `ui/tokens/density` ×10
               - `ui/tokens/color-palette` ×8
-              - `ui/tokens/type-scale` ×4
               - `ui/tokens/shape` ×3
+              - `ui/tokens/type-scale` ×3
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
@@ -33321,18 +33325,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Web: `@plugins/fields/plugins/tags/plugins/filter/web/testing`
               - `tagsOperatorSet`
-        - **`inline`** — Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).
+        - **`inline`** — Tags (multi-value) field type: data-view inline cell editor — the shared tag picker (read-only) over the field's options in a popover, a click toggling a tag, fixed options neither offered nor removed.
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "tags" → `TagsEditor`
             - Uses:
               - `primitives/css/badge.Badge`
               - `primitives/css/clip.Clip`
-              - `primitives/css/cluster.Cluster`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/toggle-chip.ToggleChip`
-              - `primitives/css/ui-kit.Input`
               - `primitives/data-view.DataViewSlots`
               - `primitives/overlay/popover.InlinePopover`
+              - `tag-tree/picker.TagPickerPanel`
+              - `tag-tree/picker.tagRowsOfOptions`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --muted-foreground`
         - **`storage`** — Tags field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so its string[] is derived rather than asserted.
@@ -33353,6 +33356,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.QuietOption`
               - `primitives/data-view.TableCellProps`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
     - **`text`** — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "text"
@@ -44145,6 +44150,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HistoryRecordSchema`
               - `LabelListSchema`
               - `LabelSchema`
+              - `LabelWriteAnswerSchema`
               - `MessageLabelsSchema`
               - `MessageListSchema`
               - `MessagePartSchema`
@@ -46097,7 +46103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 331 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 332 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×87
               - `conversations` ×49
               - `debug` ×31
@@ -46129,6 +46135,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder`
               - `screenshot`
               - `search/quick-find`
+              - `tag-tree/picker`
               - `upstream`
           - Exemptions:
             - Exempts itself from:
@@ -53489,17 +53496,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
               - `apps` ×27
               - `debug` ×12
               - `conversations` ×7
               - `primitives` ×7
               - `plugin-meta` ×6
-              - `fields` ×2
               - `page` ×2
               - `tasks` ×2
               - `code-explorer/commit-detail`
               - `config_v2/fields`
+              - `fields/dynamic-flags/config`
               - `infra/claude-cli`
               - `stats/commits`
               - `ui/tokens/shadow/customizer`
@@ -54822,15 +54829,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×3
-            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×7
               - `debug` ×5
               - `stats` ×5
-              - `fields` ×3
               - `page` ×3
               - `config_v2` ×2
               - `conversations` ×2
+              - `fields` ×2
               - `tasks` ×2
               - `ui` ×2
               - `apps-core/surface`
@@ -55014,7 +55021,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 492 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 491 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×116
               - `primitives` ×115
               - `conversations` ×53
@@ -55022,7 +55029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×25
               - `tasks` ×22
               - `ui` ×22
-              - `fields` ×14
+              - `fields` ×13
               - `apps-core` ×12
               - `plugin-meta` ×10
               - `infra` ×8
@@ -58023,11 +58030,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 138 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
-          - `apps` ×39
+        - Imported by: 136 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+          - `apps` ×38
           - `primitives` ×28
           - `conversations` ×13
-          - `fields` ×11
+          - `fields` ×10
           - `page` ×9
           - `tasks` ×6
           - `auth` ×5
@@ -59461,7 +59468,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/wallpaper`
               - `apps/events/sources`
               - `apps/file-explorer/browser`
-              - `apps/mail/threads`
               - `apps/sonata/library`
               - `conversations/rename`
               - `primitives/overlay/imperative-dialog/confirm`
@@ -60355,8 +60361,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rankText`
           - `withRank`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/rank/REFERENCE.md`](../plugins/primitives/plugins/rank/REFERENCE.md)
-          - `apps` ×7
+        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/rank/REFERENCE.md`](../plugins/primitives/plugins/rank/REFERENCE.md)
+          - `apps` ×8
           - `conversations` ×5
           - `primitives` ×4
           - `config_v2` ×2
@@ -61896,7 +61902,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
         - Imported by:
-          - `apps/mail/threads`
           - `apps/pages/page-tree`
           - `page/editor`
           - `primitives/data-view`
@@ -65666,21 +65671,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-category`
+          - `apps/mail/threads`
           - `apps/places/fixtures`
           - `apps/places/places-core`
           - `apps/places/places-map`
           - `apps/prototypes/gallery`
           - `apps/prototypes/state`
           - `tag-tree/picker`
-    - **`picker`** — The shared tag picker: TagPickerPanel (pure — search or create a typed path, the foldable tree with rolled-up counts, inline create and rename, a ⋯ menu to recolour, nest out and delete, whole-row drag to reorder and nest), TagPickerPopover wiring it to a declared tree, the TagPathChip header chip and TagMark.
+    - **`picker`** — The shared tag picker: TagPickerPanel (pure — search or create a typed path, the foldable tree with rolled-up counts, inline create and rename, a ⋯ menu to recolour, nest out and delete, whole-row drag to reorder and nest), TagPickerPopover wiring it to a declared tree or to any other backend (a TagPickerSource: rows, writes, and the TagPickerAbilities it has — manual order, icons, shading, its colour palette, clearing a colour — so the picker offers only what the backend can do; without writes the panel is a read-only picking tree), the TagPathChip header chip and TagMark.
       - Web:
-        - Uses: 34 symbols — full list in [`plugins/tag-tree/plugins/picker/REFERENCE.md`](../plugins/tag-tree/plugins/picker/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/tag-tree/plugins/picker/REFERENCE.md`](../plugins/tag-tree/plugins/picker/REFERENCE.md)
           - `primitives/css/ui-kit` ×9
           - `primitives/tree` ×5
           - `primitives/css/control-panel` ×2
           - `primitives/css/spacing` ×2
           - `tag-tree/engine` ×2
           - `infra/endpoints.EndpointError`
+          - `network/live/live-state.mapResource`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/grid.Grid`
@@ -65697,15 +65704,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `TagMarkProps`
           - `TagPathChipProps`
+          - `TagPickerAbilities`
+          - `TagPickerBackend`
           - `TagPickerOptions`
           - `TagPickerPanelProps`
           - `TagPickerPopoverProps`
+          - `TagPickerRow`
+          - `TagPickerSource`
           - `TagPickerWrites`
         - Exports (values):
+          - `TAG_TREE_ABILITIES`
           - `TagMark`
           - `TagPathChip`
           - `TagPickerPanel`
           - `TagPickerPopover`
+          - `tagRowsOfOptions`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -65723,12 +65736,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+          - `ui/tokens/type-scale --font-weight-label-strong`
           - `ui/tokens/type-scale --font-weight-medium`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
           - `apps-core/app-category`
+          - `apps/mail/threads`
           - `apps/places/places-map`
           - `apps/prototypes/gallery`
+          - `fields/tags/inline`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations; registers the Task filing instructions config (Settings → Config). Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog; a person's grant on a task — switched only from a browser, never for a task an agent owns — lifts the ownership refusal for that task's own conversation, each such action recorded on the task it changes), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's. Registers the Task filing instructions config (the tasks.file Mandate line and the grant clauses add_task describes it with).
   - Web:
@@ -71831,7 +71847,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 427 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 428 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×83
               - `primitives` ×64
@@ -71839,7 +71855,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×28
               - `ui` ×25
               - `tasks` ×16
-              - `fields` ×11
+              - `fields` ×12
               - `plugin-meta` ×8
               - `infra` ×7
               - `companions` ×6

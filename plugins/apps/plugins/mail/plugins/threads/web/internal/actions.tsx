@@ -2,33 +2,13 @@ import { useState, type ReactNode } from "react";
 import { writeRows } from "@plugins/network/plugins/live/plugins/optimistic-mutation/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import {
-  Button,
-  DialogDescription,
-  DialogTitle,
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Input,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { TagPickerPopover } from "@plugins/tag-tree/plugins/picker/web";
 import {
   applyMailOp,
   applyMailThreadOp,
-  createMailLabel,
   inMailTrash,
   mailOpColumns,
   mailThreads,
@@ -36,9 +16,7 @@ import {
   type MailThreadOp,
   type MailThreadRow,
 } from "@plugins/apps/plugins/mail/plugins/cache/core";
-import { labelColor } from "../../core";
-import { labelLines } from "./label-lines";
-import { useMailboxes, userLabels } from "./mailboxes";
+import { useMailLabelSource } from "./label-source";
 
 const labelIcon = symbol("label");
 const deleteIcon = symbol("delete");
@@ -48,7 +26,6 @@ const restoreIcon = symbol("restore-from-trash");
 const notSpamIcon = symbol("report-off");
 const readIcon = symbol("drafts");
 const unreadIcon = symbol("mark-email-unread");
-const addIcon = symbol("add");
 
 /** The facts a triage op reads of a thread (any row of `mail.threads`). */
 export type MailActionRow = Pick<MailThreadRow, "id" | "mailboxes" | "unread">;
@@ -177,7 +154,7 @@ export function ThreadActions({
   };
   return (
     <Line className="gap-2xs">
-      <LabelMenu ids={[row.id]} has={(l) => row.mailboxes.includes(l)} />
+      <LabelPicker ids={[row.id]} selected={row.mailboxes} />
       {withUnread ? (
         <IconButton
           icon={row.unread ? readIcon : unreadIcon}
@@ -233,7 +210,7 @@ export function BulkThreadActions({
         label="Done"
         onClick={() => act({ kind: "archive" })}
       />
-      <LabelMenu ids={ids} has={() => false} />
+      <LabelPicker ids={ids} />
       <IconButton
         icon={readIcon}
         label="Mark as read"
@@ -257,167 +234,55 @@ export function BulkThreadActions({
 }
 
 /**
- * "Label as": every user label as its `/` tree, checked when the threads
- * have it (`has`: a click removes it from them; else adds it to all), and
- * "New label" (a `/` path nests it), applied to the threads once made.
- * Interim: the shared tag picker replaces it (task-1795721629-kk5kdx).
+ * Label: the shared tag picker (`tag-tree/picker`) over the account's labels
+ * (`useMailLabelSource`) — search, a typed `/` path made, the tree with its
+ * ＋ / ⋯ / double-click rename / drag-to-nest — a pick toggling the label on
+ * the threads: removed when they have it, else added. It stays open across
+ * picks, so one visit sets several labels.
+ *
+ * On one thread `selected` is its labels, live. On a selection (no
+ * `selected`) a pick adds the label to all, is ✓ from then on, and a second
+ * pick takes it off all again.
  */
-export function LabelMenu({
+export function LabelPicker({
   ids,
-  has,
+  selected,
 }: {
   ids: readonly string[];
-  /** Whether every thread has the label (a selection says no: a click adds). */
-  has: (labelId: string) => boolean;
+  /**
+   * The thread's labels (it is one thread, read live), or absent for a
+   * selection, whose labels the picker tracks itself.
+   */
+  selected?: readonly string[];
 }): ReactNode {
-  const { state } = useMailboxes();
+  const source = useMailLabelSource();
   const { run } = useMailActions();
-  const newLabel = useNewLabel();
-  const labels = state.kind === "ready" ? userLabels(state.mailboxes) : [];
-  const lines = labelLines(labels, new Set());
+  // A selection: what this picker added, so it reads ✓ and toggles back.
+  const [added, setAdded] = useState<readonly string[]>([]);
+  const has = selected ?? added;
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<IconButton icon={labelIcon} label="Label" />}
-      />
-      <DropdownMenuContent align="end" className="max-h-96 min-w-56">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Label as</DropdownMenuLabel>
-          {state.kind === "loading" ? (
-            <Loading variant="rows" count={3} />
-          ) : null}
-          {lines.map(({ label, depth }) => {
-            const all = has(label.id);
-            const color =
-              state.kind === "ready"
-                ? labelColor(label, state.mailboxes)
-                : null;
-            return (
-              <DropdownMenuCheckboxItem
-                key={label.id}
-                checked={all}
-                onClick={() =>
-                  run(
-                    ids,
-                    all
-                      ? { kind: "labels", add: [], remove: [label.id] }
-                      : { kind: "labels", add: [label.id], remove: [] },
-                    { toast: false },
-                  )
-                }
-              >
-                <Line
-                  className="gap-xsm"
-                  style={{ paddingLeft: `${depth}rem` }}
-                >
-                  <span
-                    aria-hidden
-                    className="size-2 rounded-full"
-                    style={{ background: color ?? "var(--muted-foreground)" }}
-                  />
-                  {label.name}
-                </Line>
-              </DropdownMenuCheckboxItem>
-            );
-          })}
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() =>
-            void newLabel().then((id) => {
-              if (id !== null) {
-                run(
-                  ids,
-                  { kind: "labels", add: [id], remove: [] },
-                  {
-                    toast: false,
-                  },
-                );
-              }
-            })
-          }
-        >
-          <Icon icon={addIcon} className="size-4" />
-          New label
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/**
- * Asks for a new label's name (a `/` path nests it: "Travel/Ski 2027") and
- * makes it; answers its id, or null when dismissed.
- */
-export function useNewLabel(): () => Promise<string | null> {
-  const openDialog = useOpenDialog();
-  const fetchEndpoint = useFetchEndpoint();
-  return async () => {
-    let made: string | null = null;
-    await openDialog((close) => (
-      <LabelNameForm
-        title="New label"
-        description="Nest it under another with a slash: Travel/Ski 2027."
-        initial=""
-        submit="Create"
-        onSubmit={async (path) => {
-          const r = await fetchEndpoint(
-            createMailLabel,
-            {},
-            { body: { path } },
+    <TagPickerPopover
+      source={source}
+      noun="label"
+      selected={has}
+      closeOnPick={false}
+      onPick={(id) => {
+        if (id === null) return;
+        const on = has.includes(id);
+        run(
+          ids,
+          on
+            ? { kind: "labels", add: [], remove: [id] }
+            : { kind: "labels", add: [id], remove: [] },
+          { toast: false },
+        );
+        if (selected === undefined) {
+          setAdded((prev) =>
+            on ? prev.filter((x) => x !== id) : [...prev, id],
           );
-          made = r.id;
-          close();
-        }}
-      />
-    ));
-    return made;
-  };
-}
-
-/** A label's name, asked in a dialog (create, rename). */
-export function LabelNameForm({
-  title,
-  description,
-  initial,
-  submit,
-  onSubmit,
-}: {
-  title: string;
-  description: string;
-  initial: string;
-  submit: string;
-  onSubmit: (name: string) => Promise<void>;
-}): ReactNode {
-  const [name, setName] = useState(initial);
-  const ok = name.trim() !== "" && name.trim() !== initial;
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
+        }
       }}
-    >
-      <Stack gap="md">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-        <Input
-          autoFocus
-          keep={transient("a label name typed once, sent with the dialog")}
-          value={name}
-          aria-label="Label name"
-          onChange={(e) => setName(e.target.value)}
-        />
-        <Line>
-          <Fill />
-          <Button
-            type="submit"
-            disabled={!ok}
-            onClick={() => onSubmit(name.trim())}
-          >
-            {submit}
-          </Button>
-        </Line>
-      </Stack>
-    </form>
+      trigger={<IconButton icon={labelIcon} label="Label" />}
+    />
   );
 }

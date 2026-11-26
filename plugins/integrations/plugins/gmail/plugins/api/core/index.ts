@@ -44,6 +44,7 @@ export {
   HistoryRecordSchema,
   LabelListSchema,
   LabelSchema,
+  LabelWriteAnswerSchema,
   MessageLabelsSchema,
   MessageListSchema,
   MessagePartSchema,

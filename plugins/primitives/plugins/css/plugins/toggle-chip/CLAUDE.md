@@ -63,15 +63,15 @@ filter rule reads as "custom").
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×3
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
     - `primitives` ×7
     - `debug` ×5
     - `stats` ×5
-    - `fields` ×3
     - `page` ×3
     - `config_v2` ×2
     - `conversations` ×2
+    - `fields` ×2
     - `tasks` ×2
     - `ui` ×2
     - `apps-core/surface`

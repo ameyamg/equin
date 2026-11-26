@@ -216,12 +216,16 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   summary's message ids): Gmail answers one `messages.batchModify` per 1,000
   messages (50 units; a per-thread modify is 10 a thread).
 - **Labels**: `POST /api/mail/labels` (`{ path }`: "Travel/Ski 2027", each
-  missing level created under the one before, answers the last level's id),
-  `PATCH /api/mail/labels/:id` (its own name; Gmail nests by name, so the
-  Gmail provider renames every label under it too), `DELETE
-  /api/mail/labels/:id` — each through the provider, then the mailboxes
-  relisted. Not optimistic: the dialog's Button pends. Interim UI: the
-  shared tag picker replaces it (task-1795721629-kk5kdx).
+  missing level created under the one before, answers the last level's id;
+  or `{ name, parentId }`, one label under a known parent), `PATCH
+  /api/mail/labels/:id` (`MailLabelChange`: a rename, a move to another
+  parent, or a colour — a background of the provider's palette, mapped to
+  its pair here, or null to clear where the provider can), `DELETE
+  /api/mail/labels/:id` (its sub-labels move up) — each through the
+  provider, then the mailboxes relisted. A provider's `MailRefusedError` (a
+  name taken, a move under itself, a colour off the palette) is a 400. Not
+  optimistic: the tag picker shows the relisted tree. The account status
+  carries the provider's `mailboxColors` for the picker's palette.
 - **Undo is per thread, not per message**: it restores the thread's union
   facts on every message (Undo Done puts INBOX on each message of the
   thread, Undo mark-read marks each unread).
@@ -288,6 +292,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `database/sql-column.parsedJson`
     - `ids.externalIdColumn`
     - `infra/background/timer.defineTimer`
+    - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
     - `infra/jobs.NonRetryableError`
@@ -353,6 +358,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `packages/list-bound.cappedList`
   - Exports (types):
     - `MailAccountStatus`
+    - `MailLabelChange`
     - `MailMailboxRow`
     - `MailOpFacts`
     - `MailOpUndo`
@@ -376,6 +382,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `mailboxViewIds`
     - `mailCacheConfig`
     - `mailInboxView`
+    - `MailLabelChangeSchema`
     - `mailMailboxes`
     - `mailOpColumns`
     - `mailOpMoves`
@@ -384,8 +391,8 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `mailThreads`
     - `PARENT_VIEW_INCLUDES_SUB_LABELS`
     - `primaryMailAction`
-    - `renameMailLabel`
     - `undoMailOp`
+    - `updateMailLabel`
 - Cross-plugin:
   - Imported by:
     - `apps/mail/reader`

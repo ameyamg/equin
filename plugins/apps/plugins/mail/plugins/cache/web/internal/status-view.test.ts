@@ -18,6 +18,7 @@ const account = (
     watching: true,
     ticking: true,
   },
+  mailboxColors: null,
   syncedAt: "2026-11-26T10:00:00.000Z",
   syncFailure: null,
   ...over,

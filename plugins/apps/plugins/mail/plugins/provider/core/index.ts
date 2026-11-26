@@ -18,6 +18,7 @@ export {
   nativeMailboxId,
   roleMailboxId,
   type Mailbox,
+  type MailboxColor,
   type MailboxRole,
 } from "./internal/mailbox";
 export {
@@ -54,6 +55,7 @@ export {
 export {
   MailNotConnectedError,
   MailOutcomeUnknownError,
+  MailRefusedError,
   MailUnreachableError,
   type ConnectedMailAccount,
   type MailCallOptions,

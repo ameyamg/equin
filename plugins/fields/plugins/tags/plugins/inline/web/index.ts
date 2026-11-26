@@ -4,7 +4,7 @@ import { TagsEditor } from "./components/tags-editor";
 
 export default {
   description:
-    "Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).",
+    "Tags (multi-value) field type: data-view inline cell editor — the shared tag picker (read-only) over the field's options in a popover, a click toggling a tag, fixed options neither offered nor removed.",
   contributions: [
     DataViewSlots.CellEditor({
       match: "tags",

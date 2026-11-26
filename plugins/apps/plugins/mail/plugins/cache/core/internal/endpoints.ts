@@ -20,26 +20,53 @@ export const applyMailThreadOp = defineEndpoint({
   response: z.object({ undo: z.array(MailOpUndoSchema) }),
 });
 
-/** A label at a `/`-separated path, each missing level made; answers the last level's id. */
+const LabelNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(225)
+  .refine((n) => !n.includes("/"), "a label name may not contain /");
+
+/**
+ * A label: at a `/`-separated path (each missing level made — the search's
+ * "Create Travel / Ski 2027"), or one name under a known parent by its id
+ * (the provider builds the full name). Answers the (last) label's id.
+ */
 export const createMailLabel = defineEndpoint({
   route: "POST /api/mail/labels",
-  body: z.object({ path: z.string().trim().min(1).max(225) }),
+  body: z.union([
+    z.object({ path: z.string().trim().min(1).max(225) }),
+    z.object({ name: LabelNameSchema, parentId: z.string().min(1) }),
+  ]),
   response: z.object({ id: z.string() }),
 });
 
-/** A label's own name (its place in the tree kept). */
-export const renameMailLabel = defineEndpoint({
-  route: "PATCH /api/mail/labels/:id",
-  body: z.object({
-    name: z
+/**
+ * One change to a label: its own name (its place and sub-labels kept), its
+ * parent (null: a root; its sub-labels move with it), or its colour — a
+ * background of the provider's palette (`mail.account-status`'s
+ * `mailboxColors`), or null to clear it.
+ */
+export const MailLabelChangeSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("rename"), name: LabelNameSchema }),
+  z.object({ kind: z.literal("move"), parentId: z.string().min(1).nullable() }),
+  z.object({
+    kind: z.literal("color"),
+    background: z
       .string()
-      .trim()
-      .min(1)
-      .max(225)
-      .refine((n) => !n.includes("/"), "a label name may not contain /"),
+      .regex(/^#[0-9a-fA-F]{6}$/, "a colour is #rrggbb")
+      .nullable(),
   }),
+]);
+export type MailLabelChange = z.infer<typeof MailLabelChangeSchema>;
+
+/** Changes a label (`MailLabelChange`); answered once the provider has it and the mailboxes are relisted. */
+export const updateMailLabel = defineEndpoint({
+  route: "PATCH /api/mail/labels/:id",
+  body: MailLabelChangeSchema,
 });
 
+/** Deletes a label: its sub-labels move up to its parent; its threads keep their other labels. */
 export const deleteMailLabel = defineEndpoint({
   route: "DELETE /api/mail/labels/:id",
 });

@@ -1,12 +1,13 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { tagColor, type TagRow } from "@plugins/tag-tree/plugins/engine/core";
+import { tagColor, type TagNode } from "@plugins/tag-tree/plugins/engine/core";
+import type { TagPickerRow } from "../internal/types";
 
 export interface TagMarkProps {
-  tag: TagRow;
+  tag: TagPickerRow;
   /** The whole tree: a tag without a colour wears its nearest ancestor's. */
-  tags: readonly TagRow[];
+  tags: readonly TagNode[];
   className?: string;
 }
 

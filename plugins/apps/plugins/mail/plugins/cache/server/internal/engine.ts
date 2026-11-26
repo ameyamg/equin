@@ -35,6 +35,7 @@ import {
   MailUnreachableError,
   providerQuery,
   messageId as toMessageId,
+  MailRefusedError,
   threadId as toThreadId,
   type AttachmentMeta,
   type ChangeCursor,
@@ -50,6 +51,7 @@ import {
   type ThreadSummary,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import type {
+  MailLabelChange,
   MailMailboxRow,
   MailThreadRow,
   MailThreadsRefusal,
@@ -1806,6 +1808,13 @@ export function createMailCache(deps: MailCacheDeps) {
       address: row.address,
       connection: f?.kind === "offline" ? "offline" : "connected",
       changeSignal: deps.changeSignal(),
+      mailboxColors:
+        definition.capabilities.mailboxColors === null
+          ? null
+          : {
+              palette: [...definition.capabilities.mailboxColors.palette],
+              clearable: definition.capabilities.mailboxColors.clearable,
+            },
       syncedAt: row.syncedAt?.toISOString() ?? null,
       syncFailure:
         f === null ? null : { at: f.at, kind: f.kind, message: f.message },
@@ -2140,8 +2149,21 @@ export function createMailCache(deps: MailCacheDeps) {
    * under the one before it, the existing ones kept; the mailboxes relisted.
    * Answers the last level's id.
    */
-  async function createLabel(path: string): Promise<MailboxId> {
+  async function createLabel(
+    spec: { path: string } | { name: string; parentId: string },
+  ): Promise<MailboxId> {
     const a = await account();
+    if ("parentId" in spec) {
+      // Under a known parent, by its id: the provider builds the full name
+      // (a parent's own name may hold a "/" — a Gmail root named "a/b").
+      const made = await a.provider.createMailbox(
+        { name: spec.name.trim(), parentId: spec.parentId as MailboxId },
+        fg,
+      );
+      await relistMailboxes(a, fg);
+      return made.id;
+    }
+    const path = spec.path;
     const names = path
       .split("/")
       .map((n) => n.trim())
@@ -2168,13 +2190,59 @@ export function createMailCache(deps: MailCacheDeps) {
     return parent!;
   }
 
-  async function renameLabel(id: string, name: string): Promise<void> {
+  /**
+   * A label's own name, its parent, or its colour — one at a time (the
+   * provider's three writes), then the mailboxes relisted. A colour must be
+   * one of the provider's palette (by its background).
+   */
+  async function updateLabel(
+    id: string,
+    change: MailLabelChange,
+  ): Promise<void> {
     const a = await account();
-    await a.provider.renameMailbox(id as MailboxId, name.trim(), fg);
+    const mailbox = id as MailboxId;
+    switch (change.kind) {
+      case "rename":
+        await a.provider.renameMailbox(mailbox, change.name.trim(), fg);
+        break;
+      case "move":
+        await a.provider.moveMailbox(
+          mailbox,
+          change.parentId as MailboxId | null,
+          fg,
+        );
+        break;
+      case "color": {
+        const colors = a.definition.capabilities.mailboxColors;
+        if (colors === null) {
+          throw new MailRefusedError(
+            `${a.definition.label} labels have no colours`,
+          );
+        }
+        if (change.background === null) {
+          if (!colors.clearable) {
+            throw new MailRefusedError(
+              `a ${a.definition.label} label's colour cannot be cleared`,
+            );
+          }
+          await a.provider.setMailboxColor(mailbox, null, fg);
+          break;
+        }
+        const want = change.background.toLowerCase();
+        const pair = colors.palette.find((c) => c.background === want);
+        if (pair === undefined) {
+          throw new MailRefusedError(
+            `${change.background} is not one of ${a.definition.label}'s label colours`,
+          );
+        }
+        await a.provider.setMailboxColor(mailbox, pair, fg);
+        break;
+      }
+    }
     await relistMailboxes(a, fg);
   }
 
-  /** Deletes a label (its sub-labels stay, as Gmail keeps them); threads keep their other labels. */
+  /** Deletes a label: its sub-labels move up to its parent; threads keep their other labels. */
   async function deleteLabel(id: string): Promise<void> {
     const a = await account();
     await a.provider.deleteMailbox(id as MailboxId, fg);
@@ -2186,7 +2254,7 @@ export function createMailCache(deps: MailCacheDeps) {
     applyAtProvider,
     restoreThreads,
     createLabel,
-    renameLabel,
+    updateLabel,
     deleteLabel,
     window,
     held,

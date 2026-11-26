@@ -5,7 +5,7 @@ import {
   resolveTagPath,
   tagPath,
   tagPathLabel,
-  type TagRow,
+  type TagNode,
 } from "@plugins/tag-tree/plugins/engine/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
@@ -31,7 +31,13 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { TagMark } from "./tag-mark";
 import { fireWrite } from "../internal/surfaced";
-import type { TagPickerOptions, TagPickerWrites } from "../internal/types";
+import {
+  TAG_TREE_ABILITIES,
+  type TagPickerAbilities,
+  type TagPickerOptions,
+  type TagPickerRow,
+  type TagPickerWrites,
+} from "../internal/types";
 import { TagNameInput } from "./tag-name-input";
 import { TagRowMenu } from "./tag-row-menu";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -41,13 +47,30 @@ const checkIcon = symbol("check");
 const removeIcon = symbol("remove");
 
 export interface TagPickerPanelProps<
-  Row extends TagRow = TagRow,
+  Row extends TagPickerRow = TagPickerRow,
 > extends TagPickerOptions<Row> {
   /** The tree's rows (any order: the panel walks `parentId` / `rank`). */
   tags: readonly Row[];
-  writes: TagPickerWrites;
+  /**
+   * The backend's writes. Absent: the tree is read-only — it picks, and
+   * offers no ＋, ⋯, rename, drag, create or "New tag" (a cell editor over a
+   * field's options).
+   */
+  writes?: TagPickerWrites;
+  /** What the backend can do (default {@link TAG_TREE_ABILITIES}: a declared tree). */
+  abilities?: TagPickerAbilities;
   /** What the tree adds at the foot of a row's ⋯ menu (its own extras, read-only). */
   rowMenuExtra?: (tag: Row) => ReactNode;
+}
+
+/** How a picked row is marked (`TagPickerOptions.indicator`). */
+type Indicator = NonNullable<TagPickerOptions["indicator"]>;
+
+/** A name field's placeholder: "Tag name", "Sub-label name". */
+function nameHint(noun: string, nested: boolean): string {
+  return nested
+    ? `Sub-${noun} name`
+    : `${noun.charAt(0).toUpperCase()}${noun.slice(1)} name`;
 }
 
 /** How one row is marked: picked, negated, holding either, or none. */
@@ -57,7 +80,7 @@ type Mark = "picked" | "negated" | "partial" | "off";
 const DRAFT_ID = "\u0000draft";
 
 /** A tree line the panel paints: a tag adapted to the tree primitive's row. */
-interface PickerRow<Row extends TagRow> {
+interface PickerRow<Row extends TagPickerRow> {
   id: string;
   parentId: string | null;
   rank: Rank;
@@ -74,9 +97,13 @@ interface PickerRow<Row extends TagRow> {
  * double-click to rename); a query lists every tag whose path contains it and
  * offers to create the typed path. No instructional text — the mockup's.
  */
-export function TagPickerPanel<Row extends TagRow>({
+export function TagPickerPanel<Row extends TagPickerRow>({
   tags,
   writes,
+  abilities = TAG_TREE_ABILITIES,
+  search = true,
+  fadeEmpty = true,
+  noun = "tag",
   selected,
   negated = NONE,
   indicator = "check",
@@ -106,7 +133,7 @@ export function TagPickerPanel<Row extends TagRow>({
   const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const visible = useMemo(() => visibleTags(tags, exclude), [tags, exclude]);
-  const needle = query.trim();
+  const needle = search ? query.trim() : "";
   const searching = parseTagPath(needle).length > 0;
 
   const openDraft = useCallback((parentId: string | null) => {
@@ -126,7 +153,7 @@ export function TagPickerPanel<Row extends TagRow>({
     (name: string) => {
       const parentId = draftParent ?? null;
       setDraftParent(undefined);
-      if (name === "") return;
+      if (name === "" || writes === undefined) return;
       fireWrite(writes.create({ name, parentId }));
     },
     [draftParent, writes],
@@ -136,7 +163,9 @@ export function TagPickerPanel<Row extends TagRow>({
     (id: string, name: string) => {
       setRenamingId(null);
       const tag = tags.find((t) => t.id === id);
-      if (!tag || name === "" || name === tag.name) return;
+      if (!tag || name === "" || name === tag.name || writes === undefined) {
+        return;
+      }
       fireWrite(writes.update(id, { name }));
     },
     [tags, writes],
@@ -144,6 +173,7 @@ export function TagPickerPanel<Row extends TagRow>({
 
   const createPath = useCallback(
     async (segments: readonly string[]) => {
+      if (writes === undefined) return;
       const { id } = await writes.createPath(segments);
       if (pickCreated) onPick(id);
     },
@@ -157,28 +187,35 @@ export function TagPickerPanel<Row extends TagRow>({
       {/* The panel declares NO inset: its host owns it (the popover's `xs`
           rail, the Places sidebar column's `sm` one), so the search, the tree
           and the footer share the host's one edge by doing nothing. */}
-      <SearchInput
-          appearance="menu"
-          autoFocus={autoFocus}
-        keep={transient(
-          "picker query: one panel per popover, many in a pane — a pane-scoped view key would carry one picker's query into another",
-        )}
-          value={query}
-          placeholder="Search or create…"
-          aria-label="Search or create a tag"
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || !searching) return;
-            e.preventDefault();
-            const segments = parseTagPath(needle);
-            const exact = findByPath(segments, tags);
-            if (exact === undefined) fireWrite(createPath(segments));
-            else if (visible.pickable.has(exact.id)) onPick(exact.id);
-          }}
-        />
-      {/* Hairlines spanning the host's region, whatever rail it is on; the
+      {search ? (
+        <>
+          <SearchInput
+            appearance="menu"
+            autoFocus={autoFocus}
+            keep={transient(
+              "picker query: one panel per popover, many in a pane — a pane-scoped view key would carry one picker's query into another",
+            )}
+            value={query}
+            placeholder={writes ? "Search or create…" : "Search…"}
+            aria-label={
+              writes ? `Search or create a ${noun}` : `Search ${noun}s`
+            }
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || !searching) return;
+              e.preventDefault();
+              const segments = parseTagPath(needle);
+              const exact = findByPath(segments, tags);
+              if (exact === undefined) {
+                if (writes) fireWrite(createPath(segments));
+              } else if (visible.pickable.has(exact.id)) onPick(exact.id);
+            }}
+          />
+          {/* Hairlines spanning the host's region, whatever rail it is on; the
           search field keeps its own room above and below (`menu-field`). */}
       <Separator bleed />
+        </>
+      ) : null}
       <Stack direction="col" gap="none">
         {searching ? (
           <SearchResults
@@ -189,7 +226,7 @@ export function TagPickerPanel<Row extends TagRow>({
             indicator={indicator}
             counts={counts}
             onPick={onPick}
-            onCreate={createPath}
+            onCreate={writes ? createPath : undefined}
           />
         ) : (
           <>
@@ -206,7 +243,10 @@ export function TagPickerPanel<Row extends TagRow>({
               markOf={markOf}
               indicator={indicator}
               counts={counts}
+              fadeEmpty={fadeEmpty}
+              noun={noun}
               writes={writes}
+              abilities={abilities}
               canDelete={canDelete}
               rowMenuExtra={rowMenuExtra}
               onPick={onPick}
@@ -218,10 +258,10 @@ export function TagPickerPanel<Row extends TagRow>({
           </>
         )}
       </Stack>
-      {searching ? null : (
+      {searching || writes === undefined ? null : (
         <>
           <Separator bleed />
-          <FooterRow onClick={() => openDraft(null)} />
+          <FooterRow noun={noun} onClick={() => openDraft(null)} />
         </>
       )}
     </Stack>
@@ -237,7 +277,7 @@ const NONE: readonly string[] = [];
  * tag sits under it (derived — every ancestor of one).
  */
 function useMarks(
-  tags: readonly TagRow[],
+  tags: readonly TagNode[],
   selected: readonly string[],
   negated: readonly string[],
 ): (tagId: string) => Mark {
@@ -271,7 +311,7 @@ interface Visible {
 }
 
 /** Pickable = not excluded; an excluded tag stays (dimmed) only above a pickable one. */
-function visibleTags<Row extends TagRow>(
+function visibleTags<Row extends TagPickerRow>(
   tags: readonly Row[],
   exclude: ((tag: Row) => boolean) | undefined,
 ): Visible {
@@ -284,10 +324,10 @@ function visibleTags<Row extends TagRow>(
 }
 
 /** The tag whose whole path is `segments` (case-insensitive), if any. */
-function findByPath(
+function findByPath<Row extends TagPickerRow>(
   segments: readonly string[],
-  tags: readonly TagRow[],
-): TagRow | undefined {
+  tags: readonly Row[],
+): Row | undefined {
   const resolved = resolveTagPath(segments, tags);
   const leaf = resolved.at(-1)?.tagId;
   return leaf === null || leaf === undefined
@@ -297,7 +337,7 @@ function findByPath(
 
 // ── The tree (empty query) ─────────────────────────────────────────────────
 
-interface TagTreeBodyProps<Row extends TagRow> {
+interface TagTreeBodyProps<Row extends TagPickerRow> {
   tags: readonly Row[];
   visible: Visible;
   collapsed: ReadonlySet<string>;
@@ -307,9 +347,12 @@ interface TagTreeBodyProps<Row extends TagRow> {
   draftParent: string | null | undefined;
   renamingId: string | null;
   markOf: (tagId: string) => Mark;
-  indicator: "check" | "checkbox";
+  indicator: Indicator;
   counts: ReadonlyMap<string, number> | undefined;
-  writes: TagPickerWrites;
+  fadeEmpty: boolean;
+  noun: string;
+  writes: TagPickerWrites | undefined;
+  abilities: TagPickerAbilities;
   canDelete: ((tag: Row) => boolean) | undefined;
   rowMenuExtra: ((tag: Row) => ReactNode) | undefined;
   onPick(tagId: string): void;
@@ -319,7 +362,7 @@ interface TagTreeBodyProps<Row extends TagRow> {
   onCommitRename(id: string, name: string): void;
 }
 
-function TagTreeBody<Row extends TagRow>({
+function TagTreeBody<Row extends TagPickerRow>({
   tags,
   visible,
   collapsed,
@@ -329,7 +372,10 @@ function TagTreeBody<Row extends TagRow>({
   markOf,
   indicator,
   counts,
+  fadeEmpty,
+  noun,
   writes,
+  abilities,
   canDelete,
   rowMenuExtra,
   onPick,
@@ -393,8 +439,8 @@ function TagTreeBody<Row extends TagRow>({
     rows,
     onSelect: pick,
     setExpanded: applyExpanded,
-    onMove: (id, dest) => fireWrite(writes.move(id, dest)),
-    onOpen: onRename,
+    onMove: writes ? (id, dest) => fireWrite(writes.move(id, dest)) : undefined,
+    onOpen: writes ? onRename : undefined,
     // A dimmed row only folds: it is there to reach what is under it.
     expandOnActivate: (row) => row.dimmed,
     revealSelected: false,
@@ -414,6 +460,7 @@ function TagTreeBody<Row extends TagRow>({
               <DraftRow
                 key={line.node.id}
                 depth={line.depth}
+                noun={noun}
                 onCommit={onCommitDraft}
               />
             ) : (
@@ -429,7 +476,10 @@ function TagTreeBody<Row extends TagRow>({
                 renaming={renamingId === line.node.id}
                 count={counts?.get(line.node.id)}
                 showCount={counts !== undefined}
+                fadeEmpty={fadeEmpty}
+                noun={noun}
                 writes={writes}
+                abilities={abilities}
                 deletable={canDelete?.(line.node.tag) ?? true}
                 menuExtra={rowMenuExtra?.(line.node.tag)}
                 onAddChild={onAddChild}
@@ -444,7 +494,7 @@ function TagTreeBody<Row extends TagRow>({
   );
 }
 
-function TagTreeRow<Row extends TagRow>({
+function TagTreeRow<Row extends TagPickerRow>({
   node,
   tag,
   depth,
@@ -455,7 +505,10 @@ function TagTreeRow<Row extends TagRow>({
   renaming,
   count,
   showCount,
+  fadeEmpty,
+  noun,
   writes,
+  abilities,
   deletable,
   menuExtra,
   onAddChild,
@@ -468,11 +521,14 @@ function TagTreeRow<Row extends TagRow>({
   tags: readonly Row[];
   activeId: string | null;
   mark: Mark;
-  indicator: "check" | "checkbox";
+  indicator: Indicator;
   renaming: boolean;
   count: number | undefined;
   showCount: boolean;
-  writes: TagPickerWrites;
+  fadeEmpty: boolean;
+  noun: string;
+  writes: TagPickerWrites | undefined;
+  abilities: TagPickerAbilities;
   deletable: boolean;
   menuExtra: ReactNode;
   onAddChild(parentId: string): void;
@@ -492,7 +548,7 @@ function TagTreeRow<Row extends TagRow>({
     },
     [controls],
   );
-  const draggable = !renaming;
+  const draggable = !renaming && writes !== undefined;
   const selected = mark === "picked";
   return (
     <TreeRowChrome
@@ -513,17 +569,19 @@ function TagTreeRow<Row extends TagRow>({
         droppable && controls.isOverChild && "ring-1 ring-primary ring-inset",
       )}
       actions={
-        renaming ? undefined : (
+        renaming || writes === undefined ? undefined : (
           <>
             <IconButton
               icon={addIcon}
-              label="Add sub-tag"
+              label={`Add sub-${noun}`}
               onClick={() => onAddChild(tag.id)}
             />
             <TagRowMenu
               tag={tag}
               tags={tags}
               writes={writes}
+              abilities={abilities}
+              noun={noun}
               deletable={deletable}
               extra={menuExtra}
               onRename={() => onRename(tag.id)}
@@ -533,7 +591,9 @@ function TagTreeRow<Row extends TagRow>({
         )
       }
     >
-      {droppable ? (
+      {/* Before / after zones only where siblings keep a manual order: else a
+          drop only nests (onto the row), and siblings stay in the rows' order. */}
+      {droppable && abilities.reorder ? (
         <TreeDropZones
           beforeRef={controls.beforeRef}
           afterRef={controls.afterRef}
@@ -547,11 +607,16 @@ function TagTreeRow<Row extends TagRow>({
         {renaming ? (
           <TagNameInput
             initial={tag.name}
-            placeholder={tag.parentId === null ? "Tag name" : "Sub-tag name"}
+            placeholder={nameHint(noun, tag.parentId !== null)}
             onCommit={(name) => onCommitRename(tag.id, name)}
           />
         ) : (
-          <TagName name={tag.name} mark={mark} empty={showCount && !count} />
+          <TagName
+            name={tag.name}
+            mark={mark}
+            empty={fadeEmpty && showCount && !count}
+            strong={indicator === "none" && selected}
+          />
         )}
       </Fill>
       {showCount && !renaming ? (
@@ -567,9 +632,11 @@ function TagTreeRow<Row extends TagRow>({
 /** The inline row a new tag is named in: Enter / blur creates it, blank discards it. */
 function DraftRow({
   depth,
+  noun,
   onCommit,
 }: {
   depth: number;
+  noun: string;
   onCommit(name: string): void;
 }) {
   return (
@@ -578,7 +645,7 @@ function DraftRow({
       <Fill>
         <TagNameInput
           initial=""
-          placeholder={depth === 0 ? "Tag name" : "Sub-tag name"}
+          placeholder={nameHint(noun, depth > 0)}
           onCommit={onCommit}
         />
       </Fill>
@@ -588,7 +655,7 @@ function DraftRow({
 
 // ── Search results (a query) ──────────────────────────────────────────────
 
-function SearchResults({
+function SearchResults<Row extends TagPickerRow>({
   query,
   tags,
   pickable,
@@ -599,13 +666,14 @@ function SearchResults({
   onCreate,
 }: {
   query: string;
-  tags: readonly TagRow[];
+  tags: readonly Row[];
   pickable: ReadonlySet<string>;
   markOf: (tagId: string) => Mark;
-  indicator: "check" | "checkbox";
+  indicator: Indicator;
   counts: ReadonlyMap<string, number> | undefined;
   onPick(tagId: string): void;
-  onCreate(segments: readonly string[]): Promise<void>;
+  /** Create the typed path; absent on a read-only panel (no Create row). */
+  onCreate: ((segments: readonly string[]) => Promise<void>) | undefined;
 }) {
   // Typed as a path ("app/web") or a bare name ("web"): matched against each
   // tag's full path spelled the same way, the last segment highlighted.
@@ -648,7 +716,7 @@ function SearchResults({
           ) : null}
         </TreeRowChrome>
       ))}
-      {exact === undefined ? (
+      {exact === undefined && onCreate !== undefined ? (
         <TreeRowChrome
           depth={0}
           hasChildren={false}
@@ -688,7 +756,7 @@ function PathLabel({
   highlight,
 }: {
   tagId: string;
-  tags: readonly TagRow[];
+  tags: readonly TagPickerRow[];
   highlight: string;
 }) {
   const path = tagPath(tagId, tags);
@@ -748,7 +816,7 @@ function NoTagRow({ onPick }: { onPick(): void }) {
   );
 }
 
-function FooterRow({ onClick }: { onClick(): void }) {
+function FooterRow({ noun, onClick }: { noun: string; onClick(): void }) {
   return (
     <TreeRowChrome
       depth={0}
@@ -758,7 +826,7 @@ function FooterRow({ onClick }: { onClick(): void }) {
     >
       <Icon icon={addIcon} className="size-4 text-muted-foreground" />
       <Fill>
-        <Text tone="muted">New tag</Text>
+        <Text tone="muted">New {noun}</Text>
       </Fill>
     </TreeRowChrome>
   );
@@ -779,19 +847,31 @@ function TagName({
   name,
   mark,
   empty,
+  strong = false,
 }: {
   name: string;
   mark: Mark;
   empty: boolean;
+  /** The open row of a navigation tree (`indicator="none"`): its name in the label role's strong weight. */
+  strong?: boolean;
 }) {
   if (mark === "negated") {
     return (
-      <Text tone="destructive" className="line-through">
+      <Text tone="destructive" className="truncate line-through" title={name}>
         {name}
       </Text>
     );
   }
-  return <Text tone={empty ? "faint" : "default"}>{name}</Text>;
+  // One line, cut with an ellipsis: a narrow host (a sidebar) never wraps a row.
+  return (
+    <Text
+      tone={empty ? "faint" : "default"}
+      className={cn("truncate", strong && "font-label-strong")}
+      title={name}
+    >
+      {name}
+    </Text>
+  );
 }
 
 /** The leading box of a `checkbox` picker: ✓ picked, − negated, a primary − when a tag under it is either. */

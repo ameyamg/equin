@@ -1,9 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
 import {
-  TAG_PALETTE,
-  type TagRow,
-} from "@plugins/tag-tree/plugins/engine/core";
-import {
   cn,
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -22,7 +18,11 @@ import {
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import type { TagPickerWrites } from "../internal/types";
+import type {
+  TagPickerAbilities,
+  TagPickerRow,
+  TagPickerWrites,
+} from "../internal/types";
 import { fireWrite } from "../internal/surfaced";
 
 const moreIcon = symbol("more-horiz");
@@ -39,20 +39,25 @@ const closeIcon = symbol("close");
  * of its parent · Shade children (a parent's) · the colour swatches (`same as
  * parent` first, under a parent) · the caller's `extra` · Delete (immediate —
  * its children and carriers move to its parent; hidden when `deletable` is
- * false).
+ * false). Icon…, Shade children and Same as parent only where the backend
+ * can (`abilities`); the swatches are its palette.
  */
-export function TagRowMenu<Row extends TagRow>({
+export function TagRowMenu<Row extends TagPickerRow>({
   tag,
   tags,
   writes,
+  abilities,
+  noun,
   deletable,
   extra,
   onRename,
   onAddChild,
 }: {
   tag: Row;
-  tags: readonly TagRow[];
+  tags: readonly TagPickerRow[];
   writes: TagPickerWrites;
+  abilities: TagPickerAbilities;
+  noun: string;
   deletable: boolean;
   extra: ReactNode;
   onRename(): void;
@@ -93,17 +98,19 @@ export function TagRowMenu<Row extends TagRow>({
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onAddChild}>
             <Icon icon={addIcon} className="size-4" />
-            Add sub-tag
+            Add sub-{noun}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              setOpen(false);
-              setIconOpen(true);
-            }}
-          >
-            <Icon icon={iconIcon} className="size-4" />
-            Icon…
-          </DropdownMenuItem>
+          {abilities.icons ? (
+            <DropdownMenuItem
+              onClick={() => {
+                setOpen(false);
+                setIconOpen(true);
+              }}
+            >
+              <Icon icon={iconIcon} className="size-4" />
+              Icon…
+            </DropdownMenuItem>
+          ) : null}
           {parent ? (
             <DropdownMenuItem
               onClick={() =>
@@ -120,7 +127,7 @@ export function TagRowMenu<Row extends TagRow>({
               Move out of “{parent.name}”
             </DropdownMenuItem>
           ) : null}
-          {hasChildren ? (
+          {hasChildren && abilities.shadeChildren ? (
             <DropdownMenuCheckboxItem
               checked={ramp}
               onCheckedChange={() =>
@@ -135,14 +142,14 @@ export function TagRowMenu<Row extends TagRow>({
           <DropdownMenuSeparator />
           <Inset pad="xs">
             <Grid cols={6} gap="xs">
-              {parent ? (
+              {abilities.inheritColor ? (
                 <Swatch
-                  label="Same as parent"
+                  label={parent ? "Same as parent" : "No colour"}
                   on={tag.color === null}
                   onClick={() => setColor(null)}
                 />
               ) : null}
-              {TAG_PALETTE.map((color) => (
+              {abilities.palette.map((color) => (
                 <Swatch
                   key={color}
                   label={color}
@@ -173,6 +180,7 @@ export function TagRowMenu<Row extends TagRow>({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+      {abilities.icons ? (
       <ControlPanelPopover
         anchor={triggerRef}
         open={iconOpen}
@@ -198,6 +206,7 @@ export function TagRowMenu<Row extends TagRow>({
           </ControlPanel.Footer>
         ) : null}
       </ControlPanelPopover>
+      ) : null}
     </>
   );
 }

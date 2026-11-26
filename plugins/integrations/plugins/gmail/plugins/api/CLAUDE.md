@@ -202,6 +202,7 @@ that account. Two pacers over one account would each spend the whole budget.
     - `HistoryRecordSchema`
     - `LabelListSchema`
     - `LabelSchema`
+    - `LabelWriteAnswerSchema`
     - `MessageLabelsSchema`
     - `MessageListSchema`
     - `MessagePartSchema`

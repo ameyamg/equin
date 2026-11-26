@@ -2,6 +2,7 @@ import { getGmailToken } from "@plugins/integrations/plugins/gmail/server";
 import type { MailProviderDefinition } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { GMAIL_PRIMARY_ACCOUNT, openGmail } from "./accounts";
 import { compileGmailQuery } from "./compile-query";
+import { GMAIL_LABEL_COLORS } from "./labels";
 import { gmailPush } from "./push/push";
 
 export const gmailMailProvider: MailProviderDefinition = {
@@ -17,6 +18,8 @@ export const gmailMailProvider: MailProviderDefinition = {
     // minute's bound keeps every cut and coverage claim safe for that, at a
     // few extra listed messages per page.
     listOrderSlackMs: 60_000,
+    // Gmail refuses a label colour off its palette; `color: null` clears one.
+    mailboxColors: { palette: GMAIL_LABEL_COLORS, clearable: true },
   },
   // Gmail push over Pub/Sub, once set up on this backend (push/push.ts).
   push: gmailPush,

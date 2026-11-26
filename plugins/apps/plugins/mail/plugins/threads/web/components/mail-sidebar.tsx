@@ -1,30 +1,21 @@
 import { useCallback, useMemo, useState } from "react";
+import { TagPickerPanel } from "@plugins/tag-tree/plugins/picker/web";
 import {
   DataViewViewList,
   useDataViewControls,
 } from "@plugins/primitives/plugins/data-view/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import {
-  cn,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   ResourceError,
   ResourceErrorInline,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type {
@@ -32,30 +23,17 @@ import type {
   MailboxId,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import {
-  labelColor,
   labelOfView,
   labelViewId,
   MAIL_BUILT_IN_VIEWS,
   MAIL_TUCKED_VIEWS,
 } from "../../core";
-import { userLabels, type MailboxesState } from "../internal/mailboxes";
-import { labelLines } from "../internal/label-lines";
-import { LabelNameForm, useNewLabel } from "../internal/actions";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
-import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
-import {
-  deleteMailLabel,
-  renameMailLabel,
-} from "@plugins/apps/plugins/mail/plugins/cache/core";
+import type { MailboxesState } from "../internal/mailboxes";
+import { useMailLabelSource } from "../internal/label-source";
 
-const moreIcon = symbol("more-horiz");
 const copyIcon = symbol("content-copy");
 const expandIcon = symbol("expand-more");
 const collapseIcon = symbol("expand-less");
-const addIcon = symbol("add");
-const renameIcon = symbol("edit");
-const deleteIcon = symbol("delete");
 
 /** The sidebar's width, the prototype's column. */
 const SIDEBAR_WIDTH = "w-54";
@@ -99,7 +77,6 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
   }
   // "+ New view": the active view's filter as a view of the user's own,
   // named for renaming.
-  const newLabel = useNewLabel();
   const newView = () => {
     const id = drafts.saveAsNew(activeViewId, { name: "New view" });
     setRenamingId(id);
@@ -144,16 +121,9 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
             </Text>
           </Row>
           <Line className="pt-lg pb-xs pl-lg">
-            <Fill>
-              <Text as="h2" variant="caption" tone="faint">
-                Labels
-              </Text>
-            </Fill>
-            <IconButton
-              icon={addIcon}
-              label="New label"
-              onClick={() => void newLabel()}
-            />
+            <Text as="h2" variant="caption" tone="faint">
+              Labels
+            </Text>
           </Line>
           <Labels mailboxes={mailboxes} />
         </Stack>
@@ -186,120 +156,64 @@ function Labels({ mailboxes }: { mailboxes: MailboxesState }) {
   }
 }
 
-/** The user's labels as their `/` tree, each a view; folds kept per session. */
+/**
+ * The user's labels as their `/` tree, each a view: the shared tag picker's
+ * tree (`TagPickerPanel` over `useMailLabelSource`) — a click opens the
+ * label's view (highlighted while open), ＋ adds a sub-label, double-click
+ * renames, drag nests, ⋯ renames, recolours (the provider's palette), moves
+ * out, deletes or duplicates the view, and "New label" at the foot. Each
+ * label's own unread count beside it.
+ */
 function LabelTree({ mailboxes }: { mailboxes: readonly Mailbox[] }) {
   const { viewModel, activeViewId } = useDataViewControls();
-  const [folded, setFolded] = useState<ReadonlySet<MailboxId>>(new Set());
-  const labels = useMemo(() => userLabels(mailboxes), [mailboxes]);
-  const lines = useMemo(() => labelLines(labels, folded), [labels, folded]);
-  const fetchEndpoint = useFetchEndpoint();
-  const openDialog = useOpenDialog();
-  const confirm = useConfirmDialog();
-  const rename = (label: Mailbox) =>
-    openDialog((close) => (
-      <LabelNameForm
-        title="Rename label"
-        description="Its sub-labels move with it."
-        initial={label.name}
-        submit="Rename"
-        onSubmit={async (name) => {
-          await fetchEndpoint(
-            renameMailLabel,
-            { id: label.id },
-            { body: { name } },
-          );
-          close();
-        }}
-      />
-    ));
-  const remove = (label: Mailbox) =>
-    confirm({
-      title: `Delete the label “${label.name}”?`,
-      description:
-        "Its threads keep their other labels and stay in your mailbox; its sub-labels stay.",
-      confirmLabel: "Delete label",
-      onConfirm: async () => {
-        await fetchEndpoint(deleteMailLabel, { id: label.id });
-      },
-    });
-  const toggle = (id: MailboxId) =>
-    setFolded((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+  const source = useMailLabelSource();
+  const active = labelOfView(activeViewId);
+  const selected = useMemo(() => (active === null ? [] : [active]), [active]);
+  const unread = useMemo(
+    () =>
+      new Map(
+        mailboxes.flatMap((m) =>
+          m.counts !== null && m.counts.unread > 0
+            ? [[m.id as string, m.counts.unread] as const]
+            : [],
+        ),
+      ),
+    [mailboxes],
+  );
+  switch (source.read.status) {
+    case "loading":
+      return <Loading variant="rows" count={4} />;
+    case "error":
+      return <Text tone="destructive">{source.read.error.message}</Text>;
+    case "ready":
+      break;
+  }
   return (
-    <Stack gap="none">
-      {lines.map(({ label, depth, hasChildren, rolledUnread }) => {
-        const viewId = labelViewId(label.id);
-        const color = labelColor(label, mailboxes);
-        const unread = rolledUnread ?? label.counts?.unread ?? 0;
-        return (
-          <TreeRowChrome
-            key={label.id}
-            rowId={viewId}
-            depth={depth}
-            hasChildren={hasChildren}
-            isOpen={!folded.has(label.id)}
-            selected={viewId === activeViewId}
-            onToggle={() => toggle(label.id)}
-            onSelect={() => viewModel.setActiveView(viewId)}
-            icon={
-              <Center axis="both" className="size-4" aria-hidden>
-                <span
-                  className="size-2.5 rounded-full"
-                  style={{ background: color ?? "var(--muted-foreground)" }}
-                />
-              </Center>
-            }
-            actions={
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <IconButton
-                      icon={moreIcon}
-                      label={`${label.name} actions`}
-                    />
-                  }
-                />
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => viewModel.actions.duplicateView(viewId)}
-                  >
-                    <Icon icon={copyIcon} className="size-4" />
-                    Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void rename(label)}>
-                    <Icon icon={renameIcon} className="size-4" />
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void remove(label)}>
-                    <Icon icon={deleteIcon} className="size-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            }
-          >
-            <Fill>
-              <Text
-                variant="label"
-                className={cn(
-                  "truncate",
-                  viewId === activeViewId && "font-label-strong",
-                )}
-              >
-                {label.name}
-              </Text>
-            </Fill>
-            {unread > 0 ? (
-              <Text variant="caption" tone="faint" className="tabular-nums">
-                {unread}
-              </Text>
-            ) : null}
-          </TreeRowChrome>
-        );
-      })}
-    </Stack>
+    <TagPickerPanel
+      tags={source.read.data.tags}
+      writes={source.writes}
+      abilities={source.read.data.abilities}
+      noun="label"
+      search={false}
+      indicator="none"
+      autoFocus={false}
+      pickCreated={false}
+      counts={unread}
+      fadeEmpty={false}
+      selected={selected}
+      rowMenuExtra={(tag) => (
+        <DropdownMenuItem
+          onClick={() =>
+            viewModel.actions.duplicateView(labelViewId(tag.id as MailboxId))
+          }
+        >
+          <Icon icon={copyIcon} className="size-4" />
+          Duplicate view
+        </DropdownMenuItem>
+      )}
+      onPick={(id) => {
+        if (id !== null) viewModel.setActiveView(labelViewId(id as MailboxId));
+      }}
+    />
   );
 }

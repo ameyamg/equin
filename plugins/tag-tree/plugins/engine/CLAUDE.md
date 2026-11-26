@@ -120,6 +120,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-category`
+    - `apps/mail/threads`
     - `apps/places/fixtures`
     - `apps/places/places-core`
     - `apps/places/places-map`

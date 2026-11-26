@@ -417,7 +417,6 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/shape` ×3
   - Imported by:
-    - `apps/mail/threads`
     - `apps/pages/page-tree`
     - `page/editor`
     - `primitives/data-view`

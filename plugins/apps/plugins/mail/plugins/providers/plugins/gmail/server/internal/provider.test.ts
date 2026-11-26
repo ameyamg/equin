@@ -5,6 +5,7 @@ import {
   changeCursor,
   MailNotConnectedError,
   MailOutcomeUnknownError,
+  MailRefusedError,
   MailUnreachableError,
   nativeMailboxId,
   providerQuery,
@@ -693,6 +694,148 @@ describe("Gmail provider: writes", () => {
       name: "New",
       parentId: "Label_1",
     });
+  });
+});
+
+describe("Gmail provider: label tree writes", () => {
+  const LABELS = [
+    { id: "Label_1", name: "Work", type: "user" },
+    { id: "Label_2", name: "Work/Clients", type: "user" },
+    { id: "Label_3", name: "Work/Clients/EU", type: "user" },
+    { id: "Label_4", name: "Home", type: "user" },
+  ];
+  /** Answers the listing, and every patch / delete with an empty label; records the patches' bodies. */
+  function tree() {
+    const patches: { id: string; body: unknown }[] = [];
+    const deleted: string[] = [];
+    const g = gmail((r) => {
+      if (r.path === `${ME}/labels` && r.method === "GET")
+        return json(200, { labels: LABELS });
+      const m = /\/labels\/(Label_\d+)$/.exec(r.path);
+      if (m && r.method === "PATCH") {
+        patches.push({ id: m[1]!, body: JSON.parse(r.body) });
+        // labels.patch answers without `type` (measured).
+        return json(200, { id: m[1], name: "x" });
+      }
+      if (m && r.method === "DELETE") {
+        deleted.push(m[1]!);
+        return new Response(null, { status: 204 });
+      }
+    });
+    return { g, patches, deleted };
+  }
+
+  test("moving a label renames it and every label under it", async () => {
+    const { g, patches } = tree();
+    await g.provider.moveMailbox(
+      nativeMailboxId("Label_2"),
+      nativeMailboxId("Label_4"),
+    );
+    expect(patches).toEqual([
+      { id: "Label_2", body: { name: "Home/Clients" } },
+      { id: "Label_3", body: { name: "Home/Clients/EU" } },
+    ]);
+  });
+
+  test("a label cannot move under itself", async () => {
+    const { g } = tree();
+    expect(
+      g.provider.moveMailbox(
+        nativeMailboxId("Label_1"),
+        nativeMailboxId("Label_3"),
+      ),
+    ).rejects.toBeInstanceOf(MailRefusedError);
+  });
+
+  test("deleting a label lifts its sub-labels to its parent first", async () => {
+    const { g, patches, deleted } = tree();
+    await g.provider.deleteMailbox(nativeMailboxId("Label_1"));
+    expect(patches).toEqual([
+      { id: "Label_2", body: { name: "Clients" } },
+      { id: "Label_3", body: { name: "Clients/EU" } },
+    ]);
+    expect(deleted).toEqual(["Label_1"]);
+  });
+
+  test("a root named with a slash keeps its own name: rename, delete lift and nesting it", async () => {
+    const patches: { id: string; body: unknown }[] = [];
+    const g = gmail((r) => {
+      if (r.path === `${ME}/labels` && r.method === "GET")
+        return json(200, {
+          labels: [
+            // No label "a": Gmail lists "a/b" as a root named "a/b".
+            { id: "Label_7", name: "a/b", type: "user" },
+            { id: "Label_8", name: "a/b/x", type: "user" },
+            { id: "Label_4", name: "Home", type: "user" },
+          ],
+        });
+      const m = /\/labels\/(Label_\d+)$/.exec(r.path);
+      if (m && r.method === "PATCH") {
+        patches.push({ id: m[1]!, body: JSON.parse(r.body) });
+        return json(200, { id: m[1], name: "x" });
+      }
+      if (m && r.method === "DELETE")
+        return new Response(null, { status: 204 });
+    });
+    await g.provider.renameMailbox(nativeMailboxId("Label_7"), "c");
+    expect(patches).toEqual([
+      { id: "Label_7", body: { name: "c" } },
+      { id: "Label_8", body: { name: "c/x" } },
+    ]);
+    patches.length = 0;
+    await g.provider.deleteMailbox(nativeMailboxId("Label_7"));
+    expect(patches).toEqual([{ id: "Label_8", body: { name: "x" } }]);
+    expect(
+      g.provider.moveMailbox(
+        nativeMailboxId("Label_7"),
+        nativeMailboxId("Label_4"),
+      ),
+    ).rejects.toBeInstanceOf(MailRefusedError);
+  });
+
+  test("a name clash anywhere in the subtree refuses before any write", async () => {
+    const patches: string[] = [];
+    const g = gmail((r) => {
+      if (r.path === `${ME}/labels` && r.method === "GET")
+        return json(200, {
+          labels: [
+            ...LABELS,
+            // "Home/clients/EU" would be taken by the move's second rename.
+            { id: "Label_9", name: "Home/clients/eu", type: "user" },
+          ],
+        });
+      if (r.method === "PATCH" || r.method === "DELETE") {
+        patches.push(r.path);
+        return json(200, {});
+      }
+    });
+    const moved = await g.provider
+      .moveMailbox(nativeMailboxId("Label_2"), nativeMailboxId("Label_4"))
+      .catch((e: unknown) => e);
+    expect(moved).toBeInstanceOf(MailRefusedError);
+    expect(patches).toEqual([]);
+  });
+
+  test("a colour is a palette pair, or null to clear; any other is refused", async () => {
+    const { g, patches } = tree();
+    await g.provider.setMailboxColor(nativeMailboxId("Label_4"), {
+      background: "#fb4c2f",
+      text: "#ffffff",
+    });
+    await g.provider.setMailboxColor(nativeMailboxId("Label_4"), null);
+    expect(patches).toEqual([
+      {
+        id: "Label_4",
+        body: { color: { backgroundColor: "#fb4c2f", textColor: "#ffffff" } },
+      },
+      { id: "Label_4", body: { color: null } },
+    ]);
+    expect(
+      g.provider.setMailboxColor(nativeMailboxId("Label_4"), {
+        background: "#123456",
+        text: "#ffffff",
+      }),
+    ).rejects.toBeInstanceOf(MailRefusedError);
   });
 });
 

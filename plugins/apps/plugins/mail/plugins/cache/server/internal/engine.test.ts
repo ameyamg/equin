@@ -22,6 +22,7 @@ import {
   type FakeMailProviderOptions,
 } from "@plugins/apps/plugins/mail/plugins/provider/server/testing";
 import {
+  MailRefusedError,
   MailUnreachableError,
   nativeMailboxId,
   roleMailboxId,
@@ -886,5 +887,39 @@ describe("mail cache: triage (apply)", () => {
     await h.cache.sync();
     expect(ids(await h.cache.window(inboxView))).toEqual(["t2"]);
     await settle(h);
+  });
+});
+
+describe("mail cache: labels", () => {
+  test("create under a parent, recolour by the palette's background, clear, refuse off-palette, delete lifts", async () => {
+    const h = harness({ threads: inboxThreads(1) });
+    const parent = await h.cache.createLabel({ path: "Travel" });
+    const child = await h.cache.createLabel({ name: "Ski", parentId: parent });
+    const byId = async () =>
+      new Map((await h.cache.mailboxes()).map((m) => [m.id, m]));
+    expect((await byId()).get(child)).toMatchObject({
+      name: "Ski",
+      parentId: parent,
+    });
+
+    // A background of the palette, any case: its pair is written.
+    await h.cache.updateLabel(child, { kind: "color", background: "#16A766" });
+    expect((await byId()).get(child)?.color).toEqual({
+      background: "#16a766",
+      text: "#ffffff",
+    });
+    await h.cache.updateLabel(child, { kind: "color", background: null });
+    expect((await byId()).get(child)?.color).toBeNull();
+    expect(
+      h.cache.updateLabel(child, { kind: "color", background: "#123456" }),
+    ).rejects.toBeInstanceOf(MailRefusedError);
+    expect(
+      h.cache.updateLabel(parent, { kind: "move", parentId: child }),
+    ).rejects.toBeInstanceOf(MailRefusedError);
+
+    await h.cache.deleteLabel(parent);
+    const after = await byId();
+    expect(after.has(parent)).toBe(false);
+    expect(after.get(child)?.parentId).toBeNull();
   });
 });

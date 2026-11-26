@@ -4,6 +4,7 @@ import {
   nativeMailboxId,
   roleMailboxId,
   type Mailbox,
+  type MailboxColor,
   type MailboxId,
   type MailboxRole,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
@@ -163,4 +164,43 @@ export function gmailLabelName(
     parent = p.parentId;
   }
   return parts.join("/");
+}
+
+/**
+ * The label colours Mail offers: eighteen of Gmail's palette pairs (its
+ * labels.patch refuses any colour off the palette — "Label color … is not on
+ * the allowed color palette"), each background with the text Gmail's own
+ * picker pairs it with. Every pair was accepted by labels.patch on a real
+ * account, and `color: null` cleared one (2026-11-26).
+ */
+export const GMAIL_LABEL_COLORS: readonly MailboxColor[] = [
+  ["#fb4c2f", "#ffffff"],
+  ["#ffad47", "#ffffff"],
+  ["#fad165", "#000000"],
+  ["#16a766", "#ffffff"],
+  ["#43d692", "#ffffff"],
+  ["#4a86e8", "#ffffff"],
+  ["#a479e2", "#ffffff"],
+  ["#f691b3", "#ffffff"],
+  ["#cc3a21", "#ffffff"],
+  ["#eaa041", "#ffffff"],
+  ["#f2c960", "#000000"],
+  ["#149e60", "#ffffff"],
+  ["#2da2bb", "#ffffff"],
+  ["#3c78d8", "#ffffff"],
+  ["#8e63ce", "#ffffff"],
+  ["#e07798", "#ffffff"],
+  ["#666666", "#ffffff"],
+  ["#000000", "#ffffff"],
+].map(([background, text]) =>
+  Object.freeze({ background: background!, text: text! }),
+);
+
+/** Whether a colour is one of {@link GMAIL_LABEL_COLORS} (the pair, exactly). */
+export function isGmailLabelColor(color: MailboxColor): boolean {
+  return GMAIL_LABEL_COLORS.some(
+    (c) =>
+      c.background === color.background.toLowerCase() &&
+      c.text === color.text.toLowerCase(),
+  );
 }

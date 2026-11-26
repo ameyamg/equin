@@ -1,41 +1,56 @@
-import { useRef, useState, type ReactNode } from "react";
-import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
+import {
+  TagPickerPanel,
+  tagRowsOfOptions,
+} from "@plugins/tag-tree/plugins/picker/web";
 
 function sameTags(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
 /**
- * Compact inline tags editor: an open-by-default popover. A free-text input adds
- * arbitrary tags on Enter; a toggle-chip grid (known `field.options` unioned with
- * the current selection) toggles membership. The accumulated array commits on
- * dismiss via `onCommitValues` — or cancels if unchanged (and on Esc).
+ * Compact inline tags editor: an open-by-default popover holding the shared
+ * tag picker (`tag-tree/picker`'s `TagPickerPanel`, read-only) over the
+ * field's options — a forest when they carry `parent` (a tag tree's
+ * `tagFieldOptions`, a mail account's labels), a list of roots otherwise.
+ * Search finds a tag by its path; a click toggles it. An option marked
+ * `fixed` (set by other means — a mail role) is neither offered nor removed.
+ * The accumulated set commits on dismiss via `onCommitValues` — or cancels if
+ * unchanged (and on Esc).
  */
 export function TagsEditor(props: CellEditorProps): ReactNode {
-  const initial = props.values ? [...props.values] : [];
+  // The row's values when the editor opened: what Esc returns to, fixed for its life.
+  const [initial] = useState<readonly string[]>(() =>
+    props.values ? [...props.values] : [],
+  );
   const [open, setOpen] = useState(true);
-  const [selected, setSelected] = useState<string[]>(initial);
-  const [draft, setDraft] = useState("");
+  const [selected, setSelected] = useState<string[]>(() => [...initial]);
   const closed = useRef(false);
-  const options = props.field.options ?? [];
+  const options = props.field.options;
+  // The options, plus each value the row holds that no option names (a tag
+  // deleted since): listed as a root of its raw value, so it can be removed.
+  const rows = useMemo(() => {
+    const known = new Set((options ?? []).map((o) => o.value));
+    return tagRowsOfOptions([
+      ...(options ?? []),
+      ...initial
+        .filter((v) => !known.has(v))
+        .map((v) => ({ value: v, label: v })),
+    ]);
+  }, [options, initial]);
+  const fixed = useMemo(
+    () => new Set((options ?? []).filter((o) => o.fixed).map((o) => o.value)),
+    [options],
+  );
 
   const labelFor = (v: string) =>
-    options.find((o) => o.value === v)?.label ?? v;
+    options?.find((o) => o.value === v)?.label ?? v;
 
-  function add(tag: string) {
-    const t = tag.trim();
-    if (!t) return;
-    setSelected((prev) => (prev.includes(t) ? prev : [...prev, t]));
-    setDraft("");
-  }
   function toggle(v: string) {
     setSelected((prev) =>
       prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v],
@@ -49,20 +64,7 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
     else props.onCancel();
   }
 
-  const optionValues = options.map((o) => o.value);
-  const allValues = [
-    ...optionValues,
-    ...selected.filter((v) => !optionValues.includes(v)),
-  ];
-  const draftLc = draft.trim().toLowerCase();
-  const visible = draftLc
-    ? allValues.filter(
-        (v) =>
-          labelFor(v).toLowerCase().includes(draftLc) ||
-          v.toLowerCase().includes(draftLc),
-      )
-    : allValues;
-
+  const shown = selected.filter((v) => !fixed.has(v));
   return (
     <InlinePopover
       open={open}
@@ -70,14 +72,16 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
         if (!next) finish(true);
         else setOpen(true);
       }}
-      width="md"
+      width="picker"
+      padding="xs"
+      maxHeight="xl"
       trigger={
         <Clip className="whitespace-nowrap">
           <Stack direction="row" gap="xs">
-            {selected.length === 0 ? (
+            {shown.length === 0 ? (
               <span className="italic text-muted-foreground/50">Empty</span>
             ) : (
-              selected.map((t) => (
+              shown.map((t) => (
                 <Badge key={t} variant="muted">
                   {labelFor(t)}
                 </Badge>
@@ -87,39 +91,24 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
         </Clip>
       }
     >
-      <Stack gap="sm">
-        <Input
-          autoFocus
-          placeholder="Add tag…"
-          keep={transient("a one-shot cell editor: the tag is added on Enter")}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add(draft);
-            } else if (e.key === "Escape") {
-              e.preventDefault();
-              e.stopPropagation();
-              finish(false);
-            }
+      <div
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            finish(false);
+          }
+        }}
+      >
+        <TagPickerPanel
+          tags={rows}
+          selected={selected}
+          exclude={(t) => fixed.has(t.id)}
+          onPick={(id) => {
+            if (id !== null) toggle(id);
           }}
         />
-        {visible.length > 0 && (
-          <Cluster gap="xs">
-            {visible.map((v) => (
-              <ToggleChip
-                key={v}
-                active={selected.includes(v)}
-                variant="ghost"
-                onClick={() => toggle(v)}
-              >
-                {labelFor(v)}
-              </ToggleChip>
-            ))}
-          </Cluster>
-        )}
-      </Stack>
+      </div>
     </InlinePopover>
   );
 }

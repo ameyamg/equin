@@ -58,5 +58,8 @@ export type Mailbox = {
   parentId: MailboxId | null;
   /** Exact counts, when the provider gives them (Gmail labels.get); null when unknown. */
   counts: { threads: number; unread: number } | null;
-  color: { text: string; background: string } | null;
+  color: MailboxColor | null;
 };
+
+/** A mailbox's colour: its text on its background, `#rrggbb` each. */
+export type MailboxColor = { text: string; background: string };

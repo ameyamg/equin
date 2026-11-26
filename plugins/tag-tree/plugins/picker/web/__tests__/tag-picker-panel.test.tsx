@@ -207,3 +207,53 @@ describe("as a filter (checkbox)", () => {
     expect(onPick).not.toHaveBeenCalled();
   });
 });
+
+describe("a backend that is not a tag tree", () => {
+  function renderWith(props: Partial<Parameters<typeof TagPickerPanel>[0]>) {
+    const onPick = vi.fn();
+    render(
+      <PluginProvider plugins={[]}>
+        <TagPickerPanel tags={TAGS} selected={[]} onPick={onPick} {...props} />
+      </PluginProvider>,
+    );
+    return { onPick };
+  }
+
+  it("without writes: a read-only picking tree (no create, ＋, ⋯ or New tag)", () => {
+    const { onPick } = renderWith({});
+    const box = screen.getByRole("textbox", { name: /search tags/i });
+    expect(box.getAttribute("placeholder")).toBe("Search…");
+    expect(screen.queryByText("New tag")).toBeNull();
+    expect(screen.queryAllByRole("button", { name: "Add sub-tag" })).toEqual(
+      [],
+    );
+    expect(screen.queryAllByRole("button", { name: "More" })).toEqual([]);
+    fireEvent.change(box, { target: { value: "nothing-like-it" } });
+    expect(screen.queryByText(/^Create/)).toBeNull();
+    fireEvent.change(box, { target: { value: "" } });
+    fireEvent.click(screen.getByText("chord"));
+    expect(onPick).toHaveBeenCalledWith("chord");
+  });
+
+  it("names its tags by `noun`, and can draw no search", () => {
+    renderWith({ writes: writes(), noun: "label", search: false });
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByText("New label")).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: "Add sub-label" }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("indicator=none highlights the selected row with no ✓ or box", () => {
+    renderWith({ selected: ["chord"], indicator: "none" });
+    expect(rowOf("chord").getAttribute("class")).toContain("bg-selected");
+    expect(rowOf("chord").querySelector("[data-mark]")).toBeNull();
+  });
+
+  it("fadeEmpty=false keeps a 0-count tag's name at full tone", () => {
+    renderWith({ counts: new Map([["app", 2]]), fadeEmpty: false });
+    expect(screen.getByText("theme").getAttribute("class") ?? "").not.toContain(
+      "faint",
+    );
+  });
+});

@@ -58,6 +58,20 @@ export const MailAccountStatusSchema = z.discriminatedUnion("kind", [
     address: z.string(),
     connection: z.enum(["connected", "offline"]),
     changeSignal: MailChangeSignalSchema,
+    /**
+     * The colours a mailbox may take, as the provider declares them
+     * (`MailProviderCapabilities.mailboxColors`): the label picker's palette.
+     */
+    mailboxColors: z
+      .object({
+        // A provider's offered colours: Gmail's whole palette is ~100 pairs
+        // (Mail offers 18 of them).
+        palette: z
+          .array(z.object({ text: z.string(), background: z.string() }))
+          .max(128),
+        clearable: z.boolean(),
+      })
+      .nullable(),
     syncedAt: z.string().nullable(),
     syncFailure: z
       .object({
