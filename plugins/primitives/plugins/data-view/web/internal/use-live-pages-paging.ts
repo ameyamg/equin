@@ -24,7 +24,7 @@ import type {
   Filterable,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
-import type { DataViewPaging, ViewState } from "../../core";
+import type { DataViewPaging, DataViewReadOrder, ViewState } from "../../core";
 import { narrowWhere, usePagesNarrowing } from "./narrow-pages";
 import { pagesPaging } from "./pages-paging";
 import { usePagesViewport } from "./pages-viewport";
@@ -58,6 +58,9 @@ export type LivePagesPaging = Omit<DataViewPaging<unknown>, "isPaged">;
  *   next page — which waits on the read's tail being on screen — keeps
  *   coming. Without it a filter hiding the tail stops the read at its first
  *   page.
+ * - `paging.order` — the read's leading order key (the query's `orderBy`,
+ *   else the collection's default), so a view grouped by that column under
+ *   a `monotone` grouping counts every section before the tail's exactly.
  * - `total` — also read how many rows the (narrowed) query matches, as
  *   `paging.total` (stamped with the view's `filter` when the narrowing is
  *   that whole filter); the collection must be declared `count: true`. Not
@@ -143,10 +146,24 @@ export function useLivePagesPaging<Row, F, S extends string, Cols = never>(
     narrowing.kind === "narrowed" && narrowing.whole
       ? options?.narrowBy?.filter
       : undefined;
+  // The read's leading order key: the query's, else the collection's default
+  // (what the server orders an unordered query by). One object while it
+  // holds, so the body's count memo keeps across pages.
+  const leading = (narrowed?.orderBy ??
+    collection?.window.window.defaultOrderBy)?.[0];
+  const orderColumn = leading?.[0];
+  const orderDirection = leading?.[1];
+  const order = useMemo(
+    (): DataViewReadOrder | null =>
+      orderColumn === undefined || orderDirection === undefined
+        ? null
+        : { column: orderColumn, direction: orderDirection },
+    [orderColumn, orderDirection],
+  );
   const paging = useMemo((): LivePagesPaging | null => {
     switch (pages.status) {
       case "ready": {
-        const paging = pagesPaging<unknown>(pages, sink);
+        const paging = { ...pagesPaging<unknown>(pages, sink), order };
         return options?.total === true
           ? {
               ...paging,
@@ -165,7 +182,7 @@ export function useLivePagesPaging<Row, F, S extends string, Cols = never>(
       case "error":
         return null;
     }
-  }, [pages, sink, options?.total, totalCount, countedUnder]);
+  }, [pages, sink, order, options?.total, totalCount, countedUnder]);
   return useMemo(() => ({ pages, paging }), [pages, paging]);
 }
 

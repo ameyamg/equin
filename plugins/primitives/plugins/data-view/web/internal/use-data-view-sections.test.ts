@@ -888,7 +888,7 @@ describe("partitionIntoSections — a paged read's known total", () => {
     total: { count: number; uniform?: readonly string[] } | null,
   ): PartitionOptions<Task> => ({
     ...stubOpts({ enum: optionOrderGrouping }),
-    rowsComplete: { growable, total },
+    rowsComplete: { growable, total, order: null },
   });
 
   test("ungrouped: the held rows plus the read's total", () => {
@@ -967,6 +967,124 @@ describe("partitionIntoSections — a paged read's known total", () => {
       opts({ count: 1 }),
     );
     expect(only!.count).toEqual({ kind: "exact", n: 5 });
+  });
+});
+
+describe("partitionIntoSections — a paged read ordered by the grouped column", () => {
+  interface Visit {
+    id: string;
+    day: number | null;
+  }
+  // A stand-in for a date's Day grouping: one bucket per whole number, its
+  // ordinal the number — so it follows the value order (`monotone`).
+  const dayGrouping: FieldGrouping = {
+    id: "day",
+    label: "Day",
+    monotone: true,
+    plan: () => (value) => ({
+      key: `day:${String(value)}`,
+      label: `Day ${String(value)}`,
+      order: Number(value),
+    }),
+  };
+  const { monotone: _monotone, ...unordered } = dayGrouping;
+  const dayField: FieldDef<Visit> = {
+    id: "startedAt",
+    label: "Started",
+    type: "day",
+    value: (v) => v.day,
+  };
+  const key = (v: Visit) => v.id;
+  const visit = (id: string, day: number | null): Visit => ({ id, day });
+  const counts = (
+    rows: readonly Visit[],
+    opts: {
+      direction: "asc" | "desc";
+      column?: string;
+      grouping?: FieldGrouping;
+      complete?: true;
+      growable?: (v: Visit) => boolean;
+    },
+  ) =>
+    partitionIntoSections(rows, [dayField], by("startedAt", "day"), key, {
+      ...stubOpts({ "day:day": opts.grouping ?? dayGrouping }, opts.direction),
+      rowsComplete:
+        opts.complete === true
+          ? true
+          : {
+              growable: opts.growable ?? (() => true),
+              total: null,
+              order: {
+                column: opts.column ?? "startedAt",
+                direction: opts.direction,
+              },
+            },
+    }).map((s) => [s.label, formatSectionCount(s.count)]);
+
+  // Newest first, as the Sessions tab reads its visits.
+  const desc = [
+    visit("a", 3),
+    visit("b", 3),
+    visit("c", 2),
+    visit("d", 1),
+    visit("e", 1),
+  ];
+
+  test("read descending: only the tail's day can still grow", () => {
+    expect(counts(desc, { direction: "desc" })).toEqual([
+      ["Day 3", "2"],
+      ["Day 2", "1"],
+      ["Day 1", "2+"],
+    ]);
+  });
+
+  test("read ascending: the same, from the other end", () => {
+    expect(counts([...desc].reverse(), { direction: "asc" })).toEqual([
+      ["Day 1", "2"],
+      ["Day 2", "1"],
+      ["Day 3", "2+"],
+    ]);
+  });
+
+  test("the tail is the furthest paged row along the read, whatever order the rows are drawn in", () => {
+    // An in-memory sort put the tail first; held rows (not the read's) never move it.
+    const rows = [visit("e", 1), visit("a", 3), visit("held", 0)];
+    expect(
+      counts(rows, {
+        direction: "desc",
+        growable: (v) => v.id !== "held",
+      }),
+    ).toEqual([
+      ["Day 3", "1"],
+      ["Day 1", "1+"],
+      ["Day 0", "1"],
+    ]);
+  });
+
+  test("a grouping that does not follow the value order: every section holding a paged row is a lower bound", () => {
+    expect(
+      counts(desc, { direction: "desc", grouping: unordered }).map(
+        ([, n]) => n,
+      ),
+    ).toEqual(["2+", "1+", "2+"]);
+  });
+
+  test("a read ordered by another column: every section is a lower bound", () => {
+    expect(
+      counts(desc, { direction: "desc", column: "duration" }).map(([, n]) => n),
+    ).toEqual(["2+", "1+", "2+"]);
+  });
+
+  test("None stays a lower bound (a null sorts at either end)", () => {
+    expect(
+      counts([...desc, visit("n", null)], { direction: "desc" }).at(-1),
+    ).toEqual(["None", "1+"]);
+  });
+
+  test("a complete read is exact everywhere", () => {
+    expect(
+      counts(desc, { direction: "desc", complete: true }).map(([, n]) => n),
+    ).toEqual(["2", "1", "2"]);
   });
 });
 
@@ -1328,7 +1446,9 @@ describe("rollUpNestedCounts", () => {
   test("a lower bound anywhere below makes every ancestor's count a lower bound", () => {
     const growable = (p: Proto) => p.id === "p1";
     const rolled = rollUpNestedCounts(
-      partition(PROTOS, { rowsComplete: { growable, total: null } }),
+      partition(PROTOS, {
+        rowsComplete: { growable, total: null, order: null },
+      }),
     );
     const count = (key: string) =>
       formatSectionCount(rolled.find((s) => s.key === key)!.count);

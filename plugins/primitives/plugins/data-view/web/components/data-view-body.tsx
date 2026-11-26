@@ -1524,7 +1524,8 @@ function DataViewBodyInner<TRow>(
   );
 
   // In memory without paging the rows are the whole set; a paged read
-  // says when it has read to the end, which of the held rows it pages, and —
+  // says when it has read to the end, which of the held rows it pages, the
+  // column it is ordered by, and —
   // while no search or filter hides rows of it (a live source asks for one
   // only then), or the filter is one it was narrowed by whole — its total.
   // One object while those parts hold: a view memoizes on it (the nested
@@ -1537,6 +1538,7 @@ function DataViewBodyInner<TRow>(
       activeState.query.trim() === "");
   const pagingComplete = !paging || paging.complete;
   const pagedRows = paging?.isPaged ?? ALL_ROWS;
+  const readOrder = paging?.order ?? null;
   const rowsComplete = useMemo(
     () =>
       pagingComplete
@@ -1544,8 +1546,9 @@ function DataViewBodyInner<TRow>(
         : {
             growable: pagedRows,
             total: totalShown ? pagingTotal : null,
+            order: readOrder,
           },
-    [pagingComplete, pagedRows, totalShown, pagingTotal],
+    [pagingComplete, pagedRows, totalShown, pagingTotal, readOrder],
   );
 
   // The active view's expand-all, as the view last reported it — filed under

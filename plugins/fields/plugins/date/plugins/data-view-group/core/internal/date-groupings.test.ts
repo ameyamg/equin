@@ -347,6 +347,27 @@ describe("every grouping", () => {
     }
   });
 
+  it("is monotone, as it declares: each bucket one span, its ordinal rising with time", () => {
+    // What `monotone` promises the partition: walking the instants in order,
+    // the ordinal never falls and a bucket once left is never met again — so
+    // a read paged by the date column fills the buckets one after another.
+    for (const g of GROUPINGS) {
+      expect(g.monotone).toBe(true);
+      const plan = g.plan(ctx());
+      let last: GroupBucket | null = null;
+      const left = new Set<string>();
+      for (let hours = -24 * 800; hours <= 24 * 800; hours += 5) {
+        const seen = plan(new Date(NOW + hours * 3_600_000))!;
+        if (last !== null && seen.key !== last.key) {
+          expect(seen.order).toBeGreaterThan(last.order);
+          expect(left.has(seen.key)).toBe(false);
+          left.add(last.key);
+        }
+        last = seen;
+      }
+    }
+  });
+
   it("reads the clock only from ctx.now", () => {
     // Same value, a clock one year on: only the relative grouping moves.
     const nextYear = new Date(2027, 4, 13, 12, 0).getTime();

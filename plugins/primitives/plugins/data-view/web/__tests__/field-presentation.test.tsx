@@ -168,7 +168,7 @@ describe("FieldPresentationProvider: common-value elision", () => {
   });
 
   it("waits for the rows to be complete (a paged read)", () => {
-    const paged = { growable: () => true, total: null };
+    const paged = { growable: () => true, total: null, order: null };
     expect(
       drawn(KIND, rows(["a", "a", "a", "b"]), { complete: paged }),
     ).toEqual(["quiet:a", "quiet:a", "quiet:a", "quiet:b"]);

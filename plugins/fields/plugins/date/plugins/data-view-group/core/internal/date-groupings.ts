@@ -269,12 +269,31 @@ function planYear(_ctx: GroupingPlanContext): Bucketer {
  * the same convention as `date-picker/core`'s label helpers.
  */
 export function buildDateGroupings(locale?: string): FieldGrouping[] {
+  // Every one is `monotone`: each bucket is one contiguous span of time and
+  // its ordinal grows with it (a fixed granularity's is the span's start;
+  // Smart's ladder is ordered past → future, each rung a span the rung before
+  // it ends at), so a read paged by the date column fills them in turn.
   return [
-    { id: "smart", label: "Smart", plan: planSmart },
-    { id: "day", label: "Day", plan: (ctx) => planDay(ctx, locale) },
-    { id: "week", label: "Week", plan: (ctx) => planWeek(ctx, locale) },
-    { id: "month", label: "Month", plan: (ctx) => planMonth(ctx, locale) },
-    { id: "year", label: "Year", plan: planYear },
+    { id: "smart", label: "Smart", monotone: true, plan: planSmart },
+    {
+      id: "day",
+      label: "Day",
+      monotone: true,
+      plan: (ctx) => planDay(ctx, locale),
+    },
+    {
+      id: "week",
+      label: "Week",
+      monotone: true,
+      plan: (ctx) => planWeek(ctx, locale),
+    },
+    {
+      id: "month",
+      label: "Month",
+      monotone: true,
+      plan: (ctx) => planMonth(ctx, locale),
+    },
+    { id: "year", label: "Year", monotone: true, plan: planYear },
   ];
 }
 

@@ -182,6 +182,7 @@ export function useHierarchyTree(args: {
         : {
             growable: (p) => rowsComplete.growable(p.__row),
             total: rowsComplete.total,
+            order: rowsComplete.order,
           };
     const sections = partitionIntoSections(
       projectedRoots(sortedProjected),

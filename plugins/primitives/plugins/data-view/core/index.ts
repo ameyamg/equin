@@ -179,6 +179,7 @@ export type {
   DataViewPaging,
   DataViewPagingTotal,
   DataViewRowsComplete,
+  DataViewReadOrder,
   DataViewPageNotice,
   DataViewPagePlaceholder,
   DataViewPagePlaceholders,

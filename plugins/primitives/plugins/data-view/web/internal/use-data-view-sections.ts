@@ -116,8 +116,10 @@ export interface PartitionOptions<TRow = unknown> {
    * Whether `rows` is the whole set (`DataViewRenderProps.rowsComplete`).
    * Absent ⇒ true (in memory). When not, a section's count is a lower bound
    * unless a later section has started (under `"appearance"` order) — or, for
-   * `{ growable }`, unless the section holds no growable row, or the read's
-   * `total` makes it exact (see {@link sectionCount}).
+   * `{ growable }`, unless the section holds no growable row, the read's
+   * `total` makes it exact (see {@link sectionCount}), or the read is ordered
+   * by the grouped column (`order`) under a `monotone` grouping and the
+   * section's bucket is before the tail's (flat bucket sections only).
    */
   rowsComplete?: DataViewRowsComplete<TRow>;
   /**
@@ -314,6 +316,22 @@ export function partitionIntoSections<TRow>(
     }
     return node(bucketed, above);
   };
+  // A paged read ordered by the grouped column, bucketed by a grouping whose
+  // buckets follow the value order: every unloaded row sorts at or past the
+  // read's tail, so it lands in the tail's bucket or one beyond it — never in
+  // a bucket before. `readOrder` is then the read's direction, and `tailOrder`
+  // the ordinal of the bucket furthest along it among the loaded paged rows
+  // (the tail's, in read order; an earlier one when a search or filter hides
+  // the tail, which only keeps more sections a lower bound).
+  const readOrder =
+    !byAppearance &&
+    typeof completeness === "object" &&
+    completeness.order !== null &&
+    grouping.monotone === true &&
+    completeness.order.column === (field.column?.name ?? field.id)
+      ? completeness.order.direction
+      : null;
+  let tailOrder: number | null = null;
   rows.forEach((row, i) => {
     const value = values[i] as FieldValue;
     const bucketed = value == null ? null : bucketOf(value);
@@ -322,7 +340,25 @@ export function partitionIntoSections<TRow>(
       return;
     }
     place(bucketed).rows.push(row);
+    if (
+      readOrder !== null &&
+      typeof completeness === "object" &&
+      completeness.growable(row) &&
+      (tailOrder === null ||
+        (readOrder === "desc"
+          ? bucketed.order < tailOrder
+          : bucketed.order > tailOrder))
+    ) {
+      tailOrder = bucketed.order;
+    }
   });
+  // Before the tail's bucket in read order: nothing unloaded can land there.
+  const settledBeforeTail = (bucket: Bucket): boolean =>
+    readOrder !== null &&
+    tailOrder !== null &&
+    (readOrder === "desc"
+      ? bucket.order > tailOrder
+      : bucket.order < tailOrder);
   // An `alwaysGroup` option no row holds: its section, empty (after the rows,
   // so discovery order — the tie-break — stays the rows').
   for (const value of alwaysValues) {
@@ -382,9 +418,13 @@ export function partitionIntoSections<TRow>(
         label: bucket.label,
         // Exact when every row is loaded — or, sections in row order, when a
         // later section (the trailing "None" included) has started: a later
-        // page can only add sections after the tail.
+        // page can only add sections after the tail — or, a read ordered by
+        // the grouped column under a monotone grouping, when the section's
+        // bucket is before the tail's.
         count:
-          byAppearance && (i < ordered.length - 1 || nullBucket.rows.length > 0)
+          (byAppearance &&
+            (i < ordered.length - 1 || nullBucket.rows.length > 0)) ||
+          settledBeforeTail(bucket)
             ? exactCount(bucket.rows.length)
             : ownCount(bucket),
         entries: entriesOf(bucket),

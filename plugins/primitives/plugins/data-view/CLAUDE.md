@@ -656,6 +656,8 @@ DataViewSlots.Grouping({
 interface FieldGrouping {
   id: string; // "smart" | "day" | "value" — persisted
   label: string;
+  oneBucketPerValue?: true; // identity / enum: sections can follow row order
+  monotone?: true; // buckets are contiguous spans of the value order (dates)
   plan: (ctx: GroupingPlanContext) => (value: FieldValue) => GroupBucket | null;
 }
 
@@ -689,6 +691,12 @@ interface GroupByRule {
 - **`order` is a plain ascending ordinal**, read from whichever end the view's sort
   on the grouped field points (`DataViewRenderProps.groupOrder`, derived from
   `activeState.sort` — a live source zeroes `state.sort`).
+- **`monotone`** — each bucket is one contiguous interval of the value's SQL
+  order and its `order` ascends with the value (every date grouping, Smart
+  included; pinned by `date-groupings.test.ts`). A paged read ordered by the
+  grouped column then counts every section before its tail's exactly
+  ("Paging" → Counts). Never on an option-ordered, tag-tree or
+  locale-compared grouping (the identity and enum groupings leave it off).
 
 ### There is exactly one "None", and a grouping cannot mint a second
 
@@ -1100,6 +1108,16 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {});
     under search or a filter naming a contributed column.
   - The total is dropped while search/filter could hide read rows, while loading,
     and for a section the read is split across.
+  - **Ordered by the grouped column**: `paging.order` is the read's leading
+    order key (`useLivePagesPaging` fills it from the query's `orderBy`, else
+    the collection's default — so a live source's flat read has it too),
+    carried as `rowsComplete.order`. Grouped by that column (`column` name,
+    else field id) under a `monotone` grouping, every unloaded row lands in
+    the tail's bucket or past it, so each flat bucket section before the
+    tail's counts exactly and only the tail's reads "N+" (the Sessions tab's
+    days). The tail is the furthest paged row along the read among the rows
+    shown — a search or filter hiding the true tail only keeps more sections
+    a lower bound. "None" keeps its lower bound.
 
 ## Create affordances (`creators`)
 
@@ -2792,6 +2810,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewPagingTotal`
     - `DataViewPart`
     - `DataViewProps`
+    - `DataViewReadOrder`
     - `DataViewRenderProps`
     - `DataViewReserve`
     - `DataViewRowEntry`

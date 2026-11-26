@@ -27,6 +27,17 @@ export interface FieldGrouping {
    */
   readonly oneBucketPerValue?: true;
   /**
+   * Each bucket is a contiguous interval of the field's value order, and a
+   * bucket's `order` ascends with the value (a date by day, week, month, year
+   * or the Smart ladder) — so a read paged in that value's order fills its
+   * buckets one after another. Grouped by the column a paged read is ordered
+   * by (`DataViewPaging.order`), every section before the loaded tail's
+   * bucket then counts exactly, and only the tail's reads "N+". Declare it
+   * only when it holds for SQL's order of the column: never for a grouping
+   * that orders by a declared option order, a tag tree or a locale compare.
+   */
+  readonly monotone?: true;
+  /**
    * Build the bucketing function for ONE render. Two-phase on purpose: a
    * grouping that needs to see the whole set before it can order its sections
    * (enum by `options` index, the identity fallback by value order, a future

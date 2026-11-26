@@ -1230,8 +1230,9 @@ export type DataViewSectioning<TRow> =
 /**
  * How many rows a section holds, as far as the loaded rows can say: `exact`
  * when nothing more can arrive in it (every row is loaded, or — sections in
- * row order — a later section has started), else `atLeast` the rows loaded so
- * far. Printed by one formatter (`formatSectionCount`: `n` / `n+`), so a view
+ * row order — a later section has started, or — a paged read ordered by the
+ * grouped column under a `monotone` grouping — the section's bucket is before
+ * the read tail's), else `atLeast` the rows loaded so far. Printed by one formatter (`formatSectionCount`: `n` / `n+`), so a view
  * cannot print a lower bound as a total.
  */
 export type SectionCount =
@@ -2197,7 +2198,24 @@ export type DataViewRowsComplete<TRow> =
        * (no search or filter narrows the view); `null` otherwise.
        */
       total: DataViewPagingTotal | null;
+      /**
+       * The paged read's leading order key ({@link DataViewPaging.order}),
+       * `null` when unknown. Grouped by that very column with a `monotone`
+       * grouping, the unloaded rows can only land in the tail's bucket or
+       * beyond it, so every section before the tail's counts exactly.
+       */
+      order: DataViewReadOrder | null;
     };
+
+/**
+ * A paged read's LEADING order key: the column its rows come in order of, and
+ * which way. Every unloaded row sorts at or past the loaded tail on it.
+ */
+export interface DataViewReadOrder {
+  /** The column's wire name — a field binds to it by `column`, else by its id. */
+  column: string;
+  direction: "asc" | "desc";
+}
 
 /**
  * How many rows a paged read holds in all — loaded or not — when that is known
@@ -2318,6 +2336,14 @@ export interface DataViewPaging<TRow> {
    * {@link DataViewPagingTotal.filter}). Absent or `null`: unknown.
    */
   total?: DataViewPagingTotal | null;
+  /**
+   * The read's leading order key (`useLivePagesPaging` fills it from the
+   * query's `orderBy`, else the collection's default): grouped by that
+   * column with a `monotone` grouping (`FieldGrouping.monotone`), only the
+   * tail's section can still grow — every earlier one counts exactly.
+   * Absent or `null`: unknown, every section holding a paged row is "N+".
+   */
+  order?: DataViewReadOrder | null;
   /**
    * Which of `rows` came from the paged read — absent: all of them. They must
    * appear in `rows` in the read's order, so the LAST one is the read's tail:
