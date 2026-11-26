@@ -30380,7 +30380,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cli:
             - Exports (types): `KnownTestReport`
             - Exports (values): `readKnownTestReports`
-        - **`idle-runner`** — Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale, never run), a failure another checkout saw on main's code, and one confirming run of a file that failed once — never a re-run of unchanged code. Main's boot and every advance bring its test digests to the new tree; each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectDueBatch, opportunistic; an advance cancels the running batch.
+        - **`idle-runner`** — Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale, never run), a failure another checkout saw on main's code, and one confirming run of a file that failed once — never a re-run of unchanged code. Main's boot and every advance bring its test digests to the new tree; each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectDueBatch, opportunistic, and only while main's checkout is at main's tip; an advance cancels the running batch, and main's boot cancels one a previous backend left running.
           - Server:
             - Contributes:
               - `trigger` "tests.idle-next"
@@ -53062,6 +53062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-progress`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/commits-graph`
+          - `debug/tests/idle-runner`
           - `infra/git/checkout-watch`
           - `infra/git/git-watcher`
           - `reports/engine`

@@ -15,6 +15,7 @@ import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
+import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { _testFileStatus } from "@plugins/debug/plugins/tests/server";
 import { testRunnerConfig } from "@plugins/debug/plugins/tests/core";
 import {
@@ -42,7 +43,10 @@ import { selectDueBatch } from "./select-batch";
 //   a batch ended        → ingest its record, judge it, then the next batch
 //                          (one failure is confirmed by ONE more run)
 //   main advanced        → cancel the running batch (its tree moved: its
-//                          harvest would be skipped)
+//                          harvest would be skipped); no batch starts again
+//                          in this backend, whose checkout is no longer main
+//   main's backend boots → cancel a batch a previous backend left running
+//                          (it tests the tree that backend served)
 //
 // Each batch is an ordinary `./equin test`, OPPORTUNISTIC
 // (`EQUIN_OP_OPPORTUNISTIC`: background lane, low priority, not counted as
@@ -119,9 +123,35 @@ async function batchRunning(): Promise<boolean> {
   );
 }
 
-/** Start the next batch — when the runner is on, one is owed and none runs. */
+/**
+ * Whether the checkout a batch runs in (this backend's, `REPO_ROOT`: on main,
+ * the slot it was built in, detached at its commit) is main's current code.
+ *
+ * Main advances minutes before its new backend takes over. In between, this
+ * backend still runs, its checkout still the commit main just left: a batch
+ * started then tests code main no longer is (its verdicts are owed nobody),
+ * and — a detached child holding this slot — keeps running past the switch
+ * beside the new backend's boot, holding the old slot draining (45–103 s,
+ * report-1795461922-nsi1e3). So the runner tests main's code only: from the
+ * advance to the new backend's boot it starts nothing. (A main whose build
+ * fails keeps serving the old code: the runner waits for the next deploy.)
+ */
+async function checkoutIsMainTip(): Promise<boolean> {
+  const [head, main] = (
+    await runGit(["rev-parse", "HEAD", "refs/heads/main"], REPO_ROOT)
+  )
+    .trim()
+    .split("\n");
+  return head === main;
+}
+
+/**
+ * Start the next batch — when the runner is on, this checkout is main's
+ * current code, one is owed and none runs.
+ */
 export async function startNextBatch(): Promise<void> {
   if (!runnerOn()) return;
+  if (!(await checkoutIsMainTip())) return;
   if (await batchRunning()) return;
   const rows = await db
     .select({
@@ -194,15 +224,28 @@ export const runnerOnMainAdvance = defineRefReaction({
 /**
  * Main's boot: every push restarts main, and a ref reaction is skipped while
  * the backend is down — so the advance that matters most is the one it would
- * miss. The new process serves the new tree: bring the digests to it.
+ * miss. The new process serves the new tree: a batch still running was started
+ * by a previous backend, in the checkout that backend served (a detached child
+ * outlives its backend), so it is cancelled — it tests code this backend does
+ * not serve, holds that backend's slot draining, and would keep this runner
+ * from starting until it ends. Then the digests are brought to the new tree.
  */
 export const runnerAtMainBoot = defineWarmup({
   name: "tests.runner-digests-boot",
   description:
-    "When main's test runner is on: brings main's test digests to the code it now serves, so the runner re-runs what the last push affected.",
+    "When main's test runner is on: cancels a test batch a previous backend left running (it tests the code that backend served, from its slot), then brings main's test digests to the code it now serves, so the runner re-runs what the last push affected.",
   scope: "host",
   run: async () => {
-    if (runnerOn()) await requestCheckoutDigests();
+    if (!runnerOn()) return;
+    // A batch this backend started already (a trigger ran first) is its own.
+    const open = await latestSupervisedRun(idleBatchJob, {
+      paths: [BATCH_LOCK],
+      pool: BATCH_LOCK,
+    });
+    if (open?.open && open.startedAt.getTime() < performance.timeOrigin) {
+      await cancelBatch();
+    }
+    await requestCheckoutDigests();
   },
 });
 

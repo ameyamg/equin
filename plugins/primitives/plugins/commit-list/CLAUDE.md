@@ -79,6 +79,7 @@
     - `conversations/conversation-progress`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/commits-graph`
+    - `debug/tests/idle-runner`
     - `infra/git/checkout-watch`
     - `infra/git/git-watcher`
     - `reports/engine`

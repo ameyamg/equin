@@ -50,6 +50,15 @@ A batch is ≤ 25 files or ≤ 60 s of last-known duration.
   (`tests.idle-batch (refs/heads/main)`, which also cancels the running batch:
   its tree is going away, so its harvest would be skipped) ask for the
   digests of the new tree.
+- **Only main's current code.** A batch starts only while the checkout it
+  runs in (the backend's `REPO_ROOT`: main's slot) is at `refs/heads/main`.
+  Main advances minutes before its new backend takes over; a batch the old
+  backend started in between tested code main had left and — a detached child
+  holding the old slot — ran on past the switch beside the new backend's boot
+  (45–103 s, report-1795461922-nsi1e3). From the advance to the next boot the
+  runner starts nothing (a failed deploy pauses it until the next one). Main's
+  boot also cancels a batch a previous backend left running (the race between
+  a start and an advance), before bringing the digests to its tree.
 - `tests.digestsSettled`, `tests.runsIngested` (runs with failures came in)
   and each batch's end → `tests.idle-next`: pick and enqueue one batch,
   unless one runs.
@@ -69,7 +78,7 @@ A batch is ≤ 25 files or ≤ 60 s of last-known duration.
 
 ## Plugin reference
 
-- Description: Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale, never run), a failure another checkout saw on main's code, and one confirming run of a file that failed once — never a re-run of unchanged code. Main's boot and every advance bring its test digests to the new tree; each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectDueBatch, opportunistic; an advance cancels the running batch.
+- Description: Main's test runner (off unless turned on in Settings → Config, main only): after each push it runs the test files whose verdict on main's current code is owed — the files the push changed (stale, never run), a failure another checkout saw on main's code, and one confirming run of a file that failed once — never a re-run of unchanged code. Main's boot and every advance bring its test digests to the new tree; each tests.digestsSettled, tests.runsIngested and batch end (after its record is ingested and judged) starts the next tests.idle-batch — `./equin test` on files chosen by selectDueBatch, opportunistic, and only while main's checkout is at main's tip; an advance cancels the running batch, and main's boot cancels one a previous backend left running.
 - Server:
   - Contributes:
     - `trigger` "tests.idle-next"
