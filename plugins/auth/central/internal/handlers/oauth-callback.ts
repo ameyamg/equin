@@ -9,7 +9,11 @@ import {
 } from "../oauth-flow";
 import { getAccount, setAccount } from "../token-store";
 import { reportScopesIfLost } from "../scopes-lost-report";
-import { lostScopes, oauthRedirectUri, scopeLabel } from "@plugins/auth/core";
+import {
+  missingScopes,
+  oauthRedirectUri,
+  scopeLabel,
+} from "@plugins/auth/core";
 import { emitAuthChanged } from "../actions";
 import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
@@ -110,7 +114,8 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
     // consent screen). Default scopes are left out: Google answers them under
     // other names (`email` → `…/userinfo.email`) and never lets them be
     // unticked. A held scope among them is a LOSS, filed as a report too.
-    const notGranted = lostScopes(
+    // Asked-for scopes a broader granted one covers count as granted.
+    const notGranted = missingScopes(
       pending.scopes.filter(
         (s) => !descriptor.oauth!.defaultScopes.includes(s),
       ),

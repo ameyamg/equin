@@ -584,13 +584,6 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
           t.messages.forEach((m) => m.mailboxes.delete(TRASH)),
         ),
       ),
-    deleteForever: (ids, o) =>
-      call("deleteForever", ids.length, o, () => {
-        for (const id of ids) {
-          threads.delete(id);
-          touch(id);
-        }
-      }),
     setFlags: (ids, flags, o) =>
       call("setFlags", ids.length, o, () =>
         eachThread(ids, (t) =>

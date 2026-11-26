@@ -20,4 +20,5 @@ test("scopeLabel reads a URL scope by its last segment", () => {
     "drive.file",
   );
   expect(scopeLabel("openid")).toBe("openid");
+  expect(scopeLabel("https://mail.google.com/")).toBe("mail.google.com");
 });

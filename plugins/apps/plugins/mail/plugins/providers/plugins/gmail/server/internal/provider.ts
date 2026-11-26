@@ -372,10 +372,6 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
       neutral("untrash", () =>
         eachThread(ids, (id) => client.untrashThread(id, gmailOpts(o))),
       ),
-    deleteForever: (ids, o) =>
-      neutral("delete", () =>
-        eachThread(ids, (id) => client.deleteThread(id, gmailOpts(o))),
-      ),
 
     setFlags: (ids, flags, o) =>
       neutral("set flags", () => {

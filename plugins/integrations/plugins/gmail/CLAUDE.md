@@ -10,7 +10,7 @@ This plugin owns the Gmail vocabulary so consumers go through
 it and **never** import `@plugins/auth/*` directly or name the Gmail scope string.
 
 - **`core`** (`@plugins/integrations/plugins/gmail/core`)
-  - `GMAIL_SCOPES` — the canonical Gmail OAuth scope tuple (`["https://mail.google.com/"]`).
+  - `GMAIL_SCOPES` — the canonical Gmail OAuth scope tuple (`["https://www.googleapis.com/auth/gmail.modify"]`; an older full `https://mail.google.com/` grant satisfies it).
   - `GOOGLE_PROVIDER_ID` — the auth provider the Gmail scope is granted on. Named once so this plugin's scope requirement, access hook, and access action cannot drift onto different providers.
   - `GmailTokenResult` (type) — Gmail-owned token-request result: `{ ok: true; accessToken; expiresAt; scopes; email }` or `{ ok: false; needsConsent; message }`. The `email` is the connected Google account address (from the OAuth identity, known without a Gmail API call) — it lets consumers establish state before their first API call. Deliberately not a re-export of auth's `TokenResponse`.
 - **`server`** (`@plugins/integrations/plugins/gmail/server`)

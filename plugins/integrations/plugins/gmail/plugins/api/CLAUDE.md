@@ -14,10 +14,10 @@ task 1), which gets the token from the parent plugin (`getGmailToken`).
     `createLabel` / `patchLabel` / `deleteLabel`;
   - threads: `listThreads` (ids with each thread's `historyId`),
     `getThread` / `getThreads` (batch) in `minimal` | `metadata` | `full`,
-    `modifyThread`, `trashThread` / `untrashThread`, `deleteThread`;
+    `modifyThread`, `trashThread` / `untrashThread`;
   - messages: `listMessages`, `getMessage` / `getMessages` (batch, `raw`
-    too), `modifyMessage` / `trashMessage` / `untrashMessage` /
-    `deleteMessage` (one message, its thread's others untouched),
+    too), `modifyMessage` / `trashMessage` / `untrashMessage` (one
+    message, its thread's others untouched),
     `batchModifyMessages` (≤ 1,000 ids), `getAttachment` (bytes),
     `sendMessage` (RFC 2822 bytes);
   - `listHistory` — one page, or `{ kind: "expired" }` when Gmail answers

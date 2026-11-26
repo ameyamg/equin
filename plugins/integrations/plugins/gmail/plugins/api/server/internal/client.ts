@@ -361,20 +361,6 @@ export function createGmailClient(opts: GmailTransportOptions) {
         o,
       );
     },
-    /** Permanent: the thread skips the trash and cannot be recovered. */
-    async deleteThread(id: string, o?: GmailCallOptions): Promise<void> {
-      await t.call(
-        {
-          what: `threads.delete ${id}`,
-          units: GMAIL_QUOTA["threads.delete"],
-          replay: "safe",
-          method: "DELETE",
-          path: `${ME}/threads/${seg(id)}`,
-          schema: EmptySchema,
-        },
-        o,
-      );
-    },
 
     // — messages —
     listMessages(
@@ -471,20 +457,6 @@ export function createGmailClient(opts: GmailTransportOptions) {
           method: "POST",
           path: `${ME}/messages/${seg(id)}/untrash`,
           schema: MessageLabelsSchema,
-        },
-        o,
-      );
-    },
-    /** Permanent: the message skips the trash and cannot be recovered. */
-    async deleteMessage(id: string, o?: GmailCallOptions): Promise<void> {
-      await t.call(
-        {
-          what: `messages.delete ${id}`,
-          units: GMAIL_QUOTA["messages.delete"],
-          replay: "safe",
-          method: "DELETE",
-          path: `${ME}/messages/${seg(id)}`,
-          schema: EmptySchema,
         },
         o,
       );

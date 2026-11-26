@@ -2,9 +2,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import type { AuthAccountState } from "@plugins/auth/core";
+import { missingScopes, type AuthAccountState } from "@plugins/auth/core";
 import { Auth, type AuthScopeRequirement } from "../slots";
-import { missingScopes } from "../scopes";
 import { GrantAccessButton } from "./grant-access-button";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 

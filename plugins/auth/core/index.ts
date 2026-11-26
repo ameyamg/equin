@@ -1,4 +1,5 @@
 export { defineAuthProvider } from "./internal/lib";
+export { missingScopes } from "./internal/scope-coverage";
 export { oauthRedirectUri } from "./internal/redirect-uri";
 export {
   oauthStart,

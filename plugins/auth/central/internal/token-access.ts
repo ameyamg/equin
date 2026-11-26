@@ -4,7 +4,7 @@ import { getAccount, patchAccount, type StoredAccount } from "./token-store";
 import { resolveCredentials } from "./credentials";
 import { refreshAccessToken } from "./oauth-flow";
 import type { AuthIdentity, AuthProviderDescriptor } from "@plugins/auth/core";
-import { AuthNeedsConsentError } from "@plugins/auth/core";
+import { AuthNeedsConsentError, missingScopes } from "@plugins/auth/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { reportRefreshFailure, refreshSucceeded } from "./refresh-report";
 import { reportScopesIfLost } from "./scopes-lost-report";
@@ -21,11 +21,6 @@ const inFlightRefreshes = createInflight("auth-token-refresh");
 
 function refreshKey(providerId: string, accountId: string): string {
   return `${providerId}::${accountId}`;
-}
-
-function scopeSubset(requested: string[], stored: string[]): boolean {
-  const set = new Set(stored);
-  return requested.every((s) => set.has(s));
 }
 
 async function refreshAccount(
@@ -205,13 +200,13 @@ export async function getAccessTokenInternal(
   }
 
   if (args.scopes && args.scopes.length > 0) {
-    const stored = account.scopes ?? [];
-    if (!scopeSubset(args.scopes, stored)) {
+    const missing = missingScopes(args.scopes, account.scopes);
+    if (missing.length > 0) {
       return {
         ok: false,
         needsConsent: true,
         reason: "missing-scopes",
-        missingScopes: args.scopes.filter((s) => !stored.includes(s)),
+        missingScopes: missing,
       };
     }
   }

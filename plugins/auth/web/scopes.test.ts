@@ -1,29 +1,6 @@
 import { test, expect } from "bun:test";
-import { missingScopes, mergeScopes } from "./scopes";
-
-test("missingScopes: granted undefined returns all (deduped)", () => {
-  expect(missingScopes(["a", "b"], undefined)).toEqual(["a", "b"]);
-});
-
-test("missingScopes: granted empty returns all", () => {
-  expect(missingScopes(["a", "b"], [])).toEqual(["a", "b"]);
-});
-
-test("missingScopes: full subset granted returns []", () => {
-  expect(missingScopes(["a", "b"], ["a", "b"])).toEqual([]);
-});
-
-test("missingScopes: partial overlap returns the missing in original order", () => {
-  expect(missingScopes(["a", "b", "c"], ["b"])).toEqual(["a", "c"]);
-});
-
-test("missingScopes: duplicates in required are deduped", () => {
-  expect(missingScopes(["a", "a", "b", "b"], [])).toEqual(["a", "b"]);
-});
-
-test("missingScopes: granted superset returns []", () => {
-  expect(missingScopes(["a"], ["a", "b", "c"])).toEqual([]);
-});
+import { missingScopes } from "@plugins/auth/core";
+import { mergeScopes } from "./scopes";
 
 test("mergeScopes: dedupes and preserves order", () => {
   expect(mergeScopes(["a", "b"], ["b", "c"], ["a", "d"])).toEqual([

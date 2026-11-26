@@ -35,6 +35,8 @@ export function lostScopes(held: string[], granted: string[]): string[] {
  * segment (`https://www.googleapis.com/auth/drive.file` → `drive.file`).
  */
 export function scopeLabel(scope: string): string {
-  const slash = scope.lastIndexOf("/");
-  return slash === -1 ? scope : scope.slice(slash + 1);
+  // A scope that is a whole origin (`https://mail.google.com/`) by its host.
+  const trimmed = scope.endsWith("/") ? scope.slice(0, -1) : scope;
+  const slash = trimmed.lastIndexOf("/");
+  return slash === -1 ? trimmed : trimmed.slice(slash + 1);
 }

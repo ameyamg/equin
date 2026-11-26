@@ -87,7 +87,7 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
     needed) or `reset` (Gmail 404, JMAP `cannotCalculateChanges`, IMAP
     UIDVALIDITY).
 - **Writes are semantic and idempotent:** `archive`, `moveToInbox`, `trash`,
-  `untrash`, `deleteForever`, `setFlags`, `setMailboxes`, mailbox
+  `untrash`, `setFlags`, `setMailboxes`, mailbox
   create / rename / delete, `saveDraft`, `deleteDraft`, `send`. "Archive" is
   a label removal on Gmail and a move on IMAP. Each sets a target state, so a
   durable job may replay it.

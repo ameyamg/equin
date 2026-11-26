@@ -158,8 +158,9 @@ export interface MailProvider {
   moveToInbox(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
   trash(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
   untrash(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
-  /** Permanent. */
-  deleteForever(ids: readonly ThreadId[], o?: MailCallOptions): Promise<void>;
+  // No permanent delete: the trash is emptied by the provider (Gmail after
+  // 30 days), and Gmail's delete needs the full mail.google.com scope, which
+  // Mail does not ask for (gmail.modify covers every write here).
   setFlags(
     ids: readonly ThreadId[],
     flags: MailFlags,
