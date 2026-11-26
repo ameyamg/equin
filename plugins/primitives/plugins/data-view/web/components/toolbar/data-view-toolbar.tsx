@@ -114,6 +114,18 @@ function bandStage({ width }: { width: number }): BandStage {
  */
 const BAND_NARROW = { "--dv-band-narrow": "yes" } as CSSProperties;
 
+/**
+ * The band's zero-height sizer: its max-content is at least
+ * {@link COMPACT_BREAKPOINT} whatever form is drawn, and it never overflows
+ * the band (`max-width: 100%`, which an intrinsic contribution ignores). See
+ * `bandContent`.
+ */
+const BAND_SIZER: CSSProperties = {
+  width: COMPACT_BREAKPOINT,
+  maxWidth: "100%",
+  height: 0,
+};
+
 /** `searchShortcutHint: hide` drops the search well's trailing `/` hint
  *  (`show` by default). */
 const SEARCH_HINT_CLASS =
@@ -483,9 +495,28 @@ export function DataViewToolbar({
   // The narrow stage, published to the band's content as a var a style query
   // reads (`--dv-band-narrow`): a create button anywhere in the band — the
   // host's or a surface's own — follows the theme's `narrowCreateLabel`.
+  //
+  // The same box fixes what the band claims when its host is sized to its
+  // content (an auto grid track, a float, a shrink-to-fit flex item): ONE
+  // `minmax(0, 1fr)` track (min-content 0), and a zero-height sizer row
+  // `COMPACT_BREAKPOINT` wide, capped at the track (max-content at least the
+  // breakpoint). Both are the same whatever form is drawn, so in such a host
+  // the band is min(its max-content, the room) — at least the breakpoint
+  // exactly when the room is — and the stage it picks can never move the
+  // width it is measured from. Without it each form claimed its own widths:
+  // the compact fold's views strip asked 382px of min-content (above the
+  // breakpoint it is drawn under), the capsule's wide row 181px of
+  // max-content (below the one it is drawn above), and the band flipped
+  // between them every frame (report-1795711185-g5kpk7: a 59/s loop on Home).
+  // Under a definite width (most hosts) neither changes anything.
   const bandContent = (
-    <div className="contents" style={narrow ? BAND_NARROW : undefined}>
+    <div
+      // eslint-disable-next-line layout/no-adhoc-layout -- the band's intrinsic-width policy (above): a one-track minmax(0, 1fr) grid, min-content 0 under any form; no layout primitive declares what a box contributes to its host's intrinsic size
+      className="grid grid-cols-[minmax(0,1fr)]"
+      style={narrow ? BAND_NARROW : undefined}
+    >
       {bandBody}
+      <div aria-hidden style={BAND_SIZER} />
     </div>
   );
 

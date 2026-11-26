@@ -1244,6 +1244,14 @@ interface ToolbarParts {
   applicability/order, and the **compact fold** (`density="compact"` or band under
   `COMPACT_BREAKPOINT` renders it whatever the arrangement). The arrangement owns its
   row box and `rail-follow`.
+- **The band's intrinsic width is form-independent**: its content box is one
+  `minmax(0, 1fr)` track (min-content 0) holding a zero-height sizer
+  `COMPACT_BREAKPOINT` wide (max-content ≥ the breakpoint). In a host sized
+  to its content the band is min(max-content, room), so the stage it picks
+  never moves the width it is measured from — the compact fold (strip
+  min-content above the breakpoint) and the capsule (max-content below it)
+  flipped every frame (report-1795711185-g5kpk7). Pinned by
+  `e2e/band-intrinsic-width.ts`.
 - **The fade**: a zero-height `<Sticky mask="fade" layer="raised">` tail after the
   band (not the band's own fade — `nav` would wash out pinned group headers).
   `spaceBelow` is the tail's runway. No tail in compact or overlay.
