@@ -155,9 +155,7 @@ export function TextEditor({
       <DecoratorBlockPlugin />
       <TokenPastePlugin extensions={extensions} />
       <TokenBoundaryPlugin extensions={extensions} />
-      {onSubmit && submitMode !== "none" && (
-        <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
-      )}
+      <EnterKeyPlugin onSubmit={onSubmit ?? null} submitMode={submitMode} />
       {insertRef && <InsertPlugin insertRef={insertRef} />}
       <HistoryPlugin />
     </LexicalComposer>

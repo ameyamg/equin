@@ -171,6 +171,64 @@ describe("useKept — work", () => {
     ).toEqual([{ text: "!" }, { text: "hello" }]);
   });
 
+  it("settle lands in storage after its binding unmounted, and a sibling binding follows", () => {
+    const kept = defineKept({
+      owner: owner("settle"),
+      label: "Test drafts",
+      tier: "work",
+      stamp: "test",
+      cap: "8 KB",
+      schema: z.record(z.string(), z.string()),
+    });
+    const sender = renderHook(() => useKept(kept, {}, { subject: "batch" }));
+    const sibling = renderHook(() => useKept(kept, {}, { subject: "batch" }));
+    act(() => sender.result.current[1]({ a: "sent", b: "refused" }));
+    const handle = sender.result.current[3];
+    // The surface that sent goes away before the server answers.
+    sender.unmount();
+    act(() =>
+      handle.settle((prev) => {
+        const { a: _taken, ...rest } = prev;
+        return rest;
+      }),
+    );
+    expect(Object.values(stored(local, kept.owner))).toEqual([
+      { b: "refused" },
+    ]);
+    expect(sibling.result.current[0]).toEqual({ b: "refused" });
+
+    // Settled back to the initial value: the entry is cleared.
+    act(() => sibling.result.current[3].settle(() => ({})));
+    expect(stored(local, kept.owner)).toEqual({});
+    expect(sibling.result.current[0]).toEqual({});
+  });
+
+  it("current() answers as set before React renders it, and flush() stores it", () => {
+    const kept = work("as-set");
+    const hook = renderHook(() => useKept(kept, "", { subject: "s" }));
+    const [, set, , handle] = hook.result.current;
+    // Inside one act: the sets are not rendered until it ends, as for a key
+    // pressed in the same frame as the last keystroke.
+    act(() => {
+      set("he");
+      set((v) => `${v}llo`);
+      expect(hook.result.current[0]).toBe("");
+      expect(handle.current()).toBe("hello");
+      handle.flush();
+      expect(Object.values(stored(local, kept.owner))).toEqual(["hello"]);
+    });
+  });
+
+  it("current() answers what a sibling binding of the entry set this frame", () => {
+    const kept = work("sibling-set");
+    const field = renderHook(() => useKept(kept, "", { subject: "s" }));
+    const sender = renderHook(() => useKept(kept, "", { subject: "s" }));
+    act(() => {
+      field.result.current[1]("typed just now");
+      expect(sender.result.current[3].current()).toBe("typed just now");
+    });
+  });
+
   it("refuses a work owner without a subject", () => {
     const kept = work("nosubject");
     expect(() =>

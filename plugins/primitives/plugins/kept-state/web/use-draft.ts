@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -16,8 +17,10 @@ import type { KeptBinding, KeptHandle } from "../core";
 import {
   clearDraft as clearStoredDraft,
   flushDraft,
+  pendingDraft,
   readDraft,
   scheduleDraftWrite,
+  writeDraft,
 } from "./draft-storage";
 import { useKeptMark } from "./state-marks";
 
@@ -85,6 +88,18 @@ export function useKeptEntry<T>(
   }
   const value = current.value;
   const latest = useLatestRef(current);
+  // What the setters made of the rendered value, before React renders it:
+  // `handle.current()` answers "as set", so a Submit pressed in the same
+  // frame as the last keystroke sends that keystroke too. Stamped with the
+  // rendered state it was built on — once a render moves past it (this set,
+  // or anything else that changed what is shown), the render holds it.
+  const unrendered = useRef<{ on: Shown<T>; value: T } | null>(null);
+  const latestSet = useCallback((): T => {
+    const set = unrendered.current;
+    return set !== null && set.on === latest.current
+      ? set.value
+      : latest.current.value;
+  }, [latest]);
 
   // A closure made for an earlier entry (a setter, handle or subscription
   // still held after a re-key) acts on its own entry's storage but never
@@ -117,6 +132,9 @@ export function useKeptEntry<T>(
           scheduleDraftWrite(store, apply(read()), { scope: id });
         return;
       }
+      const set = apply(latestSet());
+      unrendered.current = { on: latest.current, value: set };
+      if (store !== null) scheduleDraftWrite(store, set, { scope: id });
       setShown((prev) => {
         if (prev.entry !== entry) return prev;
         const next = apply(prev.value);
@@ -124,7 +142,7 @@ export function useKeptEntry<T>(
         return { entry, value: next };
       });
     },
-    [store, id, entry, read, latest],
+    [store, id, entry, read, latest, latestSet],
   );
 
   const clear = useCallback(() => {
@@ -148,8 +166,16 @@ export function useKeptEntry<T>(
   const handle = useMemo(
     () =>
       ({
-        current: () =>
-          latest.current.entry === entry ? latest.current.value : read(),
+        current: () => {
+          if (latest.current.entry !== entry) return read();
+          // Another binding of this entry (the field a Submit bar sends) may
+          // have set it this frame: its write is pending, and this binding
+          // hears of it only once the write lands.
+          const held =
+            store === null ? null : pendingDraft(store, { scope: id });
+          const parsed = held === null ? null : parse(held.value);
+          return parsed ?? latestSet();
+        },
         flush: () => {
           if (store !== null) flushDraft(store, { scope: id });
         },
@@ -164,8 +190,30 @@ export function useKeptEntry<T>(
             same(shown, sent) ? resolvedInitial : shown,
           );
         },
+        settle: (update) => {
+          // Storage first (`read` answers from a pending write before the
+          // stored one), never through React state: an unmounted hook's
+          // updater runs only by luck (when React computes it eagerly).
+          const next = update(read());
+          if (store !== null) {
+            if (same(next, resolvedInitial))
+              clearStoredDraft(store, { scope: id });
+            else writeDraft(store, next, { scope: id });
+          }
+          showIfCurrent(update);
+        },
       }) as KeptHandle<T>,
-    [store, id, entry, read, resolvedInitial, latest, showIfCurrent],
+    [
+      store,
+      id,
+      entry,
+      read,
+      parse,
+      resolvedInitial,
+      latest,
+      latestSet,
+      showIfCurrent,
+    ],
   );
 
   return [value, setValue, clear, handle];

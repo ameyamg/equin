@@ -108,7 +108,7 @@ const sameDraft = (a: DecisionDraft | undefined, b: DecisionDraft): boolean =>
 /** The user's drafted answers, and their one Submit. */
 export function useDecisionDrafts(): DecisionDrafts {
   const binding = useKept(decisionDrafts, {}, { subject: SUBJECT });
-  const [drafts, setDrafts, , handle] = binding;
+  const [drafts, , , handle] = binding;
   const mutation = useEndpointMutation(submitDecisionAnswersEndpoint);
   const unavailable = mutation.kind === "unavailable" ? mutation.message : null;
   const part = useCallback(
@@ -148,7 +148,9 @@ export function useDecisionDrafts(): DecisionDrafts {
       const refused = new Map(
         response.refused.map((r) => [r.decision, r.message]),
       );
-      setDrafts((prev) => {
+      // On storage, not React state: the bar that sent may be gone by now
+      // (the conversation tray hides once nothing is left to answer).
+      handle.settle((prev) => {
         const next = { ...prev };
         for (const [id, d] of Object.entries(sent)) {
           if (!sameDraft(next[id], d)) continue; // edited since: keep it
@@ -160,7 +162,7 @@ export function useDecisionDrafts(): DecisionDrafts {
       });
       return response;
     },
-    [handle, mutation, setDrafts],
+    [handle, mutation],
   );
   const submit = useCallback(
     (decisions: readonly string[]): Promise<SubmitAnswersResponse> => {

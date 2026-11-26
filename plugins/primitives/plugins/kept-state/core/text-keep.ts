@@ -33,6 +33,16 @@ export interface KeptHandle<T> {
   showInitial(): void;
   /** Clear the entry if storage still holds `sent`; reset what is shown if it still shows `sent`. */
   clearIfStill(sent: T): void;
+  /**
+   * Apply `update` to what storage holds now and write the result at once
+   * (an entry back to its initial value is cleared). It acts on storage, not
+   * on the component: it lands whether or not the binding is still mounted,
+   * so a send's answer that arrives after its surface went away (a panel that
+   * hid itself once nothing was left to answer) still settles the work. What
+   * is shown follows while it is this entry. For a partial ack — some parts
+   * of a batch taken, others refused — where `clearIfStill` is all or none.
+   */
+  settle(update: (stored: T) => T): void;
 }
 
 /** A setter as `useState`'s: a value, or a function of the previous one. */

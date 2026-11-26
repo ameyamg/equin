@@ -19,6 +19,7 @@ function binding<T>(initial: T): { b: () => KeptBinding<T>; get: () => T } {
     flush: () => {},
     showInitial: () => {},
     clearIfStill: () => {},
+    settle: () => {},
   } as unknown as KeptHandle<T>;
   return {
     b: () => [

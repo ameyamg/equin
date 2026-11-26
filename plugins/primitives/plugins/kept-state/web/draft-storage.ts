@@ -188,6 +188,18 @@ export function scheduleDraftWrite<T>(
   });
 }
 
+/**
+ * An entry's write scheduled but not in storage yet — the newest value any
+ * binding of it set this frame — or `null`.
+ */
+export function pendingDraft<T>(
+  store: Store<T>,
+  options?: DraftOptions,
+): { value: T } | null {
+  const held = pending.get(store.key(options?.scope ?? ""));
+  return held ? { value: held.value as T } : null;
+}
+
 /** Write one entry's pending value now, if it has one. */
 export function flushDraft<T>(store: Store<T>, options?: DraftOptions): void {
   const held = pending.get(store.key(options?.scope ?? ""));
