@@ -6,6 +6,7 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
@@ -202,7 +203,13 @@ function SourceBody({
                 screen's clip and the swipe divider. Drawn inside the frame
                 instead, they belong to it as an iframe's would. */}
             <PortalHost>
-              {resolution.render(layout.width, layout.height)}
+              {/* A source taller than the screen scrolls inside it, as an
+                  iframe's document would (an exhibit's long field list); a
+                  source sized to the screen (an app) never overflows. The
+                  portal layer stays outside, so popups do not scroll away. */}
+              <Scroll className="h-full">
+                {resolution.render(layout.width, layout.height)}
+              </Scroll>
             </PortalHost>
           </div>
         </PluginErrorBoundary>
