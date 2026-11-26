@@ -35,7 +35,7 @@ export const appendTabRecordingChunk = defineEndpoint({
  * Ask equin to save it: the request is kept with the recording (on disk) and
  * equin's save job runs it — flushed, remuxed to a faststart MP4, linked to
  * its final name (`<YYYY-MM-DD HH.MM> <title>.mp4`, never overwriting), with
- * the pointer track beside it as `<name>.pointer.json`. Answers at once;
+ * the pointer track inside it (`cursorTrackBox`). Answers at once;
  * the outcome is the `recorder.save` live value. Asking again is harmless.
  */
 export const finishTabRecording = defineEndpoint({

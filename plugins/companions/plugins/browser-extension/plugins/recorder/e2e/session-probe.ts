@@ -10,6 +10,14 @@
  *    2560 × 1440 H.264 video (a 1280 × 720 page at DPR 2) holding them.
  * 2. Resize the window mid-recording: it stops on its own, the video kept,
  *    and the state says why (`stoppedBy: "window-resized"`), for the panel.
+ * 3. Navigate mid-recording (two full page loads), the pointer moved and
+ *    pressed on each page (Playwright's synthetic input — the OS cursor never
+ *    moves): the pointer track inside the MP4 holds every page's samples, in
+ *    time order, and the Recordings folder holds only the `.mp4`.
+ *
+ * Every video: H.264 at the preset's pixels, its duration known, faststart
+ * (`moov` before `mdat`), and its pointer track inside it — ffprobe's trace
+ * shows the top-level `uuid` box, `readCursorTrack` reads it back.
  *
  *   ./equin run plugins/companions/plugins/browser-extension/plugins/recorder/e2e/session-probe.ts [--headed]
  *
@@ -27,9 +35,9 @@
  * reason was lost behind the finish's 409. `record-probe.ts` drives the relay
  * alone and could not see it; this probe failed on that code.
  */
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   flag,
   pathUrl,
@@ -51,6 +59,7 @@ import {
   SHELL_FOLDER,
 } from "@plugins/companions/plugins/browser-extension/data-dirs";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+import { readCursorTrack } from "../core";
 
 export const e2e = {
   kind: "test",
@@ -246,6 +255,69 @@ try {
     "window-resized",
   );
 
+  // Navigations mid-recording: each page leaves its samples in the track.
+  // Each page's moves are on their own row (y), so the track shows which
+  // page a sample came from.
+  const rows = [111, 222, 333];
+  const pointerOn = async (y: number) => {
+    await tab.mouse.move(40, y);
+    await tab.mouse.move(400, y, { steps: 12 });
+    await tab.mouse.down();
+    await tab.mouse.up();
+    await tab.waitForTimeout(700);
+    // A last move, then at once the navigation: only the page's `pagehide`
+    // batch (or the stop's) carries it.
+    await tab.mouse.move(420, y);
+  };
+  const navigated = await session("navigate", async () => {
+    await pointerOn(rows[0]!);
+    await tab.goto(pathUrl("/home"));
+    await pointerOn(rows[1]!);
+    await tab.goto(tabUrl);
+    await pointerOn(rows[2]!);
+    await send({ type: "recorder.stop" });
+  });
+  if (navigated !== null) {
+    const read = await readCursorTrack(Bun.file(navigated.recording.path));
+    const samples = read.kind === "found" ? read.track.samples : [];
+    r.eq("navigate: the pointer track is inside the video", read.kind, "found");
+    const onRow = (y: number) => samples.filter((s) => s[2] === y);
+    for (const [i, y] of rows.entries()) {
+      r.ok(
+        `navigate: page ${i + 1}'s moves are in the track`,
+        onRow(y).filter((s) => s[3] === "move").length >= 10,
+        `${onRow(y).length} samples on row ${y} of ${samples.length}`,
+      );
+      r.ok(
+        `navigate: page ${i + 1}'s last move, just before it left, is in the track`,
+        onRow(y).some((s) => s[1] === 420),
+        JSON.stringify(onRow(y).slice(-3)),
+      );
+      r.eq(
+        `navigate: page ${i + 1}'s press and release are in the track`,
+        onRow(y)
+          .filter((s) => s[3] !== "move")
+          .map((s) => s[3]),
+        ["down", "up"],
+      );
+    }
+    r.ok(
+      "navigate: the pages follow each other on the video's clock",
+      rows.every(
+        (y, i) =>
+          i === 0 ||
+          Math.max(...onRow(rows[i - 1]!).map((s) => s[0])) <
+            Math.min(...onRow(y).map((s) => s[0])),
+      ),
+      JSON.stringify(rows.map((y) => onRow(y).map((s) => s[0]))),
+    );
+    r.ok(
+      "navigate: the samples are within the video",
+      samples.every((s) => s[0] >= 0 && s[0] <= navigated.recording.durationMs),
+      `${samples.at(0)?.[0]}…${samples.at(-1)?.[0]} of ${navigated.recording.durationMs} ms`,
+    );
+  }
+
   // Stopped the moment it records, before the recorder's first 1 s chunk can
   // be due: a short video, or the failure saying why nothing was recorded —
   // never a finish of nothing (the 409 the user saw).
@@ -267,7 +339,6 @@ try {
   await rm(profile, { recursive: true, force: true });
   for (const path of saved) {
     await rm(path, { force: true });
-    await rm(path.replace(/\.mp4$/, ".pointer.json"), { force: true });
   }
 }
 await r.finish();
@@ -306,5 +377,34 @@ async function checkVideo(name: string, saved: SavedRecording): Promise<void> {
     `${name}: it holds the seconds recorded`,
     Number(info.format.duration) > (RECORD_MS / 1000) * 0.75,
     info.format.duration,
+  );
+  // The top-level boxes, in file order, as ffprobe's mov demuxer walks them.
+  const trace = await spawnExpectOk(
+    [ff.ffprobe, "-v", "trace", "-i", saved.path],
+    { timeoutMs: 30_000 },
+  );
+  const top = [
+    ...`${trace.stdout}${trace.stderr}`.matchAll(
+      /type:'(\w{4})' parent:'root'/g,
+    ),
+  ].map((m) => m[1]);
+  r.ok(
+    `${name}: faststart — moov before mdat, the pointer box after`,
+    top.indexOf("moov") !== -1 &&
+      top.indexOf("moov") < top.indexOf("mdat") &&
+      top.indexOf("mdat") < top.lastIndexOf("uuid"),
+    top.join(" "),
+  );
+  const head = (await readFile(saved.path)).subarray(0, 64).toString("latin1");
+  r.ok(`${name}: the file starts with its index`, !head.includes("mdat"), head);
+  const read = await readCursorTrack(Bun.file(saved.path));
+  r.eq(`${name}: its pointer track reads back`, read.kind, "found");
+  const stem = basename(saved.path, ".mp4");
+  r.eq(
+    `${name}: the folder holds only the video`,
+    (await readdir(dirname(saved.path))).filter(
+      (f) => f === basename(saved.path) || f.startsWith(`${stem}.`),
+    ),
+    [basename(saved.path)],
   );
 }

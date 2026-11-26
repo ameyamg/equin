@@ -5,8 +5,14 @@
  * - **Countdown** — 3-2-1 over the page (click to skip), answered once it is
  *   off the screen, so it is drawn before the capture starts and never in the
  *   video.
- * - **Pointer track** — every pointer sample, kept for `<name>.pointer.json`
- *   (for an editor). Nothing of the pointer is drawn: Chrome's tab capture
+ * - **Pointer track** — every pointer sample, on the recording's clock (the
+ *   worker's, so each page of a recording stamps the video's time), sent in
+ *   batches to the offscreen document, which keeps the recording's track and
+ *   hands it to equin to save inside the video (for an editor). A batch goes
+ *   at once on a press, a release or a leave (a link's click navigates right
+ *   after), on `pagehide`, else at most `BATCH_MS` after its first sample —
+ *   so a navigation, which takes this script with the page, loses at most
+ *   the moves of its last instant. Nothing of the pointer is drawn: Chrome's tab capture
  *   composites the OS cursor itself (always, while the mouse moves over the
  *   tab; hidden after 2 s still — Chromium's mouse_cursor_overlay_controller),
  *   so an arrow drawn here is a second cursor in the video.
@@ -24,11 +30,15 @@
  * listening and drawing, one of them orphaned and deaf to `finish`, as
  * before 2026-11-25.
  */
+import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import {
   ContentCommandSchema,
+  OffscreenReplySchema,
+  recordedMs,
   type ContentCommand,
+  type OffscreenCommand,
   type PointerSample,
-  type PointerTrack,
+  type RecordingClock,
 } from "../core/recorder";
 import {
   chrome,
@@ -37,12 +47,15 @@ import {
   messageType,
   OTHER_BUILD_TEXT,
   SHELL_BUILD,
+  sendToExtension,
   unstamped,
 } from "./chrome-api";
 
 const ACCENT = "#e8643c";
 const HOST_TAG = "equin-recorder";
 const RIPPLE_MS = 500;
+/** The longest a sample waits in the page before its batch is sent. */
+const BATCH_MS = 500;
 
 const STYLE = `
 :host { all: initial; }
@@ -123,16 +136,44 @@ async function countdown(): Promise<void> {
 
 // ── Pointer track and clicks ────────────────────────────────────────────────
 
-/** A recording's session in this page: plain data, handed from one injection
- *  to the next. */
+/** A recording's session in this page, handed from one injection to the
+ *  next. */
 interface Track {
   clicks: boolean;
-  samples: PointerSample[];
-  /** performance.now() at the start, and the time paused since. */
-  startedAt: number;
-  pausedMs: number;
-  pausedAt: number | null;
-  viewport: { width: number; height: number };
+  /** The recording's clock, as the worker last said it. */
+  clock: RecordingClock;
+  /** Samples not handed to the offscreen document yet. */
+  pending: PointerSample[];
+  /** The batches on their way, one after the other (in order). */
+  sending: Promise<void>;
+}
+
+/**
+ * Hand the pending samples to the offscreen document, after the batches
+ * already on their way. Answers why they were not taken, or `null`. Samples
+ * not taken stay pending, sent again with the next batch: a page going into
+ * the back/forward cache closes its channel mid-`pagehide`, and when it
+ * comes back (Back, mid-recording) its samples still go. Only `finish`
+ * fails on a refusal — a batch sent from an event handler has no one to
+ * tell, and loses nothing by waiting.
+ */
+function flush(track: Track): Promise<string | null> {
+  const batch = track.sending.then(async (): Promise<string | null> => {
+    if (track.pending.length === 0) return null;
+    const samples = track.pending;
+    track.pending = [];
+    try {
+      const message: OffscreenCommand = { type: "offscreen.pointer", samples };
+      const reply = OffscreenReplySchema.parse(await sendToExtension(message));
+      if (!reply.ok) throw new Error(reply.error);
+      return null;
+    } catch (err) {
+      track.pending = [...samples, ...track.pending];
+      return errorText(err);
+    }
+  });
+  track.sending = batch.then(() => undefined);
+  return batch;
 }
 
 /** The listeners (and the click overlay) a track runs with. */
@@ -141,22 +182,24 @@ interface Attached {
   detach: () => void;
 }
 
-function recordedNow(t: Track): number {
-  return Math.round(
-    (t.pausedAt ?? performance.now()) - t.startedAt - t.pausedMs,
-  );
-}
-
 function attach(track: Track): Attached {
   const overlay = track.clicks ? openOverlay() : null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const send = () => {
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
+    void flush(track);
+  };
   const sample = (e: MouseEvent, kind: PointerSample[3]) => {
-    if (track.pausedAt === null)
-      track.samples.push([
-        recordedNow(track),
-        Math.round(e.clientX),
-        Math.round(e.clientY),
-        kind,
-      ]);
+    if (track.clock.pausedAt !== null) return;
+    track.pending.push([
+      Math.round(recordedMs(track.clock, wallNow("human-time"))),
+      Math.round(e.clientX),
+      Math.round(e.clientY),
+      kind,
+    ]);
+    if (kind !== "move") send();
+    else timer ??= setTimeout(send, BATCH_MS);
   };
   const move = (e: PointerEvent) => sample(e, "move");
   const down = (e: PointerEvent) => {
@@ -197,6 +240,7 @@ function attach(track: Track): Attached {
     requestAnimationFrame(() => raise(overlay));
   };
   const opts = { capture: true, passive: true } as const;
+  window.addEventListener("pagehide", send, opts);
   window.addEventListener("pointermove", move, opts);
   window.addEventListener("pointerdown", down, opts);
   window.addEventListener("pointerup", up, opts);
@@ -205,6 +249,8 @@ function attach(track: Track): Attached {
   return {
     track,
     detach: () => {
+      if (timer !== null) clearTimeout(timer);
+      window.removeEventListener("pagehide", send, opts);
       window.removeEventListener("pointermove", move, opts);
       window.removeEventListener("pointerdown", down, opts);
       window.removeEventListener("pointerup", up, opts);
@@ -217,12 +263,18 @@ function attach(track: Track): Attached {
 
 let current: Attached | null = null;
 
-function finish(): PointerTrack | null {
+/** Stop: everything drawn removed, the last samples handed over (or dropped
+ *  with a discarded recording). */
+async function finish(handOver: boolean): Promise<null> {
   const a = current;
   current = null;
   if (a === null) return null;
   a.detach();
-  return { version: 1, viewport: a.track.viewport, samples: a.track.samples };
+  if (!handOver) return null;
+  const refused = await flush(a.track);
+  if (refused !== null)
+    throw new Error(`The pointer track did not reach the recorder: ${refused}`);
+  return null;
 }
 
 async function handle(cmd: ContentCommand): Promise<unknown> {
@@ -231,29 +283,27 @@ async function handle(cmd: ContentCommand): Promise<unknown> {
       await countdown();
       return null;
     case "content.track-start":
-      // Already tracking: this page was injected again mid-recording.
-      if (current === null)
-        current = attach({
-          clicks: cmd.clicks,
-          samples: [],
-          startedAt: performance.now(),
-          pausedMs: 0,
-          pausedAt: null,
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-        });
-      return null;
-    case "content.track-pause":
-      if (current !== null && current.track.pausedAt === null)
-        current.track.pausedAt = performance.now();
-      return null;
-    case "content.track-resume":
-      if (current !== null && current.track.pausedAt !== null) {
-        current.track.pausedMs += performance.now() - current.track.pausedAt;
-        current.track.pausedAt = null;
+      // Already tracking this recording (its clock started at the same
+      // instant): the page was injected again mid-recording. A session of
+      // an earlier recording (a page back from the back/forward cache, left
+      // attached when that one stopped) is dropped: this one starts afresh.
+      if (current?.track.clock.startedAt === cmd.clock.startedAt) {
+        current.track.clock = cmd.clock;
+        return null;
       }
+      current?.detach();
+      current = attach({
+        clicks: cmd.clicks,
+        clock: cmd.clock,
+        pending: [],
+        sending: Promise.resolve(),
+      });
+      return null;
+    case "content.track-clock":
+      if (current !== null) current.track.clock = cmd.clock;
       return null;
     case "content.finish":
-      return finish();
+      return finish(cmd.handOver);
   }
 }
 
@@ -299,7 +349,11 @@ for (const stale of document.querySelectorAll<HTMLElement>(HOST_TAG)) {
   stale.style.setProperty("display", "none", "important");
   stale.dataset.equinStale = "";
 }
-if (adopted !== null) current = attach(adopted);
+// A session from an injection of another build (a shell update mid-
+// recording) has another shape: not adopted — its listeners are gone, and the
+// worker's next `track-start` starts this page's own.
+if (adopted !== null && Array.isArray(adopted.pending) && "clock" in adopted)
+  current = attach(adopted);
 
 chrome.runtime.onMessage.addListener(listener);
 world.__equinRecorder = {

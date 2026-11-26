@@ -12,7 +12,7 @@ export const recorderConfig = defineConfig({
     folder: dirPathField({
       label: "Recordings folder",
       description:
-        "Where a tab recorded from the browser extension is saved, as an MP4 (with its pointer track beside it).",
+        "Where a tab recorded from the browser extension is saved, as an MP4 (with the pointer's moves and clicks inside it, for an editor).",
       default: "~/Movies/equin",
     }),
   },

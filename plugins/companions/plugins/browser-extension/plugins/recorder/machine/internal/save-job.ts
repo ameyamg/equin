@@ -17,10 +17,10 @@ import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import type { PointerTrack } from "@plugins/companions/plugins/browser-extension/core";
-import type { RecordingSaveOutcome } from "../../core";
+import { cursorTrackBox, type RecordingSaveOutcome } from "../../core";
 import { _recorderSaves } from "../../server";
 import { perRecording } from "./per-recording";
-import { saveFreePair } from "./save-pair";
+import { saveFreeName } from "./save-name";
 import { saveStep } from "./save-step";
 import {
   claimFinish,
@@ -111,7 +111,8 @@ async function recordOutcome(
     .onConflictDoUpdate({ target: _recorderSaves.id, set: { outcome } });
 }
 
-/** Save a claimed recording: truncate, sync, remux, link, clean up. */
+/** Save a claimed recording: truncate, sync, remux, pointer track in, link,
+ *  clean up. */
 async function saveClaimed(
   upload: Upload,
   pointer: PointerTrack | null,
@@ -145,12 +146,12 @@ async function saveClaimed(
     ],
     { timeoutMs: REMUX_TIMEOUT_MS },
   );
-  const name = await saveFreePair(
-    remuxed,
-    pointer === null ? null : `${JSON.stringify(pointer)}\n`,
-    upload.folder,
-    upload.base,
-  );
+  // The pointer track travels inside the video, as a box after the movie
+  // (players skip it; faststart's index stays at the front): no file beside
+  // it to orphan. Appended to the remux's own output, so a re-run (a
+  // restart mid-save) remuxes afresh and never appends twice.
+  if (pointer !== null) await writeAtEnd(remuxed, cursorTrackBox(pointer));
+  const name = await saveFreeName(remuxed, upload.folder, upload.base);
   await removeUpload(upload);
   const path = join(upload.folder, name);
   return {
@@ -159,6 +160,18 @@ async function saveClaimed(
     name,
     bytes: (await stat(path)).size,
   };
+}
+
+/** Write `bytes` after the last byte of `path` (one box, once per save). */
+async function writeAtEnd(path: string, bytes: Uint8Array): Promise<void> {
+  const handle = await open(path, "r+");
+  try {
+    const { size } = await handle.stat();
+    await handle.write(bytes, 0, bytes.length, size);
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
 }
 
 /**

@@ -52,6 +52,7 @@ import {
   SHELL_FOLDER,
 } from "@plugins/companions/plugins/browser-extension/data-dirs";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+import { readCursorTrack } from "../core";
 
 export const e2e = {
   kind: "test",
@@ -104,7 +105,9 @@ async function framesOf(video: string): Promise<Uint8Array[]> {
       "-i",
       video,
       "-vf",
-      `fps=${FPS}`,
+      // The video is the page's every physical pixel (layout × DPR: 2560 ×
+      // 1440 on a Retina display); the boxes below are in the page's CSS px.
+      `fps=${FPS},scale=${W}:${H}`,
       "-f",
       "rawvideo",
       "-pix_fmt",
@@ -277,14 +280,12 @@ try {
     const during = await overlays();
 
     // Three clicks on empty areas; the last one's frame is read right after.
-    let clickAt = 0;
     for (const [fx, fy] of [
       [0.12, 0.85],
       [0.5, 0.85],
       [0.88, 0.85],
     ] as const) {
       await tab.mouse.click(W * fx, H * fy);
-      clickAt = at();
       await tab.waitForTimeout(400);
     }
     await tab.mouse.move(W * 0.88, H * 0.15, { steps: 5 });
@@ -330,6 +331,20 @@ try {
     );
     r.eq(`${label}: no pointer drawn where the mouse rests`, restDark, 0);
 
+    // The last click's time on the video's clock, from the pointer track
+    // inside the video — the probe's own clock reads it late on a loaded
+    // host (each Playwright call waits its turn), past the ripple's 500 ms.
+    const read = await readCursorTrack(Bun.file(video));
+    const downs =
+      read.kind === "found"
+        ? read.track.samples.filter((s) => s[3] === "down")
+        : [];
+    r.eq(
+      `${label}: the track inside the video holds the 3 clicks`,
+      downs.length,
+      3,
+    );
+    const clickAt = (downs.at(-1)?.[0] ?? 0) / 1000;
     const ripple = most(
       frames,
       clickAt - 0.2,
@@ -352,7 +367,6 @@ try {
   await rm(profile, { recursive: true, force: true });
   for (const path of saved) {
     await rm(path, { force: true });
-    await rm(path.replace(/\.mp4$/, ".pointer.json"), { force: true });
   }
 }
 await r.finish();

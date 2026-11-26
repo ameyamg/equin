@@ -10,12 +10,13 @@
  * way the offscreen recorder does — through the relay page, framed from the
  * extension's origin, chunk by chunk — and checks the file lands in the
  * Recordings folder remuxed (faststart, its duration known), with its pointer
- * track beside it; then removes both.
+ * track inside it (read back with `readCursorTrack`) and no file beside it;
+ * then removes it.
  *
  * Not covered: `tabCapture` itself, which Chrome grants only on a real click
  * on the extension (the user's manual check).
  */
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -38,6 +39,7 @@ import {
   SHELL_FOLDER,
 } from "@plugins/companions/plugins/browser-extension/data-dirs";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+import { readCursorTrack } from "../core";
 
 export const e2e = {
   kind: "test",
@@ -274,11 +276,23 @@ try {
     head.includes("ftyp") && !head.includes("mdat"),
     head,
   );
-  const pointer = saved.path.replace(/\.mp4$/, ".pointer.json");
+  const track = await readCursorTrack(Bun.file(saved.path));
+  r.eq(
+    "the pointer track is inside it",
+    track.kind === "found" ? track.track.samples.length : track.kind,
+    2,
+  );
+  const beside = saved.path.replace(/\.mp4$/, ".pointer.json");
   r.ok(
-    "the pointer track is beside it",
-    (await stat(pointer)).size > 0,
-    pointer,
+    "no pointer file beside it",
+    await access(beside).then(
+      () => false,
+      (err: NodeJS.ErrnoException) => {
+        if (err.code === "ENOENT") return true;
+        throw err;
+      },
+    ),
+    beside,
   );
 } finally {
   await context.close();
@@ -286,7 +300,6 @@ try {
   await rm(scratch, { recursive: true, force: true });
   if (saved !== null) {
     await rm(saved.path, { force: true });
-    await rm(saved.path.replace(/\.mp4$/, ".pointer.json"), { force: true });
   }
 }
 console.log(`screenshots: ${shots}`);

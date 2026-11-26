@@ -118,6 +118,20 @@ export const LastRecordingSchema = z.discriminatedUnion("kind", [
 ]);
 export type LastRecording = z.infer<typeof LastRecordingSchema>;
 
+/** A recording's clock: where recorded time (pauses excluded) stands, in
+ *  epoch ms. The worker's state holds it, and the content script samples the
+ *  pointer on it — so every page of a recording (a navigation injects a new
+ *  script) stamps its samples on the one timeline the video has. */
+export const RecordingClockSchema = z.object({
+  /** When capture started (epoch ms). */
+  startedAt: z.number(),
+  /** Time spent paused before the current stretch, ms. */
+  pausedMs: z.number().nonnegative(),
+  /** When the current pause began (epoch ms), `null` while recording. */
+  pausedAt: z.number().nullable(),
+});
+export type RecordingClock = z.infer<typeof RecordingClockSchema>;
+
 /** Where the session stands. */
 export const RecorderStateSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("idle"), last: LastRecordingSchema.nullable() }),
@@ -126,12 +140,7 @@ export const RecorderStateSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("recording"),
     options: RecorderOptionsSchema,
-    /** When capture started (epoch ms). */
-    startedAt: z.number(),
-    /** Time spent paused before the current stretch, ms. */
-    pausedMs: z.number().nonnegative(),
-    /** When the current pause began (epoch ms), `null` while recording. */
-    pausedAt: z.number().nullable(),
+    ...RecordingClockSchema.shape,
     width: z.number().int().positive(),
     height: z.number().int().positive(),
   }),
@@ -140,12 +149,20 @@ export const RecorderStateSchema = z.discriminatedUnion("kind", [
 ]);
 export type RecorderState = z.infer<typeof RecorderStateSchema>;
 
-/** Recorded time of a `recording` state at `now` (epoch ms), pauses excluded. */
-export function recordedMs(
+/** Recorded time on `clock` at `now` (epoch ms), pauses excluded. */
+export function recordedMs(clock: RecordingClock, now: number): number {
+  return (clock.pausedAt ?? now) - clock.startedAt - clock.pausedMs;
+}
+
+/** The clock part of a `recording` state. */
+export function clockOf(
   state: Extract<RecorderState, { kind: "recording" }>,
-  now: number,
-): number {
-  return (state.pausedAt ?? now) - state.startedAt - state.pausedMs;
+): RecordingClock {
+  return {
+    startedAt: state.startedAt,
+    pausedMs: state.pausedMs,
+    pausedAt: state.pausedAt,
+  };
 }
 
 /** The microphone grant, for the extension's origin. */
@@ -154,8 +171,8 @@ export type MicPermission = z.infer<typeof MicPermissionSchema>;
 
 // ── Pointer ─────────────────────────────────────────────────────────────────
 
-/** One pointer sample: recorded time (ms, pauses excluded), CSS px in the
- *  viewport, and what happened. */
+/** One pointer sample: recorded time (ms on the recording's clock, pauses
+ *  excluded — the video's time), CSS px in the viewport, and what happened. */
 export const PointerSampleSchema = z.tuple([
   z.number(),
   z.number(),
@@ -164,7 +181,9 @@ export const PointerSampleSchema = z.tuple([
 ]);
 export type PointerSample = z.infer<typeof PointerSampleSchema>;
 
-/** `<name>.pointer.json`, beside the video. */
+/** Every pointer sample of one recording, across the pages it went through:
+ *  saved inside the video (the recorder's `cursorTrackBox`, read back with
+ *  `readCursorTrack`). */
 export const PointerTrackSchema = z.object({
   version: z.literal(1),
   /** The page's viewport the samples are in, CSS px. */
@@ -215,6 +234,16 @@ export const OffscreenCommandSchema = z.discriminatedUnion("type", [
     mic: z.boolean(),
     /** The recorded tab's title, for the file name. */
     title: z.string(),
+    /** The page's viewport, CSS px: what the pointer samples are in. */
+    viewport: z.object({ width: z.number(), height: z.number() }),
+  }),
+  /** The content script's pointer samples since its last batch (from the
+   *  page, not the worker): the offscreen document keeps the recording's
+   *  track, so a navigation — which takes the page's script with it — loses
+   *  none. Answers once kept. */
+  z.object({
+    type: z.literal("offscreen.pointer"),
+    samples: z.array(PointerSampleSchema),
   }),
   z.object({ type: z.literal("offscreen.pause") }),
   z.object({ type: z.literal("offscreen.resume") }),
@@ -223,7 +252,6 @@ export const OffscreenCommandSchema = z.discriminatedUnion("type", [
     /** Why it stops: the failure's words if nothing was recorded. */
     stoppedBy: StopCauseSchema,
     durationMs: z.number().nonnegative(),
-    pointer: PointerTrackSchema.nullable(),
   }),
   z.object({ type: z.literal("offscreen.discard") }),
 ]);
@@ -257,14 +285,25 @@ export type OffscreenEvent = z.infer<typeof OffscreenEventSchema>;
 export const ContentCommandSchema = z.discriminatedUnion("type", [
   /** 3-2-1 over the page; answers once it is gone from the screen. */
   z.object({ type: z.literal("content.countdown") }),
-  /** Record the pointer's samples (for `<name>.pointer.json`), and draw a
-   *  ripple on each click when `clicks`. A page already tracking (the script
-   *  injected again into the same page) keeps its session. */
-  z.object({ type: z.literal("content.track-start"), clicks: z.boolean() }),
-  z.object({ type: z.literal("content.track-pause") }),
-  z.object({ type: z.literal("content.track-resume") }),
-  /** Remove everything; answers the pointer track (or `null`). */
-  z.object({ type: z.literal("content.finish") }),
+  /** Sample the pointer on the recording's `clock`, each batch sent to the
+   *  offscreen document, and draw a ripple on each click when `clicks`. A
+   *  page already tracking (the script injected again into the same page)
+   *  keeps its session, on the clock given. */
+  z.object({
+    type: z.literal("content.track-start"),
+    clicks: z.boolean(),
+    clock: RecordingClockSchema,
+  }),
+  /** The recording paused or resumed: its new clock. */
+  z.object({
+    type: z.literal("content.track-clock"),
+    clock: RecordingClockSchema,
+  }),
+  /** Remove everything. `handOver` (a stop): the last samples are sent
+   *  first, and it answers once the offscreen document holds every one;
+   *  without (a discard, a failed start), they are dropped with the
+   *  recording. */
+  z.object({ type: z.literal("content.finish"), handOver: z.boolean() }),
 ]);
 export type ContentCommand = z.infer<typeof ContentCommandSchema>;
 

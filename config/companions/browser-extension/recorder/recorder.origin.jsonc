@@ -1,5 +1,5 @@
 // @hash a8321f961509
 {
-  // Where a tab recorded from the browser extension is saved, as an MP4 (with its pointer track beside it).
+  // Where a tab recorded from the browser extension is saved, as an MP4 (with the pointer's moves and clicks inside it, for an editor).
   "folder": "~/Movies/equin"
 }

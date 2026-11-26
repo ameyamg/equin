@@ -22,12 +22,11 @@ import {
   ContentCommandSchema,
   OffscreenEventSchema,
   OffscreenReplySchema,
-  PointerTrackSchema,
+  clockOf,
   recordedMs,
   WorkerCommandSchema,
   type ContentCommand,
   type OffscreenCommand,
-  type PointerTrack,
   type RecorderOptions,
   type RecorderState,
   type SavedRecording,
@@ -330,10 +329,19 @@ async function begin(tabId: number, options: RecorderOptions): Promise<void> {
     tabAudio: options.tabAudio,
     mic: options.mic,
     title: tab.title ?? "",
+    viewport: { width: measure.innerWidth, height: measure.innerHeight },
   });
+  // The recording's clock starts with the capture: the page samples the
+  // pointer on it, and the state below keeps the same one.
+  const clock = {
+    startedAt: wallNow("human-time"),
+    pausedMs: 0,
+    pausedAt: null,
+  };
   await toContent(tabId, {
     type: "content.track-start",
     clicks: options.clicks,
+    clock,
   });
   const sized = await chrome.windows.get(tab.windowId);
   await writeSession({
@@ -343,9 +351,7 @@ async function begin(tabId: number, options: RecorderOptions): Promise<void> {
   await setState({
     kind: "recording",
     options,
-    startedAt: wallNow("human-time"),
-    pausedMs: 0,
-    pausedAt: null,
+    ...clock,
     width: output.value.width,
     height: output.value.height,
   });
@@ -370,12 +376,13 @@ async function abandon(): Promise<string[]> {
   await writeSession(null);
   if (session !== null)
     await step(() =>
-      toContent(session.tabId, { type: "content.finish" }).catch(
-        (err: unknown) => {
-          // The tab is gone (closed, navigated): nothing left to remove.
-          if (!isGoneTab(err)) throw err;
-        },
-      ),
+      toContent(session.tabId, {
+        type: "content.finish",
+        handOver: false,
+      }).catch((err: unknown) => {
+        // The tab is gone (closed, navigated): nothing left to remove.
+        if (!isGoneTab(err)) throw err;
+      }),
     );
   await step(closeOffscreen);
   if (session !== null) await step(() => restoreWindow(session));
@@ -400,12 +407,13 @@ async function stop(stoppedBy: StopCause): Promise<void> {
   if (session === null) throw new Error("The recording session is lost.");
   await setState({ kind: "saving" });
   try {
-    const pointer = await finishContent(session.tabId);
+    // The page's last pointer samples reach the offscreen document first:
+    // it saves the recording's whole track with the video.
+    await finishContent(session.tabId);
     const { saved, failure } = await offscreenReply({
       type: "offscreen.stop",
       stoppedBy,
       durationMs: recordedMs(state, wallNow("human-time")),
-      pointer,
     });
     if (saved === null) throw new Error("The recording was not saved.");
     await writeSession(null);
@@ -427,14 +435,13 @@ async function stop(stoppedBy: StopCause): Promise<void> {
   }
 }
 
-/** The pointer track the content script kept, or `null` once the tab is gone. */
-async function finishContent(tabId: number): Promise<PointerTrack | null> {
+/** Tell the page's script to hand over its last samples and remove what it
+ *  draws; a tab gone (closed) holds none. */
+async function finishContent(tabId: number): Promise<void> {
   try {
-    const answer = await toContent(tabId, { type: "content.finish" });
-    return answer === null ? null : PointerTrackSchema.parse(answer);
+    await toContent(tabId, { type: "content.finish", handOver: true });
   } catch (err) {
-    if (isGoneTab(err)) return null;
-    throw err;
+    if (!isGoneTab(err)) throw err;
   }
 }
 
@@ -467,18 +474,18 @@ async function pause(paused: boolean): Promise<void> {
   const now = wallNow("human-time");
   // The video is paused (or not) from here: the state says so before the
   // page is told, whatever the page does.
-  await setState(
-    paused
-      ? { ...state, pausedAt: now }
-      : {
-          ...state,
-          pausedAt: null,
-          pausedMs: state.pausedMs + (now - (state.pausedAt ?? now)),
-        },
-  );
+  const next: typeof state = paused
+    ? { ...state, pausedAt: now }
+    : {
+        ...state,
+        pausedAt: null,
+        pausedMs: state.pausedMs + (now - (state.pausedAt ?? now)),
+      };
+  await setState(next);
   if (session !== null)
     await toContent(session.tabId, {
-      type: paused ? "content.track-pause" : "content.track-resume",
+      type: "content.track-clock",
+      clock: clockOf(next),
     }).catch((err: unknown) => {
       // The page navigated: its new content script starts as the state says.
       if (!isGoneTab(err)) throw err;
@@ -597,9 +604,9 @@ chrome.windows.onBoundsChanged.addListener((changed) => {
   });
 });
 
-// The recorded tab navigated: its content script went with the old page, so
-// track (and draw clicks) again on the new one — its samples start over
-// there. Chrome also says `complete` after an in-page navigation, which keeps
+// The recorded tab navigated: its content script went with the old page (its
+// samples already handed to the offscreen document), so track (and draw
+// clicks) again on the new one, on the recording's clock. Chrome also says `complete` after an in-page navigation, which keeps
 // the script: the new injection takes its session over (content.ts), and
 // `track-start` leaves a running one alone.
 chrome.tabs.onUpdated.addListener((tabId, change) => {
@@ -616,9 +623,8 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
     await toContent(tabId, {
       type: "content.track-start",
       clicks: state.options.clicks,
+      clock: clockOf(state),
     });
-    if (state.pausedAt !== null)
-      await toContent(tabId, { type: "content.track-pause" });
   });
 });
 

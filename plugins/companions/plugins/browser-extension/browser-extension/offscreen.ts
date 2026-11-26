@@ -25,6 +25,7 @@ import {
   type OffscreenCommand,
   type OffscreenEvent,
   type OffscreenReply,
+  type PointerSample,
   type PointerTrack,
   type RelayRequest,
   type SavedRecording,
@@ -226,6 +227,10 @@ interface Session {
   failed: Error | null;
   /** Resolves once the recorder has handed over its last chunk. */
   stopped: Promise<void>;
+  /** The page's viewport and every pointer sample so far, from each page
+   *  the recording went through (the content script's batches). */
+  viewport: { width: number; height: number };
+  samples: PointerSample[];
 }
 
 let session: Session | null = null;
@@ -381,6 +386,8 @@ async function start(
     queuedBytes: 0,
     failed: null,
     stopped,
+    viewport: cmd.viewport,
+    samples: [],
   };
   recorder.addEventListener("dataavailable", (event) => enqueue(s, event.data));
   videoTrack.addEventListener("ended", () =>
@@ -462,14 +469,24 @@ function thumbnail(s: Session): string | null {
   return canvas.toDataURL("image/jpeg", 0.8);
 }
 
+/** The recording's pointer track, in time order: the batches of two pages
+ *  can arrive interleaved (one page's last batch after the next's first). */
+function pointerTrack(s: Session): PointerTrack {
+  return {
+    version: 1,
+    viewport: s.viewport,
+    samples: [...s.samples].sort((a, b) => a[0] - b[0]),
+  };
+}
+
 async function stop(
   stoppedBy: StopCause,
   durationMs: number,
-  pointer: PointerTrack | null,
 ): Promise<{ saved: SavedRecording; failure: string | null }> {
   const s = recording();
   // Taken at once: a second stop (⌥⇧R twice) finds nothing to stop.
   session = null;
+  const pointer = pointerTrack(s);
   const thumb = thumbnail(s);
   await wind(s);
   // An upload failed (before the stop, or while it flushed): saved as far as
@@ -592,10 +609,13 @@ onMessageAsync(
       case "offscreen.resume":
         recording().recorder.resume();
         return { ok: true, saved: null, failure: null };
+      case "offscreen.pointer":
+        recording().samples.push(...cmd.samples);
+        return { ok: true, saved: null, failure: null };
       case "offscreen.stop":
         return {
           ok: true,
-          ...(await stop(cmd.stoppedBy, cmd.durationMs, cmd.pointer)),
+          ...(await stop(cmd.stoppedBy, cmd.durationMs)),
         };
       case "offscreen.discard":
         await discard();

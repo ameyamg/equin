@@ -17544,6 +17544,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RecorderOptions`
           - `RecorderSnapshot`
           - `RecorderState`
+          - `RecordingClock`
           - `RecordPreset`
           - `RecordPresetId`
           - `RelayFinished`
@@ -17571,6 +17572,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `browserExtensionApp`
           - `browserExtensionConnection`
           - `browserExtensionShell`
+          - `clockOf`
           - `ConnectionStateSchema`
           - `DEFAULT_RECORDER_OPTIONS`
           - `EXTENSION_ID`
@@ -17596,6 +17598,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RecorderSnapshotSchema`
           - `RecorderStateSchema`
           - `recordExtensionOpen`
+          - `RecordingClockSchema`
           - `recordPreset`
           - `RelayCreatedSchema`
           - `RelayFinishedSchema`
@@ -17736,6 +17739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/tab-recordings/:id/discard`
           - Core:
             - Uses:
+              - `companions/browser-extension.PointerTrack`
               - `companions/browser-extension.PointerTrackSchema`
               - `companions/browser-extension.RECORDER_RELAY_PATH`
               - `companions/browser-extension.RelayCreatedSchema`
@@ -17746,18 +17750,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.liveValue`
               - `primitives/pane.defineApp`
               - `ui/icons.symbol`
-            - Exports (types): `RecordingSaveOutcome`
+            - Exports (types):
+              - `CursorTrackRead`
+              - `RecordingSaveOutcome`
             - Exports (values):
               - `appendTabRecordingChunk`
               - `createTabRecording`
+              - `CURSOR_TRACK_UUID`
+              - `cursorTrackBox`
               - `discardTabRecording`
               - `finishTabRecording`
               - `numberedName`
-              - `pointerTrackPathOf`
+              - `readCursorTrack`
               - `recorderConfig`
               - `recorderRelayApp`
               - `recordingBaseName`
-              - `recordingFileNames`
               - `recordingSave`
               - `RecordingSaveOutcomeSchema`
           - Cross-plugin:

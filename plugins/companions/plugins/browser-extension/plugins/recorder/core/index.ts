@@ -7,11 +7,12 @@ export {
   finishTabRecording,
 } from "./endpoints";
 export {
-  numberedName,
-  pointerTrackPathOf,
-  recordingBaseName,
-  recordingFileNames,
-} from "./file-name";
+  CURSOR_TRACK_UUID,
+  cursorTrackBox,
+  readCursorTrack,
+  type CursorTrackRead,
+} from "./cursor-track";
+export { numberedName, recordingBaseName } from "./file-name";
 export {
   recordingSave,
   RecordingSaveOutcomeSchema,

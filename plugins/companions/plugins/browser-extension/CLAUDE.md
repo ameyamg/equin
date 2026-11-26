@@ -89,8 +89,14 @@ both ends) and `core/viewport.ts` (pure, tested); what the panel shows is
   video (see `plugins/recorder/CLAUDE.md`).
 - **`content.ts`** draws the countdown (before the capture) and, with the
   Clicks option, a ripple on each click into the page's top layer, in a
-  closed shadow root; it always keeps the pointer samples for
-  `<name>.pointer.json`. It never draws a pointer: Chrome's tab capture
+  closed shadow root; it always samples the pointer on the recording's clock
+  (the worker's `RecordingClock`, so every page's samples are on the video's
+  time) and sends them in batches to the offscreen document (at once on a
+  press / release / leave and on `pagehide`, else within 500 ms), which keeps
+  the recording's whole track — a navigation, which takes the script with
+  the page, loses none — and hands it to equin with the finish; equin saves
+  it inside the MP4 (`plugins/recorder` § core). A stop first has the page
+  send its last batch (`content.finish { handOver }`). It never draws a pointer: Chrome's tab capture
   composites the OS cursor itself (while the mouse moves over the tab,
   hidden after 2 s still), with no way for an extension to turn it off — a
   drawn arrow was a second cursor. Injected again into the same page (each
@@ -248,6 +254,7 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `RecorderOptions`
     - `RecorderSnapshot`
     - `RecorderState`
+    - `RecordingClock`
     - `RecordPreset`
     - `RecordPresetId`
     - `RelayFinished`
@@ -275,6 +282,7 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `browserExtensionApp`
     - `browserExtensionConnection`
     - `browserExtensionShell`
+    - `clockOf`
     - `ConnectionStateSchema`
     - `DEFAULT_RECORDER_OPTIONS`
     - `EXTENSION_ID`
@@ -300,6 +308,7 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `RecorderSnapshotSchema`
     - `RecorderStateSchema`
     - `recordExtensionOpen`
+    - `RecordingClockSchema`
     - `recordPreset`
     - `RelayCreatedSchema`
     - `RelayFinishedSchema`

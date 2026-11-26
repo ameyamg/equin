@@ -22,7 +22,18 @@ prototype `proto-1794537939-tuvpg1` ("Record").
 - **`core/`** — the Recordings folder setting (`recorderConfig`, default
   `~/Movies/equin`; the recorder's other options are the extension's own, in
   Chrome's storage, so ⌥⇧R needs no equin read), the endpoints, the file name
-  (`<YYYY-MM-DD HH.MM> <title>.mp4`).
+  (`<YYYY-MM-DD HH.MM> <title>.mp4`), and the **pointer track inside the
+  video** (`cursor-track.ts`): every pointer sample of the recording (time on
+  the video's clock, CSS px in the page's viewport, move / down / up /
+  leave), as one top-level ISO BMFF `uuid` box (`CURSOR_TRACK_UUID`, the
+  track as UTF-8 JSON) appended after the remux. Players and uploads skip a
+  box they do not know; appended after `mdat` it moves no sample offset and
+  keeps the faststart index at the front; no ffmpeg stream type is involved,
+  so nothing depends on what a remux keeps. `cursorTrackBox(track)` writes
+  it, `readCursorTrack(file: Blob)` reads it back (`found` / `absent`; a
+  malformed file throws) — a browser `File` or a `Bun.file`, only box headers
+  and the payload read. Before 2026-11-26 the track was a
+  `<name>.pointer.json` beside the video, orphaned whenever the video moved.
 - **`machine/`** — the endpoints and the save job. A recording is a hidden
   `.<id>.partial.mp4` appended chunk by chunk (strictly in order:
   `chunkDecision`; a replay of the last chunk is a no-op, so a resend is
@@ -44,8 +55,8 @@ prototype `proto-1794537939-tuvpg1` ("Record").
   saved or discarded → done; asked, or no chunk for an hour (the browser
   left: closed, crashed, extension reloaded) → truncate to the last commit,
   fsync, ffmpeg remux (`-c copy -movflags +faststart`, the `media/ffmpeg`
-  dep), link to its final name (never overwriting: ` (2)`…), pointer track
-  beside it; otherwise re-queue at the deadline. The input is only `{ id,
+  dep), the pointer track appended inside the video, link to its final name
+  (never overwriting: ` (2)`…); otherwise re-queue at the deadline. The input is only `{ id,
   folder }`, so a re-queue (graphile replaces a pending row's payload) never
   loses the request. A backend dying mid-remux: the queue's sweeper re-runs
   it, and the disk claim (`.<id>.finishing`, its pid) keeps two saves apart.
@@ -123,6 +134,7 @@ prototype `proto-1794537939-tuvpg1` ("Record").
     - `POST /api/tab-recordings/:id/discard`
 - Core:
   - Uses:
+    - `companions/browser-extension.PointerTrack`
     - `companions/browser-extension.PointerTrackSchema`
     - `companions/browser-extension.RECORDER_RELAY_PATH`
     - `companions/browser-extension.RelayCreatedSchema`
@@ -133,18 +145,21 @@ prototype `proto-1794537939-tuvpg1` ("Record").
     - `network/live.liveValue`
     - `primitives/pane.defineApp`
     - `ui/icons.symbol`
-  - Exports (types): `RecordingSaveOutcome`
+  - Exports (types):
+    - `CursorTrackRead`
+    - `RecordingSaveOutcome`
   - Exports (values):
     - `appendTabRecordingChunk`
     - `createTabRecording`
+    - `CURSOR_TRACK_UUID`
+    - `cursorTrackBox`
     - `discardTabRecording`
     - `finishTabRecording`
     - `numberedName`
-    - `pointerTrackPathOf`
+    - `readCursorTrack`
     - `recorderConfig`
     - `recorderRelayApp`
     - `recordingBaseName`
-    - `recordingFileNames`
     - `recordingSave`
     - `RecordingSaveOutcomeSchema`
 - Cross-plugin:
