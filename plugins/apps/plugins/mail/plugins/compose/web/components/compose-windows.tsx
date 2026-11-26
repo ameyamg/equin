@@ -23,7 +23,11 @@ import {
   type MailDraft,
   type MailDraftId,
 } from "../../core";
-import { useDraftEditor, useOpenCompose } from "../internal/use-draft";
+import {
+  useDraftEditor,
+  useMailSignature,
+  useOpenCompose,
+} from "../internal/use-draft";
 import {
   ComposeStore,
   useComposeActions,
@@ -31,6 +35,7 @@ import {
 } from "../internal/windows";
 import {
   AttachmentList,
+  SignatureBlock,
   BodyField,
   EditorFooter,
   HeaderFields,
@@ -185,6 +190,7 @@ function ComposeEditor({
   frame: Frame;
 }): ReactNode {
   const editor = useDraftEditor(draft);
+  const signature = useMailSignature();
   const { close } = useComposeActions();
   const toast = useToast();
   const title =
@@ -213,10 +219,12 @@ function ComposeEditor({
         className="h-56 border-t border-border"
         autoFocus={editor.content.to !== ""}
       />
+      <SignatureBlock editor={editor} signature={signature} />
       <AttachmentList editor={editor} />
       <SendError editor={editor} />
       <EditorFooter
         editor={editor}
+        signature={signature}
         onSent={() => close(draft.id)}
         onDiscarded={() => close(draft.id)}
       />

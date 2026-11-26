@@ -17,12 +17,14 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { MailDraft } from "../../core";
 import {
   useDraftEditor,
+  useMailSignature,
   useOpenCompose,
   useStartDraft,
 } from "../internal/use-draft";
 import { useComposeActions } from "../internal/windows";
 import {
   AttachmentList,
+  SignatureBlock,
   BodyField,
   EditorFooter,
   SendError,
@@ -221,6 +223,7 @@ function InlineReply({
   onDone: () => void;
 }): ReactNode {
   const editor = useDraftEditor(draft);
+  const signature = useMailSignature();
   const { open } = useComposeActions();
   return (
     <Inset x="lg" b="lg">
@@ -254,9 +257,15 @@ function InlineReply({
             className="min-h-24"
             autoFocus
           />
+          <SignatureBlock editor={editor} signature={signature} />
           <AttachmentList editor={editor} />
           <SendError editor={editor} />
-          <EditorFooter editor={editor} onSent={onDone} onDiscarded={onDone} />
+          <EditorFooter
+            editor={editor}
+            signature={signature}
+            onSent={onDone}
+            onDiscarded={onDone}
+          />
         </Stack>
       </Surface>
     </Inset>

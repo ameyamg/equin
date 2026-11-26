@@ -7292,7 +7292,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reader`
           - Exemptions:
             - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/sync.ts` (sanctioned)
-        - **`compose`** — The Mail app's compose, web half: ComposeLayer — the compose windows over the Mail surface (the prototype's, bottom right: minimise, To / Cc / Bcc / Subject, the body, Send, Attach, Discard; closing saves the draft, an empty one is discarded; the c key) and the outbox pill (Sending… with Undo for the undo-send delay, which reopens the draft, then Message sent; a send given up reopens it with its reason) — ComposeButton (the sidebar's Compose) and ReplyBox (the reading pane's foot: Reply / Follow up, Reply all, Forward, or Continue writing on a draft; a reply written in place, Open in a window; the r, a and f keys). Every editor saves into its server draft as it is typed (mail.draft), which the server mirrors to the provider's drafts; registers the undo-send delay for Settings → Config. The Mail app's compose, server half: mail_drafts — each draft's working copy (recipients as typed, subject, body, files, the thread it answers, In-Reply-To / References and the quote of what it answers) and the outbox — mail.draft (one draft, pushed on every save), and the writes: start (blank, reply, reply all, forward — recipients, Re:/Fwd:, quote and threading derived from the message answered — or continue a draft message a thread holds, adopting a draft made elsewhere), save, send (queued for the undo-send delay, Settings → Config mail-compose, 10 s by default), undo send and discard; mail.draft-mirror (settled per draft) copies a draft to the provider's drafts and deletes it there on discard; mail.send sends a due draft through the provider, built by packages/mime, never twice (claimed before the call, its own Message-ID, a lost answer settled with findMessage), and a send given up reopens the draft with the reason and a notification. Left out of worktree forks.
+        - **`compose`** — The Mail app's compose, web half: ComposeLayer — the compose windows over the Mail surface (the prototype's, bottom right: minimise, To / Cc / Bcc / Subject, the body with the account's signature as a block under it — removable for this message, Add signature puts it back — Send, Attach, Discard; closing saves the draft, an empty one is discarded; the c key) and the outbox pill (Sending… with Undo for the undo-send delay, which reopens the draft, then Message sent; a send given up reopens it with its reason) — ComposeButton (the sidebar's Compose) and ReplyBox (the reading pane's foot: Reply / Follow up, Reply all, Forward, or Continue writing on a draft; a reply written in place, Open in a window; the r, a and f keys). Every editor saves into its server draft as it is typed (mail.draft), which the server mirrors to the provider's drafts; registers the undo-send delay for Settings → Config. The Mail app's compose, server half: mail_drafts — each draft's working copy (recipients as typed, subject, body, files, the thread it answers, In-Reply-To / References and the quote of what it answers) and the outbox — mail.draft (one draft, pushed on every save), mail.signature (the account's signature as the editor shows it, read from the provider when an editor opens), and the writes: start (blank, reply, reply all, forward — recipients, Re:/Fwd:, quote and threading derived from the message answered — or continue a draft message a thread holds, adopting a draft made elsewhere), save, send (queued for the undo-send delay, Settings → Config mail-compose, 10 s by default), undo send and discard; mail.draft-mirror (settled per draft) copies a draft to the provider's drafts and deletes it there on discard; mail.send sends a due draft through the provider, built by packages/mime, never twice (claimed before the call, its own Message-ID, a lost answer settled with findMessage), and a send given up reopens the draft with the reason and a notification. Left out of worktree forks.
           - Web:
             - Contributes:
               - `IdKinds.Kind` "mdraft"
@@ -7331,6 +7331,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "mail.draft"
               - `resource.declare` "mail.draft-attachment-links"
               - `resource.declare` "mail.draft-attachment-links:rows"
+              - `resource.declare` "mail.signature"
               - `attachments.link` "mail_drafts"
               - `fork-data-exclusion` "mail_drafts"
               - `fork-data-exclusion` "mail_drafts_attachments"
@@ -7361,6 +7362,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mail.draft` (push, capped: MAIL_DRAFT_ATTACHMENTS_MAX)
               - `mail.draft-attachment-links` (keyed)
               - `mail.draft-attachment-links:rows` (keyed, point)
+              - `mail.signature` (invalidate, snapshot)
             - Routes:
               - `POST /api/mail/drafts`
               - `PUT /api/mail/drafts/:id`
@@ -7393,6 +7395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailDraft`
               - `MailDraftId`
             - Exports (values):
+              - `bodySigned`
               - `discardMailDraft`
               - `DRAFT_KINDS`
               - `DRAFT_STATES`
@@ -7412,6 +7415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailDraftAttachmentLinksEntityRef`
               - `mailDraftIdKind`
               - `MailDraftSchema`
+              - `mailSignature`
               - `messageIdsIn`
               - `messageText`
               - `parseAddressList`
@@ -7444,6 +7448,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/mail/shell`
               - `apps/mail/threads`
+          - Exemptions:
+            - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
         - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one. Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
           - Web:
             - Slots: `MailProviderUi.Connect`

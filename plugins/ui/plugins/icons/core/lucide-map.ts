@@ -368,6 +368,7 @@ export const LUCIDE_MAP = {
   "shopping-bag": "shopping-bag",
   shuffle: "shuffle",
   "signal-cellular-alt": "signal",
+  signature: "signature",
   "skip-next": "skip-forward",
   slideshow: "presentation",
   "smart-display": "monitor-play",

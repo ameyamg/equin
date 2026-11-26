@@ -17,6 +17,7 @@ export {
   MAIL_DRAFT_ATTACHMENTS_MAX,
   MAIL_DRAFT_REFUSALS,
   mailDraft,
+  mailSignature,
   MailDraftSchema,
   saveMailDraft,
   sendMailDraft,
@@ -30,6 +31,7 @@ export {
   type MailDraft,
 } from "./internal/draft";
 export {
+  bodySigned,
   htmlToPlainText,
   messageIdsIn,
   messageText,

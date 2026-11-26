@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
@@ -7,6 +8,7 @@ import {
   isDraftEmpty,
   MAIL_ATTACHMENTS_MAX_BYTES,
   mailDraftIdKind,
+  mailSignature,
   saveMailDraft,
   sendMailDraft,
   startMailDraft,
@@ -55,6 +57,18 @@ export function useOpenCompose(): (start: DraftStart) => Promise<void> {
     },
     [startDraft, open, toast],
   );
+}
+
+/** The account's signature as an editor reads it (`mail.signature`). */
+export type SignatureRead = ReturnType<typeof useMailSignature>;
+
+/**
+ * The account's signature, read from the provider when the editor opens (its
+ * settings have no change signal): one read per editor, shared by the block
+ * under the body and the footer's Add signature.
+ */
+export function useMailSignature() {
+  return useLive(mailSignature);
 }
 
 export type DraftEditor = {

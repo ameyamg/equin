@@ -335,6 +335,7 @@ export const ICON_MANIFEST: {
     "shopping-bag",
     "shuffle",
     "signal-cellular-alt",
+    "signature",
     "skip-next",
     "slideshow",
     "smart-display",

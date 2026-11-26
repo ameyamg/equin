@@ -264,6 +264,8 @@ export function createOutbox(deps: OutboxDeps) {
       subject: message.subject,
       body: plainTextOf(message),
       attachments: files,
+      // Signed already when its body holds the delimiter (`bodySigned`).
+      signature: true,
     };
     const r = await insert(id, sender.accountId, domainOf(sender.address), {
       kind: answers ? "reply" : "new",
@@ -316,6 +318,7 @@ export function createOutbox(deps: OutboxDeps) {
         subject: c.subject,
         body: c.body,
         attachments: c.attachments,
+        signature: true,
       },
     });
     await deps.linkFiles(r.id, await attachmentIdsOf(r.content));
@@ -461,11 +464,19 @@ export function createOutbox(deps: OutboxDeps) {
       references: r.references,
       text: messageText(
         r.content.body,
-        signatureText(identity.signature),
+        // Removed for this message in the editor: unsigned.
+        r.content.signature ? signatureText(identity.signature) : null,
         r.quote,
       ),
       attachments: await files(r.content),
     });
+  }
+
+  /** The account's signature as the editor shows it (`mail.signature`), read from the provider now. */
+  async function signature(): Promise<{ text: string | null }> {
+    const sender = await deps.sender();
+    const identity = await sender.provider.sendIdentity(sender.address);
+    return { text: signatureText(identity.signature) };
   }
 
   // ── the provider's half: the mirror ────────────────────────────────────
@@ -738,6 +749,7 @@ export function createOutbox(deps: OutboxDeps) {
     mirror,
     sendDue,
     sendFailed,
+    signature,
   };
 }
 

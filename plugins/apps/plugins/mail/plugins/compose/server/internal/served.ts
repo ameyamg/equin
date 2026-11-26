@@ -30,6 +30,7 @@ import {
   mailComposeConfig,
   mailDraft,
   mailDraftAttachmentLinks,
+  mailSignature,
 } from "../../core";
 import { createOutbox, SendRefusedError } from "./outbox";
 import { _mailDrafts } from "./tables";
@@ -221,6 +222,18 @@ export const mailDraftServed = serveValue(mailDraft, {
       );
     return d;
   },
+});
+
+/** The account's signature as the editor shows it, read from the provider when an editor opens. */
+export const mailSignatureServed = serveValue(mailSignature, {
+  source: "external",
+  changes: {
+    snapshot: {
+      reason:
+        "the provider's send-as settings have no change signal: read when an editor opens (the message built reads them again)",
+    },
+  },
+  loader: () => outbox.signature(),
 });
 
 const linksServed = serveCollection(mailDraftAttachmentLinks, {

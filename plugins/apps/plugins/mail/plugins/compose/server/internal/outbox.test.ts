@@ -23,7 +23,12 @@ import {
   providerQuery,
   threadId,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
-import { mailDraftIdKind, type DraftContent } from "../../core";
+import {
+  DraftContentSchema,
+  isDraftEmpty,
+  mailDraftIdKind,
+  type DraftContent,
+} from "../../core";
 import { createOutbox, SendPendingError } from "./outbox";
 import { _mailDrafts } from "./tables";
 
@@ -178,6 +183,7 @@ const content = (over: Partial<DraftContent> = {}): DraftContent => ({
   subject: "Hello",
   body: "Hi Bob",
   attachments: [],
+  signature: true,
   ...over,
 });
 
@@ -350,6 +356,68 @@ describe("the send-as identity", () => {
     await h.due(id);
     expect(h.written[1]!.mime).toMatch(/^From: "?Mia"? <me@x\.test>\r$/m);
     expect(h.written[1]!.mime).toContain("Hi Bob\r\n\r\n-- \r\nMia M.");
+  });
+
+  test("a signature removed for one message: its draft and its send go unsigned, the next message is signed", async () => {
+    const h = harness({
+      identity: { displayName: null, signature: { text: "Mia M." } },
+    });
+    const id = newId();
+    const d = await h.outbox.start(id, { kind: "new" });
+    // A new draft is signed unless the person removes it.
+    expect(d.content.signature).toBe(true);
+    const unsigned = content({ signature: false });
+    await h.outbox.save(id, unsigned);
+    // The choice is kept with the draft.
+    expect((await h.outbox.read(id))!.content.signature).toBe(false);
+    await h.outbox.mirror(id);
+    await h.outbox.send(id, unsigned);
+    h.advance(10_000);
+    await h.due(id);
+    expect(h.written.map((w) => w.method)).toEqual(["saveDraft", "send"]);
+    for (const { mime } of h.written) {
+      expect(mime).toContain("Hi Bob");
+      expect(mime).not.toContain("-- ");
+      expect(mime).not.toContain("Mia M.");
+    }
+    const next = newId();
+    await h.outbox.start(next, { kind: "new" });
+    await h.outbox.send(next, content());
+    h.advance(10_000);
+    await h.due(next);
+    expect(h.written[2]!.mime).toContain("Hi Bob\r\n\r\n-- \r\nMia M.");
+  });
+
+  test("an untouched compose stays empty with a signature set: never mirrored, discarded on close", async () => {
+    const h = harness({
+      identity: { displayName: null, signature: { text: "Mia M." } },
+    });
+    const id = newId();
+    const d = await h.outbox.start(id, { kind: "new" });
+    expect(d.content.body).toBe("");
+    expect(isDraftEmpty(d.content)).toBe(true);
+    // Removing the signature is no writing either.
+    expect(isDraftEmpty({ ...d.content, signature: false })).toBe(true);
+    await h.outbox.save(id, d.content);
+    await h.outbox.mirror(id);
+    expect(h.count("saveDraft")).toBe(0);
+  });
+
+  test("the signature the editor shows: the account's, as plain text; none set is null", async () => {
+    const h = harness({
+      identity: {
+        displayName: null,
+        signature: { html: "<div><b>Mia</b><br>Paris &amp; Lyon</div>" },
+      },
+    });
+    expect(await h.outbox.signature()).toEqual({ text: "Mia\nParis & Lyon" });
+    h.f.setIdentity({ displayName: null, signature: null });
+    expect(await h.outbox.signature()).toEqual({ text: null });
+  });
+
+  test("a draft saved before the signature choice existed reads as signed", () => {
+    const { signature: _, ...old } = content();
+    expect(DraftContentSchema.parse(old).signature).toBe(true);
   });
 
   test("a body already signed (a draft written in the provider's editor) is not signed twice", async () => {

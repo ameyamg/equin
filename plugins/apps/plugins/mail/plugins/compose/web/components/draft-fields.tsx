@@ -19,13 +19,16 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { parseAddressList, type DraftContent } from "../../core";
-import type { DraftEditor } from "../internal/use-draft";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { bodySigned, parseAddressList, type DraftContent } from "../../core";
+import type { DraftEditor, SignatureRead } from "../internal/use-draft";
 
 const sendIcon = symbol("send");
 const attachIcon = symbol("attach-file");
 const discardIcon = symbol("delete");
 const removeIcon = symbol("close");
+const signatureIcon = symbol("signature");
 
 type Ready = DraftEditor;
 
@@ -177,6 +180,71 @@ export function BodyField({
   );
 }
 
+/**
+ * The account's signature under the body, as the message will carry it (under
+ * the delimiter, drawn `--`; the message's is `-- `) — a block of its own, never body text,
+ * so an untouched compose stays empty. Its remove drops it from this message
+ * only (saved with the draft; the footer's Add signature puts it back). None
+ * when the body is signed already (`bodySigned`: a draft adopted from the
+ * provider's editor) or the account has no signature.
+ */
+export function SignatureBlock({
+  editor,
+  signature,
+}: {
+  editor: Ready;
+  signature: SignatureRead;
+}): ReactNode {
+  if (!editor.content.signature || bodySigned(editor.content.body)) return null;
+  return matchResource(signature, {
+    loading: () => (
+      <Inset x="lg" b="xsm">
+        <Loading label="Reading your signature…" />
+      </Inset>
+    ),
+    // Not read: the send reads it again and signs, so the remove stays offered.
+    error: (err) => (
+      <Inset l="lg" r="xsm" b="xsm">
+        <Line className="gap-xsm">
+          <Fill>
+            <Text variant="caption" tone="destructive">
+              Your signature could not be read: {err.message}
+            </Text>
+          </Fill>
+          <IconButton
+            icon={removeIcon}
+            label="Remove signature from this message"
+            onClick={() => editor.update({ signature: false })}
+          />
+        </Line>
+      </Inset>
+    ),
+    ready: ({ text }) =>
+      text === null ? null : (
+        <Inset l="lg" r="xsm" b="xsm">
+          <Stack direction="row" gap="xsm">
+            <Fill>
+              <Text
+                as="div"
+                variant="body"
+                tone="muted"
+                aria-label="Signature"
+                className="whitespace-pre-wrap"
+              >
+                {`--\n${text}`}
+              </Text>
+            </Fill>
+            <IconButton
+              icon={removeIcon}
+              label="Remove signature from this message"
+              onClick={() => editor.update({ signature: false })}
+            />
+          </Stack>
+        </Inset>
+      ),
+  });
+}
+
 /** The draft's files, each with its size and a remove. */
 export function AttachmentList({ editor }: { editor: Ready }): ReactNode {
   const files = editor.content.attachments;
@@ -222,13 +290,21 @@ export function SendError({ editor }: { editor: Ready }): ReactNode {
  */
 export function EditorFooter({
   editor,
+  signature,
   onSent,
   onDiscarded,
 }: {
   editor: Ready;
+  /** The account's signature: Add signature shows while it was removed from this message. */
+  signature: SignatureRead;
   onSent: () => void;
   onDiscarded: () => void;
 }): ReactNode {
+  const canSign =
+    !editor.content.signature &&
+    !bodySigned(editor.content.body) &&
+    signature.status === "ready" &&
+    signature.data.text !== null;
   const toast = useToast();
   const picker = useRef<HTMLInputElement>(null);
   const fail = (what: string) => (err: unknown) => {
@@ -274,6 +350,13 @@ export function EditorFooter({
         label="Attach files"
         onClick={() => picker.current?.click()}
       />
+      {canSign ? (
+        <IconButton
+          icon={signatureIcon}
+          label="Add signature"
+          onClick={() => editor.update({ signature: true })}
+        />
+      ) : null}
       <Fill />
       <IconButton
         icon={discardIcon}

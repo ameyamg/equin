@@ -44,7 +44,13 @@ export const DraftAttachmentSchema = z.discriminatedUnion("kind", [
 ]);
 export type DraftAttachment = z.infer<typeof DraftAttachmentSchema>;
 
-/** What the person writes: recipient fields as typed (`parseAddressList` reads them), subject, body, files. */
+/**
+ * What the person writes: recipient fields as typed (`parseAddressList` reads
+ * them), subject, body, files — and whether the account's signature goes under
+ * the body (`signature`; the editor shows it as a block of its own, never as
+ * body text, and removing it is this message's choice only). A draft saved
+ * before the choice existed is signed.
+ */
 export const DraftContentSchema = z.object({
   to: z.string().max(20_000),
   cc: z.string().max(20_000),
@@ -54,6 +60,7 @@ export const DraftContentSchema = z.object({
   attachments: cappedList(DraftAttachmentSchema, {
     max: MAIL_DRAFT_ATTACHMENTS_MAX,
   }),
+  signature: z.boolean().default(true),
 });
 export type DraftContent = z.infer<typeof DraftContentSchema>;
 
@@ -64,9 +71,10 @@ export const EMPTY_DRAFT_CONTENT: DraftContent = {
   subject: "",
   body: "",
   attachments: [],
+  signature: true,
 };
 
-/** Nothing written: closing it discards it rather than keeping an empty draft. */
+/** Nothing written (the signature is not something written): closing it discards it rather than keeping an empty draft. */
 export function isDraftEmpty(c: DraftContent): boolean {
   return (
     c.to.trim() === "" &&
@@ -113,6 +121,18 @@ export const mailDraft = liveValue("mail.draft", {
   schema: MailDraftSchema,
   params: ["id"],
   refusals: MAIL_DRAFT_REFUSALS,
+});
+
+/**
+ * The signature the account's messages go out with, as plain text (`text`
+ * null: none set) — what the editor shows under the body. Read from the
+ * provider when an editor opens (its settings have no change signal); the
+ * message built reads it again, so a signature changed meanwhile is the one
+ * sent.
+ */
+export const mailSignature = liveValue("mail.signature", {
+  schema: z.object({ text: z.string().nullable() }),
+  load: "snapshot",
 });
 
 /** How a draft starts: blank, as an answer to (or forward of) a message, or as the continuation of a draft message a thread holds. */

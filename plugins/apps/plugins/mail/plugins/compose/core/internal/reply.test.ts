@@ -9,6 +9,7 @@ import {
   messageText,
   plainTextOf,
   prefixedSubject,
+  bodySigned,
   signatureText,
   startFrom,
 } from "./reply";
@@ -215,6 +216,14 @@ describe("signature and message text", () => {
     expect(signatureText({ text: "Mia\r\nM." })).toBe("Mia\nM.");
     expect(signatureText({ html: "<div><br></div>" })).toBeNull();
     expect(signatureText(null)).toBeNull();
+  });
+
+  test("a body is signed when a line is the `-- ` delimiter, only then", () => {
+    expect(bodySigned("Hi\n\n-- \nMia")).toBe(true);
+    expect(bodySigned("-- \r\nMia")).toBe(true);
+    expect(bodySigned("Hi -- Mia")).toBe(false);
+    expect(bodySigned("Hi\n--\nMia")).toBe(false);
+    expect(bodySigned("")).toBe(false);
   });
 
   test("the body, then the signature under `-- `, then the quote", () => {
