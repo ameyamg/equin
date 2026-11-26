@@ -842,6 +842,14 @@
       "name": "@equin/plugin-apps-mail-providers-gmail",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/shell": {
+      "name": "@equin/plugin-apps-mail-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/threads": {
+      "name": "@equin/plugin-apps-mail-threads",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages": {
       "name": "@equin/plugin-apps-pages",
       "version": "0.0.1",
@@ -8951,6 +8959,10 @@
     "@equin/plugin-apps-mail-providers": ["@equin/plugin-apps-mail-providers@workspace:plugins/apps/plugins/mail/plugins/providers"],
 
     "@equin/plugin-apps-mail-providers-gmail": ["@equin/plugin-apps-mail-providers-gmail@workspace:plugins/apps/plugins/mail/plugins/providers/plugins/gmail"],
+
+    "@equin/plugin-apps-mail-shell": ["@equin/plugin-apps-mail-shell@workspace:plugins/apps/plugins/mail/plugins/shell"],
+
+    "@equin/plugin-apps-mail-threads": ["@equin/plugin-apps-mail-threads@workspace:plugins/apps/plugins/mail/plugins/threads"],
 
     "@equin/plugin-apps-pages": ["@equin/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 

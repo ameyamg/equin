@@ -36,8 +36,8 @@ and a record's cover at rest / under the pointer, `shadow-cover` (`sm`) and
     - `ShadowParamsSchema`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --popover`
-  - Tokens used by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×23
+  - Tokens used by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×24
     - `primitives` ×13
     - `ui` ×5
     - `framework` ×4
@@ -55,6 +55,7 @@ and a record's cover at rest / under the pointer, `shadow-cover` (`sm`) and
     - `apps-core/chrome-theme`
     - `apps/deploy/shell`
     - `apps/desktop/shell`
+    - `apps/mail/shell`
     - `apps/pages/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`

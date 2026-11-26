@@ -1,6 +1,7 @@
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
 import type {
+  LockedViewRow,
   ViewInstance,
   ViewConfigRow,
   ViewSourceEntry,
@@ -66,4 +67,34 @@ export function buildInstanceFromRow<T extends ViewTypeMeta>(
     },
   };
   return { instance, viewType };
+}
+
+/**
+ * A host-defined view (`ViewModelOptions.locked`) resolved like a config row,
+ * marked `locked` and carrying its colour. Fail-soft like
+ * {@link buildInstanceFromRow}.
+ */
+export function buildLockedInstance<T extends ViewTypeMeta>(
+  row: LockedViewRow,
+  entries: ViewSourceEntry<T>[],
+): ResolvedViewInstance<T> | null {
+  const resolved = buildInstanceFromRow(
+    {
+      id: row.id,
+      name: row.name,
+      view: row.view,
+      ...(row.source !== undefined ? { source: row.source } : {}),
+    },
+    entries,
+  );
+  if (resolved === null) return null;
+  return {
+    viewType: resolved.viewType,
+    instance: {
+      ...resolved.instance,
+      ...(row.icon !== undefined ? { icon: row.icon } : {}),
+      locked: true,
+      ...(row.color !== undefined ? { color: row.color } : {}),
+    },
+  };
 }

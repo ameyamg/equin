@@ -11,5 +11,6 @@ export function viewEditsOptions(
   return {
     drafts: edits.mode === "draft",
     ...(edits.home !== undefined ? { home: edits.home } : {}),
+    ...(edits.locked !== undefined ? { locked: edits.locked } : {}),
   };
 }

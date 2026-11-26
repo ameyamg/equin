@@ -105,7 +105,12 @@ rounded up>` — a superset, never fewer.
 
 ## Plugin reference
 
-- Description: Registers the Gmail mail provider: MailProvider over integrations/gmail/api, one client and quota pacer per account, Gmail's q compiled from the contract's filter.
+- Description: The Gmail provider's browser half: its connect surface for Mail (the shared Gmail access state and the control that fixes it, in place). Registers the Gmail mail provider: MailProvider over integrations/gmail/api, one client and quota pacer per account, Gmail's q compiled from the contract's filter.
+- Web:
+  - Contributes: `MailProviderUi.Connect` "gmail" → `GmailConnect`
+  - Uses:
+    - `apps/mail/provider.MailProviderUi`
+    - `integrations/gmail.GmailAccessEmptyState`
 - Server:
   - Contributes: `mail.provider` "Gmail"
   - Uses:

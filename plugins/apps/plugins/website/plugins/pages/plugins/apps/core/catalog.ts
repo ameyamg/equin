@@ -207,14 +207,14 @@ export const APPS: readonly CatalogEntry[] = [
   },
   {
     id: "mail",
-    appId: null,
+    appId: "mail",
     color: "rose",
     name: "Mail",
     category: "next",
     icon: symbol("mail"),
     soon: true,
     description:
-      "An Inbox-like email client, recreated: bundles, snoozes, and an agent that drafts replies.",
+      "Your mail as views you build: every mailbox and label is a filter you can copy and edit, loaded from Gmail as you open it.",
   },
   {
     id: "finance",

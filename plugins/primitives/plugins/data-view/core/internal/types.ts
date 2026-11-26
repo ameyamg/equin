@@ -2875,6 +2875,37 @@ export interface DataViewViewEdits {
   mode: "draft";
   /** The always-first, fixed view's id. */
   home?: string;
+  /**
+   * Views the surface defines itself rather than in its config — built-in
+   * mailboxes, one per label of the data (`DataViewLockedView`): copy-only
+   * (their ⋯ menu is Duplicate, an edit is saved as a NEW view), each with
+   * its own icon or colour — a view derived from code or data, so not the
+   * config's to hold. Its PLACE is the config's: a config row of its id is
+   * its placeholder (authored `{ id, name, view: { type } }`, or written when
+   * it is dragged), and one without a placeholder is listed first, in this
+   * order. Pass a stable array.
+   */
+  locked?: readonly DataViewLockedView[];
+}
+
+/**
+ * One view the surface defines itself (`DataViewViewEdits.locked`): an id
+ * (no config row may share it), its name, an icon or a colour, and the view
+ * value — `type` plus the host keys a config row's `view` holds (`filter`,
+ * `groupBy`, `properties`, …).
+ */
+export interface DataViewLockedView {
+  id: string;
+  name: string;
+  icon?: IconRef;
+  /** A CSS colour: a dot in the icon's place wherever views are listed. */
+  color?: string;
+  view: {
+    type: string;
+    filter?: FilterGroup | null;
+    groupBy?: GroupByRule;
+    properties?: PropertyEntry[] | null;
+  } & Record<string, unknown>;
 }
 
 /** {@link DataViewBaseProps.reserve}: covered room per edge, a CSS length. */

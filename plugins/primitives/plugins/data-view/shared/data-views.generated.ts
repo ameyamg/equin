@@ -83,6 +83,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "infra.background.catalog", pluginId: "infra.background.catalog" },
   { id: "infra.background.recent-runs", pluginId: "infra.background.catalog" },
   { id: "infra.deps.dependencies", pluginId: "infra.deps" },
+  { id: "mail.threads", pluginId: "apps.mail.threads" },
   { id: "menu-bar.apps", pluginId: "companions.menu-bar.app-grid" },
   { id: "page.links.backlinks", pluginId: "page.links" },
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },

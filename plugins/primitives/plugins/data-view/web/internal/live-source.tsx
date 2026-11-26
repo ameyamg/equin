@@ -14,6 +14,7 @@ import {
   type Filter,
   type Filterable,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { groupDirection } from "./group-direction";
 import type {
   LiveColumnsDeclaration,
   LiveCountedCollection,
@@ -305,8 +306,10 @@ export function useLiveSource<TRow>(args: {
         groupField.type ?? "text",
         state.groupBy.groupingId,
       );
-      const dir =
-        state.sort.find((r) => r.fieldId === groupField.id)?.direction ?? "asc";
+      const dir = groupDirection(state.sort, groupField.id, {
+        orderBy: collection.window.window.defaultOrderBy,
+        column: columnOf(groupField.id),
+      });
       const lowering = liveGroupLowering(plan, groupField, grouping);
       switch (lowering.kind) {
         case "sections":

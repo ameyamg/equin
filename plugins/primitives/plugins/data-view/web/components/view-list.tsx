@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   CollapsedViewSwitcher,
   EditableViewSwitcher,
@@ -23,10 +23,53 @@ import { useViewRowCounts } from "../internal/use-view-row-counts";
 export function DataViewViewList(props: {
   newLabel: string;
   onNew?: () => void;
+  /**
+   * Which views are listed — default every one. A surface drawing some of its
+   * views elsewhere (a tree of label views below the list) lists the rest.
+   */
+  include?: (instance: { id: string; locked: boolean }) => boolean;
+  /**
+   * The count after each view's name, when the surface knows it better than
+   * the rows in memory do (a mailbox's unread count from its provider) —
+   * `undefined` for a view draws none. Default `useViewRowCounts`.
+   */
+  countFor?: (id: string) => number | undefined;
 }): ReactNode {
-  const { newLabel, onNew } = props;
+  const { newLabel, onNew, include } = props;
   const { viewModel, activeViewId } = useDataViewControls();
-  const countFor = useViewRowCounts();
+  const rowCounts = useViewRowCounts();
+  const countFor = props.countFor ?? rowCounts;
+  const instances = useMemo(
+    () =>
+      include === undefined
+        ? viewModel.instances
+        : viewModel.instances.filter((r) =>
+            include({
+              id: r.instance.id,
+              locked: r.instance.locked === true,
+            }),
+          ),
+    [include, viewModel.instances],
+  );
+  // The list's positions are among the views it lists; the model's are among
+  // all of them — a drop lands at the full index of the view it lands on.
+  const actions = useMemo(
+    () =>
+      include === undefined
+        ? viewModel.actions
+        : {
+            ...viewModel.actions,
+            reorderView: (id: string, toIndex: number) => {
+              const at = instances[toIndex]?.instance.id;
+              const full =
+                at === undefined
+                  ? viewModel.instances.length - 1
+                  : viewModel.instances.findIndex((r) => r.instance.id === at);
+              viewModel.actions.reorderView(id, full);
+            },
+          },
+    [include, instances, viewModel.actions, viewModel.instances],
+  );
   const create =
     onNew ??
     (() => {
@@ -42,10 +85,10 @@ export function DataViewViewList(props: {
     });
   return (
     <ViewList
-      instances={viewModel.instances}
+      instances={instances}
       activeId={activeViewId}
       onSelect={viewModel.setActiveView}
-      actions={viewModel.actions}
+      actions={actions}
       homeId={viewModel.homeViewId}
       countFor={countFor}
       dirtyFor={viewModel.dirtyFor}

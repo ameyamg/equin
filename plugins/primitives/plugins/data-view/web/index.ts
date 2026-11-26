@@ -86,6 +86,7 @@ export {
   DataViewViewList,
   DataViewViewStrip,
 } from "./components/view-list";
+export { DataViewFilterChips } from "./components/filter-chips";
 export { useViewRowCounts } from "./internal/use-view-row-counts";
 export type { DataViewControlsContextValue } from "./components/controls/controls-context";
 export { useResolveCell, useIsChipField } from "./cell-slot";

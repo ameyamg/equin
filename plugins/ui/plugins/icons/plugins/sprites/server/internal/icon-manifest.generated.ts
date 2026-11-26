@@ -305,6 +305,7 @@ export const ICON_MANIFEST: {
     "repeat",
     "replay",
     "replay-10",
+    "report",
     "restart-alt",
     "restaurant",
     "restore-from-trash",

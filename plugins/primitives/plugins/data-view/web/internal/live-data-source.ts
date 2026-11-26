@@ -49,6 +49,8 @@ export function liveDataSource<
   opts: {
     searchable: readonly LiveSearchableColumn<F>[];
     facets?: readonly LiveFacetColumn<F>[];
+    /** Read in the collection's default order only — why (`LiveDataSource.fixedOrder`). */
+    fixedOrder?: { reason: string };
   } & LiveSurfaceBinding<C["scopedColumns"]>,
 ): LiveDataSourceOf<Row, F, LiveTreeOf<C>> {
   type T = LiveTreeOf<C>;
@@ -107,6 +109,7 @@ export function liveDataSource<
     facets,
     surface,
     customColumns,
+    fixedOrder: opts.fixedOrder?.reason ?? null,
     scope:
       scope === undefined ? { kind: "all" } : { kind: "where", filter: scope },
     scoped: ({ where }) => {
@@ -144,6 +147,7 @@ export function liveDataSource<
         facets,
         surface,
         customColumns,
+        fixedOrder: opts.fixedOrder?.reason ?? null,
         scope: awaiting,
       };
     },

@@ -170,6 +170,18 @@ wrote and last read, so its own writes never echo back. A malformed draft part
 is no draft — the URL is rewritten to the screen. Without drafts the value is
 the bare id, as before.
 
+## Locked views: the host's own
+
+`useViewModel(…, { drafts: true, locked })` (`LockedViewRow[]`): views the
+consumer defines (code, data) — copy-only (`ViewInstance.locked`,
+`color`), listed first unless a config row of the same id holds their place
+(a PLACEHOLDER, `view: { type, lockedPlaceholder: true }`; one whose locked
+view is gone is dropped). Rename / icon / delete / `drafts.save` throw;
+duplicate / `saveAsNew` `insertView` a config row from the working copy;
+`reorderView` on positions in `instances` — a move touching the head
+first writes a placeholder for every head view, then moves on config
+positions. Needs `drafts`. Pinned by `web/__tests__/locked-views.test.tsx`.
+
 ## ⚠️ Invariant: never import data-view (no cycle)
 
 `view-core` is a **child** of `data-view`, so `data-view → view-core` is the only
@@ -307,6 +319,7 @@ contributions each surface passes in, and per-entry plugin id
   - Exports (types):
     - `AddableSource`
     - `AddableViewType`
+    - `LockedViewRow`
     - `ViewConfigRow`
     - `ViewId`
     - `ViewInstance`

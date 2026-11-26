@@ -330,9 +330,9 @@ the `""` entry.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 55 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 56 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×20
-    - `ThemeEngine.Theme` ×15
+    - `ThemeEngine.Theme` ×16
     - `ThemeEngine.SubTheme` ×8
     - `ThemeEngine.VariantGroup` ×6
     - `ThemeEngine.FixedTheme` ×4
@@ -485,9 +485,9 @@ the `""` entry.
     - `tokenGroupMatchesSearch`
     - `transformValues`
 - Cross-plugin:
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×51
-    - `apps` ×19
+    - `apps` ×20
     - `apps-core/chrome-theme`
     - `companions/panel`
     - `hints`

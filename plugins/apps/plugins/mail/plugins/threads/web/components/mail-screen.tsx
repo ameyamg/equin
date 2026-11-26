@@ -1,0 +1,234 @@
+import { useMemo, type ReactNode } from "react";
+import {
+  DataView,
+  defineDataView,
+  fieldOverrides,
+  liveDataSource,
+} from "@plugins/primitives/plugins/data-view/web";
+import type {
+  DataViewLockedView,
+  DataViewReadFailure,
+} from "@plugins/primitives/plugins/data-view/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { usePaneViewParam } from "@plugins/primitives/plugins/pane/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import { MailProviderUi } from "@plugins/apps/plugins/mail/plugins/provider/web";
+import {
+  mailThreads,
+  type MailThreadRow,
+  type MailThreadsRefusal,
+} from "@plugins/apps/plugins/mail/plugins/cache/core";
+import {
+  labelColor,
+  labelOfView,
+  labelView,
+  MAIL_BUILT_IN_VIEWS,
+  MAIL_INBOX_VIEW,
+} from "../../core";
+import type { Mailbox } from "@plugins/apps/plugins/mail/plugins/provider/core";
+import { mailboxLabel, useMailboxes, userLabels } from "../internal/mailboxes";
+import { MailSidebar } from "./mail-sidebar";
+import { mailToolbar } from "./mail-toolbar";
+import {
+  ThreadAvatar,
+  ThreadRow,
+  type LabelChipInfo,
+  type ThreadRowContext,
+} from "./thread-row";
+
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const THREADS_VIEW = defineDataView("mail.threads");
+
+/**
+ * Every view's threads: the live window of `mail.threads`, the search box
+ * being the provider's own search (`query`, Gmail's operators and all, over
+ * the whole mailbox).
+ */
+const threadsSource = liveDataSource(mailThreads, {
+  surface: THREADS_VIEW,
+  unscoped: {
+    reason:
+      "served external from the Mail cache, whose windows the mail provider answers — a custom column is a Postgres side table joined into a routed SQL window, which an external window cannot join",
+  },
+  searchable: ["query"],
+  fixedOrder: {
+    reason:
+      "the mail provider lists threads newest first, and the app keeps no copy of the mailbox to reorder (design §4)",
+  },
+});
+
+/** The built-ins as the DataView takes them (their sidebar counts stay here). */
+const BUILT_IN_VIEWS: readonly DataViewLockedView[] = MAIL_BUILT_IN_VIEWS.map(
+  ({ count: _count, ...view }) => view,
+);
+
+/** Sent and Drafts are read by who they went to. */
+const RECIPIENT_VIEWS = new Set(["sent", "drafts"]);
+
+/**
+ * The Mail app's whole index pane: the threads DataView, its views listed by
+ * the mail sidebar (its `aside`), its search box and controls by the mail
+ * toolbar. Rows are threads, always newest first; read-only in this step.
+ */
+export function MailScreen(): ReactNode {
+  const { state: mailboxes, options } = useMailboxes();
+  // The active view, as the pane URL names it (absent: the Inbox, the
+  // surface's default) — the URL is derived from what is on screen.
+  const viewParam = usePaneViewParam(THREADS_VIEW)?.value;
+  const activeViewId = viewParam?.split("~")[0] ?? MAIL_INBOX_VIEW.id;
+
+  // The label views change only when a label does (name, nesting, colour) —
+  // never with its counts, which move with every read mail.
+  const labelsKey =
+    mailboxes.kind === "ready" ? labelViewsKey(mailboxes.mailboxes) : null;
+  const lockedViews = useMemo((): readonly DataViewLockedView[] => {
+    if (labelsKey === null) return BUILT_IN_VIEWS;
+    const all = JSON.parse(labelsKey) as Mailbox[];
+    return [
+      ...BUILT_IN_VIEWS,
+      ...userLabels(all).map((label) => labelView(label, all)),
+    ];
+  }, [labelsKey]);
+
+  const now = useMemo(() => new Date(), []);
+  const rowCtx = useMemo(
+    (): ThreadRowContext => ({
+      labels:
+        mailboxes.kind === "ready"
+          ? labelChips(mailboxes.mailboxes)
+          : new Map(),
+      viewLabel: labelOfView(activeViewId),
+      names: RECIPIENT_VIEWS.has(activeViewId) ? "recipients" : "senders",
+      now,
+    }),
+    [mailboxes, activeViewId, now],
+  );
+  const overrides = useMemo(
+    () =>
+      fieldOverrides(mailThreads, {
+        from: { width: "12rem" },
+        to: { visible: false },
+        date: { label: "Received", width: "6rem" },
+        mailboxes: { label: "Labels", optionsResult: options },
+        unread: { visible: false },
+        // No starring in Mail (the user's call): never shown, never a rule.
+        starred: { visible: false, filterable: false, groupable: false },
+        hasAttachment: { label: "Attachment", visible: false },
+        query: { visible: false, filterable: false, groupable: false },
+      }),
+    [options],
+  );
+  const viewOptions = useMemo(
+    () => ({
+      list: {
+        renderRow: (t: MailThreadRow) => <ThreadRow thread={t} ctx={rowCtx} />,
+        renderLeading: (t: MailThreadRow) => (
+          <ThreadAvatar thread={t} ctx={rowCtx} />
+        ),
+        lines: 1 as const,
+      },
+    }),
+    [rowCtx],
+  );
+
+  // A label view named by the URL waits for the labels, rather than resolve
+  // to the Inbox and rewrite the address.
+  if (labelOfView(activeViewId) !== null && mailboxes.kind === "loading") {
+    return <Loading variant="rows" count={8} />;
+  }
+  return (
+    <DataView<MailThreadRow>
+      source={threadsSource}
+      overrides={overrides}
+      views={["list", "table"]}
+      defaultView={MAIL_INBOX_VIEW.id}
+      viewEdits={{ mode: "draft", locked: lockedViews }}
+      switcherForm="none"
+      toolbar={mailToolbar}
+      viewOptions={viewOptions}
+      searchPlaceholder={`Search ${activeName(activeViewId, lockedViews)}`}
+      aside={<MailSidebar mailboxes={mailboxes} />}
+      errorState={refusalState}
+      emptyState={<EmptyMail inbox={activeViewId === MAIL_INBOX_VIEW.id} />}
+    />
+  );
+}
+
+/** What defines the label views, as one comparable string (counts left out). */
+function labelViewsKey(mailboxes: readonly Mailbox[]): string {
+  return JSON.stringify(mailboxes.map((m) => ({ ...m, counts: null })));
+}
+
+/** Each user label's chip, once per read: its `/` path and its colour. */
+function labelChips(
+  all: readonly Mailbox[],
+): ReadonlyMap<string, LabelChipInfo> {
+  return new Map(
+    userLabels(all).map((m) => [
+      m.id,
+      { name: mailboxLabel(m, all), color: labelColor(m, all) },
+    ]),
+  );
+}
+
+function activeName(id: string, views: readonly DataViewLockedView[]): string {
+  return views.find((v) => v.id === id)?.name ?? "mail";
+}
+
+/** A refused window, by its code: not connected draws the provider's fix. */
+function refusalState(failure: DataViewReadFailure): ReactNode | undefined {
+  const { error } = failure;
+  if (!(error instanceof ResourceError)) return undefined;
+  const code = error.code as MailThreadsRefusal | null;
+  if (code !== "not-connected") return undefined;
+  return <ProviderConnect message={error.message} />;
+}
+
+/** The registered provider's connect surface (v1: one provider). */
+function ProviderConnect({ message }: { message: string }): ReactNode {
+  const providers = MailProviderUi.Connect.useContributions();
+  const provider = providers[0];
+  if (provider === undefined || providers.length !== 1) {
+    throw new Error(
+      `Mail: v1 serves one mail provider, ${providers.length} contribute a connect surface`,
+    );
+  }
+  return renderIsolated(
+    MailProviderUi.Connect,
+    provider as unknown as Contribution,
+    { message },
+  );
+}
+
+/** Ready, and no thread: the Inbox is done; any other view is empty. */
+function EmptyMail({ inbox }: { inbox: boolean }): ReactNode {
+  return (
+    <Center axis="horizontal" className="py-2xl">
+      <Stack gap="lg" align="center">
+        {inbox ? (
+          <span
+            aria-hidden
+            className="size-27.5 rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle, color-mix(in srgb, #d4854f 80%, var(--card)) 0 38%, color-mix(in srgb, #d4854f 35%, var(--background)) 39% 55%, color-mix(in srgb, #d4854f 14%, var(--background)) 56% 70%, transparent 71%)",
+            }}
+          />
+        ) : null}
+        <Stack gap="2xs" align="center">
+          <Text variant="heading">{inbox ? "All done" : "Nothing here"}</Text>
+          {inbox ? (
+            <Text variant="body" tone="faint">
+              Nothing needs you right now.
+            </Text>
+          ) : null}
+        </Stack>
+      </Stack>
+    </Center>
+  );
+}

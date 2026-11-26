@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -87,7 +88,6 @@ export function ViewList<T extends ViewTypeMeta>({
   };
   const ids = instances.map((r) => r.instance.id);
   const homeIndex = homeId === null ? -1 : ids.indexOf(homeId);
-
   const onMove = (movedId: string, overId: string) => {
     const overIndex = ids.indexOf(overId);
     if (overIndex < 0 || movedId === homeId) return;
@@ -101,7 +101,9 @@ export function ViewList<T extends ViewTypeMeta>({
           {instances.map((r) => {
             const id = r.instance.id;
             const isHome = id === homeId;
-            const isRenaming = editable && renaming.id === id && !isHome;
+            const isLocked = r.instance.locked === true;
+            const isRenaming =
+              editable && renaming.id === id && !isHome && !isLocked;
             return (
               <SortableItem key={id} id={id} disabled={isHome || isRenaming}>
                 {() => (
@@ -111,7 +113,9 @@ export function ViewList<T extends ViewTypeMeta>({
                     count={countFor?.(id)}
                     dirty={dirtyFor?.(id) ?? false}
                     renaming={isRenaming}
-                    menu={editable && !isHome}
+                    menu={
+                      !editable || isHome ? "none" : isLocked ? "copy" : "all"
+                    }
                     onSelect={() => onSelect(id)}
                     onRename={(name) => {
                       renaming.set(null);
@@ -152,7 +156,8 @@ function ViewListRow<T extends ViewTypeMeta>(props: {
   count: number | undefined;
   dirty: boolean;
   renaming: boolean;
-  menu: boolean;
+  /** The ⋯ menu: every action, Duplicate alone (a locked view), or none. */
+  menu: "all" | "copy" | "none";
   onSelect: () => void;
   /** Commit (`name`) or cancel (`null`) the inline rename. */
   onRename: (name: string | null) => void;
@@ -167,27 +172,40 @@ function ViewListRow<T extends ViewTypeMeta>(props: {
       size="sm"
       selected={active}
       data-view-id={instance.instance.id}
-      icon={<Icon icon={instance.instance.icon} />}
+      icon={
+        instance.instance.color !== undefined ? (
+          <ViewColorDot color={instance.instance.color} />
+        ) : (
+          <Icon icon={instance.instance.icon} />
+        )
+      }
       onClick={renaming ? undefined : props.onSelect}
       actions={
-        menu && !renaming ? (
+        menu !== "none" && !renaming ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<IconButton icon={moreIcon} label={`${name} actions`} />}
             />
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={props.onStartRename}>
-                <Icon icon={editIcon} className="size-4" />
-                Rename
-              </DropdownMenuItem>
+              {menu === "all" ? (
+                <DropdownMenuItem onClick={props.onStartRename}>
+                  <Icon icon={editIcon} className="size-4" />
+                  Rename
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={props.onDuplicate}>
                 <Icon icon={contentCopyIcon} className="size-4" />
                 Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={props.onDelete}>
-                <Icon icon={deleteIcon} className="size-4" />
-                Delete
-              </DropdownMenuItem>
+              {menu === "all" ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={props.onDelete}
+                >
+                  <Icon icon={deleteIcon} className="size-4" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : undefined
@@ -251,5 +269,17 @@ function RenameField(props: {
         }
       }}
     />
+  );
+}
+
+/** A coloured view's glyph: a dot of its colour, in an icon's box. */
+export function ViewColorDot({ color }: { color: string }): ReactNode {
+  return (
+    <Center axis="both" className="size-4" aria-hidden>
+      <span
+        className="size-2.5 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+    </Center>
   );
 }

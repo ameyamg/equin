@@ -131,7 +131,12 @@ The cache and e2e tests run on it, never on Gmail.
 
 ## Plugin reference
 
-- Description: Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
+- Description: Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list its account cannot answer (not connected). Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
+- Web:
+  - Slots: `MailProviderUi.Connect`
+  - Slot contributors: `MailProviderUi.Connect` ← `apps.mail.providers.gmail`
+  - Exports (types): `MailProviderConnectContribution`
+  - Exports (values): `MailProviderUi`
 - Core:
   - Uses:
     - `network/live/filter.Filter`
@@ -201,6 +206,7 @@ The cache and e2e tests run on it, never on Gmail.
   - Imported by:
     - `apps/mail/cache`
     - `apps/mail/providers/gmail`
+    - `apps/mail/threads`
 - Server:
   - Exports (values):
     - `mailProviderById`

@@ -124,7 +124,7 @@ export function liveGroupLowering<TRow>(
  */
 export type LiveFieldsSource<TRow> = Omit<
   LiveDataSource<TRow>,
-  "surface" | "customColumns"
+  "surface" | "customColumns" | "fixedOrder"
 >;
 
 /** The collection column a field reads: its declared ref, else a column of the same name, else none. */

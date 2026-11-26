@@ -541,6 +541,12 @@
       "parent": "logs"
     },
     {
+      "paneId": "mail-threads",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "notifications",
       "segment": "notifications",
       "appIndex": false,

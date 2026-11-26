@@ -64,6 +64,13 @@ export interface ViewsConfigHandle {
    *  is named `"<name> copy"` and carries the source's icon and `view`, unless
    *  `overrides` names its own (a working copy saved as a new view). */
   duplicateView: (id: string, overrides?: DuplicateOverrides) => string;
+  /** Insert a new row — at `at` (a config position), else at the end — with
+   *  `id` (else a fresh one), and return its id: a copy of a view that is not
+   *  a config row, or a locked view's placeholder. */
+  insertView: (
+    row: Omit<ViewConfigRow, "id">,
+    opts?: { id?: string; at?: number },
+  ) => string;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
 }
@@ -404,6 +411,29 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     [applyMutation],
   );
 
+  const insertView = useCallback(
+    (
+      row: Omit<ViewConfigRow, "id">,
+      opts?: { id?: string; at?: number },
+    ): string => {
+      const newRowId = opts?.id ?? newId();
+      applyMutation((rows) => {
+        if (rows.some((r) => r.id === newRowId)) return rows;
+        const next: ViewConfigRow = {
+          id: newRowId,
+          name: row.name,
+          ...(row.icon !== undefined ? { icon: row.icon } : {}),
+          view: JSON.parse(JSON.stringify(row.view)) as VariantValue,
+          ...(row.source !== undefined ? { source: row.source } : {}),
+        };
+        const at = Math.max(0, Math.min(opts?.at ?? rows.length, rows.length));
+        return [...rows.slice(0, at), next, ...rows.slice(at)];
+      });
+      return newRowId;
+    },
+    [applyMutation],
+  );
+
   const deleteView = useCallback(
     (id: string) => {
       applyMutation((rows) => rows.filter((r) => r.id !== id));
@@ -438,6 +468,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
       renameView,
       setViewIcon,
       duplicateView,
+      insertView,
       deleteView,
       reorderView,
     }),
@@ -451,6 +482,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
       renameView,
       setViewIcon,
       duplicateView,
+      insertView,
       deleteView,
       reorderView,
     ],

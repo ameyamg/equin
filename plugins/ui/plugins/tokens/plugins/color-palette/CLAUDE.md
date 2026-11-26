@@ -13,8 +13,8 @@
   - Exports (types): `ColorPaletteTokenValues`
   - Exports (values): `colorPaletteGroup`
 - Cross-plugin:
-  - Tokens used by: 568 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×124
+  - Tokens used by: 569 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×125
     - `conversations` ×94
     - `primitives` ×83
     - `debug` ×42
@@ -64,6 +64,7 @@
     - `apps/file-explorer/shell`
     - `apps/home/new-app`
     - `apps/home/shell`
+    - `apps/mail/shell`
     - `apps/pages/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`

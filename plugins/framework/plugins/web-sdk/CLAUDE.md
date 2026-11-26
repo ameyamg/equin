@@ -512,9 +512,9 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `whenPageCanFetch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 123 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×28
-    - `apps` ×21
+    - `apps` ×22
     - `ui` ×10
     - `reports` ×9
     - `apps-core` ×6

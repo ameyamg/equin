@@ -126,7 +126,8 @@ const msg = (o: {
   id: o.id,
   threadId: o.thread,
   labelIds: o.labels,
-  snippet: `snippet ${o.id}`,
+  // Gmail escapes its snippets as HTML; the summary carries plain text.
+  snippet: `snippet ${o.id} d&#39;x`,
   historyId: "100",
   internalDate: o.at,
   payload: {
@@ -201,7 +202,7 @@ describe("Gmail provider: reads", () => {
     expect(a.summary).toMatchObject({
       version: "501",
       subject: "Café",
-      snippet: "snippet a3",
+      snippet: "snippet a3 d'x",
       messageCount: 3,
       unread: true,
       starred: false,

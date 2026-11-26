@@ -553,6 +553,14 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     label: "Group header style",
     values: ["caption", "rule", "pill"] as const,
   },
+  // Whether a group header shows how many rows its section holds beside its
+  // label (`shown`) or the label alone (`hidden` — a mail list, where a tally
+  // per day is noise).
+  groupCount: {
+    default: "shown",
+    label: "Group count",
+    values: ["shown", "hidden"] as const,
+  },
   // The `pill` style's fill and inline padding.
   groupPillFill: {
     default: "color-mix(in oklab, var(--foreground) 7%, transparent)",

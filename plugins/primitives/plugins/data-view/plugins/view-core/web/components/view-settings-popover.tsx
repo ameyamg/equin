@@ -80,8 +80,11 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
     type: instance.instance.type,
   };
 
+  // A locked view (the host's) is copy-only: no name, icon or delete here.
+  const locked = instance.instance.locked === true;
   return (
     <>
+      {locked ? null : (
       <ControlPanel.Section label="Name">
         <Input
           keep={transient(
@@ -99,7 +102,9 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
           }}
         />
       </ControlPanel.Section>
+      )}
 
+      {locked ? null : (
       <ControlPanel.Section>
         <FieldRenderer
           field={viewIconField}
@@ -109,6 +114,7 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
           }
         />
       </ControlPanel.Section>
+      )}
 
       <ControlPanel.Section>
         <FieldRenderer
@@ -132,16 +138,18 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
         >
           Duplicate
         </ControlPanel.Row>
-        <ControlPanel.Row
-          icon={<Icon icon={deleteIcon} />}
-          tone="danger"
-          onSelect={() => {
-            actions.deleteView(id);
-            onClose();
-          }}
-        >
-          Delete
-        </ControlPanel.Row>
+        {locked ? null : (
+          <ControlPanel.Row
+            icon={<Icon icon={deleteIcon} />}
+            tone="danger"
+            onSelect={() => {
+              actions.deleteView(id);
+              onClose();
+            }}
+          >
+            Delete
+          </ControlPanel.Row>
+        )}
       </ControlPanel.Footer>
     </>
   );

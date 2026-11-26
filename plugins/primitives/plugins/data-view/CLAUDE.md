@@ -790,6 +790,8 @@ header).
 (`groupLabelInk`), count beside it, the rule box, trailing chevron (on hover/focus
 and while collapsed).
 
+- The theme token **`groupCount`** (`shown` / `hidden`) shows or hides the
+  count beside the label (a mail list hides it).
 - The theme token **`groupHeaderStyle`** (`ui/tokens/data-view`, via container
   style queries) picks `caption` (default) / `rule` / `pill`.
 - Pinned by `web/__tests__/grouped-sections.test.tsx`.
@@ -1358,6 +1360,32 @@ surface lists views itself).
   (`web/components/view-list.tsx`), counts from **`useViewRowCounts()`** (each
   view's filter over in-memory rows; `undefined` when rows aren't in memory).
 - **`viewShortcuts`** binds ⌥1–⌥9 (`web/internal/use-view-shortcuts.ts`).
+
+**Locked views** — `viewEdits.locked: DataViewLockedView[]`: views the
+surface defines itself rather than in its config (a mailbox, one per label
+of the data). Each is `{ id, name, icon? | color?, view }`, copy-only:
+renaming, re-iconing, deleting or saving over one throws, no list offers it
+(`ViewList`'s ⋯ is Duplicate alone; the strip's primary is Save as new view;
+the settings popover has no Name / Icon / Delete), and Duplicate / Save as
+new append a config row made from its working copy. Its PLACE is the
+config's: a config row of its id with `view: { type, lockedPlaceholder: true }`
+is its placeholder (authored, or written the first time it is dragged); one
+without a placeholder is listed first, in the given order; a placeholder
+whose locked view is gone is dropped. `color` draws a dot in the icon's
+place in `ViewList`. Engine: view-core's `ViewModelOptions.locked`
+(`web/__tests__/locked-views.test.tsx`). Reference: Mail's built-ins and
+labels.
+
+**The filter as chips** — `DataViewFilterChips({ actions? })`: one chip per
+top-level rule of the active view (`describeFilterRuleParts`, the same words
+as the Filter control's summary; a list operand spelled out), each opening
+the Filter panel and carrying ×, then "+ Filter", then `actions` (a
+surface's Save / Discard). Reads the controls context — place it in an
+arrangement or the `aside`; when to show it is the surface's call.
+
+`DataViewViewList` takes `include` (list some views — a surface drawing
+others elsewhere; a drop maps back to the full order) and `countFor` (the
+surface's own count per view).
 
 ### Row hover: `rowHover`
 
@@ -2325,6 +2353,13 @@ const fields = [
 
   Search-only changes keep previous rows; other query changes start over with
   `useHeldHeight`. Truncation → footer (`TRUNCATION_HINT`).
+- **A fixed order** — `liveDataSource(c, { fixedOrder: { reason } })`: the
+  source is read in its collection's default order only (a provider that
+  pages one way). No Sort control, no sorting header, and a view's saved
+  sort is ignored. Grouping still reads that order: with no sort of its own
+  a view's sections follow the collection's default direction on the
+  grouped column (`groupDirection`, shared by the body and the live
+  sections).
 - **Column headers sort only what the source sorts** (`DataViewRenderProps.sortHeader`;
   the host's `setSort` throws otherwise).
 
@@ -2503,12 +2538,12 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 118 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×108
+  - Contributes: 119 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×109
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 147 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 148 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2541,6 +2576,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `infra/endpoints.useAssetSrc`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/cluster.Cluster`
     - `primitives/css/coords.Placed`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
@@ -2703,6 +2739,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `CreateButton`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `DataView`
+    - `DataViewFilterChips`
     - `DataViewGroupHeader`
     - `DataViewSlots`
     - `DataViewSwitcher`
@@ -2791,8 +2828,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 110 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×108
+  - Contributes: 111 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×109
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getAllDescriptors`
@@ -2831,6 +2868,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewLiveOrigin`
     - `DataViewLoadedFrameProps`
     - `DataViewLoadedWindow`
+    - `DataViewLockedView`
     - `DataViewPageNotice`
     - `DataViewPagePlaceholder`
     - `DataViewPagePlaceholders`
@@ -2995,16 +3033,16 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `valuePosition`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 92 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 96 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×53
-    - `ui/tokens/color-palette` ×13
-    - `ui/tokens/density` ×13
+    - `ui/tokens/density` ×15
+    - `ui/tokens/color-palette` ×14
     - `ui/tokens/type-scale` ×6
-    - `ui/tokens/shadow` ×4
+    - `ui/tokens/shadow` ×5
     - `ui/tokens/shape` ×3
-  - Imported by: 132 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 133 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×40
-    - `apps` ×28
+    - `apps` ×29
     - `debug` ×17
     - `primitives` ×10
     - `conversations` ×9

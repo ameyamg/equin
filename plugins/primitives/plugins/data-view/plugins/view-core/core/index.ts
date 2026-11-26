@@ -2,6 +2,7 @@ export type {
   ViewTypeMeta,
   ViewInstance,
   ViewConfigRow,
+  LockedViewRow,
   ViewSourceEntry,
   AddableViewType,
   AddableSource,

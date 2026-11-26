@@ -165,6 +165,7 @@ export type {
   DataViewBaseProps,
   DataViewReserve,
   DataViewViewEdits,
+  DataViewLockedView,
   DataViewSearch,
   DataViewSearchSuggestions,
   QuickFilter,

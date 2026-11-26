@@ -100,6 +100,8 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"apps.home.shell.section","plugin":"apps.home.shell","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.isle.buildings.building","plugin":"apps.isle.buildings","key":"building","meta":{"kind":"slot","reorderable":false},"inMain":true},
   {"id":"apps.isle.world-view.isle.actions","plugin":"apps.isle.world-view","key":"isle.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"apps.mail.provider.connect","plugin":"apps.mail.provider","key":"connect","meta":{"kind":"slot","reorderable":false},"inMain":true},
+  {"id":"apps.mail.threads.mail.actions","plugin":"apps.mail.threads","key":"mail.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.pages.page-tree.block-detail.actions","plugin":"apps.pages.page-tree","key":"block-detail.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.pages.page-tree.header-tool","plugin":"apps.pages.page-tree","key":"header-tool","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.pages.page-tree.menu-item","plugin":"apps.pages.page-tree","key":"menu-item","meta":{"kind":"render","reorderable":true},"inMain":true},

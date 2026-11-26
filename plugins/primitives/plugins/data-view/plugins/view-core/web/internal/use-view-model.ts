@@ -6,12 +6,14 @@ import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type {
   AddableSource,
+  LockedViewRow,
   AddableViewType,
   ViewSourceEntry,
   ViewTypeMeta,
 } from "../../core";
 import {
   buildInstanceFromRow,
+  buildLockedInstance,
   type ResolvedViewInstance,
 } from "./resolve-instances";
 import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
@@ -164,7 +166,21 @@ export interface ViewModelOptions {
    * `null`/absent keeps the selection device-local only.
    */
   activeViewUrl?: ActiveViewUrl | null;
+  /**
+   * Views the host defines rather than the config (`LockedViewRow`). A config
+   * row of a locked view's id is its PLACEHOLDER: it holds the view's place
+   * only (the view is the host's). Locked views without one are listed
+   * first, in this order, then the config's rows. Copy-only — renaming,
+   * re-iconing, deleting or saving over one throws (no list offers it);
+   * Duplicate and Save as new append a config row made from it; reordering
+   * one writes its placeholder.
+   * Needs `drafts` (an edit to a locked view can only be a working copy).
+   * Pass a referentially-stable array: the instance list memoizes on it.
+   */
+  locked?: readonly LockedViewRow[];
 }
+
+const NO_LOCKED: readonly LockedViewRow[] = [];
 
 /**
  * Where the URL holds the active view: the read and write of one address key
@@ -216,6 +232,12 @@ export function useViewModel<T extends ViewTypeMeta>(
 ): ViewModelCore<T> {
   const draftsOn = opts?.drafts === true;
   const canonical = opts?.canonical;
+  const locked = opts?.locked ?? NO_LOCKED;
+  if (locked.length > 0 && !draftsOn) {
+    throw new Error(
+      `view-core(${storageKey}): locked views need drafts — an edit to one can only be a working copy`,
+    );
+  }
   // Config is the single source of truth — no synthesized defaults. The instance
   // list comes only from the authored config rows (terse `{ name, view }`,
   // normalized on read). The addable-types menu (`availableSources`, below) is
@@ -243,11 +265,46 @@ export function useViewModel<T extends ViewTypeMeta>(
   // surface reads the same one), or none without drafts.
   const drafted = useDraftMap(surfaceDrafts, draftsOn);
 
+  // The host's locked views, resolved like config rows (fail-soft), listed
+  // ahead of the config's own.
+  const lockedById = useMemo(
+    () => new Map(locked.map((row) => [row.id, row])),
+    [locked],
+  );
+  const lockedInstances = useMemo(
+    () =>
+      new Map(
+        locked
+          .map((row) => buildLockedInstance(row, entries))
+          .filter((r): r is ResolvedViewInstance<T> => r !== null)
+          .map((r) => [r.instance.id, r]),
+      ),
+    [locked, entries],
+  );
+  // Where each locked view sits: at its PLACEHOLDER — a config row of its id,
+  // which holds only its position (the view is the host's) — else at the head,
+  // in the host's order. Reordering a head view writes its placeholder, so a
+  // locked view's place is the config's like any view's.
+  // A placeholder whose locked view the host no longer defines (a label
+  // since deleted) is dropped — never shown as the bare `{ type }` it holds.
+  const { saved, head } = useMemo(() => {
+    const own = (cfg.instances as ResolvedViewInstance<T>[]).flatMap((r) => {
+      const lockedOne = lockedInstances.get(r.instance.id);
+      if (lockedOne !== undefined) return [lockedOne];
+      return isPlaceholder(r.instance.options) ? [] : [r];
+    });
+    const placed = new Set(own.map((r) => r.instance.id));
+    const head = [...lockedInstances.values()].filter(
+      (r) => !placed.has(r.instance.id),
+    );
+    return { saved: head.length === 0 ? own : [...head, ...own], head };
+  }, [cfg.instances, lockedInstances]);
+  const headCount = head.length;
+
   // A drafted view renders its working copy: its instance is rebuilt from the
   // copy (so a drafted option or type change shows), every other one is the
   // config's own (identity kept).
   const instances = useMemo(() => {
-    const saved = cfg.instances as ResolvedViewInstance<T>[];
     if (drafted === NO_DRAFTS || Object.keys(drafted).length === 0) {
       return saved;
     }
@@ -255,6 +312,10 @@ export function useViewModel<T extends ViewTypeMeta>(
       const draft = drafted[r.instance.id];
       if (draft === undefined) return r;
       const { instance } = r;
+      const lockedRow = lockedById.get(instance.id);
+      if (lockedRow !== undefined) {
+        return buildLockedInstance({ ...lockedRow, view: draft }, entries) ?? r;
+      }
       return (
         buildInstanceFromRow(
           {
@@ -272,9 +333,24 @@ export function useViewModel<T extends ViewTypeMeta>(
         ) ?? r
       );
     });
-  }, [cfg.instances, drafted, entries]);
+  }, [saved, drafted, entries, lockedById]);
 
-  const savedViewFor = cfg.viewFor;
+  const cfgViewFor = cfg.viewFor;
+  const savedViewFor = useCallback(
+    (id: string): VariantValue | undefined =>
+      lockedById.get(id)?.view ?? cfgViewFor(id),
+    [lockedById, cfgViewFor],
+  );
+  const assertNotLocked = useCallback(
+    (id: string, what: string) => {
+      if (lockedById.has(id)) {
+        throw new Error(
+          `view-core(${storageKey}): the locked view "${id}" cannot be ${what} — save a copy instead`,
+        );
+      }
+    },
+    [lockedById, storageKey],
+  );
   const viewFor = useCallback(
     (id: string): VariantValue | undefined => {
       const saved = savedViewFor(id);
@@ -510,11 +586,29 @@ export function useViewModel<T extends ViewTypeMeta>(
       addView: (type, sourceId) => {
         setActiveView(cfg.addView(type, sourceId));
       },
-      renameView: cfg.renameView,
-      setViewIcon: cfg.setViewIcon,
+      renameView: (id, name) => {
+        assertNotLocked(id, "renamed");
+        cfg.renameView(id, name);
+      },
+      setViewIcon: (id, icon) => {
+        assertNotLocked(id, "given an icon");
+        cfg.setViewIcon(id, icon);
+      },
       duplicateView: (id) => {
         // What you see is what you copy: a drafted view's working copy.
         const draft = draftsOn ? surfaceDrafts.read()[id] : undefined;
+        const lockedRow = lockedById.get(id);
+        if (lockedRow !== undefined) {
+          setActiveView(
+            cfg.insertView(
+              lockedCopy(lockedRow, {
+                name: `${lockedRow.name} copy`,
+                view: draft ?? lockedRow.view,
+              }),
+            ),
+          );
+          return;
+        }
         setActiveView(
           cfg.duplicateView(
             id,
@@ -523,10 +617,29 @@ export function useViewModel<T extends ViewTypeMeta>(
         );
       },
       deleteView: (id) => {
+        assertNotLocked(id, "deleted");
         cfg.deleteView(id);
         if (draftsOn) setDraft(id, null);
       },
-      reorderView: cfg.reorderView,
+      // `toIndex` is the view's final position in `instances`, whose head is
+      // the locked views without a placeholder: the config's order starts
+      // after them. A head view moved gets its placeholder at that place.
+      reorderView: (id, toIndex) => {
+        const touchesHead =
+          head.some((r) => r.instance.id === id) || toIndex < headCount;
+        if (!touchesHead) {
+          cfg.reorderView(id, toIndex - headCount);
+          return;
+        }
+        // The head's order becomes the config's first: a placeholder for each
+        // head view, where it stands — then an ordinary move, on positions
+        // that are the config's own.
+        head.forEach((r, at) => {
+          const row = lockedById.get(r.instance.id)!;
+          cfg.insertView(placeholderOf(row), { id: row.id, at });
+        });
+        cfg.reorderView(id, toIndex);
+      },
       updateView,
     }),
     [
@@ -538,6 +651,10 @@ export function useViewModel<T extends ViewTypeMeta>(
       surfaceDrafts,
       setDraft,
       updateView,
+      assertNotLocked,
+      lockedById,
+      head,
+      headCount,
     ],
   );
 
@@ -546,6 +663,7 @@ export function useViewModel<T extends ViewTypeMeta>(
       draftsOn
         ? {
             save: (id) => {
+              assertNotLocked(id, "saved over");
               const draft = surfaceDrafts.read()[id];
               if (draft === undefined) return;
               saveView(id, draft);
@@ -568,11 +686,21 @@ export function useViewModel<T extends ViewTypeMeta>(
                   `view-core(${storageKey}): saveAsNew("${id}") names no view`,
                 );
               }
-              const newId = cfg.duplicateView(id, {
-                name: row.name,
-                ...(row.icon !== undefined ? { icon: row.icon } : {}),
-                view,
-              });
+              const lockedRow = lockedById.get(id);
+              const newId =
+                lockedRow !== undefined
+                  ? cfg.insertView(
+                      lockedCopy(lockedRow, {
+                        name: row.name,
+                        view,
+                        ...(row.icon !== undefined ? { icon: row.icon } : {}),
+                      }),
+                    )
+                  : cfg.duplicateView(id, {
+                      name: row.name,
+                      ...(row.icon !== undefined ? { icon: row.icon } : {}),
+                      view,
+                    });
               setDraft(id, null);
               setActiveView(newId);
               return newId;
@@ -589,6 +717,8 @@ export function useViewModel<T extends ViewTypeMeta>(
       canonical,
       cfg,
       setActiveView,
+      assertNotLocked,
+      lockedById,
     ],
   );
 
@@ -644,4 +774,41 @@ function deriveVariants<T extends ViewTypeMeta>(
       { label: c.title, fields: c.configSchema ?? {} },
     ]),
   );
+}
+
+/** The key a placeholder row's `view` carries, so one whose locked view is
+ *  gone is known for what it is. */
+const PLACEHOLDER = "lockedPlaceholder";
+
+/** A locked view's placeholder row: its place in the config, nothing else. */
+function placeholderOf(row: LockedViewRow) {
+  return {
+    name: row.name,
+    view: { type: row.view.type, [PLACEHOLDER]: true } as VariantValue,
+    ...(row.source !== undefined ? { source: row.source } : {}),
+  };
+}
+
+function isPlaceholder(options: unknown): boolean {
+  return (
+    typeof options === "object" &&
+    options !== null &&
+    (options as Record<string, unknown>)[PLACEHOLDER] === true
+  );
+}
+
+/** A config row made from a locked view: its source, `over`'s name, view and
+ *  icon. Its own icon (code's, not a saved pick) and colour stay behind — a
+ *  config row carries neither. */
+function lockedCopy(
+  row: LockedViewRow,
+  over: { name: string; view: VariantValue; icon?: SavedSymbolName },
+) {
+  const icon = over.icon;
+  return {
+    name: over.name,
+    ...(icon !== undefined ? { icon } : {}),
+    view: over.view,
+    ...(row.source !== undefined ? { source: row.source } : {}),
+  };
 }

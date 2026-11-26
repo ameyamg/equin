@@ -20,6 +20,7 @@ import type {
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type {
+  DataViewLockedView,
   FilterGroup,
   FilterScope,
   FoldRule,
@@ -123,6 +124,8 @@ export interface ViewEditsOptions {
   drafts: boolean;
   /** The home view's id (see `ReadyViewModel.homeViewId`). */
   home?: string;
+  /** The host's locked views (`DataViewViewEdits.locked`). */
+  locked?: readonly DataViewLockedView[];
 }
 
 /**
@@ -359,6 +362,7 @@ export function useDataViewModel(
       drafts: edits?.drafts === true,
       canonical: canonicalViewValue,
       activeViewUrl,
+      ...(edits?.locked !== undefined ? { locked: edits.locked } : {}),
     },
   );
   const homeViewId = edits?.home ?? null;

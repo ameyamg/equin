@@ -110,6 +110,7 @@ attribute values and text, as the `HTMLRewriter` callers always did.
   - Imported by:
     - `apps/events/sources/salsanueva`
     - `apps/events/sources/url-extract`
+    - `apps/mail/providers/gmail`
     - `apps/prototypes/files`
     - `page/bookmark`
 - Core:

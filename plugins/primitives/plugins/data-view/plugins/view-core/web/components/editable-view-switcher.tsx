@@ -187,14 +187,18 @@ function SaveViewAction(props: {
   activeId: string;
   activeName: string;
   homeId: string | null;
+  /** The active view is a host's locked view: copy-only, like the home view. */
+  locked: boolean;
   drafts: ViewDrafts;
   /** A view made by Save as new: its settings open, to rename it. */
   onCreated: (id: string) => void;
 }): ReactNode {
-  const { activeId, activeName, homeId, drafts, onCreated } = props;
+  const { activeId, activeName, homeId, locked, drafts, onCreated } = props;
   const saveAsNew = () =>
     onCreated(drafts.saveAsNew(activeId, { name: `${activeName} copy` }));
-  const isHome = activeId === homeId;
+  // A copy-only view (the home view, a locked one): its edits are saved as a
+  // new view, never over it.
+  const isHome = activeId === homeId || locked;
   return (
     <ControlSizeProvider size="sm">
       <ButtonGroup data-part="dv.view-save">
@@ -340,6 +344,8 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                 // --view`), whatever the instance is named.
                 data-view-type={r.instance.type}
                 onClick={() => {
+                  // A locked view has no settings to edit (copy-only).
+                  if (isActive && r.instance.locked === true) return;
                   if (isActive) {
                     setSettingsForId((open) => (open === id ? null : id));
                   } else {
@@ -364,7 +370,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
             return (
               <SortableItem key={id} id={id}>
                 {() =>
-                  isActive ? (
+                  isActive && r.instance.locked !== true ? (
                     <ControlPanelPopover
                       open={settingsForId === id}
                       onOpenChange={(open) =>
@@ -396,6 +402,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
           activeId={activeId}
           activeName={activeInstance.instance.name}
           homeId={homeId}
+          locked={activeInstance.instance.locked === true}
           drafts={drafts}
           onCreated={setSettingsForId}
         />

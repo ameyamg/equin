@@ -1,0 +1,54 @@
+// @hash 6ec84829688d
+// Mail's views, in sidebar order. The six built-ins (Inbox, Sent, Drafts,
+// Done, Spam, Trash) are defined in code (`MAIL_BUILT_IN_VIEWS`,
+// plugins/apps/plugins/mail/plugins/threads/core) and locked: each row below
+// of a built-in's id is only its PLACEHOLDER — where it sits — so the user can
+// drag a built-in among their own views (Spam after them, say) and the order
+// is kept here. A placeholder's `view` is the code view's type, marked
+// `lockedPlaceholder` (one whose view is gone is dropped, never shown).
+// Everything else is an ordinary view of the user's own: renamable,
+// deletable. "With attachments" ships premade: threads with an attachment,
+// never spam or trash, by received day.
+{
+  "views": [
+    { "id": "inbox", "name": "Inbox", "view": { "type": "list", "lockedPlaceholder": true } },
+    { "id": "sent", "name": "Sent", "view": { "type": "list", "lockedPlaceholder": true } },
+    { "id": "drafts", "name": "Drafts", "view": { "type": "list", "lockedPlaceholder": true } },
+    { "id": "done", "name": "Done", "view": { "type": "list", "lockedPlaceholder": true } },
+    { "id": "spam", "name": "Spam", "view": { "type": "list", "lockedPlaceholder": true } },
+    { "id": "trash", "name": "Trash", "view": { "type": "list", "lockedPlaceholder": true } },
+    {
+      "id": "with-attachments",
+      "name": "With attachments",
+      "icon": "attach-file",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "date", "groupingId": "smart" },
+        "filter": {
+          "kind": "group",
+          "id": "with-attachments-root",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "with-attachments-has",
+              "fieldId": "hasAttachment",
+              "operatorId": "is",
+              "value": true
+            },
+            {
+              "kind": "rule",
+              "id": "with-attachments-not-bin",
+              "fieldId": "mailboxes",
+              "operatorId": "lacks-nested",
+              "value": ["role:spam", "role:trash"]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

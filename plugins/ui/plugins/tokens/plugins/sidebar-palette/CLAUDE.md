@@ -27,6 +27,7 @@
     - `apps/browser/shell`
     - `apps/deploy/shell`
     - `apps/file-explorer/shell`
+    - `apps/mail/shell`
     - `apps/pages/shell`
     - `ui/tokens/sidebar-palette/customizer`
 - Sub-plugins:

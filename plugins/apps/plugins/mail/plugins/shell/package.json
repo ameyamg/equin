@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-shell",
+  "description": "The Mail app's identity, rail entry, frame and dark theme.",
+  "private": true,
+  "version": "0.0.1"
+}

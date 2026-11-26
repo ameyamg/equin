@@ -1,3 +1,4 @@
+import { decodeHtmlText } from "@plugins/infra/plugins/html-decode/core";
 import {
   GmailResponseShapeError,
   type GmailMessage,
@@ -84,7 +85,9 @@ export function summaryOfThread(t: GmailThread): ThreadSummary {
     subject: decodeEncodedWords(
       header(messages[0]!.payload?.headers, "Subject") ?? "",
     ),
-    snippet: last.snippet ?? t.snippet ?? "",
+    // Gmail's snippet is HTML-escaped text (`d&#39;avoir`): decoded once here,
+    // so every reader gets plain text.
+    snippet: decodeHtmlText(last.snippet ?? t.snippet ?? ""),
     participants,
     recipients,
     lastMessageAt,

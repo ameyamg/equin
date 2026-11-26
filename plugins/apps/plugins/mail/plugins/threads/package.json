@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-threads",
+  "description": "The Mail app's index pane: the threads DataView over mail.threads, its built-in and label views, and the mail sidebar.",
+  "private": true,
+  "version": "0.0.1"
+}

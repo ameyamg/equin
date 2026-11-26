@@ -65,6 +65,7 @@ import {
 } from "../internal/use-sort-controller";
 import { useGroupingRegistry } from "../grouping-slot";
 import { useLiveSource, type SourceView } from "../internal/live-source";
+import { groupDirection } from "../internal/group-direction";
 import {
   unavailableRules,
   UnavailableFilterRuleError,
@@ -822,12 +823,21 @@ function DataViewBodyInner<TRow>(
   // for the same day.
   const now = useGroupingClock();
   const collapsedSections = viewModel.collapsedSectionsFor(activeViewId);
+  // A fixed-order source reads in its collection's default order whatever
+  // sort a view was saved with.
+  const liveState = useMemo(
+    () =>
+      liveSource?.fixedOrder != null && activeState.sort.length > 0
+        ? { ...activeState, sort: [] }
+        : activeState,
+    [liveSource, activeState],
+  );
   const live = useLiveSource({
     source: flatLiveSource,
     collection: liveSource?.collection ?? null,
     plan: livePlan,
     fields,
-    state: activeState,
+    state: liveState,
     resolveOperatorSet,
     resolveGrouping: groupingRegistry.resolve,
     now,
@@ -973,7 +983,11 @@ function DataViewBodyInner<TRow>(
   // view honors sort (the tree sorts each sibling group by field, defaulting to
   // manual/rank order), so this stays enabled; the flag remains for future
   // sort-less view types. Default (undefined) = honors sort.
-  const activeSupportsSort = activeInstance.viewType.supportsSort !== false;
+  // A live source whose order is fixed (`liveDataSource(…, { fixedOrder })`:
+  // its provider pages one way only) offers no sort at all.
+  const activeSupportsSort =
+    activeInstance.viewType.supportsSort !== false &&
+    props.source?.fixedOrder == null;
   // Whether the active view can render a flat rank-ordered, drag-reorderable
   // body at all (list/table opt in; gallery/tree do not). It says nothing about
   // whether an order is *available* — see `manualOrderActive` below.
@@ -1002,9 +1016,26 @@ function DataViewBodyInner<TRow>(
   // live source zeroes out (the SQL already sorted) — the views can
   // therefore no longer see the direction themselves, which is exactly why this
   // is computed here and threaded down.
+  //
+  // With no sort of its own, a live view is in its collection's default order
+  // (`live-source.tsx`), so the grouped field's direction there is the one
+  // its rows arrive in — a mail list (date desc) reads Today first.
+  const groupedFieldId = activeState.groupBy?.fieldId;
   const groupOrder: "asc" | "desc" =
-    activeState.sort.find((r) => r.fieldId === activeState.groupBy?.fieldId)
-      ?.direction ?? "asc";
+    groupedFieldId === undefined
+      ? "asc"
+      : groupDirection(
+          liveState.sort,
+          groupedFieldId,
+          liveSource === undefined
+            ? undefined
+            : {
+                orderBy: liveSource.collection.window.window.defaultOrderBy,
+                column:
+                  fields.find((f) => f.id === groupedFieldId)?.column?.name ??
+                  groupedFieldId,
+              },
+        );
   // The `Grouping` registry read, likewise once per surface: the toolbar's
   // group-by control asks "which fields can group?" through it (the settings
   // contribution's `isApplicable` is a pure function and cannot read a slot).

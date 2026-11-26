@@ -258,6 +258,8 @@ summaries, membership re-check, reset, refusals.
     - `mailMailboxes`
     - `mailThreads`
     - `PARENT_VIEW_INCLUDES_SUB_LABELS`
+- Cross-plugin:
+  - Imported by: `apps/mail/threads`
 - Exemptions:
   - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/sync.ts` (sanctioned)
 

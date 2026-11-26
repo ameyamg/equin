@@ -338,6 +338,7 @@ export const LUCIDE_MAP = {
   repeat: "repeat",
   replay: "rotate-ccw",
   "replay-10": "rotate-ccw",
+  report: "octagon-alert",
   "restart-alt": "rotate-ccw",
   restaurant: "utensils",
   "restore-from-trash": "archive-restore",

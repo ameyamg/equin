@@ -48,6 +48,38 @@ export interface ViewInstance {
   source?: string;
   /** Opaque per-instance options forwarded to the view-type component. */
   options?: unknown;
+  /**
+   * A view the HOST defines (`ViewModelOptions.locked`), not a config row:
+   * copy-only — it is never renamed, re-iconed, reordered, deleted or saved
+   * over; an edit to it is a working copy that can only be saved as a NEW
+   * view. Absent on every config-authored instance.
+   */
+  locked?: true;
+  /** The view's colour (a CSS colour), drawn as a dot in its icon's place
+   *  where views are listed. Only a locked view carries one. */
+  color?: string;
+}
+
+/**
+ * A view the host defines in code or derives from data (a mail label, a
+ * built-in mailbox) rather than one authored in the surface's config:
+ * copy-only (see `ViewInstance.locked`). A config row of its id is its
+ * PLACEHOLDER (`{ id, name, view: { type, lockedPlaceholder: true } }`): it
+ * holds the view's place, nothing else; one without a placeholder is listed
+ * before the config's views, in the order given.
+ */
+export interface LockedViewRow {
+  id: string;
+  name: string;
+  /** Its glyph (code's own, not a saved pick); absent = the view-type's. A
+   *  copy of the view (Duplicate, Save as new) takes the view-type's. */
+  icon?: IconRef;
+  /** Its colour, drawn as a dot in the icon's place (`ViewInstance.color`). */
+  color?: string;
+  /** The view value `{ type, ...options }` — what the view IS. */
+  view: VariantValue;
+  /** Its source entry (`ViewSourceEntry.id`); absent = the implicit one. */
+  source?: string;
 }
 
 /**

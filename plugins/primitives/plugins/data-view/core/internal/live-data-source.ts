@@ -90,6 +90,13 @@ export interface LiveDataSource<
   readonly surface: DataViewId;
   /** How the surface's custom columns reach the collection (see {@link LiveCustomColumns}). */
   readonly customColumns: LiveCustomColumns;
+  /**
+   * Why the source is read in its collection's default order only, or `null`
+   * when a view may sort it: its provider pages one way (a mailbox, newest
+   * first). A fixed-order DataView offers no Sort control and no sorting
+   * header, and reads the default order whatever sort a view was saved with.
+   */
+  readonly fixedOrder: string | null;
 }
 
 /**

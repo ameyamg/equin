@@ -1,0 +1,9 @@
+// @hash 81ba03048557
+{
+  // The Mail app paints its own theme, `mail` (the approved prototype's dark
+  // slate palette), contributed by the Mail shell
+  // (`plugins/apps/plugins/mail/plugins/shell/web/internal/theme.ts`) — never
+  // the desktop's runtime choice. The app is dark only (`colorMode: "dark"`
+  // in its `defineApp`).
+  "theme": "mail"
+}

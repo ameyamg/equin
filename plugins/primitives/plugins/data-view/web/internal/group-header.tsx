@@ -288,7 +288,7 @@ export function DataViewGroupHeader({
           `rule`) starts after it. */}
       <Text
         pick={DATA_VIEW_PICKS.groupCount}
-        className="text-group-count-ink"
+        className={cn("text-group-count-ink", GROUP_COUNT_CLASS)}
         {...dataPart("dv.group-count")}
       >
         {formatSectionCount(section.count)}
@@ -296,6 +296,9 @@ export function DataViewGroupHeader({
     </SectionHeaderRow>
   );
 }
+
+/** The count's display, the theme's call (`groupCount`: `shown` / `hidden`). */
+const GROUP_COUNT_CLASS = "[@container_style(--group-count:hidden)]:hidden";
 
 /** A group header's inline name field: selected on open; Enter or blur
  *  commits the trimmed name (an empty one cancels), Escape cancels — and the
