@@ -22,8 +22,9 @@ its table/filter capabilities from `number` via the identity `extends` chain.
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
+    - `config_v2/fields.NumberControl`
     - `config_v2/fields.useLocalValue`
-    - `primitives/css/ui-kit.Input`
+    - `config_v2/fields.useNumberFit`
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`

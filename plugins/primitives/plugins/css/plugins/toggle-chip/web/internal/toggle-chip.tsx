@@ -178,9 +178,12 @@ function iconOnlyName<T extends string>(
  * A segmented control's look: one of the chip colour treatments (each segment a
  * `ToggleChip`), or `"underline"` — a tab strip: bare segments on one hairline,
  * the selected one in the foreground over a 2px underline sitting ON that
- * hairline (a page's section tabs, where pills would read as filters).
+ * hairline (a page's section tabs, where pills would read as filters), or
+ * `"track"` — a classic segmented control: the segments sit in one tinted,
+ * bordered track and the selected one is raised onto the surface (a form
+ * field's value, where the choices are parts of ONE control, not filters).
  */
-export type SegmentedVariant = ToggleChipVariant | "underline";
+export type SegmentedVariant = ToggleChipVariant | "underline" | "track";
 
 export interface SegmentedControlProps<
   T extends string,
@@ -289,6 +292,32 @@ export function SegmentedControl<T extends string>({
   label,
   wrap = false,
 }: SegmentedControlProps<T>) {
+  if (variant === "track") {
+    return (
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className={cn(
+          "inline-flex max-w-full gap-2xs rounded-control border border-border bg-muted p-2xs",
+          wrap ? "flex-wrap" : "flex-nowrap",
+          className,
+        )}
+      >
+        {options.map((opt) => (
+          <TrackSegment
+            key={opt.id}
+            active={opt.id === value}
+            icon={opt.icon}
+            label={opt.label}
+            count={opt.count}
+            tooltip={opt.tooltip}
+            ariaLabel={iconOnlyName(opt)}
+            onSelect={() => onChange(opt.id)}
+          />
+        ))}
+      </div>
+    );
+  }
   if (variant === "underline") {
     if (wrap)
       throw new Error("SegmentedControl: an underline strip cannot wrap");
@@ -343,5 +372,51 @@ export function SegmentedControl<T extends string>({
         </ToggleChip>
       ))}
     </div>
+  );
+}
+
+/**
+ * One segment of the `"track"` variant: a borderless button inside the track,
+ * muted until selected; the selected one is raised onto the surface — the
+ * page's background, a hairline ring, its label in the foreground — so the
+ * pick reads as a part of one control lifted out of it.
+ */
+function TrackSegment({
+  active,
+  icon,
+  label,
+  count,
+  tooltip,
+  ariaLabel,
+  onSelect,
+}: UnderlineTabProps) {
+  return (
+    <WithTooltip content={tooltip}>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={active}
+        aria-label={ariaLabel}
+        onClick={onSelect}
+        className={cn(
+          "inline-flex shrink-0 items-center whitespace-nowrap rounded-control-sm transition-colors",
+          "control-sm px-control-sm gap-control-sm",
+          active
+            ? "bg-background text-foreground ring-1 ring-border"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {icon}
+        {label != null && (
+          <Text
+            variant="control"
+            className={active ? "font-semibold" : undefined}
+          >
+            {label}
+          </Text>
+        )}
+        {count !== undefined && <CountBadge count={count} />}
+      </button>
+    </WithTooltip>
   );
 }

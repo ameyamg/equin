@@ -6025,7 +6025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `config_v2/fields.FieldRenderer`
                       - `config_v2/fields.FieldsForm`
                       - `infra/endpoints.getEndpointErrorMessage`
-                      - `primitives/css/control-panel.ControlPanelPane`
+                      - `primitives/css/control-panel.ControlPanelForm`
                       - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
@@ -18357,23 +18357,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors: 42 contributors — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
           - `Fields.Renderer` ×21
           - `Fields.Sample` ×21
-        - Uses:
+        - Uses: 23 symbols — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
+          - `primitives/css/control-panel` ×8
+          - `primitives/css/ui-kit` ×3
+          - `primitives/css/toggle-chip` ×2
+          - `primitives/sortable-list` ×2
           - `primitives/css/cluster.Cluster`
-          - `primitives/css/control-panel.ControlPanel`
-          - `primitives/css/control-panel.ControlPanelHandleProps`
-          - `primitives/css/control-panel.ControlPanelPane`
-          - `primitives/css/control-panel.ControlPanelPopover`
-          - `primitives/css/control-panel.useControlPanelHost`
-          - `primitives/css/control-panel.usePanelStack`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
-          - `primitives/css/toggle-chip.ToggleChip`
-          - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/slot-render.defineDispatchSlot`
-          - `primitives/sortable-list.SortableItem`
-          - `primitives/sortable-list.SortableList`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ConfigFieldAdornments`
           - `FieldRendererProps`
@@ -18386,9 +18382,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldRenderer`
           - `Fields`
           - `FieldsForm`
+          - `NumberControl`
           - `useFieldSamples`
           - `useLocalValue`
+          - `useNumberFit`
       - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 31 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
           - `fields` ×22
           - `apps` ×7
@@ -18487,7 +18486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/column.Column`
-          - `primitives/css/control-panel.ControlPanelPane`
+          - `primitives/css/control-panel.ControlPanelForm`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
           - `primitives/css/placeholder.Placeholder`
@@ -31345,7 +31344,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
+              - `config_v2/fields.useLocalValue`
               - `primitives/css/color-picker.ColorPickerPopover`
+              - `primitives/css/control-panel.useControlPanelLayout`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
@@ -31357,6 +31360,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `colorField`
               - `colorSample`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/font-family --font-mono`
+              - `ui/tokens/shape --spacing`
         - **`table`** — Color field type: data-view table cell (read-only color swatch).
           - Web:
             - Contributes: `DataViewSlots.Cell` "color" → `ColorCell`
@@ -31734,6 +31741,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/css/cluster.Cluster`
+              - `primitives/css/control-panel.useControlPanelLayout`
               - `primitives/css/toggle-chip.ToggleChip`
             - Exports (types):
               - `DynamicFlagOption`
@@ -31884,8 +31892,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
+              - `config_v2/fields.NumberControl`
               - `config_v2/fields.useLocalValue`
-              - `primitives/css/ui-kit.Input`
+              - `config_v2/fields.useNumberFit`
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
@@ -32068,8 +32077,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
+              - `config_v2/fields.NumberControl`
               - `config_v2/fields.useLocalValue`
-              - `primitives/css/ui-kit.Input`
+              - `config_v2/fields.useNumberFit`
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
@@ -32132,9 +32142,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
+              - `config_v2/fields.useLocalValue`
+              - `primitives/css/control-panel.useControlPanelLayout`
               - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Textarea`
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
@@ -32159,6 +32173,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-scale`
+              - `ui/tokens/type-scale --font-size-caption`
+              - `ui/tokens/type-scale --font-weight-normal`
+              - `ui/tokens/type-scale --line-height-caption`
             - Imported by: 49 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×13
               - `conversations` ×8
@@ -32977,7 +32995,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
+              - `primitives/css/control-panel.useControlPanelLayout`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
+              - `primitives/dom/scroll-reveal.focusElement`
+              - `primitives/hover-reveal.hoverRevealGroup`
+              - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
+              - `primitives/icon-button.IconButton`
+              - `ui/icons.Icon`
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
@@ -32994,6 +33021,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stringListField`
               - `stringListSample`
           - Cross-plugin:
+            - Uses tokens: `ui/tokens/font-family --font-mono`
             - Imported by:
               - `apps/deploy/analytics/sessions`
               - `apps/deploy/deployments`
@@ -53369,7 +53397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
           - Exemptions:
             - Exempts itself from: `line/no-raw-single-line-provider` — `web/internal/column.tsx` (sanctioned)
-        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its four surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane), ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose) and ControlPanelForm (a record's fields as a form: label over description beside a control column aligned at every depth, nesting as tinted boxes). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
             - Uses: 26 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `primitives/css/ui-kit` ×12
@@ -53393,6 +53421,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ControlPanelFieldProps`
               - `ControlPanelFit`
               - `ControlPanelFooterProps`
+              - `ControlPanelFormProps`
               - `ControlPanelGroupProps`
               - `ControlPanelHandleProps`
               - `ControlPanelHost`
@@ -53417,26 +53446,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `ControlPanel`
               - `ControlPanelCard`
+              - `ControlPanelForm`
               - `ControlPanelPane`
               - `ControlPanelPopover`
               - `panelOverflowReportSink`
               - `useControlPanelHost`
+              - `useControlPanelLayout`
+              - `useGroupInlines`
               - `usePanelStack`
           - Cross-plugin:
-            - Uses tokens: 30 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `ui/tokens/density` ×12
-              - `ui/tokens/color-palette` ×9
-              - `ui/tokens/type-scale` ×7
-              - `ui/tokens/shape` ×2
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Uses tokens: 35 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `ui/tokens/density` ×14
+              - `ui/tokens/color-palette` ×10
+              - `ui/tokens/type-scale` ×8
+              - `ui/tokens/shape` ×3
+            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×14
+              - `fields` ×6
               - `page` ×6
               - `primitives` ×4
               - `config_v2` ×3
               - `tasks` ×3
               - `audience` ×2
               - `conversations` ×2
-              - `fields` ×2
               - `hints` ×2
               - `ui` ×2
               - `apps-core/surface`
@@ -53498,7 +53530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 194 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×52
               - `primitives` ×34
               - `conversations` ×28
@@ -53518,6 +53550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-launcher`
               - `auth`
               - `companions/panel`
+              - `fields/string-list/config`
               - `music/background`
               - `tag-tree/picker`
               - `upstream`
@@ -54215,7 +54248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 474 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 478 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×79
               - `primitives` ×57
@@ -54224,7 +54257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×26
               - `tasks` ×21
               - `plugin-meta` ×16
-              - `fields` ×11
+              - `fields` ×14
               - `infra` ×9
               - `apps-core` ×7
               - `stats` ×7
@@ -54232,8 +54265,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×5
               - `companions` ×5
               - `shell` ×5
+              - `config_v2` ×4
               - `review` ×4
-              - `config_v2` ×3
               - `integrations` ×3
               - `reorder` ×3
               - `active-data` ×2
@@ -54584,11 +54617,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SegmentedControl`
               - `ToggleChip`
           - Cross-plugin:
-            - Uses tokens: 33 vars — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Uses tokens: 36 vars — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `ui/tokens/density` ×14
               - `ui/tokens/color-palette` ×12
-              - `ui/tokens/type-scale` ×6
-              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale` ×7
+              - `ui/tokens/shape` ×3
             - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×7
@@ -56825,13 +56858,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×17
               - `page` ×6
               - `conversations` ×4
               - `apps-core` ×2
               - `search` ×2
+              - `fields/string-list/config`
               - `hints`
               - `layouts/miller`
               - `media/player`
@@ -57612,13 +57646,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×12
           - `page` ×9
           - `primitives` ×9
           - `ui` ×4
+          - `fields` ×3
           - `conversations` ×2
-          - `fields` ×2
           - `integrations/youtube`
           - `layouts/miller`
           - `plugin-meta/exhibits`
@@ -57639,7 +57673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 151 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×47
           - `primitives` ×25
           - `conversations` ×20
@@ -57647,11 +57681,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×7
           - `debug` ×6
           - `config_v2` ×4
+          - `fields` ×3
           - `infra` ×3
           - `shell` ×3
           - `apps-core` ×2
           - `companions` ×2
-          - `fields` ×2
           - `hints` ×2
           - `screenshot` ×2
           - `ui` ×2
@@ -57783,7 +57817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 136 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 137 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×38
           - `primitives` ×28
           - `conversations` ×13
@@ -57799,6 +57833,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `search` ×2
           - `active-data/task`
           - `build`
+          - `config_v2/fields`
           - `hints/ask`
           - `integrations/google-maps`
           - `map`
@@ -69593,12 +69628,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 618 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 619 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×155
           - `conversations` ×123
           - `primitives` ×56
           - `page` ×51
-          - `fields` ×43
+          - `fields` ×44
           - `debug` ×30
           - `tasks` ×28
           - `plugin-meta` ×16
@@ -71210,16 +71245,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 158 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 160 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×24
               - `plugin-meta` ×23
               - `debug` ×20
               - `primitives` ×15
               - `reports` ×7
+              - `fields` ×5
               - `infra` ×5
               - `tasks` ×5
-              - `fields` ×3
               - `ui` ×3
               - `active-data` ×2
               - `auth` ×2
@@ -71574,7 +71609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 423 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 425 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×81
               - `primitives` ×64
@@ -71582,17 +71617,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×28
               - `ui` ×25
               - `tasks` ×16
-              - `fields` ×10
+              - `fields` ×11
               - `plugin-meta` ×8
               - `infra` ×7
               - `companions` ×6
               - `reorder` ×6
               - `apps-core` ×5
               - `stats` ×5
+              - `config_v2` ×4
               - `review` ×4
               - `shell` ×4
               - `build` ×3
-              - `config_v2` ×3
               - `active-data` ×2
               - `backup` ×2
               - `screenshot` ×2
@@ -71773,7 +71808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 241 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 242 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×63
               - `conversations` ×39
               - `primitives` ×39
@@ -71782,7 +71817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×11
               - `page` ×10
               - `ui` ×7
-              - `fields` ×4
+              - `fields` ×5
               - `review` ×4
               - `stats` ×4
               - `auth` ×3

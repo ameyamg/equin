@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import type { FieldsRecord } from "@plugins/fields/core";
-import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanelForm } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { FieldRenderer } from "./field-renderer";
 
@@ -32,11 +32,11 @@ export interface FieldsFormProps {
  * blur, not per keystroke), so `onChange` fires at field-edit frequency and is
  * safe to wire straight to an autosave PATCH.
  *
- * The form IS a control panel, so it is one: `ControlPanelPane` publishes the
- * panel body (and with it the rail, the row height and the hairlines between
- * bands), the panel stack a nested group needs, and the host policy every field
- * reads — inline the first level of nesting, and keep descriptions visible on
- * the band rather than behind a hover.
+ * The form IS a control panel's form surface, so it is one: `ControlPanelForm`
+ * publishes the panel body (the label | control columns, the hairlines between
+ * top-level fields), the panel stack a nested group needs, and the host policy
+ * every field reads — nest as tinted boxes, and keep descriptions visible
+ * under each field's label rather than behind a hover.
  */
 export function FieldsForm({
   fields,
@@ -55,7 +55,7 @@ export function FieldsForm({
   }
 
   return (
-    <ControlPanelPane>
+    <ControlPanelForm>
       {entries.map(([key, field]) => (
         <FieldRenderer
           key={key}
@@ -64,6 +64,6 @@ export function FieldsForm({
           onChange={(value) => onChange(key, value)}
         />
       ))}
-    </ControlPanelPane>
+    </ControlPanelForm>
   );
 }

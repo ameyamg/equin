@@ -40,7 +40,12 @@ export {
   type ControlPanelFit,
   type ControlPanelMark,
 } from "./internal/setting-row";
-export { useControlPanelHost, type ControlPanelHost } from "./internal/host";
+export {
+  useControlPanelHost,
+  useGroupInlines,
+  useHostLayout as useControlPanelLayout,
+  type ControlPanelHost,
+} from "./internal/host";
 export {
   ControlPanelCard,
   type ControlPanelCardProps,
@@ -49,9 +54,13 @@ export {
   ControlPanelPane,
   type ControlPanelPaneProps,
 } from "./internal/control-panel-pane";
+export {
+  ControlPanelForm,
+  type ControlPanelFormProps,
+} from "./internal/control-panel-form";
 
 export default {
   description:
-    "The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.",
+    "The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its four surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane), ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose) and ControlPanelForm (a record's fields as a form: label over description beside a control column aligned at every depth, nesting as tinted boxes). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.",
   contributions: [],
 } satisfies PluginDefinition;

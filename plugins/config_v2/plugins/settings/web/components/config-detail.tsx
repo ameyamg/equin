@@ -24,7 +24,7 @@ import type {
   ConfigV2Tiers,
   ConfigV2Values,
 } from "@plugins/config_v2/core";
-import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanelForm } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -678,7 +678,7 @@ function ConfigDetailBody({
               the row height and the hairlines between bands; it owns neither the
               scroll (PaneChrome's is already the scroller) nor the width (the
               pane's own role). */}
-          <ControlPanelPane>
+          <ControlPanelForm>
             {Object.entries(registration.descriptor.fields).map(
               ([key, field]) => (
                 <ConfigField
@@ -694,7 +694,7 @@ function ConfigDetailBody({
                 />
               ),
             )}
-          </ControlPanelPane>
+          </ControlPanelForm>
         </>
       )}
     </>

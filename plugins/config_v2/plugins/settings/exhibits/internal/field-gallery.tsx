@@ -7,7 +7,7 @@ import {
   type FieldSampleEntry,
 } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldDef } from "@plugins/fields/core";
-import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanelForm } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
@@ -36,11 +36,11 @@ export default function FieldGalleryExhibit() {
   return (
     <Stack gap="xs" className="p-md">
       <ConfigFieldAdornmentsProvider value={NO_ADORNMENTS}>
-        <ControlPanelPane>
+        <ControlPanelForm>
           {entries.map((entry) => (
             <SampleField key={entry.typeId} entry={entry} />
           ))}
-        </ControlPanelPane>
+        </ControlPanelForm>
       </ConfigFieldAdornmentsProvider>
     </Stack>
   );

@@ -29,7 +29,7 @@ imports:
 - `FieldRenderer` — recursive dispatch into a sub-field (used by `list` /
   `object` shapes to recurse).
 - `FieldsForm({ fields, values, onChange, emptyLabel? })` — a whole form from
-  any `FieldsRecord`: one `FieldRenderer` per key inside a `ControlPanelPane`,
+  any `FieldsRecord`: one `FieldRenderer` per key inside a `ControlPanelForm`,
   `onChange(key, value)` per edited field (the caller merges and persists).
   Used by the Events app's source forms; any consumer whose shape is declared
   as fields gets a form with zero form code. It never names a field type or a
@@ -79,23 +79,19 @@ the config-only templates to mirror.
   - Slot contributors: 42 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Fields.Renderer` ×21
     - `Fields.Sample` ×21
-  - Uses:
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/control-panel` ×8
+    - `primitives/css/ui-kit` ×3
+    - `primitives/css/toggle-chip` ×2
+    - `primitives/sortable-list` ×2
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelHandleProps`
-    - `primitives/css/control-panel.ControlPanelPane`
-    - `primitives/css/control-panel.ControlPanelPopover`
-    - `primitives/css/control-panel.useControlPanelHost`
-    - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/sortable-list.SortableItem`
-    - `primitives/sortable-list.SortableList`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ConfigFieldAdornments`
     - `FieldRendererProps`
@@ -108,9 +104,12 @@ the config-only templates to mirror.
     - `FieldRenderer`
     - `Fields`
     - `FieldsForm`
+    - `NumberControl`
     - `useFieldSamples`
     - `useLocalValue`
+    - `useNumberFit`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×22
     - `apps` ×7

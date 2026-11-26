@@ -2,7 +2,7 @@
 
 ## The fields are a control panel; everything else is pane chrome
 
-`config-detail.tsx` wraps ONLY the field list in `ControlPanelPane`. The scope
+`config-detail.tsx` wraps ONLY the field list in `ControlPanelForm`. The scope
 tabs, the three conflict banners, the Reset all / Stop customizing / Raw file
 toolbar and the raw + diff views stay outside it — they are chrome about the
 descriptor, not settings in it, and a banner rendered as a panel member would
@@ -127,7 +127,7 @@ renderer, which only the running app has.
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
-    - `primitives/css/control-panel.ControlPanelPane`
+    - `primitives/css/control-panel.ControlPanelForm`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`

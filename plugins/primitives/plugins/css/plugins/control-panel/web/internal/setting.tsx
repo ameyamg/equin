@@ -1,6 +1,8 @@
 import type React from "react";
 
+import { FormBand, FormRow } from "./form-row";
 import type { ControlPanelHandleProps } from "./handle";
+import { useHostLayout } from "./host";
 import {
   SettingNote,
   SettingRow,
@@ -16,6 +18,13 @@ export interface ControlPanelSettingProps {
    * line. See `HintedLabelCell`.
    */
   hint?: string;
+  /**
+   * Explanatory prose as a VISIBLE line under the label — wrapping, muted.
+   * The row grows to hold it (invariant #2's described exception). In a form
+   * (`ControlPanelForm`) it is the label column's second line. Pass it OR
+   * `hint`: given both, the description is drawn and the hint is not.
+   */
+  description?: string;
   /**
    * THE CONTROL. Interactive by contract: this row's box is a plain `<div>`, so
    * nesting is legal here and only here. There is NO `onSelect` and NO `href` on
@@ -79,6 +88,7 @@ export interface ControlPanelSettingProps {
 export function ControlPanelSetting({
   label,
   hint,
+  description,
   control,
   fit,
   status,
@@ -90,11 +100,38 @@ export function ControlPanelSetting({
   disabled,
   className,
 }: ControlPanelSettingProps) {
+  const layout = useHostLayout();
+  if (layout === "form") {
+    if (handle) {
+      throw new Error(
+        "ControlPanel.Setting: a form row hangs no drag handle — a reorderable " +
+          "item in a form is a `Group item`, whose box carries the handle.",
+      );
+    }
+    return (
+      <FormBand>
+        <FormRow
+          label={label}
+          hint={hint}
+          description={description}
+          control={control}
+          fit={fit}
+          status={status}
+          actions={actions}
+          mark={mark}
+          note={note}
+          disabled={disabled}
+          className={className}
+        />
+      </FormBand>
+    );
+  }
   return (
     <>
       <SettingRow
         label={label}
         hint={hint}
+        description={description}
         control={control}
         fit={fit}
         status={status}

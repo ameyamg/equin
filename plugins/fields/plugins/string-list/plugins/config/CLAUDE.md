@@ -33,7 +33,16 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
+    - `primitives/css/control-panel.useControlPanelLayout`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
+    - `primitives/dom/scroll-reveal.focusElement`
+    - `primitives/hover-reveal.hoverRevealGroup`
+    - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
+    - `primitives/icon-button.IconButton`
+    - `ui/icons.Icon`
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`
@@ -50,6 +59,7 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
     - `stringListField`
     - `stringListSample`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/font-family --font-mono`
   - Imported by:
     - `apps/deploy/analytics/sessions`
     - `apps/deploy/deployments`

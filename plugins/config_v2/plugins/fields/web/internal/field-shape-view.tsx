@@ -8,16 +8,20 @@ import {
   ControlPanel,
   ControlPanelPopover,
   useControlPanelHost,
+  useGroupInlines,
   usePanelStack,
   type ControlPanelHandleProps,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   SortableItem,
   SortableList,
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import {
+  SegmentedControl,
+  ToggleChip,
+} from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type React from "react";
 import { useId, useState } from "react";
@@ -29,8 +33,10 @@ import {
 } from "./field-adornments";
 import { FieldRenderer } from "./field-renderer";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
+const addIcon = symbol("add");
 
 /**
  * THE THRESHOLD, and it lives here because it is a PRESENTATION decision.
@@ -93,7 +99,10 @@ export function FieldShapeView({
   // config descriptions are real paragraphs that behind a hover would be
   // invisible on touch, unreachable by ⌘F and gone for anyone reading down the
   // page) keeps them visible on a band.
-  const onBand = host.descriptions === "band";
+  // `"label"` (a form) shows it under the field's own label instead — the
+  // member carries it, so no band is drawn for it at all.
+  const visible = host.descriptions !== "hint";
+  const form = host.layout === "form";
   const description = field.meta.description;
   return (
     // The adornments are CONSUMED here and cleared for everything below. A group
@@ -103,14 +112,14 @@ export function FieldShapeView({
     <ConfigFieldAdornmentsProvider value={null}>
       <ShapeMember
         label={field.meta.label ?? ""}
-        hint={onBand ? undefined : description}
+        hint={visible ? undefined : description}
         // A field that carries prose is its own subject, so it is its own BAND —
         // in either host. Only WHERE the prose is shown differs by host, which is
         // why this reads the description itself rather than the rendered one:
         // keyed on the rendered one, a popover banded nothing at all and a run of
         // unrelated toggles ran together with no rule between them.
-        band={description != null}
-        description={onBand ? description : undefined}
+        band={!form && description != null}
+        description={visible ? description : undefined}
         adornments={adornments}
         shape={shape}
       />
@@ -123,7 +132,7 @@ interface ShapeMemberProps {
   hint?: string;
   /** Whether this field is a band of its own. See `Banded`. */
   band?: boolean;
-  description?: React.ReactNode;
+  description?: string;
   /**
    * What the HOST says about this field — `null` when the host adorns nothing,
    * which is every popover. See `field-adornments` for why presence and content
@@ -154,6 +163,7 @@ function ShapeMember({
   shape,
 }: ShapeMemberProps) {
   const host = adornments ?? NO_ADORNMENTS;
+  const form = useControlPanelHost().layout === "form";
   const handle = handleProps !== undefined;
   const { mark, status, note } = host;
   const rowActions = mergeActions(host.actions, actions);
@@ -170,7 +180,10 @@ function ShapeMember({
   // Keyed on whether the host adorns AT ALL, never on whether it currently has
   // something to say — a toggle that turned into a different control the moment
   // it was edited would be the worst of both.
-  const labelledRow = adornments != null;
+  //
+  // A form always draws the labelled row: its switch sits in the control
+  // column with every other control, never as a menu row of its own.
+  const labelledRow = adornments != null || form;
   if (handle && !HANDLED_KINDS.has(shape.kind)) {
     throw new Error(
       `ShapeMember: a "${shape.kind}" shape cannot be a reorderable list item ` +
@@ -185,6 +198,7 @@ function ShapeMember({
             <ControlPanel.Setting
               label={label}
               hint={hint}
+              description={form ? description : undefined}
               fit="inline"
               control={
                 <Switch
@@ -223,6 +237,7 @@ function ShapeMember({
           <ControlPanel.Setting
             label={label}
             hint={hint}
+            description={form ? description : undefined}
             control={shape.control}
             fit={shape.fit}
             status={status}
@@ -343,13 +358,68 @@ function ChoiceMember({
 }: {
   label: React.ReactNode;
   hint?: string;
-  description?: React.ReactNode;
+  description?: string;
   adornments?: ConfigFieldAdornments | null;
   actions?: React.ReactNode;
   shape: ChoiceShape;
 }) {
   const host = adornments ?? NO_ADORNMENTS;
+  const form = useControlPanelHost().layout === "form";
   const selected = new Set(shape.value);
+
+  // A FORM draws every choice as ONE control in the control column, beside
+  // its label — never as a band of rows, which would put the options where
+  // the next field's label belongs:
+  //  - one of a few  → a segmented control (the options are parts of it);
+  //  - many of any   → a wrapping cluster of pill chips;
+  //  - one of many   → the value box opening its picker (below).
+  if (
+    form &&
+    (shape.select === "many" || shape.options.length <= CHOICE_ROWS_MAX)
+  ) {
+    const control =
+      shape.select === "one" ? (
+        <SegmentedControl
+          variant="track"
+          wrap
+          label={typeof label === "string" ? label : undefined}
+          options={shape.options.map((option) => ({
+            id: option.value,
+            label: segmentLabel(option),
+            tooltip: option.hint,
+          }))}
+          value={shape.value[0] ?? null}
+          onChange={shape.onSelect}
+        />
+      ) : (
+        <Cluster gap="2xs">
+          {shape.options.map((option) => (
+            <ToggleChip
+              key={option.value}
+              variant="tinted"
+              active={selected.has(option.value)}
+              tooltip={option.hint}
+              onClick={() => shape.onSelect(option.value)}
+            >
+              {option.label}
+            </ToggleChip>
+          ))}
+        </Cluster>
+      );
+    return (
+      <ControlPanel.Setting
+        label={label}
+        hint={hint}
+        description={description}
+        fit="inline"
+        control={control}
+        status={host.status}
+        actions={actions}
+        mark={host.mark}
+        note={host.note}
+      />
+    );
+  }
 
   if (shape.options.length <= CHOICE_ROWS_MAX) {
     const rows = shape.options.map((option) => (
@@ -428,10 +498,11 @@ function ChoiceMember({
   }
 
   return (
-    <Banded band={description != null} description={description}>
+    <Banded band={!form && description != null} description={description}>
       <ControlPanel.Setting
         label={label}
         hint={hint}
+        description={form ? description : undefined}
         fit="field"
         control={<ChoicePicker label={label} shape={shape} />}
         status={host.status}
@@ -521,6 +592,15 @@ function ChoicePicker({
   );
 }
 
+/** A segment needs a visible label; an option drawn as nothing names itself. */
+function segmentLabel(
+  option: ChoiceOption,
+): Exclude<React.ReactNode, undefined | null | boolean> {
+  const { label } = option;
+  if (label == null || typeof label === "boolean") return option.value;
+  return label;
+}
+
 /** `null` — not `""` — so the `Field` shows its muted placeholder for "unset". */
 function summaryOf(option: ChoiceOption | undefined): React.ReactNode {
   return option?.label ?? null;
@@ -560,14 +640,16 @@ function ListMember({
 }: {
   label: React.ReactNode;
   hint?: string;
-  description?: React.ReactNode;
+  description?: string;
   adornments?: ConfigFieldAdornments | null;
   actions?: React.ReactNode;
   shape: ListShape;
 }) {
   const host = adornments ?? NO_ADORNMENTS;
+  const form = useControlPanelHost().layout === "form";
   return (
     <ControlPanel.Group
+      holds="items"
       label={label}
       hint={hint}
       description={description}
@@ -612,7 +694,16 @@ function ListMember({
           />
         ))
       )}
-      {shape.onAdd ? (
+      {shape.onAdd && form ? (
+        // In a form the items are boxes, so the add is the ghost button under
+        // them — a menu row would read as one more item.
+        <span>
+          <Button variant="ghost" onClick={shape.onAdd}>
+            <Icon icon={addIcon} />
+            {shape.addLabel ?? "Add item"}
+          </Button>
+        </span>
+      ) : shape.onAdd ? (
         // A ROW, not a `Footer`: a footer is a band, so one inside a group would
         // draw a hairline through the middle of it — and invariant #4's leading
         // footer glyph would open the icon column for every row in the PANEL.
@@ -636,6 +727,44 @@ function ListItemMember({
   handleProps?: ControlPanelHandleProps;
 }) {
   const label = itemLabel(item.shape, index);
+  // Past the host's inline budget the item is a drill row (a `<button>`), so
+  // its Remove cannot be a header action — that case keeps the rows arms
+  // below, Remove a member of the pushed page.
+  const form = useControlPanelHost().layout === "form";
+  const inlines = useGroupInlines();
+  const boxed = form && inlines;
+  // A form row hangs no handle (a form `Setting` throws, and a drill row's
+  // handle would open the PANEL's gutter for every field): past the budget a
+  // form's item is not draggable — it is a page link.
+  const rowHandleProps = form ? undefined : handleProps;
+  const remove = onRemove ? (
+    <IconButton
+      icon={closeIcon}
+      label="Remove"
+      onClick={() => onRemove(item.id)}
+    />
+  ) : undefined;
+
+  if (boxed) {
+    // In a form every item is ITS OWN BOX, its header (grip, live title, a
+    // hover-revealed ✕) inside it — a record's fields under the header, a
+    // scalar's one control as the box's body.
+    return (
+      <ControlPanel.Group
+        item
+        label={label}
+        actions={remove}
+        handle={handleProps !== undefined}
+        handleProps={handleProps}
+      >
+        {item.shape.kind === "group" ? (
+          <GroupFields shape={item.shape} />
+        ) : (
+          <ShapeMember label="Value" shape={item.shape} />
+        )}
+      </ControlPanel.Group>
+    );
+  }
 
   if (item.shape.kind === "group") {
     // A `Group`'s drill row is a `<button>` under a pushing host, so an action
@@ -645,8 +774,8 @@ function ListItemMember({
     return (
       <ControlPanel.Group
         label={label}
-        handle={handleProps !== undefined}
-        handleProps={handleProps}
+        handle={rowHandleProps !== undefined}
+        handleProps={rowHandleProps}
       >
         <GroupFields shape={groupShape} />
         {onRemove ? (
@@ -666,16 +795,8 @@ function ListItemMember({
     <ShapeMember
       label={label}
       shape={item.shape}
-      handleProps={handleProps}
-      actions={
-        onRemove ? (
-          <IconButton
-            icon={closeIcon}
-            label="Remove"
-            onClick={() => onRemove(item.id)}
-          />
-        ) : undefined
-      }
+      handleProps={rowHandleProps}
+      actions={remove}
     />
   );
 }

@@ -80,7 +80,7 @@ primitive exists to name.
     - `Fill`
     - `fillClasses`
 - Cross-plugin:
-  - Imported by: 194 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 195 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×52
     - `primitives` ×34
     - `conversations` ×28
@@ -100,6 +100,7 @@ primitive exists to name.
     - `apps-core/app-launcher`
     - `auth`
     - `companions/panel`
+    - `fields/string-list/config`
     - `music/background`
     - `tag-tree/picker`
     - `upstream`

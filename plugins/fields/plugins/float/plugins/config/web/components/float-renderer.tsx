@@ -1,10 +1,10 @@
 import {
   defineFieldShape,
+  NumberControl,
   useLocalValue,
+  useNumberFit,
 } from "@plugins/config_v2/plugins/fields/web";
 import { floatFieldType } from "@plugins/fields/plugins/float/core";
-import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { type FloatFieldDef } from "../../core";
 
 const FloatRenderer = defineFieldShape({
@@ -12,15 +12,15 @@ const FloatRenderer = defineFieldShape({
   useShape: ({ field, value, onChange }) => {
     const { min, max, step } = field as FloatFieldDef;
     const { local, setLocal, focus } = useLocalValue(String(value));
+    const fit = useNumberFit();
     return {
       kind: "value",
-      fit: "field",
+      fit,
       control: (
-        <Input
-          type="number"
-          keep={transient(
-            "a number committed on blur: a half-typed one is harmless to lose",
-          )}
+        <NumberControl
+          keepReason={
+            "a number committed on blur: a half-typed one is harmless to lose"
+          }
           value={local}
           min={min}
           max={max}
@@ -32,7 +32,7 @@ const FloatRenderer = defineFieldShape({
             if (Number.isFinite(n) && n !== value) onChange(n);
             else setLocal(String(value));
           }}
-          onChange={(e) => setLocal(e.target.value)}
+          onChange={setLocal}
         />
       ),
     };

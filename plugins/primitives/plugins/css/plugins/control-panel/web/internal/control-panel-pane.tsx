@@ -54,4 +54,5 @@ const PANE_HOST: ControlPanelHost = {
   inlineDepth: 1,
   descriptions: "band",
   sections: "label",
+  layout: "rows",
 };

@@ -13,8 +13,11 @@ export interface ControlPanelHost {
    * collapse into nothing.
    */
   readonly inlineDepth: number;
-  /** Where a field's description goes: on the band, or behind a `hint`. */
-  readonly descriptions: "band" | "hint";
+  /**
+   * Where a field's description goes: on the band, behind a `hint`, or visibly
+   * UNDER the field's own label (`"label"` — the form surface).
+   */
+  readonly descriptions: "band" | "hint" | "label";
   /**
    * How a `Section` names its band: `"label"` — the shared menu section label
    * (a popover, a pane), or `"heading"` — a settings card's heading over
@@ -22,6 +25,16 @@ export interface ControlPanelHost {
    * site's, so one `<ControlPanel.Section>` reads right wherever it renders.
    */
   readonly sections: "label" | "heading";
+  /**
+   * The row construction the field members draw. `"rows"` — the menu row:
+   * label on the text rail, control in a trailing value track, nesting an
+   * indented region (the popover, the pane, the card). `"form"` — a form:
+   * a label column (label over its description) beside a control column that
+   * starts at ONE x at every depth, wide controls under the label, nesting a
+   * tinted box (`ControlPanelForm`). The surface's answer, like every field
+   * here: a member written once reads right in either.
+   */
+  readonly layout: "rows" | "form";
 }
 
 const ControlPanelHostContext = createContext<ControlPanelHost | null>(null);
@@ -41,7 +54,7 @@ export function useControlPanelHost(): ControlPanelHost {
   const host = useContext(ControlPanelHostContext);
   if (!host) {
     throw new Error(
-      "useControlPanelHost() requires a ControlPanelPopover, ControlPanelPane or ControlPanelCard " +
+      "useControlPanelHost() requires a ControlPanelPopover, ControlPanelPane, ControlPanelCard or ControlPanelForm " +
         "ancestor. The host decides how a Group presents (push vs inline) and " +
         "where a description goes; there is no correct default.",
     );
@@ -57,6 +70,15 @@ export function useControlPanelHost(): ControlPanelHost {
  */
 export function useSectionStyle(): ControlPanelHost["sections"] {
   return useContext(ControlPanelHostContext)?.sections ?? "label";
+}
+
+/**
+ * The row construction members draw here. Like `useSectionStyle` it does not
+ * throw without a host: a bare `<ControlPanel>` in a `DialogContent` draws the
+ * menu rows it always drew.
+ */
+export function useHostLayout(): ControlPanelHost["layout"] {
+  return useContext(ControlPanelHostContext)?.layout ?? "rows";
 }
 
 /**
@@ -85,6 +107,19 @@ const GroupDepthContext = createContext(0);
 
 export function useGroupDepth(): number {
   return useContext(GroupDepthContext);
+}
+
+/**
+ * Whether a `Group` rendered HERE would inline (`true`) or push a panel
+ * (`false`) — the host's nesting and the depth budget, read the way `Group`
+ * reads them. For a caller that must pick what goes INTO a group by how it
+ * presents: a list item's Remove is a header action on an inline item box,
+ * but a member row inside a pushed page (a drill row is a `<button>`).
+ */
+export function useGroupInlines(): boolean {
+  const host = useControlPanelHost();
+  const depth = useGroupDepth();
+  return host.nesting === "inline" && depth < host.inlineDepth;
 }
 
 export function GroupDepthProvider({

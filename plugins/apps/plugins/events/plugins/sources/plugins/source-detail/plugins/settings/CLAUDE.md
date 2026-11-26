@@ -42,7 +42,7 @@ a new type ships a field record + an extractor and gets a working form.
     - `config_v2/fields.FieldRenderer`
     - `config_v2/fields.FieldsForm`
     - `infra/endpoints.getEndpointErrorMessage`
-    - `primitives/css/control-panel.ControlPanelPane`
+    - `primitives/css/control-panel.ControlPanelForm`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

@@ -5,7 +5,7 @@ import {
 } from "@plugins/config_v2/plugins/fields/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanelForm } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -84,7 +84,7 @@ export function SourceSettingsSection({
           so it needs a panel around it — and `FieldsForm` below opens its
           own, which a second one here must not nest inside. Two panels stacked
           render as one form: same rail, same row height, same hairlines. */}
-      <ControlPanelPane>
+      <ControlPanelForm>
         <FieldRenderer
           field={nameField}
           value={lookup.source.name}
@@ -98,7 +98,7 @@ export function SourceSettingsSection({
             });
           }}
         />
-      </ControlPanelPane>
+      </ControlPanelForm>
       <SourceTypeConfig sourceId={sourceId} type={lookup.source.type} />
       {update.error && (
         <Text as="p" variant="caption" tone="destructive">

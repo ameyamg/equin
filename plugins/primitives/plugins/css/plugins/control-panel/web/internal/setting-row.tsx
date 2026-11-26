@@ -34,6 +34,8 @@ export type ControlPanelFit = "inline" | "field";
 interface SettingRowProps {
   label: React.ReactNode;
   hint?: string;
+  /** A visible, wrapping second line under the label (`DescribedLabelCell`). */
+  description?: string;
   /** The value cell's content. Omitted for a header row that has no control. */
   control?: React.ReactNode;
   fit?: ControlPanelFit;
@@ -70,6 +72,7 @@ interface SettingRowProps {
 export function SettingRow({
   label,
   hint,
+  description,
   control,
   fit,
   status,
@@ -84,7 +87,7 @@ export function SettingRow({
   return (
     <div
       data-cp-mark={mark === "accent" ? "" : mark}
-      aria-describedby={hint ? hintId : undefined}
+      aria-describedby={hint || description ? hintId : undefined}
       className={cn(
         "cp-setting text-body",
         "[&_svg:not([class*='size-'])]:icon-auto",
@@ -113,7 +116,11 @@ export function SettingRow({
           <Icon icon={dragIndicatorIcon} />
         </span>
       ) : null}
-      <HintedLabelCell hint={hint} descriptionId={hintId}>
+      <HintedLabelCell
+        hint={hint}
+        description={description}
+        descriptionId={hintId}
+      >
         {label}
       </HintedLabelCell>
       {/* The value cell exists only when there IS a control, and marking it is

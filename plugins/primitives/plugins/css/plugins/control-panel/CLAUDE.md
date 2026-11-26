@@ -6,7 +6,8 @@ The vocabulary for a **data-control panel** — the body of a Filter / Sort popo
 a view-settings menu, a settings pane, a per-field editor. One compound namespace
 (`ControlPanel` + `.Section` / `.Subhead` / `.Row` / `.Setting` / `.Block` /
 `.Group` / `.RuleList` / `.RuleRow` / `.Field` / `.Footer` / `.Empty` / `.Stack`)
-and three surfaces (`ControlPanelPopover`, `ControlPanelPane`, `ControlPanelCard`).
+and four surfaces (`ControlPanelPopover`, `ControlPanelPane`, `ControlPanelCard`,
+`ControlPanelForm`).
 
 Four ways to be one field:
 
@@ -192,10 +193,11 @@ One edit from wrong:
 Use `Subhead`, not a `Section` (would rule a hairline under its heading) or a
 field label (would indent it).
 
-## Three surfaces, picked by what the thing IS
+## Four surfaces, picked by what the thing IS
 
 | surface | it is | sections draw | descriptions | width |
 |---|---|---|---|---|
+| `ControlPanelForm` | a record's fields as a form (config, a feed item, a source's settings) | the menu section label | under each field's label | the pane's |
 | `ControlPanelPopover` | a menu of choices (filter, sort, view settings) | the menu section label | `hint` | the showing page's need (`cp-surface`) |
 | `ControlPanelPane` | a settings pane | the menu section label | on the band | the pane's |
 | `ControlPanelCard` | a titled settings card under a gear (an app's own settings) | a **heading** over body prose | on the band | `settings` (density `popoverWidthSettings`) |
@@ -223,20 +225,58 @@ draws its plain label (`useSectionStyle`).
 interface ControlPanelHost {
   nesting: "push" | "inline";
   inlineDepth: number;
-  descriptions: "band" | "hint";
+  descriptions: "band" | "hint" | "label";
   sections: "label" | "heading";
+  layout: "rows" | "form";
 }
 ```
 
 | surface | host |
 | --- | --- |
-| `ControlPanelPopover` | `{ push, 0, hint, label }` |
-| `ControlPanelPane` | `{ inline, 1, band, label }` |
-| `ControlPanelCard` | `{ inline, 1, band, heading }` |
+| `ControlPanelPopover` | `{ push, 0, hint, label, rows }` |
+| `ControlPanelPane` | `{ inline, 1, band, label, rows }` |
+| `ControlPanelCard` | `{ inline, 1, band, heading, rows }` |
+| `ControlPanelForm` | `{ inline, 3, label, label, form }` |
 
-- The pane and the card still wrap children in a `ControlPanel.Stack`, so depth
-  ≥ 2 falls back to a push.
+- The pane, the card and the form still wrap children in a `ControlPanel.Stack`,
+  so a group past the budget (depth ≥ 2 in the pane and card, ≥ 3 in the form)
+  falls back to a push. `useGroupInlines()` answers which, for a caller that
+  must pick what goes INTO a group by how it presents.
 - `useControlPanelHost()` **throws** with no host (same as `usePanelStack()`).
+
+## The form layout (`ControlPanelForm`, `layout: "form"`)
+
+The members draw a different row there, read from the host (never a prop):
+
+- **`Setting`** — `cp-form-row`: label cell (semibold label, its
+  `description` visibly under it, first line on the control's first line) |
+  control cell | trailing cell (status + hover actions). `fit="field"` fills the
+  control column, `fit="inline"` sizes to itself and sits at its start —
+  switches included. A form `Setting` takes no `handle` (throws).
+- **`Block`** — the same label cell, its control full width UNDER it.
+- **`Group`** — its label row over ONE tinted box (`cp-form-box`) of its
+  members; `holds="items"` stacks its `Group item`s with no box around them;
+  `Group item` is a list item drawn as its own box, header (handle, label,
+  hover actions) inside it.
+- **One control x at every depth.** The label track is `40cqi` (the form is
+  the inline-size container) minus `--cp-form-nest` — what the enclosing boxes
+  inset, counted by nested `.cp-form-box` selectors (a custom property cannot
+  add to its own inherited value). The formula is written in the row's
+  template, never in a custom property declared on the form (it would freeze
+  the nest at 0). Under a 35rem form every row is one column.
+- **A hairline only between top-level fields**: a member at depth 0 is its own
+  `cp-band`; inside a box rows are separated by space.
+- A box paints a step off the form's canvas (`--cp-form-canvas`, captured at
+  the form root), a box in a box the canvas again; each re-publishes
+  `--chrome-mask` / `--hover-fill`.
+
+`Setting.description` exists in every layout: in `rows` it is the described
+label cell (title over wrapping prose, invariant #2's exception). Pass
+`description` OR `hint` — given both, the visible description wins and the hint
+is not drawn. A control whose look depends on the layout (a field renderer)
+reads `useControlPanelLayout()`; in a form the control cell is a `group` named
+by the label and described by the description, so a control needs no label
+of its own.
 
 **An inline group is a nested rail region** (`cp-group`) — never a margin, never
 `border-l` + `pl-lg`.
@@ -449,7 +489,7 @@ surface isn't viewport-capped, it fails loudly.
 
 ## Plugin reference
 
-- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its four surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane), ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose) and ControlPanelForm (a record's fields as a form: label over description beside a control column aligned at every depth, nesting as tinted boxes). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
   - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×12
@@ -473,6 +513,7 @@ surface isn't viewport-capped, it fails loudly.
     - `ControlPanelFieldProps`
     - `ControlPanelFit`
     - `ControlPanelFooterProps`
+    - `ControlPanelFormProps`
     - `ControlPanelGroupProps`
     - `ControlPanelHandleProps`
     - `ControlPanelHost`
@@ -497,26 +538,29 @@ surface isn't viewport-capped, it fails loudly.
   - Exports (values):
     - `ControlPanel`
     - `ControlPanelCard`
+    - `ControlPanelForm`
     - `ControlPanelPane`
     - `ControlPanelPopover`
     - `panelOverflowReportSink`
     - `useControlPanelHost`
+    - `useControlPanelLayout`
+    - `useGroupInlines`
     - `usePanelStack`
 - Cross-plugin:
-  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×12
-    - `ui/tokens/color-palette` ×9
-    - `ui/tokens/type-scale` ×7
-    - `ui/tokens/shape` ×2
-  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×14
+    - `ui/tokens/color-palette` ×10
+    - `ui/tokens/type-scale` ×8
+    - `ui/tokens/shape` ×3
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
+    - `fields` ×6
     - `page` ×6
     - `primitives` ×4
     - `config_v2` ×3
     - `tasks` ×3
     - `audience` ×2
     - `conversations` ×2
-    - `fields` ×2
     - `hints` ×2
     - `ui` ×2
     - `apps-core/surface`

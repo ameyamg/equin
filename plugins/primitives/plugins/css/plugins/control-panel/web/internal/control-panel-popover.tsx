@@ -155,4 +155,5 @@ const POPOVER_HOST: ControlPanelHost = {
   inlineDepth: 0,
   descriptions: "hint",
   sections: "label",
+  layout: "rows",
 };

@@ -34,6 +34,7 @@ their raw names.
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/control-panel.useControlPanelLayout`
     - `primitives/css/toggle-chip.ToggleChip`
   - Exports (types):
     - `DynamicFlagOption`

@@ -1,5 +1,7 @@
 import type React from "react";
 
+import { FormBand, FormRow } from "./form-row";
+import { useHostLayout } from "./host";
 import {
   SettingDescription,
   SettingNote,
@@ -54,6 +56,26 @@ export function ControlPanelBlock({
   note,
   className,
 }: ControlPanelBlockProps) {
+  // In a form the wide control goes under the label column, the row's whole
+  // width — the same row a `Setting` is, with its control moved down.
+  if (useHostLayout() === "form") {
+    return (
+      <FormBand>
+        <FormRow
+          wide
+          label={label}
+          hint={hint}
+          description={description}
+          control={children}
+          status={status}
+          actions={actions}
+          mark={mark}
+          note={note}
+          className={className}
+        />
+      </FormBand>
+    );
+  }
   return (
     <>
       <SettingRow

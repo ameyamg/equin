@@ -2424,6 +2424,164 @@
   }
 }
 
+@utility cp-form {
+  /* twmerge: standalone -- Composite form-surface root (the form's canvas + box inset published for its rows and boxes); no single-value built-in group to conflict with. */
+  /* THE FORM SURFACE (`ControlPanelForm`), always on the same element as
+     `cp-pane` (whose inline-size container every `cqi` below resolves
+     against — the FORM's width, at any depth).
+     It publishes the two lengths its rows and boxes share. `--cp-form-canvas`
+     is the form's own background, captured HERE (a custom property is
+     substituted where declared), so a box inside a box can paint it while
+     every box re-publishes `--chrome-mask` for what it paints itself.
+     `--cp-form-box-inset` is what one box moves its rows in by — its border
+     plus its inline padding — the unit `--cp-form-nest` counts in. */
+  --cp-form-canvas: var(--chrome-mask);
+  --cp-form-box-inset: calc(1px + var(--space-md));
+  --cp-form-nest: 0px;
+  /* A top-level field is its own band (the member says so at depth 0), so the
+     hairline falls only between top-level fields; this is the band's air. The
+     rule hangs in the panel's gap, so it stays centred whatever pad is here. */
+  & .cp-band {
+    padding-block: var(--space-smd);
+  }
+}
+
+@utility cp-form-row {
+  /* twmerge: standalone -- Composite form-row grid (display + the three tracks + the depth-corrected label column + the narrow-form collapse); no single-value built-in group to conflict with. */
+  /* ONE FIELD OF A FORM: label | control | trailing.
+     THE CONTROL COLUMN STARTS AT ONE X AT EVERY DEPTH. The label track is 40%
+     of the FORM (`cqi`, the form is the container), minus what the boxes this
+     row sits in have already moved it right by (`--cp-form-nest`, counted by
+     `cp-form-box`). Written here, never in a custom property declared on the
+     form: a `var()` inside a custom property is substituted where it is
+     declared, so it would freeze the nest at the form's 0.
+     The floor keeps a label readable in a narrow form; under it a deep row's
+     control steps right, which is the honest failure.
+     The trailing track holds a modified badge and the hover reset: `auto`, so
+     a row without one gives its control the room. */
+  display: grid;
+  grid-template-columns:
+    max(8rem, calc(40cqi - var(--cp-form-nest) - var(--cp-icon-gap)))
+    minmax(0, 1fr)
+    auto;
+  column-gap: var(--cp-icon-gap);
+  row-gap: var(--space-xs);
+  align-items: start;
+  position: relative;
+  /* A wide row (a `Block`, a group's header) is one column: its label over
+     its control, the control the row's whole width. */
+  &[data-cp-wide] {
+    grid-template-columns: minmax(0, 1fr) auto;
+    & > [data-cp-cell="value"] {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+  /* Beside a control, the label's FIRST line sits on the control's first
+     line: the control cell is at least a control tall and centres a shorter
+     control (a switch, a swatch) in that height, so the label is pushed down
+     by half of what a control is taller than one line. */
+  &:not([data-cp-wide]) > [data-cp-cell="label"] {
+    padding-top: calc((var(--control-height-md) - 1lh) / 2);
+  }
+  & > [data-cp-cell="value"] {
+    display: grid;
+    align-items: center;
+    min-width: 0;
+    min-height: var(--control-height-md);
+  }
+  & > [data-cp-cell="value"][data-cp-fit="inline"] {
+    justify-items: start;
+  }
+  & > [data-cp-cell="trailing"] {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    min-height: var(--control-height-md);
+  }
+  &[data-cp-mark]::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(-1 * var(--space-sm));
+    width: 2px;
+    background: var(--primary);
+  }
+  &[data-cp-mark="warning"]::before {
+    background: var(--warning);
+  }
+  /* A narrow form is one column at every row: label over control. */
+  @container (max-width: 35rem) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    & > [data-cp-cell="value"] {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    &:not([data-cp-wide]) > [data-cp-cell="label"] {
+      padding-top: 0;
+    }
+  }
+}
+
+@utility cp-form-box {
+  /* twmerge: standalone -- Composite nesting box (tint + border + radius + inset + the depth count its rows read); no single-value built-in group to conflict with. */
+  /* NESTING HAS ONE CUE: A BOX. An object or a variant is one box of its
+     fields; a list is one box per item. Inside a box rows are separated by
+     space, never by rules, so a hairline only ever means "next top-level
+     field".
+     The box counts how deep it is for its rows' control column
+     (`cp-form-row`): a custom property cannot extend its own inherited value
+     (`calc(var(--x) + …)` on the element declaring `--x` is a cycle), so the
+     depth is spelled by nesting, one rule per level a form can inline.
+     A box paints a step off the form's canvas, a box inside it the canvas
+     again, so neighbouring levels always differ; each re-publishes
+     `--chrome-mask` and `--hover-fill` for what it paints. */
+  --cp-form-nest: var(--cp-form-box-inset);
+  --cp-form-box-bg: color-mix(
+    in oklab,
+    var(--foreground) 3.5%,
+    var(--cp-form-canvas)
+  );
+  background: var(--cp-form-box-bg);
+  --chrome-mask: var(--cp-form-box-bg);
+  --hover-fill: color-mix(in oklab, var(--foreground) 7%, var(--cp-form-canvas));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  & > [data-cp-box-rows] {
+    display: contents;
+  }
+  & .cp-form-box {
+    --cp-form-nest: calc(2 * var(--cp-form-box-inset));
+    --cp-form-box-bg: var(--cp-form-canvas);
+    --hover-fill: color-mix(
+      in oklab,
+      var(--foreground) 5%,
+      var(--cp-form-canvas)
+    );
+  }
+  & .cp-form-box .cp-form-box {
+    --cp-form-nest: calc(3 * var(--cp-form-box-inset));
+    --cp-form-box-bg: color-mix(
+      in oklab,
+      var(--foreground) 3.5%,
+      var(--cp-form-canvas)
+    );
+  }
+  & .cp-form-box .cp-form-box .cp-form-box {
+    --cp-form-nest: calc(4 * var(--cp-form-box-inset));
+    --cp-form-box-bg: var(--cp-form-canvas);
+  }
+  /* A list item's box: its header (grip, live title, actions) is inside it. */
+  &[data-cp-item]:hover,
+  &[data-cp-item]:focus-within {
+    border-color: var(--input);
+  }
+}
+
 /* Spacing scale utilities — the single source of truth for layout gap + padding
  * rhythm (<Stack gap> / <Inset pad> primitives, plugins/primitives/plugins/spacing).
  * One closed 10-step ramp (none | 2xs | xs | xsm | sm | smd | md | lg | xl | 2xl) backed by the

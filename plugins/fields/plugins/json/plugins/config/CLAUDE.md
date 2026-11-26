@@ -12,9 +12,13 @@
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
+    - `config_v2/fields.useLocalValue`
+    - `primitives/css/control-panel.useControlPanelLayout`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Textarea`
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`
@@ -39,6 +43,10 @@
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
     - `conversations` ×8

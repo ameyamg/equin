@@ -19,6 +19,14 @@ read as one rule (a child, not `::after`: `no-adhoc-control` reads a pseudo's
 density (`md` → `control-lg`). A segment's optional `count` draws a filled
 `Badge` pill after the label in every variant.
 
+## `SegmentedControl variant="track"` is one control, not a row of chips
+
+The classic segmented control: borderless segments inside ONE tinted, bordered
+track (`bg-muted`, `rounded-control`), the selected one raised onto the
+surface (`bg-background`, a hairline ring, semibold label). For a value whose
+options are parts of one control — a form field's enum (`ControlPanelForm`) —
+where separate pills would read as filters. It wraps with `wrap`.
+
 ## `SegmentedControl value={null}`: nothing selected
 
 `value` is `T | null`; `null` checks no segment — for a control that is a view
@@ -50,11 +58,11 @@ filter rule reads as "custom").
     - `SegmentedControl`
     - `ToggleChip`
 - Cross-plugin:
-  - Uses tokens: 33 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 36 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×14
     - `ui/tokens/color-palette` ×12
-    - `ui/tokens/type-scale` ×6
-    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale` ×7
+    - `ui/tokens/shape` ×3
   - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
     - `primitives` ×7

@@ -3,10 +3,18 @@ import type React from "react";
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+
 import { ControlPanelSection } from "./control-panel";
 import { ControlPanelRow } from "./control-panel-row";
+import { FormBand, FormBox, FormRow } from "./form-row";
 import type { ControlPanelHandleProps } from "./handle";
-import { GroupDepthProvider, useControlPanelHost, useGroupDepth } from "./host";
+import {
+  GroupDepthProvider,
+  useControlPanelHost,
+  useGroupDepth,
+  useGroupInlines,
+} from "./host";
 import { usePanelStack } from "./stack-context";
 import {
   SettingDescription,
@@ -51,6 +59,20 @@ export interface ControlPanelGroupProps {
   handle?: boolean;
   /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
   handleProps?: ControlPanelHandleProps;
+  /**
+   * This group is ONE ITEM OF A LIST (a record in a list of records). In a
+   * form it is drawn as its own box with its header — handle, label, actions —
+   * INSIDE it, instead of a label over a box. Other layouts draw an item like
+   * any group.
+   */
+  item?: boolean;
+  /**
+   * What the group's members are. `"fields"` (default) — its own fields, which
+   * a form draws in ONE box under the label. `"items"` — `Group item`s (a
+   * list), each already its own box, which a form stacks under the label with
+   * no box around them. Other layouts draw both alike.
+   */
+  holds?: "fields" | "items";
   children: React.ReactNode;
   className?: string;
   // NO `mode` prop. The presentation belongs to the HOST, not to the field: a
@@ -91,6 +113,8 @@ export function ControlPanelGroup({
   note,
   handle,
   handleProps,
+  item,
+  holds = "fields",
   children,
   className,
 }: ControlPanelGroupProps) {
@@ -109,7 +133,7 @@ export function ControlPanelGroup({
   const { close } = usePanelStack();
   useEffect(() => () => close(key), [close, key]);
 
-  const inline = host.nesting === "inline" && depth < host.inlineDepth;
+  const inline = useGroupInlines();
   if (!inline) {
     if (actions != null || mark != null || note != null) {
       throw new Error(
@@ -152,6 +176,59 @@ export function ControlPanelGroup({
             )
           : null}
       </>
+    );
+  }
+
+  if (host.layout === "form") {
+    const members = (
+      <GroupDepthProvider depth={depth + 1}>{children}</GroupDepthProvider>
+    );
+    if (item) {
+      if (
+        status != null ||
+        mark != null ||
+        note != null ||
+        description != null
+      ) {
+        throw new Error(
+          "ControlPanel.Group item: a list item's box header carries its " +
+            "label, handle and actions only — `status` / `mark` / `note` / " +
+            "`description` belong on the list, or on the item's own fields.",
+        );
+      }
+      return (
+        <FormBand>
+          <FormBox item={{ label, actions, handle, handleProps }}>
+            {members}
+          </FormBox>
+        </FormBand>
+      );
+    }
+    if (handle) {
+      throw new Error(
+        "ControlPanel.Group: in a form only a list item (`item`) hangs a drag " +
+          "handle — its box carries it.",
+      );
+    }
+    return (
+      <FormBand>
+        <Stack gap="xs" className={className}>
+          <FormRow
+            label={label}
+            hint={hint}
+            description={description}
+            status={status}
+            actions={actions}
+            mark={mark}
+            note={note}
+          />
+          {holds === "items" ? (
+            <Stack gap="sm">{members}</Stack>
+          ) : (
+            <FormBox>{members}</FormBox>
+          )}
+        </Stack>
+      </FormBand>
     );
   }
 

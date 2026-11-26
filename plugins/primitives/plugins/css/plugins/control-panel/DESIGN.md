@@ -174,6 +174,30 @@ card owns everything that makes it a card, and a call site writes the same
 **Why focus lands on the title row on pointer open:** so no row action opens
 ringed.
 
+## Why the form is a fourth surface, not a pane knob
+
+A config record rendered as fields reads as a FORM: every member is one field
+of one record, most carry a sentence of description, and objects, variants and
+lists of records nest. In the pane's row construction that came out badly
+(Deploy → Feeds, Settings → Config): each description a band ABOVE its row,
+every value control pushed to the far right at one width, switches and
+swatches elsewhere, nesting an indent that read as noise.
+
+The pane stays right for what it holds elsewhere — hand-written menus of rows,
+switches and a few `Setting`s (Automations, autopilot sections) — so the form
+construction is a fourth surface rather than a `layout` prop on the pane:
+the content picks the surface, the surface publishes `layout`, and a member
+written once reads right in either. Rejected: a pane-wide switch to the form
+rows, which would have re-laid every non-form pane in the app for a problem
+only forms had.
+
+**Why `cqi` minus a counted nest, not subgrid.** A subgrid would keep the
+control column aligned through boxes for free, but every box between a row
+and the form would have to be a subgrid grid item — and a list item reaches
+the form through dnd-kit's sortable wrapper and the `display: contents`
+lineage spans, any of which breaks the chain silently. The container length
+holds through any wrapper; the price is one rule per nesting level.
+
 ## The host owns the presentation, and throws when absent
 
 **Why the popover pushes.** A popover passes field subsets precisely because it

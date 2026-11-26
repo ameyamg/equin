@@ -11,6 +11,7 @@ export { ConfigFieldContext } from "./internal/config-field-context";
 export { ConfigFieldAdornmentsProvider } from "./internal/field-adornments";
 export type { ConfigFieldAdornments } from "./internal/field-adornments";
 export { useLocalValue } from "./internal/use-local-value";
+export { NumberControl, useNumberFit } from "./internal/number-control";
 export { defineFieldShape } from "./internal/define-field-shape";
 export type { FieldRendererProps } from "./internal/slots";
 

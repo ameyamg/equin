@@ -131,4 +131,5 @@ const CARD_HOST: ControlPanelHost = {
   inlineDepth: 1,
   descriptions: "band",
   sections: "heading",
+  layout: "rows",
 };

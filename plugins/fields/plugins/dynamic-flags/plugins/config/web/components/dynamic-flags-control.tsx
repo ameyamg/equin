@@ -5,6 +5,7 @@ import { flagValue } from "../../core";
 import { DynamicFlags, type DynamicFlagOption } from "../internal/slots";
 
 type Flags = Readonly<Record<string, boolean>>;
+type ChipLook = "ghost" | "tinted";
 
 /**
  * The options-resolving control, handed to the panel as ONE element.
@@ -24,19 +25,24 @@ export function DynamicFlagsControl({
   field,
   value,
   onChange,
+  chip,
 }: {
   field: unknown;
   value: Flags;
   onChange: (value: Record<string, boolean>) => void;
+  /** The chips' look: the host's (tinted in a form, ghost in a menu). */
+  chip: ChipLook;
 }) {
   const contributions = DynamicFlags.Options.useContributions();
   const match = contributions.find((c) => c.field === field);
-  if (!match) return <UnresolvedFlags value={value} onChange={onChange} />;
+  if (!match)
+    return <UnresolvedFlags value={value} onChange={onChange} chip={chip} />;
   return (
     <ResolvedFlags
       useOptions={match.useOptions}
       value={value}
       onChange={onChange}
+      chip={chip}
     />
   );
 }
@@ -45,10 +51,12 @@ function ResolvedFlags({
   useOptions,
   value,
   onChange,
+  chip,
 }: {
   useOptions: Hook<() => readonly DynamicFlagOption[]>;
   value: Flags;
   onChange: (value: Record<string, boolean>) => void;
+  chip: ChipLook;
 }) {
   const options = useOptions();
   return (
@@ -60,6 +68,7 @@ function ResolvedFlags({
       }))}
       value={value}
       onChange={onChange}
+      chip={chip}
     />
   );
 }
@@ -72,9 +81,11 @@ function ResolvedFlags({
 function UnresolvedFlags({
   value,
   onChange,
+  chip,
 }: {
   value: Flags;
   onChange: (value: Record<string, boolean>) => void;
+  chip: ChipLook;
 }) {
   return (
     <FlagChips
@@ -85,6 +96,7 @@ function UnresolvedFlags({
       }))}
       value={value}
       onChange={onChange}
+      chip={chip}
     />
   );
 }
@@ -93,17 +105,19 @@ function FlagChips({
   flags,
   value,
   onChange,
+  chip,
 }: {
   flags: readonly { key: string; label: string; on: boolean }[];
   value: Flags;
   onChange: (value: Record<string, boolean>) => void;
+  chip: ChipLook;
 }) {
   return (
     <Cluster gap="2xs">
       {flags.map((flag) => (
         <ToggleChip
           key={flag.key}
-          variant="ghost"
+          variant={chip}
           active={flag.on}
           // Writes the key explicitly, so a toggled option keeps its state
           // even if its default later changes.
