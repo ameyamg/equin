@@ -90,6 +90,7 @@ export {
   type RecorderSnapshot,
   type RecorderState,
   type RelayRequest,
+  type RelayFinished,
   type RelayResponse,
   type SavedRecording,
   type StopCause,

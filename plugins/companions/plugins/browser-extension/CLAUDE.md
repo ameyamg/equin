@@ -71,7 +71,10 @@ both ends) and `core/viewport.ts` (pure, tested); what the panel shows is
   codec). It uploads through the **relay page**: it frames
   `RECORDER_RELAY_PATH` (the recorder plugin's unlisted app) with the same
   hello → port handshake as the popup, so the uploads are the owner's, chunk by
-  chunk in order, at most 64 MB queued.
+  chunk in order, at most 64 MB queued. A request equin did not answer (a
+  backend switch on redeploy, the relay page reloading) is sent again
+  (`sendUntilAnswered`); a finish waits until equin's save job has saved the
+  video (see `plugins/recorder/CLAUDE.md`).
 - **`content.ts`** draws the countdown (before the capture) and, with the
   Clicks option, a ripple on each click into the page's top layer, in a
   closed shadow root; it always keeps the pointer samples for
@@ -233,6 +236,7 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `RecorderState`
     - `RecordPreset`
     - `RecordPresetId`
+    - `RelayFinished`
     - `RelayRequest`
     - `RelayResponse`
     - `SavedRecording`

@@ -23,54 +23,61 @@ prototype `proto-1794537939-tuvpg1` ("Record").
   `~/Movies/equin`; the recorder's other options are the extension's own, in
   Chrome's storage, so ⌥⇧R needs no equin read), the endpoints, the file name
   (`<YYYY-MM-DD HH.MM> <title>.mp4`).
-- **`machine/`** — the endpoints. A recording is a hidden
+- **`machine/`** — the endpoints and the save job. A recording is a hidden
   `.<id>.partial.mp4` appended chunk by chunk (strictly in order:
-  `chunkDecision`), then truncated to its last commit, fsynced, remuxed by
-  ffmpeg (`-c copy -movflags +faststart`, the `media/ffmpeg` dep, requested on
-  first use) and linked to its final name (never overwriting: ` (2)`…).
+  `chunkDecision`; a replay of the last chunk is a no-op, so a resend is
+  safe).
   **An upload's state is on disk, never in memory** (`upload-store.ts`): its
-  cursor (stem, next chunk, last size, committed bytes) is
-  `.<id>.partial.json` beside the partial, renamed into place after each
-  chunk's bytes are written — the commit point. So a backend restart or a
-  redeploy mid-recording (main redeploys every few minutes) is invisible: the
-  next backend reads the same files. Before 2026-11-25 the cursor was a
-  module-level Map and every redeploy broke the recording in flight with a 404.
-  Chunk bytes and the cursor are synced before the rename. Requests for one
-  id are serialized in-process (a keyed mutex); across processes the relay
-  sends one at a time, and a finish claims the recording on disk
-  (`.<id>.finishing`, its pid): while that process lives no chunk, second
-  finish or delete touches it and the panel does not list it; a claim whose
-  process died (a redeploy mid-remux) is taken over by the next finish. A
-  cursor that cannot be read is that recording's problem (it can still be
-  saved), never the folder listing's. The folder's recordings never
-  finished are the `recorder.unfinished` live value (a watch on the folder and
-  the setting); a partial without a cursor (from before) can be saved or
-  deleted but takes no more chunks.
-- **Failures.** An upload failing mid-recording stops it with
-  `upload-failed`: the offscreen recorder finishes what was uploaded, and the
-  panel shows the saved video with the failure beside it. If that finish fails
-  too, the recording stays in the folder and the panel lists it under
-  Unfinished recordings (Save / Delete). Every failed relay request is filed
-  as a crash (`client-tab-recorder`): for a recorder no status is expected
-  control flow.
+  cursor (stem, next chunk, last size, committed bytes, and the save asked
+  for — `finishRequested`, with the pointer track) is `.<id>.partial.json`
+  beside the partial, renamed into place after each chunk's bytes are
+  written — the commit point. So a backend restart or a redeploy
+  mid-recording (main redeploys every few minutes) is invisible: the next
+  backend reads the same files. Before 2026-11-25 the cursor was a
+  module-level Map and every redeploy broke the recording in flight with a
+  404. Requests for one id are serialized in-process (`per-recording.ts`);
+  across processes the relay sends one at a time.
+- **The save is a durable job, never a request** (`save-job.ts`,
+  `recorder.save`, keyed by recording id). Create queues it an hour out
+  (`ABANDONED_AFTER_MS`); finish only writes `finishRequested` into the
+  cursor and queues it now. Each run decides from the disk (`saveStep`):
+  saved or discarded → done; asked, or no chunk for an hour (the browser
+  left: closed, crashed, extension reloaded) → truncate to the last commit,
+  fsync, ffmpeg remux (`-c copy -movflags +faststart`, the `media/ffmpeg`
+  dep), link to its final name (never overwriting: ` (2)`…), pointer track
+  beside it; otherwise re-queue at the deadline. The input is only `{ id,
+  folder }`, so a re-queue (graphile replaces a pending row's payload) never
+  loses the request. A backend dying mid-remux: the queue's sweeper re-runs
+  it, and the disk claim (`.<id>.finishing`, its pid) keeps two saves apart.
+  The outcome (saved: path / name / bytes; failed: why, from `onDead` once
+  every attempt is spent) is a row of `recorder_saves` (server half, kept a
+  week), read as the `recorder.save` live value. At boot (`onSettled`) any
+  partial in the folder without a coming save gets one (`sweep.ts`). A
+  recording paused longer than an hour is saved as it stands; resuming it
+  then is refused (409) and stops it with `upload-failed`.
+- **Relay and resends.** The relay page answers a failure with `retry` when
+  equin did not answer (no response, or the gateway's 502 / 503 / 504 — a
+  backend switch): the offscreen recorder sends the same request again
+  (`sendUntilAnswered`, backing off to 5 s), bounded by its queue
+  (`MAX_QUEUED_BYTES`) for chunks and 10 minutes for a finish. A finish
+  waits on the save's live value (`SaveWait`), so a restart mid-save only
+  makes "Saving…" longer. A failure equin answered (a refusal) is filed as a
+  crash (`client-tab-recorder`) and stops the recording with
+  `upload-failed`: the extension saves what was uploaded and the panel says
+  why. Nothing is ever left for the user to save by hand.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: The browser extension's tab recorder, in the panel: the Record section (BrowserExtension.Section 'record', after Wish) — the 'Record this tab' row with the size dropdown (each preset named by the page size it lays the tab out at — 1280 × 720, 1920 × 1080, 2560 × 1440, 540 × 960, As is — with 720p… and the video size on this display beneath, the video always every physical pixel of the page; one this tab cannot record now stays choosable with a Too big / Zoomed badge) and its Apply button (size the window to the chosen preset now, without recording), the tab audio / mic / clicks / countdown toggles and the round Record button (⌥⇧R); the live recording card (timer, Discard, Pause, Stop); and the last recording saved, with Show in Files and Delete (to the Trash) on hover — or, when an upload stopped it, what was uploaded saved and the failure said; and Unfinished recordings (the folder's recordings never finished — a closed browser, a failed save), each with Save and Delete. The relay page the extension's offscreen recorder frames to upload a recording as the owner (its own unlisted app at /home/browser-extension-recorder). Registers the Recordings folder setting. The tab recorder, every host's half: registers the Recordings folder setting (Settings → Config), which the machine half writes recordings into.
+- Description: The browser extension's tab recorder, in the panel: the Record section (BrowserExtension.Section 'record', after Wish) — the 'Record this tab' row with the size dropdown (each preset named by the page size it lays the tab out at — 1280 × 720, 1920 × 1080, 2560 × 1440, 540 × 960, As is — with 720p… and the video size on this display beneath, the video always every physical pixel of the page; one this tab cannot record now stays choosable with a Too big / Zoomed badge) and its Apply button (size the window to the chosen preset now, without recording), the tab audio / mic / clicks / countdown toggles and the round Record button (⌥⇧R); the live recording card (timer, Discard, Pause, Stop); and the last recording saved, with Show in Files and Delete (to the Trash) on hover — or, when an upload stopped it, what was uploaded saved and the failure said. The relay page the extension's offscreen recorder frames to upload a recording as the owner (resending a request equin did not answer — a backend switch on redeploy — and waiting on the save job's outcome for a finish) (its own unlisted app at /home/browser-extension-recorder). Registers the Recordings folder setting. The tab recorder, every host's half: registers the Recordings folder setting (Settings → Config), which the machine half writes recordings into, and owns the recorder_saves table (each recording's save outcome, by id — kept a week).
 - Web:
-  - Slots: `item-actions`
-  - Slot contributors: `item-actions` ← `companions.browser-extension.recorder`
   - Contributes:
     - `ConfigV2.WebRegister` "recorder"
     - `BrowserExtension.Section` "Record" → `RecordSection`
     - `Apps.App` "Recorder relay" → `RecorderRelayPage`
-    - `item-actions` "save" → `SaveUnfinishedAction`
-    - `item-actions` "discard" → `DiscardUnfinishedAction`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
-    - `primitives/data-view` ×5
     - `companions/browser-extension` ×4
     - `infra/endpoints` ×3
     - `companions/panel` ×2
@@ -93,15 +100,22 @@ prototype `proto-1794537939-tuvpg1` ("Record").
 - Server:
   - Contributes:
     - `ConfigV2.Register` "recorder"
-    - `resource.declare` "recorder.unfinished"
+    - `resource.declare` "recorder.save"
     - `DocumentHead.FrameAncestors` "browser-extension-recorder (/home/browser-extension-recorder)"
-  - Uses: `config_v2.ConfigV2`
-  - Resources: `recorder.unfinished` (push, notified, whole: the recordings in one folder that were never finished — one per interrupted recording, cleared by Save or Delete)
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `database/sql-column.parsedJson`
+    - `ids.externalIdColumn`
+    - `infra/retention.defineRetention`
+  - DB schema: `plugins/companions/plugins/browser-extension/plugins/recorder/server/internal/tables.ts`
+  - Exports (values): `_recorderSaves`
+  - Register: `defineJob('retention.recorder_saves')`
+  - Resources: `recorder.save` (push)
 - Machine:
   - Uses:
     - `infra/endpoints.implementMachine`
-    - `infra/host-fs.watchHostDir`
     - `network/live.serveValue`
+  - Register: `defineJob('recorder.save')`
   - Routes:
     - `POST /api/tab-recordings`
     - `POST /api/tab-recordings/:id/chunks/:seq`
@@ -112,16 +126,14 @@ prototype `proto-1794537939-tuvpg1` ("Record").
     - `companions/browser-extension.PointerTrackSchema`
     - `companions/browser-extension.RECORDER_RELAY_PATH`
     - `companions/browser-extension.RelayCreatedSchema`
-    - `companions/browser-extension.RelayFinishedSchema`
     - `config_v2.defineConfig`
     - `fields/directory-path/config.dirPathField`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `packages/list-bound.wholeList`
     - `primitives/pane.defineApp`
     - `ui/icons.symbol`
-  - Exports (types): `UnfinishedRecording`
+  - Exports (types): `RecordingSaveOutcome`
   - Exports (values):
     - `appendTabRecordingChunk`
     - `createTabRecording`
@@ -133,8 +145,8 @@ prototype `proto-1794537939-tuvpg1` ("Record").
     - `recorderRelayApp`
     - `recordingBaseName`
     - `recordingFileNames`
-    - `UnfinishedRecordingSchema`
-    - `unfinishedTabRecordings`
+    - `recordingSave`
+    - `RecordingSaveOutcomeSchema`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

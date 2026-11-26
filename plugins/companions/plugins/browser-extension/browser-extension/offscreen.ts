@@ -21,6 +21,7 @@ import {
   RelayCreatedSchema,
   RelayFinishedSchema,
   RelayResponseSchema,
+  type RelayFinished,
   type OffscreenCommand,
   type OffscreenEvent,
   type OffscreenReply,
@@ -94,7 +95,9 @@ function openRelay(): Promise<Relay> {
       const channel = new MessageChannel();
       target.postMessage(BRIDGE_PORT, origin, [channel.port2]);
       current?.drop(
-        new Error("The recorder's relay page reloaded mid-upload."),
+        new RelayUnavailableError(
+          "The recorder's relay page reloaded mid-upload.",
+        ),
       );
       current = relayClient(channel.port1);
       resolve((req, transfer) => {
@@ -119,7 +122,12 @@ function relayClient(port: MessagePort): RelayClient {
       throw new Error(`relay answered an unknown request #${response.id}`);
     waiting.delete(response.id);
     if (response.ok) entry.resolve(response.value);
-    else entry.reject(new Error(response.error));
+    else
+      entry.reject(
+        response.retry
+          ? new RelayUnavailableError(response.error)
+          : new Error(response.error),
+      );
   };
   return {
     call: (req, transfer = []) =>
@@ -135,6 +143,68 @@ function relayClient(port: MessagePort): RelayClient {
     },
   };
 }
+
+/**
+ * equin did not answer a relay request: a backend switching on redeploy, the
+ * gateway's own error page, the relay page reloading. The request is sent
+ * again (`sendUntilAnswered`); every other failure is equin's answer.
+ */
+class RelayUnavailableError extends Error {}
+
+/** First wait before a request equin did not answer is sent again, and the cap
+ *  the wait doubles to. */
+const RESEND_FIRST_MS = 500;
+const RESEND_MAX_MS = 5_000;
+
+/**
+ * Send `req` until equin answers it. Unavailability is expected control flow
+ * — main redeploys every few minutes, and the backend switch drops what is in
+ * flight — so the same request is sent again after a short wait (a request
+ * is idempotent: a chunk equin already took is a replay, a finish already
+ * asked for is asked again). A refusal is thrown. `bound` ends it: its
+ * `stop` (an error to throw instead of waiting on), or `maxWaitMs` of waiting
+ * between sends (timers, so a machine asleep spends none of it). `request`
+ * makes each send's request and what it transfers (a transferred buffer is
+ * gone after the send, so each send needs its own).
+ */
+async function sendUntilAnswered(
+  request: () => {
+    req: DistributiveOmit<RelayRequest, "id">;
+    transfer?: Transferable[];
+  },
+  bound: { stop: () => Error | null } | { maxWaitMs: number; what: string },
+): Promise<unknown> {
+  let waitMs = RESEND_FIRST_MS;
+  let waited = 0;
+  const stopped = (): Error | null => {
+    if ("stop" in bound) return bound.stop();
+    return waited < bound.maxWaitMs
+      ? null
+      : new Error(
+          `equin did not answer ${bound.what} for ${bound.maxWaitMs / 60_000} minutes.`,
+        );
+  };
+  for (;;) {
+    try {
+      const { req, transfer } = request();
+      return await (
+        await openRelay()
+      )(req, transfer);
+    } catch (err) {
+      if (!(err instanceof RelayUnavailableError)) throw err;
+      const before = stopped();
+      if (before !== null) throw before;
+      await new Promise((resolve) => window.setTimeout(resolve, waitMs));
+      waited += waitMs;
+      waitMs = Math.min(waitMs * 2, RESEND_MAX_MS);
+      const after = stopped();
+      if (after !== null) throw after;
+    }
+  }
+}
+
+/** How long a finish may wait for equin to answer before the stop fails. */
+const FINISH_UNANSWERED_MS = 10 * 60_000;
 
 // ── The recording ───────────────────────────────────────────────────────────
 
@@ -338,9 +408,18 @@ function enqueue(s: Session, chunk: Blob): void {
     if (s.failed !== null) return;
     const bytes = await chunk.arrayBuffer();
     try {
-      await (
-        await openRelay()
-      )({ op: "chunk", recordingId: s.recordingId, seq, bytes }, [bytes]);
+      // Bounded by the queue: a recording that outgrows MAX_QUEUED_BYTES
+      // while equin does not answer has failed (`s.failed`).
+      await sendUntilAnswered(
+        () => {
+          const copy = bytes.slice(0);
+          return {
+            req: { op: "chunk", recordingId: s.recordingId, seq, bytes: copy },
+            transfer: [copy],
+          };
+        },
+        { stop: () => s.failed },
+      );
     } catch (err) {
       fail(s, err instanceof Error ? err : new Error(String(err)));
       return;
@@ -403,22 +482,10 @@ async function stop(
   // Stopped before the recorder handed over a single chunk: there is no
   // video, and the failure is why it stopped — never a finish of nothing.
   if (s.seq === 0) {
-    await (
-      await openRelay()
-    )({ op: "discard", recordingId: s.recordingId });
+    await discardOnEquin(s);
     throw new Error(emptyRecordingText(stoppedBy));
   }
-  const finished = RelayFinishedSchema.parse(
-    await keepingWorkerAwake(
-      (async () =>
-        (await openRelay())({
-          op: "finish",
-          recordingId: s.recordingId,
-          durationMs,
-          pointer,
-        }))(),
-    ),
-  );
+  const finished = await finishOnEquin(s, durationMs, pointer);
   return {
     saved: {
       ...finished,
@@ -432,11 +499,44 @@ async function stop(
 }
 
 /**
+ * Ask equin to save the recording and wait until it has. The save is
+ * equin's durable job: a backend restarting mid-save re-runs it, so this
+ * only waits longer — and a recording equin is sure to save is never lost
+ * even when this wait gives up (it saves it all the same).
+ */
+async function finishOnEquin(
+  s: Session,
+  durationMs: number,
+  pointer: PointerTrack | null,
+): Promise<RelayFinished> {
+  return RelayFinishedSchema.parse(
+    await keepingWorkerAwake(
+      sendUntilAnswered(
+        () => ({
+          req: {
+            op: "finish",
+            recordingId: s.recordingId,
+            durationMs,
+            pointer,
+          },
+        }),
+        { maxWaitMs: FINISH_UNANSWERED_MS, what: "the save" },
+      ),
+    ),
+  );
+}
+
+async function discardOnEquin(s: Session): Promise<void> {
+  await sendUntilAnswered(
+    () => ({ req: { op: "discard", recordingId: s.recordingId } }),
+    { maxWaitMs: FINISH_UNANSWERED_MS, what: "the discard" },
+  );
+}
+
+/**
  * An upload failed mid-recording: what equin took before it is still a video
- * (its state is on disk, chunk by chunk), so it is finished as one — never
- * dropped. Nothing taken: the failure is the answer. The finish failing too:
- * both are said, and the recording stays in the folder, listed in the panel's
- * Unfinished recordings to save later.
+ * (its state is on disk, chunk by chunk), so it is saved as one — never
+ * dropped. Nothing taken: the failure is the answer.
  */
 async function salvage(
   s: Session,
@@ -447,22 +547,13 @@ async function salvage(
   if (s.uploaded === 0) throw failed;
   // The video holds the chunks taken: one second each (paused time sends none).
   const durationMs = s.uploaded * 1000;
-  const finished = await (async () =>
-    RelayFinishedSchema.parse(
-      await keepingWorkerAwake(
-        (async () =>
-          (await openRelay())({
-            op: "finish",
-            recordingId: s.recordingId,
-            durationMs,
-            pointer,
-          }))(),
-      ),
-    ))().catch((err: unknown) => {
-    throw new Error(
-      `${failed.message} — and saving what was uploaded failed too (${errorText(err)}). Whatever equin kept of it is listed under Unfinished recordings in this panel.`,
-    );
-  });
+  const finished = await finishOnEquin(s, durationMs, pointer).catch(
+    (err: unknown) => {
+      throw new Error(
+        `${failed.message} — and saving what was uploaded failed too (${errorText(err)}).`,
+      );
+    },
+  );
   return {
     ...finished,
     durationMs,
@@ -477,9 +568,7 @@ async function discard(): Promise<void> {
   session = null;
   s.failed ??= new Error("discarded");
   await wind(s);
-  await (
-    await openRelay()
-  )({ op: "discard", recordingId: s.recordingId });
+  await discardOnEquin(s);
 }
 
 onMessageAsync(

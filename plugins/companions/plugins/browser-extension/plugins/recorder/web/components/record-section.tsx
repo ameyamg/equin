@@ -39,7 +39,6 @@ import {
 } from "../internal/use-recorder";
 import { useSavedActions } from "../internal/saved-actions";
 import { SizeMenu } from "./size-menu";
-import { UnfinishedList } from "./unfinished-list";
 import "../internal/record.css";
 
 const icons = {
@@ -172,7 +171,6 @@ function Body({
           {state.last?.kind === "failed" && (
             <Note tone="error" text={state.last.error} />
           )}
-          <UnfinishedList run={run} />
           <RecordRow
             options={options}
             fit={fit}

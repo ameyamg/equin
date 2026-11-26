@@ -301,7 +301,15 @@ export type RelayRequest = z.infer<typeof RelayRequestSchema>;
 /** The relay's answer: the endpoint's response body, or its error. */
 export const RelayResponseSchema = z.discriminatedUnion("ok", [
   z.object({ id: z.number().int(), ok: z.literal(true), value: z.unknown() }),
-  z.object({ id: z.number().int(), ok: z.literal(false), error: z.string() }),
+  z.object({
+    id: z.number().int(),
+    ok: z.literal(false),
+    error: z.string(),
+    /** equin did not answer (a backend switch on redeploy, the gateway's
+     *  own error page): the same request is sent again. `false`: it
+     *  answered and refused — the request is never sent again. */
+    retry: z.boolean().default(false),
+  }),
 ]);
 export type RelayResponse = z.infer<typeof RelayResponseSchema>;
 
@@ -318,6 +326,7 @@ export const RelayFinishedSchema = z.object({
   name: z.string(),
   bytes: z.number().int().nonnegative(),
 });
+export type RelayFinished = z.infer<typeof RelayFinishedSchema>;
 
 /** The relay page, framed by the offscreen document. */
 export const RECORDER_RELAY_PATH = "/home/browser-extension-recorder";

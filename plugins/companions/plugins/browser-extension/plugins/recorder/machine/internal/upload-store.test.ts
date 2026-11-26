@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
   claimFinish,
   createUpload,
-  listUploads,
+  listUploadIds,
   partialPathOf,
   readUpload,
   releaseFinish,
@@ -26,30 +26,34 @@ afterEach(async () => {
 describe("upload-store", () => {
   test("an upload is read back from disk alone — what a new backend sees", async () => {
     await createUpload(folder, ID, "2026-11-25 13.50 Plan");
-    await writeCursor(folder, ID, {
+    const cursor = {
       base: "2026-11-25 13.50 Plan",
       nextSeq: 3,
       lastSize: 10,
       bytes: 30,
-    });
+      finishRequested: { pointer: null },
+    };
+    await writeCursor(folder, ID, cursor);
     const upload = await readUpload(folder, ID);
-    expect(upload?.cursor).toEqual({
-      base: "2026-11-25 13.50 Plan",
-      nextSeq: 3,
-      lastSize: 10,
-      bytes: 30,
-    });
+    expect(upload?.cursor).toEqual(cursor);
     expect(upload?.bytes).toBe(30);
   });
 
-  test("a partial from before cursors is listed with its own size and no cursor", async () => {
+  test("a cursor from before finishRequested asked for no save", async () => {
+    await createUpload(folder, ID, "a");
+    await writeFile(
+      join(folder, `.${ID}.partial.json`),
+      JSON.stringify({ base: "a", nextSeq: 1, lastSize: 4, bytes: 4 }),
+    );
+    expect((await readUpload(folder, ID))?.cursor?.finishRequested).toBeNull();
+  });
+
+  test("a partial from before cursors is read with its own size and no cursor", async () => {
     await writeFile(partialPathOf(folder, ID), new Uint8Array(12));
     const upload = await readUpload(folder, ID);
     expect(upload?.cursor).toBeNull();
     expect(upload?.bytes).toBe(12);
-    expect(upload?.base).toMatch(
-      /^\d{4}-\d\d-\d\d \d\d\.\d\d Unfinished recording$/,
-    );
+    expect(upload?.base).toMatch(/^\d{4}-\d\d-\d\d \d\d\.\d\d Recording$/);
   });
 
   test("an id that is not one create mints names no file", async () => {
@@ -57,38 +61,36 @@ describe("upload-store", () => {
     expect(await readUpload(folder, ID)).toBeNull();
   });
 
-  test("list finds every unfinished recording; remove drops it", async () => {
+  test("list finds every recording not saved yet; remove drops it", async () => {
     await createUpload(folder, ID, "a");
     await writeFile(join(folder, "2026-11-25 13.50 Saved.mp4"), "x");
-    const listed = await listUploads(folder);
-    expect(listed.map((u) => u.id)).toEqual([ID]);
-    await removeUpload(listed[0]!);
-    expect(await listUploads(folder)).toEqual([]);
+    expect(await listUploadIds(folder)).toEqual([ID]);
+    await removeUpload((await readUpload(folder, ID))!);
+    expect(await listUploadIds(folder)).toEqual([]);
   });
 
   test("a missing folder holds no recordings", async () => {
-    expect(await listUploads(join(folder, "missing"))).toEqual([]);
+    expect(await listUploadIds(join(folder, "missing"))).toEqual([]);
   });
 
-  test("an unreadable cursor is that row's problem, not the folder's", async () => {
+  test("an unreadable cursor is that recording's problem, not the read's", async () => {
     await createUpload(folder, ID, "a");
     await writeFile(join(folder, `.${ID}.partial.json`), "");
-    const [upload] = await listUploads(folder);
+    const upload = await readUpload(folder, ID);
     expect(upload?.cursor).toBeNull();
     expect(upload?.cursorProblem).toContain("not JSON");
   });
 
-  test("a finish's claim hides it and refuses a second finish while its process lives", async () => {
+  test("a save's claim refuses a second save while its process lives", async () => {
     await createUpload(folder, ID, "a");
     // The parent of this test: a live process that is not this one.
     await writeFile(join(folder, `.${ID}.finishing`), String(process.ppid));
     const claimed = await readUpload(folder, ID);
     expect(claimed?.finishingBy).toBe(process.ppid);
     expect(await claimFinish(claimed!)).toBe(false);
-    expect(await listUploads(folder)).toEqual([]);
   });
 
-  test("a claim whose process died is taken over; a released one is unfinished again", async () => {
+  test("a claim whose process died is taken over; a released one can be claimed again", async () => {
     await createUpload(folder, ID, "a");
     // Pid 2^22 + 1 is above macOS's and Linux's default pid_max: never live.
     await writeFile(join(folder, `.${ID}.finishing`), String(4_194_305));
@@ -97,6 +99,6 @@ describe("upload-store", () => {
     expect(await claimFinish(stale!)).toBe(true);
     expect((await readUpload(folder, ID))?.finishingBy).toBe(process.pid);
     await releaseFinish(stale!);
-    expect((await listUploads(folder)).map((u) => u.id)).toEqual([ID]);
+    expect((await readUpload(folder, ID))?.finishingBy).toBeNull();
   });
 });

@@ -1097,7 +1097,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `TOTAL_JOB_SLOTS`
     - `zombieAfterMsFor`
 - Cross-plugin:
-  - Imported by: 98 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 99 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×24
     - `conversations` ×18
     - `infra` ×16
@@ -1106,6 +1106,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `database` ×4
     - `page` ×3
     - `build`
+    - `companions/browser-extension/recorder`
     - `config_v2/auto-merge`
     - `integrations/youtube/audio-fetch`
     - `network/live/live-state-snapshot`

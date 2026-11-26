@@ -93,7 +93,6 @@ export const dataViews: DataViewEntry[] = [
   { id: "plugin-meta.exhibits.catalog", pluginId: "plugin-meta.exhibits" },
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
   { id: "prototypes.versions", pluginId: "apps.prototypes.canvas" },
-  { id: "recorder.unfinished", pluginId: "companions.browser-extension.recorder" },
   { id: "release.run-logs", pluginId: "apps.plugin-studio.compositions.release.release-logs" },
   { id: "running-agents", pluginId: "conversations.conversation-view.running-agents" },
   { id: "runs", pluginId: "runs" },

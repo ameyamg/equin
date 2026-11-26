@@ -13,7 +13,7 @@ export {
   recordingFileNames,
 } from "./file-name";
 export {
-  unfinishedTabRecordings,
-  UnfinishedRecordingSchema,
-  type UnfinishedRecording,
-} from "./unfinished";
+  recordingSave,
+  RecordingSaveOutcomeSchema,
+  type RecordingSaveOutcome,
+} from "./save";

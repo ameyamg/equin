@@ -142,7 +142,9 @@ try {
   await popup.screenshot({ path: shot("record-section.png") });
   await size.click();
   // Every entry is named by its page size, one too big still listed.
-  await panel.getByText("2560 × 1440").waitFor({ timeout: TIMEOUT_MS });
+  await panel
+    .getByText("2560 × 1440", { exact: true })
+    .waitFor({ timeout: TIMEOUT_MS });
   r.ok("the dropdown lists the presets by their page size", true);
   await popup.screenshot({ path: shot("record-size-menu.png") });
   await popup.keyboard.press("Escape");

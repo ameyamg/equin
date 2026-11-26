@@ -9,6 +9,7 @@ import {
 import { isProcessAlive } from "@plugins/packages/plugins/process-alive/core";
 import { recordingBaseName } from "../../core";
 import type { ChunkCursor } from "./chunk-order";
+import { PointerTrackSchema } from "@plugins/companions/plugins/browser-extension/core";
 
 /**
  * A recording being uploaded, as the Recordings folder holds it — never in a
@@ -18,21 +19,24 @@ import type { ChunkCursor } from "./chunk-order";
  *
  * - `.<id>.partial.mp4` — the bytes, appended chunk by chunk;
  * - `.<id>.partial.json` — its cursor: the stem it is saved under, the next
- *   chunk it takes, the last one's size and the bytes committed. Rewritten
+ *   chunk it takes, the last one's size, the bytes committed, and the save
+ *   asked for (`finishRequested`: the pointer track to save beside it — set
+ *   by the finish endpoint, run by the save job, so no request carries it
+ *   and a re-queued job can never lose it). Rewritten
  *   (a synced temp file renamed over it) AFTER each chunk's bytes are written
  *   and synced, so it is the commit point: bytes past `bytes` are a chunk
  *   whose cursor never landed — overwritten by that chunk's retry, cut at
  *   finish;
- * - `.<id>.finishing` — a finish's claim (the pid of the backend running
- *   it): while its process lives, the recording takes no chunk and no second
- *   finish, and is not listed as unfinished. A claim whose process died (a
- *   redeploy mid-remux) is stale: the next finish takes it over;
+ * - `.<id>.finishing` — a save's claim (the pid of the backend running it):
+ *   while its process lives, no second save or delete touches it. A claim
+ *   whose process died (a redeploy mid-remux) is stale: the save job's next
+ *   run takes it over;
  * - `.<id>.mp4` — a finish's remux, before it is linked to its name.
  *
  * A partial with no cursor beside it was started by an equin that kept the
- * cursor in memory (before 2026-11-25): it takes no more chunks, but it can
- * still be saved — under its creation time — or deleted. So can one whose
- * cursor cannot be read (`cursorProblem`).
+ * cursor in memory (before 2026-11-25): it takes no more chunks, and the
+ * save job saves it under its creation time. So is one whose cursor cannot
+ * be read (`cursorProblem`).
  */
 export interface Upload {
   id: string;
@@ -57,6 +61,12 @@ const UploadCursorSchema = z.object({
   nextSeq: z.number().int().nonnegative(),
   lastSize: z.number().int().nonnegative().nullable(),
   bytes: z.number().int().nonnegative(),
+  /** The save asked for, `null` while it records. A cursor from before the
+   *  field asked for none. */
+  finishRequested: z
+    .object({ pointer: PointerTrackSchema.nullable() })
+    .nullable()
+    .default(null),
 });
 export type UploadCursor = z.infer<typeof UploadCursorSchema> & ChunkCursor;
 
@@ -65,7 +75,7 @@ const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const PARTIAL = /^\.([0-9a-f-]{36})\.partial\.mp4$/;
 
 /** The title a partial without a cursor is saved under. */
-const UNNAMED_TITLE = "Unfinished recording";
+const UNNAMED_TITLE = "Recording";
 
 export function partialPathOf(folder: string, id: string): string {
   return join(folder, `.${id}.partial.mp4`);
@@ -91,7 +101,13 @@ export async function createUpload(
   base: string,
 ): Promise<void> {
   await writeFile(partialPathOf(folder, id), new Uint8Array(), { flag: "wx" });
-  await writeCursor(folder, id, { base, nextSeq: 0, lastSize: null, bytes: 0 });
+  await writeCursor(folder, id, {
+    base,
+    nextSeq: 0,
+    lastSize: null,
+    bytes: 0,
+    finishRequested: null,
+  });
 }
 
 /**
@@ -142,7 +158,7 @@ export async function claimFinish(upload: Upload): Promise<boolean> {
   return true;
 }
 
-/** Give a claim back (a finish that failed): the recording is unfinished again. */
+/** Give a claim back (a save that failed): the job's next attempt claims it. */
 export async function releaseFinish(upload: Upload): Promise<void> {
   await rm(claimPathOf(upload.folder, upload.id), { force: true });
 }
@@ -174,9 +190,8 @@ export async function readUpload(
   };
 }
 
-/** Every recording in `folder` that was never finished, newest first —
- *  without the ones a live process is finishing now. */
-export async function listUploads(folder: string): Promise<Upload[]> {
+/** The id of every recording `folder` holds that is not saved yet. */
+export async function listUploadIds(folder: string): Promise<string[]> {
   let names: string[];
   try {
     names = await readdir(folder);
@@ -184,15 +199,10 @@ export async function listUploads(folder: string): Promise<Upload[]> {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
-  const uploads: Upload[] = [];
-  for (const name of names) {
+  return names.flatMap((name) => {
     const id = PARTIAL.exec(name)?.[1];
-    if (id === undefined) continue;
-    // Gone between the listing and the read (finished, deleted): not unfinished.
-    const upload = await readUpload(folder, id);
-    if (upload !== null && upload.finishingBy === null) uploads.push(upload);
-  }
-  return uploads.sort((a, b) => b.writtenAt - a.writtenAt);
+    return id === undefined || !ID.test(id) ? [] : [id];
+  });
 }
 
 /**

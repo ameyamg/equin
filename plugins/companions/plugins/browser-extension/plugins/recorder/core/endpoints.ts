@@ -3,7 +3,6 @@ import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import {
   PointerTrackSchema,
   RelayCreatedSchema,
-  RelayFinishedSchema,
 } from "@plugins/companions/plugins/browser-extension/core";
 
 /** The recording's bytes land in a folder on the computer. */
@@ -33,9 +32,11 @@ export const appendTabRecordingChunk = defineEndpoint({
 });
 
 /**
- * Finish it: flushed, remuxed to a faststart MP4, linked to its final name
- * (`<YYYY-MM-DD HH.MM> <title>.mp4`, never overwriting), with the pointer
- * track beside it as `<name>.pointer.json`.
+ * Ask equin to save it: the request is kept with the recording (on disk) and
+ * equin's save job runs it — flushed, remuxed to a faststart MP4, linked to
+ * its final name (`<YYYY-MM-DD HH.MM> <title>.mp4`, never overwriting), with
+ * the pointer track beside it as `<name>.pointer.json`. Answers at once;
+ * the outcome is the `recorder.save` live value. Asking again is harmless.
  */
 export const finishTabRecording = defineEndpoint({
   route: "POST /api/tab-recordings/:id/finish",
@@ -43,7 +44,6 @@ export const finishTabRecording = defineEndpoint({
     durationMs: z.number().nonnegative(),
     pointer: PointerTrackSchema.nullable(),
   }),
-  response: RelayFinishedSchema,
   needsMachine: NEEDS_MACHINE,
 });
 

@@ -1,6 +1,6 @@
 {
-  "id": "9893f5a7-b468-41d6-8b37-238a6d0a44e6",
-  "prevId": "4c2859b5-8da6-4f66-b0be-65ca4c4d03e1",
+  "id": "1478afcc-b7b2-4ef4-9404-a8181695b9ed",
+  "prevId": "9893f5a7-b468-41d6-8b37-238a6d0a44e6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5977,6 +5977,54 @@
             },
             {
               "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.recorder_saves": {
+      "name": "recorder_saves",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "recorder_saves_created_at_idx": {
+          "name": "recorder_saves_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

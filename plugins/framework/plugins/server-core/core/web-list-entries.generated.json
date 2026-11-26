@@ -637,8 +637,6 @@
   {"list":"companions.browser-extension.page-action","plugin":"companions.browser-extension.equin-site","fact":{"href":{"$code":true},"icon":{"color":"indigo","symbol":{"kind":"symbol","name":"swap-horiz"}},"id":"open-on-public-site","kind":"link","site":{"label":"equin","matches":{"$code":true}},"title":"Open on equin.ai"}},
   {"list":"companions.browser-extension.page-action","plugin":"companions.browser-extension.equin-site","fact":{"href":{"$code":true},"icon":{"color":"teal","symbol":{"kind":"symbol","name":"play-circle"}},"id":"open-in-demo","kind":"link","site":{"label":"equin","matches":{"$code":true}},"title":"Open in the demo"}},
   {"list":"companions.browser-extension.page-action","plugin":"companions.browser-extension.equin-site","fact":{"href":{"$code":true},"icon":{"color":"amber","symbol":{"kind":"symbol","name":"bolt"}},"id":"open-live","kind":"link","site":{"label":"equin","matches":{"$code":true}},"title":"Open live"}},
-  {"list":"companions.browser-extension.recorder.item-actions","plugin":"companions.browser-extension.recorder","fact":{"component":{"$code":true},"id":"save"}},
-  {"list":"companions.browser-extension.recorder.item-actions","plugin":"companions.browser-extension.recorder","fact":{"component":{"$code":true},"id":"discard"}},
   {"list":"companions.browser-extension.section","plugin":"companions.browser-extension","fact":{"component":{"$code":true},"id":"header","label":"Header"}},
   {"list":"companions.browser-extension.section","plugin":"companions.browser-extension","fact":{"component":{"$code":true},"id":"page-actions","label":"Page actions"}},
   {"list":"companions.browser-extension.section","plugin":"companions.browser-extension","fact":{"component":{"$code":true},"id":"footer","label":"Footer"}},
