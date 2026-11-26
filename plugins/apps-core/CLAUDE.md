@@ -186,7 +186,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `APP_RAIL_WIDTH`
     - `documentTitle`
 - Cross-plugin:
-  - Imported by: 67 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×31
     - `apps-core` ×17
     - `ui` ×6
@@ -194,6 +194,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `config_v2` ×2
     - `hints` ×2
     - `debug/icons`
+    - `network/live/boot-snapshot`
     - `plugin-meta/exhibits`
     - `reports/main-thread-stall`
     - `shell/global-action-bar`

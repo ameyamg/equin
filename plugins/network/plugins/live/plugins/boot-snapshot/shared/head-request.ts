@@ -13,4 +13,6 @@ export interface HeadRequest {
   response: Promise<Response>;
   /** `performance.now()` when the head script issued the request. */
   startMs: number;
+  /** The app the request named (`?app=`, its plugin subtree), or null. */
+  app: string | null;
 }

@@ -652,3 +652,50 @@ describe("mail cache: refusals", () => {
     await settle(other);
   });
 });
+
+describe("mail cache: held (the boot preload's cache-only answer)", () => {
+  test("answers a covered window as window() does, with no provider call; anything else is not held", async () => {
+    const h = harness({ threads: inboxThreads(5) });
+    // Nothing cached: not held, and nothing asked of the provider.
+    expect(await h.cache.held(win({ limit: 2 }))).toEqual({ held: false });
+    expect(h.f.calls).toEqual([]);
+
+    const covered = await h.cache.window(win({ limit: 2 }));
+    await settle(h);
+    h.resetCalls();
+    expect(await h.cache.held(win({ limit: 2 }))).toEqual({
+      held: true,
+      rows: covered,
+    });
+    // Past coverage, or another query: not held (window() would fill).
+    expect(await h.cache.held(win({ limit: 5 }))).toEqual({ held: false });
+    expect(
+      await h.cache.held(
+        win({ limit: 2, where: clause("unread", "eq", true) as Filter }),
+      ),
+    ).toEqual({ held: false });
+    expect(h.f.calls).toEqual([]);
+
+    // The connection is never checked: held answers even when it cannot be.
+    h.f.setConnected("unreachable");
+    expect(await h.cache.held(win({ limit: 2 }))).toEqual({
+      held: true,
+      rows: covered,
+    });
+    expect(h.f.calls).toEqual([]);
+  });
+});
+
+test("held writes nothing (a boot preload is not a use)", async () => {
+  const h = harness({ threads: inboxThreads(3) });
+  await h.cache.window(win({ limit: 2 }));
+  await settle(h);
+  await t.db.execute(
+    sql`update mail_threads set last_used_at = '2026-01-01T00:00:00Z'`,
+  );
+  expect((await h.cache.held(win({ limit: 2 }))).held).toBe(true);
+  const r = await t.db.execute(
+    sql`select count(*)::int as n from mail_threads where last_used_at <> '2026-01-01T00:00:00Z'`,
+  );
+  expect((r.rows[0] as { n: number }).n).toBe(0);
+});

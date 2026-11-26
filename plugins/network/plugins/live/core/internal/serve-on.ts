@@ -53,6 +53,11 @@ import type {
   LiveWindowParams,
 } from "./query";
 import type { LivePagedParams, LiveQueryParams } from "./query-value";
+import {
+  windowAppPreload,
+  type LiveExternalPreloadWindows,
+  type LivePreloadedTuple,
+} from "./preload-windows";
 import type { LiveCutKey } from "./row-key";
 
 // The ONE serving code path every host of the live API runs — the Bun server
@@ -431,6 +436,13 @@ export type ServeExternalWindowOptions<
   groups?: (
     q: LiveDecodedGroupQuery<keyof F & string>,
   ) => Answer<readonly LiveGroup<FilterScalar>[]>;
+  /**
+   * The windows an app's first frame reads, preloaded in that app's boot
+   * snapshot from what the source already holds (`held(q)`, cache-only) —
+   * see `core/internal/preload-windows.ts`. Served by the Bun host only (it
+   * has the boot snapshot); another host refuses it.
+   */
+  preloadWindows?: LiveExternalPreloadWindows<Row, F, S>;
   all?: never;
 } & CountOption<Cn> &
   KeyTextOption<Row, S>;
@@ -445,6 +457,7 @@ export type ServeExternalAllOptions<
   groups?: never;
   count?: never;
   keyText?: never;
+  preloadWindows?: never;
 };
 
 /** An external lookup-only collection's one answer: rows by id. */
@@ -457,6 +470,7 @@ export type ServeExternalLookupOptions<
   groups?: never;
   count?: never;
   keyText?: never;
+  preloadWindows?: never;
 };
 
 /**
@@ -585,6 +599,12 @@ export function serveCollectionOn(
   collection: AnyCollection,
   opts: AnyExternalCollectionOptions,
 ): AnyServedExternal {
+  if (opts.preloadWindows !== undefined) {
+    // Only the Bun host has a boot snapshot to carry them.
+    throw new Error(
+      `serveCollectionOn("${collection.key}"): \`preloadWindows\` rides the worktree's boot snapshot — serve it with the Bun \`serveCollection\`.`,
+    );
+  }
   return compileExternalCollection(rt, collection, opts);
 }
 
@@ -599,6 +619,11 @@ export type AnyServedExternal = ServedExternalBase & {
   > | null;
   count?: ServedExternalResource<number, LiveCountParams> | null;
   notify?: (change?: LiveCollectionChange) => void;
+  /**
+   * The window's app preload (`preloadWindows`), when served with one — what
+   * the Bun host declares on the window's `Resource.Declare`.
+   */
+  windowAppPreload?: { tuples: () => Promise<LivePreloadedTuple[]> };
 };
 
 /** Every collection form, erased — the implementation's view. */
@@ -653,6 +678,12 @@ export interface AnyExternalCollectionOptions {
   ) => Answer<readonly LiveGroup<FilterScalar>[]>;
   count?: (q: LiveDecodedCountQuery) => Answer<number>;
   keyText?: Record<string, ((value: unknown) => string | null) | undefined>;
+  preloadWindows?: {
+    windows: () => unknown;
+    held: (
+      q: LiveDecodedQuery<string>,
+    ) => Answer<{ held: true; rows: readonly unknown[] } | { held: false }>;
+  };
   whileSubscribed?: (notify: LiveCollectionNotify) => StopFn | Promise<StopFn>;
   throttleMs?: number;
 }
@@ -965,10 +996,12 @@ export function compileExternalCollection(
   // Each form takes exactly its answers (tsc); refused for a cast.
   const allowed: readonly string[] = {
     all: ["all"],
-    window: ["window", "groups", "count", "keyText"],
+    window: ["window", "groups", "count", "keyText", "preloadWindows"],
     lookup: [],
   }[form];
-  const stray = (["window", "all", "groups", "count", "keyText"] as const)
+  const stray = (
+    ["window", "all", "groups", "count", "keyText", "preloadWindows"] as const
+  )
     .filter((f) => opts[f] !== undefined && !allowed.includes(f))
     .map((f) => `\`${f}\``);
   if (stray.length > 0) {
@@ -1061,7 +1094,11 @@ export function compileExternalCollection(
     (params) => pointDecode(params),
   );
 
-  let served: Omit<AnyServedExternal, keyof ServedExternalBase | "notify">;
+  let served: Omit<
+    AnyServedExternal,
+    keyof ServedExternalBase | "notify" | "windowAppPreload"
+  >;
+  let windowAppPreloadOf: AnyServedExternal["windowAppPreload"];
 
   if (form === "all") {
     const allAnswer = opts.all;
@@ -1103,6 +1140,34 @@ export function compileExternalCollection(
     const descriptor = collection.window!;
     const codec = descriptor.window;
     const keyText = opts.keyText ?? {};
+    /** One window answer, checked against the declaration and its rows minted their `$key`. */
+    const windowRows = (
+      what: string,
+      q: LiveDecodedQuery<string>,
+      answer: unknown,
+    ) => {
+      const out = checkedRows(what, answer, q.limit);
+      // The key: the order's parts, then the id unless the order names it.
+      const named = q.orderBy.some(([c]) => c === collection.id);
+      const dirs: LiveKeyDirection[] = [
+        ...q.orderBy.map(([, d]) => d),
+        ...(named ? [] : (["asc"] as const)),
+      ];
+      return mintRowKeys(
+        out,
+        (row): LiveCutKey => [
+          ...q.orderBy.map(([c]) =>
+            c === collection.id
+              ? (row[collection.id] as string)
+              : partOf(row, c),
+          ),
+          ...(named ? [] : [row[collection.id] as string]),
+        ],
+        dirs,
+        { after: q.after ?? null, until: q.until ?? null },
+        (detail) => fail(`${what}: ${detail}`),
+      );
+    };
     /** One order field's `$key` part: its text, or NULL. */
     const partOf = (row: Record<string, unknown>, field: string) => {
       const value = row[field];
@@ -1134,31 +1199,35 @@ export function compileExternalCollection(
         },
         loader: async (params: LiveWindowParams) => {
           const q = codec.decode(params);
-          const out = checkedRows("window(q)", await windowAnswer!(q), q.limit);
-          // The key: the order's parts, then the id unless the order names it.
-          const named = q.orderBy.some(([c]) => c === collection.id);
-          const dirs: LiveKeyDirection[] = [
-            ...q.orderBy.map(([, d]) => d),
-            ...(named ? [] : (["asc"] as const)),
-          ];
-          return mintRowKeys(
-            out,
-            (row): LiveCutKey => [
-              ...q.orderBy.map(([c]) =>
-                c === collection.id
-                  ? (row[collection.id] as string)
-                  : partOf(row, c),
-              ),
-              ...(named ? [] : [row[collection.id] as string]),
-            ],
-            dirs,
-            { after: q.after ?? null, until: q.until ?? null },
-            (detail) => fail(`window(q): ${detail}`),
-          );
+          return windowRows("window(q)", q, await windowAnswer!(q));
         },
         ...common,
       }),
     );
+    // `preloadWindows`: the same tuples a reader subscribes, answered from
+    // `held(q)` and checked and keyed exactly as `window(q)`'s answer.
+    const preloadSpec = opts.preloadWindows;
+    if (preloadSpec !== undefined) {
+      if (typeof preloadSpec.held !== "function") {
+        fail(
+          "`preloadWindows.held(q)` is required — an external source's preload answers from what it already holds, never from its provider.",
+        );
+      }
+      windowAppPreloadOf = windowAppPreload(
+        where,
+        descriptor.window as unknown as Parameters<typeof windowAppPreload>[1],
+        preloadSpec,
+        async (params) => {
+          const q = codec.decode(params);
+          const h = await preloadSpec.held(q);
+          if (!h.held) return { held: false };
+          return {
+            held: true,
+            value: windowRows("preloadWindows.held(q)", q, h.rows),
+          };
+        },
+      );
+    }
 
     let groups: AnyServedExternal["groups"] = null;
     const groupsAnswer = opts.groups;
@@ -1219,7 +1288,13 @@ export function compileExternalCollection(
     served = { rows };
   }
 
-  return { ...served, ...reg.seal() };
+  return {
+    ...served,
+    ...reg.seal(),
+    ...(windowAppPreloadOf !== undefined
+      ? { windowAppPreload: windowAppPreloadOf }
+      : {}),
+  };
 }
 
 /**

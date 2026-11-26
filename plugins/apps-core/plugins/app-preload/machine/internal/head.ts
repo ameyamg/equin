@@ -9,6 +9,7 @@ import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import type { HeadFragments } from "@plugins/shell/plugins/document-head/server";
 import {
   APP_PRELOADS_FILE,
+  appHeadPaths,
   appRootOf,
   AppPreloadsSchema,
   type AppPreloads,
@@ -65,14 +66,8 @@ export function renderAppPreloadHead(
       .join("");
   };
   const head: HeadFragments = {};
-  for (const app of apps) head[app.basePath] = htmlOf(app.plugin);
-  for (const surface of apps) {
-    if (surface.launch !== "surface") continue;
-    for (const app of apps) {
-      if (app.launch !== "tab") continue;
-      head[surface.basePath + app.basePath] = htmlOf(app.plugin);
-    }
-  }
+  for (const { path, app } of appHeadPaths(apps))
+    head[path] = htmlOf(app.plugin);
   return head;
 }
 

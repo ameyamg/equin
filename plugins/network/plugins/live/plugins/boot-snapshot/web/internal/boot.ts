@@ -12,7 +12,7 @@ import {
   HEAD_REQUEST_GLOBAL,
   type HeadRequest,
 } from "../../shared/head-request";
-import { hydrateBootSnapshot } from "./hydrate";
+import { hydrateAppTuples, hydrateBootSnapshot } from "./hydrate";
 
 /**
  * The snapshot request the shell's head started (`server/internal/head-request.ts`),
@@ -33,7 +33,8 @@ function takeHeadRequest():
     !("response" in value) ||
     !(value.response instanceof Promise) ||
     !("startMs" in value) ||
-    typeof value.startMs !== "number"
+    typeof value.startMs !== "number" ||
+    ("app" in value && value.app !== null && typeof value.app !== "string")
   ) {
     throw new Error(
       `boot-snapshot: globalThis.${HEAD_REQUEST_GLOBAL} is not the head script's request`,
@@ -44,8 +45,51 @@ function takeHeadRequest():
     request: {
       response: value.response as Promise<Response>,
       startMs: value.startMs,
+      // A shell whose head an older backend published names no app.
+      app: "app" in value ? (value.app as string | null) : null,
     },
   };
+}
+
+/**
+ * The app the page's first boot asked for (the head request's `?app=`),
+ * kept so a second boot in the same page (Retry) asks for the same one. A
+ * page whose shell carried no head request asks for none — its app's own
+ * preloads then load with the app, as without them.
+ */
+let bootApp: string | null = null;
+
+/** A boot-snapshot problem, filed as a crash (see the two call sites). */
+function reportBootSnapshotProblem(errorType: string, summary: string): void {
+  // The crash collector's window error listener is NOT mounted yet during the boot
+  // window (RenderCoreRoot mounts after the boot tasks settle), so a queueMicrotask
+  // throw would only reach the console. report() is a direct keepalive POST that
+  // files a deduped crash task regardless of mount state.
+  void report({
+    kind: "crash",
+    source: "boot-snapshot",
+    message: summary,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    // Matches the crash kind's CrashPayloadSchema (errorType + stack). No real
+    // Error is thrown here, so we synthesize a minimal stack for fingerprinting.
+    data: { errorType, stack: new Error(summary).stack ?? null },
+  });
+}
+
+function reportHydrateFailed(failed: readonly string[]): void {
+  const more = failed.length > 5 ? ` (+${failed.length - 5} more)` : "";
+  const summary = `boot-snapshot: hydrate failed for ${failed.slice(0, 5).join("; ")}${more}`;
+  console.error(`[boot-snapshot] ${summary}`);
+  reportBootSnapshotProblem("BootSnapshotHydrateFailed", summary);
+}
+
+function reportMissing(missing: readonly string[]): void {
+  const summary = `boot-snapshot: unresolved descriptor key(s): ${missing.join(", ")}`;
+  console.error(
+    `[boot-snapshot] no descriptor registered for: ${missing.join(", ")}`,
+  );
+  reportBootSnapshotProblem("BootSnapshotUnresolvedDescriptor", summary);
 }
 
 // Boot-readiness task: fetch every boot-critical resource in ONE request and seed the
@@ -65,14 +109,23 @@ export async function runBootSnapshot(): Promise<void> {
   // the shell's head already sent that same request at t0; only its reply is
   // read here.
   const head = takeHeadRequest();
+  if (head.kind === "taken") bootApp = head.request.app;
   const reqStart =
     head.kind === "taken" ? head.request.startMs : performance.now();
-  const { caller, resources, tuples, timings } = await readEndpointResponse(
-    bootSnapshot,
-    await (head.kind === "taken"
-      ? head.request.response
-      : sendEndpointRequest(pageTransport.fetch, bootSnapshot, {})),
-  );
+  const { caller, resources, tuples, appTuples, timings } =
+    await readEndpointResponse(
+      bootSnapshot,
+      await (head.kind === "taken"
+        ? head.request.response
+        : sendEndpointRequest(
+            pageTransport.fetch,
+            bootSnapshot,
+            {},
+            {
+              query: bootApp === null ? {} : { app: bootApp },
+            },
+          )),
+    );
   // Who the page's server takes this page for, recorded before anything
   // renders: a deployed site's visitor page then never sends a write its
   // server only takes from the owner.
@@ -85,7 +138,11 @@ export async function runBootSnapshot(): Promise<void> {
     startMs: reqStart,
     durationMs: reqMs,
   });
-  for (const key of [...Object.keys(resources), ...Object.keys(tuples)]) {
+  for (const key of [
+    ...Object.keys(resources),
+    ...Object.keys(tuples),
+    ...Object.keys(appTuples).map((k) => `app:${k}`),
+  ]) {
     const t = timings[key];
     recordBootSpan({
       id: `res:${key}`,
@@ -102,45 +159,15 @@ export async function runBootSnapshot(): Promise<void> {
   // armed by App itself, right before it swaps the boot screen for the app: the
   // boot screen commits too (its elapsed clock), so "the next commit after this
   // hydrate" would no longer be App's first real render.
-  if (failed.length) {
-    const more = failed.length > 5 ? ` (+${failed.length - 5} more)` : "";
-    const summary = `boot-snapshot: hydrate failed for ${failed.slice(0, 5).join("; ")}${more}`;
-    console.error(`[boot-snapshot] ${summary}`);
-    void report({
-      kind: "crash",
-      source: "boot-snapshot",
-      message: summary,
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      data: {
-        errorType: "BootSnapshotHydrateFailed",
-        stack: new Error(summary).stack ?? null,
-      },
-    });
-  }
-  if (missing.length) {
-    // The crash collector's window error listener is NOT mounted yet during the boot
-    // window (RenderCoreRoot mounts after the boot tasks settle), so a queueMicrotask
-    // throw would only reach the console. report() is a direct keepalive POST that
-    // files a deduped crash task regardless of mount state.
-    const summary = `boot-snapshot: unresolved descriptor key(s): ${missing.join(", ")}`;
-    console.error(
-      `[boot-snapshot] no descriptor registered for: ${missing.join(", ")}`,
-    );
-    void report({
-      kind: "crash",
-      source: "boot-snapshot",
-      message: summary,
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      // Matches the crash kind's CrashPayloadSchema (errorType + stack). No real
-      // Error is thrown here, so we synthesize a minimal stack for fingerprinting.
-      data: {
-        errorType: "BootSnapshotUnresolvedDescriptor",
-        stack: new Error(summary).stack ?? null,
-      },
-    });
-  }
+  if (failed.length) reportHydrateFailed(failed);
+  if (missing.length) reportMissing(missing);
+  // The app's own preloads: hydrated as their app's code registers them,
+  // before the first frame (the boot holds for the app's code).
+  hydrateAppTuples(appTuples, {
+    app: bootApp,
+    onMissing: reportMissing,
+    onFailed: reportHydrateFailed,
+  });
 }
 
 // `block`: without the snapshot the app has no boot-critical data. A stalled or

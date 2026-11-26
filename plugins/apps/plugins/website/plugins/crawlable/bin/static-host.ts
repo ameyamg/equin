@@ -94,6 +94,8 @@ await booted.settled;
 const bootSnapshot = await assembleBootSnapshot({
   webPlugins: new Set(host.webPlugins.map(webPluginId)),
   caller: "visitor",
+  // One snapshot for every page of the site, so no app's own preloads.
+  app: null,
 });
 const pages = [...WebsitePages.Page.getContributions()].sort((a, b) =>
   a.path.localeCompare(b.path),

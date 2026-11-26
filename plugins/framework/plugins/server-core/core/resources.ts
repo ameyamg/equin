@@ -183,13 +183,27 @@ type ResourceDeclarePayload = {
   code?: readonly PersistedCode[];
   preloadTuples?: (
     composedWebPlugins: ReadonlySet<string>,
-  ) => Promise<
-    (
-      | { params: ResourceParams; ok: true; value: unknown }
-      | { params: ResourceParams; ok: false; error: unknown }
-    )[]
-  >;
+  ) => Promise<SettledPreloadTuple[]>;
+  appPreload?: AppPreload;
 };
+
+/** One enumerated boot tuple, loaded or failed (each settles on its own). */
+export type SettledPreloadTuple =
+  | { params: ResourceParams; ok: true; value: unknown }
+  | { params: ResourceParams; ok: false; error: unknown };
+
+/**
+ * An APP-SCOPED preload (network/live's `serveCollection(c, { preloadWindows })`):
+ * tuples only the pages of ONE app read — the app the contributing plugin
+ * lies in (its `_pluginId`) — so only that app's boot snapshot carries them.
+ * `tuples` answers from what the server already holds and never waits on a
+ * third party: a tuple not held is simply absent (its reader loads it as
+ * without a preload). Independent of `preload` — never L2-persisted, never
+ * pinned eager.
+ */
+export interface AppPreload {
+  tuples: () => Promise<SettledPreloadTuple[]>;
+}
 
 export const Resource = {
   Declare: defineServerContribution<
@@ -204,6 +218,9 @@ export const Resource = {
       ...(resource.code !== undefined ? { code: resource.code } : {}),
       ...(resource.preloadTuples !== undefined
         ? { preloadTuples: resource.preloadTuples }
+        : {}),
+      ...(resource.appPreload !== undefined
+        ? { appPreload: resource.appPreload }
         : {}),
     }),
   }),

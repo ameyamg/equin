@@ -34,3 +34,28 @@ export function enumeratedPreloads(): {
   }
   return out;
 }
+
+/**
+ * The app-scoped preloads (server-core's `Resource.Declare` `appPreload`, set
+ * by network/live's `preloadWindows`): each key, the plugin that declared it
+ * (whose app it is scoped to), and its loader.
+ */
+export function appPreloads(): {
+  key: string;
+  plugin: string;
+  appPreload: NonNullable<
+    ReturnType<typeof Resource.Declare.getContributions>[number]["appPreload"]
+  >;
+}[] {
+  const out: ReturnType<typeof appPreloads> = [];
+  for (const c of Resource.Declare.getContributions()) {
+    if (c.appPreload === undefined) continue;
+    if (c._pluginId === undefined) {
+      throw new Error(
+        `boot-snapshot: the app preload of "${c.key}" was collected with no declaring plugin — its app is the plugin's`,
+      );
+    }
+    out.push({ key: c.key, plugin: c._pluginId, appPreload: c.appPreload });
+  }
+  return out;
+}

@@ -640,6 +640,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `primitives/report-sink.defineReportSink`
     - `primitives/report-sink.defineRequestSink`
   - Exports (types):
+    - `AppPreload`
     - `BootHookContext`
     - `BootJournalEntry`
     - `BootMode`
@@ -713,6 +714,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ServerRegistryEntry`
     - `ServerReport`
     - `ServerResourceOptions`
+    - `SettledPreloadTuple`
     - `SinkHandler`
     - `Span`
     - `StartSet`

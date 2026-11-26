@@ -26,8 +26,21 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 const bootSnapshotSource = z.enum(["memory", "persisted", "loader"]);
 export type BootSnapshotSource = z.infer<typeof bootSnapshotSource>;
 
+/** One key's enumerated tuples, each with its params. */
+const tupleListSchema = z.array(
+  z.object({
+    params: z.record(z.string(), z.string()),
+    value: z.unknown(),
+  }),
+);
+
 export const bootSnapshot = defineEndpoint({
   route: "GET /api/resources/boot-snapshot",
+  // The app the page boots — its plugin subtree, `apps/plugins/<app>/`
+  // (apps-core/app-preload's `appRootOf`): the snapshot then also carries the
+  // app-scoped preloads of that app's plugins (`appTuples`). Absent: a page
+  // outside every app, or a boot that does not know its app (a Retry).
+  query: z.object({ app: z.string().optional() }),
   // Like the live-state read it front-loads (`GET /api/resources/:key`): every
   // page of a deployed site boots from it.
   access: {
@@ -43,15 +56,12 @@ export const bootSnapshot = defineEndpoint({
     // (its server's gate stays the authority).
     caller: z.enum(["owner", "visitor"]).optional(),
     resources: z.record(z.string(), z.unknown()),
-    tuples: z.record(
-      z.string(),
-      z.array(
-        z.object({
-          params: z.record(z.string(), z.string()),
-          value: z.unknown(),
-        }),
-      ),
-    ),
+    tuples: z.record(z.string(), tupleListSchema),
+    // The app-scoped preloads (`Resource.Declare`'s `appPreload`) of the app
+    // named by `app`, as `tuples`. Their descriptors load with the app's code,
+    // not eagerly: the boot hydrates each once registered. Timed under
+    // `app:<key>`. Defaulted: a backend older than the field answers without it.
+    appTuples: z.record(z.string(), tupleListSchema).default({}),
     timings: z.record(
       z.string(),
       z.object({

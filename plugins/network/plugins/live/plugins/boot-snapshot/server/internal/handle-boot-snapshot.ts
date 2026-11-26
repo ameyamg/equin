@@ -12,9 +12,14 @@ import {
 import { admittedAs } from "@plugins/framework/plugins/principal/core";
 import { readPersistedSnapshots } from "@plugins/network/plugins/live/plugins/live-state-snapshot/server";
 import { resourceDescriptorByKey } from "@plugins/network/plugins/live/plugins/live-state/core";
+import {
+  asFsPath,
+  asPluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
+import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
 import { bootSnapshot } from "../../core";
 import type { BootSnapshotSource } from "../../core";
-import { enumeratedPreloads, preloadedKeys } from "./boot-keys";
+import { appPreloads, enumeratedPreloads, preloadedKeys } from "./boot-keys";
 
 type Params = Record<string, string>;
 
@@ -74,6 +79,13 @@ export async function assembleBootSnapshot(opts: {
    */
   caller: "owner" | "visitor";
   /**
+   * The app the page boots — its plugin subtree (`apps/plugins/<app>/`,
+   * apps-core/app-preload's `appRootOf`) — or null. The snapshot carries the
+   * app-scoped preloads (`appPreload`) its plugins declare only, so an
+   * app's first-frame windows ride its own boot and no other.
+   */
+  app: string | null;
+  /**
    * Serve persisted aliases from memory (default true). Boot-bench's cold
    * mode turns it off, so a cleared L2 really measures the loaders.
    */
@@ -81,6 +93,7 @@ export async function assembleBootSnapshot(opts: {
 }): Promise<{
   resources: Record<string, unknown>;
   tuples: Record<string, { params: Params; value: unknown }[]>;
+  appTuples: Record<string, { params: Params; value: unknown }[]>;
   timings: Record<string, { source: BootSnapshotSource; workMs: number }>;
   /** Wall time of the single batched persisted-snapshot read (the L2 fast path). */
   persistedReadMs: number;
@@ -148,6 +161,8 @@ export async function assembleBootSnapshot(opts: {
     }),
   );
 
+  const appLoads = loadAppPreloads(opts, readable, visitorTuple);
+
   const t0 = performance.now();
   const persisted = await readPersistedSnapshots(keys);
   const persistedReadMs = performance.now() - t0;
@@ -214,16 +229,102 @@ export async function assembleBootSnapshot(opts: {
     tuples[e.key] = e.tuples;
     timings[e.key] = { source: "loader", workMs: e.workMs };
   }
-  return { resources, tuples, timings, persistedReadMs };
+  const appTuples: Record<string, { params: Params; value: unknown }[]> = {};
+  for (const e of await appLoads) {
+    if (e.entries.length === 0) continue;
+    appTuples[e.key] = e.entries;
+    // Its own timing key: the same key may also ship a default tuple.
+    timings[`app:${e.key}`] = { source: "loader", workMs: e.workMs };
+  }
+  return { resources, tuples, appTuples, timings, persistedReadMs };
 }
 
-export const handleBootSnapshot = implement(bootSnapshot, async ({ req }) => {
-  const caller = admittedAs(req);
-  return {
-    ...(await assembleBootSnapshot({
-      webPlugins: composedWebPlugins(),
+/** Keys whose app preload was reported as lying in no app — once per process, not every boot. */
+const reportedAppless = new Set<string>();
+
+/**
+ * The app-scoped preloads of the booted app: every `appPreload` whose
+ * declaring plugin lies in `opts.app`. Each tuple settles on its own (a failed
+ * one is omitted and reported); a tuple its source does not hold was never
+ * returned. A declaring plugin outside every app can never be booted:
+ * reported (once), so it is not silently dead.
+ */
+function loadAppPreloads(
+  opts: { app: string | null },
+  readable: (key: string) => boolean,
+  visitorTuple: (key: string, params: Params) => Promise<boolean>,
+): Promise<
+  {
+    key: string;
+    entries: { params: Params; value: unknown }[];
+    workMs: number;
+  }[]
+> {
+  const app = opts.app;
+  if (app === null) return Promise.resolve([]);
+  return Promise.all(
+    appPreloads()
+      .filter(({ key, plugin }) => {
+        const root = appRootOf(asFsPath(asPluginId(plugin)));
+        if (root === null) {
+          if (!reportedAppless.has(key)) {
+            reportedAppless.add(key);
+            reportOmitted(
+              key,
+              "(app preload)",
+              new Error(
+                `it is declared by "${plugin}", which lies in no app (apps/plugins/<app>/), so no boot ever carries it`,
+              ),
+            );
+          }
+          return false;
+        }
+        return root === app && readable(key);
+      })
+      .map(async ({ key, appPreload }) => {
+        const s = performance.now();
+        const entries: { params: Params; value: unknown }[] = [];
+        try {
+          const loaded = await appPreload.tuples();
+          const failed: { params: Params; error: unknown }[] = [];
+          for (const t of loaded) {
+            // A failed tuple is reported, never asked about: its params may
+            // be no tuple at all (a window that did not encode).
+            if (!t.ok) {
+              failed.push({ params: t.params, error: t.error });
+              continue;
+            }
+            if (await visitorTuple(key, t.params)) {
+              entries.push({ params: t.params, value: t.value });
+            }
+          }
+          const first = failed[0];
+          if (first !== undefined) {
+            reportOmitted(
+              key,
+              `${failed.length}/${loaded.length} app tuple(s), first ${JSON.stringify(first.params)}`,
+              first.error,
+            );
+          }
+        } catch (err) {
+          reportOmitted(key, "(app preload failed)", err);
+        }
+        return { key, entries, workMs: performance.now() - s };
+      }),
+  );
+}
+
+export const handleBootSnapshot = implement(
+  bootSnapshot,
+  async ({ req, query }) => {
+    const caller = admittedAs(req);
+    return {
+      ...(await assembleBootSnapshot({
+        webPlugins: composedWebPlugins(),
+        caller,
+        app: query.app ?? null,
+      })),
       caller,
-    })),
-    caller,
-  };
-});
+    };
+  },
+);

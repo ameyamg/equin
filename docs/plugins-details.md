@@ -7166,7 +7166,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mail.threads:rows` (keyed, point)
           - Core:
             - Uses:
+              - `apps/mail/provider.Mailbox`
               - `apps/mail/provider.MAILBOX_ROLES`
+              - `apps/mail/provider.MailboxId`
+              - `apps/mail/provider.roleMailboxId`
               - `apps/mail/provider.THREAD_PARTICIPANTS_MAX`
               - `fields.nullable`
               - `fields/bool/config.boolField`
@@ -7192,6 +7195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailAccountStatusSchema`
               - `mailboxViewFilter`
               - `mailboxViewIds`
+              - `mailInboxView`
               - `mailMailboxes`
               - `mailThreads`
               - `PARENT_VIEW_INCLUDES_SUB_LABELS`
@@ -14451,7 +14455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 67 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 68 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×31
       - `apps-core` ×17
       - `ui` ×6
@@ -14459,6 +14463,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config_v2` ×2
       - `hints` ×2
       - `debug/icons`
+      - `network/live/boot-snapshot`
       - `plugin-meta/exhibits`
       - `reports/main-thread-stall`
       - `shell/global-action-bar`
@@ -14771,10 +14776,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/web-artifacts`
           - `framework/web-core`
+          - `network/live/boot-snapshot`
       - Core:
-        - Exports (types): `AppPreloads`
+        - Exports (types):
+          - `AppPreloads`
+          - `HeadKeyedApp`
         - Exports (values):
           - `APP_PRELOADS_FILE`
+          - `appHeadPaths`
           - `AppPreloadsSchema`
           - `appRootOf`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
@@ -34109,7 +34118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 103 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 104 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
           - `apps` ×18
           - `tasks` ×12
@@ -34125,6 +34134,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions` ×2
           - `code-explorer/commit-detail`
           - `hints/ask`
+          - `network/live/boot-snapshot`
           - `primitives/data-view`
           - `reorder`
           - `reports/launch-fix`
@@ -34250,6 +34260,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/report-sink.defineReportSink`
           - `primitives/report-sink.defineRequestSink`
         - Exports (types):
+          - `AppPreload`
           - `BootHookContext`
           - `BootJournalEntry`
           - `BootMode`
@@ -34323,6 +34334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServerRegistryEntry`
           - `ServerReport`
           - `ServerResourceOptions`
+          - `SettledPreloadTuple`
           - `SinkHandler`
           - `Span`
           - `StartSet`
@@ -44999,6 +45011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveDecodedQuery`
           - `LiveExposedColumns`
           - `LiveExposes`
+          - `LiveExternalPreloadWindows`
           - `LiveField`
           - `LiveFieldIds`
           - `LiveFields`
@@ -45016,6 +45029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveGroupQuery`
           - `LiveGroupsDescriptor`
           - `LiveGroupValue`
+          - `LiveHeldWindow`
           - `LiveHost`
           - `LiveHostSource`
           - `LiveHostSources`
@@ -45045,6 +45059,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePreload`
           - `LivePreloadedParamValue`
           - `LivePreloadedParamValueSpec`
+          - `LivePreloadedTuple`
+          - `LivePreloadWindow`
+          - `LivePreloadWindows`
           - `LiveQuery`
           - `LiveQueryCodec`
           - `LiveQueryFilterable`
@@ -45159,6 +45176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
           - `sliceRange`
+          - `windowAppPreload`
       - Cross-plugin:
         - Imported by: 374 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×93
@@ -45256,10 +45274,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `DocumentHead.Fragment` "boot-snapshot"
             - Uses:
+              - `apps-core.declaredAppPlugins`
               - `infra/endpoints.endpointPath`
               - `infra/endpoints.implement`
               - `network/live/live-state-snapshot.readPersistedSnapshots`
               - `shell/document-head.DocumentHead`
+              - `shell/document-head.HeadFragments`
             - Exports (values):
               - `assembleBootSnapshot`
               - `preloadedKeys`

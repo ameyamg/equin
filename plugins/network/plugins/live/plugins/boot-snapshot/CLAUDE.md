@@ -94,6 +94,25 @@ Two kinds of preload, told apart by the `Resource.Declare` payload alone:
   `preloadRows: { idsOf }` is one too: its one tuple is the id set of another
   preloaded collection's boot value (network/live's *Preload*).
 
+- **App-scoped** — a window collection served with `preloadWindows`
+  (network/live): its Declare carries `appPreload` (`{ tuples }`), loaded
+  only for a page booting the app its declaring plugin (`_pluginId`) lies in. The head fragment
+  is rendered per app path (apps-core/app-preload's `appHeadPaths`, the same
+  keying as the app's module preloads): each app's pages send
+  `?app=apps/plugins/<app>/` (`appRootOf` of the app's plugin), every other
+  path none, and `assembleBootSnapshot({ app })` loads the `appPreload`s
+  declared in that app. Shipped in `appTuples[key]` as `{ params, value }[]`,
+  timed under `app:<key>`. The app's descriptors are registered by the app's
+  own code (the boot's "App code" task, not the eager tier), so the client
+  hydrates a key at once when registered, else when a deferred batch lands
+  with it registered (`hydrateAppTuples`, over web-sdk's deferred-load state)
+  — still before the first frame, which waits for the app's code. A key still
+  unregistered once the deferred tier settles is reported missing, unless a
+  plugin of the app failed to load (dropped: the loader reports that). An app
+  preload declared outside every app is reported once per process.
+  The head parks the asked app beside its request, so a Retry asks for the
+  same one; a head from an older backend names none. Never L2-persisted.
+
 A route-parametrized resource nobody enumerates self-heals via its normal sub-ack.
 A load that fails is omitted from the snapshot and reported (server error
 reporter); a value the client schema rejects is skipped and reported (one bad
@@ -115,7 +134,8 @@ How it works:
 
 - **Snapshot endpoint** `GET /api/resources/boot-snapshot` returns
   `{ resources: Record<key, value>, tuples: Record<key, { params, value }[]>,
-  timings }` — every preloaded resource loaded in one request (a failed loader
+  appTuples: Record<key, { plugin, entries }>, timings }` (query `app?`) —
+  every preloaded resource loaded in one request (a failed loader
   is omitted and reported, not fatal).
 - **Client boot task** (`Core.Boot`) fetches that snapshot once and, for each key
   it ships, resolves the descriptor via `resourceDescriptorByKey` and
@@ -148,10 +168,12 @@ How it works:
 - Server:
   - Contributes: `DocumentHead.Fragment` "boot-snapshot"
   - Uses:
+    - `apps-core.declaredAppPlugins`
     - `infra/endpoints.endpointPath`
     - `infra/endpoints.implement`
     - `network/live/live-state-snapshot.readPersistedSnapshots`
     - `shell/document-head.DocumentHead`
+    - `shell/document-head.HeadFragments`
   - Exports (values):
     - `assembleBootSnapshot`
     - `preloadedKeys`

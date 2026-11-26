@@ -21,6 +21,8 @@ import {
   loadResourceByKey,
   loadResourceFresh,
   Resource as ResourceContribution,
+  type AppPreload,
+  type ResourceMode,
 } from "@plugins/framework/plugins/server-core/core";
 import type { Resource } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type { PointParams } from "@plugins/network/plugins/live/plugins/live-state/core";
@@ -112,6 +114,8 @@ import {
 import { rowEncodeOf } from "./encode-row";
 import {
   compileExternalCollection,
+  windowAppPreload,
+  type LivePreloadWindows,
   type AnyCollection,
   type AnyExternalCollectionOptions,
   type AnyServedExternal,
@@ -307,6 +311,16 @@ export type ServeCollectionOptions<
    * enumerated preload: never L2-persisted.
    */
   preloadRows?: PreloadRows;
+  /**
+   * The windows an app's first frame reads (a view's `where` / `orderBy`),
+   * preloaded — page 0 of each, from the compiled read — in the boot snapshot
+   * of a page booting the app the serving plugin lies in, only. See
+   * `core/internal/preload-windows.ts`.
+   */
+  // Its windows' columns are checked by the window codec when encoded (a
+  // window over another column fails its tuple, reported), not by type here:
+  // the options are shared with the lookup form, whose `U` is not the window's.
+  preloadWindows?: LivePreloadWindows<Record<string, unknown>, string>;
   /**
    * A tree collection's `$childCount` — required there (`ChildCountOption`,
    * tsc), refused elsewhere (a bind-time throw).
@@ -1426,9 +1440,14 @@ export function serveAnyCollection<
       collection as unknown as AnyCollection,
       external_ as unknown as AnyExternalCollectionOptions,
     );
+    const appPreload = external.windowAppPreload;
     return {
       ...external,
-      declare: external.resources.map((r) => ResourceContribution.Declare(r)),
+      declare: external.resources.map((r) =>
+        appPreload !== undefined && r.key === external.window?.key
+          ? declareAppPreloaded(r, appPreload)
+          : ResourceContribution.Declare(r),
+      ),
     };
   }
   // A table-backed collection's reads are compiled SQL, which never throws a
@@ -1688,25 +1707,35 @@ function serveOffFeedCollection<
     specs,
     opts,
   );
+  const window = served.window;
   return {
     ...served,
     declare: served.resources.map((r) =>
       r.key === served.rows.key
         ? declareRows(windowed, served.rows, opts.preloadRows)
-        : ResourceContribution.Declare(r),
+        : window !== undefined && r.key === window.key
+          ? declareWindow(
+              windowed as LiveCollection<Row, unknown, string>,
+              window,
+              opts.preloadWindows,
+            )
+          : ResourceContribution.Declare(r),
     ),
   };
 }
 
 /** A window collection's served resources, their keys and their declarations. */
 function servedWindow<Row>(
-  collection: { key: string; rows: { point: PointCodec } },
+  collection: WindowedCollection,
   window: Resource<Row[], LiveWindowParams>,
   rows: Resource<Row[], PointParams>,
   groups: Resource<LiveGroup<FilterScalar>[], LiveGroupParams>,
   count: Resource<number, LiveCountParams> | null,
   ancestors: Resource<Row[], PointParams> | null,
-  opts: { preloadRows?: PreloadRows },
+  opts: {
+    preloadRows?: PreloadRows;
+    preloadWindows?: PreloadWindowsSpec;
+  },
 ): ServedCollection<Row> {
   const all = [
     window,
@@ -1725,12 +1754,65 @@ function servedWindow<Row>(
     declare: all.map((r) =>
       r === rows
         ? declareRows(collection, rows, opts.preloadRows)
-        : ResourceContribution.Declare(r),
+        : r === window
+          ? declareWindow(collection, window, opts.preloadWindows)
+          : ResourceContribution.Declare(r),
     ),
   };
 }
 
 type PointCodec = { encode: (ids: readonly string[]) => PointParams };
+
+/** A window collection as its declarations read it: its key, its point codec, its window codec. */
+type WindowedCollection = {
+  key: string;
+  rows: { point: PointCodec };
+  window: { window: Parameters<typeof windowAppPreload>[1] };
+};
+
+/** `preloadWindows`, erased (typed on `ServeCollectionOptions`). */
+type PreloadWindowsSpec = { windows: () => unknown };
+
+/**
+ * A table-backed window's declaration — an app preload of `preloadWindows`
+ * when given, each window answered by the window's own compiled read
+ * (Postgres is a table's truth, so the server always holds it). The resource's
+ * own `load` (no flight, no commit watermark), as `declareRows`'.
+ */
+function declareWindow(
+  collection: WindowedCollection,
+  window: Pick<
+    Resource<unknown[], LiveWindowParams>,
+    "key" | "mode" | "load"
+  > & {
+    preload?: Resource<unknown[], LiveWindowParams>["preload"];
+  },
+  spec: PreloadWindowsSpec | undefined,
+): ReturnType<typeof ResourceContribution.Declare> {
+  if (spec === undefined) return ResourceContribution.Declare(window);
+  return declareAppPreloaded(
+    window,
+    windowAppPreload(
+      `serveCollection("${collection.key}")`,
+      collection.window.window,
+      spec,
+      async (params) => ({ held: true, value: await window.load(params) }),
+    ),
+  );
+}
+
+/** A resource's declaration carrying its app preload (server-core's `Resource.Declare` `appPreload`). */
+function declareAppPreloaded(
+  r: { key: string; mode: ResourceMode; preload?: "boot" | "boot-and-keep" },
+  appPreload: AppPreload,
+): ReturnType<typeof ResourceContribution.Declare> {
+  return ResourceContribution.Declare({
+    key: r.key,
+    mode: r.mode,
+    ...(r.preload !== undefined ? { preload: r.preload } : {}),
+    appPreload,
+  });
+}
 
 /**
  * The `:rows` sibling's declaration — an enumerated preload at the id set of

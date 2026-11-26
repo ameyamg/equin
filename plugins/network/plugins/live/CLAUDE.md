@@ -194,6 +194,35 @@ useLive(blocks, { where: { pageId } });
   `serveCollection(c, { preloadRows: { idsOf: other } })` — the id set of
   another preloaded `all` collection's boot value (the queue's ranks). Default
   `"none"`. Scanners read the flag through `tooling/resource-vocabulary`.
+- **App-scoped windows — `serveCollection(c, { preloadWindows })`.** The
+  windows an APP's first frame reads (Mail's Inbox, not the unfiltered
+  default), in that app's boot only:
+
+  ```ts
+  serveCollection(mailThreads, {
+    source: "external", /* window, rows, … */
+    preloadWindows: {
+      windows: () => [mailInboxView], // { where?, orderBy? } — page 0 at the step
+      held: (q) => cache.held(q),   // external only (tsc + throw): cache-only
+    },
+  });
+  ```
+
+  Each window ships as the reader's own page 0 (`encode({ ...w, limit:
+  step })` — what `useLive(c, w, { viewport })` and `useLive(c, w)` subscribe
+  first), only in the boot snapshot of a page whose path is in the app the
+  SERVING plugin lies in (`apps/plugins/<app>/` — derived, never named; one
+  served outside every app is reported), and is hydrated once the app's code
+  registers the collection (before the first frame — boot-snapshot's
+  *App-scoped*). The answer is what the server already holds: a
+  table's compiled read, or an external source's `held(q)` → `{ held: true,
+  rows }` (checked and keyed as `window(q)`'s) or `{ held: false }` (absent;
+  the reader loads it as without a preload) — never a provider wait. No
+  `preload` flag, never L2-persisted, the plugin not pinned eager. A window
+  naming `limit`, another key, or a clock field fails its tuple (reported).
+  The Bun host only (`serveCollectionOn` refuses it). Declared on the
+  window's `Resource.Declare` as `appPreload` (server-core). Code:
+  `core/internal/preload-windows.ts`; tests beside it.
 - **A row's own lists carry their bound.** `liveCollection` walks its row
   schema with `packages/list-bound` and freezes `c.shape`; a bare
   `jsonField` array/record throws at declaration (`stringListField` /
@@ -1799,6 +1828,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveDecodedQuery`
     - `LiveExposedColumns`
     - `LiveExposes`
+    - `LiveExternalPreloadWindows`
     - `LiveField`
     - `LiveFieldIds`
     - `LiveFields`
@@ -1816,6 +1846,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveGroupQuery`
     - `LiveGroupsDescriptor`
     - `LiveGroupValue`
+    - `LiveHeldWindow`
     - `LiveHost`
     - `LiveHostSource`
     - `LiveHostSources`
@@ -1845,6 +1876,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LivePreload`
     - `LivePreloadedParamValue`
     - `LivePreloadedParamValueSpec`
+    - `LivePreloadedTuple`
+    - `LivePreloadWindow`
+    - `LivePreloadWindows`
     - `LiveQuery`
     - `LiveQueryCodec`
     - `LiveQueryFilterable`
@@ -1959,6 +1993,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveCollectionOn`
     - `serveValueOn`
     - `sliceRange`
+    - `windowAppPreload`
 - Cross-plugin:
   - Imported by: 374 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×93

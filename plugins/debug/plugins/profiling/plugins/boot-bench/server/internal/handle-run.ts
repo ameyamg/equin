@@ -135,6 +135,8 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
         const r = await assembleBootSnapshot({
           webPlugins: composedWebPlugins(),
           caller: "owner",
+          // The default-tuple boot every page pays; an app's own preloads are its own.
+          app: null,
           memory: !cold,
         });
         return {
@@ -206,6 +208,8 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
       await assembleBootSnapshot({
         webPlugins: composedWebPlugins(),
         caller: "owner",
+        // The default-tuple boot every page pays; an app's own preloads are its own.
+        app: null,
         memory: !cold,
       }),
     );

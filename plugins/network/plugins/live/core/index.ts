@@ -272,6 +272,15 @@ export {
   compileExternalCollection,
   externalCollectionRegistrar,
 } from "./internal/serve-on";
+// App-scoped window preloads (`serveCollection(c, { preloadWindows })`).
+export { windowAppPreload } from "./internal/preload-windows";
+export type {
+  LiveExternalPreloadWindows,
+  LiveHeldWindow,
+  LivePreloadedTuple,
+  LivePreloadWindow,
+  LivePreloadWindows,
+} from "./internal/preload-windows";
 export type {
   AnyCollection,
   AnyExternalCollectionOptions,

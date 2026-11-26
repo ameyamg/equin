@@ -10,14 +10,16 @@ const hydrated: [string, unknown, unknown][] = [];
 const reports: { message: string }[] = [];
 let snapshot: unknown;
 let pageFetches = 0;
+const fetchedPaths: string[] = [];
 
 vi.mock(
   "@plugins/primitives/plugins/networking/plugins/page-transport/web",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     pageTransport: {
-      fetch: async () => {
+      fetch: async (path: string) => {
         pageFetches += 1;
+        fetchedPaths.push(path);
         return Response.json(snapshot);
       },
     },
@@ -57,6 +59,7 @@ describe("boot snapshot hydration", () => {
     hydrated.length = 0;
     reports.length = 0;
     pageFetches = 0;
+    fetchedPaths.length = 0;
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -120,14 +123,17 @@ describe("boot snapshot hydration", () => {
         Response.json({ resources: { early: 0 }, tuples: {}, timings: {} }),
       ),
       startMs: 0,
+      app: "apps/plugins/mail/",
     });
     await runBootSnapshot();
     expect(pageFetches).toBe(0);
     expect(hydrated).toEqual([["early", undefined, 0]]);
     expect(Reflect.get(globalThis, HEAD_REQUEST_GLOBAL)).toBeUndefined();
 
+    // The second boot (Retry) asks for the app the head asked for.
     await runBootSnapshot();
     expect(pageFetches).toBe(1);
+    expect(fetchedPaths[0]).toContain("app=apps%2Fplugins%2Fmail%2F");
     expect(hydrated).toEqual([
       ["early", undefined, 0],
       ["plain", undefined, 1],

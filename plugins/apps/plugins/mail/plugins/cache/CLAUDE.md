@@ -128,12 +128,26 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
 - **The health report's Mail row** (`web`): attention while not connected
   or a step faulted, grey while offline, ok once synced.
 
+## Opening Mail: the Inbox in the first frame
+
+`mailThreadsServed` declares `preloadWindows` (network/live): the Inbox's
+first page (`mailInboxView`, THE Inbox definition the thread list's Inbox view
+reads) rides Mail's own boot snapshot — only a page under `/mail` — answered by
+`held(q)`: the one stored account, its cached mailboxes and the query's
+coverage, from Postgres alone. No provider call, not even the connection check
+(a token refresh can reach Google); anything not covered is `{ held: false }`
+and the list loads as before; it writes nothing. Not checking the connection,
+it answers for the account the cache last served: after a disconnect or a
+switch to another Google account, those rows show for the instant until the
+live read refuses `not-connected` or answers the new account.
+`core/internal/mailbox-view.test.ts` pins that a
+DataView's one-rule Inbox filter encodes to the preloaded tuple.
+
 ## Not yet (later steps of the design)
 
 - No push (step 8). No thread value to notify yet (step 5's `mail.thread`).
-- No `preload: "boot"`: a collection's boot tuple is its param-less default
-  window (unfiltered, not the Inbox), loaded for every app's first paint, and
-  an uncovered one would wait on the provider.
+- No `preload: "boot"` (its boot tuple would be the unfiltered default
+  window, on every app's boot): the Inbox is preloaded instead (above).
 
 ## Testing
 
@@ -211,7 +225,10 @@ summaries, membership re-check, reset, refusals.
     - `mail.threads:rows` (keyed, point)
 - Core:
   - Uses:
+    - `apps/mail/provider.Mailbox`
     - `apps/mail/provider.MAILBOX_ROLES`
+    - `apps/mail/provider.MailboxId`
+    - `apps/mail/provider.roleMailboxId`
     - `apps/mail/provider.THREAD_PARTICIPANTS_MAX`
     - `fields.nullable`
     - `fields/bool/config.boolField`
@@ -237,6 +254,7 @@ summaries, membership re-check, reset, refusals.
     - `MailAccountStatusSchema`
     - `mailboxViewFilter`
     - `mailboxViewIds`
+    - `mailInboxView`
     - `mailMailboxes`
     - `mailThreads`
     - `PARENT_VIEW_INCLUDES_SUB_LABELS`

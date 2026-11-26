@@ -486,10 +486,16 @@ export function createMailCache(deps: MailCacheDeps) {
     return Math.max(0, w.limit - r!.n);
   }
 
+  /**
+   * The window's rows from coverage. `touch` stamps the threads' use for
+   * retention — a read the user made; a boot preload is not one (it writes
+   * nothing).
+   */
   async function answer(
-    a: Account,
+    a: Pick<Account, "id">,
     qr: QueryRow,
     w: MailWindowQuery,
+    touch = true,
   ): Promise<MailThreadRow[]> {
     const m = _mailQueryMembers;
     const t = _mailThreads;
@@ -509,14 +515,16 @@ export function createMailCache(deps: MailCacheDeps) {
       .orderBy(desc(m.at), collateC(m.threadId))
       .limit(w.limit);
     const now = wallNow("retention");
-    const touch = rows
-      .filter((r) => now - r.lastUsedAt.getTime() > USED_TOUCH_MS)
-      .map((r) => r.threadId);
-    if (touch.length > 0) {
+    const used = touch
+      ? rows
+          .filter((r) => now - r.lastUsedAt.getTime() > USED_TOUCH_MS)
+          .map((r) => r.threadId)
+      : [];
+    if (used.length > 0) {
       await db
         .update(t)
         .set({ lastUsedAt: new Date(now) })
-        .where(and(eq(t.accountId, a.id), inArray(t.threadId, touch)));
+        .where(and(eq(t.accountId, a.id), inArray(t.threadId, used)));
     }
     return rows.map((r) => rowOf(loadSummary(r.summary), r.at));
   }
@@ -1143,6 +1151,53 @@ export function createMailCache(deps: MailCacheDeps) {
     return rows;
   }
 
+  /**
+   * The window from what the cache already holds — no provider call, not
+   * even the connection check (a token refresh can reach Google), and no
+   * write: the one account the cache holds for the provider, its cached
+   * mailboxes, the query's coverage. `{ held: false }` whenever any of them
+   * is missing or coverage does not answer the window whole. What a boot
+   * preload reads (`preloadWindows`). Not checking the connection, it
+   * answers for the account the cache last served: after a disconnect, or a
+   * switch to another Google account, those stored rows show for the instant
+   * until the live read (`window`) refuses `not-connected` or drops that
+   * account's cache and answers the new one.
+   */
+  async function held(
+    w: MailWindowQuery,
+  ): Promise<{ held: true; rows: MailThreadRow[] } | { held: false }> {
+    const definition = deps.definition();
+    const accounts = await db
+      .select()
+      .from(_mailAccounts)
+      .where(eq(_mailAccounts.providerId, definition.id));
+    const [row] = accounts;
+    if (accounts.length !== 1 || row!.cursor === null) return { held: false };
+    const mailboxes = await cachedMailboxes(row!.id);
+    if (mailboxes.length === 0) return { held: false };
+    const canonical = canonicalizeFilter(
+      w.where as MailQuery,
+      MAIL_QUERY_COLUMNS,
+    ) as Filter | undefined;
+    const compiled = definition.compileQuery(canonical as MailQuery, {
+      mailboxes,
+    });
+    if (compiled.kind === "refused") return { held: false };
+    if (compiled.kind === "nothing") return { held: true, rows: [] };
+    const [qr] = await db
+      .select()
+      .from(_mailQueries)
+      .where(
+        and(
+          eq(_mailQueries.accountId, row!.id),
+          eq(_mailQueries.providerQuery, compiled.providerQuery),
+        ),
+      );
+    if (!qr || (await missing(qr, w)) > 0) return { held: false };
+    const a: Pick<Account, "id"> = { id: row!.id };
+    return { held: true, rows: await answer(a, qr, w, false) };
+  }
+
   async function rows(ids: readonly string[]): Promise<MailThreadRow[]> {
     const a = await account();
     if (ids.length === 0) return [];
@@ -1226,6 +1281,7 @@ export function createMailCache(deps: MailCacheDeps) {
 
   return {
     window,
+    held,
     rows,
     mailboxes,
     sync,

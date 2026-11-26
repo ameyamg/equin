@@ -178,6 +178,8 @@ export type {
   KeyedServerResourceOptions,
   ResourceMode,
   ResourceParams,
+  AppPreload,
+  SettledPreloadTuple,
 } from "./resources";
 export type {
   EndpointHttpHandler,

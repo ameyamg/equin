@@ -1,6 +1,7 @@
-import type {
-  Mailbox,
-  MailboxId,
+import {
+  roleMailboxId,
+  type Mailbox,
+  type MailboxId,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 
 /**
@@ -42,3 +43,21 @@ export function mailboxViewFilter(
     operand: mailboxViewIds(id, mailboxes),
   };
 }
+
+/**
+ * The Inbox view — THE one definition of what the Mail app opens on: the
+ * threads with a message in the inbox, in the collection's default order
+ * (date, newest first). The thread list's Inbox view reads exactly this
+ * window, and the server preloads its first page into Mail's boot snapshot
+ * (`preloadWindows`), so the two must stay one value: the preloaded tuple is
+ * the view's own page 0 only while they encode alike. The inbox is a role
+ * mailbox, which no label nests under, so its view is the inbox alone
+ * (`mailboxViewFilter`'s sub-labels never apply).
+ */
+export const mailInboxView = {
+  where: {
+    column: "mailboxes",
+    op: "hasAny",
+    operand: [roleMailboxId("inbox")],
+  },
+} as const;

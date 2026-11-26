@@ -38,10 +38,14 @@ with the first frame: the app paints whole, never chrome first.
   - Imported by:
     - `framework/tooling/web-artifacts`
     - `framework/web-core`
+    - `network/live/boot-snapshot`
 - Core:
-  - Exports (types): `AppPreloads`
+  - Exports (types):
+    - `AppPreloads`
+    - `HeadKeyedApp`
   - Exports (values):
     - `APP_PRELOADS_FILE`
+    - `appHeadPaths`
     - `AppPreloadsSchema`
     - `appRootOf`
 

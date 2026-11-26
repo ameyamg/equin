@@ -6,7 +6,12 @@ import { serveCollection } from "@plugins/network/plugins/live/server";
 import { MailProviders } from "@plugins/apps/plugins/mail/plugins/provider/server";
 import type { MailProviderDefinition } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { mailAccountStatus, mailMailboxes, mailThreads } from "../../core";
+import {
+  mailAccountStatus,
+  mailInboxView,
+  mailMailboxes,
+  mailThreads,
+} from "../../core";
 import { mailChangeSignal, SYNC_IDLE_MS, SYNC_TICK_MS } from "./sync";
 import { createMailCache } from "./engine";
 import {
@@ -90,6 +95,13 @@ export const mailThreadsServed = serveCollection(mailThreads, {
     };
   },
   throttleMs: 500,
+  // Opening Mail paints the Inbox from the cache: its first page rides Mail's
+  // own boot snapshot (the app this plugin lies in, no other), answered from
+  // coverage alone — nothing cached, no preload, never a wait on the provider.
+  preloadWindows: {
+    windows: () => [mailInboxView],
+    held: (q) => mailCache.held(q),
+  },
 });
 
 /** The account's mailboxes with the provider's counts, relisted by the cache. */

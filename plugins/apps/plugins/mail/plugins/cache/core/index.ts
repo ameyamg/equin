@@ -9,6 +9,7 @@ export { mailMailboxes, type MailMailboxRow } from "./internal/mailboxes";
 export {
   mailboxViewFilter,
   mailboxViewIds,
+  mailInboxView,
   PARENT_VIEW_INCLUDES_SUB_LABELS,
 } from "./internal/mailbox-view";
 export {
