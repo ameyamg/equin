@@ -5306,6 +5306,10 @@
       "name": "@equin/plugin-integrations-google-maps-usage",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/google-pubsub": {
+      "name": "@equin/plugin-integrations-google-pubsub",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/hooktheory": {
       "name": "@equin/plugin-integrations-hooktheory",
       "version": "0.0.1",
@@ -11101,6 +11105,8 @@
     "@equin/plugin-integrations-google-maps-places-api": ["@equin/plugin-integrations-google-maps-places-api@workspace:plugins/integrations/plugins/google-maps/plugins/places-api"],
 
     "@equin/plugin-integrations-google-maps-usage": ["@equin/plugin-integrations-google-maps-usage@workspace:plugins/integrations/plugins/google-maps/plugins/usage"],
+
+    "@equin/plugin-integrations-google-pubsub": ["@equin/plugin-integrations-google-pubsub@workspace:plugins/integrations/plugins/google-pubsub"],
 
     "@equin/plugin-integrations-hooktheory": ["@equin/plugin-integrations-hooktheory@workspace:plugins/integrations/plugins/hooktheory"],
 

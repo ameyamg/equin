@@ -4,7 +4,7 @@ import { useMailHealth } from "./internal/use-mail-health";
 
 export default {
   description:
-    "The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting or the last sync step failed, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (the fallback tick, until push).",
+    "The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).",
   contributions: [
     HealthReport.Row({
       kind: "status",

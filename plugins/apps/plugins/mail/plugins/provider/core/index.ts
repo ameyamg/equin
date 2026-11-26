@@ -61,4 +61,6 @@ export {
   type MailProvider,
   type MailProviderCapabilities,
   type MailProviderDefinition,
+  type MailPush,
+  type MailPushState,
 } from "./internal/provider";

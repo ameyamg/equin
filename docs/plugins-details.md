@@ -7100,7 +7100,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/keyboard-party/isle-building`
     - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), the cache, the shell and the threads list.
       - Plugins:
-        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting or the last sync step failed, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (the fallback tick, until push). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, a 30 s tick while any mail view is subscribed — the documented no-polling exception, the provider giving no change signal until push — and a 10-min job on main with nobody watching) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal, last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
           - Web:
             - Contributes: `HealthReport.Row` "Mail"
             - Uses:
@@ -7185,6 +7185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `MailAccountStatus`
               - `MailMailboxRow`
+              - `MailPushStatus`
               - `MailThreadRow`
               - `MailThreadsRefusal`
             - Exports (values):
@@ -7235,6 +7236,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailProvider`
               - `MailProviderCapabilities`
               - `MailProviderDefinition`
+              - `MailPush`
+              - `MailPushState`
               - `MailQuery`
               - `MailQueryColumn`
               - `MailQueryRefusal`
@@ -7290,18 +7293,72 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Types: `FakeAttachment`, `FakeCall`, `FakeMailProvider`, `FakeMailProviderOptions`, `FakeMessageInput`
         - **`providers`** — Umbrella for the Mail app's providers — each a MailProvider behind the provider-neutral contract (mail/provider): Gmail first; IMAP, JMAP and Outlook later.
           - Plugins:
-            - **`gmail`** — The Gmail provider's browser half: its connect surface for Mail (the shared Gmail access state and the control that fixes it, in place). Registers the Gmail mail provider: MailProvider over integrations/gmail/api, one client and quota pacer per account, Gmail's q compiled from the contract's filter.
+            - **`gmail`** — The Gmail provider's browser half: its connect surface for Mail (the shared Gmail access state and the control that fixes it, in place), and Gmail instant updates in Settings → Accounts (under Google): grant the Pub/Sub scope, turn on the Pub/Sub API in the OAuth client's project, then Enable — which creates the topic, Gmail's publisher grant, this backend's subscription and the watch — and, once on, whether it delivers and Turn off. Registers the Gmail mail provider: MailProvider over integrations/gmail/api, one client and quota pacer per account, Gmail's q compiled from the contract's filter — and its push: Gmail publishing mailbox changes to a Pub/Sub topic in the user's own Google Cloud project (POST /api/mail/gmail/push/enable: topic, Gmail's publisher grant, this backend's pull subscription, users.watch; /disable), held pulls on this backend's subscription signalling the cache's sync step, the daily mail.gmail-watch-renew job on main, and mail.gmail-push (setup and consumer state).
               - Web:
-                - Contributes: `MailProviderUi.Connect` "gmail" → `GmailConnect`
-                - Uses:
+                - Contributes:
+                  - `MailProviderUi.Connect` "gmail" → `GmailConnect`
+                  - `Auth.Integration` "Gmail instant updates"
+                - Uses: 24 symbols — full list in [`plugins/apps/plugins/mail/plugins/providers/plugins/gmail/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/providers/plugins/gmail/REFERENCE.md)
+                  - `network/live/live-state` ×5
+                  - `primitives/setup-steps` ×5
+                  - `integrations/google-pubsub` ×3
+                  - `infra/endpoints` ×2
+                  - `primitives/css/ui-kit` ×2
                   - `apps/mail/provider.MailProviderUi`
+                  - `auth.Auth`
                   - `integrations/gmail.GmailAccessEmptyState`
+                  - `network/live.useLive`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/loading.Loading`
               - Server:
-                - Contributes: `mail.provider` "Gmail"
+                - Contributes:
+                  - `mail.provider` "Gmail"
+                  - `resource.declare` "mail.gmail-push"
+                  - `fork-data-exclusion` "mail_gmail_push"
+                  - `change-feed-exclusion` "mail_gmail_push"
                 - Uses:
                   - `apps/mail/provider.MailProviders`
+                  - `database.db`
+                  - `database/admin.ExcludeFromFork`
+                  - `ids.externalIdColumn`
+                  - `infra/endpoints.HttpError`
+                  - `infra/endpoints.implement`
+                  - `infra/jobs.defineJob`
                   - `integrations/gmail.getGmailToken`
                   - `integrations/gmail/api.createGmailClient`
+                  - `integrations/gmail/api.GmailClient`
+                  - `integrations/google-pubsub.createPubSubClient`
+                  - `integrations/google-pubsub.getPubSubToken`
+                  - `integrations/google-pubsub.PubSubClient`
+                  - `integrations/google-pubsub.subscriptionName`
+                  - `integrations/google-pubsub.topicName`
+                  - `network/live.serveValue`
+                  - `network/live/change-feed.ExcludeFromChangeFeed`
+                - DB schema: `plugins/apps/plugins/mail/plugins/providers/plugins/gmail/server/internal/tables.ts`
+                - Exports (values): `_mailGmailPush`
+                - Register: `defineJob('mail.gmail-watch-renew')`
+                - Resources: `mail.gmail-push` (push, notified)
+                - Routes:
+                  - `POST /api/mail/gmail/push/enable`
+                  - `POST /api/mail/gmail/push/disable`
+              - Core:
+                - Uses:
+                  - `infra/endpoints.defineEndpoint`
+                  - `network/live.liveValue`
+                - Exports (types):
+                  - `GmailPushSetupResult`
+                  - `GmailPushStatus`
+                - Exports (values):
+                  - `disableGmailPush`
+                  - `enableGmailPush`
+                  - `GCP_PROJECT_ID`
+                  - `gmailPushStatus`
+                  - `GmailPushStatusSchema`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --destructive`
+                  - `ui/tokens/color-palette --muted-foreground`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-raw-content-disposition` — `server/internal/content.ts` (sanctioned)
         - **`shell`** — The Mail app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer (the threads list is the index pane), and the app's own dark theme from the approved prototype.
@@ -15410,6 +15467,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.Provider` ← `auth.google-maps.setup-wizard`
       - `Auth.Provider` ← `auth.hooktheory`
       - `Auth.Provider` ← `auth.notion`
+      - `Auth.Integration` ← `apps.mail.providers.gmail`
       - `Auth.Integration` ← `auth.apple-signing.setup-wizard`
       - `Auth.Integration` ← `companions.browser-extension.accounts-row`
       - `Auth.Integration` ← `integrations.google-maps`
@@ -15606,6 +15664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --line-height-caption`
     - Imported by:
       - `apps/deploy/deployments`
+      - `apps/mail/providers/gmail`
       - `apps/settings/accounts`
       - `auth/apple-signing/setup-wizard`
       - `auth/cloudflare`
@@ -15622,6 +15681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `integrations/gmail`
       - `integrations/google-maps`
       - `integrations/google-maps/usage`
+      - `integrations/google-pubsub`
       - `integrations/hooktheory`
   - Exemptions:
     - Exempts itself from:
@@ -25798,8 +25858,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 190 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×50
+    - Imported by: 191 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×51
       - `tasks` ×23
       - `conversations` ×22
       - `infra` ×19
@@ -25894,11 +25954,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×10
           - `infra` ×7
+          - `apps` ×5
           - `database` ×5
-          - `apps` ×4
           - `framework` ×4
           - `build` ×2
           - `network` ×2
@@ -34544,9 +34604,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 130 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
-          - `apps` ×14
+          - `apps` ×15
           - `conversations` ×14
           - `debug` ×14
           - `tasks` ×13
@@ -37084,8 +37144,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 60 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×19
+    - Imported by: 61 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×20
       - `conversations` ×8
       - `tasks` ×7
       - `infra` ×4
@@ -38823,8 +38883,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 290 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×85
+        - Imported by: 291 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×86
           - `conversations` ×37
           - `infra` ×24
           - `tasks` ×24
@@ -40822,8 +40882,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 100 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×25
+        - Imported by: 101 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×26
           - `conversations` ×18
           - `infra` ×16
           - `debug` ×13
@@ -42524,12 +42584,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×17
           - `debug` ×16
           - `build` ×9
           - `conversations` ×9
-          - `apps` ×7
+          - `apps` ×8
           - `database` ×4
           - `tasks` ×4
           - `framework` ×3
@@ -44070,6 +44130,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/places-core`
               - `apps/places/places-map`
               - `integrations/google-maps`
+    - **`google-pubsub`** — The Pub/Sub scope on the shared Google connection, web half: usePubSubAccess() (granted / missing / disconnected, as a read) and PubSubGrantButton (the scope-grant popup), so a consumer never imports auth nor names the scope. Stateless Google Cloud Pub/Sub REST client: createPubSubClient({ accessToken }) — ensureTopic, grantOnTopic (an IAM binding, read-modify-write under the etag), ensureSubscription (a pull subscription, optionally expiring when idle), deleteSubscription, a held pull and acknowledge, every answer zod-parsed and a refusal a PubSubApiError (status, reason, the activation link when the project has the API off); getPubSubToken brokers the pubsub scope on the shared Google connection.
+      - Web:
+        - Uses:
+          - `auth.GrantAccessButton`
+          - `auth.missingScopes`
+          - `auth.useAccountStatus`
+          - `network/live/live-state.mapResource`
+          - `network/live/live-state.ResourceResult`
+          - `network/live/live-state.ResourceUnavailable`
+        - Exports (types): `PubSubAccess`
+        - Exports (values):
+          - `PubSubGrantButton`
+          - `usePubSubAccess`
+      - Server:
+        - Uses: `auth.getTokenFromCentral`
+        - DB schema: `plugins/integrations/plugins/google-pubsub/server/internal/schemas.ts`
+        - Exports (types):
+          - `PubSubClient`
+          - `PubSubClientOptions`
+          - `PubSubTokenResult`
+          - `ReceivedMessage`
+        - Exports (values):
+          - `createPubSubClient`
+          - `getPubSubToken`
+          - `messageText`
+          - `PUBSUB_API_ROOT`
+          - `PUBSUB_PULL_MAX`
+          - `subscriptionName`
+          - `topicName`
+      - Cross-plugin:
+        - Imported by: `apps/mail/providers/gmail`
+      - Core:
+        - Exports (values):
+          - `PUBSUB_SCOPES`
+          - `PubSubApiError`
+          - `PubSubResponseShapeError`
+          - `PubSubUnreachableError`
     - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers. Core adds pure readers: sectionFromHookpadDoc (a Hookpad document to a section) and hookpadChordSound (a chord to its root pitch class and intervals, ported from Sheet Sage and checked against its whole dataset).
       - Server:
         - Uses:
@@ -45277,8 +45374,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sliceRange`
           - `windowAppPreload`
       - Cross-plugin:
-        - Imported by: 375 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×94
+        - Imported by: 376 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×95
           - `conversations` ×74
           - `tasks` ×37
           - `debug` ×36
@@ -45473,6 +45570,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/site-messages/intake`
               - `apps/deploy/site-reports/intake`
               - `apps/mail/cache`
+              - `apps/mail/providers/gmail`
               - `conversations/runtime-sdk`
               - `conversations/usage`
               - `database/table-mirror/replica`
@@ -45707,8 +45805,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 327 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `apps` ×85
+            - Imported by: 329 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `apps` ×86
               - `conversations` ×49
               - `debug` ×31
               - `tasks` ×29
@@ -45720,11 +45818,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data` ×5
               - `apps-core` ×5
               - `auth` ×5
+              - `integrations` ×4
               - `plugin-meta` ×4
               - `companions` ×3
               - `config_v2` ×3
               - `framework` ×3
-              - `integrations` ×3
               - `network` ×3
               - `review` ×3
               - `hints` ×2
@@ -46298,11 +46396,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 86 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 87 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×24
           - `debug` ×14
           - `framework` ×13
-          - `apps` ×11
+          - `apps` ×12
           - `conversations` ×5
           - `database` ×3
           - `integrations` ×2
@@ -46330,11 +46428,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×9
           - `database` ×6
+          - `apps` ×5
           - `conversations` ×5
-          - `apps` ×4
           - `reports` ×4
           - `debug` ×3
           - `framework` ×3
@@ -46518,10 +46616,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installInflightJoinMeter`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex(name).run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×12
+          - `apps` ×5
           - `conversations` ×5
-          - `apps` ×4
           - `companions/browser-extension/recorder`
           - `config_v2`
           - `debug/sentinel/status-file`
@@ -54056,8 +54154,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 472 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×112
+            - Imported by: 473 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×113
               - `conversations` ×79
               - `primitives` ×57
               - `debug` ×39
@@ -54296,8 +54394,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 449 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×112
+            - Imported by: 450 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×113
               - `conversations` ×84
               - `primitives` ×49
               - `debug` ×39
@@ -54622,9 +54720,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 488 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 489 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×116
-              - `apps` ×112
+              - `apps` ×113
               - `conversations` ×53
               - `page` ×26
               - `debug` ×25
@@ -57622,8 +57720,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
-          - `apps` ×37
+        - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+          - `apps` ×38
           - `primitives` ×28
           - `conversations` ×13
           - `fields` ×11
@@ -57965,8 +58063,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 245 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×73
+        - Imported by: 246 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×74
           - `conversations` ×26
           - `ui` ×24
           - `debug` ×20
@@ -60408,6 +60506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/health`
           - `apps/deploy/ssh-setup`
           - `apps/deploy/ssh-setup/hetzner`
+          - `apps/mail/providers/gmail`
           - `auth`
           - `auth/apple-signing/setup-wizard`
           - `auth/cloudflare`
@@ -69365,8 +69464,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 616 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×154
+        - Imported by: 617 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×155
           - `conversations` ×123
           - `primitives` ×56
           - `page` ×51
@@ -70712,8 +70811,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 569 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×125
+            - Tokens used by: 570 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×126
               - `conversations` ×94
               - `primitives` ×83
               - `debug` ×42

@@ -47,6 +47,7 @@
     - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`
+    - `apps/mail/providers/gmail`
     - `auth`
     - `auth/apple-signing/setup-wizard`
     - `auth/cloudflare`

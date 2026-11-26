@@ -97,8 +97,11 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
     reconciling did not find it. Ask `findMessage` again before any resend.
 - **`MailProviderDefinition`:** `id`, `label`, `capabilities`
   (`mailboxModel`, `mailboxDefinitions` (`relist` when changes carry no
-  mailbox create / rename), `push`, `listOrderSlackMs` — how far the list
-  order and cut may stray from `MessageFacts.date`: Gmail 60 s), the pure
+  mailbox create / rename), `listOrderSlackMs` — how far the list
+  order and cut may stray from `MessageFacts.date`: Gmail 60 s), `push`
+  (a `MailPush` — `state()` not-set-up / starting / live / down, and
+  `listen({ changed, state })` — or null: the cache's fallback tick is then
+  the change signal; Gmail's is Pub/Sub, `providers/gmail`), the pure
   `compileQuery(query, { mailboxes })`, `open(accountId)`, and
   `connectedAccount()` (the account id and address, `not-connected`, or
   `unreachable` when the connection cannot be checked now — no mail call). `open` answers the account's ONE
@@ -110,7 +113,7 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
 ## Testing (`server/testing`)
 
 `createFakeMailProvider({ mailboxes?, threads?, changesPageMax?,
-listOrderSlackMs?, account? })` is an in-memory label-model provider with the
+listOrderSlackMs?, account?, push? })` is an in-memory label-model provider with the
 contract's semantics: per-message queries (its provider query is the
 canonical filter JSON), messages newest first, a per-message `before` cut, a
 per-message `providerSkewMs` (the provider's clock off `date`, as Gmail's),
@@ -164,6 +167,8 @@ The cache and e2e tests run on it, never on Gmail.
     - `MailProvider`
     - `MailProviderCapabilities`
     - `MailProviderDefinition`
+    - `MailPush`
+    - `MailPushState`
     - `MailQuery`
     - `MailQueryColumn`
     - `MailQueryRefusal`

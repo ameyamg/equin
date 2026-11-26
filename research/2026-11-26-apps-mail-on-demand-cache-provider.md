@@ -676,6 +676,27 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
    attachments, `packages/mime`, and the outbox with undo send. *Ships:* sending.
 8. **Push.** Pub/Sub setup action, the StreamingPull daemon and the daily `watch` renewal.
    The fallback tick stays for worktrees and silence. *Ships:* instant updates.
+   *Built* (`mail/providers/gmail` `server/internal/push/`, `integrations/google-pubsub`):
+   - **Held REST pulls, not StreamingPull.** StreamingPull is gRPC (the official
+     client brings grpc-js and google-auth-library for one stream); a REST
+     `subscriptions.pull` without `returnImmediately` is held until a message is
+     published, so pulls back to back hear a notification within a round trip.
+     In-process, not a `defineDaemon` worker: a Worker entry is not embedded by
+     the compiled release build, and the loop is one `fetch` at a time.
+   - **Setup** is one "Gmail instant updates" row in Settings → Accounts: grant
+     the pubsub scope, turn on the Pub/Sub API in the OAuth client's project
+     (Gmail publishes only to a topic in that project; the project ID is typed
+     — it is not readable from the client id, only its number is), Enable. The
+     server creates the topic, Gmail's publisher grant, a pull subscription and
+     the watch, answering each refusal typed.
+   - **One topic, one subscription per backend**: a worktree set up from itself
+     gets every notification main does (its subscription expires after a day
+     unused); not set up — the row is left out of forks — it keeps the 30 s
+     tick.
+   - The contract's `capabilities.push` string became `MailProviderDefinition.push`
+     (`MailPush`: `state()`, `listen({ changed, state })`). The cache's tick runs
+     while watched and push is not live; the 10-min idle job runs whatever push
+     says (Google may drop notifications); the health row says push vs fallback.
 
 Tasks 1, 2 and 3 are the critical path. Tasks 5, 6 and 7 can run in parallel after 4. Task 8
 is independent after 4.

@@ -2,17 +2,37 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 
 /**
- * How changes reach the cache. v1 has no change signal from the provider
- * (Gmail push needs Pub/Sub, design step 8): the documented fallback is a
- * `tick` — a change read every `everyMs` while anyone watches a mail view
- * (`watching`), else a scheduled job every `idleEveryMs` — on main only
- * (null: this backend runs no idle job, a worktree).
+ * The provider's push as the cache sees it: `none` (the provider has no
+ * push), else its `MailPushState` — not set up, starting, live (changes
+ * arrive as they happen) or down (set up, not delivering: `message`).
+ */
+export const MailPushStatusSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("none") }),
+  z.object({ kind: z.literal("not-set-up") }),
+  z.object({ kind: z.literal("starting") }),
+  z.object({ kind: z.literal("live"), since: z.string() }),
+  z.object({
+    kind: z.literal("down"),
+    since: z.string(),
+    message: z.string(),
+  }),
+]);
+export type MailPushStatus = z.infer<typeof MailPushStatusSchema>;
+
+/**
+ * How changes reach the cache: the provider's `push` when it is live, else
+ * the documented fallback — a change read every `everyMs` while anyone
+ * watches a mail view (`watching`; `ticking` says the tick runs: watched and
+ * push not live), and a scheduled job every `idleEveryMs` whatever push says
+ * (it also catches a notification push dropped) — on main only (null: this
+ * backend runs no idle job, a worktree).
  */
 export const MailChangeSignalSchema = z.object({
-  kind: z.literal("tick"),
+  push: MailPushStatusSchema,
   everyMs: z.number(),
   idleEveryMs: z.number().nullable(),
   watching: z.boolean(),
+  ticking: z.boolean(),
 });
 
 /**
@@ -50,7 +70,7 @@ export const MailAccountStatusSchema = z.discriminatedUnion("kind", [
 ]);
 export type MailAccountStatus = z.infer<typeof MailAccountStatusSchema>;
 
-/** `mail.account-status`: pushed on every sync step and whenever the tick starts or stops. */
+/** `mail.account-status`: pushed on every sync step, whenever the tick starts or stops and whenever push moves. */
 export const mailAccountStatus = liveValue("mail.account-status", {
   schema: MailAccountStatusSchema,
 });

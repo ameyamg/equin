@@ -498,6 +498,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `apps/deploy/site-messages/intake`
     - `apps/deploy/site-reports/intake`
     - `apps/mail/cache`
+    - `apps/mail/providers/gmail`
     - `conversations/runtime-sdk`
     - `conversations/usage`
     - `database/table-mirror/replica`

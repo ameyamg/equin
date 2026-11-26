@@ -127,6 +127,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.Provider` ← `auth.google-maps.setup-wizard`
     - `Auth.Provider` ← `auth.hooktheory`
     - `Auth.Provider` ← `auth.notion`
+    - `Auth.Integration` ← `apps.mail.providers.gmail`
     - `Auth.Integration` ← `auth.apple-signing.setup-wizard`
     - `Auth.Integration` ← `companions.browser-extension.accounts-row`
     - `Auth.Integration` ← `integrations.google-maps`
@@ -323,6 +324,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/mail/providers/gmail`
     - `apps/settings/accounts`
     - `auth/apple-signing/setup-wizard`
     - `auth/cloudflare`
@@ -339,6 +341,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `integrations/gmail`
     - `integrations/google-maps`
     - `integrations/google-maps/usage`
+    - `integrations/google-pubsub`
     - `integrations/hooktheory`
 - Exemptions:
   - Exempts itself from:

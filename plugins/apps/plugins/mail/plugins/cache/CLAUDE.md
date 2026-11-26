@@ -98,17 +98,20 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   `mail.threads` notified with the changed ids and, when the provider says
   mailboxes moved (Gmail: any change; `relist`), `mail.mailboxes` relisted
   with fresh counts.
-- **The change signal is the no-polling rule's documented exception**: the
-  provider gives none until push (Gmail Pub/Sub, design step 8).
+- **The change signal** is the provider's `push` when it is live (Gmail:
+  Pub/Sub, `providers/gmail`): every change it signals runs a sync step, and
+  push going live runs one (catching up what moved while it was not).
+- **The fallback is the no-polling rule's documented exception**, for when
+  push is none, not set up (in a worktree that did not set it up), starting
+  or down:
   - `mail.sync-tick` (a `defineTimer`, exempted in `exempt/index.ts`): every
-    30 s while anyone is subscribed to `mail.threads` (`whileSubscribed`
-    starts and stops it). Cost when nothing moved: one `history.list`, 2
-    units.
-  - `mail.sync-idle` (a `defineJob`, every 10 min, main only): with nobody
-    watching, keeps the cursor inside Gmail's history window.
+    30 s while anyone is subscribed to `mail.threads` (`whileSubscribed`) and
+    push is not live (`reconcileTick` in `served.ts`, re-run on every push
+    state move). Cost when nothing moved: one `history.list`, 2 units.
+  - `mail.sync-idle` (a `defineJob`, every 10 min, main only), whatever push
+    says: keeps the cursor inside Gmail's history window with nobody
+    watching, and catches a notification Google dropped (it says push may).
   - A read still triggers a step, so a view opened between ticks is current.
-  - Push will not retire the tick: worktrees never consume the subscription,
-    and Google says push may drop notifications.
 - **A step's effects land before its page's cursor** (the mailbox relist
   included), so a step failing mid-way re-reads that page next time; the
   threads it already moved are notified whatever fails after. Cost: a step
@@ -122,11 +125,13 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   signal; the next read, tick or idle job records a reconnect or a
   revocation): `none` (no account read yet — the health row is absent),
   `not-connected` (needs reconsent), or `account` (connected / offline,
-  the change signal and whether it ticks, `syncedAt`, and the later step's
+  the change signal — push state, whether the fallback ticks — `syncedAt`, and the later step's
   `syncFailure`: offline and not-connected recorded, a fault recorded and
-  reported). Pushed on every step and tick start / stop.
-- **The health report's Mail row** (`web`): attention while not connected
-  or a step faulted, grey while offline, ok once synced.
+  reported). Pushed on every step, tick start / stop and push state move.
+- **The health report's Mail row** (`web`): attention while not connected,
+  a step faulted, or push is set up but down; grey while offline; ok once
+  synced, saying how changes arrive (instant updates, or the fallback and
+  why).
 
 ## Opening Mail: the Inbox in the first frame
 
@@ -145,7 +150,7 @@ DataView's one-rule Inbox filter encodes to the preloaded tuple.
 
 ## Not yet (later steps of the design)
 
-- No push (step 8). No thread value to notify yet (step 5's `mail.thread`).
+- No thread value to notify yet (step 5's `mail.thread`).
 - No `preload: "boot"` (its boot tuple would be the unfiltered default
   window, on every app's boot): the Inbox is preloaded instead (above).
 
@@ -160,7 +165,7 @@ summaries, membership re-check, reset, refusals.
 
 ## Plugin reference
 
-- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting or the last sync step failed, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (the fallback tick, until push). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, a 30 s tick while any mail view is subscribed — the documented no-polling exception, the provider giving no change signal until push — and a 10-min job on main with nobody watching) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal, last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
+- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, and the eviction sweeps.
 - Web:
   - Contributes: `HealthReport.Row` "Mail"
   - Uses:
@@ -245,6 +250,7 @@ summaries, membership re-check, reset, refusals.
   - Exports (types):
     - `MailAccountStatus`
     - `MailMailboxRow`
+    - `MailPushStatus`
     - `MailThreadRow`
     - `MailThreadsRefusal`
   - Exports (values):

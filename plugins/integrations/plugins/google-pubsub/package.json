@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-integrations-google-pubsub",
+  "description": "Stateless Google Cloud Pub/Sub REST client over the user's own Google connection: topics, a topic's IAM publisher grant, pull subscriptions, held pulls and acks, every answer zod-parsed and a refusal typed (PubSubApiError: status, reason, the API-activation link when the project has Pub/Sub turned off). The pubsub OAuth scope, its token broker and the grant affordance.",
+  "private": true,
+  "version": "0.0.1"
+}

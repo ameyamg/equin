@@ -11,6 +11,7 @@ import {
   mailInboxView,
   mailMailboxes,
   mailThreads,
+  type MailPushStatus,
 } from "../../core";
 import { mailChangeSignal, SYNC_IDLE_MS, SYNC_TICK_MS } from "./sync";
 import { createMailCache } from "./engine";
@@ -42,20 +43,74 @@ export const mailCache = createMailCache({
   notifyMailboxes: () => mailMailboxesServed.notify(),
   notifyStatus: () => mailAccountStatusServed.notify(),
   changeSignal: () => ({
-    kind: "tick",
+    push: pushStatus(),
     everyMs: SYNC_TICK_MS,
     idleEveryMs: isMain() ? SYNC_IDLE_MS : null,
-    watching: mailSync.tick.running,
+    watching,
+    ticking: mailSync.tick.running,
   }),
-  onBackgroundError: (what, err) =>
-    reportServerError({
-      message: `mail cache ${what} failed: ${err instanceof Error ? err.message : String(err)}`,
-      ...crashFieldsOf(err, "mail-cache"),
-    }),
+  onBackgroundError,
 });
+
+function onBackgroundError(what: string, err: unknown): void {
+  reportServerError({
+    message: `mail cache ${what} failed: ${err instanceof Error ? err.message : String(err)}`,
+    ...crashFieldsOf(err, "mail-cache"),
+  });
+}
 
 /** The change signal: the fallback tick while a view is open, the idle job otherwise (`sync.ts`). */
 export const mailSync = mailChangeSignal(() => mailCache.sync());
+
+/** Whether any mail view is subscribed (`mail.threads`' one watcher). */
+let watching = false;
+
+function pushStatus(): MailPushStatus {
+  const push = soleProvider().push;
+  return push === null ? { kind: "none" } : push.state();
+}
+
+/**
+ * The fallback tick runs while a mail view is open AND the provider's push
+ * is not live (none, not set up, starting or down). Push live, a view gets
+ * its changes as they happen; the idle job still runs, catching a
+ * notification Google dropped.
+ */
+function reconcileTick(): void {
+  if (watching && pushStatus().kind !== "live") mailSync.tick.start();
+  else mailSync.tick.stop();
+  mailAccountStatusServed.notify();
+}
+
+/**
+ * Listens to the provider's push (a no-op without one): every change it
+ * signals runs a sync step (coalesced with any other), and every move of its
+ * state re-decides the tick — a push going live also syncs, catching up
+ * what moved while it was not. Returns the unsubscribe.
+ */
+export function listenToPush(): () => void {
+  const push = soleProvider().push;
+  if (push === null) return () => {};
+  const syncNow = () => {
+    mailCache
+      .sync()
+      .catch((err: unknown) => onBackgroundError("push sync", err));
+  };
+  let wasLive = push.state().kind === "live";
+  const unlisten = push.listen({
+    changed: syncNow,
+    state: () => {
+      const live = push.state().kind === "live";
+      if (live && !wasLive) syncNow();
+      wasLive = live;
+      reconcileTick();
+    },
+  });
+  // Push may have moved before this listener existed (plugins' onReady run
+  // in no set order): decide the tick on its state now.
+  reconcileTick();
+  return unlisten;
+}
 
 const CACHE_READS = {
   tables: [],
@@ -85,13 +140,14 @@ export const mailThreadsServed = serveCollection(mailThreads, {
   window: (q) => mailCache.window(q),
   rows: (ids) => mailCache.rows(ids),
   keyText: { date: (d: Date) => d.toISOString() },
-  // ONE watcher for every open mail view: the fallback tick runs while any is.
+  // ONE watcher for every open mail view: the fallback tick runs while any
+  // is, unless push is live (`reconcileTick`).
   whileSubscribed: () => {
-    mailSync.tick.start();
-    mailAccountStatusServed.notify();
+    watching = true;
+    reconcileTick();
     return () => {
-      mailSync.tick.stop();
-      mailAccountStatusServed.notify();
+      watching = false;
+      reconcileTick();
     };
   },
   throttleMs: 500,
@@ -117,7 +173,7 @@ export const mailMailboxesServed = serveCollection(mailMailboxes, {
   throttleMs: 500,
 });
 
-/** The account's connection and last sync, pushed on every sync step and tick start / stop. */
+/** The account's connection, change signal and last sync, pushed on every sync step, tick start / stop and push move. */
 export const mailAccountStatusServed = serveValue(mailAccountStatus, {
   source: "external",
   changes: "notified",

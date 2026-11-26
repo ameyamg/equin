@@ -16,4 +16,5 @@ export {
   mailAccountStatus,
   MailAccountStatusSchema,
   type MailAccountStatus,
+  type MailPushStatus,
 } from "./internal/account-status";

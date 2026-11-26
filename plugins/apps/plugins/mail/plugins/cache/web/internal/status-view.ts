@@ -19,11 +19,35 @@ function every(ms: number): string {
   return ms % 60_000 === 0 ? `${ms / 60_000} min` : `${ms / 1000} s`;
 }
 
+/** How changes arrive, in words: pushed, or the fallback and why. */
+function arrival(
+  signal: Extract<MailAccountStatus, { kind: "account" }>["changeSignal"],
+): string {
+  const { push, ticking, everyMs, idleEveryMs } = signal;
+  if (push.kind === "live") return "instant updates (push)";
+  const fallback = ticking
+    ? `checking every ${every(everyMs)} while Mail is open`
+    : idleEveryMs === null
+      ? "checked when Mail is opened"
+      : `checking every ${every(idleEveryMs)}`;
+  switch (push.kind) {
+    case "none":
+      return fallback;
+    case "not-set-up":
+      return `${fallback} (instant updates not set up)`;
+    case "starting":
+      return `${fallback} (instant updates connecting…)`;
+    case "down":
+      return `${fallback} (instant updates down)`;
+  }
+}
+
 /**
  * The Mail row. Absent until Mail has been opened with an account (nothing
- * cached, nothing to say); attention while the account needs reconnecting or
- * the last sync step failed; unknown (still) while offline; ok once synced,
- * saying how changes arrive — the fallback tick, until push exists.
+ * cached, nothing to say); attention while the account needs reconnecting,
+ * the last sync step failed, or push is set up but down (changes then come
+ * by the slower fallback); unknown (still) while offline; ok once synced,
+ * saying how changes arrive — pushed, or the fallback tick.
  */
 export function mailHealth(read: Read<MailAccountStatus>): HealthStatus {
   if (read.status === "unavailable") return { state: "absent" };
@@ -54,12 +78,13 @@ export function mailHealth(read: Read<MailAccountStatus>): HealthStatus {
       title: "Mail sync failing",
       summary: `Since ${clock(s.syncFailure.at)}: ${s.syncFailure.message}`,
     };
-  const { watching, everyMs, idleEveryMs } = s.changeSignal;
-  const how = watching
-    ? `checking every ${every(everyMs)} while Mail is open`
-    : idleEveryMs === null
-      ? "checked when Mail is opened"
-      : `checking every ${every(idleEveryMs)}`;
+  const push = s.changeSignal.push;
+  if (push.kind === "down")
+    return {
+      state: "attention",
+      title: "Mail instant updates down",
+      summary: `Since ${clock(push.since)}: ${push.message} — ${arrival(s.changeSignal)}`,
+    };
   if (s.syncedAt === null)
     return {
       state: "ok",
@@ -68,6 +93,6 @@ export function mailHealth(read: Read<MailAccountStatus>): HealthStatus {
     };
   return {
     state: "ok",
-    summary: `${s.address} · synced ${clock(s.syncedAt)}, ${how} (no push yet)`,
+    summary: `${s.address} · synced ${clock(s.syncedAt)}, ${arrival(s.changeSignal)}`,
   };
 }

@@ -81,10 +81,11 @@ function harness(opts: FakeMailProviderOptions) {
     notifyMailboxes: () => mailboxesNotified++,
     notifyStatus: () => statusNotified++,
     changeSignal: () => ({
-      kind: "tick",
+      push: { kind: "none" },
       everyMs: 30_000,
       idleEveryMs: 600_000,
       watching: true,
+      ticking: true,
     }),
     onBackgroundError: (_what, err) => background.push(err),
   });

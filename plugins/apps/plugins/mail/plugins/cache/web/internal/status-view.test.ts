@@ -12,10 +12,11 @@ const account = (
   address: "me@example.com",
   connection: "connected",
   changeSignal: {
-    kind: "tick",
+    push: { kind: "none" },
     everyMs: 30_000,
     idleEveryMs: 600_000,
     watching: true,
+    ticking: true,
   },
   syncedAt: "2026-11-26T10:00:00.000Z",
   syncFailure: null,
@@ -75,14 +76,67 @@ describe("the Mail row", () => {
       ready(
         account({
           changeSignal: {
-            kind: "tick",
+            push: { kind: "none" },
             everyMs: 30_000,
             idleEveryMs: 600_000,
             watching: false,
+            ticking: false,
           },
         }),
       ),
     );
     expect(idle.summary).toContain("every 10 min");
+  });
+
+  test("push live says instant updates; not set up says so beside the fallback", () => {
+    const signal = (
+      push: Extract<
+        MailAccountStatus,
+        { kind: "account" }
+      >["changeSignal"]["push"],
+      ticking: boolean,
+    ) =>
+      account({
+        changeSignal: {
+          push,
+          everyMs: 30_000,
+          idleEveryMs: 600_000,
+          watching: true,
+          ticking,
+        },
+      });
+    const live = mailHealth(
+      ready(signal({ kind: "live", since: "2026-11-26T10:00:00.000Z" }, false)),
+    );
+    expect(live.state).toBe("ok");
+    expect(live.summary).toContain("instant updates (push)");
+    expect(live.summary).not.toContain("every 30 s");
+    const notSetUp = mailHealth(ready(signal({ kind: "not-set-up" }, true)));
+    expect(notSetUp.state).toBe("ok");
+    expect(notSetUp.summary).toContain("every 30 s while Mail is open");
+    expect(notSetUp.summary).toContain("not set up");
+  });
+
+  test("push set up but down needs attention, naming why and the fallback", () => {
+    const h = mailHealth(
+      ready(
+        account({
+          changeSignal: {
+            push: {
+              kind: "down",
+              since: "2026-11-26T10:00:00.000Z",
+              message: "subscription deleted",
+            },
+            everyMs: 30_000,
+            idleEveryMs: 600_000,
+            watching: true,
+            ticking: true,
+          },
+        }),
+      ),
+    );
+    expect(h.state).toBe("attention");
+    expect(h.summary).toContain("subscription deleted");
+    expect(h.summary).toContain("every 30 s");
   });
 });

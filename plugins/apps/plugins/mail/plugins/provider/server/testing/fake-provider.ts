@@ -27,6 +27,7 @@ import {
   type MailChanges,
   type MailProvider,
   type MailProviderDefinition,
+  type MailPush,
   type MailQuery,
   type MessageContent,
   type OutgoingMessage,
@@ -105,6 +106,8 @@ export type FakeMailProviderOptions = {
   listOrderSlackMs?: number;
   /** The connected account (default `fake-account`, `fake@example.com`). */
   account?: { accountId: string; address: string };
+  /** The provider's push (default none: the cache's fallback tick). */
+  push?: MailPush;
 };
 
 const DEFAULT_ROLES = [
@@ -664,9 +667,9 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     capabilities: {
       mailboxModel: "labels",
       mailboxDefinitions: "in-changes",
-      push: "none",
       listOrderSlackMs: opts.listOrderSlackMs ?? 0,
     },
+    push: opts.push ?? null,
     compileQuery: (q, ctx) => fakeCompileQuery(q, ctx),
     open: () => provider,
     connectedAccount: () => {

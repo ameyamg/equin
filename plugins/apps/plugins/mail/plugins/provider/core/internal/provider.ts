@@ -38,8 +38,6 @@ export type MailProviderCapabilities = {
    * carry none — the caller relists mailboxes on its own schedule).
    */
   mailboxDefinitions: "in-changes" | "relist";
-  /** The push the provider can give (`none` until one is wired). */
-  push: "pubsub" | "eventsource" | "idle" | "none";
   /**
    * How far the provider's list order and `olderThan` cut may stray from
    * `MessageFacts.date`, in ms: a message listed after another is at most this
@@ -79,6 +77,33 @@ export type MailChanges =
   | { kind: "reset" };
 
 export type MailFlags = { unread?: boolean; starred?: boolean };
+
+/**
+ * Where the provider's push stands in this process:
+ * - `not-set-up` — push needs a setup the user has not done (Gmail: the
+ *   Pub/Sub topic), or this backend does not consume it;
+ * - `starting` — set up, connecting;
+ * - `live` — changes are pushed as they happen (since `since`, ISO);
+ * - `down` — set up but not delivering (`message` says why), retrying.
+ */
+export type MailPushState =
+  | { kind: "not-set-up" }
+  | { kind: "starting" }
+  | { kind: "live"; since: string }
+  | { kind: "down"; since: string; message: string };
+
+/**
+ * A provider's change signal: it calls `changed` whenever the account's mail
+ * may have moved (the cache then runs a sync step — the push says only
+ * "something changed", `changesSince` says what), and `state` whenever its
+ * `state()` moves. A provider without push has none (`push: null`), and the
+ * cache's documented fallback tick is its change signal.
+ */
+export interface MailPush {
+  state(): MailPushState;
+  /** Returns the unsubscribe. */
+  listen(l: { changed: () => void; state: () => void }): () => void;
+}
 
 /**
  * One account's mail, provider-neutral. Every read and write goes through it;
@@ -177,6 +202,8 @@ export interface MailProviderDefinition {
   readonly id: string;
   readonly label: string;
   readonly capabilities: MailProviderCapabilities;
+  /** The provider's push, or null when it has none (the cache's fallback tick then is the change signal). */
+  readonly push: MailPush | null;
   compileQuery(
     query: MailQuery,
     ctx: { mailboxes: readonly Mailbox[] },
