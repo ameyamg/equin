@@ -71,6 +71,15 @@ export const DrainSlowPayloadSchema = z.object({
    * before it existed.
    */
   foundDead: z.boolean().default(false),
+  /**
+   * When the holder took its lease, relative to the switch (wall clock):
+   * negative for one already holding then, positive for work STARTED in a
+   * slot that already served no app — whose span still counts from the
+   * switch, not from its own start. `null`: not recorded (a record written
+   * before it was, the guard bootstrap's copy); absent on reports filed
+   * before it existed.
+   */
+  startedAfterSwitchMs: z.number().nullable().default(null),
 });
 export type DrainSlowPayload = z.infer<typeof DrainSlowPayloadSchema>;
 
@@ -85,11 +94,25 @@ export function drainSlowFingerprint(
 export function drainSlowMessage(d: DrainSlowPayload): string {
   const who = `${d.kind}${d.label === null ? "" : ` ${d.label}`} (pid ${d.pid})`;
   const s = heldSpan(d);
+  const tail = startedAfter(d);
   if (d.stillHolding)
-    return `${who} still holds main slot ${d.slot} ${s} after its app switched away`;
+    return `${who} still holds main slot ${d.slot} ${s} after its app switched away${tail}`;
   if (d.foundDead)
-    return `${who} held main slot ${d.slot} at least ${s} after its app switched away, then was killed while holding it`;
-  return `${who} held main slot ${d.slot} ${s} after its app switched away`;
+    return `${who} held main slot ${d.slot} at least ${s} after its app switched away, then was killed while holding it${tail}`;
+  return `${who} held main slot ${d.slot} ${s} after its app switched away${tail}`;
+}
+
+/**
+ * ` (started 33 s after the switch)` for a holder that took the slot once it
+ * served no app — its span counts from the switch, not from its own start —
+ * else nothing.
+ */
+function startedAfter(
+  d: Pick<DrainSlowPayload, "startedAfterSwitchMs">,
+): string {
+  if (d.startedAfterSwitchMs === null || d.startedAfterSwitchMs < 1000)
+    return "";
+  return ` (started ${Math.round(d.startedAfterSwitchMs / 1000)} s after the switch)`;
 }
 
 /**

@@ -83,7 +83,10 @@ import {
   stampUnserved,
   stampUnservedSlots,
 } from "../../core/internal/slots";
-import type { DrainSlowPayload } from "../../core/internal/reports";
+import {
+  drainSlowMessage,
+  type DrainSlowPayload,
+} from "../../core/internal/reports";
 import {
   acquireBuildSlot,
   runInBuildSlot,
@@ -692,6 +695,27 @@ describe("slow drains", () => {
     ]);
     expect(readdirSync(drainLog)).toEqual([]);
     await stuck.release();
+  });
+
+  test("a hold that started after the switch says so", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    await stampUnserved(a, {
+      at: wallAt(new Date(Date.now() - 20_000)),
+      reportAfterMs: THRESHOLD_MS,
+    });
+    const late = await acquireSharedLease(a, "exec-child", "url");
+    await late.release();
+    const reports = collector();
+    await reclaimSlots({
+      drainReportAfterMs: THRESHOLD_MS,
+      fileDrainSlow: reports.file,
+    });
+    expect(reports.filed).toHaveLength(1);
+    expect(reports.filed[0]!.startedAfterSwitchMs).toBeGreaterThan(19_000);
+    expect(drainSlowMessage(reports.filed[0]!)).toMatch(
+      / \(started 2\d s after the switch\)$/,
+    );
   });
 
   test("a holder still holding is judged on awake time: a span the machine slept through is not a slow drain", async () => {
@@ -1607,6 +1631,7 @@ describe("central pins its slot", () => {
         thresholdMs: THRESHOLD_MS,
         slot,
         commit: first,
+        acquiredAt: null,
         releasedAt: new Date().toISOString(),
         foundDead: false,
       });

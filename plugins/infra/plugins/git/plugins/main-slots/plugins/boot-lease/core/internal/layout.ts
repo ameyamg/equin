@@ -286,6 +286,13 @@ export interface DrainRecord {
   slot: string;
   /** The commit the slot was checked out at (`null`: its HEAD named none). */
   commit: string | null;
+  /**
+   * ISO instant the holder took its lease — so a report can tell work
+   * STARTED in a slot that already served no app (its span still counts
+   * from the switch) from a holder that was there before it. `null`: a
+   * record written before it was recorded, or the guard bootstrap's copy.
+   */
+  acquiredAt: string | null;
   /** ISO instant of the release (found dead: when it was last seen alive). */
   releasedAt: string;
   /**
@@ -313,6 +320,9 @@ export function parseDrainRecord(file: string, text: string): DrainRecord {
     typeof p.slot !== "string" ||
     (p.commit !== null && typeof p.commit !== "string") ||
     typeof p.releasedAt !== "string" ||
+    (p.acquiredAt !== undefined &&
+      p.acquiredAt !== null &&
+      typeof p.acquiredAt !== "string") ||
     (p.foundDead !== undefined && typeof p.foundDead !== "boolean") ||
     (p.sleptMs !== undefined &&
       p.sleptMs !== null &&
@@ -321,9 +331,10 @@ export function parseDrainRecord(file: string, text: string): DrainRecord {
     throw new Error(`main-slots: drain record ${file} is malformed: ${text}`);
   }
   // A record written before `foundDead` existed was a release; before
-  // `sleptMs`, nobody knew the sleep.
+  // `sleptMs`, nobody knew the sleep; before `acquiredAt`, nor the acquire.
   return {
     ...(p as DrainRecord),
+    acquiredAt: p.acquiredAt ?? null,
     foundDead: p.foundDead ?? false,
     sleptMs: p.sleptMs ?? null,
   };
@@ -363,6 +374,7 @@ export function drainRecordFor(i: {
     thresholdMs: i.stamp.reportAfterMs,
     slot: i.slot,
     commit: i.commit,
+    acquiredAt: i.holder.acquiredAt,
     releasedAt: new Date(i.now.wallMs).toISOString(),
     foundDead: i.foundDead ?? false,
   };

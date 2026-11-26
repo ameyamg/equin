@@ -181,6 +181,8 @@ async function drainRecordsOf(
   for (const name of names.filter((n) => n.endsWith(".json")).sort()) {
     const file = joinAppPath(dir, name);
     const record = parseDrainRecord(file, await readFile(file, "utf8"));
+    // The switch is the release less the span (both on the wall clock).
+    const switchMs = Date.parse(record.releasedAt) - record.heldPastSwitchMs;
     out.push({
       file,
       payload: {
@@ -194,6 +196,10 @@ async function drainRecordsOf(
         commit: record.commit,
         stillHolding: false,
         foundDead: record.foundDead,
+        startedAfterSwitchMs:
+          record.acquiredAt === null
+            ? null
+            : Date.parse(record.acquiredAt) - switchMs,
       },
     });
   }
@@ -218,6 +224,8 @@ function stillHolding(s: SlotState, now: ClockStamp): DrainSlowPayload[] {
       commit: null,
       stillHolding: true,
       foundDead: false,
+      startedAfterSwitchMs:
+        Date.parse(h.acquiredAt) - Date.parse(s.unserved!.at),
     }));
 }
 

@@ -234,7 +234,7 @@ a normal wait:
   (`412 s awake (7384 s on the wall clock)`).
 - **Captured at release**, so nothing is missed between builds: a lease let go
   past the threshold leaves `<admin dir>/drain-log/<pid>.<n>.json`
-  (`{kind, label, pid, heldPastSwitchMs, sleptMs, thresholdMs, slot, commit}`) — plain
+  (`{kind, label, pid, heldPastSwitchMs, sleptMs, thresholdMs, slot, commit, acquiredAt}`) — plain
   `fs` in boot-lease (`noteLeaseReleaseSync`, and its async twin in `lease.ts`),
   on every release path: an explicit release, the CLI bootstrap's exit handler,
   a lifetime lease's `releaseAtExitSync`, the guard bootstrap's release
@@ -253,6 +253,10 @@ a normal wait:
   draining slot still holding past the threshold ("still holding").
   Fingerprint `(kind, label)`: one row per job, its occurrences counted. The
   report names the job — what to make faster, or stop from outliving its app.
+- **Work started after the switch says so** (`startedAfterSwitchMs`, from
+  the record's `acquiredAt`): its span still counts from the switch, so a
+  `./equin url` living half a second reads "held 43 s … (started 42 s after
+  the switch)", not as a 43 s process.
 - Only `drains` holders are reported: never `build-relay` (it causes the
   switch), never central (it pins its slot). Reclaim checks the role again
   when it files a drain record and deletes a record of any other kind: the

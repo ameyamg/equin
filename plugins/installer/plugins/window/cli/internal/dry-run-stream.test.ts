@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawn, type ChildProcess } from "node:child_process";
 import {
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -37,7 +38,27 @@ import { installShBashes } from "@plugins/installer/deps/testing";
  */
 
 const BASHES = (await installShBashes()).map((b) => [b.label, b.path] as const);
-const SCRIPT = join(REPO_ROOT, "install.sh");
+/**
+ * The checkout the dry run plays from: install.sh and mise.toml (what makes a
+ * folder a checkout to it) beside a stand-in `./equin`. A dry run asks its checkout for the address (`./equin url`), and
+ * the real one is a whole CLI boot (~0.6 s) per run — ~75 runs per bash, and
+ * from one of main's slots each was a slot lease of its own, filed as its own
+ * slow drain when main's test runner straddled a deploy (2026-11-25,
+ * report-1795649362-6p7l9i). The stand-in answers what the real one does
+ * under the dry run's empty HOME (no port recorded: the legacy port) and
+ * counts its calls.
+ */
+const CHECKOUT = mkdtempSync(join(tmpdir(), "install-dry-run-checkout-"));
+const SCRIPT = join(CHECKOUT, "install.sh");
+const URL_CALLS = join(CHECKOUT, "url-calls");
+const ADDRESS = "http://equin.localhost:9000";
+copyFileSync(join(REPO_ROOT, "install.sh"), SCRIPT);
+copyFileSync(join(REPO_ROOT, "mise.toml"), join(CHECKOUT, "mise.toml"));
+writeFileSync(
+  join(CHECKOUT, "equin"),
+  `#!/bin/sh\n[ "$*" = url ] || { echo "stand-in ./equin: only 'url', not: $*" >&2; exit 2; }\necho x >>"${URL_CALLS}"\necho ${ADDRESS}\n`,
+  { mode: 0o755 },
+);
 
 /**
  * The dry run's HOME: its run dir (`~/.equin/logs/install/<run>/`, from the
@@ -49,8 +70,19 @@ function tempHome(): string {
   homes.push(home);
   return home;
 }
+/** How many times the stand-in `./equin url` was asked, over the whole file. */
+function urlCalls(): number {
+  try {
+    return readFileSync(URL_CALLS, "utf8").split("\n").length - 1;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw err;
+  }
+}
+
 afterAll(() => {
   for (const home of homes) rmSync(home, { recursive: true, force: true });
+  rmSync(CHECKOUT, { recursive: true, force: true });
 });
 
 /** The run dir the dry run under `home` wrote (`latest` names it). */
@@ -489,11 +521,14 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
 
   describe("install.sh --dry-run event stream", () => {
     test("every line is an event of the schema, plan first and exit last", async () => {
+      const asked = urlCalls();
       const { events, code } = await dryRun([]);
       expect(code).toBe(0);
       expect(events[0]?.type).toBe("plan");
       expect(events.at(-1)).toMatchObject({ type: "exit", code: 0 });
-      expect(events.at(-2)?.type).toBe("done");
+      // The address is the checkout's answer, asked once.
+      expect(events.at(-2)).toMatchObject({ type: "done", url: ADDRESS });
+      expect(urlCalls() - asked).toBe(1);
       const plan = events[0];
       if (plan?.type !== "plan") throw new Error("no plan");
       expect(plan.mode).toBe("window");
