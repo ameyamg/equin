@@ -277,6 +277,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"debug.claude-cli-calls.claude-cli-call-detail.actions","plugin":"debug.claude-cli-calls","key":"claude-cli-call-detail.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"debug.claude-cli-calls.claude-cli-calls.actions","plugin":"debug.claude-cli-calls","key":"claude-cli-calls.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"debug.config-orphans.config-orphans.actions","plugin":"debug.config-orphans","key":"config-orphans.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"debug.config-orphans.item-actions","plugin":"debug.config-orphans","key":"item-actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"debug.health-monitor.debug-health-monitor.actions","plugin":"debug.health-monitor","key":"debug-health-monitor.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"debug.heap-snapshot.debug-heap-snapshot.actions","plugin":"debug.heap-snapshot","key":"debug-heap-snapshot.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"debug.icons.icons.actions","plugin":"debug.icons","key":"icons.actions","meta":{"kind":"render","reorderable":true},"inMain":true},

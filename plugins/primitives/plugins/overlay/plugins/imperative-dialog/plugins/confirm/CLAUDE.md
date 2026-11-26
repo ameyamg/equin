@@ -82,6 +82,7 @@ appears (YAGNI).
     - `apps/website/landing/screenshot/chrome`
     - `build/serve-composition`
     - `conversations/conversation-view/rewind`
+    - `debug/config-orphans`
     - `debug/worktree-cleanup`
     - `ui/theme-engine/theme-gallery`
 

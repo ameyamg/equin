@@ -1,91 +1,120 @@
 import { z } from "zod";
 import { ReportKind } from "@plugins/reports/server";
-import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { recordStandingReport } from "@plugins/reports/plugins/engine/server";
+import type { ReportInput } from "@plugins/reports/core";
+import type { OrphanReport } from "@plugins/config_v2/core";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { auditUserConfigOrphans } from "./orphan-audit";
 
 export const STRANDED_CONFIG_KIND = "config-orphans-stranded";
 
-/** How many config names the payload carries; `count` is the full total. */
-const MAX_LISTED = 20;
-
 const StrandedConfigPayloadSchema = z.object({
-  count: z.number().int().positive(),
-  /** `<hier>/<name>` of each stranded config, capped at MAX_LISTED. */
-  storeKeys: z.array(z.string()),
+  /** `<hier>/<name>` of the stranded config. */
+  storeKey: z.string().min(1),
+  /** Its files on disk, relative to the user layer (overrides and leftovers). */
+  files: z.array(z.string()),
 });
 
 type StrandedConfigPayload = z.infer<typeof StrandedConfigPayloadSchema>;
 
 /**
- * The `config-orphans-stranded` report kind: **some of the user's saved
- * settings no longer apply.** A config override sits at a place no live config
- * reads — the plugin was removed, or it moved onto a destination that already
- * had settings (plugin moves otherwise carry saved settings along; see
- * relocate's apply-moves). The app silently runs the defaults instead.
+ * The payload of a row filed before one report per config: one row per
+ * namespace (fingerprint `config-orphans-stranded`), listing every stranded
+ * config. Never filed again, but such rows live on (an investigated row is
+ * never swept), so their tasks still render.
+ */
+const LegacyStrandedConfigPayloadSchema = z.object({
+  count: z.number().int().positive(),
+  storeKeys: z.array(z.string()),
+});
+
+const StoredStrandedConfigPayloadSchema = z.union([
+  StrandedConfigPayloadSchema,
+  LegacyStrandedConfigPayloadSchema,
+]);
+
+/**
+ * The `config-orphans-stranded` report kind: **a saved setting no longer
+ * applies.** A config override sits at a place no live config reads — the
+ * plugin was removed, or it moved onto a destination that already had
+ * settings (plugin moves otherwise carry saved settings along; see relocate's
+ * apply-moves). The app silently runs the defaults instead.
  *
  * Only real user overrides count. Leftover generated snapshots (origins,
  * ancestors) hold no user data and never report.
  *
- * One row per namespace, forever: the fingerprint is constant, and each boot
- * refreshes the payload. A day's cooldown — this re-checks on every restart,
- * and a standing fact the user has seen should not ring on each one.
+ * One row per stranded config (the fingerprint is its store key), filed as a
+ * STANDING condition (`recordStandingReport`): the boot audit re-observes it on
+ * every restart, and that is not another occurrence. A config stranded later is
+ * a new row, so it is news exactly once. Before this, one row per namespace was
+ * re-recorded on every boot: report-1795697585-xixclh counted 26 "occurrences"
+ * of one leftover in 3.5 hours — every restart, never a new stranding.
  */
 export const strandedConfigKind = ReportKind({
   kind: STRANDED_CONFIG_KIND,
   schema: StrandedConfigPayloadSchema,
-  fingerprint: () => STRANDED_CONFIG_KIND,
+  fingerprint: (d: StrandedConfigPayload) =>
+    `${STRANDED_CONFIG_KIND}:${d.storeKey}`,
   meta: {
     tag: "[config]",
-    notif: "Some saved settings no longer apply",
+    notif: "A saved setting no longer applies",
     variant: "warning",
     category: "error",
-    notifCooldownMs: 24 * 60 * 60 * 1000,
   },
   renderTask: (row: ReportRow) => {
-    const d = StrandedConfigPayloadSchema.parse(row.data);
-    return { title: strandedConfigTitle(d), description: describe(d) };
+    const d = StoredStrandedConfigPayloadSchema.parse(row.data);
+    if ("storeKey" in d)
+      return { title: strandedConfigTitle(d), description: describe(d) };
+    return {
+      title: `[config] ${d.count} saved setting(s) no longer apply`,
+      description: describe({ storeKey: d.storeKeys.join(", "), files: [] }),
+    };
   },
 });
 
 function strandedConfigTitle(d: StrandedConfigPayload): string {
-  return `[config] ${d.count} saved setting${d.count === 1 ? "" : "s"} no longer appl${d.count === 1 ? "ies" : "y"}`;
+  return `[config] Saved setting \`${d.storeKey}\` no longer applies`;
 }
 
 function describe(d: StrandedConfigPayload): string {
   return [
-    `This namespace's user-layer config holds ` +
-      `${d.count} config override(s) that no live config reads, so the app runs the defaults instead:`,
-    "",
-    ...d.storeKeys.map((k) => `- \`${k}\``),
-    ...(d.count > d.storeKeys.length
-      ? [`- … and ${d.count - d.storeKeys.length} more`]
+    `This namespace's user-layer config holds an override of \`${d.storeKey}\` ` +
+      "that no live config reads, so the app runs the defaults instead.",
+    ...(d.files.length > 0
+      ? ["", "Its files:", "", ...d.files.map((f) => `- \`${f}\``)]
       : []),
     "",
-    "Open Debug → Config Orphans for the files, their sizes and where each config likely moved.",
-    "For each one, decide with the user: carry the settings over to the config's new location, " +
-      "or delete them if the config is gone for good. Never delete an override without asking — " +
-      "the user layer is not versioned.",
+    "Open Debug → Config Orphans for the files, their sizes and where the config likely moved.",
+    "Decide with the user: carry the settings over to the config's new location, " +
+      "or discard them if the config is gone for good (the row's Discard action). " +
+      "Never discard an override without asking — the user layer is not versioned.",
   ].join("\n");
 }
 
-/** Audit this namespace's saved settings and file the report if any are stranded. */
+/** The audit's stranded configs, as the reports they file — one per config. */
+export function strandedConfigReports(report: OrphanReport): ReportInput[] {
+  return report.orphans
+    .filter((o) => o.riskClass === "stranded-data")
+    .map((o) => {
+      const data: StrandedConfigPayload = {
+        storeKey: o.storeKey,
+        files: o.files.map((f) => f.relPath),
+      };
+      return {
+        kind: STRANDED_CONFIG_KIND,
+        source: "server-config-audit",
+        message: strandedConfigTitle(data),
+        data,
+      };
+    });
+}
+
+/** Audit this namespace's saved settings and file each newly stranded one. */
 export async function reportStrandedConfig(): Promise<void> {
-  const stranded = (await auditUserConfigOrphans()).orphans.filter(
-    (o) => o.riskClass === "stranded-data",
-  );
-  if (stranded.length === 0) return;
-  const data: StrandedConfigPayload = {
-    count: stranded.length,
-    storeKeys: stranded.slice(0, MAX_LISTED).map((o) => o.storeKey),
-  };
-  await recordReport({
-    kind: STRANDED_CONFIG_KIND,
-    source: "server-config-audit",
-    message: strandedConfigTitle(data),
-    data,
-  });
+  for (const input of strandedConfigReports(await auditUserConfigOrphans())) {
+    await recordStandingReport(input);
+  }
 }
 
 /**

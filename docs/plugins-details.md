@@ -27515,32 +27515,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
-    - **`config-orphans`** — Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply.
+    - **`config-orphans`** — Audit of orphaned user-layer config files whose defineConfig descriptor is no longer live (each discardable from its row), plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply.
       - Web:
-        - Slots: `configOrphansPane.Actions`
-        - Slot contributors: `configOrphansPane.Actions` ← `primitives.pane`
+        - Slots:
+          - `configOrphansPane.Actions`
+          - `item-actions`
+        - Slot contributors:
+          - `configOrphansPane.Actions` ← `primitives.pane`
+          - `item-actions` ← `debug.config-orphans`
         - Contributes:
           - `Pane.Register` "config-orphans"
           - `DebugApp.Sidebar` "Config Orphans"
           - `ConfigNavSlots.Notice` → `StrandedConfigNotice`
-        - Uses:
+          - `item-actions` "discard" → `DiscardOrphanAction`
+        - Uses: 24 symbols — full list in [`plugins/debug/plugins/config-orphans/REFERENCE.md`](../plugins/debug/plugins/config-orphans/REFERENCE.md)
+          - `primitives/data-view` ×4
+          - `primitives/pane` ×3
+          - `network/live/live-state` ×2
+          - `primitives/css/ui-kit` ×2
           - `apps-core/tabs.useAppLinkProps`
           - `apps/debug/shell.DebugApp`
           - `config_v2/settings.ConfigNavSlots`
+          - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
-          - `network/live/live-state.foldResource`
-          - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/fill.Fill`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/data-view.DataView`
-          - `primitives/data-view.defineDataView`
-          - `primitives/pane.defineRoute`
-          - `primitives/pane.Pane`
-          - `primitives/pane.PaneChrome`
+          - `primitives/icon-button.IconButton`
+          - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
           - `primitives/relative-time.RelativeTime`
           - `ui/icons.Icon`
         - Exports (values): `configOrphansPane`
@@ -27553,8 +27556,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.configGenerationDir`
           - `config_v2.listConfigFiles`
+          - `infra/endpoints.implementMachine`
           - `network/live.serveValue`
         - Register: `defineWarmup('config-orphans.stranded')`
+        - Routes: `POST /api/config-orphans/discard`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -27565,7 +27570,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --spacing`
       - Shared:
-        - Exports (values): `configOrphansReport`
+        - Exports (values):
+          - `configOrphansReport`
+          - `discardConfigOrphanEndpoint`
     - **`duress-shed`** — Duress-shed report renderer: a one-line Debug → Reports summary (buffer kind + shed/dropped/replayed accounting) for the duress-shed kind. The duress-shed report kind: validates each shed buffer's post-episode flush summary, fingerprints per (buffer, episode) so summaries never dedupe across episodes or buffers, and renders the accounting task. Declares itself duressExempt so the accounting can never itself be shed.
       - Web:
         - Contributes: `Reports.KindView` → `DuressShedSummary`
@@ -38727,12 +38734,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 289 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 290 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×85
           - `conversations` ×37
           - `infra` ×24
           - `tasks` ×24
-          - `debug` ×21
+          - `debug` ×22
           - `page` ×18
           - `primitives` ×15
           - `ui` ×8
@@ -42332,13 +42339,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `systemOrigin`
           - `UNREVERTED_WRITE_HEADER`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/infra/plugins/request-origin/REFERENCE.md`](../plugins/infra/plugins/request-origin/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/infra/plugins/request-origin/REFERENCE.md`](../plugins/infra/plugins/request-origin/REFERENCE.md)
           - `apps` ×6
           - `infra` ×4
           - `tasks` ×4
           - `config_v2` ×3
           - `apps-core/app-usage`
           - `auth/apple-signing`
+          - `debug/config-orphans`
           - `framework/tooling/e2e-harness`
           - `ui/theme-engine/saved-themes`
       - Plugins:
@@ -57375,13 +57383,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 148 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
           - `primitives` ×25
           - `conversations` ×20
           - `tasks` ×11
           - `page` ×7
-          - `debug` ×5
+          - `debug` ×6
           - `config_v2` ×4
           - `infra` ×3
           - `shell` ×3
@@ -58975,6 +58983,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/landing/screenshot/chrome`
                   - `build/serve-composition`
                   - `conversations/conversation-view/rewind`
+                  - `debug/config-orphans`
                   - `debug/worktree-cleanup`
                   - `ui/theme-engine/theme-gallery`
         - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
@@ -61949,8 +61958,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 312 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×312
+    - Contributes: 313 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×313
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -61974,8 +61983,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 311 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×311
+    - Contributes: 312 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×312
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -62634,6 +62643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReportTrend`
           - `RestateOccurrence`
           - `RestateResult`
+          - `StandingReportResult`
         - Exports (values):
           - `DEFAULT_REPORT_DEBOUNCE_MS`
           - `investigateReport`
@@ -62642,6 +62652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordReport`
           - `recordReportDebounced`
           - `recordReportIncident`
+          - `recordStandingReport`
           - `renderReportTask`
           - `reportOutboxFatalSink`
           - `reportOutboxSink`

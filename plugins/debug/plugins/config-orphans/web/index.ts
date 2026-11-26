@@ -4,13 +4,17 @@ import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigNavSlots } from "@plugins/config_v2/plugins/settings/web";
 import { configOrphansPane } from "./panes";
 import { StrandedConfigNotice } from "./components/stranded-config-notice";
+import {
+  ConfigOrphanItemActions,
+  DiscardOrphanAction,
+} from "./components/discard-orphan-action";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { configOrphansPane } from "./panes";
 
 export default {
   description:
-    "Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply.",
+    "Audit of orphaned user-layer config files whose defineConfig descriptor is no longer live (each discardable from its row), plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply.",
   contributions: [
     Pane.Register({ pane: configOrphansPane }),
     DebugApp.Sidebar({
@@ -23,6 +27,10 @@ export default {
       id: "stranded-config",
       component: StrandedConfigNotice,
     }),
+    ConfigOrphanItemActions({ id: "discard", component: DiscardOrphanAction }),
   ],
-  slots: { "config-orphans": configOrphansPane },
+  slots: {
+    "config-orphans": configOrphansPane,
+    itemActions: ConfigOrphanItemActions,
+  },
 } satisfies PluginDefinition;

@@ -12,6 +12,7 @@ import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { configOrphansReport } from "../../shared/report";
+import { ConfigOrphanItemActions } from "./discard-orphan-action";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const ORPHANS_VIEW = defineDataView("debug.config-orphans");
@@ -151,14 +152,15 @@ export function ConfigOrphansPanel() {
         <span className="font-mono">defineConfig</span> descriptor is no longer
         live. <strong>Stranded user data</strong> means a real user
         customization (a base or scoped override) silently stopped applying
-        because its descriptor moved or was removed — review it before any
-        deletion. Read-only audit; nothing is deleted.
+        because its descriptor moved or was removed — review it before
+        discarding it. Nothing is deleted unless you discard a row.
       </Text>
       <DataView<OrphanEntry>
         rows={orphans}
         fields={fields}
         rowKey={(r) => r.storeKey}
         views={["table"]}
+        itemActions={ConfigOrphanItemActions}
         storageKey={ORPHANS_VIEW}
         readiness={audit}
         searchAccessor={(r) => `${r.storeKey} ${r.relocatedToHier ?? ""}`}

@@ -64,6 +64,19 @@ So never merge co-occurring reports into one fingerprint to quiet the bell:
 that puts unrelated incidents on one row and hides the member that only ever
 co-occurs. First user: slow-ops' per-batch bursts.
 
+## A standing condition is filed once
+
+An audit that re-runs (a boot warm-up, an hourly pass) re-observes the same
+fact while it lasts; through `recordReport` each look is an occurrence, so a
+leftover nobody touched read as a report firing on every restart
+(report-1795697585-xixclh: 26 in 3.5 h). `recordStandingReport(input)` files
+it only when no row of its fingerprint exists in this worktree (else
+`{ outcome: "standing" }`: nothing written, nothing rings). Its fingerprint
+must name the condition itself (one stranded config), so a new condition is a
+new row and news exactly once; a row retention swept is filed again, as a
+reminder. Serving backend only (it throws elsewhere: the outbox would count
+every hand-off). First user: `debug/config-orphans`.
+
 ## An occurrence says when the machine had just woken
 
 Each occurrence `recordReport` writes carries `afterWake` (reports/core's
@@ -350,6 +363,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `ReportTrend`
     - `RestateOccurrence`
     - `RestateResult`
+    - `StandingReportResult`
   - Exports (values):
     - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `investigateReport`
@@ -358,6 +372,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `recordReport`
     - `recordReportDebounced`
     - `recordReportIncident`
+    - `recordStandingReport`
     - `renderReportTask`
     - `reportOutboxFatalSink`
     - `reportOutboxSink`

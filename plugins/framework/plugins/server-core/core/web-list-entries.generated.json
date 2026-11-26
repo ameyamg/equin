@@ -977,6 +977,7 @@
   {"list":"debug.claude-cli-calls.claude-cli-call-detail.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"debug.claude-cli-calls.claude-cli-calls.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"debug.config-orphans.config-orphans.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
+  {"list":"debug.config-orphans.item-actions","plugin":"debug.config-orphans","fact":{"component":{"$code":true},"id":"discard"}},
   {"list":"debug.health-monitor.debug-health-monitor.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"debug.heap-snapshot.debug-heap-snapshot.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"debug.icons.icons.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},

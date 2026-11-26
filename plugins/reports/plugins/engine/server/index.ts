@@ -47,6 +47,10 @@ export {
   type IncidentOptions,
 } from "./internal/record-report";
 export { restateReportOccurrence } from "./internal/restate-report";
+export {
+  recordStandingReport,
+  type StandingReportResult,
+} from "./internal/standing-report";
 export type {
   RestateOccurrence,
   RestateResult,
