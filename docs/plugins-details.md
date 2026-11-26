@@ -35611,8 +35611,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isE2eScriptPath`
               - `MANUAL_REASONS`
           - Cross-plugin:
-            - Imported by: 212 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×65
+            - Imported by: 213 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×66
               - `primitives` ×30
               - `conversations` ×26
               - `page` ×26
