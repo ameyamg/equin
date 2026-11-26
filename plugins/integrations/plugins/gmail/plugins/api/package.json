@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-integrations-gmail-api",
-  "description": "Stateless typed Gmail REST client: profile, labels, threads, messages, history, drafts, send, attachments, modify and watch; HTTP multipart batch (≤50 calls); one per-account quota pacer (a 60 s sliding window of Gmail's quota units, foreground before background) and a bounded backoff on Google's 429 / 5xx / rate-limit 403. Every answer zod-parsed. Takes an access-token getter; never touches auth or storage.",
+  "description": "Stateless typed Gmail REST client: profile, labels, threads, messages, history, drafts, send, attachments, modify and watch; HTTP multipart batch (≤20 calls: past that Google refuses parts for rate); one per-account quota pacer (a 60 s sliding window of Gmail's quota units, foreground before background) and a bounded backoff on Google's 429 / 5xx / rate-limit 403. Every answer zod-parsed. Takes an access-token getter; never touches auth or storage.",
   "private": true,
   "version": "0.0.1"
 }

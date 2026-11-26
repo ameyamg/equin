@@ -53,7 +53,18 @@ export type QuotaPacer = {
    */
   acquire(
     units: number,
-    opts: { priority: GmailPriority; signal?: AbortSignal },
+    opts: {
+      priority: GmailPriority;
+      signal?: AbortSignal;
+      /**
+       * Called only when the call has to wait (no room, or paused) — never
+       * for one admitted at once — and its return called once the wait ends
+       * (admitted or aborted). The transport meters the wait through it, so
+       * a request held by the account's budget names the budget instead of
+       * booking the wait as its own time.
+       */
+      onQueued?: () => () => void;
+    },
   ): Promise<void>;
   /**
    * Admit nothing for `ms`. Called when Google refuses a call for rate (429,
@@ -173,7 +184,7 @@ export function createQuotaPacer(opts: QuotaPacerOptions = {}): QuotaPacer {
   }
 
   return {
-    acquire(units, { priority, signal }) {
+    acquire(units, { priority, signal, onQueued }) {
       if (!(Number.isInteger(units) && units > 0)) {
         throw new Error(
           `quota pacer: units must be a positive integer, got ${units}`,
@@ -187,23 +198,36 @@ export function createQuotaPacer(opts: QuotaPacerOptions = {}): QuotaPacer {
       }
       signal?.throwIfAborted();
       return new Promise<void>((resolve, reject) => {
+        let settled = false;
+        let endWait: (() => void) | null = null;
+        const settle = () => {
+          settled = true;
+          endWait?.();
+          endWait = null;
+        };
         const onAbort = () => {
           const q = queues[priority];
           const i = q.indexOf(waiter);
           if (i >= 0) q.splice(i, 1);
+          settle();
           reject(signal!.reason);
           // The head may have been the one blocking the next caller.
           pump();
         };
         const waiter: Waiter = {
           units,
-          resolve,
+          resolve: () => {
+            settle();
+            resolve();
+          },
           reject,
           detach: () => signal?.removeEventListener("abort", onAbort),
         };
         signal?.addEventListener("abort", onAbort, { once: true });
         queues[priority].push(waiter);
         pump();
+        // Still queued after the pump: it waits for room.
+        if (!settled && onQueued) endWait = onQueued();
       });
     },
     pause(ms) {

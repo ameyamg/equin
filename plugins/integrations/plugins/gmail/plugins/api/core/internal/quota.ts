@@ -4,8 +4,17 @@
 /** Gmail's per-user, per-project budget: quota units per rolling minute. */
 export const GMAIL_USER_UNITS_PER_MINUTE = 6_000;
 
-/** Google: at most 100 calls per HTTP batch, and it recommends 50 or fewer. */
-export const GMAIL_BATCH_MAX = 50;
+/**
+ * Calls per HTTP batch. Google allows 100 and recommends 50 or fewer, but runs
+ * a batch's parts at once and refuses for rate (429 rateLimitExceeded) the
+ * ones past a per-user concurrency it does not publish — and a refused part is
+ * charged again when it is re-sent. Measured on the real account (2026-11-26,
+ * `scripts/batch-shape-probe.ts`, `threads.get` metadata, each shape on a fresh
+ * minute): 50 parts → 24 of 50 refused, 40 → 2 of 50, 30 → 4 of 30; 25 and 20
+ * → none, in every run. 20 keeps a margin; batches of 20 one after another
+ * read 50 threads in about the time one 50-part batch took (234 vs 281 ms).
+ */
+export const GMAIL_BATCH_MAX = 20;
 
 /** What a read returns: `full` / `raw` cost three times `metadata` / `minimal`. */
 export type GmailFormat = "minimal" | "metadata" | "full" | "raw";

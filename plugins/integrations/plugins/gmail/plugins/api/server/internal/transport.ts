@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { wallNow } from "@plugins/packages/plugins/deadline/core";
+import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   exponential,
   withJitter,
@@ -19,6 +20,25 @@ import {
   type GmailPriority,
   type QuotaPacer,
 } from "../../core";
+
+/**
+ * The waits a Gmail call is metered as, each named by its layer in the trace
+ * of the request that awaited it (2026-11-26: a cold Mail window held 57 s by
+ * the account's budget read as `loader mail.threads took 56,072 ms of its
+ * own`, naming nothing):
+ * - `gmail-quota` (queue): held by the account's pacer, its minute spent or
+ *   paused after a rate refusal. Metered only when the call has to wait; not
+ *   the waiter's own time.
+ * - `gmail-backoff` (queue): the delay before re-sending what Google failed
+ *   on its side or could not be reached for (a rate refusal waits on the
+ *   pacer's pause instead, as `gmail-quota`).
+ * - `gmail-api` (io): Google's time — the HTTP round trip, body read
+ *   included. An io wait no one files stays part of its waiter's own time,
+ *   named.
+ */
+const QUOTA_WAIT = "gmail-quota";
+const BACKOFF_WAIT = "gmail-backoff";
+const API_WAIT = "gmail-api";
 
 /** Root of Gmail's REST API host; every path below hangs off it. */
 export const GMAIL_API_ROOT = "https://gmail.googleapis.com";
@@ -194,11 +214,12 @@ export type GmailTransport = {
 };
 
 /**
- * Splits a batch by count (≤ GMAIL_BATCH_MAX calls, Google's advice) and by
+ * Splits a batch by count (≤ GMAIL_BATCH_MAX calls: past it Google refuses
+ * parts for rate, and each refused part is charged again) and by
  * units (≤ half the priority's window), so no chunk is one the pacer refuses
  * and none holds a whole minute's budget while a click waits behind it in
- * the FIFO. A 50-thread metadata page (2,000 units) is still one foreground
- * request.
+ * the FIFO. A 50-thread metadata page (2,000 units) is three requests, one
+ * after another.
  */
 export function batchChunks<I extends { units: number }>(
   items: readonly I[],
@@ -236,6 +257,15 @@ export function createGmailTransport(
   const sleep = opts.retry?.sleep ?? abortableSleep;
   const { pacer } = opts;
 
+  /** The pacer's admission, metered as the `gmail-quota` wait when it has to wait. */
+  function admit(units: number, priority: GmailPriority, signal?: AbortSignal) {
+    return pacer.acquire(units, {
+      priority,
+      signal,
+      onQueued: () => beginWait(QUOTA_WAIT, "queue"),
+    });
+  }
+
   /**
    * Wait before attempt `attempt + 1`. A rate refusal pauses the account's
    * pacer instead — the budget is the user's, so every caller waits it out,
@@ -252,7 +282,12 @@ export function createGmailTransport(
       pacer.pause(ms);
       return;
     }
-    await sleep(ms, signal);
+    const end = beginWait(BACKOFF_WAIT, "queue");
+    try {
+      await sleep(ms, signal);
+    } finally {
+      end();
+    }
     signal?.throwIfAborted();
   }
 
@@ -267,6 +302,7 @@ export function createGmailTransport(
     refused?: string,
   ): Promise<{ res: Response; text: string; token: string }> {
     const once = async (token: string) => {
+      const end = beginWait(API_WAIT, "io");
       try {
         const res = await doFetch(`${GMAIL_API_ROOT}${path}`, {
           method,
@@ -280,6 +316,8 @@ export function createGmailTransport(
       } catch (err) {
         if (signal?.aborted) throw err;
         throw new GmailUnreachableError(what, err);
+      } finally {
+        end();
       }
     };
     const token = await opts.accessToken(
@@ -308,7 +346,7 @@ export function createGmailTransport(
       body = spec.body.bytes as Uint8Array<ArrayBuffer>;
     }
     for (let attempt = 0; ; attempt++) {
-      await pacer.acquire(spec.units, { priority, signal: callOpts.signal });
+      await admit(spec.units, priority, callOpts.signal);
       let res: Response;
       let text: string;
       try {
@@ -374,7 +412,7 @@ export function createGmailTransport(
     for (let attempt = 0; pending.length > 0; attempt++) {
       const last = attempt + 1 >= attempts;
       const units = pending.reduce((sum, i) => sum + items[i]!.units, 0);
-      await pacer.acquire(units, { priority, signal: callOpts.signal });
+      await admit(units, priority, callOpts.signal);
       const boundary = newBatchBoundary();
       const label = `${what} (batch of ${pending.length})`;
       let res: Response;

@@ -298,7 +298,7 @@ export function createGmailClient(opts: GmailTransportOptions) {
         o,
       );
     },
-    /** Many threads, batched ≤ 50 per HTTP request; one result per id, in order. */
+    /** Many threads, batched ≤ GMAIL_BATCH_MAX (20) per HTTP request; one result per id, in order. */
     getThreads(
       ids: readonly string[],
       f: GmailReadFormat<GmailThreadFormat>,

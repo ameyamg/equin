@@ -785,7 +785,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by: 83 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×25
     - `debug` ×22
     - `apps` ×9
@@ -793,13 +793,13 @@ remaining allocations are one flat band array per completed entry span, and what
     - `database` ×4
     - `packages` ×3
     - `build` ×2
+    - `integrations` ×2
     - `reports` ×2
     - `tasks` ×2
     - `auth`
     - `companions/browser-extension`
     - `config_v2`
     - `framework/tooling/web-artifacts/served-addresses`
-    - `integrations/google-maps/browser-config`
     - `network/live/change-feed`
     - `plugin-meta/plugin-tree`
     - `primitives/log-channels`

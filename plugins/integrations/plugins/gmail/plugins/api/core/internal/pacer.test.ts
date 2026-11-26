@@ -138,6 +138,34 @@ describe("createQuotaPacer", () => {
     expect(pacer.stats().queued.foreground).toBe(0);
   });
 
+  test("onQueued meters only a call that waits, ended as it is admitted or aborted", async () => {
+    const c = fakeClock();
+    const pacer = createQuotaPacer({ unitsPerMinute: 100, clock: c.clock });
+    const log: string[] = [];
+    const meter = (name: string) => () => {
+      log.push(`begin ${name}`);
+      return () => log.push(`end ${name}`);
+    };
+    await pacer.acquire(90, { priority: "foreground", onQueued: meter("now") });
+    expect(log).toEqual([]); // admitted at once: no wait
+    const late = track(
+      pacer.acquire(20, { priority: "foreground", onQueued: meter("late") }),
+    );
+    const ac = new AbortController();
+    const gone = pacer.acquire(20, {
+      priority: "foreground",
+      signal: ac.signal,
+      onQueued: meter("gone"),
+    });
+    expect(log).toEqual(["begin late", "begin gone"]);
+    ac.abort(new Error("gone"));
+    expect(gone).rejects.toThrow("gone");
+    expect(log).toEqual(["begin late", "begin gone", "end gone"]);
+    await c.advance(60_000);
+    expect(late.done).toBe(true);
+    expect(log).toEqual(["begin late", "begin gone", "end gone", "end late"]);
+  });
+
   test("refuses a call that could never fit", () => {
     const pacer = createQuotaPacer({
       unitsPerMinute: 100,

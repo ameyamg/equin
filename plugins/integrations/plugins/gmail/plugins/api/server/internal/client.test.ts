@@ -163,16 +163,16 @@ describe("createGmailClient", () => {
     expect(c.pacer.stats().spentUnits).toBe(120);
   });
 
-  test("a batch of 120 ids is three HTTP requests of ≤ 50", async () => {
+  test("a batch of 120 ids is six HTTP requests of ≤ GMAIL_BATCH_MAX (20)", async () => {
     const ids = Array.from({ length: 120 }, (_, i) => `t${i}`);
     const ok = batchReply((_, path) => ({
       status: 200,
       statusText: "OK",
       body: metadataThread(/threads\/(\w+)/.exec(path)![1]!, "1"),
     }));
-    const c = client([ok, ok, ok]);
+    const c = client([ok, ok, ok, ok, ok, ok]);
     const res = await c.gmail.getThreads(ids, { format: "minimal" });
-    expect(c.sent).toHaveLength(3);
+    expect(c.sent).toHaveLength(6);
     expect(res.map((r) => r.ok && r.value.id)).toEqual(ids);
   });
 

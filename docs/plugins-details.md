@@ -42973,7 +42973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×25
           - `debug` ×22
           - `apps` ×9
@@ -42981,13 +42981,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×4
           - `packages` ×3
           - `build` ×2
+          - `integrations` ×2
           - `reports` ×2
           - `tasks` ×2
           - `auth`
           - `companions/browser-extension`
           - `config_v2`
           - `framework/tooling/web-artifacts/served-addresses`
-          - `integrations/google-maps/browser-config`
           - `network/live/change-feed`
           - `plugin-meta/plugin-tree`
           - `primitives/log-channels`
@@ -44069,7 +44069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
       - Plugins:
-        - **`api`** — Stateless typed Gmail REST client: createGmailClient({ accessToken, pacer }) — profile, labels, threads, messages, history (an expired cursor is a typed outcome), drafts, send (multipart upload), attachments, modify and watch; reads batched ≤50 per HTTP request with a per-id result; every call charged on the account's quota pacer before it is sent and retried within a bound on Google's 429 / 5xx / rate-limit 403; every answer zod-parsed.
+        - **`api`** — Stateless typed Gmail REST client: createGmailClient({ accessToken, pacer }) — profile, labels, threads, messages, history (an expired cursor is a typed outcome), drafts, send (multipart upload), attachments, modify and watch; reads batched ≤20 per HTTP request (past that Google refuses parts for rate) with a per-id result; every call charged on the account's quota pacer before it is sent and retried within a bound on Google's 429 / 5xx / rate-limit 403; every answer zod-parsed.
           - Cross-plugin:
             - Imported by: `apps/mail/providers/gmail`
           - Server:

@@ -21,5 +21,5 @@ export {
 
 export default {
   description:
-    "Stateless typed Gmail REST client: createGmailClient({ accessToken, pacer }) — profile, labels, threads, messages, history (an expired cursor is a typed outcome), drafts, send (multipart upload), attachments, modify and watch; reads batched ≤50 per HTTP request with a per-id result; every call charged on the account's quota pacer before it is sent and retried within a bound on Google's 429 / 5xx / rate-limit 403; every answer zod-parsed.",
+    "Stateless typed Gmail REST client: createGmailClient({ accessToken, pacer }) — profile, labels, threads, messages, history (an expired cursor is a typed outcome), drafts, send (multipart upload), attachments, modify and watch; reads batched ≤20 per HTTP request (past that Google refuses parts for rate) with a per-id result; every call charged on the account's quota pacer before it is sent and retried within a bound on Google's 429 / 5xx / rate-limit 403; every answer zod-parsed.",
 } satisfies ServerPluginDefinition;
