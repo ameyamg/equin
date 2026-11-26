@@ -45,3 +45,5 @@ export {
   unsupportedEndpointResponse,
   unmatchedApiResponse,
 } from "./unsupported";
+export { contentDisposition } from "./content-disposition";
+export type { DispositionType } from "./content-disposition";

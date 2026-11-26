@@ -2,6 +2,7 @@ import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
 import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
 import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { contentDisposition } from "@plugins/infra/plugins/endpoints/core";
 import {
   originOf,
   type WriteOrigin,
@@ -576,7 +577,7 @@ export async function handleBrowserFileRaw(req: Request): Promise<Response> {
     headers: {
       "content-type": contentType,
       "content-length": String(read.blob.size),
-      "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(name)}`,
+      ...contentDisposition("inline", name),
       "x-content-type-options": "nosniff",
       ...(contentType === "application/pdf"
         ? {}

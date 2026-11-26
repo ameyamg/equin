@@ -2,7 +2,10 @@ import { constants } from "node:fs";
 import { access, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { rangedBlobResponse } from "@plugins/infra/plugins/endpoints/core";
+import {
+  contentDisposition,
+  rangedBlobResponse,
+} from "@plugins/infra/plugins/endpoints/core";
 import { locateHostPath, type HostLocation } from "./archive/locate";
 import { openArchiveMember } from "./archive/read";
 import { classifyFsError, resolveHostPath } from "./path";
@@ -27,7 +30,7 @@ export function inertHeaders(
 ): Record<string, string> {
   return {
     "Content-Type": contentType,
-    "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(basename(path))}`,
+    ...contentDisposition("inline", basename(path)),
     "X-Content-Type-Options": "nosniff",
     ...(contentType === "application/pdf"
       ? {}

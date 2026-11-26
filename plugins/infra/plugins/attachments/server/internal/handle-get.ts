@@ -1,4 +1,7 @@
-import { rangedBlobResponse } from "@plugins/infra/plugins/endpoints/core";
+import {
+  contentDisposition,
+  rangedBlobResponse,
+} from "@plugins/infra/plugins/endpoints/core";
 import { getAttachment } from "./operations";
 import { AttachmentBlobs } from "./blobs";
 
@@ -21,7 +24,7 @@ export async function handleGet(
 
   return rangedBlobResponse(file, req.headers, {
     "content-type": row.mime,
-    "content-disposition": `inline; filename="${row.filename.replace(/"/g, "")}"`,
+    ...contentDisposition("inline", row.filename),
     "cache-control": "private, max-age=3600",
   });
 }

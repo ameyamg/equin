@@ -567,6 +567,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `ByteStreamBody`
     - `Codec`
     - `ContentPath`
+    - `DispositionType`
     - `EndpointAnswer`
     - `EndpointDef`
     - `EndpointRequestOpts`
@@ -590,6 +591,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `assetPath`
     - `blob`
     - `byteStream`
+    - `contentDisposition`
     - `contentPath`
     - `dateString`
     - `defineEndpoint`
@@ -649,6 +651,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Exempts itself from:
     - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
     - `networking/no-request-guard-capability` — `web/internal/asset-url.ts`, `web/internal/asset-src.ts` (sanctioned)
+    - `endpoints/no-raw-content-disposition` — `core/content-disposition.ts`, `lint/no-raw-content-disposition.ts` (sanctioned)
   - Exempted by:
     - `apps/pages/page-tree` (0 debt)
     - `apps/sonata/playback-history` (0 debt)

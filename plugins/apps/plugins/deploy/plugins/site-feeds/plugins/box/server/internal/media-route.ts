@@ -1,6 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { rangedBlobResponse } from "@plugins/infra/plugins/endpoints/core";
+import {
+  contentDisposition,
+  rangedBlobResponse,
+} from "@plugins/infra/plugins/endpoints/core";
 import {
   AttachmentBlobs,
   getAttachment,
@@ -39,7 +42,7 @@ export async function handleSiteFeedMedia(
   }
   return rangedBlobResponse(file, req.headers, {
     "content-type": row.mime,
-    "content-disposition": `inline; filename="${row.filename.replace(/"/g, "")}"`,
+    ...contentDisposition("inline", row.filename),
     "cache-control": "public, max-age=31536000, immutable",
   });
 }
