@@ -319,6 +319,21 @@ await withBrowser(async (h) => {
     { timeoutMs: 30_000 },
   );
   r.ok("its screenshot loads", imgOk.ok, String(imgOk.value));
+  // A click opens it in the image viewer; Esc closes it.
+  await img.click();
+  const viewer = page.locator(
+    '[role="dialog"][aria-label="Image viewer: split-pane.png"]',
+  );
+  const opened = await viewer
+    .waitFor({ timeout: 10_000 })
+    .then(() => true)
+    .catch((err: unknown) => {
+      if (err instanceof Error && err.name === "TimeoutError") return false;
+      throw err;
+    });
+  r.ok("a click on the screenshot opens the image viewer", opened);
+  await page.keyboard.press("Escape");
+  await viewer.waitFor({ state: "detached", timeout: 10_000 });
   const video = page.locator("article video").first();
   await video.waitFor({ timeout: 30_000 });
   const duration = await waitFor(

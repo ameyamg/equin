@@ -14044,10 +14044,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteFeeds.Feed` "tips"
                   - `Pane.Register` "website-tips"
                   - `Website.LearnEntry` "Tips" → `TipsNavItem`
-                - Uses: 22 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
+                - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
                   - `apps/website/shell` ×7
                   - `apps/deploy/site-feeds/box` ×4
                   - `primitives/pane` ×3
+                  - `primitives/overlay/image-viewer` ×2
                   - `infra/endpoints.useAssetSrc`
                   - `media/player.MediaPlayer`
                   - `network/live/live-state.ResourceErrorInline`
@@ -14078,6 +14079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --ring`
                   - `ui/tokens/shape --radius`
             - **`vision`** — The vision page of the equin website: the /about/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
@@ -58838,10 +58840,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow` ×2
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `conversations` ×7
+              - `apps` ×4
               - `primitives` ×4
-              - `apps` ×3
               - `page` ×3
               - `fields` ×2
               - `debug/browser-recordings`

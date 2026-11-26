@@ -9,6 +9,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  ImageGallery,
+  useImageViewerTrigger,
+} from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import {
   WebsiteBand,
   WebsiteChrome,
   WebsiteHero,
@@ -73,7 +77,11 @@ export function TipsBody() {
   );
 }
 
-/** One tip: when it was published, its title, its text, then its media in order. */
+/**
+ * One tip: when it was published, its title, its text, then its media in
+ * order. Its screenshots are one gallery: a click opens the full-window
+ * viewer, ← / → step through that tip's other screenshots.
+ */
 function TipCard({ entry }: { entry: SiteFeedEntry<TipsFields> }) {
   const { title, body, media } = entry.values;
   return (
@@ -96,9 +104,11 @@ function TipCard({ entry }: { entry: SiteFeedEntry<TipsFields> }) {
             </Text>
           )}
         </Stack>
-        {media.map((ref) => (
-          <TipMedia key={ref.attachmentId} entryId={entry.id} media={ref} />
-        ))}
+        <ImageGallery>
+          {media.map((ref) => (
+            <TipMedia key={ref.attachmentId} entryId={entry.id} media={ref} />
+          ))}
+        </ImageGallery>
       </Stack>
     </Card>
   );
@@ -139,16 +149,37 @@ function TipMedia({ entryId, media }: { entryId: string; media: MediaRef }) {
       />
     );
   }
+  return <TipImage src={src.src} media={media} />;
+}
+
+/**
+ * A screenshot at the card's width; a click (or Enter) opens it in the
+ * enclosing tip's image viewer, which grows out of this box.
+ */
+function TipImage({ src, media }: { src: string; media: MediaRef }) {
+  const trigger = useImageViewerTrigger<HTMLButtonElement>({
+    src,
+    name: media.filename,
+    width: media.width,
+    height: media.height,
+  });
   return (
-    <img
-      src={src.src}
-      alt={media.filename}
-      width={media.width}
-      height={media.height}
-      loading="lazy"
-      decoding="async"
-      className={`${MEDIA_CLASS} h-auto border border-border`}
-    />
+    <button
+      type="button"
+      aria-label={`Open ${media.filename}`}
+      className={`${MEDIA_CLASS} focus-ring block cursor-zoom-in`}
+      {...trigger}
+    >
+      <img
+        src={src}
+        alt={media.filename}
+        width={media.width}
+        height={media.height}
+        loading="lazy"
+        decoding="async"
+        className={`${MEDIA_CLASS} block h-auto border border-border`}
+      />
+    </button>
   );
 }
 
