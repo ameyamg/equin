@@ -420,6 +420,8 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"tasks.automations.automation-section","plugin":"tasks.automations","key":"automation-section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.automations.automation-task-detail","plugin":"tasks.automations","key":"automation-task-detail","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.automations.automations.actions","plugin":"tasks.automations","key":"automations.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"tasks.decisions.above-answer","plugin":"tasks.decisions","key":"above-answer","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"tasks.decisions.answer-action","plugin":"tasks.decisions","key":"answer-action","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.decisions.inbox.decision-detail.actions","plugin":"tasks.decisions.inbox","key":"decision-detail.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.decisions.inbox.decisions.actions","plugin":"tasks.decisions.inbox","key":"decisions.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.decisions.inbox.sources","plugin":"tasks.decisions.inbox","key":"sources","meta":{"kind":"render","reorderable":true},"inMain":true},

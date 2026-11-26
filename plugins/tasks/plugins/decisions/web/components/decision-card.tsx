@@ -48,6 +48,7 @@ import {
   VersionNav,
 } from "./decision-versions";
 import { isAnswerable, type DecisionDraft } from "../internal/drafts";
+import { DecisionCardSlots } from "../slots";
 
 /**
  * One decision in full — what every surface (the inbox's detail, later the
@@ -176,6 +177,11 @@ export function DecisionCard({
           <Text variant="caption" tone="muted">
             {`Sent to ${decision.taskTitle}. Waiting for it to act on your answer.`}
           </Text>
+        ) : null}
+        {draft !== undefined ? (
+          <DecisionCardSlots.AboveAnswer.Render>
+            {(item) => <item.component decision={decision} />}
+          </DecisionCardSlots.AboveAnswer.Render>
         ) : null}
         {draft !== undefined && isAnswerable(decision) ? (
           <Answer decision={decision} draft={draft} />
@@ -357,18 +363,27 @@ function Answer({
       {/* The prompt's own editor, one row that grows: a pasted or dropped
           image or file and chips (`<ui-context>`, ids) work as in any prompt.
           Not a composer — there is no control bar to configure the answer. */}
-      <TextEditor
-        keep={keptField(draft, "note")}
-        minRows={1}
-        maxHeight="16rem"
-        namespace={`decision-note-${decision.id}`}
-        ariaLabel="Your note"
-        placeholder={
-          decision.state === "fyi"
-            ? "Ask about this…"
-            : "Add a note, or ask a question…"
-        }
-      />
+      <Stack direction="row" gap="xs" align="center">
+        <Fill>
+          <TextEditor
+            keep={keptField(draft, "note")}
+            minRows={1}
+            maxHeight="16rem"
+            namespace={`decision-note-${decision.id}`}
+            ariaLabel="Your note"
+            placeholder={
+              decision.state === "fyi"
+                ? "Ask about this…"
+                : "Add a note, or ask a question…"
+            }
+          />
+        </Fill>
+        <Stack direction="row" gap="xs" align="center">
+          <DecisionCardSlots.AnswerAction.Render>
+            {(item) => <item.component decision={decision} />}
+          </DecisionCardSlots.AnswerAction.Render>
+        </Stack>
+      </Stack>
       {canClose || d.close ? (
         <Stack direction="row" gap="sm" align="center">
           <Button

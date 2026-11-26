@@ -1,12 +1,13 @@
+import type { ReactElement } from "react";
+import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
-import { useConversationNote } from "../internal/use-conversation-note";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { useSideNote, type SideNoteRow } from "../internal/use-side-note";
 
 const stickyNote2Icon = symbol("sticky-note-2");
 
@@ -15,14 +16,15 @@ const stickyNote2Icon = symbol("sticky-note-2");
  * shows, and marks the button with a dot on the icon's corner — following the
  * editor's draft as it is typed, not the debounced save.
  */
-export function NotesToggleButton({
-  conversation,
+export function SideNoteToggle({
+  subject,
+  read,
 }: {
-  conversation: ConversationRecord;
-}) {
-  const { isVisible, hasText, read, toggleVisible } = useConversationNote(
-    conversation.id,
-  );
+  /** The note's page-wide identity, shared with its SideNoteArea. */
+  subject: string;
+  read: LiveRowResult<SideNoteRow>;
+}): ReactElement | null {
+  const { isVisible, hasText, toggleVisible } = useSideNote({ subject, read });
 
   // Nothing to offer until the note is known: "Add note" over a note that
   // exists would be a lie. A failed read keeps the button's face and says so —
@@ -51,7 +53,7 @@ export function NotesToggleButton({
             ? "Clear the note to hide it"
             : isVisible
               ? "Hide note"
-              : "Add note"
+              : "Add a note for yourself — never sent"
         }
         active={isVisible}
         aria-pressed={isVisible}

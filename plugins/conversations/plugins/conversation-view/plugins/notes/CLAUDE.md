@@ -12,16 +12,9 @@
   - Uses:
     - `conversations/conversation-view.Conversation`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.LiveRowResult`
     - `network/live.useLive`
-    - `network/live/live-state.ResourceErrorInline`
-    - `primitives/css/pin.Pin`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Textarea`
-    - `primitives/editable-field.useEditableField`
-    - `primitives/icon-button.IconButton`
+    - `primitives/side-note.SideNoteArea`
+    - `primitives/side-note.SideNoteToggle`
 - Server:
   - Contributes: `resource.declare` "conversation-notes:rows"
   - Uses:
@@ -46,19 +39,6 @@
     - `conversationNoteRows`
     - `ConversationNoteSchema`
     - `conversationNotesShape`
-- Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --warning`
-    - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/type-scale --font-scale`
-    - `ui/tokens/type-scale --font-size-3xs`
-    - `ui/tokens/type-scale --font-size-caption`
-    - `ui/tokens/type-scale --font-weight-normal`
-    - `ui/tokens/type-scale --line-height-3xs`
-    - `ui/tokens/type-scale --line-height-caption`
 - Shared:
   - Exports (types): `ConversationNote`
   - Exports (values):

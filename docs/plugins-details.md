@@ -22858,16 +22858,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `conversations/conversation-view.Conversation`
               - `infra/endpoints.useFetchEndpoint`
-              - `network/live.LiveRowResult`
               - `network/live.useLive`
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/pin.Pin`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/status-dot.StatusDot`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.Textarea`
-              - `primitives/editable-field.useEditableField`
-              - `primitives/icon-button.IconButton`
+              - `primitives/side-note.SideNoteArea`
+              - `primitives/side-note.SideNoteToggle`
           - Server:
             - Contributes: `resource.declare` "conversation-notes:rows"
             - Uses:
@@ -22892,19 +22885,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversationNoteRows`
               - `ConversationNoteSchema`
               - `conversationNotesShape`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --warning`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/type-scale --font-scale`
-              - `ui/tokens/type-scale --font-size-3xs`
-              - `ui/tokens/type-scale --font-size-caption`
-              - `ui/tokens/type-scale --font-weight-normal`
-              - `ui/tokens/type-scale --line-height-3xs`
-              - `ui/tokens/type-scale --line-height-caption`
           - Shared:
             - Exports (types): `ConversationNote`
             - Exports (values):
@@ -32978,10 +32958,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 124 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 125 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×36
               - `conversations` ×22
-              - `tasks` ×18
+              - `tasks` ×19
               - `infra` ×8
               - `page` ×8
               - `primitives` ×6
@@ -38735,11 +38715,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 288 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 289 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×85
           - `conversations` ×37
           - `infra` ×24
-          - `tasks` ×23
+          - `tasks` ×24
           - `debug` ×21
           - `page` ×18
           - `primitives` ×15
@@ -38923,9 +38903,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 50 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×19
-          - `tasks` ×15
+          - `tasks` ×16
           - `conversations` ×13
           - `page` ×3
       - Exemptions:
@@ -45180,11 +45160,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 373 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 374 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×93
           - `conversations` ×74
+          - `tasks` ×37
           - `debug` ×36
-          - `tasks` ×36
           - `infra` ×25
           - `page` ×15
           - `active-data` ×14
@@ -45610,12 +45590,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/color-palette --destructive`
             - Imported by: 326 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×84
-              - `conversations` ×50
+              - `conversations` ×49
               - `debug` ×31
               - `tasks` ×29
               - `ui` ×26
+              - `primitives` ×17
               - `page` ×16
-              - `primitives` ×16
               - `infra` ×11
               - `build` ×9
               - `active-data` ×5
@@ -53604,10 +53584,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
-              - `primitives` ×21
+              - `primitives` ×22
               - `apps` ×17
               - `page` ×9
-              - `conversations` ×6
+              - `conversations` ×5
               - `tasks` ×3
               - `apps-core/app-rail`
               - `audience/developer-mark`
@@ -53959,8 +53939,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 471 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
-              - `conversations` ×80
-              - `primitives` ×56
+              - `conversations` ×79
+              - `primitives` ×57
               - `debug` ×39
               - `ui` ×32
               - `page` ×26
@@ -54035,17 +54015,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-xs`
             - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
               - `apps` ×12
-              - `conversations` ×10
+              - `conversations` ×9
               - `debug` ×9
               - `tasks` ×4
               - `active-data` ×3
               - `shell` ×3
               - `build` ×2
+              - `primitives` ×2
               - `companions/panel`
               - `config_v2/settings`
               - `hints/ask`
               - `infra/claude-cli`
-              - `primitives/data-view/view-core`
               - `runs/run-outcome`
         - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level; stickyOffsetPx turns a measured height into the exact offset a box stacked under it pins at.
           - Web:
@@ -54524,9 +54504,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
             - Imported by: 487 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×115
+              - `primitives` ×116
               - `apps` ×111
-              - `conversations` ×54
+              - `conversations` ×53
               - `page` ×26
               - `debug` ×25
               - `ui` ×22
@@ -56768,9 +56748,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `apps/sonata/library`
           - `conversations/agents`
-          - `conversations/conversation-view/notes`
           - `fields/multiline-text/config`
           - `fields/text/config`
+          - `primitives/side-note`
           - `tasks/automations`
           - `tasks/supervisor-roles/pane`
           - `tasks/task-description`
@@ -57377,8 +57357,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
-          - `primitives` ×24
-          - `conversations` ×21
+          - `primitives` ×25
+          - `conversations` ×20
           - `tasks` ×11
           - `page` ×7
           - `debug` ×5
@@ -60360,6 +60340,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Web: `@plugins/primitives/plugins/shortcuts/web/testing`
           - `WithShortcuts` — The shortcut registry, live, around `children`: the one window keydown listener that dispatches every `useSurfaceShortcuts` / `usePlayPauseShortcut` registration.
+    - **`side-note`** — A private note beside a composer — text the user keeps for themselves, never sent: SideNoteToggle (the note icon: opens and hides an empty note, a dot while it has text, following the draft as typed) and SideNoteArea (the auto-saved editor, shown while it has text or is opened; deleting the last of the text closes it, Ctrl+Z brings it back), sharing one note's state by its subject. The owner stores the note and passes its live read and save.
+      - Web:
+        - Uses:
+          - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.Textarea`
+          - `primitives/editable-field.useEditableField`
+          - `primitives/icon-button.IconButton`
+        - Exports (types):
+          - `SideNoteRow`
+          - `SideNoteState`
+        - Exports (values):
+          - `SideNoteArea`
+          - `SideNoteToggle`
+          - `useSideNote`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/color-palette --warning`
+          - `ui/tokens/density --space-md`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/type-scale --font-scale`
+          - `ui/tokens/type-scale --font-size-3xs`
+          - `ui/tokens/type-scale --font-size-caption`
+          - `ui/tokens/type-scale --font-weight-normal`
+          - `ui/tokens/type-scale --line-height-3xs`
+          - `ui/tokens/type-scale --line-height-caption`
+        - Imported by:
+          - `conversations/conversation-view/notes`
+          - `tasks/decisions/notes`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
         - Slots:
@@ -60423,14 +60437,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 104 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 105 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×35
           - `primitives` ×15
           - `conversations` ×14
           - `apps-core` ×6
+          - `tasks` ×5
           - `ui` ×5
           - `shell` ×4
-          - `tasks` ×4
           - `companions` ×3
           - `page` ×3
           - `config_v2` ×2
@@ -61913,8 +61927,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 310 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×310
+    - Contributes: 312 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×312
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -61938,8 +61952,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×309
+    - Contributes: 311 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×311
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -65784,10 +65798,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upstream`
     - **`decisions`** — Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen; answering — the drafted answers (decisionDrafts: one browser-only kept work entry keyed by decision, shared by every surface; useDecisionDrafts' part(id) and submit), DecisionCard answered in place given a draft (options pick, a note or a question, Got it on an FYI, Close on a finished agent's decision, which says its answer will be kept, not sent), SubmitBar — the one sticky Submit (⌘↵) sending every drafted answer, N of M answered, how many go to agents and how many are only kept — and TaskDecisionsPanel, one task's decisions as the conversation tray and the page block draw them (a header folding it, open rows expanding inline into their card, a collapsed N closed row, the Submit scoped to the task); the row fields every decision list shares (the state dot, the drafted answer). The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open — a supervisor's root only (update_decision edits a decision's question, body and option texts with Edit-style old_string/new_string edits, or rewrites a field whole; a closed decision accepts only notes and replies unless the call reopens it), and read_decision (any agent: one decision of any task in full — body, options, thread — by its id, or a label of the caller's task; what a page's <task-decisions> excerpt points to and what an agent reads before editing); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
       - Web:
+        - Slots:
+          - `DecisionCardSlots.AboveAnswer`
+          - `DecisionCardSlots.AnswerAction`
+        - Slot contributors:
+          - `DecisionCardSlots.AboveAnswer` ← `tasks.decisions.notes`
+          - `DecisionCardSlots.AnswerAction` ← `tasks.decisions.notes`
         - Contributes:
           - `IdKinds.Kind` "dec"
           - `IdKinds.Kind` "dex"
-        - Uses: 49 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+        - Uses: 50 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
           - `primitives/data-view` ×4
           - `network/live` ×3
           - `primitives/collapsible` ×3
@@ -65819,6 +65839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/markdown.Markdown`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/relative-time.RelativeTime`
+          - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
           - `shell/notifications.useToast`
         - Exports (types):
@@ -65828,6 +65849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `answerOf`
           - `DecisionCard`
+          - `DecisionCardSlots`
           - `decisionDraftField`
           - `decisionDrafts`
           - `decisionPillField`
@@ -66000,9 +66022,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `tasks/decisions/inbox`
           - `tasks/decisions/item-count`
+          - `tasks/decisions/notes`
           - `tasks/decisions/page-block`
           - `tasks/decisions/tray`
           - `tasks/supervisor-roles/sessions/handoff`
+        - Extended by: `tasks/decisions/notes` (table `decisions_ext_notes`)
       - Plugins:
         - **`capability`** — The decisions.open mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through decisions, which imports tasks-core and conversations.
           - Core:
@@ -66086,6 +66110,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.useLive`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/badge.Badge`
+        - **`notes`** — A private note on each decision, never sent to the agent: a note icon on the right of the answer's editor opens it (a dot while it has text), and the auto-saved note shows above the answer box — on every surface a decision is answered in (the inbox, the conversation tray, the page block), and still shown once the decision is closed. The user's private note on a decision (decisions_ext_notes, one per decision): the decision-notes live rows and the PUT / DELETE routes that save it. Never sent to the agent.
+          - Web:
+            - Contributes:
+              - `DecisionCardSlots.AboveAnswer` → `DecisionNoteArea`
+              - `DecisionCardSlots.AnswerAction` → `DecisionNoteToggle`
+            - Uses:
+              - `infra/endpoints.useFetchEndpoint`
+              - `network/live.useLive`
+              - `primitives/side-note.SideNoteArea`
+              - `primitives/side-note.SideNoteToggle`
+              - `tasks/decisions.DecisionCardSlots`
+          - Server:
+            - Contributes: `resource.declare` "decision-notes:rows"
+            - Uses:
+              - `infra/endpoints.implement`
+              - `infra/entity-extensions.defineExtension`
+              - `network/live.serveCollection`
+              - `tasks/decisions._decisions`
+            - DB schema: `plugins/tasks/plugins/decisions/plugins/notes/server/internal/tables.ts`
+            - Entity extension of: `tasks/decisions` (table `decisions_ext_notes`)
+            - Resources: `decision-notes:rows` (keyed, point)
+            - Routes:
+              - `PUT /api/decision-notes/:decisionId`
+              - `DELETE /api/decision-notes/:decisionId`
+          - Core:
+            - Uses:
+              - `fields/text/config.textField`
+              - `infra/entity-extensions.defineExtensionShape`
+              - `network/live.liveCollection`
+            - Exports (types): `DecisionNote`
+            - Exports (values):
+              - `decisionNoteRows`
+              - `DecisionNoteSchema`
+              - `decisionNotesShape`
+          - Shared:
+            - Exports (values):
+              - `deleteDecisionNote`
+              - `upsertDecisionNote`
         - **`page-block`** — The <task-decisions task="task-…"/> page block: one task's decisions on a page, drawn as the conversation tray draws them (TaskDecisionsPanel, shown even while none is open) and answered in place with the inbox's drafts and Submit. Inserted by /decisions (a picker over the tasks, the latest edited first), or written by an agent with edit_page; a deleted task reads "task deleted". The <task-decisions task="task-…"/> page block, server half: registers its data schema at the write boundary; projects it per reader for read_page (the task's title, then its decisions bounded to any other agent — the open ones as <decision> lines with a one-line body excerpt and options while they fit in 8k chars, the 5 latest closed as one line each, every other one an index line naming its id, which read_decision returns in full — and the one-line own="N open, M closed" stub to the agent whose task it is; missing="task deleted" when the task is gone), both read-only and discarded on parse, so the block round-trips through edit_page; and refuses a markdown apply minting or re-pointing one at a task that does not exist.
           - Web:
             - Contributes: `Editor.Block` "task-decisions" → `TaskDecisionsBlock`
@@ -69173,8 +69235,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shadow --shadow`
         - Imported by: 614 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×152
-          - `conversations` ×124
-          - `primitives` ×55
+          - `conversations` ×123
+          - `primitives` ×56
           - `page` ×51
           - `fields` ×43
           - `debug` ×30
@@ -70520,8 +70582,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Tokens used by: 568 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×124
-              - `conversations` ×95
-              - `primitives` ×82
+              - `conversations` ×94
+              - `primitives` ×83
               - `debug` ×42
               - `page` ×33
               - `plugin-meta` ×27
@@ -70677,9 +70739,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
             - Tokens used by: 369 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `primitives` ×74
+              - `primitives` ×75
               - `apps` ×73
-              - `conversations` ×51
+              - `conversations` ×50
               - `debug` ×29
               - `ui` ×28
               - `page` ×20
@@ -71149,9 +71211,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
             - Tokens used by: 422 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×95
+              - `conversations` ×94
               - `apps` ×80
-              - `primitives` ×63
+              - `primitives` ×64
               - `page` ×35
               - `debug` ×28
               - `ui` ×25
@@ -71347,8 +71409,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Tokens used by: 240 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×62
-              - `conversations` ×40
-              - `primitives` ×38
+              - `conversations` ×39
+              - `primitives` ×39
               - `debug` ×15
               - `plugin-meta` ×14
               - `tasks` ×11

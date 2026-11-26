@@ -1,65 +1,58 @@
-import { useCallback, useLayoutEffect, useState } from "react";
-import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import { useLayoutEffect, useState, type ReactElement } from "react";
+import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   cn,
   Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useConversationNote } from "../internal/use-conversation-note";
-import { setDraft, setOpen, useNoteUi } from "../internal/notes-ui-store";
-import { upsertNote, deleteNote } from "../internal/api";
+import { setDraft, setOpen } from "../internal/side-note-store";
+import { useSideNote, type SideNoteRow } from "../internal/use-side-note";
 
 /**
  * The note's one editor. It owns the draft and publishes it, so the toggle's
  * dot follows the text as it is typed rather than the debounced save.
  */
-export function NotesArea({
-  conversation,
+export function SideNoteArea({
+  subject,
+  read,
+  save,
+  keepField,
+  ariaLabel,
 }: {
-  conversation: ConversationRecord;
-}) {
-  const conversationId = conversation.id;
-  const fetchEndpoint = useFetchEndpoint();
-  const { read, serverNote } = useConversationNote(conversationId);
-  const { open } = useNoteUi(conversationId);
+  /** The note's page-wide identity, shared with its SideNoteToggle. */
+  subject: string;
+  /** The owner's live read of the note row (`found: false`: no note). */
+  read: LiveRowResult<SideNoteRow>;
+  /** Saves the text; `""` deletes the note. */
+  save: (next: string) => Promise<void>;
+  /** The kept-state field unsaved text is kept under (with `subject`). */
+  keepField: string;
+  ariaLabel: string;
+}): ReactElement | null {
+  const { saved, isVisible: shown } = useSideNote({ subject, read });
   const [isFocused, setIsFocused] = useState(false);
 
-  const handleSave = useCallback(
-    async (next: string) => {
-      if (next.trim() === "") {
-        await deleteNote(fetchEndpoint, conversationId);
-      } else {
-        await upsertNote(fetchEndpoint, conversationId, next);
-      }
-    },
-    [conversationId, fetchEndpoint],
-  );
-
   const { keep, value, onFocus, onBlur, isSaving } = useEditableField<string>({
-    value: serverNote,
-    onSave: handleSave,
+    value: saved,
+    onSave: save,
     debounceMs: 1000,
-    keep: { field: "conversation-notes.note", subject: conversationId },
+    keep: { field: keepField, subject },
   });
 
   // Before paint, so the toggle's dot never lags the text by a frame.
   useLayoutEffect(() => {
-    setDraft(conversationId, value);
-  }, [conversationId, value]);
-  useLayoutEffect(
-    () => () => setDraft(conversationId, undefined),
-    [conversationId],
-  );
+    setDraft(subject, value);
+  }, [subject, value]);
+  useLayoutEffect(() => () => setDraft(subject, undefined), [subject]);
 
   const hasText = value.trim().length > 0;
 
   // The editor mounts only over a known note: seeded from a not-yet-loaded ""
-  // it would race the real value in. A failed read is reported by the toolbar
-  // toggle (NotesToggleButton), not a second time here.
+  // it would race the real value in. A failed read is reported by the toggle
+  // (SideNoteToggle), not a second time here.
   if (read.status !== "ready") return null;
-  const isVisible = hasText || open;
+  const isVisible = hasText || shown;
   // Emptied while being typed in, the note hides — but the editor stays
   // mounted and focused (visually hidden) until it blurs, so the next
   // keystroke or Ctrl+Z (the browser's own undo history) brings it back.
@@ -72,8 +65,7 @@ export function NotesArea({
         keep={keep}
         onChange={(e) => {
           // Deleting the last of the text closes the note.
-          if (hasText && e.target.value.trim() === "")
-            setOpen(conversationId, false);
+          if (hasText && e.target.value.trim() === "") setOpen(subject, false);
         }}
         onFocus={() => {
           setIsFocused(true);
@@ -87,7 +79,7 @@ export function NotesArea({
         // Grows with the text (field-sizing) from ~2 to ~12 lines, then
         // scrolls — a long note is never hidden behind a 2-line scrollbox.
         className="field-sizing-content max-h-[12lh] min-h-[3lh] w-full resize-y rounded-md border border-warning/60 bg-warning/10 px-md py-sm text-caption placeholder:text-warning/70 focus:outline-none focus:ring-1 focus:ring-warning"
-        aria-label="Conversation notes"
+        aria-label={ariaLabel}
       />
       {isSaving && isVisible && (
         <Pin

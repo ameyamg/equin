@@ -7233,6 +7233,10 @@
       "name": "@equin/plugin-primitives-shortcuts",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/side-note": {
+      "name": "@equin/plugin-primitives-side-note",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/slot-render": {
       "name": "@equin/plugin-primitives-slot-render",
       "version": "0.0.1",
@@ -7800,6 +7804,10 @@
     },
     "plugins/tasks/plugins/decisions/plugins/item-count": {
       "name": "@equin/plugin-tasks-decisions-item-count",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/decisions/plugins/notes": {
+      "name": "@equin/plugin-tasks-decisions-notes",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/decisions/plugins/page-block": {
@@ -11990,6 +11998,8 @@
 
     "@equin/plugin-primitives-shortcuts": ["@equin/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
 
+    "@equin/plugin-primitives-side-note": ["@equin/plugin-primitives-side-note@workspace:plugins/primitives/plugins/side-note"],
+
     "@equin/plugin-primitives-slot-render": ["@equin/plugin-primitives-slot-render@workspace:plugins/primitives/plugins/slot-render"],
 
     "@equin/plugin-primitives-sortable-list": ["@equin/plugin-primitives-sortable-list@workspace:plugins/primitives/plugins/sortable-list"],
@@ -12243,6 +12253,8 @@
     "@equin/plugin-tasks-decisions-inbox": ["@equin/plugin-tasks-decisions-inbox@workspace:plugins/tasks/plugins/decisions/plugins/inbox"],
 
     "@equin/plugin-tasks-decisions-item-count": ["@equin/plugin-tasks-decisions-item-count@workspace:plugins/tasks/plugins/decisions/plugins/item-count"],
+
+    "@equin/plugin-tasks-decisions-notes": ["@equin/plugin-tasks-decisions-notes@workspace:plugins/tasks/plugins/decisions/plugins/notes"],
 
     "@equin/plugin-tasks-decisions-page-block": ["@equin/plugin-tasks-decisions-page-block@workspace:plugins/tasks/plugins/decisions/plugins/page-block"],
 

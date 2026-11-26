@@ -51,8 +51,8 @@ follow.
 - Cross-plugin:
   - Tokens used by: 240 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
-    - `conversations` ×40
-    - `primitives` ×38
+    - `conversations` ×39
+    - `primitives` ×39
     - `debug` ×15
     - `plugin-meta` ×14
     - `tasks` ×11

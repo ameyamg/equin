@@ -1,6 +1,6 @@
 {
-  "id": "48b502df-ad3b-477e-b7f4-c3977f283cc7",
-  "prevId": "2e7b53bf-e2ed-485a-9b63-a66f3a3ac350",
+  "id": "9843b671-d083-449f-b52d-edf95c8294b5",
+  "prevId": "48b502df-ad3b-477e-b7f4-c3977f283cc7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -16156,6 +16156,59 @@
           "name": "tasks_ext_origin_parent_id_tasks_id_fk",
           "tableFrom": "tasks_ext_origin",
           "tableTo": "tasks",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.decisions_ext_notes": {
+      "name": "decisions_ext_notes",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "decisions_ext_notes_parent_id_decisions_id_fk": {
+          "name": "decisions_ext_notes_parent_id_decisions_id_fk",
+          "tableFrom": "decisions_ext_notes",
+          "tableTo": "decisions",
           "columnsFrom": [
             "parent_id"
           ],

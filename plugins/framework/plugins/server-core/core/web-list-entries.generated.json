@@ -1869,6 +1869,8 @@
   {"list":"tasks.automations.automation-section","plugin":"tasks.sidequest-autopilot","fact":{"automationId":"sidequest-autopilot","component":{"$code":true},"id":"triage"}},
   {"list":"tasks.automations.automation-task-detail","plugin":"tasks.outcome-report","fact":{"component":{"$code":true},"id":"outcome-report"}},
   {"list":"tasks.automations.automations.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
+  {"list":"tasks.decisions.above-answer","plugin":"tasks.decisions.notes","fact":{"component":{"$code":true},"id":"note"}},
+  {"list":"tasks.decisions.answer-action","plugin":"tasks.decisions.notes","fact":{"component":{"$code":true},"id":"note-toggle"}},
   {"list":"tasks.decisions.inbox.decision-detail.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"tasks.decisions.inbox.decisions.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"tasks.decisions.inbox.sources","plugin":"tasks.decisions.inbox","fact":{"component":{"$code":true},"icon":{"kind":"symbol","name":"inbox"},"id":"needs","title":"Needs you","views":["list"]}},

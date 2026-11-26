@@ -163,9 +163,9 @@ self-echo behavior that must keep holding.
     - `apps/pages/page-tree`
     - `apps/sonata/library`
     - `conversations/agents`
-    - `conversations/conversation-view/notes`
     - `fields/multiline-text/config`
     - `fields/text/config`
+    - `primitives/side-note`
     - `tasks/automations`
     - `tasks/supervisor-roles/pane`
     - `tasks/task-description`

@@ -24,9 +24,9 @@
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --radius-chip-compact`
   - Tokens used by: 422 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×95
+    - `conversations` ×94
     - `apps` ×80
-    - `primitives` ×63
+    - `primitives` ×64
     - `page` ×35
     - `debug` ×28
     - `ui` ×25
