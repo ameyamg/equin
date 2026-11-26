@@ -639,6 +639,100 @@ describe("Gmail provider: writes", () => {
     expect(lost.sent.filter((s) => s.path.endsWith("/send"))).toHaveLength(1);
   });
 
+  test("a sent message Gmail renamed is found by the sent-id header the send added", async () => {
+    let uploaded = "";
+    const g = gmail((r) => {
+      if (r.path.endsWith("/messages/send")) {
+        uploaded = r.body;
+        return err(503, "backendError");
+      }
+      if (
+        r.path === `${ME}/messages` &&
+        r.query.get("q")?.startsWith("rfc822msgid:")
+      )
+        return json(200, { resultSizeEstimate: 0 });
+      if (r.path === `${ME}/messages`) {
+        expect(r.query.get("q")).toBe("(in:sent OR in:drafts) newer_than:2d");
+        return json(200, {
+          messages: [
+            { id: "m7", threadId: "t7" },
+            { id: "m8", threadId: "t8" },
+          ],
+          resultSizeEstimate: 2,
+        });
+      }
+      const id = r.path.split("/").at(-1)!;
+      expect(r.query.getAll("metadataHeaders")).toEqual(["X-Equin-Message-Id"]);
+      return json(200, {
+        id,
+        threadId: id.replace("m", "t"),
+        payload: {
+          partId: "",
+          mimeType: "text/plain",
+          filename: "",
+          headers:
+            id === "m8"
+              ? [{ name: "X-Equin-Message-Id", value: "<s4@x.test>" }]
+              : [],
+          body: { size: 0 },
+        },
+      });
+    });
+    expect(
+      await g.provider.send({
+        mime: mime("<s4@x.test>"),
+        threadId: null,
+        rfc822MessageId: "<s4@x.test>",
+      }),
+    ).toEqual({ messageId: "m8" as never, threadId: threadId("t8") });
+    expect(uploaded).toContain(
+      "X-Equin-Message-Id: <s4@x.test>\r\nMessage-ID: <s4@x.test>",
+    );
+  });
+
+  test("a send Gmail refuses as asked (a 400) is MailRefusedError, nothing to reconcile", async () => {
+    const g = gmail((r) =>
+      r.path.endsWith("/messages/send")
+        ? err(400, "invalidArgument", "Invalid To header")
+        : undefined,
+    );
+    const e = await g.provider
+      .send({
+        mime: mime("<s5@x.test>"),
+        threadId: null,
+        rfc822MessageId: "<s5@x.test>",
+      })
+      .catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(MailRefusedError);
+    expect(g.sent).toHaveLength(1);
+  });
+
+  test("a draft deleted in Gmail is made again on the next save", async () => {
+    const g = gmail((r) => {
+      if (r.method === "PUT" && r.path.includes("/drafts/r-old"))
+        return err(404, "notFound");
+      if (r.method === "POST" && r.path.endsWith("/drafts"))
+        return json(200, {
+          id: "r-new",
+          message: { id: "m-new", threadId: "t-new" },
+        });
+    });
+    expect(
+      await g.provider.saveDraft(
+        {
+          mime: mime("<d1@x.test>"),
+          threadId: null,
+          rfc822MessageId: "<d1@x.test>",
+        },
+        "r-old" as never,
+      ),
+    ).toEqual({
+      draftId: "r-new" as never,
+      messageId: "m-new" as never,
+      threadId: threadId("t-new"),
+    });
+  });
+
   test("a send whose lookup fails too stays outcome-unknown, never unreachable", async () => {
     let sends = 0;
     const client = createGmailClient({

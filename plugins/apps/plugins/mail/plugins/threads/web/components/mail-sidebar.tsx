@@ -7,7 +7,12 @@ import {
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -30,6 +35,10 @@ import {
 } from "../../core";
 import type { MailboxesState } from "../internal/mailboxes";
 import { useMailLabelSource } from "../internal/label-source";
+import { ComposeButton } from "@plugins/apps/plugins/mail/plugins/compose/web";
+import { mailAccountStatus } from "@plugins/apps/plugins/mail/plugins/cache/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { avatarColor } from "@plugins/apps/plugins/mail/plugins/shell/core";
 
 const copyIcon = symbol("content-copy");
 const expandIcon = symbol("expand-more");
@@ -102,6 +111,9 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
           </span>
         ) : null}
       </Line>
+      <Inset l="lg" r="smd" b="smd" className={rigidClass()}>
+        <ComposeButton className="w-full" />
+      </Inset>
       <Scroll fill className="pr-smd pb-lg">
         <Stack gap="none">
           <DataViewViewList
@@ -128,7 +140,37 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
           <Labels mailboxes={mailboxes} />
         </Stack>
       </Scroll>
+      <AccountFooter />
     </Stack>
+  );
+}
+
+/** The sidebar's foot (the prototype's): the account mail is read and sent as — its initial and address. */
+function AccountFooter() {
+  const status = useLive(mailAccountStatus);
+  // Loading or failed: the list says why; the foot waits.
+  if (status.status === "loading" || status.status === "error") return null;
+  if (status.data.kind === "none") return null;
+  const address = status.data.address;
+  return (
+    <Line
+      className={`h-12 gap-smd pr-smd pl-xl ${rigidClass()}`}
+      title={address}
+    >
+      <Center
+        axis="both"
+        aria-hidden
+        className={`size-6 rounded-full ${rigidClass()}`}
+        style={{ background: avatarColor(address) }}
+      >
+        <Text variant="caption" className="font-label-strong text-white">
+          {address.slice(0, 1).toUpperCase()}
+        </Text>
+      </Center>
+      <Text variant="caption" tone="muted" className="truncate">
+        {address}
+      </Text>
+    </Line>
   );
 }
 

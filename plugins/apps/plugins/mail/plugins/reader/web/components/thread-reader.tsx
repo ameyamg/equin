@@ -64,8 +64,11 @@ export function ThreadReader({
   threadId,
   onClose,
   tools,
+  footer,
 }: {
   threadId: string;
+  /** Drawn under the thread once it is read (the reply box), given the thread. */
+  footer?: (thread: ReaderThread) => ReactNode;
   /** The thread's tools (its triage), drawn at the bar's end (absent: none). */
   tools?: ReactNode;
   /** Closes the reading pane (the pane's own close, with the click's gesture); null: nowhere to close to now. */
@@ -99,6 +102,9 @@ export function ThreadReader({
         {tools}
       </Bar>
       {body}
+      {footer !== undefined && read.status === "ready"
+        ? footer(read.data)
+        : null}
     </Stack>
   );
 }

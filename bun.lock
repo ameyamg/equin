@@ -830,6 +830,10 @@
       "name": "@equin/plugin-apps-mail-cache",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/compose": {
+      "name": "@equin/plugin-apps-mail-compose",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/mail/plugins/provider": {
       "name": "@equin/plugin-apps-mail-provider",
       "version": "0.0.1",
@@ -5536,6 +5540,10 @@
       "name": "@equin/plugin-packages-macrotask-yield",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/mime": {
+      "name": "@equin/plugin-packages-mime",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/owned-fd": {
       "name": "@equin/plugin-packages-owned-fd",
       "version": "0.0.1",
@@ -8970,6 +8978,8 @@
 
     "@equin/plugin-apps-mail-cache": ["@equin/plugin-apps-mail-cache@workspace:plugins/apps/plugins/mail/plugins/cache"],
 
+    "@equin/plugin-apps-mail-compose": ["@equin/plugin-apps-mail-compose@workspace:plugins/apps/plugins/mail/plugins/compose"],
+
     "@equin/plugin-apps-mail-provider": ["@equin/plugin-apps-mail-provider@workspace:plugins/apps/plugins/mail/plugins/provider"],
 
     "@equin/plugin-apps-mail-providers": ["@equin/plugin-apps-mail-providers@workspace:plugins/apps/plugins/mail/plugins/providers"],
@@ -11227,6 +11237,8 @@
     "@equin/plugin-packages-list-bound": ["@equin/plugin-packages-list-bound@workspace:plugins/packages/plugins/list-bound"],
 
     "@equin/plugin-packages-macrotask-yield": ["@equin/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
+
+    "@equin/plugin-packages-mime": ["@equin/plugin-packages-mime@workspace:plugins/packages/plugins/mime"],
 
     "@equin/plugin-packages-owned-fd": ["@equin/plugin-packages-owned-fd@workspace:plugins/packages/plugins/owned-fd"],
 

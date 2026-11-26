@@ -726,6 +726,35 @@ plugins/apps/plugins/mail/                     (app shell — sibling rebuild ta
      threads one call (178 ms), its Undo one call (196 ms).
 7. **Compose.** Local drafts mirrored to Gmail drafts, compose/reply/reply-all/forward,
    attachments, `packages/mime`, and the outbox with undo send. *Ships:* sending.
+   *Done* (`mail/compose`, `packages/mime`; reference: `compose/CLAUDE.md`):
+   - One table, `mail_drafts`, for drafts and the outbox (a draft's `state`:
+     editing / queued / sending / sent, and `discarded` until its provider
+     draft is deleted), not a separate `mail_outbox`: a queued send IS its
+     draft, and Undo is a state change. Left out of forks (a fork must never
+     send main's queued mail), backed up.
+   - The draft id is minted in the browser; saves after 700 ms quiet;
+     `mail.draft-mirror` (settled) mirrors to Gmail drafts; Send queues
+     `mail.send` at now + 10 s (Settings → Config `mail-compose`).
+   - Never twice: claimed before the call with a fresh Message-ID per send
+     (the draft's own would find the draft), the attempt marked `unknown`
+     before the provider sees it, settled by `findMessage`.
+   - **Gmail renames a sent message and a saved draft** (measured: the
+     Message-ID is replaced by Gmail's, `rfc822msgid:` finds nothing; other
+     headers are kept), so step 2's reconcile by Message-ID could never find
+     a send or a draft create. The Gmail
+     provider now adds `X-Equin-Message-Id` to what it sends and
+     `findMessage` reads it back off the 25 latest Sent and Drafts messages
+     (~130 units, only on a lost answer).
+   - The contract gained `findDraft(messageId)` (continue a draft made
+     elsewhere) and `deleteDraft` of a gone draft is done.
+   - Bodies are plain text (no rich editor); the optimistic "Sent" row is
+     not built — the sent thread arrives through the change sync (push).
+   - **Verified on the real account** (2026-11-26, to its own address only):
+     a draft mirrored to Gmail and listed in Drafts, Continue writing
+     reopened the same draft, Send → Undo reopened it, Send went once and
+     deleted the Gmail draft, a reply landed in the same thread
+     (In-Reply-To / References), and `findMessage` found that reply by the
+     Message-ID compose minted (400 ms, 130 units).
 8. **Push.** Pub/Sub setup action, the StreamingPull daemon and the daily `watch` renewal.
    The fallback tick stays for worktrees and silence. *Ships:* instant updates.
    *Built* (`mail/providers/gmail` `server/internal/push/`, `integrations/google-pubsub`):

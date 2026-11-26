@@ -1,4 +1,4 @@
-export { mailApp } from "./app";
+export { mailApp, mailThreadRoute, mailThreadsRoute } from "./app";
 export {
   avatarColor,
   fullName,

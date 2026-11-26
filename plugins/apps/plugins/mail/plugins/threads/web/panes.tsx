@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import {
   mailThreads,
   primaryMailAction,
@@ -9,12 +9,17 @@ import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { ThreadActions, useMailActions } from "./internal/actions";
 import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
-import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import {
+  mailApp,
+  mailThreadRoute,
+  mailThreadsRoute,
+} from "@plugins/apps/plugins/mail/plugins/shell/core";
 import { mailThread } from "@plugins/apps/plugins/mail/plugins/reader/core";
 import { ThreadReader } from "@plugins/apps/plugins/mail/plugins/reader/web";
+import { ReplyBox } from "@plugins/apps/plugins/mail/plugins/compose/web";
+import { mailAccountStatus } from "@plugins/apps/plugins/mail/plugins/cache/core";
 import { MailScreen } from "./components/mail-screen";
-
-const mailThreadsRoute = defineRoute({ id: "mail-threads", segment: "" });
 
 /**
  * Mail's index pane — what bare `/mail` shows: the threads list with the mail
@@ -38,7 +43,7 @@ export const mailThreadsPane = Pane.define({
  * the reader says loading, gone or not connected itself.
  */
 export const mailThreadPane = Pane.define({
-  route: defineRoute({ id: "mail-thread", segment: "thread/:threadId" }),
+  route: mailThreadRoute,
   app: mailApp,
   companion: true,
   useResolve: false,
@@ -114,10 +119,18 @@ function MailThreadPaneView() {
       handler: () => act({ kind: "trash" }),
     },
   ]);
+  const status = useLive(mailAccountStatus);
+  // Only the reply box's wording reads it ("Follow up" on your own message).
+  const me = foldResource(status, {
+    loading: () => null,
+    error: () => null,
+    ready: (s) => (s.kind === "none" ? null : s.address),
+  });
   return (
     <ThreadReader
       threadId={threadId}
       onClose={close}
+      footer={(thread) => <ReplyBox key={thread.id} thread={thread} me={me} />}
       tools={
         row === null ? null : (
           <ThreadActions row={row} withUnread onLeave={leave} />

@@ -25,6 +25,7 @@ export {
   MailThreadUnavailableError,
   type MailAttachmentRead,
   type MailCache,
+  type MailSender,
   type MailThreadRead,
 } from "./internal/engine";
 import {

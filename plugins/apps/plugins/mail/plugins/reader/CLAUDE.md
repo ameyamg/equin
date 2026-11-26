@@ -59,7 +59,8 @@ The prototype's reading pane: a bar (Close), the subject and message count,
 the messages oldest first — the last and the unread ones open, the others
 folded to one line (a click opens one) — an HTML body framed on a light page
 of its own, a text body as text, each message's files. The bar ends with the
-caller's `tools`. Not yet: the label chips and the reply bar (step 7).
+caller's `tools`, and the thread ends with the caller's `footer` (the
+thread pane passes compose's reply box). Not yet: the label chips.
 
 ## Measuring
 

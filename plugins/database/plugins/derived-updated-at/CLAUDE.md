@@ -153,6 +153,7 @@ are in `infra/entities/server/internal/`
     - `apps/chord/curriculum`
     - `apps/chord/song-index`
     - `apps/deploy/site-feeds/box`
+    - `apps/mail/compose`
     - `apps/website/promo-film/seed`
     - `conversations/conversations-view/grouped`
     - `database`

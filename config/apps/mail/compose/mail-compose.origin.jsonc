@@ -1,0 +1,5 @@
+// @hash 0f7d439b0ca1
+{
+  // How long a message you send waits in the outbox before it goes, so Undo can still take it back to the draft. 0 sends at once (no Undo).
+  "undoSendSeconds": 10
+}

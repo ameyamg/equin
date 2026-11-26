@@ -10,6 +10,7 @@ import type {
 import type { Mailbox, MailboxColor } from "./mailbox";
 import type {
   AttachmentRef,
+  FoundDraft,
   FoundMessage,
   OutgoingMessage,
   SavedDraft,
@@ -238,6 +239,12 @@ export interface MailProvider {
     existing: DraftId | null,
     o?: MailCallOptions,
   ): Promise<SavedDraft>;
+  /**
+   * The draft whose message is `messageId` (a message a thread lists with
+   * `isDraft`), or absent — what a draft made elsewhere is adopted by.
+   */
+  findDraft(messageId: MessageId, o?: MailCallOptions): Promise<FoundDraft>;
+  /** Deletes a draft; one already gone is no error (a replay is harmless). */
   deleteDraft(id: DraftId, o?: MailCallOptions): Promise<void>;
   send(m: OutgoingMessage, o?: MailCallOptions): Promise<SentMessage>;
 }

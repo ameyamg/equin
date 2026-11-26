@@ -1,0 +1,44 @@
+export { mailDraftIdKind, type MailDraftId } from "./internal/id-kinds";
+export {
+  formatAddressList,
+  parseAddressList,
+  type AddressListParse,
+} from "./internal/addresses";
+export {
+  DRAFT_KINDS,
+  DRAFT_STATES,
+  DraftAttachmentSchema,
+  DraftContentSchema,
+  DraftStartSchema,
+  discardMailDraft,
+  EMPTY_DRAFT_CONTENT,
+  isDraftEmpty,
+  MAIL_ATTACHMENTS_MAX_BYTES,
+  MAIL_DRAFT_ATTACHMENTS_MAX,
+  MAIL_DRAFT_REFUSALS,
+  mailDraft,
+  MailDraftSchema,
+  saveMailDraft,
+  sendMailDraft,
+  startMailDraft,
+  undoSendMailDraft,
+  type DraftAttachment,
+  type DraftContent,
+  type DraftKind,
+  type DraftStart,
+  type DraftState,
+  type MailDraft,
+} from "./internal/draft";
+export {
+  messageIdsIn,
+  plainTextOf,
+  prefixedSubject,
+  quoteOf,
+  startFrom,
+  type DraftStartContent,
+} from "./internal/reply";
+export { mailComposeConfig } from "./internal/config";
+export {
+  mailDraftAttachmentLinks,
+  mailDraftAttachmentLinksEntityRef,
+} from "./internal/attachment-links";

@@ -156,8 +156,8 @@ never be clobbered.
     - `ui/tokens/overlay --overlay-enter-duration`
     - `ui/tokens/overlay --overlay-enter-easing`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
     - `primitives` ×9
     - `page` ×4
     - `infra` ×3

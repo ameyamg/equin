@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-compose",
+  "description": "The Mail app's compose: drafts kept locally and mirrored to the provider, compose / reply / reply all / forward, attachments, and the outbox with undo send.",
+  "private": true,
+  "version": "0.0.1"
+}

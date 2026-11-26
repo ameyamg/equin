@@ -89,9 +89,29 @@ rounded up>` — a superset, never fewer.
     `labels.patch` answer without the label's `type` (it is always `user`;
     the api client's `LabelWriteAnswerSchema`).
 - **Outcome unknown is reconciled, never retried:**
-  - `send`: `rfc822msgid:` search. Found → the sent message; else
-    `MailOutcomeUnknownError`.
-  - Draft create: the same search over drafts.
+  - `send` → `findMessage`. **Gmail renames a message sent through the
+    API**: its Message-ID becomes Gmail's own (`<CA…@mail.gmail.com>`), so
+    `rfc822msgid:` never finds a sent message by the id its bytes carried
+    (measured 2026-11-26 on the real account: 0 hits; every other header
+    kept — `api/scripts/headers-probe.ts`). So `send` adds
+    `X-Equin-Message-Id: <the bytes' Message-ID>` to what it uploads, and
+    `findMessage` searches `rfc822msgid:` (a message received), then reads
+    that header off the account's 25 latest Sent and Drafts messages of the
+    last two days (`(in:sent OR in:drafts) newer_than:2d`, metadata: ~130
+    units). Drafts are renamed too (probed the same day), so a draft
+    upload carries the header as well. Found →
+    the sent message; else `MailOutcomeUnknownError`. Measured with
+    `scripts/find-message-probe.ts`: a reply compose sent was found (400 ms,
+    130 units), a made-up id answered absent.
+  - Draft create: `findMessage`, then the draft of the message found.
+  - A draft deleted in Gmail web is made again on the next save (an update
+    answering 404 creates).
+  - A 4xx that is not about access, a missing object or rate
+    (`asRefused`) is `MailRefusedError`: nothing was written — a send
+    refused this way is known not sent.
+  - `findDraft(messageId)`: `drafts.list` paged (100 a page, at most 50
+    pages) for the draft whose message it is. `deleteDraft` of a draft
+    already gone (404) is done.
   - Label create (or a 409 for an existing name): the label by its unique
     name.
   - A lookup that fails too (most often the same dropped connection) leaves

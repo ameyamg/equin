@@ -19,6 +19,7 @@ import {
   MailUnreachableError,
   messageId,
   threadId,
+  type DraftId,
   type Mailbox,
   type MailboxId,
   type MailCallOptions,
@@ -81,6 +82,24 @@ function notConnected(err: GmailApiError): MailNotConnectedError | null {
   return null;
 }
 
+/**
+ * A write Gmail refused as asked (a 4xx that is not about access, a missing
+ * object or rate): nothing was written, and doing it again fails the same way.
+ */
+function asRefused(err: unknown): unknown {
+  if (
+    err instanceof GmailApiError &&
+    err.status >= 400 &&
+    err.status < 500 &&
+    err.status !== 404 &&
+    err.status !== 429 &&
+    notConnected(err) === null
+  ) {
+    return new MailRefusedError(`Gmail refused it: ${err.detail}`);
+  }
+  return err;
+}
+
 /** Gmail's failures in the contract's words; anything else is thrown as is. */
 async function neutral<T>(what: string, run: () => Promise<T>): Promise<T> {
   try {
@@ -108,6 +127,38 @@ function rfc822Term(id: string): string {
   }
   return `rfc822msgid:${bare}`;
 }
+
+/**
+ * Gmail gives a message sent or saved as a draft through the API a
+ * Message-ID of its own: the bytes' is gone, so `rfc822msgid:` never finds
+ * it (measured 2026-11-26 on the real account, `api/scripts/headers-probe.ts`
+ * for a send; a draft probed the same way). It keeps every other header, so
+ * a send or draft carries its Message-ID a second time in this one, and
+ * `findMessage` reads it back off the account's recent Sent and Drafts.
+ */
+const SENT_ID_HEADER = "X-Equin-Message-Id";
+/** How many recent Sent / Drafts messages a lookup reads (metadata, 5 units each). */
+const SENT_LOOKUP_MAX = 25;
+/** Where a message this account sent or saved lately is. */
+const OWN_RECENT_QUERY = "(in:sent OR in:drafts) newer_than:2d";
+
+/** The bytes with the sent-id header first (a header's place in the block does not matter). */
+function withSentIdHeader(
+  mime: Uint8Array,
+  rfc822MessageId: string,
+): Uint8Array {
+  rfc822Term(rfc822MessageId); // a Message-ID with no space or line break
+  const line = new TextEncoder().encode(
+    `${SENT_ID_HEADER}: ${rfc822MessageId}\r\n`,
+  );
+  const out = new Uint8Array(line.length + mime.length);
+  out.set(line);
+  out.set(mime, line.length);
+  return out;
+}
+
+/** How many `drafts.list` pages `findDraft` reads (100 drafts each) before it gives up loudly. */
+const DRAFT_PAGES_MAX = 50;
 
 const isNotFound = (err: unknown) =>
   err instanceof GmailApiError && err.status === 404;
@@ -249,19 +300,68 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
     return mine;
   }
 
+  /** The draft whose message `id` is: drafts.list paged (a person's drafts are few; 100 a page, 5 units). */
+  async function draftOfMessage(
+    id: string,
+    o?: MailCallOptions,
+  ): Promise<DraftId | null> {
+    let pageToken: string | undefined;
+    for (let page = 0; page < DRAFT_PAGES_MAX; page++) {
+      const r = await client.listDrafts(
+        { maxResults: 100, pageToken },
+        gmailOpts(o),
+      );
+      const hit = r.drafts.find((d) => d.message.id === id);
+      if (hit) return draftId(hit.id);
+      if (r.nextPageToken === null) return null;
+      pageToken = r.nextPageToken;
+    }
+    throw new Error(
+      `mail: more than ${DRAFT_PAGES_MAX * 100} Gmail drafts; the draft of message ${id} was not among them`,
+    );
+  }
+
   async function findMessage(rfc: string, o?: MailCallOptions) {
     const r = await client.listMessages(
       { q: rfc822Term(rfc), includeSpamTrash: true, maxResults: 1 },
       gmailOpts(o),
     );
     const hit = r.messages?.[0];
-    return hit
-      ? {
+    if (hit) {
+      return {
+        kind: "found" as const,
+        messageId: messageId(hit.id),
+        threadId: threadId(hit.threadId),
+      };
+    }
+    // Sent or saved from here: Gmail renamed it, and the name it had is in
+    // SENT_ID_HEADER on one of the account's latest Sent or Drafts messages.
+    const recent = await client.listMessages(
+      { q: OWN_RECENT_QUERY, maxResults: SENT_LOOKUP_MAX },
+      gmailOpts(o),
+    );
+    const refs = recent.messages ?? [];
+    if (refs.length === 0) return { kind: "absent" as const };
+    const metas = await client.getMessages(
+      refs.map((m) => m.id),
+      { format: "metadata", metadataHeaders: [SENT_ID_HEADER] },
+      gmailOpts(o),
+    );
+    for (const [i, m] of metas.entries()) {
+      // A part that failed leaves the answer unknown: never "absent".
+      if (!m.ok) throw m.error;
+      const header = m.value.payload?.headers?.find(
+        (h) => h.name.toLowerCase() === SENT_ID_HEADER.toLowerCase(),
+      );
+      if (header?.value.trim() === rfc.trim()) {
+        return {
           kind: "found" as const,
-          messageId: messageId(hit.id),
-          threadId: threadId(hit.threadId),
-        }
-      : { kind: "absent" as const };
+          messageId: messageId(refs[i]!.id),
+          threadId: threadId(refs[i]!.threadId),
+        };
+      }
+    }
+    return { kind: "absent" as const };
   }
 
   return {
@@ -622,28 +722,36 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
     saveDraft: (m, existing, o) =>
       neutral("save draft", async () => {
         assertOutgoingMessageId(m);
-        const outgoing = { rfc822: m.mime, threadId: m.threadId ?? undefined };
-        let d;
+        const outgoing = {
+          rfc822: withSentIdHeader(m.mime, m.rfc822MessageId),
+          threadId: m.threadId ?? undefined,
+        };
+        let d = null;
         if (existing !== null) {
-          d = await client.updateDraft(existing, outgoing, gmailOpts(o));
-        } else {
+          try {
+            d = await client.updateDraft(existing, outgoing, gmailOpts(o));
+          } catch (err) {
+            // Deleted elsewhere (Gmail web): it is made again below.
+            if (!isNotFound(err)) throw asRefused(err);
+          }
+        }
+        if (d === null) {
           try {
             d = await client.createDraft(outgoing, gmailOpts(o));
           } catch (err) {
-            if (!(err instanceof GmailOutcomeUnknownError)) throw err;
+            if (!(err instanceof GmailOutcomeUnknownError))
+              throw asRefused(err);
             return reconcile("creating a draft", err, async () => {
-              const found = await client.listDrafts(
-                { q: rfc822Term(m.rfc822MessageId), maxResults: 1 },
-                gmailOpts(o),
-              );
-              const hit = found.drafts[0];
-              return hit
-                ? {
-                    draftId: draftId(hit.id),
-                    messageId: messageId(hit.message.id),
-                    threadId: threadId(hit.message.threadId),
-                  }
-                : null;
+              const found = await findMessage(m.rfc822MessageId, o);
+              if (found.kind === "absent") return null;
+              const draft = await draftOfMessage(found.messageId, o);
+              return draft === null
+                ? null
+                : {
+                    draftId: draft,
+                    messageId: found.messageId,
+                    threadId: found.threadId,
+                  };
             });
           }
         }
@@ -654,15 +762,33 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
         };
       }),
 
+    findDraft: (id, o) =>
+      neutral(`find the draft of message ${id}`, async () => {
+        const d = await draftOfMessage(id, o);
+        return d === null
+          ? { kind: "absent" as const }
+          : { kind: "found" as const, draftId: d };
+      }),
+
     deleteDraft: (id, o) =>
-      neutral(`delete draft ${id}`, () => client.deleteDraft(id, gmailOpts(o))),
+      neutral(`delete draft ${id}`, async () => {
+        try {
+          await client.deleteDraft(id, gmailOpts(o));
+        } catch (err) {
+          // Gone already (sent, or deleted elsewhere): the target state holds.
+          if (!isNotFound(err)) throw err;
+        }
+      }),
 
     send: (m: OutgoingMessage, o) =>
       neutral("send", async () => {
         assertOutgoingMessageId(m);
         try {
           const sent = await client.sendMessage(
-            { rfc822: m.mime, threadId: m.threadId ?? undefined },
+            {
+              rfc822: withSentIdHeader(m.mime, m.rfc822MessageId),
+              threadId: m.threadId ?? undefined,
+            },
             gmailOpts(o),
           );
           return {
@@ -670,7 +796,7 @@ export function createGmailMailProvider(client: GmailClient): MailProvider {
             threadId: threadId(sent.threadId),
           };
         } catch (err) {
-          if (!(err instanceof GmailOutcomeUnknownError)) throw err;
+          if (!(err instanceof GmailOutcomeUnknownError)) throw asRefused(err);
           // Never resent blindly: the Message-ID says whether it went.
           return reconcile("sending", err, async () => {
             const found = await findMessage(m.rfc822MessageId, o);

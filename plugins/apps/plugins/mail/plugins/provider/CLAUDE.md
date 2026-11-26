@@ -88,7 +88,10 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
     UIDVALIDITY).
 - **Writes are semantic and idempotent:** `archive`, `moveToInbox`, `trash`,
   `untrash`, `setFlags`, `setMailboxes`, mailbox
-  create / rename / delete, `saveDraft`, `deleteDraft`, `send`. "Archive" is
+  create / rename / delete, `saveDraft`, `deleteDraft` (a draft already
+  gone is no error), `send`. `findDraft(messageId)` finds the draft whose
+  message a thread lists (`isDraft`) — what compose adopts a draft made
+  elsewhere by. "Archive" is
   a label removal on Gmail and a move on IMAP. Each sets a target state, so a
   durable job may replay it. The message writes take **`MailWriteTarget`s**
   (a thread and the message ids the caller knows — its summary's), so a
@@ -99,6 +102,9 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
   - `MailNotConnectedError`: the account needs (re)consent.
   - `MailOutcomeUnknownError`: a send or create may have happened and
     reconciling did not find it. Ask `findMessage` again before any resend.
+    `findMessage` must find a message this account SENT by the Message-ID
+    its bytes carried, even where the provider renames it (Gmail does: its
+    provider adds `X-Equin-Message-Id` to what it sends and reads it back).
   - `MailRefusedError`: the write is refused as asked (a mailbox name
     taken, a move under itself, a colour off the palette) and nothing was
     written — the caller's 400.
@@ -172,6 +178,8 @@ The cache and e2e tests run on it, never on Gmail.
     - `ChangeCursor`
     - `CompiledMailQuery`
     - `ConnectedMailAccount`
+    - `DraftId`
+    - `FoundDraft`
     - `FoundMessage`
     - `ListCursor`
     - `ListedMessage`
@@ -231,6 +239,7 @@ The cache and e2e tests run on it, never on Gmail.
 - Cross-plugin:
   - Imported by:
     - `apps/mail/cache`
+    - `apps/mail/compose`
     - `apps/mail/providers/gmail`
     - `apps/mail/reader`
     - `apps/mail/threads`

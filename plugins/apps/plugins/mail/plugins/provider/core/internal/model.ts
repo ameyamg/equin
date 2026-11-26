@@ -168,6 +168,9 @@ export type SavedDraft = {
 
 export type SentMessage = { messageId: MessageId; threadId: ThreadId };
 
+export type FoundDraft =
+  { kind: "found"; draftId: DraftId } | { kind: "absent" };
+
 export type FoundMessage =
   | { kind: "found"; messageId: MessageId; threadId: ThreadId }
   | { kind: "absent" };

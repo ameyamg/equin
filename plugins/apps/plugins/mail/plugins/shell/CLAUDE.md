@@ -20,12 +20,15 @@ groups without counts), selected in `config/ui/theme-engine/@app/mail/theme.json
     - `Apps.App` "Mail" → `MailLayout`
   - Uses:
     - `apps-core.Apps`
+    - `apps/mail/compose.ComposeLayer`
+    - `apps/mail/compose.ComposeProvider`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `ui/theme-engine.ThemeEngine`
 - Core:
   - Uses:
     - `primitives/pane.defineApp`
+    - `primitives/pane.defineRoute`
     - `ui/icons.symbol`
   - Exports (values):
     - `avatarColor`
@@ -33,6 +36,8 @@ groups without counts), selected in `config/ui/theme-engine/@app/mail/theme.json
     - `initials`
     - `listTime`
     - `mailApp`
+    - `mailThreadRoute`
+    - `mailThreadsRoute`
     - `oneLine`
     - `shortName`
 - Cross-plugin:
@@ -43,6 +48,7 @@ groups without counts), selected in `config/ui/theme-engine/@app/mail/theme.json
     - `ui/tokens/shadow --shadow-sm`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `apps/mail/compose`
     - `apps/mail/reader`
     - `apps/mail/threads`
 

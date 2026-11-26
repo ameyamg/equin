@@ -88,6 +88,7 @@ sink*, and it belongs in [`primitives/scope/install-sink`](../install-sink/CLAUD
 - Cross-plugin:
   - Imported by:
     - `apps/browser/shell`
+    - `apps/mail/compose`
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/live-play`
     - `apps/sonata/document`

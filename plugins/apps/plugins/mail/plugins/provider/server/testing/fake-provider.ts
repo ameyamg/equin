@@ -702,6 +702,14 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
           threadId: r.threadId,
         };
       }),
+    findDraft: (id, o) =>
+      call("findDraft", 0, o, () => {
+        for (const t of threads.values())
+          for (const m of t.messages)
+            if (m.id === id && m.draftId !== null)
+              return { kind: "found" as const, draftId: m.draftId };
+        return { kind: "absent" as const };
+      }),
     deleteDraft: (id, o) =>
       call("deleteDraft", 0, o, () => {
         for (const t of threads.values()) {

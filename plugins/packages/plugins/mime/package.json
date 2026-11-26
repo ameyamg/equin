@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-mime",
+  "private": true,
+  "version": "0.0.1",
+  "description": "RFC 5322 / 2045 message builder in plain JS, on every host: buildMimeMessage({ from, to, cc, bcc, subject, date, messageId, inReplyTo, references, text, html, attachments }) → the message's bytes — headers folded at 78 columns, non-ASCII words as RFC 2047 encoded-words, addresses with quoted display names, a text/plain (and text/html) body in quoted-printable UTF-8, multipart/alternative and multipart/mixed with base64 attachments (RFC 2231 filenames) — and newMessageId(domain), a fresh Message-ID."
+}

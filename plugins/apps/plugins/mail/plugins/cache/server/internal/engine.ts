@@ -192,6 +192,13 @@ export type MailCacheDeps = {
   enqueueOp: (job: MailOpJob) => Promise<void>;
 };
 
+/** The account mail is written from, and its provider (`mailCache.sender()`). */
+export type MailSender = {
+  accountId: string;
+  address: string;
+  provider: MailProvider;
+};
+
 /** A triage op as the durable job carries it: the account, the op, what it acts on. */
 export type MailOpJob = {
   accountId: string;
@@ -2265,7 +2272,24 @@ export function createMailCache(deps: MailCacheDeps) {
     await relistMailboxes(a, fg);
   }
 
+  /**
+   * The account mail is written from (compose: drafts and sends) — its id,
+   * address and provider — as a read names it: refused `not-connected`, and
+   * offline the account the cache holds (whose provider calls then fail
+   * `MailUnreachableError`, so a send waits in the outbox).
+   */
+  async function sender(): Promise<MailSender> {
+    const a = await account();
+    const [row] = await db
+      .select({ address: _mailAccounts.address })
+      .from(_mailAccounts)
+      .where(eq(_mailAccounts.id, a.id));
+    if (!row) throw new Error(`mail cache: account ${a.id} has no row`);
+    return { accountId: a.id, address: row.address, provider: a.provider };
+  }
+
   return {
+    sender,
     apply,
     applyAtProvider,
     restoreThreads,

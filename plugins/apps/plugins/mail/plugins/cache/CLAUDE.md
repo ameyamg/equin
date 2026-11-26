@@ -310,6 +310,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
   - Exports (types):
     - `MailAttachmentRead`
     - `MailCache`
+    - `MailSender`
     - `MailThreadRead`
   - Exports (values):
     - `_mailAccounts`
@@ -400,6 +401,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `updateMailLabel`
 - Cross-plugin:
   - Imported by:
+    - `apps/mail/compose`
     - `apps/mail/reader`
     - `apps/mail/threads`
   - Endpoint callers:

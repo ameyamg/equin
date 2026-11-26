@@ -1,4 +1,4 @@
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 /**
@@ -15,4 +15,16 @@ export const mailApp = defineApp({
   category: ["Office", "Documents"],
   colorMode: "dark",
   audience: "developer",
+});
+
+/** Mail's index: the threads list (bare `/mail`). */
+export const mailThreadsRoute = defineRoute({
+  id: "mail-threads",
+  segment: "",
+});
+
+/** One thread open beside the list: `/mail/thread/<id>`. */
+export const mailThreadRoute = defineRoute({
+  id: "mail-thread",
+  segment: "thread/:threadId",
 });

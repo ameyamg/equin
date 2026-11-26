@@ -8,8 +8,9 @@ contract — never a mirror of the whole mailbox.
 So far: the contract (`provider`), the Gmail provider (`providers/gmail`),
 the cache (`cache`: on-demand windows, change sync, the account status),
 the shell (`shell`) and the threads list (`threads`: the index pane, a
-DataView whose sidebar lists the built-in, label and user views). The reader
-and compose come in the design's later steps. Only `providers/*` name a
+DataView whose sidebar lists the built-in, label and user views), the reader
+(`reader`) and compose (`compose`: drafts mirrored to the provider, reply /
+forward, the outbox with undo send). Only `providers/*` name a
 provider (the threads list draws the provider's connect surface through
 `provider/web`'s `MailProviderUi.Connect`).
 
@@ -20,6 +21,7 @@ provider (the threads list draws the provider's connect surface through
 - Description: Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), the cache, the shell and the threads list.
 - Sub-plugins:
   - **`cache`** [exempt] — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is…
+  - **`compose`** — The Mail app's compose, web half: ComposeLayer — the compose windows over the Mail surface (the prototype's, bottom right: minimise, To / Cc / Bcc / Subject, the body, Send, Attach, Discard; closing…
   - **`provider`** [test helpers] — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected)…
   - **`providers`** [exempt] [1 sub-plugin] — Umbrella for the Mail app's providers — each a MailProvider behind the provider-neutral contract (mail/provider): Gmail first; IMAP, JMAP and Outlook later.
   - **`reader`** — The Mail reader, web half: ThreadReader — one thread (mail.thread) as the reading pane draws it: the subject and message count, every message oldest first (the last and the unread open, the rest…
