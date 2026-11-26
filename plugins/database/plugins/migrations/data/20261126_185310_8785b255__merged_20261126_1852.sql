@@ -1,5 +1,6 @@
--- singularity:snapshot id=c50f1db5-e803-4c6a-b48e-4cec136b7aad parents=18dd8cce-aa4c-441c-9eef-ef83d496c7c2
--- singularity:supersedes a2bc19c5
+-- singularity:snapshot id=9c9dabe5-351d-482e-b513-46f75dd36fd0 parents=18dd8cce-aa4c-441c-9eef-ef83d496c7c2
+-- singularity:supersedes 4a59ba77
+-- singularity:supersedes 4a59ba77 <- a2bc19c5
 -- singularity:supersedes a2bc19c5 <- 56907c45
 -- singularity:phase expand
 CREATE TABLE "mail_thread_bodies" (

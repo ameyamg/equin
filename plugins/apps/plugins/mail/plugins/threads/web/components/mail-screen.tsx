@@ -166,10 +166,10 @@ export function MailScreen(): ReactNode {
       aside={<MailSidebar mailboxes={mailboxes} />}
         measure={MAIL_MEASURE}
       errorState={refusalState}
-      selectedRowId={openThreadId}
-      rowActivation={(t) =>
-        openPane.to(mailThreadPane, { threadId: t.id }, { mode: "push" })
-      }
+        selectedRowId={openThreadId}
+        rowActivation={(t) =>
+          openPane.to(mailThreadPane, { threadId: t.id }, { mode: "push" })
+        }
       emptyState={<EmptyMail inbox={activeViewId === MAIL_INBOX_VIEW.id} />}
     />
     </PaneScroll>
