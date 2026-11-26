@@ -312,3 +312,111 @@ describe("TabsProvider — re-checked once the deferred tier settles", () => {
     expect(stateOf("t-bg")).toEqual({ kind: "unresolved", rawPath: "gone/x" });
   });
 });
+
+describe("bootTabs — the focused tab's pane instances across a reload", () => {
+  /** The focused tab's slot uuids after a boot at the current URL. */
+  function focusedUuids(): string[] | null {
+    const boot = bootTabs(APPS, "pages");
+    const state = boot.tabs
+      .find((t) => t.tabId === boot.focusedTabId)!
+      .store.getRouteState();
+    return state.kind === "resolved" ? state.slots.map((s) => s.uuid) : null;
+  }
+
+  /** One tab, last seen on `page/now` (the persisted route). */
+  function persistLastSeenElsewhere(): void {
+    persist({
+      tabs: [
+        {
+          tabId: "t1",
+          appId: "pages",
+          route: [
+            {
+              paneId: "rv-page",
+              params: { id: "now" },
+              options: {},
+              uuid: "u-now",
+            },
+          ],
+          rawPath: "page/now",
+        },
+      ],
+      focusedTabId: "t1",
+      mode: "",
+    });
+  }
+
+  it("Back across a reload to an older entry: its panes keep the entry's uuids", () => {
+    persistLastSeenElsewhere();
+    // The older entry the browser lands on, as the shell adapter stamped it.
+    window.history.replaceState(
+      {
+        tabId: "t1",
+        appId: "pages",
+        route: [
+          {
+            paneId: "rv-page",
+            params: { id: "old" },
+            options: {},
+            uuid: "u-old",
+          },
+        ],
+      },
+      "",
+      "/pages/page/old",
+    );
+    expect(focusedUuids()).toEqual(["u-old"]);
+  });
+
+  it("an entry saved by another tab lends it no instances", () => {
+    persistLastSeenElsewhere();
+    window.history.replaceState(
+      {
+        tabId: "t-other",
+        appId: "pages",
+        route: [
+          {
+            paneId: "rv-page",
+            params: { id: "old" },
+            options: {},
+            uuid: "u-old",
+          },
+        ],
+      },
+      "",
+      "/pages/page/old",
+    );
+    const uuids = focusedUuids();
+    expect(uuids).toHaveLength(1);
+    expect(uuids).not.toEqual(["u-old"]);
+  });
+
+  it("an entry slot of another pane or params is a new instance", () => {
+    persistLastSeenElsewhere();
+    window.history.replaceState(
+      {
+        tabId: "t1",
+        appId: "pages",
+        route: [
+          {
+            paneId: "rv-page",
+            params: { id: "else" },
+            options: {},
+            uuid: "u-else",
+          },
+        ],
+      },
+      "",
+      "/pages/page/old",
+    );
+    const uuids = focusedUuids();
+    expect(uuids).toHaveLength(1);
+    expect(uuids).not.toEqual(["u-else"]);
+  });
+
+  it("a plain reload with no route in the entry keeps the persisted tab's uuids", () => {
+    persistLastSeenElsewhere();
+    window.history.replaceState(null, "", "/pages/page/now");
+    expect(focusedUuids()).toEqual(["u-now"]);
+  });
+});

@@ -47,11 +47,15 @@ Because `tabId`s are sessionStorage-stable, a snapshot stamped before a reload
 still matches after it, so back/forward keeps working across reloads.
 
 Pane instances survive a reload too: every restored slot keeps its `uuid`
-(`restoreRoute` passes it through), and when the address bar is the URL the
-focused tab was saved on, the panes parsed from it take the saved slots' uuids
-(same pane, same params, same position — `keepInstanceIds`). So state keyed by
-the pane instance (a Miller column's collapse, the prototype canvas) comes back
-after a reload, while a new link still opens new instances.
+(`restoreRoute` passes it through), and the focused tab's panes parsed from
+the address bar take the uuids of the slots saved for that URL (same pane, same
+params, same position — `keepInstanceIds`): the current history entry's own
+route when it is this tab's (a Back or Forward across a reload lands on an
+entry the persisted tab no longer describes), else the persisted tab's when it
+was saved on this URL (a reload). So state keyed by the pane instance (its
+scroll offset, a Miller column's collapse, the prototype canvas) comes back
+after a reload and on a Back past one, while a new link still opens new
+instances.
 
 A saved route is validated, not trusted (`validRestoredRoute`, pane
 `CLAUDE.md`): a persisted tab's route lacking a param its pane now requires —

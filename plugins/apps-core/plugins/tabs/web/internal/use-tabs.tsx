@@ -452,13 +452,14 @@ function backForwardEntryTabId(): string | undefined {
  * recognises the entries around it instead of a freshly-minted stranger.
  */
 /**
- * The URL's slots, each carrying the uuid of the persisted slot at its position
+ * The URL's slots, each carrying the uuid of the saved slot at its position
  * when that slot is the same pane at the same params — the instance a reload
- * brings back. Any slot that differs is a new instance and keeps its fresh id.
+ * or a Back brings back. Any slot that differs is a new instance and keeps its
+ * fresh id.
  */
 function keepInstanceIds(
   slots: readonly PaneSlot[],
-  persisted: readonly PersistedSlot[],
+  persisted: readonly InstanceSlot[],
 ): PaneSlot[] {
   return slots.map((slot, i) => {
     const prev = persisted[i];
@@ -468,6 +469,44 @@ function keepInstanceIds(
       ? { ...slot, uuid: prev.uuid }
       : slot;
   });
+}
+
+/** What {@link keepInstanceIds} reads off a saved slot. */
+type InstanceSlot = Pick<PersistedSlot, "paneId" | "params" | "uuid">;
+
+/**
+ * The slots the CURRENT history entry saved for `tabId`'s route — the panes
+ * that were on screen at this very URL, in this tab — or `undefined` when the
+ * entry holds none for it (a fresh entry, a pending one, a legacy `{}`, another
+ * tab's). The entry is the URL's own record: after a reload, Back or Forward to
+ * an entry written before it loads a new document whose address names THAT
+ * entry's panes, which the persisted tab (where the tab was last) does not
+ * describe. Read untyped, as `handleLocationChange` reads it: an entry is
+ * whatever an earlier build wrote.
+ */
+function entryInstanceSlots(tabId: string): InstanceSlot[] | undefined {
+  const state = window.history.state as {
+    tabId?: unknown;
+    route?: unknown;
+  } | null;
+  if (state?.tabId !== tabId || !Array.isArray(state.route)) return undefined;
+  const slots: InstanceSlot[] = [];
+  for (const s of state.route as unknown[]) {
+    const slot = s as Partial<Record<keyof InstanceSlot, unknown>> | null;
+    if (
+      typeof slot?.paneId !== "string" ||
+      typeof slot.uuid !== "string" ||
+      typeof slot.params !== "object" ||
+      slot.params === null
+    )
+      return undefined;
+    slots.push({
+      paneId: slot.paneId,
+      params: slot.params as Record<string, string>,
+      uuid: slot.uuid,
+    });
+  }
+  return slots;
 }
 
 function sameParams(
@@ -610,16 +649,24 @@ export function bootTabs(
     (t) => t.tabId === focused.tabId,
   );
   if (parsed.status === "matched" && parsed.slots.length > 0) {
-    // A plain reload of the URL the tab was on is the SAME panes coming back:
-    // they keep their instance ids. The URL still decides which panes there are
-    // (and their params — today's parser's, so this route needs no validation:
-    // only the uuids come from the saved one).
+    // The panes this URL names are the SAME instances coming back when it is
+    // a place this tab already was: they keep their instance ids, so what is
+    // kept under each (its scroll offset, a Miller column's collapse) comes
+    // back too. The URL still decides which panes there are (and their params
+    // — today's parser's, so this route needs no validation: only the uuids
+    // come from the saved one). Whose uuids: the history entry's own record
+    // of this URL first — the one a Back or Forward across a reload lands on,
+    // which the persisted tab (where the tab was LAST) does not describe —
+    // else the persisted tab's, when it was saved on this URL (a reload).
+    const saved =
+      entryInstanceSlots(focused.tabId) ??
+      (persistedFocused !== undefined &&
+      resolved !== undefined &&
+      persistedFocused.rawPath === normalizeRawPath(resolved.routePath)
+        ? persistedFocused.route
+        : undefined);
     focused.store.restoreRoute(
-      persistedFocused !== undefined &&
-        resolved !== undefined &&
-        persistedFocused.rawPath === normalizeRawPath(resolved.routePath)
-        ? keepInstanceIds(parsed.slots, persistedFocused.route)
-        : parsed.slots,
+      saved ? keepInstanceIds(parsed.slots, saved) : parsed.slots,
       { index: parsed.index },
     );
   } else if (parsed.status === "matched") {
