@@ -16,6 +16,10 @@ lives in the per-surface cursor store (`CursorStoreProvider`, `useCursorApi`,
 `useCursorSelector`) so a ~60 fps advance never re-renders a `useSession()`
 consumer; the session must be mounted inside a `CursorStoreProvider`.
 
+`togglePlay` (the Play button and Space) on a song played to its end rewinds
+to the lead-in first and replays it; the internal resume paths (`play()`) never
+rewind.
+
 ## The A–B loop and the play position
 
 The cursor holds a `PlayPosition` (score/core), not just a beat: `beat`, plus

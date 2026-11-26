@@ -865,6 +865,18 @@ export function PlaybackSession({
     if (isPlayingRef.current) return;
     if (scoreEndBeat(scoreRef.current) <= 0) return;
     if (tempoScaleRef.current === 0) return;
+    // A song played to its end replays from the start: the end is where
+    // playback stops, so playing from there would stop again on the first
+    // frame. Parked at the lead-in origin like a fresh load, so the count-in
+    // (below) counts into the replay. Only this deliberate path rewinds — a
+    // scrub released at the end resumes (and so stops) where it was left.
+    const score = scoreRef.current;
+    if (cursor.getBeat() >= scoreEndBeat(score)) {
+      const start = scoreStartBeat(score);
+      const d = driverRef.current;
+      if (d !== null) seekDriver(d, start);
+      cursor.setBeat(start, { seek: true });
+    }
     // The count-in is clicked out on the audio clock, which a driver does not
     // follow: with a medium driving, play at once (it has its own intro).
     if (driverRef.current !== null) {
@@ -887,7 +899,7 @@ export function PlaybackSession({
       startedAtClockSec: clockRef.current.now(),
       durationSec: lead * secPerQuarter,
     });
-  }, [play, cursor]);
+  }, [play, cursor, seekDriver]);
 
   const requestPlayOnLoad = useCallback(() => {
     playOnLoadRef.current = true;

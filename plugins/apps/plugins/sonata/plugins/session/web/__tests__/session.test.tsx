@@ -136,6 +136,25 @@ describe("playback session: the content reset", () => {
   });
 });
 
+describe("playback session: replay at the end", () => {
+  it("Play on a song played to its end replays it from the lead-in", () => {
+    const s = renderSession({ kind: "ready", contentKey: {}, score: song(16) });
+    act(() => s.session().seekTo(16));
+    expect(s.beat()).toBe(16);
+    act(() => s.session().togglePlay());
+    expect(s.session().isPlaying).toBe(true);
+    expect(s.beat()).toBe(-4);
+  });
+
+  it("Play mid-song resumes where the playhead is", () => {
+    const s = renderSession({ kind: "ready", contentKey: {}, score: song(16) });
+    act(() => s.session().seekTo(8));
+    act(() => s.session().togglePlay());
+    expect(s.session().isPlaying).toBe(true);
+    expect(s.beat()).toBe(8);
+  });
+});
+
 describe("playback session: the load intents", () => {
   it("seek-on-load parks at the requested beat once the next content composes, once", () => {
     const s = renderSession({ kind: "empty", contentKey: {} });
