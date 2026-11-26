@@ -67,11 +67,8 @@ const productionPorts: DeliverPorts = {
     if (out.kind === "not-found")
       throw new Error(`event turn: conversation ${conversationId} not found`);
     // An event never reopens a stopped agent: nothing was recorded, so the
-    // rows stay undelivered (re-routed once the watch is dead).
-    if (out.kind === "stopped")
-      throw new Error(
-        `event turn: conversation ${conversationId} is ${out.status}`,
-      );
+    // rows stay undelivered for the re-run (see sendClaimedTurn).
+    if (out.kind === "stopped") return { kind: "stopped" };
     return { kind: recorded ? "recorded" : "duplicate" };
   },
   async digest(conversationId) {
@@ -105,7 +102,10 @@ export const watchDeliverJob = defineJob({
     const sent = await sendClaimedTurn(db, out, productionPorts);
     // The rows moved while it was sent (a quiet withdrawn, another delivery
     // first): deliver what is left now — an empty run if nothing is.
-    if (sent.kind === "changed") await watchDeliverJob.enqueue({ watchId });
+    // Or the watcher stopped after the claim read it: deliver again, deciding
+    // from the new status (a dead watch re-routes, a `gone` one holds). Each
+    // re-run reads a state the last one could not, so it cannot repeat.
+    if (sent.kind !== "delivered") await watchDeliverJob.enqueue({ watchId });
   },
 });
 

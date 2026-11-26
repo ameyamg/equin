@@ -69,6 +69,27 @@ describe("automatic-turn readiness", () => {
     expect(got.missing).toEqual({ kind: "not-found" });
   });
 
+  test("a stopped conversation (gone / done) is held: no automatic turn resumes it", async () => {
+    const got = await worktreeDbScenario(async (tx) => {
+      const gone = await conversation(tx, "gone");
+      const done = await conversation(tx, "done");
+      return {
+        gone: await readinessOn(tx, gone, [], undefined),
+        done: await readinessOn(tx, done, [], undefined),
+      };
+    });
+    expect(got.gone).toEqual({
+      kind: "held",
+      reason: "stopped",
+      status: "gone",
+    });
+    expect(got.done).toEqual({
+      kind: "held",
+      reason: "stopped",
+      status: "done",
+    });
+  });
+
   test("another plugin's pending turn holds every other sender, not its own", async () => {
     const pendingFor = new Set<string>();
     const mine = pendingEntry("mine", pendingFor);

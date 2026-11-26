@@ -7,10 +7,17 @@ cannot type into each other's turn.
 
 ```ts
 automaticTurnReadiness(conversationId, { own?, exec? })
-  // → ready | not-found | held: busy | waiting-for | pending-turn (by)
+  // → ready | not-found | held: stopped (status) | busy | waiting-for | pending-turn (by)
 PendingTurn({ id, pending: (conversationId, exec) => … })
 ```
 
+- **stopped** — `gone` / `done`: no agent to type into, and no automatic
+  turn brings one back (turn-ledger's `resumesStopped`), so the ledger would
+  refuse it. A `gone` one is re-decided by its resume; `done` is final, so a
+  sender whose target can close routes elsewhere first (watch re-routes a dead
+  watch's events). Before it, readiness said `ready` and the send threw on
+  the ledger's refusal — five failing attempts of the same throw
+  (report-1795719040-48osuf).
 - **busy** — `starting` / `working` (`isAgentBusy`): a turn typed into a busy
   CLI is folded into the running turn at its next tool boundary, as plain text.
 - **waiting-for** — `waitingFor` set (a held question): a turn would answer it.
@@ -34,7 +41,7 @@ a waiting question for it). This plugin names no sender and no contributor.
 
 ## Plugin reference
 
-- Description: Whether the app may type an automatic turn into a conversation now: automaticTurnReadiness(conversationId, { own? }) — held while the agent is busy, waits on the user (waitingFor), or another plugin's PendingTurn contribution says a turn of its own goes first; ready otherwise. Every automatic sender asks it, so two senders woken by the same status change cannot type into each other's turn. Names no sender.
+- Description: Whether the app may type an automatic turn into a conversation now: automaticTurnReadiness(conversationId, { own? }) — held while the conversation is stopped (gone / done — no agent, and an automatic turn never resumes one), the agent is busy, waits on the user (waitingFor), or another plugin's PendingTurn contribution says a turn of its own goes first; ready otherwise. Every automatic sender asks it, so two senders woken by the same status change cannot type into each other's turn. Names no sender.
 - Server:
   - Uses:
     - `database.db`

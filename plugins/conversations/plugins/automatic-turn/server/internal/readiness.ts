@@ -17,7 +17,13 @@ export type TurnReadiness =
    * would answer it. */
   | { kind: "held"; reason: "busy" | "waiting-for" }
   /** Another plugin's turn goes first (`by`: its PendingTurn id). */
-  | { kind: "held"; reason: "pending-turn"; by: string };
+  | { kind: "held"; reason: "pending-turn"; by: string }
+  /** Stopped (`gone` / `done`): no agent to type into, and an automatic turn
+   * never brings one back (turn-ledger's `resumesStopped`) — the ledger would
+   * refuse it. `gone` is re-decided by its resume (the agent coming up is a
+   * status change); `done` is final, so a sender whose target can close
+   * routes elsewhere before asking (a watch's dead-watch re-route). */
+  | { kind: "held"; reason: "stopped"; status: "gone" | "done" };
 
 /** A held readiness: what a sender reports when it holds its turn. */
 export type HeldTurn = Extract<TurnReadiness, { kind: "held" }>;
@@ -39,6 +45,8 @@ export async function readinessOn(
     .where(eq(_conversations.id, conversationId))
     .limit(1);
   if (row === undefined) return { kind: "not-found" };
+  if (row.status === "gone" || row.status === "done")
+    return { kind: "held", reason: "stopped", status: row.status };
   if (isAgentBusy(row.status)) return { kind: "held", reason: "busy" };
   if (row.waitingFor !== null) return { kind: "held", reason: "waiting-for" };
   for (const entry of entries) {

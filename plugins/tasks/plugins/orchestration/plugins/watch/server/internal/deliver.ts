@@ -25,13 +25,14 @@ export interface DeliverPorts {
   /** Submit one `event` turn. `onRecorded` runs on the transaction that
    * records it in the turn ledger (a throw rolls that record back, typing
    * nothing). `duplicate`: the ledger had `turnId` already, so `onRecorded`
-   * did not run. */
+   * did not run. `stopped`: the conversation stopped (`gone` / `done`) after
+   * the claim read it — an event never reopens it, so nothing was recorded. */
   submit(
     conversationId: string,
     turnId: TurnId,
     text: string,
     onRecorded: (tx: DbExecutor) => Promise<void>,
-  ): Promise<{ kind: "recorded" | "duplicate" }>;
+  ): Promise<{ kind: "recorded" | "duplicate" | "stopped" }>;
   /** The tree digest appended to the turn (advances the watcher's cursor). */
   digest(conversationId: string): Promise<string | null>;
   handler(id: string): WatchHandlerEntry | undefined;
@@ -40,9 +41,9 @@ export interface DeliverPorts {
 export type DeliverOutcome =
   | { kind: "not-found" }
   | { kind: "empty" }
-  /** The watcher cannot take a turn now (busy, waiting on the user, or
-   * another plugin's turn goes first); its next status change re-runs
-   * delivery. */
+  /** The watcher cannot take a turn now (stopped `gone`, busy, waiting on
+   * the user, or another plugin's turn goes first); its next status change
+   * re-runs delivery. */
   | HeldTurn
   /** The watch is dead: its rows moved to `to` (each needs a delivery). */
   | { kind: "rerouted"; to: WatchId[]; dropped: number }
@@ -281,13 +282,21 @@ export async function claimDelivery(
  * never sent again, whatever becomes of its ledger row later. `changed`: the
  * rows moved under it ({@link BatchChangedError}), or another delivery of the
  * same rows recorded the turn first; the caller runs delivery again.
+ * `stopped`: the watcher stopped between the claim and the send (closed that
+ * very moment — 2026-11-26, conv-1794746872-ocqsyj). Nothing was recorded,
+ * and the caller runs delivery again, which decides from the new status: a
+ * `done` watcher's watch is dead, so its rows re-route; a `gone` one is held
+ * (readiness `stopped`) until it is resumed. Never a throw: a retry of the
+ * same send can only fail the same way.
  */
 export async function sendClaimedTurn(
   exec: DbExecutor,
   claim: ClaimedTurn,
   ports: DeliverPorts,
 ): Promise<
-  { kind: "delivered"; turnId: string; count: number } | { kind: "changed" }
+  | { kind: "delivered"; turnId: string; count: number }
+  | { kind: "changed" }
+  | { kind: "stopped" }
 > {
   const digest = await ports.digest(claim.conversationId);
   try {
@@ -297,6 +306,7 @@ export async function sendClaimedTurn(
       renderEventTurn(claim.events, claim.titles, digest),
       (tx) => markDelivered(tx, claim.watchId, claim.rowIds, claim.turnId),
     );
+    if (out.kind === "stopped") return { kind: "stopped" };
     // The ledger has this turn already: another delivery of the same rows
     // recorded it first, marking them on that transaction. Rows still
     // unmarked under a recorded turn would break the one invariant here.

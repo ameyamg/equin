@@ -139,7 +139,7 @@ async function deliver(
   tx: Tx,
   watchId: WatchId,
   ports: DeliverPorts,
-): Promise<DeliverOutcome | { kind: "changed" }> {
+): Promise<DeliverOutcome | { kind: "changed" } | { kind: "stopped" }> {
   const out = await claimDelivery(tx, watchId, ports);
   return out.kind === "claimed"
     ? sendClaimedTurn(tx, out, onTx(tx, ports))
@@ -694,6 +694,80 @@ describe("delivery", () => {
     expect(got.midInbox).toBe(0);
     expect(fake.turns).toHaveLength(0);
   });
+
+  // report-1795719040-48osuf: the claim read the watcher live, it closed
+  // before the send, and the ledger's refusal was thrown — five retries of
+  // the same failure. Now `stopped` is an outcome; the re-run decides.
+  for (const status of ["done", "gone"] as const) {
+    test(`a watcher that turns ${status} between the claim and the send: nothing recorded, and the re-run ${status === "done" ? "re-routes" : "holds"}`, async () => {
+      const fake = fakePorts();
+      const got = await worktreeDbScenario(async (tx) => {
+        const root = await task(tx, null);
+        const mid = await task(tx, root);
+        const rootConv = await conversation(tx, root, "waiting");
+        const midConv = await conversation(tx, mid, "waiting");
+        const rootW = await watchTask(
+          root,
+          { kind: "conversation", conversationId: rootConv },
+          tx,
+        );
+        const midW = await watchTask(
+          mid,
+          { kind: "conversation", conversationId: midConv },
+          tx,
+        );
+        await routeEvents(tx, [
+          { kind: "reported", taskId: mid, summary: "r" },
+        ]);
+        const stopping: DeliverPorts = {
+          ...fake.ports,
+          // The ledger's answer once the conversation stopped: no hook run.
+          submit: async (conversationId) => {
+            await setStatus(tx, conversationId, status);
+            fake.state.set(conversationId, {
+              kind: "held",
+              reason: "stopped",
+              status,
+            });
+            return { kind: "stopped" };
+          },
+        };
+        const sent = await deliver(tx, midW.id, stopping);
+        const undeliveredAfterSend = (await inbox(tx, midW.id)).filter(
+          (r) => r.deliveredInTurn === null,
+        ).length;
+        const rerun = await deliver(tx, midW.id, fake.ports);
+        return {
+          sent,
+          undeliveredAfterSend,
+          rerun,
+          rootW: rootW.id,
+          rootInbox: (await inbox(tx, rootW.id)).length,
+          midInbox: (await inbox(tx, midW.id)).length,
+        };
+      });
+      expect(got.sent).toEqual({ kind: "stopped" });
+      expect(got.undeliveredAfterSend).toBe(1);
+      if (status === "done") {
+        expect(got.rerun).toEqual({
+          kind: "rerouted",
+          to: [got.rootW],
+          dropped: 0,
+        });
+        expect(got.rootInbox).toBe(1);
+        expect(got.midInbox).toBe(0);
+      } else {
+        expect(got.rerun).toEqual({
+          kind: "held",
+          reason: "stopped",
+          status: "gone",
+        });
+        expect(got.rootInbox).toBe(0);
+        expect(got.midInbox).toBe(1);
+      }
+      expect(fake.turns).toHaveLength(0);
+    });
+  }
 
   test("a code watcher gets the batch; an unknown handler throws", async () => {
     const fake = fakePorts();

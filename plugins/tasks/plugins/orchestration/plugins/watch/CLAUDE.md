@@ -41,7 +41,8 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
   settling raises a fresh one.
 - **Delivery** (`watch.deliver`, keyed by watch) — a dead watch re-routes its
   rows to the next live watch above; a conversation watcher that cannot take
-  an automatic turn (`conversations/automatic-turn`'s readiness: busy,
+  an automatic turn (`conversations/automatic-turn`'s readiness: stopped
+  `gone` — re-decided by its resume — busy,
   `waitingFor` set — an event turn would answer its question — or another
   plugin's `PendingTurn`, such as a compaction, goes first) is held. Its own
   `conversation.statusChanged` re-enqueues delivery — which fires on leaving
@@ -68,6 +69,14 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
   changed while the turn was sent (a `quiet` withdrawn, another delivery
   first) roll the record back (`BatchChangedError` → `changed`) and the job
   runs again over what is left.
+- **A watcher that stops mid-send is an outcome, not a failure** — the claim
+  reads the watcher live, then it closes before the turn is submitted
+  (2026-11-26, report-1795719040-48osuf): the ledger refuses an `event` into a
+  stopped conversation (`stopped`, nothing recorded), `sendClaimedTurn`
+  answers `stopped` and the job runs delivery again, which decides from the
+  new status — a `done` watcher's watch is dead, so its rows re-route; a
+  `gone` one is held (readiness `stopped`) until its resume's status change.
+  It used to throw, and the job's retries failed the same way.
 - **Stop waiver** — a conversation owning a live, not-quiet watch may stop: the
   next event wakes it.
 - **Capability** — `watch.children: true` (core). `add_task` makes the caller

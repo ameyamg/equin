@@ -7,5 +7,5 @@ export type { HeldTurn, TurnReadiness } from "./internal/readiness";
 
 export default {
   description:
-    "Whether the app may type an automatic turn into a conversation now: automaticTurnReadiness(conversationId, { own? }) — held while the agent is busy, waits on the user (waitingFor), or another plugin's PendingTurn contribution says a turn of its own goes first; ready otherwise. Every automatic sender asks it, so two senders woken by the same status change cannot type into each other's turn. Names no sender.",
+    "Whether the app may type an automatic turn into a conversation now: automaticTurnReadiness(conversationId, { own? }) — held while the conversation is stopped (gone / done — no agent, and an automatic turn never resumes one), the agent is busy, waits on the user (waitingFor), or another plugin's PendingTurn contribution says a turn of its own goes first; ready otherwise. Every automatic sender asks it, so two senders woken by the same status change cannot type into each other's turn. Names no sender.",
 } satisfies ServerPluginDefinition;
