@@ -149,6 +149,42 @@ const rebaseEnv = (): Record<string, string | undefined> => ({
   ...envEntries({ SKIP_POST_REWRITE: "1" }),
 });
 
+// The ref `./equin`'s pre-rebase stub (../scripts/rebase-first.sh) leaves at
+// the HEAD it rebased this branch to. It changes ONE decision: a branch that
+// contains main only because the stub rebased it is an ordinary branch (the
+// stub rebases no merge, and ran only because main had moved past it) — so it
+// takes arm 3, whose rebase replays every commit with the trailers, not arm 1,
+// which amends only the tip. A ref, not an env var, so a push refused after
+// the stub (the test gate, a collision) still knows it on the retry. Honoured
+// only while the branch still builds on that HEAD; cleared once the branch is
+// in landing shape.
+const rebasedFirstRef = (branch: string): string =>
+  `refs/equin/push-rebased/${branch}`;
+
+async function rebasedFirst(branch: string): Promise<boolean> {
+  const { stdout, exitCode } = await runAllowFail([
+    "git",
+    "rev-parse",
+    "--verify",
+    "--quiet",
+    `${rebasedFirstRef(branch)}^{commit}`,
+  ]);
+  if (exitCode !== 0 || !stdout) return false;
+  const ancestor = await spawnCaptured(
+    ["git", "merge-base", "--is-ancestor", stdout, "HEAD"],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
+  if (ancestor.exitCode === 0) return true;
+  if (ancestor.exitCode === 1) return false;
+  console.error(`Could not compare ${rebasedFirstRef(branch)} with HEAD.`);
+  if (ancestor.stderr.trim()) console.error(ancestor.stderr.trim());
+  process.exit(1);
+}
+
+async function clearRebasedFirst(branch: string): Promise<void> {
+  await exec(["git", "update-ref", "-d", rebasedFirstRef(branch)]);
+}
+
 const nulList = (out: string): string[] => out.split("\0").filter(Boolean);
 
 // Refuse, before anything reaches the remote, when the main checkout holds a
@@ -759,6 +795,7 @@ const pushAction: CliAction<
         //    the server can group it as a single event. Which of three arms
         //    applies is a question about the branch's shape, not a preference.
         const shape = await readLandingShape();
+        const stubRebased = await rebasedFirst(branch);
 
         // Arm 1 — a branch that already CONTAINS main lands with no rebase at all.
         //     The rebase exists only to make step 6's ff-merge possible, and
@@ -780,7 +817,9 @@ const pushAction: CliAction<
         //     The stamp is skipped entirely when there is nothing to land —
         //     amending a tip that IS main's tip would fork it away from main
         //     and break the very fast-forward this arm relies on.
-        if (shape.containsMain) {
+        //     A branch the pre-rebase stub moved onto main is not this case
+        //     (see rebasedFirst): it was behind main, so it takes arm 3.
+        if (shape.containsMain && !(stubRebased && shape.merges === 0)) {
           if (shape.commits > 0) {
             await exec(
               [
@@ -865,6 +904,9 @@ const pushAction: CliAction<
             process.exit(1);
           }
         }
+
+        // In landing shape: the stub's mark has done its job.
+        await clearRebasedFirst(branch);
 
         // 3b. A fix claim needs a landed commit to ride on (see
         //     ensureFixClaimLands): made here, after the rebase, or refused.

@@ -8,6 +8,43 @@
 `import()` so no other invocation pays for the host-admission, worktree and
 op-profiler barrels it pulls in.
 
+## Rebase first: the branch's old code runs only as a git-and-sh stub
+
+Before the rebase, a push runs the BRANCH's code, so a change on main to that
+path breaks older branches' pushes. So `./equin` runs `scripts/rebase-first.sh`
+for `push` before anything else, Bun included
+([`research/2026-11-26-cli-push-rebase-first-stub.md`](../../../../../../research/2026-11-26-cli-push-rebase-first-stub.md)):
+
+- It rebases the branch onto local `main` (no fetch), marks the result in
+  `refs/equin/push-rebased/<branch>` and exits 10. The wrapper re-`exec`s the
+  rebased `./equin` (install frozen, as in the land phase), so the bootstrap
+  and the driver are main's code.
+- Uncommitted work rides as a temporary commit and comes back uncommitted. A
+  conflict or an interrupt aborts and restores everything; a conflict prints
+  the resolution steps.
+- It exits 0 and leaves the branch alone when: the branch contains main or
+  has merges, it is `main` or a detached HEAD, a git operation is in progress,
+  there is no committer identity, the tree is dirty with no `-m`, or `--help`
+  was asked for.
+- Driver side (`rebasedFirst`): while the ref is an ancestor of HEAD, a branch
+  that contains main takes arm 3 (every commit re-stamped), not arm 1. A ref,
+  not env, so a push refused after the stub (test gate, collision) still
+  re-stamps on the retry. Cleared once the branch is in landing shape.
+- The driver still fetches and rebases under the mutex. The land-phase
+  hand-off covers commits that land in between.
+
+**The stub may depend only on git and POSIX sh.** Anything more goes in the
+driver.
+
+- The `push:rebase-first-stub` check holds this: only `set -e` and the `cd`
+  sit above the stub in `./equin`, and the stub has no command that runs
+  `bun`, `./…`, a repo path, `node_modules` or a sourced script.
+- `scripts/rebase-first.test.ts` runs it in a bare temp repo with only git, sh
+  and cat on PATH.
+- Cross-version contract, like `cli/handoff.ts`: its exit codes (0 / 10),
+  the ref, and `EQUIN_SKIP_POST_REWRITE` (its rebase still runs the
+  checkout's hooks and merge drivers, as any `git rebase` does).
+
 ## Publishing is asked about, not assumed
 
 Before the mutex, push asks `infra/git/remotes` whether this checkout may write

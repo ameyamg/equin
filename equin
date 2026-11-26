@@ -2,15 +2,24 @@
 set -e
 cd "$(dirname "$0")"
 
-# ONE step, on purpose: nothing may run before the CLI process. This used to
-# `bun install --silent` first, and a failed install aborted the wrapper (set -e)
-# before `exec`, printing nothing — every subcommand then looked like it had
-# failed on its own. Dependencies are now installed INSIDE the CLI, by the
-# bootstrap in bin/index.ts (ensureDeps), which can attribute its own failures.
-# Do not add a step above the exec — except the data-root declaration and the naming just before it, which
-# cannot abort (every command in it is a condition; a miss falls through to
-# plain `bun`), and this one guard, which cannot fail silently: with no Bun there is no CLI to report anything, and `exec` would say
-# only "bun: not found". The doctor names everything else that is missing too.
+# `push` rebases onto local main FIRST, before anything else here or in Bun
+# runs, so the push runs main's code rather than this branch's older copy
+# (cli/push CLAUDE.md, § Rebase first). Git and sh only, and it says why when
+# it refuses, so it cannot fail silently. Once rebased, the rebased `./equin`
+# runs the push, installing the rebased lockfile as it stands (frozen, as the
+# land phase does: a mid-push tree is never re-resolved). Not for the land
+# phase, which is a push's own child.
+# Kept first in this file: the `push:rebase-first-stub` check holds it there.
+if [ "${1:-}" = push ] && [ -z "${EQUIN_PUSH_LAND:-}" ]; then
+  first=0
+  sh plugins/framework/plugins/cli/plugins/push/scripts/rebase-first.sh "$@" || first=$?
+  case $first in
+    0) ;;
+    10) export EQUIN_FROZEN_LOCKFILE=1 && exec ./equin "$@" ;;
+    *) exit "$first" ;;
+  esac
+fi
+
 command -v bun >/dev/null 2>&1 || {
   echo "equin: bun not found — nothing can run without it." >&2
   sh plugins/framework/plugins/cli/plugins/doctor/doctor.sh >&2

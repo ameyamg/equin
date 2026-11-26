@@ -48,6 +48,7 @@ import {
   spawnCaptured,
   type SpawnResult,
 } from "@plugins/infra/plugins/spawn/core";
+import { PUSH_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 
 export const e2e = {
@@ -67,6 +68,9 @@ const CLI_TIMEOUT_MS = 20 * 60_000;
 const PUSH_TIMEOUT_MS = 45 * 60_000;
 
 const LAND = "plugins/framework/plugins/cli/plugins/push/cli/land.ts";
+const DRIVER = "plugins/framework/plugins/cli/plugins/push/cli/run.ts";
+/** The line main inserts below, at the top of the driver — BEFORE its rebase. */
+const DRIVER_ENTRY = "  const branch = await getCurrentBranch();\n";
 /** The line main inserts at the top of the land phase. */
 const LAND_ENTRY =
   "export async function landPush(payload: LandPayload): Promise<void> {\n";
@@ -191,6 +195,7 @@ async function journey(
   const repo = join(tmp, `e2e-ph-${id}`);
   const wt = join(tmp, `e2e-ph-${id}-wt`);
   const marker = `push-handoff-e2e: land phase ran main's code (${id})`;
+  const driverMarker = `push-handoff-e2e: the driver ran main's code (${id})`;
   fixtureEnv = {
     GIT_AUTHOR_NAME: "t",
     GIT_AUTHOR_EMAIL: "t@t.t",
@@ -229,6 +234,13 @@ async function journey(
   );
   await git(wt, "add", "-A");
   await git(wt, "commit", "-q", "-m", "e2e: the branch's work");
+  // A second commit, so the re-stamp of every rebased commit is visible.
+  writeFileSync(
+    join(wt, "research", `e2e-push-handoff-${id}-2.md`),
+    `# e2e ${id} (2)\n`,
+  );
+  await git(wt, "add", "-A");
+  await git(wt, "commit", "-q", "-m", "e2e: the branch's second commit");
 
   // Main moves past the branch, changing what the land phase prints.
   const land = readFileSync(join(repo, LAND), "utf8");
@@ -241,8 +253,27 @@ async function journey(
       `${LAND_ENTRY}  console.log(${JSON.stringify(marker)});\n`,
     ),
   );
+  // ...and what the driver prints before its rebase: the incident's shape
+  // (2026-11-18), a change on main to code a push runs BEFORE its rebase. Only
+  // `./equin`'s pre-rebase stub gets main's copy of it to run.
+  const driver = readFileSync(join(repo, DRIVER), "utf8");
+  if (!driver.includes(DRIVER_ENTRY))
+    throw new FixtureError(`${DRIVER} no longer holds: ${DRIVER_ENTRY}`);
+  writeFileSync(
+    join(repo, DRIVER),
+    driver.replace(
+      DRIVER_ENTRY,
+      `${DRIVER_ENTRY}  console.log(${JSON.stringify(driverMarker)});\n`,
+    ),
+  );
   await git(repo, "add", "-A");
-  await git(repo, "commit", "-q", "-m", "e2e: main changes the land phase");
+  await git(
+    repo,
+    "commit",
+    "-q",
+    "-m",
+    "e2e: main changes the land phase and the driver",
+  );
   const mainBefore = await git(repo, "rev-parse", "main");
 
   console.log("\nPush from the worktree:");
@@ -251,6 +282,10 @@ async function journey(
   check(
     "the land phase ran the rebased code (main's marker printed)",
     output(pushed).includes(marker),
+  );
+  check(
+    "the driver's pre-rebase code was main's (the stub rebased first)",
+    output(pushed).includes(driverMarker),
   );
   check(
     "the land phase ran once",
@@ -274,6 +309,23 @@ async function journey(
       )
     ).exitCode === 0,
   );
+  const stamps = await stampedPushes(repo, `${mainBefore}..${head}`);
+  check(
+    "both branch commits carry the push trailer (rebased, not tip-amended)",
+    stamps.length === 2 && stamps.every((s) => s.trim().length > 0),
+    JSON.stringify(stamps),
+  );
+}
+
+async function stampedPushes(repo: string, range: string): Promise<string[]> {
+  return (
+    await git(
+      repo,
+      "log",
+      `--format=%(trailers:key=${PUSH_TRAILER_KEY},valueonly,separator=)`,
+      range,
+    )
+  ).split("\n");
 }
 
 async function main(): Promise<void> {
