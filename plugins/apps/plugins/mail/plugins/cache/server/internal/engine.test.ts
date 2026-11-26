@@ -588,6 +588,84 @@ describe("mail cache: re-list", () => {
   });
 });
 
+describe("mail cache: re-list and foreground reads", () => {
+  test("a person's read of a query never waits on its background re-list's provider calls", async () => {
+    // report-1795721325-z5j6zz: a fill waited 27 s on the query's lock while
+    // a re-list held it across background calls paced behind every
+    // foreground one.
+    const threads = Array.from({ length: 80 }, (_, i) => ({
+      id: `a${String(i + 1).padStart(2, "0")}`,
+      messages: [
+        {
+          id: `am${i + 1}`,
+          date: new Date(Date.UTC(2026, 0, 1, 10, i)).toISOString(),
+          from: ana,
+          subject: `s${i + 1}`,
+        },
+      ],
+    }));
+    const h = harness({ threads });
+    const fromAna = (limit: number, after?: MailWindowQuery["after"]) =>
+      win({ where: clause("from", "contains", "ana") as Filter, limit, after });
+    const head = await h.cache.window(fromAna(10));
+    await settle(h);
+    h.f.deliver(null, {
+      id: "new",
+      date: "2026-01-02T08:00:00Z",
+      from: ana,
+      subject: "new",
+    });
+    await h.cache.catchUp();
+    // The background re-list's list call takes its time (Gmail's pacer).
+    const held = h.f.holdNext("listMessages", "background");
+    await h.cache.window(fromAna(10)); // unverified: starts the re-list
+    await held.reached;
+    const { query_id, floor_at } = (
+      await t.db.execute(sql`select query_id, floor_at from mail_queries`)
+    ).rows[0] as { query_id: number; floor_at: string | null };
+    expect(floor_at).not.toBeNull(); // coverage ends at the first page's floor
+
+    // A person pages past the coverage: a foreground fill of that query.
+    h.resetCalls();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const next = await Promise.race([
+      h.cache.window(fromAna(60, keyOf(head.at(-1)!))),
+      new Promise<"blocked">((r) => {
+        timer = setTimeout(() => r("blocked"), 2_000);
+      }),
+    ]);
+    clearTimeout(timer);
+    expect(next).not.toBe("blocked");
+    expect(
+      h.f.calls.some(
+        (c) => c.method === "listMessages" && c.priority === "foreground",
+      ),
+    ).toBe(true);
+
+    // The held re-list's answer predates the fill that moved the query, so
+    // it is not written; the read that filled asked for another re-list
+    // (coalesced, after it), which lists the query as it stands now.
+    h.resetCalls();
+    held.release();
+    await h.cache.relistSettled(query_id);
+    // The trailing re-list listed again: the held one wrote nothing (had it
+    // marked the query verified, the trailing one would have stopped there).
+    expect(
+      h.f.calls.filter(
+        (c) => c.method === "listMessages" && c.priority === "background",
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
+    const { verified_cursor, cursor } = (
+      await t.db.execute(
+        sql`select q.verified_cursor, a.cursor from mail_queries q join mail_accounts a on a.id = q.account_id`,
+      )
+    ).rows[0] as { verified_cursor: string | null; cursor: string };
+    expect(verified_cursor).toBe(cursor);
+    expect((await h.cache.window(fromAna(1)))[0]!.subject).toBe("new");
+    await settle(h);
+  });
+});
+
 describe("mail cache: refusals", () => {
   test("not connected", async () => {
     const h = harness({ threads: inboxThreads(2) });

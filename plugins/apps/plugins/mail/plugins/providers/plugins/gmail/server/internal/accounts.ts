@@ -1,4 +1,8 @@
-import { createQuotaPacer } from "@plugins/integrations/plugins/gmail/plugins/api/core";
+import {
+  createQuotaPacer,
+  GMAIL_QUOTA,
+  GMAIL_USER_UNITS_PER_MINUTE,
+} from "@plugins/integrations/plugins/gmail/plugins/api/core";
 import {
   createGmailClient,
   type GmailClient,
@@ -12,6 +16,21 @@ import { createGmailMailProvider } from "./provider";
 
 /** The one account v1 serves: the primary Google connection getGmailToken reads. */
 export const GMAIL_PRIMARY_ACCOUNT = "primary";
+
+/**
+ * The units of every minute background work (body prefetch, re-lists,
+ * catch-ups) may never take: what a person asks in a minute's burst — two
+ * cold views opened back to back, each a 50-thread page (one
+ * `messages.list` page and 50 `threads.get` metadata summaries). A
+ * background charge stays in Gmail's 60 s window for the whole minute, so
+ * background admitted into HALF the budget (the pacer's default) left a
+ * second cold view waiting up to a minute for it to age out: 18 prefetched
+ * bodies took 36% of one minute on 2026-11-26 while a cold Inbox read
+ * waited 56 s (report-1795721325-qdseiw, task-1795722837-9njd4m).
+ * Background work is not refused, only paced into the rest.
+ */
+const FOREGROUND_RESERVE_UNITS =
+  2 * (GMAIL_QUOTA["messages.list"] + 50 * GMAIL_QUOTA["threads.get"].metadata);
 
 const opened = new Map<
   string,
@@ -34,7 +53,10 @@ function openAccount(accountId: string) {
     },
     // ONE pacer per account per process: every read and write of this
     // account goes through this provider instance (opened once, kept).
-    pacer: createQuotaPacer(),
+    pacer: createQuotaPacer({
+      backgroundShare:
+        1 - FOREGROUND_RESERVE_UNITS / GMAIL_USER_UNITS_PER_MINUTE,
+    }),
   });
   const entry = { client, provider: createGmailMailProvider(client) };
   opened.set(accountId, entry);

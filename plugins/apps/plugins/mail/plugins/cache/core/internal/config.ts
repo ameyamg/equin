@@ -20,7 +20,7 @@ export const mailCacheConfig = defineConfig({
       min: 0,
       label: "Bodies prefetched per run",
       description:
-        "How many threads' content Mail fetches ahead of you each time a view is read, a thread opened or new mail arrives — the open thread's neighbours first, then the Inbox's unread, then the top of each view read today. Fetched at the provider's background priority (Gmail: half its per-minute quota); 0 turns prefetch off.",
+        "How many threads' content Mail fetches ahead of you each time a view is read, a thread opened or new mail arrives — the open thread's neighbours first, then the Inbox's unread, then the top of each view read today. Fetched at the provider's background priority, in what its per-minute quota leaves after a reserve for the views you open (Gmail: about a third); 0 turns prefetch off.",
     }),
   },
 });

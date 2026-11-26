@@ -31,7 +31,11 @@
  *     replacement leaves one unread too, or the server is slow on the
  *     question, or it runs in this browser (equin.ai, report-1794962221-4ztwpq:
  *     a woken tab's socket read "open" for 38 s after its frames stopped
- *     arriving; a fresh one was answered in 100 ms).
+ *     arriving; a fresh one was answered in 100 ms);
+ *   - a sub the server read and is still loading (the gate free, the trail
+ *     answered at once) is a slow load, the server's to report under the
+ *     load's name — not reported here, unless the server runs in this
+ *     browser (Mail's cold Gmail windows, report-1795721286-0gc0z2).
  *
  * Conventions follow the sibling suites: `clientLog` mocked to a no-op, fake
  * timers per test, every client `destroy()`-ed in afterEach.
@@ -62,6 +66,7 @@ import {
   PROMPT_TRAIL_MS,
   describeUnansweredTrail,
   unansweredSubReportSink,
+  unansweredVerdict,
   type UnansweredSubReport,
 } from "../unanswered-sub-reporter";
 import type { AnswerTrail } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
@@ -82,6 +87,25 @@ function trailOf(at: number): AnswerTrail {
   };
 }
 
+/**
+ * A server's trail: read the sub and loading it (a provider's paced call),
+ * no read of it waiting for a slot, the gate free.
+ */
+function loadingTrailOf(at: number, queued = false): AnswerTrail {
+  return {
+    at,
+    request: { kind: "received", at: at - 15_000 },
+    queued: queued ? { since: at - 15_000, probe: false } : null,
+    loading: { since: at - 15_000 },
+    gate: {
+      active: queued ? 6 : 0,
+      queued: queued ? 3 : 0,
+      max: 6,
+      holders: [],
+    },
+  };
+}
+
 /** A server's trail: it never read the sub frame, its read gate idle. */
 function noRecordTrailOf(at: number): AnswerTrail {
   return {
@@ -98,7 +122,15 @@ function noRecordTrailOf(at: number): AnswerTrail {
  * `no-record-slow` past `PROMPT_TRAIL_MS` (its thread busy).
  */
 type TrailAnswer =
-  "trail" | "no-record" | "no-record-slow" | "never" | "not-found";
+  | "trail"
+  | "no-record"
+  | "no-record-slow"
+  | "loading"
+  | "loading-queued"
+  | "loading-slow"
+  | "loading-delayed"
+  | "never"
+  | "not-found";
 
 const pushSchema = z.object({ status: z.string() });
 
@@ -130,6 +162,8 @@ describe("NotificationsClient — unanswered subs", () => {
     server?: "page" | "in-browser";
     telemetry?: boolean;
     trail?: TrailAnswer;
+    /** Per asked key, overriding `trail`. */
+    trailFor?: Record<string, TrailAnswer>;
   }): Promise<{
     hub: ReturnType<typeof createTransportHub>;
     client: NotificationsClient;
@@ -151,7 +185,14 @@ describe("NotificationsClient — unanswered subs", () => {
         )
           return new Promise<Response>(() => {});
         asked.push(String(input));
-        switch (opts.trail ?? "trail") {
+        const askedKey = new URL(String(input), "http://x").searchParams.get(
+          "key",
+        );
+        const answer =
+          (askedKey === null ? undefined : opts.trailFor?.[askedKey]) ??
+          opts.trail ??
+          "trail";
+        switch (answer) {
           case "trail":
             return Promise.resolve(
               new Response(JSON.stringify(trailOf(Date.now()))),
@@ -168,6 +209,29 @@ describe("NotificationsClient — unanswered subs", () => {
                     new Response(JSON.stringify(noRecordTrailOf(Date.now()))),
                   ),
                 PROMPT_TRAIL_MS + 1,
+              ),
+            );
+          case "loading":
+          case "loading-queued":
+            return Promise.resolve(
+              new Response(
+                JSON.stringify(
+                  loadingTrailOf(Date.now(), answer === "loading-queued"),
+                ),
+              ),
+            );
+          case "loading-slow":
+          case "loading-delayed":
+            // Past `PROMPT_TRAIL_MS` (its thread busy), or within it.
+            return new Promise<Response>((resolve) =>
+              setTimeout(
+                () =>
+                  resolve(
+                    new Response(JSON.stringify(loadingTrailOf(Date.now()))),
+                  ),
+                answer === "loading-slow"
+                  ? PROMPT_TRAIL_MS + 1
+                  : PROMPT_TRAIL_MS / 2,
               ),
             );
           case "never":
@@ -380,6 +444,136 @@ describe("NotificationsClient — unanswered subs", () => {
     await flush();
     expect(reports).toEqual([expect.objectContaining({ oldestKey: "k" })]);
     expect(socket.readyState).toBe(WebSocket.OPEN);
+  });
+
+  test("a sub the server read and is still loading is not reported: the load is the server's to report", async () => {
+    // Mail's cold `mail.threads` windows waited 36–56 s on Gmail's quota
+    // pacer, the gate free (report-1795721286-0gc0z2): a slow load, which
+    // slow-ops / stuck-spans file under the load's name — not a wedge.
+    const { client, socket } = await setup({ open: true, trail: "loading" });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    const { id } = requestOf(socket, "k", "tab-a");
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(asked).toHaveLength(1);
+    expect(reports).toHaveLength(0);
+    expect(socket.readyState).toBe(WebSocket.OPEN);
+
+    // The load ends: its answer applies as any other.
+    socket.serverSend({
+      kind: "sub-ack",
+      id,
+      tabId: "tab-a",
+      key: "k",
+      params: {},
+      value: { status: "ok" },
+      version: 1,
+    });
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 3);
+    expect(reports).toHaveLength(0);
+    expect(client.queryClient.getQueryData(["k"])).toEqual({
+      status: "ok",
+    });
+  });
+
+  test("a batch whose oldest is loading hands the rest back to the deadline, minus those answered meanwhile", async () => {
+    const { client, socket } = await setup({
+      open: true,
+      trailFor: { slow: "loading-delayed", lost: "trail", answered: "trail" },
+    });
+    // All three sent together: one batch, `slow` its oldest by order.
+    client.observe("slow", {}, undefined, { schema: pushSchema });
+    client.observe("lost", {}, undefined, { schema: pushSchema });
+    client.observe("answered", {}, undefined, { schema: pushSchema });
+    await flush();
+    const answered = requestOf(socket, "answered", "tab-a");
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(
+      asked.map((u) => new URL(u, "http://x").searchParams.get("key")),
+    ).toEqual(["slow"]);
+    // While the trail question is out, `answered` gets its answer.
+    socket.serverSend({
+      kind: "sub-ack",
+      id: answered.id,
+      tabId: "tab-a",
+      key: "answered",
+      params: {},
+      value: { status: "ok" },
+      version: 1,
+    });
+    await vi.advanceTimersByTimeAsync(PROMPT_TRAIL_MS);
+    await flush();
+    // `slow` is loading — not reported; `lost` is judged on its own trail.
+    expect(reports).toEqual([
+      expect.objectContaining({ oldestKey: "lost", count: 1 }),
+    ]);
+  });
+
+  test("a loading sub on central is reported: central names no slow load of its own", async () => {
+    expect(
+      unansweredVerdict(
+        {
+          kind: "trail",
+          trail: loadingTrailOf(1_000_000),
+          sentAt: 985_000,
+          askedAt: 1_000_000,
+          repliedAt: 1_000_010,
+        },
+        { server: "central", connection: "c1", replacement: null },
+      ),
+    ).toBe("report");
+  });
+
+  test("a sub the server read with no load running and none queued is reported", async () => {
+    const at = 1_000_000;
+    const trail: AnswerTrail = { ...loadingTrailOf(at), loading: null };
+    expect(
+      unansweredVerdict(
+        {
+          kind: "trail",
+          trail,
+          sentAt: at - 15_000,
+          askedAt: at,
+          repliedAt: at + 10,
+        },
+        { server: "worktree", connection: "c1", replacement: null },
+      ),
+    ).toBe("report");
+  });
+
+  test("a loading sub whose read also queues for a slot is reported: the gate may be what holds it", async () => {
+    const { client } = await setup({ open: true, trail: "loading-queued" });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(reports).toEqual([expect.objectContaining({ oldestKey: "k" })]);
+  });
+
+  test("a loading sub on a server slow on the trail question is reported: its thread may be what holds it", async () => {
+    const { client } = await setup({ open: true, trail: "loading-slow" });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS + PROMPT_TRAIL_MS + 1);
+    await flush();
+    expect(reports).toEqual([expect.objectContaining({ oldestKey: "k" })]);
+  });
+
+  test("a loading sub on a server in this browser is reported: it keeps no slow-load signal of its own", async () => {
+    const { client } = await setup({
+      open: true,
+      server: "in-browser",
+      trail: "loading",
+    });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(reports).toEqual([
+      expect.objectContaining({ server: "in-browser", oldestKey: "k" }),
+    ]);
   });
 
   test("a frame a server in this browser never read is reported: no link to lose", async () => {

@@ -823,53 +823,76 @@ export function createMailCache(deps: MailCacheDeps) {
    * Re-lists a query from the head down to its floor and replaces the members
    * above it with what the provider answers now (stale-while-revalidate for a
    * query a change may have moved). Notifies when anything moved.
+   *
+   * The provider is read OUTSIDE the query's lock, which is taken only to
+   * write: a re-list runs at background priority, and its paced calls wait
+   * for room behind every foreground call — under the lock, a person's read
+   * of the same query (a fill, at foreground) waited on that background
+   * work, pacer waits included (27 s on `mutex:mail-cache-query`,
+   * report-1795721325-z5j6zz). Written only if the query is still as the
+   * re-list found it (its coverage and its verified cursor): a fill, a read's
+   * own listing or a catch-up that moved it meanwhile is newer than this
+   * answer, and a query left unverified is re-listed by its next read. A
+   * triage op's re-check moves members without touching those, so a thread
+   * with an op still pending keeps its membership as it stands.
    */
   async function relist(a: Account, queryId: number) {
+    const [before] = await db
+      .select()
+      .from(_mailQueries)
+      .where(eq(_mailQueries.queryId, queryId));
+    // Evicted, or its account's cache dropped, since the read that asked.
+    if (!before || before.verifiedCursor === a.cursor) return;
+    const slack = a.definition.capabilities.listOrderSlackMs;
+    const pq = providerQuery(before.providerQuery);
+    const oldFloor = before.exhausted
+      ? -Infinity
+      : (before.floorAt?.getTime() ?? Infinity);
+    const found = new Map<string, number>();
+    let floor = Infinity;
+    let cursor: Parameters<MailProvider["listMessages"]>[1]["cursor"] = null;
+    let exhausted = false;
+    while (floor > oldFloor) {
+      const page = await a.provider.listMessages(
+        pq,
+        { olderThan: null, limit: LIST_PAGE, cursor },
+        bg,
+      );
+      let i = 0;
+      for (; i < page.hits.length && floor > oldFloor; i += 25) {
+        const batch = page.hits.slice(i, i + 25);
+        const summaries = await summariesFor(a, batch, bg);
+        for (const h of batch) {
+          const m = summaries
+            .get(h.thread)
+            ?.messages.find((x) => x.id === h.message);
+          if (!m) continue;
+          const at = m.date.getTime();
+          found.set(h.thread, Math.max(found.get(h.thread) ?? -Infinity, at));
+          floor = Math.min(floor, at + slack);
+        }
+      }
+      // The list ended AND every hit of its last page was placed: only then
+      // is everything below known. Stopped early, the old floor stands.
+      if (page.next === null) {
+        exhausted = i >= page.hits.length;
+        break;
+      }
+      cursor = page.next;
+    }
+    const keepFloor = exhausted ? null : Math.max(floor, oldFloor);
     await queryMutex.run(String(queryId), async () => {
-      const [before] = await db
+      const [q] = await db
         .select()
         .from(_mailQueries)
         .where(eq(_mailQueries.queryId, queryId));
-      // Evicted, or its account's cache dropped, since the read that asked.
-      if (!before || before.verifiedCursor === a.cursor) return;
-      const slack = a.definition.capabilities.listOrderSlackMs;
-      const pq = providerQuery(before.providerQuery);
-      const oldFloor = before.exhausted
-        ? -Infinity
-        : (before.floorAt?.getTime() ?? Infinity);
-      const found = new Map<string, number>();
-      let floor = Infinity;
-      let cursor: Parameters<MailProvider["listMessages"]>[1]["cursor"] = null;
-      let exhausted = false;
-      while (floor > oldFloor) {
-        const page = await a.provider.listMessages(
-          pq,
-          { olderThan: null, limit: LIST_PAGE, cursor },
-          bg,
-        );
-        let i = 0;
-        for (; i < page.hits.length && floor > oldFloor; i += 25) {
-          const batch = page.hits.slice(i, i + 25);
-          const summaries = await summariesFor(a, batch, bg);
-          for (const h of batch) {
-            const m = summaries
-              .get(h.thread)
-              ?.messages.find((x) => x.id === h.message);
-            if (!m) continue;
-            const at = m.date.getTime();
-            found.set(h.thread, Math.max(found.get(h.thread) ?? -Infinity, at));
-            floor = Math.min(floor, at + slack);
-          }
-        }
-        // The list ended AND every hit of its last page was placed: only then
-        // is everything below known. Stopped early, the old floor stands.
-        if (page.next === null) {
-          exhausted = i >= page.hits.length;
-          break;
-        }
-        cursor = page.next;
-      }
-      const keepFloor = exhausted ? null : Math.max(floor, oldFloor);
+      if (
+        !q ||
+        q.verifiedCursor !== before.verifiedCursor ||
+        q.exhausted !== before.exhausted ||
+        (q.floorAt?.getTime() ?? null) !== (before.floorAt?.getTime() ?? null)
+      )
+        return;
       const current = await db
         .select({
           threadId: _mailQueryMembers.threadId,
@@ -883,7 +906,13 @@ export function createMailCache(deps: MailCacheDeps) {
           .filter((r) => above(r.at.getTime()))
           .map((r) => [r.threadId, r.at.getTime()]),
       );
-      const now = new Map([...found].filter(([, at]) => above(at)));
+      // A thread with a triage op not yet written to the provider keeps the
+      // membership the op's re-check gave it: the provider's listing may
+      // predate the write (an archived thread still listed in the Inbox).
+      const now = new Map(
+        [...found].filter(([id, at]) => above(at) && !pendingOps.has(id)),
+      );
+      for (const [id, at] of was) if (pendingOps.has(id)) now.set(id, at);
       const moved =
         was.size !== now.size ||
         [...now].some(([id, at]) => was.get(id) !== at);

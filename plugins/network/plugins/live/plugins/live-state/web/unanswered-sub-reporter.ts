@@ -38,10 +38,12 @@ export function unansweredServer(
  * Subscriptions this tab sent on an OPEN socket that got no answer — no
  * `sub-ack`, `up-to-date` or `sub-error` — within `UNANSWERED_SUB_MS`. The
  * server answers every sub it receives (registration is synchronous on
- * receipt), so an unanswered one means the frame never reached it, or the answer
- * never reached this tab: the transport between them is broken while still
- * reporting "open". Emitted once per stuck sub (the batch is everything that
- * crossed the deadline together); live-state never recovers on its own here —
+ * receipt) once its read is done, so an unanswered one means the frame never
+ * reached it, the answer never reached this tab (the transport between them
+ * broken while still reporting "open"), or the server's read of it is stuck.
+ * A read the server is still loading is not reported (`unansweredVerdict`:
+ * `loading` — the server's own slow-load signals name it). Emitted once per
+ * stuck sub (the batch is everything that crossed the deadline together); live-state never recovers on its own here —
  * the consumer (infra/health's watchdog) reports it. Emitted only when the
  * client's transport reports its telemetry.
  */
@@ -176,12 +178,31 @@ export const PROMPT_TRAIL_MS = 2_000;
  *   network path a sleep or a move left behind, a TCP retransmission
  *   backoff). The fix is a fresh connection (`replaceConnection`), whose
  *   replay re-sends every sub — not a report about the server.
+ * - `loading` — the worktree server answered the trail question at once,
+ *   read the sub (`received`) and is running the tuple's load, with no read
+ *   of it waiting for a slot: nothing between this tab and the server is
+ *   lost — the answer waits on the load, and leaves when it ends. A load that
+ *   waits on a third party (Mail's `mail.threads` on Gmail's quota pacer, 36
+ *   s and 56 s cold on 2026-11-26) is the loader's to answer for, and the
+ *   worktree server already does, under the load's own name: `debug/slow-ops`
+ *   files the load when it ends (past its loader bar), `debug/stuck-spans`
+ *   while it is still open past 90 s. Not a report here: filed as a
+ *   live-state wedge it named the socket, not the load
+ *   (report-1795721286-0gc0z2, task-1795722837-9njd4m). Central and a server
+ *   in this browser keep no loader spans, so their loads are reported here.
+ *   Residual: `loading` is the TUPLE's (any read of it — another tab's, this
+ *   tab's HTTP prime), not this request's, so a request held by something
+ *   else in its sub path (a watcher's start, a revalidate probe) while
+ *   another read of its tuple loads reads `loading` too; such a hold sits in
+ *   the request's `sub` span, which stuck-spans watches.
  * - `report` — anything else: the server read it and did not answer (or
- *   answered and the answer was lost), its thread is slow or silent, the
- *   question failed, the server is in this browser (no link to lose) — or
- *   `connection` is itself the replacement of a dead link and has not
- *   answered anything yet: a frame a fresh connection leaves unread too is
- *   past the link, and is reported.
+ *   answered and the answer was lost), its read queues for a slot, its
+ *   thread is slow or silent, the question failed, the server is central or
+ *   in this browser (no slow-load signal of their own; no link to lose for
+ *   the latter) — or, for a
+ *   frame never read, `connection` is itself the replacement of a dead link
+ *   and has not answered anything yet: a frame a fresh connection leaves
+ *   unread too is past the link, and is reported.
  */
 export function unansweredVerdict(
   trail: UnansweredTrail,
@@ -192,13 +213,21 @@ export function unansweredVerdict(
     /** The connection that replaced a dead link and has answered nothing yet. */
     replacement: string | null;
   },
-): "dead-link" | "report" {
+): "dead-link" | "loading" | "report" {
   if (ctx.server === "in-browser") return "report";
+  if (trail.kind !== "trail") return "report";
+  if (trail.repliedAt - trail.askedAt > PROMPT_TRAIL_MS) return "report";
+  const t = trail.trail;
+  if (t.request.kind === "received") {
+    // Only the worktree server names its slow loads (central's runtime
+    // opens no loader span, and no slow-ops / stuck-spans runs there).
+    return ctx.server === "worktree" && t.loading !== null && t.queued === null
+      ? "loading"
+      : "report";
+  }
   if (ctx.connection === null || ctx.connection === ctx.replacement)
     return "report";
-  if (trail.kind !== "trail") return "report";
-  if (trail.trail.request.kind !== "no-record") return "report";
-  if (trail.repliedAt - trail.askedAt > PROMPT_TRAIL_MS) return "report";
+  if (t.request.kind !== "no-record") return "report";
   return "dead-link";
 }
 

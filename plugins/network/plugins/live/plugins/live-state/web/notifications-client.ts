@@ -576,6 +576,15 @@ interface ActiveSub {
    */
   awaiting?: { id: number; since: number };
   /**
+   * The request `awaiting` named while the server's answer trail for its
+   * deadline's batch is being asked (`reportUnanswered`): set when it stops
+   * awaiting, cleared by an answer to it (`noteAnswered`), a resend
+   * (`markAwaiting`) or the verdict. A batch whose oldest the server is still
+   * loading hands the other subs still judged here back to the deadline, so
+   * one slow load never hides another sub's loss.
+   */
+  judging?: { id: number; since: number };
+  /**
    * Highest server version (state-change count) this sub has applied. `-1` =
    * nothing applied yet — the baseline a fresh or replayed sub starts from, so
    * the first sub-ack always passes the `<=` staleness guard. The server bumps
@@ -792,13 +801,16 @@ interface SocketChannel {
 
 /**
  * How long a sub sent on an open socket may go unanswered. The server
- * registers a sub synchronously on receipt and always answers it, so past this
- * the frame or its answer was lost between this tab and the server while the
- * transport still reads "open" — reported (`unansweredSubReportSink`), never
- * silently retried. Except when the server's answer trail shows the connection
- * itself dead (`unansweredVerdict`: it never read the frame while it answers
- * HTTP at once): that connection is replaced, its open replaying every sub,
- * and a replacement that leaves a frame unread too is reported.
+ * registers a sub synchronously on receipt and answers it once its read is
+ * done, so past this the frame or its answer was lost between this tab and the
+ * server while the transport still reads "open", or the server's read is
+ * stuck — reported (`unansweredSubReportSink`), never silently retried. Two
+ * exceptions, read off the server's answer trail (`unansweredVerdict`):
+ * - `loading` — it read the sub and is still loading it: a slow load, which
+ *   the server reports itself under the load's name;
+ * - `dead-link` — it never read the frame while it answers HTTP at once: that
+ *   connection is replaced, its open replaying every sub, and a replacement
+ *   that leaves a frame unread too is reported.
  */
 export const UNANSWERED_SUB_MS = 15_000;
 
@@ -2780,6 +2792,7 @@ export class NotificationsClient {
     sub: ActiveSub,
     id: number,
   ): void {
+    sub.judging = undefined;
     if (channel.ws.connection === null) {
       sub.awaiting = undefined;
       return;
@@ -2798,11 +2811,10 @@ export class NotificationsClient {
     entry: ActiveSub,
     answer: { id?: number; tabId?: string },
   ): void {
-    if (
-      entry.awaiting !== undefined &&
-      answer.tabId === this.tabId &&
-      answer.id === entry.awaiting.id
-    ) {
+    if (answer.tabId !== this.tabId) return;
+    if (entry.judging !== undefined && answer.id === entry.judging.id)
+      entry.judging = undefined;
+    if (entry.awaiting !== undefined && answer.id === entry.awaiting.id) {
       entry.awaiting = undefined;
       // A connection that replaced a dead link carries frames both ways.
       channel.unreadReplacement = undefined;
@@ -2869,7 +2881,10 @@ export class NotificationsClient {
     const server = unansweredServer(socket, this.server);
     const asked = oldest.awaiting!;
     const oldestWaitMs = now - asked.since;
-    for (const sub of late) sub.awaiting = undefined;
+    for (const sub of late) {
+      sub.judging = sub.awaiting;
+      sub.awaiting = undefined;
+    }
     trace(
       `unanswered socket=${socket} server=${server} count=${late.length} oldestKey=${oldest.key} oldestParams=${paramsKey(oldest.params)} waitMs=${oldestWaitMs} tabs=${channel.ws.attachedTabs ?? "?"} conn=${channel.ws.connection ?? "-"}`,
     );
@@ -2892,14 +2907,37 @@ export class NotificationsClient {
       // The server is free and never read the frame: the connection is dead
       // while it reads "open". A fresh one (its open replays every sub) is
       // the fix — the visitor's link, not the server's fault, so no report.
-      if (
-        connection !== null &&
-        unansweredVerdict(trail, {
-          server,
-          connection,
-          replacement: channel.unreadReplacement ?? null,
-        }) === "dead-link"
-      ) {
+      const verdict = unansweredVerdict(trail, {
+        server,
+        connection,
+        replacement: channel.unreadReplacement ?? null,
+      });
+      // The server read the sub and is still loading it: the wait is the
+      // load's, which the server reports under the load's own name (slow-ops
+      // when it ends, stuck-spans while it stays open) — not the socket's.
+      // Only the oldest's tuple is known to be loading: every other sub of
+      // the batch still unanswered goes back to the deadline (already due),
+      // judged on its own trail.
+      if (verdict === "loading") {
+        let back = 0;
+        for (const sub of late) {
+          const judged = sub.judging;
+          sub.judging = undefined;
+          if (sub === oldest || judged === undefined) continue;
+          if (channel.subs.get(`${sub.key}\0${paramsKey(sub.params)}`) !== sub)
+            continue;
+          if (channel.ws.connection !== connection) continue;
+          sub.awaiting = judged;
+          back++;
+        }
+        trace(
+          `unanswered-loading socket=${socket} key=${oldest.key} count=${late.length} back=${back}: the server is loading it — left to its slow-load signals`,
+        );
+        if (back > 0) this.armUnansweredCheck(channel);
+        return;
+      }
+      for (const sub of late) sub.judging = undefined;
+      if (connection !== null && verdict === "dead-link") {
         trace(
           `unanswered-dead-link socket=${socket} conn=${connection} count=${late.length}: replacing the connection`,
         );

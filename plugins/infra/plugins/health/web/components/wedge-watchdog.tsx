@@ -317,6 +317,8 @@ export function WedgeWatchdog() {
       // A frame the server never read while it answered the trail at once
       // never gets here either: live-state replaced that dead connection
       // (`unansweredVerdict`), the visitor's link, not the server's fault.
+      // Nor does a sub the server read and is still loading (`loading`): a
+      // slow load, which the server files under the load's own name.
       const visibleMs = deadlines.visibleMsSince(Date.now() - r.oldestWaitMs);
       const file = () =>
         wedge(
@@ -376,7 +378,9 @@ export function WedgeWatchdog() {
           const detail = `${m.key} ${m.prevVersion}->${m.ackVersion}${more}`;
           const health = await getHealth();
           const restartWhileHidden =
-            sinceHidden != null && health != null && health.startedAt > sinceHidden;
+            sinceHidden != null &&
+            health != null &&
+            health.startedAt > sinceHidden;
           if (restartWhileHidden) {
             wedge(
               toast,

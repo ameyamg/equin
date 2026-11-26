@@ -78,8 +78,13 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   the connection cannot be checked (`unreachable`: offline, a token refresh
   failed) the account the cache holds is served — covered windows answer,
   uncovered ones are refused `offline-not-cached`.
-- **Concurrency.** A fill, a re-list and a catch-up's re-check of one query
-  run under that query's lock; a catch-up keeps verified only a query
+- **Concurrency.** A fill, a re-list's write and a catch-up's re-check of
+  one query run under that query's lock. A re-list reads the provider OUTSIDE
+  it (its calls are background, paced behind every foreground one — under the
+  lock a person's read of the same query waited 27 s on it) and writes only
+  if the query's coverage and verified cursor are as it found them (else its
+  next read re-lists it), leaving a thread with a triage op still pending as
+  the op's re-check placed it; a catch-up keeps verified only a query
   verified exactly at the cursor it started from (any other is unverified,
   so re-listed).
 - **Spam and trash are mail like any other.** The contract's query is over
@@ -158,7 +163,8 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   never-opened one by when it was fetched); an evicted body is fetched again
   on its next open. Bodies cascade with their thread (retention, gone).
 - **Prefetch** (`deps.prefetch`; Settings → Config `mail-cache` › Bodies
-  prefetched per run, 25 — a minute of the background half of Gmail's budget;
+  prefetched per run, 25 — paced into Gmail's background share, what a minute
+  leaves after the provider's foreground reserve of two cold views;
   0 turns it off): after every window read, thread open and
   sync step that moved mail, one coalesced run per account fetches, through
   the provider's **background** priority, the wanted bodies not stored, most

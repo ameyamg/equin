@@ -214,6 +214,11 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
   const mailboxes = new Map<MailboxId, Omit<Mailbox, "counts" | "color">>();
   const calls: FakeCall[] = [];
   const failures = new Map<string, { error: Error; after: boolean }>();
+  /** Held calls (`holdNext`), by `method` and priority: each awaits its gate. */
+  const holds = new Map<
+    string,
+    { reached: () => void; released: Promise<void> }
+  >();
   const changesPageMax = opts.changesPageMax ?? Number.POSITIVE_INFINITY;
   let connection:
     | { kind: "connected"; account: { accountId: string; address: string } }
@@ -386,7 +391,14 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     run: () => T,
   ): Promise<T> {
     o?.signal?.throwIfAborted();
-    calls.push({ method, ids, priority: o?.priority ?? "foreground" });
+    const priority = o?.priority ?? "foreground";
+    calls.push({ method, ids, priority });
+    const hold = holds.get(`${method}\0${priority}`);
+    if (hold) {
+      holds.delete(`${method}\0${priority}`);
+      hold.reached();
+      await hold.released;
+    }
     const fail = failures.get(method);
     if (fail) {
       failures.delete(method);
@@ -714,6 +726,22 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
       o: { after?: boolean } = {},
     ) {
       failures.set(method, { error, after: o.after ?? false });
+    },
+    /**
+     * The next call of `method` at `priority` waits until `release()` — a
+     * provider call that takes its time (Gmail's pacer, a slow answer).
+     * `reached` resolves once that call is made (and waiting).
+     */
+    holdNext(
+      method: keyof MailProvider,
+      priority: "foreground" | "background",
+    ): { reached: Promise<void>; release: () => void } {
+      let reached!: () => void;
+      let release!: () => void;
+      const reachedP = new Promise<void>((r) => (reached = r));
+      const released = new Promise<void>((r) => (release = r));
+      holds.set(`${method}\0${priority}`, { reached, released });
+      return { reached: reachedP, release };
     },
     /**
      * Disconnects the account (`connectedAccount` answers not-connected),

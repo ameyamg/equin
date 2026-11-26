@@ -769,6 +769,20 @@ Details:
   Hidden time is not taken out of this wait: a deadline that fires on time
   shows the page ran, so the wait is the link's or the server's, whichever
   the trail names.
+- **A sub the server is still loading is the load's, not the socket's**
+  (`unansweredVerdict` → `loading`). When the trail says `received`, a load of
+  the tuple running and no read of it queued for a slot, and the server
+  answered the question within `PROMPT_TRAIL_MS`, nothing on the way is lost
+  or stuck: the answer leaves when the load ends. Traced
+  `unanswered-loading …`, never reported — the worktree server names a slow
+  load itself (`debug/slow-ops` when it ends, `debug/stuck-spans` while it
+  stays open past 90 s). Worktree only: central and a server in this browser
+  open no loader span, so their loads are still reported here. Only the
+  oldest's tuple is known to load: every other sub of its batch still
+  unanswered goes back to the deadline, judged on its own trail. `loading`
+  is the tuple's, not the request's (residual, held by stuck-spans' `sub`
+  span). Mail's cold `mail.threads` windows on Gmail's quota pacer (36–56 s)
+  were filed as a wedge (report-1795721286-0gc0z2).
 - **Update latency sample** (`clientLatencySink`, signal `update`): one sample
   per applied pushed frame carrying `timing`
   (`{ changedAt, sentAt, deliverMs }`).
