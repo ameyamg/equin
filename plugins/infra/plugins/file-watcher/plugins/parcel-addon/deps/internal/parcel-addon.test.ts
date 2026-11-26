@@ -94,6 +94,35 @@ async function subscribe(
   return { sub, events };
 }
 
+/**
+ * A libc interposer (DYLD_INSERT_LIBRARIES): every lstat / stat / fstatat /
+ * open of a path naming SLOWFS sleeps 1 s first — a stat on cold metadata
+ * during a host I/O stall, on demand.
+ */
+const SLOW_FS_C = `
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <string.h>
+#include <unistd.h>
+#define INTERPOSE(r, f) __attribute__((used)) static struct { const void *r; const void *f; } interpose_##f \\
+  __attribute__((section("__DATA,__interpose"))) = { (const void *)&r, (const void *)&f };
+static void slow(const char *p) { if (p && strstr(p, "SLOWFS")) usleep(1000000); }
+static int slow_lstat(const char *p, struct stat *s) { slow(p); return lstat(p, s); }
+static int slow_stat(const char *p, struct stat *s) { slow(p); return stat(p, s); }
+static int slow_fstatat(int fd, const char *p, struct stat *s, int f) { slow(p); return fstatat(fd, p, s, f); }
+static int slow_open(const char *p, int flags, ...) {
+  int mode = 0;
+  if (flags & O_CREAT) { va_list a; va_start(a, flags); mode = va_arg(a, int); va_end(a); }
+  slow(p);
+  return open(p, flags, mode);
+}
+INTERPOSE(slow_lstat, lstat)
+INTERPOSE(slow_stat, stat)
+INTERPOSE(slow_fstatat, fstatat)
+INTERPOSE(slow_open, open)
+`;
+
 describe.skipIf(process.platform !== "darwin")(
   "parcel-watcher-addon (kqueue)",
   () => {
@@ -505,6 +534,90 @@ describe.skipIf(process.platform !== "darwin")(
         heard: true,
         heldAtEnd: 0,
       });
+    }, 60_000);
+
+    test("a subscribe whose stat is slow never holds another watcher's delivery", async () => {
+      // Every kqueue watcher of a process shares one backend thread, which
+      // handles each batch under the backend's lock. A subscribe used to read
+      // its tree and open its entries under that lock, so one slow stat (cold
+      // metadata during a host I/O stall) deafened every other watcher for
+      // as long (report-1795610730-j1bceo). Here, in a child, every stat and
+      // open of a path naming SLOWFS takes 1 s (an interposed libc): the
+      // subscribe of a folder holding one takes ~3 s, and a watcher of
+      // another folder written every 10 ms must keep hearing it.
+      const ready = await ensureDep(parcelWatcherAddon, execContextForTests());
+      const build = tempDir("slow-fs-lib");
+      writeFileSync(join(build, "slowfs.c"), SLOW_FS_C);
+      execFileSync("cc", [
+        "-dynamiclib",
+        "-o",
+        join(build, "slowfs.dylib"),
+        join(build, "slowfs.c"),
+      ]);
+      const probed = tempDir("slow-fs-probed");
+      const slow = tempDir("slow-fs-slow");
+      writeFileSync(join(slow, "SLOWFS"), "x");
+      const script = `
+        const [wrapperPath, addonPath, probed, slow] = process.argv.slice(-4);
+        const { appendFileSync } = require("node:fs");
+        const { join } = require("node:path");
+        const addon = require(wrapperPath).createWrapper(require(addonPath));
+        let pending = [];
+        let maxLag = 0;
+        const probe = await addon.subscribe(probed, () => {
+          const now = performance.now();
+          for (const t of pending) maxLag = Math.max(maxLag, now - t);
+          pending = [];
+        }, { backend: "kqueue" });
+        let writing = true;
+        const writer = (async () => {
+          for (let i = 0; writing; i++) {
+            appendFileSync(join(probed, "probe.log"), i + "\\n");
+            pending.push(performance.now());
+            await new Promise((r) => setTimeout(r, 10));
+          }
+        })();
+        const start = performance.now();
+        const sub = await addon.subscribe(slow, () => {}, { backend: "kqueue" });
+        const subscribeMs = performance.now() - start;
+        await new Promise((r) => setTimeout(r, 200));
+        writing = false;
+        await writer;
+        await sub.unsubscribe();
+        await probe.unsubscribe();
+        console.log(JSON.stringify({ subscribeMs, maxLag }));
+        process.exit(0);`;
+      const child = spawn(
+        process.execPath,
+        [
+          "-e",
+          script,
+          createRequire(import.meta.url).resolve("@parcel/watcher/wrapper"),
+          builtFile(ready),
+          probed,
+          slow,
+        ],
+        {
+          stdio: ["ignore", "pipe", "pipe"],
+          env: {
+            ...process.env,
+            DYLD_INSERT_LIBRARIES: join(build, "slowfs.dylib"),
+          },
+        },
+      );
+      let out = "";
+      let err = "";
+      child.stdout.on("data", (chunk: Buffer) => (out += chunk.toString()));
+      child.stderr.on("data", (chunk: Buffer) => (err += chunk.toString()));
+      const code = await new Promise<number | null>((resolve) =>
+        child.on("exit", (c) => resolve(c)),
+      );
+      expect({ code, err }).toEqual({ code: 0, err: "" });
+      const result = JSON.parse(out) as { subscribeMs: number; maxLag: number };
+      // The interposer took: the subscribe met its slow calls.
+      expect(result.subscribeMs).toBeGreaterThan(2_000);
+      // Before: the probe heard nothing for the whole subscribe (~3 s).
+      expect(result.maxLag).toBeLessThan(1_000);
     }, 60_000);
 
     test("a folder diff that cannot watch a created entry reports every create and the loss", async () => {

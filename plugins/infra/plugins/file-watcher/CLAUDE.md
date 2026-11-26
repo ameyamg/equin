@@ -80,11 +80,13 @@ enumerated: one descriptor per named file present plus one per directory —
   after unsubscribe). We run a patched build instead: see *The patched addon*
   below.
 - An open lists the dir and stats only the named entries; a later folder diff
-  keeps the others as bare names, never stat'ed (the patched addon). Each stat
-  is made under the kqueue backend's one lock, so stat-ing the ignored ones
-  held every kqueue watcher of the process: with the runs dir's ~1,800
-  entries and cold metadata, 2–6 s after each run's start or end
-  (report-1795610730-j1bceo). An entry deleted mid-listing fails the open. A follower that deletes in the
+  keeps the others as bare names, never stat'ed (the patched addon). Every
+  kqueue watcher of the process shares one backend thread: stat-ing the
+  ignored ones held all of them, with the runs dir's ~1,800 entries and cold
+  metadata 2–6 s after each run's start or end (report-1795610730-j1bceo). An
+  open's listing, stats and opens no longer hold the others at all (made off
+  the backend's lock); a folder diff's still delay every watcher's delivery
+  (they run on the backend thread). An entry deleted mid-listing fails the open. A follower that deletes in the
   same dir holds its deletes outside its opens (`supervised-job`'s
   `pruneOutsideWatcherStart`).
 
@@ -158,8 +160,9 @@ naming its holder) through its own short-lived open, never the held fd
 **What "arrival" includes.** The arrival is read in the JS callback, so it
 counts everything between the kernel and this process's event loop: the
 backend thread (kqueue's is shared by every follow and children watch of the
-process, and a `subscribe` / `unsubscribe` holds it for as long as it lists its
-dir), then the hop to JS. It no longer counts a native debounce: upstream
+process, and a folder diff lists and stats on it — a slow one delays every
+kqueue watcher; a `subscribe` / `unsubscribe` no longer does, its file-system
+work made off the backend's lock), then the hop to JS. It no longer counts a native debounce: upstream
 parcel held every watcher's batch on one process-wide debounce thread, up to
 500 ms while any watch was busy (`parcel-addon`'s CLAUDE.md); the patched addon
 delivers each batch from its backend thread, and the engine's own `debounceMs`

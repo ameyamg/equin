@@ -24,7 +24,7 @@ export async function parcelWatcherPackageDir(root: string): Promise<string> {
  * `node_modules` predates the patch).
  */
 const PATCH_MARKER =
-  "void KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {";
+  "void KqueueBackend::applyDiff(FolderDiff &diff, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {";
 
 /**
  * binding.gyp's darwin target: the shared sources plus every darwin backend —

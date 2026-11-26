@@ -54,6 +54,33 @@ index 78ee744d74900c39a839cafa46b295258fc86307..690aefff5f2bb2d4499b46d6bafe8e90
      }
    }
  }
+diff --git a/src/Backend.hh b/src/Backend.hh
+index d673bd1a19a7f6115245a8223bf3b15462ed1de2..eee772b292041dc9b905c988283d6a9f920724f1 100644
+--- a/src/Backend.hh
++++ b/src/Backend.hh
+@@ -20,15 +20,18 @@ public:
+ 
+   static std::shared_ptr<Backend> getShared(std::string backend);
+ 
+-  void watch(WatcherRef watcher);
+-  void unwatch(WatcherRef watcher);
+-  void unref();
++  // equin: virtual, so a backend can do a subscription's file-system work
++  // outside mMutex (the kqueue backend: see KqueueBackend::watch).
++  virtual void watch(WatcherRef watcher);
++  virtual void unwatch(WatcherRef watcher);
++  virtual void unref();
+   void handleWatcherError(WatcherError &err);
+ 
+   std::mutex mMutex;
+   std::thread mThread;
+-private:
++protected:
+   std::unordered_set<WatcherRef> mSubscriptions;
++private:
+   Signal mStartedSignal;
+ 
+   void handleError(std::exception &err);
 diff --git a/src/DirTree.cc b/src/DirTree.cc
 index b7eddd8cd659b7447c37724ec50066e7ef66bc4f..43ef113848982e0f945f0183f8471c8b45211dc9 100644
 --- a/src/DirTree.cc
@@ -413,7 +440,7 @@ index 057b61b83385793a2f13c7adc8c2e983bef67538..9f3f89517fcfcba15e1c36ad127b61ab
    return runner->queue();
  }
 diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
-index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948eca6abc11 100644
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..df4abbcf3a95f5e109ccd4fbc470b6ad75ecfd1e 100644
 --- a/src/kqueue/KqueueBackend.cc
 +++ b/src/kqueue/KqueueBackend.cc
 @@ -1,4 +1,5 @@
@@ -422,13 +449,23 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
  #include <poll.h>
  #include <unistd.h>
  #include <libgen.h>
-@@ -58,13 +59,51 @@ void KqueueBackend::start() {
+@@ -15,6 +16,9 @@
+ #define O_EVTONLY O_RDONLY
+ #endif
+ 
++// equin: what every watched descriptor is registered for.
++#define VNODE_NOTES (NOTE_DELETE | NOTE_WRITE | NOTE_EXTEND | NOTE_ATTRIB | NOTE_RENAME | NOTE_REVOKE)
++
+ #define CONVERT_TIME(ts) ((uint64_t)ts.tv_sec * 1000000000 + ts.tv_nsec)
+ 
+ void KqueueBackend::start() {
+@@ -58,13 +62,58 @@ void KqueueBackend::start() {
  
      // Track all of the watchers that are touched so we can notify them at the end of the events.
      std::unordered_set<WatcherRef> watchers;
 -
 +    // Descriptors of entries that stopped being watched in this batch. Closed only
-+    // once the batch is handled: closing one mid-batch would let a watchDir below
++    // once the batch is handled: closing one mid-batch would let an open below
 +    // reuse its number while a later event of this batch still names the old file.
 +    std::unordered_set<int> closing;
 +    // equin: the folders this batch diffed, and the folders of entries it saw
@@ -443,14 +480,21 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +    // folder once the batch is handled, unless the batch diffed it already.
 +    std::unordered_set<int> diffed;
 +    std::unordered_map<int, std::string> rediff;
++    // equin: the batch's folder diffs and file writes: planned under the
++    // lock, read off it, applied under it (see FolderDiff).
++    std::vector<FolderDiff> diffs;
++    std::vector<FileLook> looks;
 +    bool stopping = false;
 +
-+    // equin: the batch is handled under the backend's mutex, which `subscribe`
-+    // and `unsubscribe` hold (Backend::watch / unwatch). Upstream ran it
++    // equin: the batch's bookkeeping is done under the backend's mutex, which
++    // `watch` and `unwatch` take to change the tables. Upstream ran it
 +    // unlocked: a directory diff here added entries to a tree a `subscribe` on
 +    // another thread was iterating, and read subscriptions an `unsubscribe` was
 +    // erasing — the open then failed with a stale errno, or the process
-+    // crashed. Watchers are notified after it is released.
++    // crashed. But no file-system call is made under it (only `dup`): every
++    // kqueue watcher of the process waits on it, and a stat on cold metadata
++    // held there deafened all of them for seconds (report-1795610730-j1bceo).
++    // Watchers are notified after it is released.
 +    {
 +    std::unique_lock<std::mutex> lock(mMutex);
 +    // equin: two passes — every delete or rename of the batch first, then the
@@ -476,11 +520,16 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
        }
  
        auto it = mFdToEntry.find(fd);
-@@ -75,21 +114,62 @@ void KqueueBackend::start() {
+@@ -75,31 +124,124 @@ void KqueueBackend::start() {
  
        DirEntry *entry = it->second;
  
 -      if (flags & NOTE_WRITE && entry && entry->isDir) {
+-        // If a write occurred on a directory, we have to diff the contents of that
+-        // directory to determine what file was added/deleted.
+-        compareDir(fd, entry->path, watchers);
+-      } else {
+-        std::vector<KqueueSubscription *> subs = findSubscriptions(entry->path);
 +      // A delete or rename first: a directory whose last entry went and which was
 +      // then removed reports NOTE_WRITE | NOTE_DELETE in one event, and diffing
 +      // it would leave its own descriptor behind.
@@ -494,9 +543,20 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +        std::string path = entry->path;
 +        bool isDir = entry->isDir;
 +        std::vector<KqueueSubscription *> subs = findSubscriptions(path, fd);
-+        for (auto it = subs.begin(); it != subs.end(); it++) {
-+          KqueueSubscription *sub = *it;
-+          watchers.insert(sub->watcher);
+         for (auto it = subs.begin(); it != subs.end(); it++) {
+           KqueueSubscription *sub = *it;
+           watchers.insert(sub->watcher);
+-          if (flags & (NOTE_DELETE | NOTE_RENAME | NOTE_REVOKE)) {
+-            sub->watcher->mEvents.remove(sub->path);
+-            sub->tree->remove(sub->path);
+-            mFdToEntry.erase((int)(size_t)entry->state);
+-            mSubscriptions.erase(sub->path);
+-          } else if (flags & (NOTE_WRITE | NOTE_ATTRIB | NOTE_EXTEND)) {
+-            struct stat st;
+-            lstat(sub->path.c_str(), &st);
+-            if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
+-              entry->mtime = CONVERT_TIME(st.st_mtim);
+-              sub->watcher->mEvents.update(sub->path);
 +          sub->watcher->mEvents.remove(path);
 +          if (isDir) {
 +            forgetDescendants(sub->tree, path, subs, watchers, closing);
@@ -517,9 +577,9 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +            DirEntry *parent = (*it)->find(folder);
 +            if (parent && parent->isDir && parent->state) {
 +              rediff.emplace((int)(size_t)parent->state, folder);
-+            }
-+          }
-+        }
+             }
+           }
+         }
 +        for (auto it = trees.begin(); it != trees.end(); it++) {
 +          (*it)->remove(path);
 +          forgetSubscriptions(path, *it); // frees the subscriptions `subs` points at
@@ -527,36 +587,30 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +        mFdToEntry.erase(fd);
 +        closing.insert(fd);
 +      } else if (flags & NOTE_WRITE && entry && entry->isDir) {
-         // If a write occurred on a directory, we have to diff the contents of that
-         // directory to determine what file was added/deleted.
--        compareDir(fd, entry->path, watchers);
++        // If a write occurred on a directory, we have to diff the contents of that
++        // directory to determine what file was added/deleted.
 +        diffed.insert(fd);
-+        compareDir(fd, entry->path, watchers, closing);
-       } else {
--        std::vector<KqueueSubscription *> subs = findSubscriptions(entry->path);
++        planDiff(fd, entry->path, watchers, diffs);
++      } else if (flags & (NOTE_WRITE | NOTE_ATTRIB | NOTE_EXTEND)) {
 +        std::vector<KqueueSubscription *> subs = findSubscriptions(entry->path, fd);
-         for (auto it = subs.begin(); it != subs.end(); it++) {
-           KqueueSubscription *sub = *it;
-           watchers.insert(sub->watcher);
--          if (flags & (NOTE_DELETE | NOTE_RENAME | NOTE_REVOKE)) {
--            sub->watcher->mEvents.remove(sub->path);
--            sub->tree->remove(sub->path);
--            mFdToEntry.erase((int)(size_t)entry->state);
--            mSubscriptions.erase(sub->path);
--          } else if (flags & (NOTE_WRITE | NOTE_ATTRIB | NOTE_EXTEND)) {
-+          if (flags & (NOTE_WRITE | NOTE_ATTRIB | NOTE_EXTEND)) {
-             struct stat st;
-             lstat(sub->path.c_str(), &st);
-             if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
-@@ -100,6 +180,32 @@ void KqueueBackend::start() {
-         }
++        if (subs.empty()) {
++          continue;
++        }
++        FileLook look = { .fd = fd, .path = entry->path, .statted = false, .mtime = 0 };
++        for (auto it = subs.begin(); it != subs.end(); it++) {
++          if (std::find(look.trees.begin(), look.trees.end(), (*it)->tree) == look.trees.end()) {
++            look.trees.push_back((*it)->tree);
++          }
++        }
++        looks.push_back(look);
        }
      }
 +    }
 +
 +    // A removal's folder, not diffed by this batch: a file renamed over the
 +    // removed path is found now, not at the folder's next change. A folder
-+    // that went in this batch (its descriptor closing) has nothing to diff.
++    // that went in this batch (its descriptor closing) has nothing to diff;
++    // one a diff of this batch finds gone is dropped when that is applied.
 +    if (!stopping) {
 +      for (auto it = rediff.begin(); it != rediff.end(); it++) {
 +        int fd = it->first;
@@ -564,15 +618,42 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +          continue;
 +        }
 +        diffed.insert(fd);
-+        std::string folder = it->second;
-+        compareDir(fd, folder, watchers, closing);
++        planDiff(fd, it->second, watchers, diffs);
++      }
++    }
++    }
++
++    if (!stopping) {
++      // equin: off the lock — the listings, stats and opens.
++      for (auto it = diffs.begin(); it != diffs.end(); it++) {
++        listFolder(*it);
++      }
++      for (auto it = looks.begin(); it != looks.end(); it++) {
++        struct stat st;
++        if (lstat(it->path.c_str(), &st) == 0) {
++          it->statted = true;
++          it->mtime = CONVERT_TIME(st.st_mtim);
++        }
++      }
++
++      std::unique_lock<std::mutex> lock(mMutex);
++      for (auto it = diffs.begin(); it != diffs.end(); it++) {
++        applyDiff(*it, watchers, closing);
++      }
++      for (auto it = looks.begin(); it != looks.end(); it++) {
++        applyLook(*it, watchers);
++      }
++    } else {
++      for (auto it = diffs.begin(); it != diffs.end(); it++) {
++        close(it->dirFd);
 +      }
 +    }
 +
-+    // Closing a descriptor also removes its kqueue registration.
++    // Closing a descriptor also removes its kqueue registration. Off the lock:
++    // each one here has left every table, so its number cannot be handed out
++    // again before it is closed.
 +    for (auto it = closing.begin(); it != closing.end(); it++) {
 +      close(*it);
-+    }
 +    }
 +
 +    if (stopping) {
@@ -581,7 +662,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
  
      for (auto it = watchers.begin(); it != watchers.end(); it++) {
        (*it)->notify();
-@@ -112,31 +218,119 @@ done:
+@@ -112,146 +254,618 @@ done:
    mEndedSignal.notify();
  }
  
@@ -627,37 +708,200 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
    mEndedSignal.wait();
  }
  
- void KqueueBackend::subscribe(WatcherRef watcher) {
+-void KqueueBackend::subscribe(WatcherRef watcher) {
 -  // Build a full directory tree recursively, and watch each directory.
 -  std::shared_ptr<DirTree> tree = getTree(watcher);
 -
-+  // equin: a tree of its own, read through this watcher's own ignore. Upstream
-+  // took the one cached per directory path (getTree), shared by every
-+  // subscription of the directory whatever its ignore: read through the first
-+  // one's, and grown by every directory diff with entries no ignore filtered —
-+  // so a later subscription met entries it ignores and failed with a stale
-+  // errno ("Undefined error: 0", "File exists"), or missed the files the first
-+  // one ignored. Separate trees hold separate descriptors, which `unsubscribe`
-+  // and the removal paths already handle per tree.
-+  std::shared_ptr<DirTree> tree = std::make_shared<DirTree>(watcher->mDir);
-+  readTree(watcher, tree);
-+  tree->isComplete = true;
-+
-+  std::vector<std::string> gone;
-   for (auto it = tree->entries.begin(); it != tree->entries.end(); it++) {
+-  for (auto it = tree->entries.begin(); it != tree->entries.end(); it++) {
 -    bool success = watchDir(watcher, it->second.path, tree);
 -    if (!success) {
 -      throw WatcherError(std::string("error watching " + watcher->mDir + ": " + strerror(errno)), watcher);
-+    if (watcher->isIgnored(it->second.path)) {
-+      continue;
-+    }
-+    errno = 0;
-+    WatchResult result = watchDir(watcher, it->second.path, tree);
++// equin: open one entry for kqueue's vnode filter — what `watchableKind`
++// allows, the descriptor not registered yet. Off the backend's lock.
++static Opening openEntry(const std::string &path) {
++  errno = 0;
++  EntryKind kind = watchableKind(path);
++  if (kind == EntryKind::Gone) {
++    return { WatchResult::Gone, -1, errno };
++  }
++  if (kind == EntryKind::Failed) {
++    return { WatchResult::Failed, -1, errno };
++  }
++  if (kind == EntryKind::Unwatchable) {
++    return { WatchResult::Unwatched, -1, 0 };
++  }
++  int fd = open(path.c_str(), O_EVTONLY);
++  if (fd <= 0) {
 +    int err = errno;
-+    if (result == WatchResult::Watched) {
++    if (vanished(err)) {
++      // The path itself gone, or only a symlink's target (open follows it):
++      // a link left dangling is listed with no descriptor, like one found so.
++      struct stat st;
++      if (lstat(path.c_str(), &st) == 0 && S_ISLNK(st.st_mode)) {
++        return { WatchResult::Unwatched, -1, 0 };
++      }
++      return { WatchResult::Gone, -1, err };
+     }
++    return { unopenable(err) ? WatchResult::Unwatched : WatchResult::Failed, -1, err };
+   }
++  return { WatchResult::Watched, fd, 0 };
+ }
+ 
+-bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree) {
+-  if (watcher->isIgnored(path)) {
+-    return false;
++static void closeAll(const std::vector<int> &fds) {
++  for (auto it = fds.begin(); it != fds.end(); it++) {
++    close(*it);
+   }
++}
+ 
+-  DirEntry *entry = tree->find(path);
+-  if (!entry) {
+-    return false;
++// equin: a subscription in two steps. Its tree is read and every entry opened
++// OFF the backend's lock (`prepareTree`): that is all of its file-system work,
++// and a slow listing, stat or open there (cold metadata during a host I/O
++// stall) used to hold every kqueue watcher of the process — the backend
++// thread handles each batch under the same lock (report-1795610730-j1bceo).
++// Each descriptor is registered disabled as soon as it is opened; under the
++// lock they are entered in the tables and enabled (`commitTree`): an event on
++// one finds its subscription, and a change made to an entry after its open is
++// handed over then. One made between the listing and the open is not heard,
++// as upstream's was not.
++void KqueueBackend::watch(WatcherRef watcher) {
++  {
++    std::unique_lock<std::mutex> lock(mMutex);
++    mPrepared.wait(lock, [&] { return mPreparing.count(watcher) == 0; });
++    if (Backend::mSubscriptions.count(watcher)) {
++      return;
++    }
++    mPreparing.insert(watcher);
++    mPreparingCount++;
++  }
++
++  PreparedTree prepared;
++  try {
++    prepared = prepareTree(watcher);
++  } catch (std::exception&) {
++    std::unique_lock<std::mutex> lock(mMutex);
++    mPreparing.erase(watcher);
++    mPreparingCount--;
++    mPrepared.notify_all();
++    unref();
++    throw;
+   }
+ 
+-  KqueueSubscription sub = {
+-    .watcher = watcher,
+-    .path = path,
+-    .tree = tree
+-  };
++  std::vector<int> closing;
++  {
++    std::unique_lock<std::mutex> lock(mMutex);
++    mPreparing.erase(watcher);
++    mPreparingCount--;
++    mPrepared.notify_all();
++    try {
++      commitTree(watcher, prepared, closing);
++      Backend::mSubscriptions.insert(watcher);
++    } catch (std::exception&) {
++      unref();
++      lock.unlock();
++      closeAll(closing);
++      throw;
++    }
++  }
++}
+ 
+-  if (!entry->state) {
+-    int fd = open(path.c_str(), O_EVTONLY);
+-    if (fd <= 0) {
+-      return false;
++void KqueueBackend::unwatch(WatcherRef watcher) {
++  std::vector<int> closing;
++  {
++    std::unique_lock<std::mutex> lock(mMutex);
++    // An unsubscribe that meets its subscribe still reading the tree waits
++    // for it: erasing nothing now would leave the subscription it opens
++    // behind. (One that runs before the subscribe starts still does, as
++    // upstream's did: the worker pool does not order them.)
++    mPrepared.wait(lock, [&] { return mPreparing.count(watcher) == 0; });
++    if (Backend::mSubscriptions.erase(watcher) > 0) {
++      forget(watcher, closing);
++      unref();
+     }
++  }
++  // Closing a descriptor also unwatches it in the kqueue. Off the lock: every
++  // table has let go of it, so its number cannot be handed out before it is
++  // closed.
++  closeAll(closing);
++}
+ 
+-    struct kevent event;
+-    EV_SET(
+-      &event,
+-      fd,
+-      EVFILT_VNODE,
+-      EV_ADD | EV_CLEAR | EV_ENABLE,
+-      NOTE_DELETE | NOTE_WRITE | NOTE_EXTEND | NOTE_ATTRIB | NOTE_RENAME | NOTE_REVOKE,
+-      0,
+-      0
+-    );
++// equin: the backend is dropped once nothing is subscribed — never while a
++// subscription is being read off the lock: it would be made in a backend no
++// longer shared, whose thread ends when its last holder lets go.
++void KqueueBackend::unref() {
++  // A count, not mPreparing: the snapshot runners' destructors call this
++  // without the lock (src/binding.cc).
++  if (mPreparingCount.load() == 0) {
++    Backend::unref();
++  }
++}
+ 
+-    if (kevent(mKqueue, &event, 1, NULL, 0, 0)) {
+-      close(fd);
+-      return false;
++// equin: every subscription goes through `watch` (its file-system work off
++// the lock); nothing calls this but a backend that does not override `watch`.
++void KqueueBackend::subscribe(WatcherRef watcher) {
++  throw std::logic_error("KqueueBackend subscribes through watch()");
++}
++
++void KqueueBackend::unsubscribe(WatcherRef watcher) {
++  std::vector<int> closing;
++  forget(watcher, closing);
++  closeAll(closing);
++}
++
++// equin: a tree of its own, read through this watcher's own ignore. Upstream
++// took the one cached per directory path (getTree), shared by every
++// subscription of the directory whatever its ignore: read through the first
++// one's, and grown by every directory diff with entries no ignore filtered —
++// so a later subscription met entries it ignores and failed with a stale
++// errno ("Undefined error: 0", "File exists"), or missed the files the first
++// one ignored. Separate trees hold separate descriptors, which `unwatch`
++// and the removal paths already handle per tree. Off the backend's lock: the
++// tree is this subscription's alone until `commitTree` enters it.
++PreparedTree KqueueBackend::prepareTree(WatcherRef watcher) {
++  PreparedTree prepared;
++  prepared.tree = std::make_shared<DirTree>(watcher->mDir);
++  readTree(watcher, prepared.tree);
++  prepared.tree->isComplete = true;
++
++  std::vector<std::string> gone;
++  for (auto it = prepared.tree->entries.begin(); it != prepared.tree->entries.end(); it++) {
++    const std::string &path = it->second.path;
++    if (watcher->isIgnored(path)) {
 +      continue;
 +    }
-+    if (result == WatchResult::Unwatched && it->second.path != watcher->mDir) {
++    Opening opening = openAndRegister(path);
++    if (opening.result == WatchResult::Watched) {
++      prepared.opened.emplace_back(path, opening.fd);
++      continue;
++    }
++    if (opening.result == WatchResult::Unwatched && path != watcher->mDir) {
 +      // equin: an entry kqueue cannot watch (`watchableKind`), or this account
 +      // may not open (macOS privacy protection: ~/.Trash without Full Disk
 +      // Access), stays in the tree with no descriptor: its coming and going is
@@ -665,102 +909,105 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +      // failed the whole subscription.
 +      continue;
 +    }
-+    if (result == WatchResult::Gone && it->second.path != watcher->mDir) {
++    if (opening.result == WatchResult::Gone && path != watcher->mDir) {
 +      // Gone since the listing: not in the tree, so a re-creation is a create.
-+      gone.push_back(it->second.path);
++      gone.push_back(path);
 +      continue;
-+    }
+     }
 +    // Nothing of a failed subscription stays behind. Upstream left the
 +    // entries it had watched so far in the backend — their descriptors held,
 +    // their tree alive and diffed for the life of the process.
-+    unsubscribe(watcher);
-+    throw WatcherError(std::string("error watching " + watcher->mDir + ": " + (err != 0 ? strerror(err) : "unknown error")), watcher);
++    for (auto open = prepared.opened.begin(); open != prepared.opened.end(); open++) {
++      close(open->second);
++    }
++    throw WatcherError(std::string("error watching " + watcher->mDir + ": " + (opening.err != 0 ? strerror(opening.err) : "unknown error")), watcher);
 +  }
 +  for (auto it = gone.begin(); it != gone.end(); it++) {
-+    // A directory takes its entries with it, and some may be watched already
-+    // (the tree is unordered): close theirs and drop their subscriptions
-+    // first, so nothing maps to an entry the removal frees.
++    // A directory takes its entries with it, and some may be opened already
++    // (the tree is unordered): close theirs first.
 +    std::string prefix = childPrefix(*it);
-+    for (auto entry = tree->entries.begin(); entry != tree->entries.end(); entry++) {
-+      if (entry->first.rfind(prefix, 0) != 0) {
-+        continue;
++    auto kept = std::remove_if(prepared.opened.begin(), prepared.opened.end(), [&prefix](const std::pair<std::string, int> &open) {
++      if (open.first.rfind(prefix, 0) != 0) {
++        return false;
 +      }
-+      int fd = (int)(size_t)entry->second.state;
-+      if (fd > 0) {
-+        mFdToEntry.erase(fd);
-+        close(fd);
-+      }
-+      forgetSubscriptions(entry->first, tree);
-     }
-+    tree->remove(*it);
-   }
- }
- 
--bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree) {
-+KqueueBackend::WatchResult KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree) {
-   if (watcher->isIgnored(path)) {
--    return false;
-+    return WatchResult::Failed;
-   }
- 
-   DirEntry *entry = tree->find(path);
-   if (!entry) {
--    return false;
-+    return WatchResult::Failed;
-   }
- 
-   KqueueSubscription sub = {
-@@ -146,9 +340,29 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
-   };
- 
-   if (!entry->state) {
-+    EntryKind kind = watchableKind(path);
-+    if (kind == EntryKind::Gone) {
-+      return WatchResult::Gone;
-+    }
-+    if (kind == EntryKind::Failed) {
-+      return WatchResult::Failed;
-+    }
-+    if (kind == EntryKind::Unwatchable) {
-+      return WatchResult::Unwatched;
-+    }
-     int fd = open(path.c_str(), O_EVTONLY);
-     if (fd <= 0) {
--      return false;
-+      int err = errno;
-+      if (vanished(err)) {
-+        // The path itself gone, or only a symlink's target (open follows it):
-+        // a link left dangling is listed with no descriptor, like one found so.
-+        struct stat st;
-+        if (lstat(path.c_str(), &st) == 0 && S_ISLNK(st.st_mode)) {
-+          return WatchResult::Unwatched;
-+        }
-+        return WatchResult::Gone;
-+      }
-+      return unopenable(err) ? WatchResult::Unwatched : WatchResult::Failed;
-     }
- 
-     struct kevent event;
-@@ -163,8 +377,10 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
-     );
- 
-     if (kevent(mKqueue, &event, 1, NULL, 0, 0)) {
-+      int err = errno;
-       close(fd);
--      return false;
-+      errno = err;
-+      return WatchResult::Failed;
-     }
- 
-     entry->state = (void *)(size_t)fd;
-@@ -173,38 +389,114 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
- 
-   sub.fd = (int)(size_t)entry->state;
-   mSubscriptions.emplace(path, sub);
--  return true;
-+  return WatchResult::Watched;
++      close(open.second);
++      return true;
++    });
++    prepared.opened.erase(kept, prepared.opened.end());
++    prepared.tree->remove(*it);
++  }
++  return prepared;
 +}
 +
++// equin: a descriptor is registered with the kqueue DISABLED as soon as it is
++// opened, off the lock, and enabled once it is in the tables, under it. A
++// disabled registration still records what happens to its file and hands it
++// over when enabled (checked on macOS 26), so nothing done to the file between
++// its open and its entry in the tables is lost — and no event on it reaches
++// `start()` before its subscription exists.
++bool KqueueBackend::registerFd(int fd) {
++  struct kevent event;
++  EV_SET(
++    &event,
++    fd,
++    EVFILT_VNODE,
++    EV_ADD | EV_CLEAR | EV_DISABLE,
++    VNODE_NOTES,
++    0,
++    0
++  );
++  return kevent(mKqueue, &event, 1, NULL, 0, 0) == 0;
++}
++
++bool KqueueBackend::enableFd(int fd) {
++  struct kevent event;
++  // The notes again: an EV_ENABLE replaces the registration's fflags, and
++  // with 0 the vnode filter reports nothing more (checked on macOS 26).
++  EV_SET(&event, fd, EVFILT_VNODE, EV_ENABLE, VNODE_NOTES, 0, 0);
++  return kevent(mKqueue, &event, 1, NULL, 0, 0) == 0;
++}
+ 
++// equin: open one entry and register it, disabled (`registerFd`). Off the lock.
++Opening KqueueBackend::openAndRegister(const std::string &path) {
++  Opening opening = openEntry(path);
++  if (opening.result == WatchResult::Watched && !registerFd(opening.fd)) {
++    int err = errno;
++    close(opening.fd);
++    return { WatchResult::Failed, -1, err };
++  }
++  return opening;
++}
++
++// equin: under the backend's lock — registration and the tables only, no
++// file-system call. A registration that fails undoes the rest (`closing`:
++// closed by the caller once off the lock).
++void KqueueBackend::commitTree(WatcherRef watcher, PreparedTree &prepared, std::vector<int> &closing) {
++  for (size_t i = 0; i < prepared.opened.size(); i++) {
++    const std::string &path = prepared.opened[i].first;
++    int fd = prepared.opened[i].second;
++    if (!enableFd(fd)) {
++      int err = errno;
++      for (size_t j = i; j < prepared.opened.size(); j++) {
++        closing.push_back(prepared.opened[j].second);
++      }
++      forget(watcher, closing);
++      throw WatcherError(std::string("error watching " + watcher->mDir + ": " + strerror(err)), watcher);
++    }
++    DirEntry *entry = prepared.tree->find(path);
+     entry->state = (void *)(size_t)fd;
+     mFdToEntry.emplace(fd, entry);
++    mSubscriptions.emplace(path, KqueueSubscription {
++      .watcher = watcher,
++      .path = path,
++      .tree = prepared.tree,
++      .fd = fd
++    });
+   }
++}
+ 
+-  sub.fd = (int)(size_t)entry->state;
+-  mSubscriptions.emplace(path, sub);
+-  return true;
 +// equin: the one way a subscription leaves the table other than `unsubscribe`:
 +// a path's subscriptions in ONE tree. Subscriptions are keyed by path, and a
 +// path is held by every tree that watches it — a watcher rooted at a folder
@@ -809,6 +1056,11 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
  }
  
 -bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<WatcherRef> &watchers) {
+-  // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
+-  // to ensure the closedir doesn't also stop watching.
+-  #if __APPLE__
+-    fd = dup(fd);
+-  #endif
 +// equin: a diff that cannot see the folder whole is a loss for each watcher it
 +// leaves behind: an error delivered with the batch (EventList::error, the
 +// channel FSEvents reports its dropped events on), so the consumer hears it
@@ -819,220 +1071,300 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +  sub->watcher->mEvents.error("error diffing " + sub->path + ": " + what + ": " + (err != 0 ? strerror(err) : "unknown error"));
 +  watchers.emplace(sub->watcher);
 +}
-+
-+void KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {
+ 
+-  DIR *dir = fdopendir(fd);
+-  if (dir == NULL) {
++// equin: a folder diff's first step, under the backend's lock: the
++// subscriptions it speaks for (their trees and watchers, held), and a dup of
++// the folder's descriptor for the listing — the one call made under the lock,
++// no disk read. The folder is listed off the lock (`listFolder`), and the
++// result applied under it (`applyDiff`).
++bool KqueueBackend::planDiff(int fd, const std::string &path, std::unordered_set<WatcherRef> &watchers, std::vector<FolderDiff> &diffs) {
 +  std::vector<KqueueSubscription *> subs = findSubscriptions(path, fd);
 +  // equin: a folder at its watcher's depth (an entry of a children watch) is
 +  // not listed: every entry the diff could find is one the watcher ignores,
 +  // and a tree that never held them has nothing to remove. Listed, a write in
 +  // a big folder stat'ed each of its entries into a tree that wanted none
-+  // (once per new entry), under the backend's lock.
++  // (once per new entry).
 +  subs.erase(std::remove_if(subs.begin(), subs.end(), [&path](KqueueSubscription *sub) {
 +    return !sub->watcher->seesBelow(path);
 +  }), subs.end());
 +  if (subs.empty()) {
+     return false;
+   }
+ 
+-  // fdopendir doesn't rewind to the beginning.
+-  rewinddir(dir);
+-
+-  std::vector<KqueueSubscription *> subs = findSubscriptions(path);
+-  std::string dirStart = path + DIR_SEP;
++  // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
++  // to ensure the closedir doesn't also stop watching. Made here, so the
++  // listing reads this folder even if an unwatch closes `fd` meanwhile and
++  // its number goes to another file.
++  int dirFd = dup(fd);
++  if (dirFd < 0) {
++    int err = errno;
++    for (auto it = subs.begin(); it != subs.end(); it++) {
++      diffFailed(*it, "dup", err, watchers);
++    }
++    return false;
++  }
+ 
+-  std::unordered_set<std::shared_ptr<DirTree>> trees;
++  FolderDiff diff = { .fd = fd, .path = path, .dirFd = dirFd, .openErr = 0, .readdirErr = 0 };
+   for (auto it = subs.begin(); it != subs.end(); it++) {
+-    trees.emplace((*it)->tree);
++    KqueueSubscription *sub = *it;
++    size_t t = std::find(diff.trees.begin(), diff.trees.end(), sub->tree) - diff.trees.begin();
++    if (t == diff.trees.size()) {
++      diff.trees.push_back(sub->tree);
++      diff.watchers.emplace_back();
++    }
++    diff.watchers[t].push_back(sub->watcher);
+   }
++  diffs.push_back(std::move(diff));
++  return true;
++}
+ 
+-  std::unordered_set<std::string> entries;
++// equin: a folder diff's second step, OFF the backend's lock: list the folder,
++// and stat and open each entry a tree lacks and wants. Reads the trees (only
++// the backend thread — this one — changes a subscribed tree, and the diff
++// holds them) and the watchers' ignores (immutable), writes nothing shared.
++void KqueueBackend::listFolder(FolderDiff &diff) {
++  DIR *dir = fdopendir(diff.dirFd);
++  if (dir == NULL) {
++    diff.openErr = errno;
++    close(diff.dirFd); // the dup; the watched descriptor stays open
 +    return;
 +  }
 +
-   // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
-   // to ensure the closedir doesn't also stop watching.
-   #if __APPLE__
--    fd = dup(fd);
-+    int dirFd = dup(fd);
-+    if (dirFd < 0) {
-+      int err = errno;
-+      for (auto it = subs.begin(); it != subs.end(); it++) {
-+        diffFailed(*it, "dup", err, watchers);
-+      }
-+      return;
-+    }
-+  #else
-+    int dirFd = fd;
-   #endif
- 
--  DIR *dir = fdopendir(fd);
-+  DIR *dir = fdopendir(dirFd);
-   if (dir == NULL) {
--    return false;
-+    int err = errno;
-+    #if __APPLE__
-+      close(dirFd); // the dup above; the watched descriptor stays open
-+    #endif
-+    if (vanished(err)) {
-+      // The folder itself was removed since its write: nothing to diff. Its
-+      // own descriptor reports the delete, which takes its entries with it.
-+      return;
-+    }
-+    for (auto it = subs.begin(); it != subs.end(); it++) {
-+      diffFailed(*it, "opendir", err, watchers);
-+    }
-+    return;
-   }
- 
-   // fdopendir doesn't rewind to the beginning.
-   rewinddir(dir);
- 
--  std::vector<KqueueSubscription *> subs = findSubscriptions(path);
--  std::string dirStart = path + DIR_SEP;
-+  std::string dirStart = childPrefix(path);
- 
-   std::unordered_set<std::shared_ptr<DirTree>> trees;
-   for (auto it = subs.begin(); it != subs.end(); it++) {
-@@ -213,41 +505,135 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
- 
-   std::unordered_set<std::string> entries;
++  // fdopendir doesn't rewind to the beginning.
++  rewinddir(dir);
++
++  std::string dirStart = childPrefix(diff.path);
    struct dirent *entry;
 +  errno = 0;
    while ((entry = readdir(dir))) {
      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
++      errno = 0;
        continue;
      }
  
-     std::string fullpath = dirStart + entry->d_name;
+-    std::string fullpath = dirStart + entry->d_name;
 -    entries.emplace(fullpath);
- 
-+    // Stat'ed once, when a tree first lacks the entry (an entry every tree
-+    // already holds needs nothing of it).
-+    bool statted = false;
-+    struct stat st;
-+    int statErr = 0;
-     for (auto it = trees.begin(); it != trees.end(); it++) {
-       std::shared_ptr<DirTree> tree = *it;
+-
+-    for (auto it = trees.begin(); it != trees.end(); it++) {
+-      std::shared_ptr<DirTree> tree = *it;
 -      if (!tree->find(fullpath)) {
 -        struct stat st;
 -        fstatat(fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW);
 -        tree->add(fullpath, CONVERT_TIME(st.st_mtim), S_ISDIR(st.st_mode));
-+      if (tree->find(fullpath)) {
-+        continue;
-+      }
-+      // equin: an entry every subscription of the tree ignores is kept in the
-+      // tree as a bare name — never stat'ed, never watched — so the next diff
-+      // finds it there. Stat'ed, a follow of a few names in a big folder (the
-+      // supervised runs dir: 2 names, ~1,800 entries) paid one `fstatat` per
-+      // entry under the backend's lock on the first write after every
-+      // re-open; with the metadata cold (the vnode cache recycling thousands
-+      // a second, each stat a disk read) that held every kqueue watcher of
-+      // the process 2–6 s (report-1795610730-j1bceo, 2026-11-25/26). Such an
-+      // entry is never a folder holding entries of the tree (its own would be
-+      // ignored below it), so its kind does not matter.
-+      bool wanted = false;
-+      for (auto i = subs.begin(); i != subs.end(); i++) {
-+        if ((*i)->tree == tree && !(*i)->watcher->isIgnored(fullpath)) {
-+          wanted = true;
-+          break;
-+        }
-+      }
-+      if (!wanted) {
-+        tree->add(fullpath, 0, false);
-+        continue;
-+      }
-+      if (!statted) {
-+        statted = true;
-+        if (fstatat(dirFd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) {
-+          statErr = errno;
-+        }
-+      }
-+      if (vanished(statErr)) {
-+        // Gone since the listing: for this diff it is not there (below, a
-+        // tree that held it hears it removed).
-+        break;
-+      }
-+      if (statErr != 0) {
-+        // Not known, so not added: the next diff of the folder meets it again.
-+        for (auto i = subs.begin(); i != subs.end(); i++) {
-+          if ((*i)->tree == tree && !(*i)->watcher->isIgnored(fullpath)) {
-+            diffFailed(*i, "stat " + fullpath, statErr, watchers);
++    ListedEntry listed = { .path = dirStart + entry->d_name, .gone = false, .statErr = 0, .mtime = 0, .isDir = false };
++    bool wanted = false;
++    for (size_t t = 0; t < diff.trees.size(); t++) {
++      EntryFate fate = { .kind = EntryFate::Known, .opening = { WatchResult::Unwatched, -1, 0 } };
++      if (!diff.trees[t]->find(listed.path)) {
++        // equin: an entry every watcher of the tree ignores is kept in the
++        // tree as a bare name — never stat'ed, never watched — so the next
++        // diff finds it there. Stat'ed, a follow of a few names in a big
++        // folder (the supervised runs dir: 2 names, ~1,800 entries) paid one
++        // `fstatat` per entry on the first write after every re-open. Such an
++        // entry is never a folder holding entries of the tree (its own would
++        // be ignored below it), so its kind does not matter.
++        fate.kind = EntryFate::Bare;
++        for (auto w = diff.watchers[t].begin(); w != diff.watchers[t].end(); w++) {
++          if (!(*w)->isIgnored(listed.path)) {
++            fate.kind = EntryFate::Wanted;
++            wanted = true;
++            break;
 +          }
 +        }
-+        continue;
 +      }
-+      tree->add(fullpath, CONVERT_TIME(st.st_mtim), S_ISDIR(st.st_mode));
-+
-+      // Watch it for every subscription of the tree. Only the first watchDir
-+      // opens (the others reuse its descriptor), so a vanished or failed
-+      // entry is known before any subscription of it is recorded.
-+      std::vector<KqueueSubscription *> created;
-+      WatchResult result = WatchResult::Watched;
-+      int err = 0;
-+      for (auto i = subs.begin(); i != subs.end(); i++) {
-+        KqueueSubscription *sub = *i;
-+        if (sub->tree != tree || sub->watcher->isIgnored(fullpath)) {
-+          continue;
-+        }
-+        errno = 0;
-+        result = watchDir(sub->watcher, fullpath, sub->tree);
-+        err = errno;
-+        if (result == WatchResult::Gone || result == WatchResult::Failed) {
-+          break;
-+        }
-+        // Watched, or Unwatched: listed, not watched — see `subscribe`.
-+        created.push_back(sub);
-+      }
++      listed.fates.push_back(fate);
++    }
  
 -        // Notify all watchers with the same tree.
-+      if (result == WatchResult::Gone) {
-+        // Created and removed between the listing and its open: nothing to
-+        // report, and not in the tree, so a re-creation is a create.
-+        tree->remove(fullpath);
-+        statErr = ENOENT;
-+        break;
-+      }
-+      if (result == WatchResult::Failed) {
-+        // There, but not watched: report it created with the loss, and leave it
-+        // out of the tree so the next diff of the folder tries it again.
-+        tree->remove(fullpath);
-         for (auto i = subs.begin(); i != subs.end(); i++) {
-           KqueueSubscription *sub = *i;
+-        for (auto i = subs.begin(); i != subs.end(); i++) {
+-          KqueueSubscription *sub = *i;
 -          if (sub->tree == tree) {
 -            if (sub->watcher->isIgnored(fullpath)) {
 -              continue;
--            }
--
-+          if (sub->tree == tree && !sub->watcher->isIgnored(fullpath)) {
-             sub->watcher->mEvents.create(fullpath);
++    // Stat'ed once, when a tree first lacks and wants the entry (an entry
++    // every tree already holds needs nothing of it); opened once per such
++    // tree (each tree holds a descriptor of its own).
++    if (wanted) {
++      struct stat st;
++      if (fstatat(diff.dirFd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) {
++        listed.statErr = errno;
++        listed.gone = vanished(listed.statErr);
++      } else {
++        listed.mtime = CONVERT_TIME(st.st_mtim);
++        listed.isDir = S_ISDIR(st.st_mode);
++        for (auto fate = listed.fates.begin(); fate != listed.fates.end() && !listed.gone; fate++) {
++          if (fate->kind != EntryFate::Wanted) {
++            continue;
++          }
++          fate->opening = openAndRegister(listed.path);
++          if (fate->opening.result == WatchResult::Gone) {
++            // Created and removed between the listing and its open: not
++            // there for this diff, nor for any tree.
++            listed.gone = true;
++          }
++        }
++        if (listed.gone) {
++          for (auto fate = listed.fates.begin(); fate != listed.fates.end(); fate++) {
++            if (fate->opening.result == WatchResult::Watched) {
++              close(fate->opening.fd);
++              fate->opening = { WatchResult::Gone, -1, ENOENT };
+             }
++          }
++        }
++      }
++    }
++    diff.listed.push_back(std::move(listed));
++    errno = 0;
++  }
++  diff.readdirErr = errno;
++
++  #if __APPLE__
++    closedir(dir);
++  #else
++    fdclosedir(dir);
++  #endif
++}
+ 
+-            sub->watcher->mEvents.create(fullpath);
 -            watchers.emplace(sub->watcher);
--
++// equin: a folder diff's last step, under the backend's lock: the listing
++// applied to each tree it was made for that is still subscribed — an unwatch
++// while it was listed drops its trees, and a descriptor opened for one of
++// them is closed. No file-system call but the kqueue registration.
++void KqueueBackend::applyDiff(FolderDiff &diff, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {
++  std::vector<KqueueSubscription *> subs = findSubscriptions(diff.path, diff.fd);
++  subs.erase(std::remove_if(subs.begin(), subs.end(), [&diff](KqueueSubscription *sub) {
++    return std::find(diff.trees.begin(), diff.trees.end(), sub->tree) == diff.trees.end() || !sub->watcher->seesBelow(diff.path);
++  }), subs.end());
++  std::vector<bool> live(diff.trees.size(), false);
++  for (auto it = subs.begin(); it != subs.end(); it++) {
++    live[std::find(diff.trees.begin(), diff.trees.end(), (*it)->tree) - diff.trees.begin()] = true;
++  }
+ 
 -            bool success = watchDir(sub->watcher, fullpath, sub->tree);
 -            if (!success) {
 -              sub->tree->remove(fullpath);
 -              return false;
 -            }
-+            diffFailed(sub, "watch " + fullpath, err, watchers);
-           }
-         }
+-          }
++  if (diff.openErr != 0) {
++    // The folder itself was removed since its write (vanished): nothing to
++    // diff. Its own descriptor reports the delete, which takes its entries
++    // with it. Anything else is a loss.
++    if (!vanished(diff.openErr)) {
++      for (auto it = subs.begin(); it != subs.end(); it++) {
++        diffFailed(*it, "opendir", diff.openErr, watchers);
++      }
++    }
++    return;
++  }
++
++  std::unordered_set<std::string> entries;
++  for (auto l = diff.listed.begin(); l != diff.listed.end(); l++) {
++    ListedEntry &listed = *l;
++    if (!listed.gone) {
++      entries.emplace(listed.path);
++    }
++    for (size_t t = 0; t < diff.trees.size(); t++) {
++      EntryFate &fate = listed.fates[t];
++      if (!live[t] || listed.gone || fate.kind == EntryFate::Known || diff.trees[t]->find(listed.path)) {
++        if (fate.opening.result == WatchResult::Watched) {
++          closing.insert(fate.opening.fd);
++        }
 +        continue;
 +      }
-+      for (auto i = created.begin(); i != created.end(); i++) {
-+        (*i)->watcher->mEvents.create(fullpath);
++      std::shared_ptr<DirTree> tree = diff.trees[t];
++      // The tree's subscriptions that see it (each hears it created).
++      std::vector<KqueueSubscription *> wanting;
++      for (auto i = subs.begin(); fate.kind == EntryFate::Wanted && i != subs.end(); i++) {
++        if ((*i)->tree == tree && !(*i)->watcher->isIgnored(listed.path)) {
++          wanting.push_back(*i);
++        }
++      }
++      if (wanting.empty()) {
++        // Bare: every subscription of the tree ignores it.
++        if (fate.opening.result == WatchResult::Watched) {
++          closing.insert(fate.opening.fd);
++        }
++        tree->add(listed.path, 0, false);
++        continue;
++      }
++      if (listed.statErr != 0) {
++        // Not known, so not added: the next diff of the folder meets it again.
++        for (auto i = wanting.begin(); i != wanting.end(); i++) {
++          diffFailed(*i, "stat " + listed.path, listed.statErr, watchers);
++        }
++        continue;
++      }
++      Opening opening = fate.opening;
++      if (opening.result == WatchResult::Watched && !enableFd(opening.fd)) {
++        opening = { WatchResult::Failed, -1, errno };
++        closing.insert(fate.opening.fd);
++      }
++      if (opening.result == WatchResult::Failed) {
++        // There, but not watched: report it created with the loss, and leave it
++        // out of the tree so the next diff of the folder tries it again.
++        for (auto i = wanting.begin(); i != wanting.end(); i++) {
++          (*i)->watcher->mEvents.create(listed.path);
++          diffFailed(*i, "watch " + listed.path, opening.err, watchers);
++        }
++        continue;
++      }
++      DirEntry *added = tree->add(listed.path, listed.mtime, listed.isDir);
++      if (opening.result == WatchResult::Watched) {
++        added->state = (void *)(size_t)opening.fd;
++        mFdToEntry.emplace(opening.fd, added);
++        for (auto i = wanting.begin(); i != wanting.end(); i++) {
++          mSubscriptions.emplace(listed.path, KqueueSubscription {
++            .watcher = (*i)->watcher,
++            .path = listed.path,
++            .tree = tree,
++            .fd = opening.fd
++          });
+         }
+       }
++      // Watched, or Unwatched: listed, not watched — see `prepareTree`.
++      for (auto i = wanting.begin(); i != wanting.end(); i++) {
++        (*i)->watcher->mEvents.create(listed.path);
 +        watchers.emplace((*i)->watcher);
 +      }
-+    }
-+
-+    if (!vanished(statErr)) {
-+      entries.emplace(fullpath);
-+    }
-+    errno = 0;
-+  }
-+  if (errno != 0) {
+     }
+   }
+ 
+-  for (auto it = trees.begin(); it != trees.end(); it++) {
+-    std::shared_ptr<DirTree> tree = *it;
++  if (diff.readdirErr != 0) {
 +    // readdir stopped short: the deletes below would be guesses. A folder
 +    // removed mid-listing (ENOENT) is the race above — its own delete
 +    // reports it; anything else is a loss.
-+    int err = errno;
-+    if (!vanished(err)) {
++    if (!vanished(diff.readdirErr)) {
 +      for (auto it = subs.begin(); it != subs.end(); it++) {
-+        diffFailed(*it, "readdir", err, watchers);
-       }
-     }
-+    #if __APPLE__
-+      closedir(dir);
-+    #else
-+      fdclosedir(dir);
-+    #endif
++        diffFailed(*it, "readdir", diff.readdirErr, watchers);
++      }
++    }
 +    return;
-   }
++  }
++
++  std::string dirStart = childPrefix(diff.path);
++  for (size_t t = 0; t < diff.trees.size(); t++) {
++    if (!live[t]) {
++      continue;
++    }
++    std::shared_ptr<DirTree> tree = diff.trees[t];
+     for (auto entry = tree->entries.begin(); entry != tree->entries.end();) {
  
-   for (auto it = trees.begin(); it != trees.end(); it++) {
-@@ -270,8 +656,17 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+       if (
+@@ -270,31 +884,105 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
            }
          }
  
@@ -1052,10 +1384,42 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
          entry = tree->entries.erase(entry);
        } else {
          entry++;
-@@ -284,17 +679,61 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
-   #else
-     fdclosedir(dir);
-   #endif
+       }
+     }
+   }
++}
+ 
+-  #if __APPLE__
+-    closedir(dir);
+-  #else
+-    fdclosedir(dir);
+-  #endif
++// equin: a write to a watched file, its lstat made off the lock: reported to
++// the subscriptions of its descriptor still subscribed, if the mtime moved.
++void KqueueBackend::applyLook(FileLook &look, std::unordered_set<WatcherRef> &watchers) {
++  std::vector<KqueueSubscription *> subs = findSubscriptions(look.path, look.fd);
++  subs.erase(std::remove_if(subs.begin(), subs.end(), [&look](KqueueSubscription *sub) {
++    return std::find(look.trees.begin(), look.trees.end(), sub->tree) == look.trees.end();
++  }), subs.end());
++  if (subs.empty()) {
++    return;
++  }
++  // A live subscription holds the descriptor, so it still maps to the entry.
++  auto found = mFdToEntry.find(look.fd);
++  if (found == mFdToEntry.end()) {
++    return;
++  }
++  DirEntry *entry = found->second;
++  for (auto it = subs.begin(); it != subs.end(); it++) {
++    watchers.insert((*it)->watcher);
++  }
++  if (!look.statted || entry->mtime == look.mtime) {
++    return;
++  }
++  entry->mtime = look.mtime;
++  for (auto it = subs.begin(); it != subs.end(); it++) {
++    (*it)->watcher->mEvents.update((*it)->path);
++  }
 +}
  
 -  return true;
@@ -1087,11 +1451,14 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +  }
  }
  
- void KqueueBackend::unsubscribe(WatcherRef watcher) {
+-void KqueueBackend::unsubscribe(WatcherRef watcher) {
++void KqueueBackend::forget(WatcherRef watcher, std::vector<int> &closing) {
    // Find any subscriptions pointing to this watcher, and remove them.
    for (auto it = mSubscriptions.begin(); it != mSubscriptions.end();) {
      if (it->second.watcher.get() == watcher.get()) {
 -      if (mSubscriptions.count(it->first) == 1) {
+-        // Closing the file descriptor automatically unwatches it in the kqueue.
+-        close(it->second.fd);
 +      // The descriptor is shared only by subscriptions of the same tree;
 +      // watchers rooted at nested dirs hold their own for one path, so
 +      // counting the path's subscriptions would keep the last-but-one open.
@@ -1104,11 +1471,10 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
 +        }
 +      }
 +      if (!shared) {
-         // Closing the file descriptor automatically unwatches it in the kqueue.
-+        // Forget it on the entry too: the tree is cached by path and outlives this
-+        // subscription when another one shares it, and a later watchDir of the
-+        // entry must open a descriptor of its own, not reuse this closed number.
-         close(it->second.fd);
++        // Queued for closing (which unwatches it in the kqueue). Forget it on
++        // the entry too: a later registration of the entry must open a
++        // descriptor of its own, not reuse this closed number.
++        closing.push_back(it->second.fd);
 +        auto entry = mFdToEntry.find(it->second.fd);
 +        if (entry != mFdToEntry.end() && entry->second) {
 +          entry->second->state = nullptr;
@@ -1117,27 +1483,127 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..d121106ae1799fa44a8bc5f68127948e
        }
  
 diff --git a/src/kqueue/KqueueBackend.hh b/src/kqueue/KqueueBackend.hh
-index 3c6a9cdd5c1de26b0eb5c5f2835409098fb601ae..b6c35db185009c0fa7c950f2ab684723a62e86e0 100644
+index 3c6a9cdd5c1de26b0eb5c5f2835409098fb601ae..3ddac2df637863c35d29e51c61133db0a28d9506 100644
 --- a/src/kqueue/KqueueBackend.hh
 +++ b/src/kqueue/KqueueBackend.hh
-@@ -27,9 +27,22 @@ private:
+@@ -2,6 +2,10 @@
+ #define KQUEUE_H
+ 
+ #include <unordered_map>
++#include <unordered_set>
++#include <vector>
++#include <condition_variable>
++#include <atomic>
+ #include <sys/event.h>
+ #include "../shared/BruteForceBackend.hh"
+ #include "../DirTree.hh"
+@@ -14,10 +18,80 @@ struct KqueueSubscription {
+   int fd;
+ };
+ 
++// equin: what watching one entry came to — a descriptor on it, the entry
++// kept with none (a kind or a permission kqueue cannot watch: listed, its
++// coming and going heard by its folder's diff), the entry gone since it was
++// listed (ENOENT / ENOTDIR: removed in between — a race, not a failure), or
++// a failure (`err` says why).
++enum class WatchResult { Watched, Unwatched, Gone, Failed };
++struct Opening {
++  WatchResult result;
++  int fd;  // Watched: the descriptor (registered disabled, once opened by the backend)
++  int err;
++};
++
++// equin: a subscription's tree, read and its entries opened off the backend's
++// lock (KqueueBackend::watch); registered under it.
++struct PreparedTree {
++  std::shared_ptr<DirTree> tree;
++  std::vector<std::pair<std::string, int>> opened; // path, descriptor
++};
++
++// equin: what one entry a folder diff listed came to, for one tree: already
++// in it, kept as a bare name (every subscription of the tree ignores it), or
++// wanted — then stat'ed and opened off the lock (`opening`).
++struct EntryFate {
++  enum Kind { Known, Bare, Wanted } kind;
++  Opening opening;
++};
++
++struct ListedEntry {
++  std::string path;
++  // Gone between the listing and its stat or open: for this diff it is not
++  // there (a tree that held it hears it removed).
++  bool gone;
++  int statErr; // fstatat's errno for a wanted entry, 0 once stat'ed
++  uint64_t mtime;
++  bool isDir;
++  std::vector<EntryFate> fates; // one per FolderDiff::trees
++};
++
++// equin: one folder diff of a batch. Made under the backend's lock (the
++// subscriptions it speaks for, and a dup of the folder's descriptor), the
++// folder listed and its new wanted entries stat'ed and opened OFF it, then
++// applied under it again — so a slow listing, stat or open (cold metadata, a
++// host I/O stall) delays this folder's own watchers, never every kqueue
++// watcher of the process (report-1795610730-j1bceo).
++struct FolderDiff {
++  int fd;            // the folder's watched descriptor
++  std::string path;
++  // The trees it speaks for, held so none is freed (and its address reused)
++  // while the diff is off the lock, and each tree's watchers that see below
++  // the folder. Applied only to the trees still subscribed by then.
++  std::vector<std::shared_ptr<DirTree>> trees;
++  std::vector<std::vector<WatcherRef>> watchers;
++  int dirFd;         // a dup of `fd`, made under the lock: the listing reads it
++  int openErr;       // fdopendir's errno
++  int readdirErr;    // readdir stopped short
++  std::vector<ListedEntry> listed;
++};
++
++// equin: a write to a watched file, its mtime read off the lock.
++struct FileLook {
++  int fd;
++  std::string path;
++  std::vector<std::shared_ptr<DirTree>> trees;
++  bool statted;
++  uint64_t mtime;
++};
++
+ class KqueueBackend : public BruteForceBackend {
+ public:
+   void start() override;
+   ~KqueueBackend();
++  void watch(WatcherRef watcher) override;
++  void unwatch(WatcherRef watcher) override;
++  void unref() override;
+   void subscribe(WatcherRef watcher) override;
+   void unsubscribe(WatcherRef watcher) override;
+ private:
+@@ -26,10 +100,30 @@ private:
+   std::unordered_multimap<std::string, KqueueSubscription> mSubscriptions;
    std::unordered_map<int, DirEntry *> mFdToEntry;
    Signal mEndedSignal;
++  // equin: watchers whose subscription is being read off the lock (`watch`).
++  // A second watch or an unwatch of the same watcher waits for it; the
++  // backend is not dropped while one is in flight.
++  std::unordered_set<WatcherRef> mPreparing;
++  std::atomic<size_t> mPreparingCount{0};
++  std::condition_variable mPrepared;
  
 -  bool watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree);
 -  bool compareDir(int fd, std::string &dir, std::unordered_set<WatcherRef> &watchers);
 -  std::vector<KqueueSubscription *> findSubscriptions(std::string &path);
-+  // equin: what watching one entry came to — a descriptor on it, the entry
-+  // kept with none (a kind or a permission kqueue cannot watch: listed, its
-+  // coming and going heard by its folder's diff), the entry gone since it was
-+  // listed (ENOENT / ENOTDIR: removed in between — a race, not a failure), or
-+  // a failure (errno says why).
-+  enum class WatchResult { Watched, Unwatched, Gone, Failed };
-+  WatchResult watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree);
-+  // equin: no answer to ignore — a diff that cannot finish (the folder
-+  // unreadable, an entry that cannot be stat'ed or watched) reports it to each
-+  // watcher it leaves behind, as an error delivered with the batch.
-+  void compareDir(int fd, std::string &dir, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing);
++  PreparedTree prepareTree(WatcherRef watcher);
++  void commitTree(WatcherRef watcher, PreparedTree &prepared, std::vector<int> &closing);
++  bool registerFd(int fd);
++  bool enableFd(int fd);
++  Opening openAndRegister(const std::string &path);
++  // equin: drop every subscription of `watcher`, queueing the descriptors no
++  // other subscription holds — closed by the caller once off the lock.
++  void forget(WatcherRef watcher, std::vector<int> &closing);
++  bool planDiff(int fd, const std::string &path, std::unordered_set<WatcherRef> &watchers, std::vector<FolderDiff> &diffs);
++  void listFolder(FolderDiff &diff);
++  void applyDiff(FolderDiff &diff, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing);
++  void applyLook(FileLook &look, std::unordered_set<WatcherRef> &watchers);
 +  std::vector<KqueueSubscription *> findSubscriptions(const std::string &path, int fd);
 +  // equin: drop `path`'s subscriptions of one tree — never the path's key,
 +  // which other trees' subscriptions share (see the definition).
