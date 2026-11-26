@@ -23,14 +23,15 @@ describe("createBootTally", () => {
     t.caughtUp("a", 40);
     t.caughtUp("b", 12);
     t.caughtUp("c", 1);
+    t.current("d");
     expect(t.summary()).toBe(
-      "follows opened: 2 in 32 ms (slowest b 30 ms); agents caught up: 3, 53 ms summed (queueing included), slowest a 40 ms; read 12 KB, 8 events (most b 10 KB); whole-file re-reads: b",
+      "follows opened: 2, 32 ms summed (slowest b 30 ms); already current: 1; agents caught up: 3, 53 ms summed (queueing included), slowest a 40 ms; read 12 KB, 8 events (most b 10 KB); whole-file re-reads: b",
     );
   });
 
   test("an empty boot says so", () => {
     expect(createBootTally().summary()).toBe(
-      "follows opened: 0 in 0 ms; agents caught up: 0, 0 ms summed (queueing included); read 0 KB, 0 events; whole-file re-reads: none",
+      "follows opened: 0, 0 ms summed; already current: 0; agents caught up: 0, 0 ms summed (queueing included); read 0 KB, 0 events; whole-file re-reads: none",
     );
   });
 });

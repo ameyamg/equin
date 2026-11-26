@@ -13,7 +13,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readAgentEvents, readEventsAfter } from "./event-reader";
+import {
+  eventsMayHaveLinesPast,
+  mayHaveLinesPast,
+  readAgentEvents,
+  readEventsAfter,
+} from "./event-reader";
 
 let dir: string;
 let path: AppPath;
@@ -154,5 +159,26 @@ describe("readEventsAfter", () => {
       append(path, seq);
     }
     expect(seqs(await readEventsAfter(path, 1, stored))).toEqual([2, 3, 4]);
+  });
+});
+
+describe("mayHaveLinesPast", () => {
+  const at = { ino: 7, offset: 100 };
+  test("no only at the very end of the same file", () => {
+    expect(mayHaveLinesPast(at, { ino: 7, size: 100 })).toBe(false);
+    expect(mayHaveLinesPast(at, { ino: 7, size: 120 })).toBe(true); // appended
+    expect(mayHaveLinesPast(at, { ino: 7, size: 40 })).toBe(true); // inode reused
+    expect(mayHaveLinesPast(at, { ino: 8, size: 100 })).toBe(true); // rotated
+    expect(mayHaveLinesPast(at, null)).toBe(true); // live file gone
+    expect(mayHaveLinesPast(null, { ino: 7, size: 100 })).toBe(true);
+  });
+
+  test("agrees with a read from the position", async () => {
+    append(path, 1, 2);
+    const stored = (await readAgentEvents(path, null)).position;
+    expect(await eventsMayHaveLinesPast(path, stored)).toBe(false);
+    append(path, 3);
+    expect(await eventsMayHaveLinesPast(path, stored)).toBe(true);
+    expect(seqs(await readEventsAfter(path, 2, stored))).toEqual([3]);
   });
 });

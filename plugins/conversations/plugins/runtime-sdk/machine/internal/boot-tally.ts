@@ -19,12 +19,15 @@ export interface BootTally {
   read(id: string, read: EventsRead): void;
   /** A boot catch-up of `id` settled, in `ms` (its reads included). */
   caughtUp(id: string, ms: number): void;
+  /** `id`'s events file ends where its row's cursor does: nothing to catch up. */
+  current(id: string): void;
   /** The one-line summary. */
   summary(): string;
 }
 
 export function createBootTally(): BootTally {
   const opens = new Map<string, number>();
+  let current = 0;
   const catchUps = new Map<string, AgentCost>();
   const costOf = (id: string): AgentCost => {
     let cost = catchUps.get(id);
@@ -49,6 +52,9 @@ export function createBootTally(): BootTally {
     caughtUp(id, ms) {
       costOf(id).ms += ms;
     },
+    current() {
+      current += 1;
+    },
     summary() {
       const openMs = [...opens.values()].reduce((a, b) => a + b, 0);
       const slowestOpen = maxBy([...opens], ([, ms]) => ms);
@@ -59,8 +65,9 @@ export function createBootTally(): BootTally {
       const biggest = maxBy(costs, ([, c]) => c.bytes);
       const whole = costs.filter(([, c]) => c.whole).map(([id]) => id);
       return [
-        `follows opened: ${String(opens.size)} in ${ms(openMs)}`,
+        `follows opened: ${String(opens.size)}, ${ms(openMs)} summed`,
         slowestOpen ? ` (slowest ${slowestOpen[0]} ${ms(slowestOpen[1])})` : "",
+        `; already current: ${String(current)}`,
         `; agents caught up: ${String(costs.length)}, ${ms(sum((c) => c.ms))} summed (queueing included)`,
         slowest ? `, slowest ${slowest[0]} ${ms(slowest[1].ms)}` : "",
         `; read ${kb(sum((c) => c.bytes))}, ${String(sum((c) => c.events))} events`,

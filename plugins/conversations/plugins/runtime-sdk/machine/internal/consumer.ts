@@ -49,11 +49,12 @@ import {
 } from "../../server/internal/rows";
 import {
   currentAgentRow,
+  currentAgentRows,
   leaseAgentRow,
   type AgentRowLease,
 } from "./agent-row-lease";
 import { requestAutoResume } from "./auto-resume";
-import { readEventsAfter } from "./event-reader";
+import { eventsMayHaveLinesPast, readEventsAfter } from "./event-reader";
 import { createBootTally, type BootTally } from "./boot-tally";
 import { createBootHold, releasedHold, type BootHold } from "./boot-hold";
 import type { ReadPosition } from "../../server/internal/read-position";
@@ -679,24 +680,34 @@ async function syncFollowed(): Promise<void> {
     });
     return;
   }
-  for (const id of running) {
-    if (followed.has(id)) continue;
-    const startedAt = performance.now();
-    try {
-      await followAgent(id).watch;
-      bootTally?.opened(id, performance.now() - startedAt);
-    } catch (err) {
-      await reportFollowFailure(id, "could not be watched", err);
-    }
-  }
-  for (const [id, follow] of [...followed]) {
-    if (running.has(id) || follow.launches > 0) continue;
-    try {
-      await unfollowAgent(id, follow);
-    } catch (err) {
-      await reportFollowFailure(id, "could not stop being watched", err);
-    }
-  }
+  // Each agent's follow is its own directory's watch, so they open (and
+  // close) together. One after another, every open waited its own turn of an
+  // event loop the boot shares with every tab's restart replay: 2026-11-26
+  // 13:27 UTC, 23 opens took 1,194 ms in series (23–30 ms on a quiet boot).
+  await Promise.all(
+    [...running]
+      .filter((id) => !followed.has(id))
+      .map(async (id) => {
+        const startedAt = performance.now();
+        try {
+          await followAgent(id).watch;
+          bootTally?.opened(id, performance.now() - startedAt);
+        } catch (err) {
+          await reportFollowFailure(id, "could not be watched", err);
+        }
+      }),
+  );
+  await Promise.all(
+    [...followed]
+      .filter(([id, follow]) => !running.has(id) && follow.launches === 0)
+      .map(async ([id, follow]) => {
+        try {
+          await unfollowAgent(id, follow);
+        } catch (err) {
+          await reportFollowFailure(id, "could not stop being watched", err);
+        }
+      }),
+  );
 }
 
 async function reportFollowFailure(
@@ -769,36 +780,60 @@ async function bootConsumer(
   // The rows expected live (an agent that exited while this backend was down
   // still has its last lines to read) and every agent actually running, whatever
   // its row says.
-  const atBoot = await step(
-    "boot-ids",
-    async () =>
-      new Set([
-        ...(await liveSdkConversationIds()),
-        ...(await runningAgentIds()),
-      ]),
-  );
-  // Agents are independent (a catch-up is one at a time per agent only), so
-  // they are brought up together, a few at once: one after another, a boot
-  // paid two round trips per agent in series, each queued behind the rest of
-  // the boot.
-  // An agent a follow heard that neither list names (one launched meanwhile)
-  // is caught up by the same pass.
-  const toCatchUp = new Set([...atBoot, ...booting.pending()]);
+  const { atBoot, running, rows } = await step("boot-ids", async () => {
+    const live = await liveSdkConversationIds();
+    // An agent a follow heard during the boot (one launched meanwhile) may
+    // hold a question too.
+    const runningNow = new Set([
+      ...(await runningAgentIds()),
+      ...booting.pending(),
+    ]);
+    const ids = new Set([...live, ...runningNow]);
+    return {
+      atBoot: ids,
+      running: runningNow,
+      // Every row's stored read position, in one read.
+      rows: await currentAgentRows([...ids]),
+    };
+  });
+  // What each agent needs, decided together: every one is claimed (what it
+  // heard until now, its catch-up — or the check that it has none — covers;
+  // what it hears from here is held again and caught up once the boot is
+  // done), then one `stat` tells whether its live events file moved past its
+  // row's stored position. One whose file ends exactly there (same inode,
+  // same size) is current: a catch-up of it — its row's lease, four file
+  // opens, no line — cost ~40 ms of a loaded boot for nothing (2026-11-26
+  // 13:19 UTC: 53 catch-ups read 1 event between them, 415 ms of a 604 ms
+  // onReady:conversations). The checks, and the `hello`s, run all at once:
+  // each is one syscall or socket round trip, and the boot shares its event
+  // loop with every tab's restart replay, so a wait per round of 8 is what
+  // the step paid. Only the catch-ups that read and apply lines go a few at
+  // a time.
   const gate = createSemaphore(BOOT_CATCH_UP_CONCURRENCY);
   await step("catch-up", () =>
     Promise.all(
-      [...toCatchUp].map((id) =>
-        gate.run(async () => {
-          ours.add(id);
-          // What it heard until now, this run reads; what it hears from
-          // here is held again and caught up once the boot is done.
-          booting.claim(id);
-          const startedAt = performance.now();
-          await catchUps.run(id);
-          tally.caughtUp(id, performance.now() - startedAt);
-          await resyncOpenRequests(id);
-        }),
-      ),
+      [...atBoot].map(async (id) => {
+        ours.add(id);
+        booting.claim(id);
+        const row = rows.get(id);
+        if (
+          row === undefined ||
+          (await eventsMayHaveLinesPast(
+            agentEventsPath(id),
+            row.eventsPosition,
+          ))
+        ) {
+          await gate.run(async () => {
+            const startedAt = performance.now();
+            await catchUps.run(id);
+            tally.caughtUp(id, performance.now() - startedAt);
+          });
+        } else {
+          tally.current(id);
+        }
+        // Only a running agent holds a question to re-hold.
+        if (running.has(id)) await resyncOpenRequests(id);
+      }),
     ),
   );
   return async () => {

@@ -3,6 +3,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { open, type FileHandle } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { AgentEventSchema, type AgentEvent } from "../../core";
 import type { ReadPosition } from "../../server/internal/read-position";
 
@@ -171,4 +172,37 @@ export async function readEventsAfter(
   if (from === null || !first || first.seq <= cursorSeq + 1) return read;
   const again = await readAgentEvents(path, null);
   return { ...again, bytes: read.bytes + again.bytes };
+}
+
+/**
+ * Whether the live file `live` (its inode and size, null when absent) may hold
+ * lines past `position` — the one question a read from that position answers
+ * with nothing when it is no. No only when the position is in this very file
+ * (same inode) at its very end: a rotation since gives the live file another
+ * inode, an append makes it longer, a reused inode can make it shorter. A
+ * missing position or file is yes: only a read can tell.
+ */
+export function mayHaveLinesPast(
+  position: ReadPosition | null,
+  live: { ino: number; size: number } | null,
+): boolean {
+  if (position === null || live === null) return true;
+  return live.ino !== position.ino || live.size !== position.offset;
+}
+
+/** {@link mayHaveLinesPast} for the events file at `path`, by one `stat`. */
+export async function eventsMayHaveLinesPast(
+  path: AppPath,
+  position: ReadPosition | null,
+): Promise<boolean> {
+  if (position === null) return true;
+  let live: { ino: number; size: number } | null;
+  try {
+    const st = await stat(path);
+    live = { ino: st.ino, size: st.size };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    live = null;
+  }
+  return mayHaveLinesPast(position, live);
 }

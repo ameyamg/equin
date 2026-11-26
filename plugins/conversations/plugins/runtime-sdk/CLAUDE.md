@@ -82,9 +82,20 @@ agents without tmux, per-namespace paths, the Claude Code health row:
     a cached no would skip a conversation forever.
   - **The boot catches each agent up once** (`boot-hold.ts`): while
     `startConsumer` runs, what a follow hears (its open's re-read, an append,
-    a loss) only marks the agent, and the boot's `catch-up` step runs every
-    marked or live agent, 8 at a time; what is heard after the pass took an
-    agent is caught up when the boot ends. Before, each follow the boot's
+    a loss) only marks the agent, and the boot's `catch-up` step takes every
+    marked or live agent; what is heard after the pass took an agent is
+    caught up when the boot ends. The pass reads every row's stored position
+    in one query and fully catches up (8 at a time) only an agent whose live
+    events file moved past it (another inode, another size —
+    `eventsMayHaveLinesPast`, one `stat`); an agent already current costs that
+    stat, and only a running agent is asked `hello` for its open questions
+    (13:19 UTC the same day: 53 full catch-ups found 1 event between them,
+    415 ms). **The boot's per-agent awaits run together, not in series**: the
+    follows' opens, the stats and the `hello`s are each one syscall or round
+    trip, and onReady shares its event loop with every tab's restart replay
+    (the gateway swaps the backend in at ready), so each serial await paid a
+    loaded loop's turn — 13:27 UTC: 23 follow opens took 1,194 ms in series,
+    23–30 ms on a quiet boot. Before, each follow the boot's
     scan opened started its own catch-ups at once, unbounded, and the pass
     then ran them all again (2026-11-26: `follow-scan` 494 ms of a 705 ms
     onReady). Each boot writes one line to the `runtime-sdk-consumer-boot`
