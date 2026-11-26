@@ -176,7 +176,28 @@ export function namespaceFor(
     );
   }
 
+  // A single-label namespace spelled like a host alias (`equin`) would be
+  // addressed as the namespace the alias stands for: a checkout named `equin`
+  // printed main's address as its own (`./equin url`) and its writes landed on
+  // main. Refused at the one minter, so no caller — build, url, check — can
+  // hold such a name. The main composition on the main checkout is decided
+  // first: it is what `MAIN_WORKTREE_NAME` (and so the alias table) is derived
+  // from, at module evaluation.
   const isMainComposition = composition === MAIN_COMPOSITION_ID;
+  if (isMainComposition && checkout.kind === "main")
+    return composition as Namespace;
+  const single = checkout.kind === "main" ? composition : checkout.name;
+  if (
+    (checkout.kind === "main" || isMainComposition) &&
+    isNamespaceHostAlias(single)
+  ) {
+    throw new Error(
+      `"${single}" is the host alias of the "${NAMESPACE_HOST_ALIASES[single]}" namespace — ` +
+        `a namespace of that name would be addressed as that one. Rename the ` +
+        `${checkout.kind === "main" ? "composition" : "checkout"}.`,
+    );
+  }
+
   if (checkout.kind === "main") {
     // Main checkout: the suffix elides, so the namespace is just the
     // composition — including main's own, whose id IS the main namespace.

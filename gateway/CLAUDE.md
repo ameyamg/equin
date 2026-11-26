@@ -28,7 +28,7 @@ anything). The port is per account — 8700 by default, the first free one of
 8700..8709 — chosen once by `./equin start`, recorded in
 `~/.equin/state/gateway/port` and owned by
 `plugins/infra/plugins/launcher/plugins/gateway-port` (`./equin url` prints this
-account's). A Go default would be a second copy of that choice. The port must
+account's, with this checkout's host). A Go default would be a second copy of that choice. The port must
 be a real one (1..65535; `0` is refused — there would be nothing to tell a
 child or a browser).
 

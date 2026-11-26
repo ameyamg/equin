@@ -74,9 +74,9 @@ A leaf (its one import is `user-path/core`'s types), so `tooling/lint/core`'s
     - `REPO_ROOT_MODULE`
     - `scriptPath`
 - Cross-plugin:
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×15
-    - `infra` ×10
+    - `infra` ×11
     - `apps` ×7
     - `build` ×6
     - `packages` ×4

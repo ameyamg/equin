@@ -42447,9 +42447,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `REPO_ROOT_MODULE`
               - `scriptPath`
           - Cross-plugin:
-            - Imported by: 62 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 63 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
-              - `infra` ×10
+              - `infra` ×11
               - `apps` ×7
               - `build` ×6
               - `packages` ×4

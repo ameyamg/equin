@@ -31,7 +31,7 @@ port as a required argument.
 | CLI, scripts, checks | `gatewayPortSync()` / `gatewayOriginSync()` (data-dirs) | the env above if set, else the port file, else 9000 (an install that has not moved yet) |
 | A page | `usePagePort()` (web), `pagePort(location)` (core) | the page's own `location.port` |
 | The menu-bar helper (Rust) | `gateway::port()` | the file named by `EQUIN_GATEWAY_PORT_FILE`, which the tray's job carries (`menu-bar/login-services`) |
-| Shell (`install.sh`) | `./equin url` | main's address on this account's port |
+| Shell (`install.sh`, an agent's shell) | `./equin url` | this checkout's address on this account's port: main's from the main checkout, the worktree's own app from a worktree (`checkoutNamespace`: the main composition's namespace `./equin build` serves it at, whether built yet or not; a `--composition` build is at `<composition>.<checkout>`) |
 | `./equin start` | `probeGateway(port)` | `GET /gateway/identity`: nothing, this account's gateway, another account's equin, or something else |
 
 ## The legacy port

@@ -168,7 +168,7 @@ Take the **highest rung** that can express the constraint, even if it churns cal
 | Memory leaks | `plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/leak-test.ts` |
 | Resume a failed script | `browser_attach`, rerun with `--attach <ticket>` |
 
-Run scripts with `./equin run <path>`. Never pass your own worktree URL by hand: in an agent session it resolves to main. `--url` is only for a deploy you didn't build.
+Run scripts with `./equin run <path>`. Never pass your own worktree URL by hand: a script finds this checkout's build itself. `--url` is only for a deploy you didn't build.
 
 A repeatable flow is `plugins/<path>/e2e/<name>.ts` (never `*.test.ts`) and declares `export const e2e = { … } satisfies E2eScript`.
 

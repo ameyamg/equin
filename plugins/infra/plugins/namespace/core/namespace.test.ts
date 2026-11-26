@@ -56,6 +56,21 @@ test("the elision rule maps the four (composition, checkout) cases", () => {
   expect(namespaceFor("sonata", WT("att-x"))).toBe(asNamespace("sonata.att-x"));
 });
 
+test("a single-label namespace spelled like a host alias is refused at the mint", () => {
+  for (const alias of Object.keys(NAMESPACE_HOST_ALIASES)) {
+    // A checkout named like the alias would be addressed as main.
+    expect(() => namespaceFor(MAIN_COMPOSITION_ID, WT(alias))).toThrow(
+      /host alias/,
+    );
+    // So would a composition of that name served from the main checkout.
+    expect(() => namespaceFor(alias, MAIN)).toThrow(/host alias/);
+    // Two labels never collide with a host alias.
+    expect(namespaceFor("sonata", WT(alias))).toBe(
+      asNamespace(`sonata.${alias}`),
+    );
+  }
+});
+
 test("every minted namespace is a legal namespace", () => {
   const compositions = [
     MAIN_COMPOSITION_ID,
