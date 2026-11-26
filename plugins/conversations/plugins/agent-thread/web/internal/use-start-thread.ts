@@ -4,6 +4,7 @@ import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
 import { workspaceLaunchOption } from "@plugins/conversations/plugins/workspace/plugins/launch-option/core";
 import { autoStartLaunchOption } from "@plugins/tasks/plugins/auto-start/plugins/launch-option/core";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
+import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 
 export interface StartThreadOptions {
   /** The scratch profile the agent runs under — the thread's kind. */
@@ -23,6 +24,12 @@ export interface StartThreadRequest {
   prompt: string;
   /** The profile's input (validated by the profile's own schema on the server). */
   input?: unknown;
+  /**
+   * The record the run is about (`tasks/task-subject`): its task is linked to
+   * it, so a host reads its thread back by subject (`useSubjectTask`), and a
+   * start about a subject that already has a live task reuses that task.
+   */
+  subject?: TaskSubject;
 }
 
 /** What a start answers: the conversation the run started. */
@@ -53,6 +60,7 @@ export function useStartThread({
     title,
     prompt,
     input = {},
+    subject,
   }: StartThreadRequest): Promise<StartThreadResult> => {
     const result = await launch(
       prompt,
@@ -60,7 +68,7 @@ export function useStartThread({
         [workspaceLaunchOption.id]: { kind: "scratch", profile, input },
         [autoStartLaunchOption.id]: model,
       },
-      { title, categoryId, filedFrom },
+      { title, categoryId, filedFrom, subject },
     );
     if (result.kind !== "ok") return result;
     if (!result.value.started)

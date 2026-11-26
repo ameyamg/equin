@@ -168,13 +168,14 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `SCOPE_PATTERN`
     - `SCOPE_SEPARATOR`
 - Cross-plugin:
-  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×16
     - `apps` ×14
     - `conversations` ×6
     - `apps-core` ×3
     - `reports` ×2
     - `screenshot` ×2
+    - `tasks` ×2
     - `ui` ×2
     - `build`
     - `companions/browser-extension`
@@ -187,7 +188,6 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `network/live/live-state`
     - `page/editor`
     - `shell/global-action-bar`
-    - `tasks/task-draft-form`
     - `wish`
 - Exemptions:
   - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)

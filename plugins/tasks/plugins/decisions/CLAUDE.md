@@ -194,7 +194,9 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `DecisionCardSlots.AboveAnswer`
     - `DecisionCardSlots.AnswerAction`
   - Slot contributors:
+    - `DecisionCardSlots.AboveAnswer` ← `tasks.decisions.ask`
     - `DecisionCardSlots.AboveAnswer` ← `tasks.decisions.notes`
+    - `DecisionCardSlots.AnswerAction` ← `tasks.decisions.ask`
     - `DecisionCardSlots.AnswerAction` ← `tasks.decisions.notes`
   - Contributes:
     - `IdKinds.Kind` "dec"
@@ -306,10 +308,12 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `_decisionExchanges`
     - `_decisions`
     - `decisionAttrs`
+    - `decisionLines`
     - `existingTaskIds`
     - `handOverDecisions`
     - `optionLines`
     - `quotedLines`
+    - `readDecisionInFull`
     - `readTaskDecisionsInFull`
   - Register:
     - `defineHistorySource('decision')`
@@ -412,6 +416,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
+    - `tasks/decisions/ask`
     - `tasks/decisions/inbox`
     - `tasks/decisions/item-count`
     - `tasks/decisions/notes`
@@ -420,6 +425,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `tasks/supervisor-roles/sessions/handoff`
   - Extended by: `tasks/decisions/notes` (table `decisions_ext_notes`)
 - Sub-plugins:
+  - **`ask`** — A decision's side chat, web half: a chat icon on the right of the answer's editor, beside the note's (a dot while the decision has a thread and the chat is closed), opening the chat above the answer…
   - **`capability`** — The decisions.open mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through decisions, which imports…
   - **`inbox`** — The Decisions inbox in the agent manager: the Decisions sidebar entry with the count of decisions that need the user (a grouping of the derived tab), the decisions pane — one view bar over the Needs…
   - **`item-count`** — Per-row decisions chip on a conversation item: how many of its task's decisions need the user (one grouping of the Needs you tab by task, shared by every row). Nothing while zero.

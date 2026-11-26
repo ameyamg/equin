@@ -7806,6 +7806,10 @@
       "name": "@equin/plugin-tasks-decisions",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/decisions/plugins/ask": {
+      "name": "@equin/plugin-tasks-decisions-ask",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/decisions/plugins/capability": {
       "name": "@equin/plugin-tasks-decisions-capability",
       "version": "0.0.1",
@@ -12265,6 +12269,8 @@
     "@equin/plugin-tasks-automations": ["@equin/plugin-tasks-automations@workspace:plugins/tasks/plugins/automations"],
 
     "@equin/plugin-tasks-decisions": ["@equin/plugin-tasks-decisions@workspace:plugins/tasks/plugins/decisions"],
+
+    "@equin/plugin-tasks-decisions-ask": ["@equin/plugin-tasks-decisions-ask@workspace:plugins/tasks/plugins/decisions/plugins/ask"],
 
     "@equin/plugin-tasks-decisions-capability": ["@equin/plugin-tasks-decisions-capability@workspace:plugins/tasks/plugins/decisions/plugins/capability"],
 

@@ -926,11 +926,11 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 329 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 330 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×86
     - `conversations` ×49
     - `debug` ×31
-    - `tasks` ×29
+    - `tasks` ×30
     - `ui` ×26
     - `primitives` ×17
     - `page` ×16

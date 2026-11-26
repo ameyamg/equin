@@ -1,4 +1,4 @@
-// @hash 904f64219b78
+// @hash 70f3c4818362
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "tasks.decisions.ask:ask",
     "tasks.decisions.notes:note"
   ]
 }

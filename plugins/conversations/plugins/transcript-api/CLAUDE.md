@@ -21,13 +21,15 @@ the chain's files in order, oldest → newest. Read them in that order and dedup
 
 ## Plugin reference
 
-- Description: Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
+- Description: Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain, and the transcript_paths MCP tool answers the same for an agent (any conversation, read-only) — the one a sandboxed agent, with no network, can reach.
 - Server:
   - Uses:
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/mcp.Mcp`
     - `tasks/tasks-core.getConversationClaudeSessionId`
+  - Register: `mcpTool('transcript_paths')`
   - Routes: `GET /api/conversations/:id/transcript`
 - Shared:
   - Exports (values): `getConversationTranscript`

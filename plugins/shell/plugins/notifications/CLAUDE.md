@@ -423,10 +423,10 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
     - `ui/tokens/type-scale` ×8
     - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×2
-  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×18
     - `apps` ×13
-    - `tasks` ×10
+    - `tasks` ×11
     - `debug` ×5
     - `config_v2` ×4
     - `reports` ×4

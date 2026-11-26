@@ -53,6 +53,7 @@
     - `debug/read-set`
     - `primitives/launch/investigate`
     - `tasks`
+    - `tasks/decisions/ask`
     - `tasks/task-triage`
     - `upstream`
 

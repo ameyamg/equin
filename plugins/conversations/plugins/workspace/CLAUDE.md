@@ -129,10 +129,10 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `WorkspaceKindSchema`
     - `WorkspaceSpecSchema`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×10
+    - `tasks` ×4
     - `debug` ×3
-    - `tasks` ×3
     - `apps` ×2
     - `code-explorer`
     - `hints/ask`

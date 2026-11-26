@@ -205,6 +205,7 @@ memo degrades to a full chain re-read on every push.
     - `conversations/transcript-retention`
     - `conversations/usage`
     - `debug/read-set`
+    - `tasks/decisions/ask`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/chain-signature.ts`, `server/internal/find-transcript-path.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
 

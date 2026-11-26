@@ -51,6 +51,7 @@ own worktree). The consumer that turns a workspace into a file-peek target is
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/markdown-extensions`
     - `hints/ask`
+    - `tasks/decisions/ask`
     - `tasks/task-detail`
     - `tasks/task-source-url`
 

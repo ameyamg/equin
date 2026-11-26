@@ -366,7 +366,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×11
     - `apps` ×8
     - `conversations` ×4
@@ -375,6 +375,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `page/editor`
     - `search/find-in-surface`
     - `stats`
+    - `tasks/decisions/ask`
 - Exemptions:
   - Exempts itself from:
     - `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)

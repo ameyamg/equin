@@ -10,6 +10,7 @@
     - `config_v2/prompts`
     - `hints/ask`
     - `tasks/automations`
+    - `tasks/decisions/ask`
     - `tasks/supervisor-roles/pane`
     - `tasks/task-triage`
     - `upstream`

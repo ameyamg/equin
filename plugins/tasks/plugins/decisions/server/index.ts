@@ -23,10 +23,15 @@ import {
 } from "./internal/tools";
 
 export { _decisionExchanges, _decisions } from "./internal/tables";
-export { existingTaskIds, readTaskDecisionsInFull } from "./internal/full-read";
+export {
+  existingTaskIds,
+  readDecisionInFull,
+  readTaskDecisionsInFull,
+} from "./internal/full-read";
 export { handOverDecisions } from "./internal/hand-over";
 export {
   decisionAttrs,
+  decisionLines,
   optionLines,
   quotedLines,
 } from "./internal/full-render";

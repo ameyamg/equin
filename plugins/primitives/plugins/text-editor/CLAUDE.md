@@ -160,6 +160,7 @@ start matching across lines.
     - `primitives/text-editor/pasted-text`
     - `screenshot`
     - `tasks/decisions`
+    - `tasks/decisions/ask`
     - `tasks/supervisor-roles/pane`
     - `tasks/task-description`
 - Exemptions:

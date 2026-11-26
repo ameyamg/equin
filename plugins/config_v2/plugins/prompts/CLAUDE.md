@@ -72,6 +72,7 @@ fillPrompt(descriptor, values, key, vars); // pure: tests (descriptor.defaults),
     - `hints/ask`
     - `page/annotations/agent-access`
     - `tasks`
+    - `tasks/decisions/ask`
     - `tasks/orchestration/mandate`
     - `tasks/orchestration/watch`
     - `tasks/outcome-report`
