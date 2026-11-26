@@ -36,6 +36,12 @@ import {
 } from "./chrome-api";
 import { measureTab } from "./measure";
 import {
+  record,
+  startPopupTrace,
+  takePreviousTrace,
+  tracePopupLifecycle,
+} from "./popup-trace";
+import {
   OPTIONS_KEY,
   readRecorderOptions,
   readRecorderState,
@@ -57,9 +63,27 @@ function meta(name: string): string {
   return value;
 }
 
+/**
+ * The shell that is actually running: this build's digest while Chrome runs
+ * the manifest it was built with — the manifest names the whole shell's
+ * digest, so a build that changed any part of it (a permission, the service
+ * worker, the offscreen recorder) is a new manifest. Under an older one, not
+ * this shell: an unpacked extension reads the popup's files from disk on
+ * every open but the manifest and the worker only when (re)loaded, so the
+ * page, seeing this digest differ from the served one, asks Chrome to reload
+ * the extension (`web/internal/shell-update.tsx`), its usual self-update.
+ */
+const shellDigest = runsThisBuild()
+  ? SHELL_BUILD
+  : `${SHELL_BUILD}+stale-manifest`;
+
+// The trace first: a popup Chrome closes at once must still leave one.
+startPopupTrace(shellDigest);
+
 const origin = meta("equin-origin");
 
 const frame = document.createElement("iframe");
+tracePopupLifecycle(frame);
 frame.src = `${origin}/home/browser-extension?embed=1`;
 frame.title = "equin";
 document.body.append(frame);
@@ -77,24 +101,11 @@ window.addEventListener("message", (event) => {
   if (target === null || event.source !== target || event.origin !== origin)
     return;
   if (!BridgeHelloSchema.safeParse(event.data).success) return;
+  record("hello");
   const channel = new MessageChannel();
   channel.port1.onmessage = (m) => void serve(channel.port1, m.data);
   target.postMessage(BRIDGE_PORT, origin, [channel.port2]);
 });
-
-/**
- * The shell that is actually running: this build's digest while Chrome runs
- * the manifest it was built with — the manifest names the whole shell's
- * digest, so a build that changed any part of it (a permission, the service
- * worker, the offscreen recorder) is a new manifest. Under an older one, not
- * this shell: an unpacked extension reads the popup's files from disk on
- * every open but the manifest and the worker only when (re)loaded, so the
- * page, seeing this digest differ from the served one, asks Chrome to reload
- * the extension (`web/internal/shell-update.tsx`), its usual self-update.
- */
-const shellDigest = runsThisBuild()
-  ? SHELL_BUILD
-  : `${SHELL_BUILD}+stale-manifest`;
 
 /**
  * The tab the popup is about. Opened from the toolbar the popup is no tab, so
@@ -125,6 +136,7 @@ const hostInfo: ExtensionHostInfo = {
     close: true,
     // Only where the loaded manifest grants what the recorder uses.
     record: hasApis("storage", "scripting", "tabCapture", "offscreen"),
+    trace: true,
   },
 };
 
@@ -205,12 +217,15 @@ async function answer(call: BridgeCall, port: MessagePort): Promise<unknown> {
       });
       return null;
     case "close":
+      record("close-call");
       window.close();
       return null;
     case "setHeight":
+      record("set-height", String(call.params.px));
       frame.style.height = `${Math.min(call.params.px, MAX_HEIGHT)}px`;
       return null;
     case "reload":
+      record("reload-call");
       chrome.runtime.reload();
       return null;
     case "recorder":
@@ -244,6 +259,8 @@ async function answer(call: BridgeCall, port: MessagePort): Promise<unknown> {
         url: chrome.runtime.getURL("permissions.html"),
       });
       return null;
+    case "lastPopupTrace":
+      return takePreviousTrace();
   }
 }
 

@@ -10,6 +10,7 @@ import {
   type BridgeCall,
   type BridgeResult,
   type ExtensionHostInfo,
+  type PopupTrace,
   type RecorderCommand,
   type RecorderOptions,
   type RecorderSnapshot,
@@ -63,6 +64,9 @@ export type ExtensionHost =
       close: (() => Promise<void>) | null;
       setHeight: (px: number) => Promise<void>;
       reload: () => Promise<void>;
+      /** The previous popup's lifecycle trace, handed over once (`null`
+       *  when there is none); `null` itself on a shell from before it. */
+      lastPopupTrace: (() => Promise<PopupTrace | null>) | null;
       recorder: ExtensionRecorder | null;
     };
 
@@ -148,6 +152,10 @@ async function presentHost(
       : null,
     setHeight: (px) => done(call({ method: "setHeight", params: { px } })),
     reload: () => done(call({ method: "reload", params: {} })),
+    lastPopupTrace:
+      caps.trace === true
+        ? () => call({ method: "lastPopupTrace", params: {} })
+        : null,
     recorder:
       caps.record === true
         ? {

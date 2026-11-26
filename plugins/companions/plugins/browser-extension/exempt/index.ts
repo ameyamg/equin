@@ -29,4 +29,11 @@ export default [
     reason:
       "The extension shell may import only core barrels, so playMedia is out of reach; the offscreen recorder plays a muted capture stream it owns (for the thumbnail frame), awaited — a refusal fails the start loudly.",
   },
+  {
+    rule: "web-storage/no-raw-web-storage",
+    paths: ["browser-extension/popup-trace.ts"],
+    kind: "sanctioned",
+    reason:
+      "The popup's lifecycle trace, in the localStorage of the extension's own chrome-extension:// origin — no other plugin shares it, so the shared-origin quota the rule guards is not at stake — and the shell may import only core barrels, so defineStore is out of reach. Synchronous storage is the point: each event must land before Chrome closes the popup. Two keys, one capped trace each.",
+  },
 ] satisfies Exemptions;

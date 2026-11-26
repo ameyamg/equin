@@ -191,7 +191,9 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `wish`
 - Exemptions:
   - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)
-  - Exempted by: `primitives/dom/web-storage` (0 debt)
+  - Exempted by:
+    - `companions/browser-extension` (0 debt)
+    - `primitives/dom/web-storage` (0 debt)
 - Test helpers:
   - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
     - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.

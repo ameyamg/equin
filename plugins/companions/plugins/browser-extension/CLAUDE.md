@@ -37,6 +37,18 @@ the shell is served under `frame-ancestors chrome-extension://<EXTENSION_ID>`
 `useNativeHost()`. Absent (a plain tab, or framed by anything else): the route
 says it runs inside the extension.
 
+## The popup trace
+
+Chrome closes a popup on its own (focus loss, an extension reload) and the
+page inside dies before it can log why. So the shell traces each popup's
+lifecycle (`browser-extension/popup-trace.ts`: open, frame load, hello,
+heights, focus / blur with `hasFocus`, visibility, pagehide, errors, close
+and reload calls) into the extension origin's own `localStorage`,
+synchronously, and the next popup hands it to the page (`lastPopupTrace`,
+capability `trace`), which logs one line on the `browser-extension` channel
+(`web/internal/shell-update.tsx`). A popup that closed on open is explained
+by the line the next open writes. `e2e/popup-probe.ts` asserts the round trip.
+
 ## The tab recorder
 
 Record the tab the popup (or ⌥⇧R, the `toggle-recording` command) was opened
@@ -230,6 +242,8 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `PageRunAction`
     - `PointerSample`
     - `PointerTrack`
+    - `PopupTrace`
+    - `PopupTraceEvent`
     - `RecorderCommand`
     - `RecorderOptions`
     - `RecorderSnapshot`
@@ -274,6 +288,8 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `MicPermissionSchema`
     - `outputFor`
     - `PointerTrackSchema`
+    - `POPUP_TRACE_MAX_EVENTS`
+    - `PopupTraceSchema`
     - `presetFit`
     - `presetSizeText`
     - `RECORD_PRESETS`
@@ -313,6 +329,7 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `frame/no-raw-frame` — `browser-extension/offscreen.ts` (sanctioned)
     - `audio-context/no-raw-audio-context` — `browser-extension/offscreen.ts` (sanctioned)
     - `media-element/no-raw-media-play` — `browser-extension/offscreen.ts` (sanctioned)
+    - `web-storage/no-raw-web-storage` — `browser-extension/popup-trace.ts` (sanctioned)
 - Cli:
   - Exports (types): `ShellWrite`
   - Exports (values): `writeExtensionShell`

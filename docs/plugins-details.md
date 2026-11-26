@@ -17080,6 +17080,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageRunAction`
           - `PointerSample`
           - `PointerTrack`
+          - `PopupTrace`
+          - `PopupTraceEvent`
           - `RecorderCommand`
           - `RecorderOptions`
           - `RecorderSnapshot`
@@ -17124,6 +17126,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MicPermissionSchema`
           - `outputFor`
           - `PointerTrackSchema`
+          - `POPUP_TRACE_MAX_EVENTS`
+          - `PopupTraceSchema`
           - `presetFit`
           - `presetSizeText`
           - `RECORD_PRESETS`
@@ -17163,6 +17167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `frame/no-raw-frame` — `browser-extension/offscreen.ts` (sanctioned)
           - `audio-context/no-raw-audio-context` — `browser-extension/offscreen.ts` (sanctioned)
           - `media-element/no-raw-media-play` — `browser-extension/offscreen.ts` (sanctioned)
+          - `web-storage/no-raw-web-storage` — `browser-extension/popup-trace.ts` (sanctioned)
       - Cli:
         - Exports (types): `ShellWrite`
         - Exports (values): `writeExtensionShell`
@@ -56600,7 +56605,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `wish`
           - Exemptions:
             - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)
-            - Exempted by: `primitives/dom/web-storage` (0 debt)
+            - Exempted by:
+              - `companions/browser-extension` (0 debt)
+              - `primitives/dom/web-storage` (0 debt)
           - Test helpers:
             - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
               - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.

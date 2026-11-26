@@ -4,7 +4,11 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
-import { browserExtensionShell, recordExtensionOpen } from "../../core";
+import {
+  browserExtensionShell,
+  recordExtensionOpen,
+  type PopupTrace,
+} from "../../core";
 
 /** The last update this page asked the extension for (`<own>→<served>`). */
 const reloadAttemptStore = defineStore({
@@ -61,5 +65,33 @@ export function RecordOpen({ shellDigest }: { shellDigest: string }) {
     // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- a silent record for Settings: a lost one is redone by the next open, and the popup shows no toasts
     void fetchEndpoint(recordExtensionOpen, {}, { body: { shellDigest } });
   }, [fetchEndpoint, shellDigest]);
+  return null;
+}
+
+/** A popup's trace on one line: when it opened, on which shell, and each
+ *  event as `<ms> <kind> <detail>`. */
+export function popupTraceLine(trace: PopupTrace): string {
+  const events = trace.events
+    .map((e) => `${e.at} ${e.kind}${e.detail === "" ? "" : ` ${e.detail}`}`)
+    .join(" · ");
+  const last = trace.events.at(-1)?.at ?? 0;
+  return `previous popup opened ${new Date(trace.openedAt).toISOString()} on shell ${trace.shellDigest.slice(0, 12)}, last event at ${last} ms: ${events}${trace.dropped > 0 ? ` · (+${trace.dropped} more)` : ""}`;
+}
+
+/**
+ * Logs the previous popup's lifecycle trace (`browser-extension` channel):
+ * the shell kept it through the close, which the page inside could not log
+ * itself — so a popup Chrome closed at once is explained by the next open.
+ */
+export function PopupTraceLog({
+  lastPopupTrace,
+}: {
+  lastPopupTrace: () => Promise<PopupTrace | null>;
+}) {
+  useEffect(() => {
+    void lastPopupTrace().then((trace) => {
+      if (trace !== null) clientLog("browser-extension", popupTraceLine(trace));
+    });
+  }, [lastPopupTrace]);
   return null;
 }

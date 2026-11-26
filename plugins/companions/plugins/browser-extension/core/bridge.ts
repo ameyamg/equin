@@ -37,6 +37,9 @@ export const ExtensionCapabilitiesSchema = z.object({
    *  `requestMicrophone`). Absent on a
    *  shell from before the recorder. */
   record: z.boolean().optional(),
+  /** Hand over the previous popup's lifecycle trace (`lastPopupTrace`).
+   *  Absent on a shell from before the trace. */
+  trace: z.boolean().optional(),
 });
 export type ExtensionCapabilities = z.infer<typeof ExtensionCapabilitiesSchema>;
 
@@ -48,6 +51,49 @@ export const ExtensionHostInfoSchema = z.object({
   capabilities: ExtensionCapabilitiesSchema,
 });
 export type ExtensionHostInfo = z.infer<typeof ExtensionHostInfoSchema>;
+
+/**
+ * What happened to one popup, from its open to its close: each lifecycle
+ * event the shell saw (its window's focus, its visibility, its page hiding,
+ * an uncaught error, a bridge call that closes it), stamped in ms since the
+ * popup's script started. Chrome closes a popup on its own — on focus loss,
+ * on an extension reload — and leaves no trace of why, so the shell keeps
+ * this in its own storage as it goes, and the next popup hands it to the
+ * page to log (`lastPopupTrace`).
+ */
+export const PopupTraceEventSchema = z.object({
+  at: z.number().nonnegative(),
+  kind: z.enum([
+    "open",
+    "frame-load",
+    "hello",
+    "focus",
+    "blur",
+    "visibility",
+    "pagehide",
+    "error",
+    "rejection",
+    "close-call",
+    "reload-call",
+    "set-height",
+  ]),
+  detail: z.string(),
+});
+export type PopupTraceEvent = z.infer<typeof PopupTraceEventSchema>;
+
+/** At most this many events are kept per popup: the first ones (the open is
+ *  what the trace is for) and a last marker that more were dropped. */
+export const POPUP_TRACE_MAX_EVENTS = 64;
+
+export const PopupTraceSchema = z.object({
+  /** Epoch ms of the popup's start. */
+  openedAt: z.number(),
+  shellDigest: z.string(),
+  events: z.array(PopupTraceEventSchema).max(POPUP_TRACE_MAX_EVENTS),
+  /** Events not kept past the cap. */
+  dropped: z.number().int().nonnegative(),
+});
+export type PopupTrace = z.infer<typeof PopupTraceSchema>;
 
 /** The tab the popup is about. */
 export const ActiveTabSchema = z.object({
@@ -98,6 +144,8 @@ export const BridgeCallSchema = z.discriminatedUnion("method", [
     params: z.object({ preset: RecordPresetIdSchema }),
   }),
   z.object({ method: z.literal("requestMicrophone"), params: NoParams }),
+  // The previous popup's trace (capability `trace`), handed over once.
+  z.object({ method: z.literal("lastPopupTrace"), params: NoParams }),
 ]);
 export type BridgeCall = z.infer<typeof BridgeCallSchema>;
 export type BridgeMethod = BridgeCall["method"];
@@ -118,6 +166,7 @@ export const BRIDGE_RESULTS = {
   recorderCommand: z.null(),
   recorderApplySize: z.null(),
   requestMicrophone: z.null(),
+  lastPopupTrace: PopupTraceSchema.nullable(),
 } as const satisfies Record<BridgeMethod, z.ZodType>;
 export type BridgeResult<M extends BridgeMethod> = z.infer<
   (typeof BRIDGE_RESULTS)[M]

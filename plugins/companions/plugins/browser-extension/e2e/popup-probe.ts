@@ -9,7 +9,9 @@
  * Asserts the popup frames this checkout's deploy and its bridge answers
  * (hostInfo, then the tab), the Wish section renders, Open locally is offered
  * for the equin.ai tab, and running it moves that tab to the same page on the
- * local instance.
+ * local instance. Then closes the popup and opens a new one: the new one
+ * hands the closed popup's lifecycle trace to the page, which logs it on the
+ * `browser-extension` channel, ending in its pagehide.
  */
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -24,6 +26,7 @@ import {
   MAIN_WORKTREE_NAME,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
+import { worktreeDataDir } from "@plugins/infra/plugins/paths/core";
 import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
 import { launchPersistentChromium } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
@@ -134,6 +137,44 @@ try {
   await openLocally.click();
   await tab.waitForURL(LOCAL_PAGE, { timeout: TIMEOUT_MS });
   r.eq("Open locally moved the tab to the local page", tab.url(), LOCAL_PAGE);
+
+  // The popup's lifecycle trace survives its close: the next popup hands it
+  // to the page, which logs it.
+  const traceLog = join(
+    worktreeDataDir(targetNamespace()),
+    "logs",
+    "browser-extension.jsonl",
+  );
+  const closedAt = Date.now();
+  await popup.close();
+  const next = await context.newPage();
+  await next.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
+  let line: string | null = null;
+  const deadline = Date.now() + TIMEOUT_MS;
+  while (line === null && Date.now() < deadline) {
+    const text = await readFile(traceLog, "utf8").catch((err: unknown) => {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return "";
+      throw err;
+    });
+    line =
+      text
+        .split("\n")
+        .filter((l) => l !== "")
+        .map((l) => JSON.parse(l) as { t: number; line: string })
+        .filter(
+          (e) => e.t >= closedAt && e.line.startsWith("previous popup opened"),
+        )
+        .at(-1)?.line ?? null;
+    if (line === null) await next.waitForTimeout(500);
+  }
+  r.ok(
+    "the next popup logged the closed one's trace, from its open to its pagehide",
+    line !== null &&
+      line.includes(" open ") &&
+      line.includes(" hello") &&
+      line.includes(" pagehide "),
+    line ?? "(no trace line)",
+  );
 } finally {
   await context.close();
   await rm(profile, { recursive: true, force: true });

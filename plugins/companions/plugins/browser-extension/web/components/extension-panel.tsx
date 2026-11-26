@@ -3,7 +3,11 @@ import { CompanionPanel } from "@plugins/companions/plugins/panel/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { BrowserExtension } from "../slots";
 import { useExtensionHost, type ExtensionHost } from "../host";
-import { RecordOpen, ShellUpdate } from "../internal/shell-update";
+import {
+  PopupTraceLog,
+  RecordOpen,
+  ShellUpdate,
+} from "../internal/shell-update";
 import { NeedsExtension } from "./needs-extension";
 
 /**
@@ -39,6 +43,9 @@ function PresentPanel({
     >
       <ShellUpdate shellDigest={host.info.shellDigest} reload={reload} />
       <RecordOpen shellDigest={host.info.shellDigest} />
+      {host.lastPopupTrace !== null && (
+        <PopupTraceLog lastPopupTrace={host.lastPopupTrace} />
+      )}
     </CompanionPanel>
   );
 }
