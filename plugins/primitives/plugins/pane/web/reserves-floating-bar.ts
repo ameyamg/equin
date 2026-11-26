@@ -11,7 +11,10 @@ import { SurfaceChromeContext } from "./surface-chrome-context";
  * True when the pane's content owns the surface's top chrome (no app-shell
  * toolbar above it) and the pane is the surface's end (rightmost) column. The
  * one answer for every top bar a pane can show: its own header (`PaneChrome`)
- * or a bar its body draws in place of one (the DataView floating toolbar).
+ * or a bar its body draws in place of one (a DataView's toolbar band, in
+ * every arrangement). Under a bar that already is that edge
+ * (`TopChromeTaken`: a pane header's body, a DataView's surface) it is false,
+ * so only the first bar down the tree reserves.
  */
 export function useReservesFloatingBar(): boolean {
   const layoutCtx = useContext(PaneLayoutContext);

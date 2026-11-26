@@ -49,8 +49,8 @@ follow.
   - Exports (types): `TypeScaleTokenValues`
   - Exports (values): `typeScaleGroup`
 - Cross-plugin:
-  - Tokens used by: 244 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×65
+  - Tokens used by: 245 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×66
     - `conversations` ×39
     - `primitives` ×39
     - `debug` ×15
@@ -87,6 +87,7 @@ follow.
     - `apps/file-explorer/browser`
     - `apps/file-explorer/shell`
     - `apps/home/shell`
+    - `apps/mail/shell`
     - `apps/pages/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`

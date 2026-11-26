@@ -186,6 +186,19 @@ export interface DataViewToolbarProps {
    *  left edge, as a CSS length; default `"0px"` (no aside, or one in its own
    *  column beside the band). */
   asideInset?: string;
+  /**
+   * The band is the surface's top bar, under the global floating action bar
+   * (`useReservesFloatingBar`, read by the host above its own
+   * `TopChromeTaken`): it reserves the bar's room on its right — every
+   * arrangement, wide or folded — and names itself the bar's anchor, so the
+   * bar is centred on the band's line. Ignored when the arrangement declares
+   * `topBar: false`.
+   */
+  reservesFloatingBar?: boolean;
+  /** The body is drawn in a centred reading column (`DataViewProps.measure`),
+   *  which the band's row follows: the floating bar's room is then reserved
+   *  on both sides, so the row stays centred on the column. */
+  measured?: boolean;
 }
 
 /**
@@ -225,17 +238,19 @@ export function DataViewToolbar({
   searchTrailing,
   onSearchSubmit,
   asideInset = "0px",
+  reservesFloatingBar = false,
+  measured = false,
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, stage] = useElementSize(bandStage);
-  // The band is both the shell's measured sticky element and this toolbar's
-  // own width probe — one element, two refs — so the arrangement's layout box
-  // is its own and the measurement never depends on what an arrangement renders.
+  // The band is the shell's measured sticky element; this toolbar's width
+  // probe is the band's content box (`bandContent`, below) — the room the
+  // arrangement is actually drawn in, the floating bar's reserved room left
+  // out — and never depends on what an arrangement renders.
   const bandRef = useCallback(
     (node: HTMLElement | null) => {
-      measureRef(node);
       stickyRef?.(node);
     },
-    [measureRef, stickyRef],
+    [stickyRef],
   );
   const searchRef = useRef<HTMLInputElement>(null);
   const compact = density === "compact" || stage === "compact";
@@ -274,7 +289,23 @@ export function DataViewToolbar({
   // Built once and relocated into whichever branch renders — the toolbar's
   // "each control element is built once" discipline. The compact fold has forms
   // of its own; the wide layout builds each part in the arrangement's forms.
-  const { forms, component: Arrangement, spaceBelow, overlay } = arrangement;
+  const {
+    forms,
+    component: Arrangement,
+    spaceBelow,
+    overlay,
+    topBar,
+  } = arrangement;
+  // The band itself makes the floating bar's room — never the arrangement,
+  // which only draws its row inside it (a custom one used to forget, and the
+  // bar covered its end: Mail's Filter button).
+  const bandReserve =
+    reservesFloatingBar && topBar !== false
+      ? cn(
+          measured ? "px-floating-bar-room" : "pr-floating-bar-room",
+          "anchor-floating-bar-band",
+        )
+      : undefined;
   // An overlay arrangement floats the band in BOTH layouts, so the view's inset
   // (the band's measured height) means one thing whatever the width; the
   // compact fold then wears a card of its own (below) rather than floating as
@@ -511,6 +542,7 @@ export function DataViewToolbar({
   // Under a definite width (most hosts) neither changes anything.
   const bandContent = (
     <div
+      ref={measureRef}
       // eslint-disable-next-line layout/no-adhoc-layout -- the band's intrinsic-width policy (above): a one-track minmax(0, 1fr) grid, min-content 0 under any form; no layout primitive declares what a box contributes to its host's intrinsic size
       className="grid grid-cols-[minmax(0,1fr)]"
       style={narrow ? BAND_NARROW : undefined}
@@ -547,7 +579,7 @@ export function DataViewToolbar({
           decorative
           layer="nav"
           ref={bandRef}
-          className={hoverRevealGroup}
+          className={cn(hoverRevealGroup, bandReserve)}
           {...dataPart("dv.toolbar")}
         >
           {bandContent}
@@ -558,7 +590,7 @@ export function DataViewToolbar({
           mask
           layer="nav"
           ref={bandRef}
-          className={hoverRevealGroup}
+          className={cn(hoverRevealGroup, bandReserve)}
           {...dataPart("dv.toolbar")}
         >
           {bandContent}

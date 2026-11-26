@@ -283,8 +283,8 @@ to reconcile them; they never needed reconciling.
     - `textVariantClass`
     - `useTextVariantClass`
 - Cross-plugin:
-  - Uses tokens: 45 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/type-scale` ×37
+  - Uses tokens: 46 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×38
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family` ×2
   - Imported by: 453 plugins — full list in [REFERENCE.md](./REFERENCE.md)

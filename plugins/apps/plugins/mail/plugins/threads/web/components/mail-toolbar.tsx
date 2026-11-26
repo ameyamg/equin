@@ -19,14 +19,21 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
- * The list's reading column (the prototype's 860px): the DataView's
- * `measure`, so the rows are drawn in it; the toolbar centres the search box
- * on the same column through `--dv-measure`.
+ * The list's reading column: the DataView's `measure`, so the rows are drawn
+ * in it; the toolbar centres the search box on the same column through
+ * `--dv-measure`. The rows' bands pay the rail inside the column
+ * (`rail-follow`, the chrome pad here), so the column is the prototype's
+ * 860px day cards plus that rail on each side — and the toolbar's row pays
+ * the same rail ({@link MAIL_ROW}), so the search box is exactly as wide as
+ * the cards.
  */
-export const MAIL_MEASURE = "53.75rem";
+export const MAIL_MEASURE = "calc(53.75rem + 2 * var(--chrome-pad-x))";
 
 /** The toolbar's content on the body's column (`DataViewProps.measure`). */
 const MAIL_COLUMN = "mx-auto w-full max-w-(--dv-measure)";
+
+/** Inside the column, the rail the rows' bands pay. */
+const MAIL_ROW = "rail-follow";
 
 /**
  * Mail's toolbar: the view's search box over the list's column, the Filter
@@ -43,7 +50,7 @@ function MailToolbar({
   return (
     <Stack gap="none" className="px-xl rail-follow">
       <Line className="h-12">
-        <div className={MAIL_COLUMN}>
+        <div className={cn(MAIL_COLUMN, MAIL_ROW)}>
           <ControlSizeProvider size="sm">
             <Line className="@container/mail-search h-8.5 gap-smd rounded-lg bg-card pr-xs pl-md focus-within:ring-1 focus-within:ring-input">
               <Fill className="h-full" data-mail-search>
@@ -108,8 +115,10 @@ function ViewRules({ query }: { query: string }): ReactNode {
       </Line>
     );
   return (
-    <div className={cn(MAIL_COLUMN, "px-xs pb-xs")}>
-      <DataViewFilterChips actions={actions} />
+    <div className={cn(MAIL_COLUMN, MAIL_ROW, "pb-xs")}>
+      <div className="px-xs">
+        <DataViewFilterChips actions={actions} />
+      </div>
     </div>
   );
 }

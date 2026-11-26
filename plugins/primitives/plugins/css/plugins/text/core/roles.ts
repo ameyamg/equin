@@ -28,7 +28,7 @@ export const TYPE_ROLES = {
   heading: { weight: "semibold", compact: "subheading" },
   subheading: { weight: "semibold", compact: "body" },
   body: { weight: "normal", compact: "label" },
-  label: { weight: "medium", compact: "caption" },
+  label: { weight: "token", strong: true, compact: "caption" },
   // The heading of a group of rows in a list or sidebar (a quiet group header:
   // "Queue 14"). Its own role, not `label`, so a theme sizes its group heads
   // apart from the rows they head. Steps down to caption metrics at its weight.

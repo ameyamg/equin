@@ -55,6 +55,19 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   lineHeightSubheading: { default: "1.5rem", label: "Line height subheading" },
   lineHeightBody: { default: "1.5rem", label: "Line height body" },
   lineHeightLabel: { default: "1.25rem", label: "Line height label" },
+  // The label's weight is a token (default = the medium it always wore), with
+  // a strong step for the label that names where you are — the selected row
+  // of a list of places to go (`font-label-strong`). Default = the label's
+  // own weight, so a selected row reads by its fill alone; a theme that bolds
+  // its current place sets semibold.
+  fontWeightLabel: {
+    default: "var(--font-weight-medium)",
+    label: "Font weight label",
+  },
+  fontWeightLabelStrong: {
+    default: "var(--font-weight-label)",
+    label: "Font weight strong label",
+  },
   lineHeightCaption: { default: "1rem", label: "Line height caption" },
   // The group role: the heading of a group of rows in a list or sidebar (a
   // quiet group header, "Queue 14"). Semibold, frozen in its utility. Defaults

@@ -154,7 +154,7 @@ export function TreeRowChrome({
         // tokens (`treeRowH`, `treeRowGap`, `treeRowPadStart`, `treeIndent`),
         // so a theme owns a tree's rhythm.
         TREE_ROW_GROUP,
-        "min-h-tree-row gap-tree-row rounded-md px-xs py-xs text-body",
+        "min-h-tree-row gap-tree-row rounded-nav-row px-xs py-xs text-body",
         // A press-and-drag across rows is a row gesture (a selection, a
         // drag), never a text selection; an inline editor inside the row is a
         // form control and keeps its own.

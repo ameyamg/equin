@@ -26,7 +26,7 @@
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-size-label`
-    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-label`
     - `ui/tokens/type-scale --line-height-caption`
     - `ui/tokens/type-scale --line-height-label`
   - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)

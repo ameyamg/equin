@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
-import { useReservesFloatingBar } from "@plugins/primitives/plugins/pane/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
   ToolbarArrangement,
   ToolbarParts,
@@ -21,22 +19,15 @@ const GUTTER = "md";
 function FloatingToolbar(parts: ToolbarParts): ReactNode {
   const { asideInset } = parts;
 
-  // At the surface's top-right corner the band stands in for the pane header
-  // the global floating bar would otherwise sit in: it reserves the bar's safe
-  // area on the right and is the bar's anchor, so the bar is centred on this
-  // band's line, level with the pills — the pane header's own rule.
-  const reservesFloatingBar = useReservesFloatingBar();
+  // At the surface's top-right corner the band (the host's, around this row)
+  // reserves the global floating bar's room and anchors it, so the bar is
+  // centred on the band's line, level with the pills.
   const gutter = spaceLength(GUTTER);
   return (
     <PillsToolbar
       {...parts}
       overlay
-      className={cn(
-        "py-md",
-        reservesFloatingBar
-          ? "pr-floating-bar-pane anchor-floating-bar-band"
-          : "pr-md",
-      )}
+      className="py-md pr-md"
       // The left pill starts one gutter past the aside's floating card.
       style={{ paddingLeft: `calc(${asideInset} + ${gutter})` }}
     />

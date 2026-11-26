@@ -28,6 +28,7 @@ import { usePaneEntry, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
 import { useReservesFloatingBar } from "../reserves-floating-bar";
+import { TopChromeTaken } from "./top-chrome-taken";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
@@ -349,7 +350,13 @@ export function PaneChrome({
       <PaneEndControls pane={pane} expand={expand} />
     </Bar>
   );
-  const content = <ContentScope>{children}</ContentScope>;
+  // The header is the surface's top edge (when any bar is): no bar in the
+  // body reserves the floating bar's room or anchors it.
+  const content = (
+    <TopChromeTaken>
+      <ContentScope>{children}</ContentScope>
+    </TopChromeTaken>
+  );
   // The document region, filling the scroller (see DOCUMENT_REGION_FILL).
   const documentBody =
     documentRegion === undefined ? (

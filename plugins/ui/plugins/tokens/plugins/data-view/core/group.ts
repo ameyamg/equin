@@ -676,6 +676,13 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     values: ["always", "sorted", "hover"] as const,
   },
   // ── List rows ──────────────────────────────────────────────────────────
+  // A section's card (the list's `frame: "section"`, a raised card around
+  // each group's rows): its hairline. Default = the raised card's own border;
+  // a theme whose cards stand on their shadow alone sets `transparent`.
+  sectionCardBorder: {
+    default: "var(--border)",
+    label: "Section card border",
+  },
   // The gap between a list row's aligned trailing slots, and the ink of a
   // row's times — its `edge` and every instant (data-view's `wearsTimeInk`),
   // in a list row and a table column alike.

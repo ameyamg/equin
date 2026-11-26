@@ -13,6 +13,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { paneHeaderContributions } from "../header-slot";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
+import { useReservesFloatingBar } from "../reserves-floating-bar";
 import { Pane as PaneSlots } from "../slots";
 import { createTestSurfaceStore, TestSurface } from "../testing";
 
@@ -145,6 +146,40 @@ describe("PaneChrome inset", () => {
     const header = part(container, "pane.header");
     expect(header.className).toContain("pr-floating-bar-pane");
     expect(header.className).toContain("anchor-floating-bar-band");
+  });
+
+  it("takes the surface's top chrome for its body: no bar inside reserves the floating bar", () => {
+    function Probe() {
+      return (
+        <span data-testid="probe">{String(useReservesFloatingBar())}</span>
+      );
+    }
+    const { getByTestId } = render(
+      <TestSurface
+        store={store}
+        plugins={[panePlugin, hostPlugin]}
+        basePath={app.basePath}
+      >
+        {atTopRight(
+          <>
+            <span data-testid="outside">
+              {/* A bar beside the header (none above it) still would. */}
+              <Probe />
+            </span>
+            <PaneChrome pane={pane}>
+              <Probe />
+            </PaneChrome>
+          </>,
+        )}
+      </TestSurface>,
+    );
+    expect(getByTestId("outside").textContent).toBe("true");
+    const header = part(document.body, "pane.header");
+    expect(header.className).toContain("anchor-floating-bar-band");
+    const inBody = [...document.querySelectorAll('[data-testid="probe"]')].at(
+      -1,
+    );
+    expect(inBody?.textContent).toBe("false");
   });
 
   it('inset="document" opens the region inside the body scroller, never on it or the header', () => {

@@ -11,6 +11,10 @@ import {
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  TopChromeTaken,
+  useReservesFloatingBar,
+} from "@plugins/primitives/plugins/pane/web";
 import { useAppliedQuery } from "../internal/use-applied-query";
 import { setPrimarySort } from "../internal/sort-cycle";
 import { withFieldHidden } from "../internal/use-properties-controller";
@@ -470,6 +474,9 @@ function DataViewBodyInner<TRow>(
     chrome,
     sectionActivation,
   } = props;
+  // Whether the band is the surface's top bar (a headerless pane's first bar
+  // at the surface's end) — read above the surface's own TopChromeTaken.
+  const reservesFloatingBar = useReservesFloatingBar();
   // The surface's placement say, one stable object per change of its CONTENT:
   // a surface may spell `place` / `emphasis` inline, and a fresh literal per
   // render must not rebuild every view's placement (and every memoized row).
@@ -1673,12 +1680,18 @@ function DataViewBodyInner<TRow>(
   // any section is what those reads answer.
   // The `loadedFrame` around whatever the surface draws — on every path, so a
   // section hiding and showing again keeps one element tree (no remount).
-  const framed = (node: ReactNode): ReactNode =>
-    LoadedFrame === undefined ? (
-      node
-    ) : (
-      <LoadedFrame loaded={loadedWindow}>{node}</LoadedFrame>
-    );
+  // The surface's band is its top bar when nothing is above it (read here,
+  // outside the claim below); everything the surface draws — rows, aside, a
+  // nested DataView — sits under that bar, so none of it is one.
+  const framed = (node: ReactNode): ReactNode => (
+    <TopChromeTaken>
+      {LoadedFrame === undefined ? (
+        node
+      ) : (
+        <LoadedFrame loaded={loadedWindow}>{node}</LoadedFrame>
+      )}
+    </TopChromeTaken>
+  );
   if (sectionHidden) {
     return framed(
       <>
@@ -2186,6 +2199,8 @@ function DataViewBodyInner<TRow>(
                   ? {}
                   : { onSearchSubmit: search.onSubmit })}
                 asideInset={asideInset}
+                reservesFloatingBar={reservesFloatingBar}
+                measured={chrome.measure !== undefined}
               />
             )}
           >

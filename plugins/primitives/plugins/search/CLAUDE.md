@@ -67,7 +67,7 @@ emoji search) is drawn through `render={<Lib.Search />}`, keeping this chrome.
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-size-label`
-    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-label`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
     - `ui/tokens/type-scale --line-height-label`

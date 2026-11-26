@@ -134,6 +134,7 @@ export { useRenderSync } from "./use-render-sync";
 export { PaneLayoutContext } from "./maximize-context";
 export { SurfaceChromeContext } from "./surface-chrome-context";
 export { useReservesFloatingBar } from "./reserves-floating-bar";
+export { TopChromeTaken } from "./components/top-chrome-taken";
 export type { SurfaceChrome } from "./surface-chrome-context";
 
 export default {

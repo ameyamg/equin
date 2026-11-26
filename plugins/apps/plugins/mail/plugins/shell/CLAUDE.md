@@ -41,6 +41,7 @@ groups without counts), selected in `config/ui/theme-engine/@app/mail/theme.json
     - `ui/tokens/shadow --shadow-lg`
     - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shadow --shadow-sm`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/mail/reader`
     - `apps/mail/threads`

@@ -6421,6 +6421,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/sidebar-palette --sidebar-primary`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-label`
+              - `ui/tokens/type-scale --font-weight-label`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-label`
@@ -7570,6 +7571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-lg`
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shadow --shadow-sm`
+              - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/mail/reader`
               - `apps/mail/threads`
@@ -7640,11 +7642,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MAIL_INBOX_VIEW`
               - `MAIL_TUCKED_VIEWS`
           - Cross-plugin:
-            - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses tokens: 25 vars — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `ui/tokens/density` ×10
               - `ui/tokens/color-palette` ×8
-              - `ui/tokens/type-scale` ×3
-              - `ui/tokens/shape` ×2
+              - `ui/tokens/type-scale` ×4
+              - `ui/tokens/shape` ×3
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
@@ -7747,7 +7749,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-label`
-              - `ui/tokens/type-scale --font-weight-medium`
+              - `ui/tokens/type-scale --font-weight-label`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-label`
         - **`copy-id`** — Copy block ID button next to the title in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
@@ -53972,7 +53974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-size-label`
-              - `ui/tokens/type-scale --font-weight-medium`
+              - `ui/tokens/type-scale --font-weight-label`
               - `ui/tokens/type-scale --line-height-caption`
               - `ui/tokens/type-scale --line-height-label`
             - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
@@ -54682,8 +54684,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textVariantClass`
               - `useTextVariantClass`
           - Cross-plugin:
-            - Uses tokens: 45 vars — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `ui/tokens/type-scale` ×37
+            - Uses tokens: 46 vars — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
             - Imported by: 453 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
@@ -54997,12 +54999,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 390 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `ui/tokens/data-view` ×105
+            - Uses tokens: 394 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `ui/tokens/data-view` ×106
               - `ui/tokens/density` ×92
               - `ui/tokens/color-palette` ×62
-              - `ui/tokens/type-scale` ×42
-              - `ui/tokens/shape` ×15
+              - `ui/tokens/type-scale` ×44
+              - `ui/tokens/shape` ×16
               - `ui/tokens/overlay` ×13
               - `ui/tokens/shadow` ×12
               - `ui/tokens/sidebar-metrics` ×12
@@ -55012,9 +55014,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 493 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 492 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×116
-              - `primitives` ×116
+              - `primitives` ×115
               - `conversations` ×53
               - `page` ×26
               - `debug` ×25
@@ -55338,7 +55340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 149 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 151 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -55350,6 +55352,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text` ×3
           - `primitives/css/toggle-chip` ×3
           - `primitives/kept-state` ×3
+          - `primitives/pane` ×3
           - `config_v2` ×2
           - `primitives/collapsible` ×2
           - `primitives/css/fill` ×2
@@ -55390,7 +55393,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/link-gesture.activationProps`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.Kbd`
-          - `primitives/pane.usePaneViewParam`
           - `primitives/relative-time.useNow`
           - `primitives/tree.useRowControls`
           - `primitives/virtual-rows.offscreenSkipClass`
@@ -56013,15 +56015,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `primitives/data-view/custom-columns`
         - **`floating-toolbar`** — Floating toolbar arrangement for the data-view primitive: the band floats over the view (a full-bleed map under it) — the view tabs as a floating card top-left, past the surface's aside, and search, controls, actions and create as a floating card top-right.
           - Web:
-            - Uses:
-              - `primitives/css/ui-kit.cn`
-              - `primitives/data-view.PillsToolbar`
-              - `primitives/pane.useReservesFloatingBar`
+            - Uses: `primitives/data-view.PillsToolbar`
             - Exports (values): `floatingToolbar`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/density --document-pad-x`
-              - `ui/tokens/density --space-md`
+            - Uses tokens: `ui/tokens/density --space-md`
             - Imported by: `apps/places/places-map`
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
           - Web:
@@ -56143,6 +56140,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/data-view --list-slot-gap`
               - `ui/tokens/data-view --list-time-ink`
+              - `ui/tokens/data-view --section-card-border`
               - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --section-body-pad-top`
               - `ui/tokens/density --space-sm`
@@ -56291,13 +56289,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ViewTypeMeta`
             - Exports (values): `viewIdKind`
           - Cross-plugin:
-            - Uses tokens: 29 vars — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses tokens: 32 vars — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `ui/tokens/data-view` ×14
+              - `ui/tokens/type-scale` ×7
               - `ui/tokens/color-palette` ×5
-              - `ui/tokens/type-scale` ×5
               - `ui/tokens/density` ×2
+              - `ui/tokens/shape` ×2
               - `ui/tokens/sidebar-metrics` ×2
-              - `ui/tokens/shape --spacing`
             - Imported by:
               - `primitives/data-view`
               - `primitives/metrics`
@@ -59905,6 +59903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stripBasePath`
           - `SurfaceChromeContext`
           - `TabSetStoreContext`
+          - `TopChromeTaken`
           - `type`
           - `useAppNavBoundary`
           - `useCurrentPane`
@@ -59941,13 +59940,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 222 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 221 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×78
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
           - `tasks` ×13
-          - `primitives` ×9
+          - `primitives` ×8
           - `apps-core` ×7
           - `plugin-meta` ×6
           - `companions` ×4
@@ -60726,7 +60725,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-size-label`
-          - `ui/tokens/type-scale --font-weight-medium`
+          - `ui/tokens/type-scale --font-weight-label`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-label`
@@ -61891,11 +61890,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `subtreeIds`
           - `treeKeyMove`
       - Cross-plugin:
-        - Uses tokens: 23 vars — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses tokens: 24 vars — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `ui/tokens/density` ×9
           - `ui/tokens/color-palette` ×8
           - `ui/tokens/type-scale` ×4
-          - `ui/tokens/shape` ×2
+          - `ui/tokens/shape` ×3
         - Imported by:
           - `apps/mail/threads`
           - `apps/pages/page-tree`
@@ -68001,7 +68000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-size-label`
               - `ui/tokens/type-scale --font-size-title`
-              - `ui/tokens/type-scale --font-weight-medium`
+              - `ui/tokens/type-scale --font-weight-label`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --font-weight-semibold`
               - `ui/tokens/type-scale --line-height-caption`
@@ -72031,8 +72030,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 244 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×65
+            - Tokens used by: 245 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×66
               - `conversations` ×39
               - `primitives` ×39
               - `debug` ×15
@@ -72069,6 +72068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser`
               - `apps/file-explorer/shell`
               - `apps/home/shell`
+              - `apps/mail/shell`
               - `apps/pages/shell`
               - `apps/prototypes/shell`
               - `apps/sonata/shell`

@@ -111,6 +111,15 @@ export interface ToolbarArrangement {
    * width and a narrow pane never shows a transparent row of controls.
    */
   overlay?: true;
+  /**
+   * `false`: the band is never the surface's top bar, so it never reserves the
+   * global floating action bar's room nor anchors it — for an arrangement
+   * drawn under the page's own heading (the capsule). Absent: the band IS the
+   * top bar wherever nothing is above it (a headerless pane at the surface's
+   * end: `useReservesFloatingBar`), whatever the arrangement draws, so a
+   * custom arrangement cannot forget to make room for the bar.
+   */
+  topBar?: false;
 }
 
 /**

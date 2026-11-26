@@ -79,6 +79,8 @@ function renderToolbar(opts: {
   quickFilters?: readonly QuickFilter[];
   controls?: Partial<DataViewControlsContextValue>;
   searchable?: boolean;
+  reservesFloatingBar?: boolean;
+  measured?: boolean;
 }) {
   lastParts = null;
   surfaceShortcuts.length = 0;
@@ -106,6 +108,8 @@ function renderToolbar(opts: {
           arrangement={opts.arrangement}
           searchPlaceholder={opts.searchPlaceholder}
           asideInset={opts.asideInset}
+          reservesFloatingBar={opts.reservesFloatingBar}
+          measured={opts.measured}
         />
       </DataViewControlsProvider>
     </PluginProvider>,
@@ -441,5 +445,42 @@ describe("DataViewToolbar arrangements", () => {
       "dv.create",
     ])
       expect(container.querySelector(`[data-part="${part}"]`)).not.toBeNull();
+  });
+});
+
+describe("DataViewToolbar: the global floating bar's room", () => {
+  const band = (c: HTMLElement) =>
+    c.querySelector<HTMLElement>('[data-part~="dv.toolbar"]')!;
+
+  it("the band reserves it for any arrangement, not the arrangement's row", () => {
+    const { container } = renderToolbar({
+      arrangement: recordingArrangement,
+      reservesFloatingBar: true,
+    });
+    expect(band(container).className).toContain("pr-floating-bar-room");
+    expect(band(container).className).toContain("anchor-floating-bar-band");
+  });
+
+  it("on both sides when the row follows a centred reading column", () => {
+    const { container } = renderToolbar({
+      arrangement: recordingArrangement,
+      reservesFloatingBar: true,
+      measured: true,
+    });
+    expect(band(container).className).toContain("px-floating-bar-room");
+    expect(band(container).className).not.toContain("pr-floating-bar-room");
+  });
+
+  it("not when the band is not the surface's top bar", () => {
+    const { container } = renderToolbar({ arrangement: recordingArrangement });
+    expect(band(container).className).not.toContain("floating-bar");
+  });
+
+  it("not for an arrangement that is never the top bar (topBar: false)", () => {
+    const { container } = renderToolbar({
+      arrangement: { ...recordingArrangement, topBar: false },
+      reservesFloatingBar: true,
+    });
+    expect(band(container).className).not.toContain("floating-bar");
   });
 });

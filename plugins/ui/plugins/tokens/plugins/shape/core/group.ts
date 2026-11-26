@@ -52,6 +52,15 @@ export const shapeGroup = defineTokenGroup("shape", {
     default: "calc(var(--radius) * 0.8)",
     label: "Panel row radius",
   },
+  // A navigation row's corners — a row that takes you somewhere (a view in a
+  // view list, a node of a tree: `rounded-nav-row`), never a record's row.
+  // Default = the `rounded-md` step they always wore. A `border-radius`
+  // shorthand, so a theme can draw them as pills hung from the start edge
+  // (`0 1rem 1rem 0`: Mail's sidebar) while its records keep their corners.
+  radiusNavRow: {
+    default: "calc(var(--radius) * 0.8)",
+    label: "Navigation row radius",
+  },
   pillPadExtra: { default: "0rem", label: "Pill extra padding" },
   // A record's cover — the DataView gallery card (the cover IS the card) and
   // the list's leading thumbnail (`rounded-cover`). Default = the raised

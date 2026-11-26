@@ -135,6 +135,7 @@ export function ViewList<T extends ViewTypeMeta>({
       </SortableList>
       {create ? (
         <Row
+          className="rounded-nav-row"
           icon={<Icon icon={addIcon} className="text-muted-foreground" />}
           onClick={create.onCreate}
         >
@@ -170,6 +171,8 @@ function ViewListRow<T extends ViewTypeMeta>(props: {
   return (
     <Row
       size="sm"
+      // A view is a place to go: a navigation row's corners.
+      className="rounded-nav-row"
       selected={active}
       data-view-id={instance.instance.id}
       icon={<ViewGlyph view={instance.instance} />}
@@ -211,7 +214,12 @@ function ViewListRow<T extends ViewTypeMeta>(props: {
         </Fill>
       ) : (
         <Fill>
-          <Text variant="label">{name}</Text>
+          <Text
+            variant="label"
+            className={active ? "font-label-strong" : undefined}
+          >
+            {name}
+          </Text>
         </Fill>
       )}
       {dirty ? (

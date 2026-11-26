@@ -4,6 +4,7 @@ import { sidebarPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-
 import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
 import { shadowGroup } from "@plugins/ui/plugins/tokens/plugins/shadow/core";
+import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 
 // The approved Mail prototype's dark palette (proto-1795656296-rtsmk5 `:root`).
@@ -71,7 +72,15 @@ const fontFamily = fontFamilyGroup.fragment(
   }),
 );
 
-const shape = shapeGroup.fragment(both({ radius: "0.625rem" }));
+// The sidebar's rows are pills hung from its left edge (`.nav`: 0 16px 16px 0).
+const shape = shapeGroup.fragment(
+  both({ radius: "0.625rem", radiusNavRow: "0 1rem 1rem 0" }),
+);
+
+/** The current view's name is semibold (`.nav.on`). */
+const typeScale = typeScaleGroup.fragment(
+  both({ fontWeightLabelStrong: "var(--font-weight-semibold)" }),
+);
 
 const shadow = shadowGroup.fragment(
   both({
@@ -83,7 +92,10 @@ const shadow = shadowGroup.fragment(
 );
 
 /** The day groups name the day alone: a tally per day is noise in a mail list. */
-const dataView = dataViewGroup.fragment(both({ groupCount: "hidden" }));
+// The day cards stand on their shadow alone (`.card`: no border).
+const dataView = dataViewGroup.fragment(
+  both({ groupCount: "hidden", sectionCardBorder: "transparent" }),
+);
 
 /**
  * The Mail app's own theme (dark only): the prototype's slate ground, raised
@@ -99,6 +111,7 @@ export const mailTheme = defineTheme({
     sidebarPalette,
     fontFamily,
     shape,
+    typeScale,
     shadow,
     dataView,
   ],

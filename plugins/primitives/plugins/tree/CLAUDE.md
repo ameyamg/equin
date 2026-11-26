@@ -411,11 +411,11 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `subtreeIds`
     - `treeKeyMove`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×9
     - `ui/tokens/color-palette` ×8
     - `ui/tokens/type-scale` ×4
-    - `ui/tokens/shape` ×2
+    - `ui/tokens/shape` ×3
   - Imported by:
     - `apps/mail/threads`
     - `apps/pages/page-tree`

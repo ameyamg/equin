@@ -12,8 +12,11 @@
 // so no anchor) through the app launcher and checks the bar is still painted
 // and hit-testable at the corner. Last, opens the app in a desktop window and
 // checks the window's header (inside a `floating-bar-boundary`) reserves no
-// safe area. Writes `<out>-docked.png`, `<out>-solo.png`,
-// `<out>-solo-tall.png`, `<out>-solo-home.png`, `<out>-desktop.png`.
+// safe area. Before that, opens Mail (a headerless pane whose DataView draws
+// the top bar through its own toolbar arrangement) at 1000px and checks every
+// toolbar control is hit-testable beside the bar. Writes `<out>-docked.png`,
+// `<out>-solo.png`, `<out>-solo-tall.png`, `<out>-solo-home.png`,
+// `<out>-solo-mail.png`, `<out>-desktop.png`.
 //
 // Usage:
 //   ./equin run plugins/shell/plugins/global-action-bar/e2e/solo-safe-area.ts \
@@ -206,6 +209,49 @@ await withBrowser(async (h) => {
     JSON.stringify(homeHit),
   );
   await snap(page, out, "solo-home");
+
+  // A headerless pane whose body draws the top bar (Mail: a DataView with a
+  // custom toolbar arrangement): the DataView's band reserves the bar's room
+  // whatever the arrangement draws, so at a width where the row reaches the
+  // corner no toolbar control sits under the collapsed bar.
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.goto(pageUrl("/mail"));
+  await page
+    .locator('[data-part~="dv.toolbar"] button')
+    .first()
+    .waitFor({ timeout: 60_000 });
+  await page.waitForTimeout(1000);
+  const dvBand = await page.evaluate(() => {
+    const band = document.querySelector<HTMLElement>(
+      '[data-part~="dv.toolbar"]',
+    );
+    const covered = [...(band?.querySelectorAll("button") ?? [])]
+      .filter((b) => b.getBoundingClientRect().width > 0)
+      .filter((b) => {
+        const r = b.getBoundingClientRect();
+        const at = document.elementFromPoint(
+          r.left + r.width / 2,
+          r.top + r.height / 2,
+        );
+        return at == null || !b.contains(at);
+      })
+      .map((b) => b.getAttribute("aria-label") ?? b.textContent);
+    return {
+      anchors: band?.classList.contains("anchor-floating-bar-band") ?? false,
+      covered,
+    };
+  });
+  t.ok(
+    "mail: the DataView band is the bar's anchor",
+    dvBand.anchors,
+    JSON.stringify(dvBand),
+  );
+  t.ok(
+    "mail: no toolbar control under the collapsed bar",
+    dvBand.covered.length === 0,
+    JSON.stringify(dvBand),
+  );
+  await snap(page, out, "solo-mail");
 
   // A desktop window's content is a `floating-bar-boundary`: the header inside
   // it is not at the viewport's corner, so the bar's reservation (still

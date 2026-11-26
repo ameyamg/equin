@@ -76,6 +76,9 @@ export const capsuleToolbar: ToolbarArrangement = {
   id: "capsule",
   forms: { search: "bare", controls: "round", creators: "round" },
   component: CapsuleToolbar,
+  // A centred pill under the page's own heading, never at the surface's top
+  // edge at rest: it is not the bar the global floating bar sits in.
+  topBar: false,
   // The pill floats apart from what it filters. The mock puts its first tile's
   // top edge ~70px below the pill: this band's own 8px bottom (`py-sm`) + 50px
   // + the icons view's 12px tile padding. Above the spacing ramp's top step, so

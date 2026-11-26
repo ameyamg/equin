@@ -327,13 +327,13 @@ contributions each surface passes in, and per-entry plugin id
     - `ViewTypeMeta`
   - Exports (values): `viewIdKind`
 - Cross-plugin:
-  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 32 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×14
+    - `ui/tokens/type-scale` ×7
     - `ui/tokens/color-palette` ×5
-    - `ui/tokens/type-scale` ×5
     - `ui/tokens/density` ×2
+    - `ui/tokens/shape` ×2
     - `ui/tokens/sidebar-metrics` ×2
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `primitives/data-view`
     - `primitives/metrics`

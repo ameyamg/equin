@@ -39,7 +39,7 @@ type TooltipTypeRole =
  * own utility — one entry per role of the ladder (tsc demands each; the
  * closed-role-ladder check pins the list to `TYPE_ROLES`). Sizes, leading and weights stay the
  * type-scale group's; the token only chooses among them. Strong exists only for
- * the roles with a strong step (`control`, `tag`). A browser without style
+ * the roles with a strong step (`label`, `control`, `tag`). A browser without style
  * queries draws the base `text-caption`.
  */
 const TOOLTIP_ROLE_CLASS: Record<TooltipTypeRole, string> = {
@@ -48,7 +48,8 @@ const TOOLTIP_ROLE_CLASS: Record<TooltipTypeRole, string> = {
   heading: "[@container_style(--tooltip-role:heading)]:text-heading",
   subheading: "[@container_style(--tooltip-role:subheading)]:text-subheading",
   body: "[@container_style(--tooltip-role:body)]:text-body",
-  label: "[@container_style(--tooltip-role:label)]:text-label",
+  label:
+    "[@container_style(--tooltip-role:label)]:text-label [@container_style(--tooltip-role:label)_and_style(--tooltip-emphasis:strong)]:font-label-strong",
   group: "[@container_style(--tooltip-role:group)]:text-group",
   caption: "[@container_style(--tooltip-role:caption)]:text-caption",
   control:

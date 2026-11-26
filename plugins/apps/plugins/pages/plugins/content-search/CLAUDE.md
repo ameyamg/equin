@@ -54,7 +54,7 @@
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-label`
-    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-label`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-label`
 

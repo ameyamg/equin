@@ -12,6 +12,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -134,6 +135,7 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
           />
           <Row
             size="sm"
+            className="rounded-nav-row"
             icon={<Icon icon={more ? collapseIcon : expandIcon} />}
             onClick={() => setMore((m) => !m)}
           >
@@ -280,7 +282,13 @@ function LabelTree({ mailboxes }: { mailboxes: readonly Mailbox[] }) {
             }
           >
             <Fill>
-              <Text variant="label" className="truncate">
+              <Text
+                variant="label"
+                className={cn(
+                  "truncate",
+                  viewId === activeViewId && "font-label-strong",
+                )}
+              >
                 {label.name}
               </Text>
             </Fill>

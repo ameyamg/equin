@@ -881,7 +881,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     frame === "section" ? (
       <Surface
         level="raised"
-        className={clipClasses({ axis: "both", fill: false })}
+        className={cn(
+          clipClasses({ axis: "both", fill: false }),
+          // The card's hairline is the theme's (`sectionCardBorder`).
+          "border-section-card-border",
+        )}
       >
         {rows}
       </Surface>

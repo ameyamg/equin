@@ -89,7 +89,7 @@
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-size-label`
     - `ui/tokens/type-scale --font-size-title`
-    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-label`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`
     - `ui/tokens/type-scale --line-height-caption`

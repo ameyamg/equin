@@ -372,6 +372,7 @@ conditional hook.
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/data-view --list-slot-gap`
     - `ui/tokens/data-view --list-time-ink`
+    - `ui/tokens/data-view --section-card-border`
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --section-body-pad-top`
     - `ui/tokens/density --space-sm`
