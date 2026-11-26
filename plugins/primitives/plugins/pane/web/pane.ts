@@ -3163,9 +3163,15 @@ export function usePaneEntry(internal: PaneInternal): MatchEntry | null {
 }
 
 /**
- * What the enclosing pane instance shows, as a string that survives a reload:
- * the surface (tab) it is drawn in, the pane, its address and its on-screen
- * views. Two panes showing the same page in two tabs get two keys. `undefined`
+ * The enclosing pane instance and what it shows, as a string that survives a
+ * reload: the surface (tab) it is drawn in, the instance's uuid (kept across a
+ * reload, back/forward and a persisted tab — the same uuid its `KeepScope` is
+ * named by), the pane, its address and its on-screen views. Two instances
+ * never share a key: not two tabs showing one page, nor one chain holding the
+ * same pane at the same address twice (A | B | A — report-1795658217-pvolrz,
+ * where an address-only key made both A's claim one kept-scroll key). The
+ * address and views still take part so a view switch in place
+ * (`useSetParams`, same uuid) keeps each view's offset apart. `undefined`
  * outside a pane instance (an exhibit, a test) — there is nothing to key on.
  */
 export function usePaneInstanceKey(): string | undefined {
@@ -3179,10 +3185,9 @@ export function usePaneInstanceKey(): string | undefined {
   if (!entry) return undefined;
   const sorted = (rec: Readonly<Record<string, string>>) =>
     Object.entries(rec).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return `${surfaceId}:${entry.pane.id}:${JSON.stringify([
-    sorted(entry.fullParams),
-    sorted(entry.views),
-  ])}`;
+  return `${surfaceId}:${paneKeepSegment(entry.uuid)}:${entry.pane.id}:${JSON.stringify(
+    [sorted(entry.fullParams), sorted(entry.views)],
+  )}`;
 }
 
 export function useCurrentPane(): PaneInternal | null {

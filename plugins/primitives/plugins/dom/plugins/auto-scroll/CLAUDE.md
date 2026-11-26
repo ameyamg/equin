@@ -182,7 +182,7 @@ The browser restores only the document's own scroll, and gives up before async
 content arrives; every pane body is an inner scroller, so a reload opened every
 pane at its top. The hook saves the offset (session storage, trailing debounce,
 flushed on `pagehide` since a reload unmounts nothing) under a caller key that
-survives a reload (`PaneScroll` keys by tab, pane, address and views). After a
+survives a reload (`PaneScroll` keys by tab, pane instance — its uuid, so one pane opened twice in a chain gets two keys — address and views). After a
 reload it puts the offset back as content arrives — every DOM change under the
 scroller re-applies it, clamped, so a windowed list reaching its end loads more
 and the restore carries on — until the reader takes over (wheel, touch,

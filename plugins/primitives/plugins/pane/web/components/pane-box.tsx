@@ -64,7 +64,7 @@ interface PaneBoxProps {
  * this is a no-op repaint.
  *
  * It also opens the pane instance's scroll keep scope (auto-scroll's
- * `KeepScrollScope`, keyed by tab, pane, address and views), so any scroller
+ * `KeepScrollScope`, keyed by tab, pane instance, address and views), so any scroller
  * of the pane's body — `PaneScroll`, or a `<Scroll keep="…">` filling a body
  * that never renders one — keeps its offset across a reload.
  *

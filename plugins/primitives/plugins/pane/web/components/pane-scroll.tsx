@@ -20,7 +20,7 @@ export type PaneScrollProps = Omit<ScrollProps, "axis" | "fill" | "keep">;
  * `VirtualRows.findScrollParent` binding to a predictable viewport.
  *
  * It opens the pane instance's keep scope (auto-scroll's `KeepScrollScope`,
- * keyed by tab, pane, address and views) and keeps its own offset in it across
+ * keyed by tab, pane instance, address and views) and keeps its own offset in it across
  * a page reload, so a reloaded page opens where the reader left it. A body that
  * scrolls in a box of its own instead (a file preview, a code listing) keeps
  * that box by naming it: `<Scroll keep="…">` under this scope.

@@ -3,7 +3,7 @@ import { useScrollAcrossReload } from "./use-scroll-across-reload";
 
 /**
  * The place the scrollers under it belong to, stable across a reload — a pane
- * instance (its tab, pane, address and views). `undefined` keeps nothing.
+ * instance (its tab, the instance uuid, pane, address and views). `undefined` keeps nothing.
  */
 const KeepScrollScopeContext = createContext<string | undefined>(undefined);
 
