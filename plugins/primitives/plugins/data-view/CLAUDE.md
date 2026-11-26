@@ -1239,6 +1239,13 @@ interface ToolbarParts {
   unclickable in solo). Everything the surface draws (rows, aside, a nested
   DataView) is under `TopChromeTaken`, so only the first bar down the tree
   reserves. An arrangement that is never the top bar says `topBar: false`.
+- **The bar sits on the band's line.** Its fixed band spans the anchor's top
+  and height and centres the bar there, so an arrangement drawn on several
+  lines (Mail: the search line, then the view's rule chips) wraps its bar line
+  in `ToolbarLine` (web barrel): while the band reserves, that line names
+  itself the anchor too and wins (the innermost in tree order), so a row
+  growing above or under it never moves the bar. Outside a reserving band it
+  anchors nothing.
 - **`switcher`**: render exactly one of `strip` / `chip` (both `null` when pinned) —
   it is the only way to manage views.
 - **`search` is always rendered** (a non-empty query must stay visible); placeholder
@@ -2871,6 +2878,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `rowToneClass`
     - `SectionBody`
     - `SubtitleRun`
+    - `ToolbarLine`
     - `treeAliases`
     - `UNGROUPED_FOLD_KEY`
     - `useDataViewControls`

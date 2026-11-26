@@ -241,7 +241,7 @@ function labelViewsKey(mailboxes: readonly Mailbox[]): string {
 }
 
 /** Each user label's chip, once per read: its `/` path and its colour. */
-function labelChips(
+export function labelChips(
   all: readonly Mailbox[],
 ): ReadonlyMap<string, LabelChipInfo> {
   return new Map(

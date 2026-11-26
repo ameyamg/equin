@@ -167,6 +167,7 @@ export { useGroupingClock } from "./internal/use-grouping-clock";
 export { GroupedSections } from "./internal/grouped-sections";
 export { DataViewGroupHeader } from "./internal/group-header";
 export { PillsToolbar } from "./components/toolbar/pills-toolbar";
+export { ToolbarLine } from "./components/toolbar/toolbar-line";
 export { NestedSectionIndent } from "./internal/nested-section-indent";
 export { SectionBody } from "./components/section-body";
 export { useGridPhase } from "./internal/grid-phase";

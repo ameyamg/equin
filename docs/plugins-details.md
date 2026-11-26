@@ -7297,8 +7297,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `IdKinds.Kind` "mdraft"
               - `ConfigV2.WebRegister` "mail-compose"
-            - Uses: 26 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
-              - `primitives/css/ui-kit` ×4
+            - Uses: 27 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
+              - `primitives/css/ui-kit` ×5
               - `primitives/css/fill` ×2
               - `primitives/css/spacing` ×2
               - `config_v2.ConfigV2`
@@ -7429,6 +7429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --border`
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --input`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/density --space-2xs`
@@ -7439,6 +7440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius-control`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-label-strong`
+              - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/mail/shell`
               - `apps/mail/threads`
@@ -7737,6 +7739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-lg`
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shadow --shadow-sm`
+              - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/mail/compose`
@@ -7756,8 +7759,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 52 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
-              - `primitives/data-view` ×8
+            - Uses: 54 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+              - `primitives/data-view` ×9
               - `network/live/live-state` ×5
               - `primitives/css/ui-kit` ×5
               - `primitives/pane` ×4
@@ -7771,6 +7774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/reader.ThreadReader`
               - `network/live/optimistic-mutation.writeRows`
               - `primitives/css/center.Center`
+              - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/row.Row`
@@ -7809,11 +7813,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MAIL_INBOX_VIEW`
               - `MAIL_TUCKED_VIEWS`
           - Cross-plugin:
-            - Uses tokens: 25 vars — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses tokens: 30 vars — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `ui/tokens/density` ×10
               - `ui/tokens/color-palette` ×8
-              - `ui/tokens/type-scale` ×4
+              - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×3
+              - `ui/tokens/sidebar-metrics --sidebar-row-pad-x`
+              - `ui/tokens/sidebar-palette --sidebar-foreground`
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
@@ -53682,8 +53688,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×27
+            - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×28
               - `debug` ×12
               - `conversations` ×7
               - `primitives` ×7
@@ -54457,11 +54463,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Uses tokens: 30 vars — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
-              - `ui/tokens/type-scale` ×11
+            - Uses tokens: 37 vars — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+              - `ui/tokens/type-scale` ×14
               - `ui/tokens/data-view` ×7
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/density` ×4
+              - `ui/tokens/sidebar-metrics` ×4
               - `ui/tokens/shape` ×2
             - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×15
@@ -55780,6 +55787,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rowToneClass`
           - `SectionBody`
           - `SubtitleRun`
+          - `ToolbarLine`
           - `treeAliases`
           - `UNGROUPED_FOLD_KEY`
           - `useDataViewControls`
@@ -71522,6 +71530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view/view-core`
             - Imported by:
               - `apps/mail/shell`
+              - `apps/mail/threads`
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `primitives/data-table`
@@ -71602,6 +71611,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser`
               - `apps/file-explorer/shell`
               - `apps/home/new-app`
+              - `apps/mail/shell`
               - `apps/pages/shell`
               - `apps/prototypes/canvas`
               - `apps/prototypes/shell`
@@ -72124,9 +72134,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Tokens used by:
               - `apps-core/app-launcher`
               - `apps/file-explorer/places`
+              - `apps/mail/threads`
               - `apps/pages/shell`
               - `conversations/conversation-ui/item`
               - `primitives/app-shell`
+              - `primitives/css/row`
               - `primitives/css/ui-kit`
               - `primitives/data-view/view-core`
               - `ui/sidebar-framing/floating`
@@ -72135,6 +72147,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/agent-manager/shell`
               - `apps/file-explorer/shell`
+              - `apps/mail/shell`
               - `apps/pages/shell`
               - `ui/tokens/sidebar-metrics/customizer`
           - Plugins:
@@ -72166,6 +72179,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-launcher`
               - `apps/browser/shell`
               - `apps/file-explorer/places`
+              - `apps/mail/threads`
               - `conversations/conversations-view/data-view`
               - `primitives/app-shell`
               - `primitives/css/theme-boundary`

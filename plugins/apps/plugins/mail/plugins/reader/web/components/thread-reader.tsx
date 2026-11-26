@@ -64,9 +64,12 @@ export function ThreadReader({
   threadId,
   onClose,
   tools,
+  labels,
   footer,
 }: {
   threadId: string;
+  /** The thread's labels, drawn under its subject (absent: none). */
+  labels?: ReactNode;
   /** Drawn under the thread once it is read (the reply box), given the thread. */
   footer?: (thread: ReaderThread) => ReactNode;
   /** The thread's tools (its triage), drawn at the bar's end (absent: none). */
@@ -86,7 +89,7 @@ export function ThreadReader({
     body = <ReadFailure error={read.error} />;
   } else {
     // Keyed by thread: another thread starts with its own folds.
-    body = <ThreadBody key={read.data.id} thread={read.data} />;
+    body = <ThreadBody key={read.data.id} thread={read.data} labels={labels} />;
   }
   return (
     <Stack gap="none" className="h-full min-h-0 bg-card">
@@ -128,7 +131,13 @@ function ReadFailure({ error }: { error: Error }): ReactNode {
   );
 }
 
-function ThreadBody({ thread }: { thread: ReaderThread }): ReactNode {
+function ThreadBody({
+  thread,
+  labels,
+}: {
+  thread: ReaderThread;
+  labels: ReactNode;
+}): ReactNode {
   const now = useMemo(() => new Date(), []);
   const last = thread.messages.at(-1)?.id;
   // The last message and the unread ones are open; a click opens another.
@@ -148,7 +157,8 @@ function ThreadBody({ thread }: { thread: ReaderThread }): ReactNode {
       return next;
     });
   return (
-    <Scroll data-mail-thread={thread.id}>
+    // The thread fills the pane, so the reply box sits at its foot.
+    <Scroll fill data-mail-thread={thread.id}>
       <Inset x="xl" t="lg" b="xl">
         <Stack gap="lg">
           <Cluster gap="sm">
@@ -165,6 +175,7 @@ function ThreadBody({ thread }: { thread: ReaderThread }): ReactNode {
               </Text>
             ) : null}
           </Cluster>
+          {labels}
           <Stack gap="none">
             {thread.messages.map((m) =>
               open.has(m.id) ? (

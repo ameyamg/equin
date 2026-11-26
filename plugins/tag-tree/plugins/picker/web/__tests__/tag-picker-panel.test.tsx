@@ -134,6 +134,18 @@ describe("the tree (no query)", () => {
     renderPanel({ counts: new Map([["app", 7]]) });
     expect(rowOf("app").textContent).toContain("7");
   });
+
+  it("countsOf=own: an open tag shows its own, a folded one its subtree's total", () => {
+    const counts = new Map([
+      ["app", 4],
+      ["web", 1],
+      ["home", 2],
+    ]);
+    renderPanel({ counts, countsOf: "own", defaultExpanded: "roots" });
+    // app is open: its own 4. website is folded: 1 + homepage's 2.
+    expect(rowOf("app").textContent).toContain("4");
+    expect(rowOf("website").textContent).toContain("3");
+  });
 });
 
 describe("a query", () => {

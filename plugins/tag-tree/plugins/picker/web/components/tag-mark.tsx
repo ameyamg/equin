@@ -9,6 +9,9 @@ export interface TagMarkProps {
   /** The whole tree: a tag without a colour wears its nearest ancestor's. */
   tags: readonly TagNode[];
   className?: string;
+  /** One full dot of the colour the tag wears, the muted ink when none
+   *  reaches it (`TagPickerOptions.marks: "flat"`). */
+  flat?: boolean;
 }
 
 /**
@@ -20,7 +23,7 @@ export interface TagMarkProps {
  * The colour is user data (a stored hex), so it is the one thing painted
  * through `style`.
  */
-export function TagMark({ tag, tags, className }: TagMarkProps) {
+export function TagMark({ tag, tags, className, flat = false }: TagMarkProps) {
   const color = tagColor(tag.id, tags);
   if (tag.icon !== null) {
     return (
@@ -33,6 +36,19 @@ export function TagMark({ tag, tags, className }: TagMarkProps) {
           className,
         )}
         style={color === null ? undefined : { color }}
+      />
+    );
+  }
+  if (flat) {
+    return (
+      <span
+        aria-hidden
+        className={cn(
+          "inline-block size-2.5 rounded-full",
+          color === null && "bg-muted-foreground",
+          className,
+        )}
+        style={color === null ? undefined : { backgroundColor: color }}
       />
     );
   }

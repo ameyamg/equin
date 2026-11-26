@@ -91,6 +91,7 @@
     - `apps/file-explorer/browser`
     - `apps/file-explorer/shell`
     - `apps/home/new-app`
+    - `apps/mail/shell`
     - `apps/pages/shell`
     - `apps/prototypes/canvas`
     - `apps/prototypes/shell`

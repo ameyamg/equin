@@ -57,6 +57,11 @@ export interface ViewListProps<T extends ViewTypeMeta> {
   renaming?: { id: string | null; set: (id: string | null) => void };
   /** A trailing "+ {label}" row. */
   create?: { label: string; onCreate: () => void };
+  /**
+   * What the rows are: `menu` (default) — picks in a popover (`Row` sm);
+   * `nav` — a sidebar's places to go (`Row` nav: the sidebar metrics).
+   */
+  form?: "menu" | "nav";
 }
 
 /**
@@ -80,6 +85,7 @@ export function ViewList<T extends ViewTypeMeta>({
   editable = true,
   renaming: controlledRenaming,
   create,
+  form = "menu",
 }: ViewListProps<T>): ReactNode {
   const [ownRenamingId, setOwnRenamingId] = useState<string | null>(null);
   const renaming = controlledRenaming ?? {
@@ -108,6 +114,7 @@ export function ViewList<T extends ViewTypeMeta>({
               <SortableItem key={id} id={id} disabled={isHome || isRenaming}>
                 {() => (
                   <ViewListRow
+                    form={form}
                     instance={r}
                     active={id === activeId}
                     count={countFor?.(id)}
@@ -135,6 +142,7 @@ export function ViewList<T extends ViewTypeMeta>({
       </SortableList>
       {create ? (
         <Row
+          size={form === "nav" ? "nav" : undefined}
           className="rounded-nav-row"
           icon={<Icon icon={addIcon} className="text-muted-foreground" />}
           onClick={create.onCreate}
@@ -152,6 +160,7 @@ export function ViewList<T extends ViewTypeMeta>({
  *  field (a field inside a button is invalid DOM), else a button that selects
  *  the view. */
 function ViewListRow<T extends ViewTypeMeta>(props: {
+  form: "menu" | "nav";
   instance: ResolvedViewInstance<T>;
   active: boolean;
   count: number | undefined;
@@ -170,8 +179,8 @@ function ViewListRow<T extends ViewTypeMeta>(props: {
   const name = instance.instance.name;
   return (
     <Row
-      size="sm"
-      // A view is a place to go: a navigation row's corners.
+      // A view is a place to go: in a sidebar, its navigation row.
+      size={props.form === "nav" ? "nav" : "sm"}
       className="rounded-nav-row"
       selected={active}
       data-view-id={instance.instance.id}

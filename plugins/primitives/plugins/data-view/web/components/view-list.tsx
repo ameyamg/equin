@@ -94,6 +94,7 @@ export function DataViewViewList(props: {
       dirtyFor={viewModel.dirtyFor}
       renaming={{ id: viewModel.renamingId, set: viewModel.setRenamingId }}
       create={{ label: newLabel, onCreate: create }}
+      form="nav"
     />
   );
 }

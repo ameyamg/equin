@@ -114,6 +114,8 @@ export function TagPickerPanel<Row extends TagPickerRow>({
   rowMenuExtra,
   exclude,
   counts,
+  countsOf = "rolled-up",
+  marks = "nested",
   offerNone = false,
   onPick,
 }: TagPickerPanelProps<Row>) {
@@ -225,6 +227,7 @@ export function TagPickerPanel<Row extends TagPickerRow>({
             markOf={markOf}
             indicator={indicator}
             counts={counts}
+            flatMarks={marks === "flat"}
             onPick={onPick}
             onCreate={writes ? createPath : undefined}
           />
@@ -243,6 +246,8 @@ export function TagPickerPanel<Row extends TagPickerRow>({
               markOf={markOf}
               indicator={indicator}
               counts={counts}
+              countsOf={countsOf}
+              flatMarks={marks === "flat"}
               fadeEmpty={fadeEmpty}
               noun={noun}
               writes={writes}
@@ -349,6 +354,8 @@ interface TagTreeBodyProps<Row extends TagPickerRow> {
   markOf: (tagId: string) => Mark;
   indicator: Indicator;
   counts: ReadonlyMap<string, number> | undefined;
+  countsOf: "rolled-up" | "own";
+  flatMarks: boolean;
   fadeEmpty: boolean;
   noun: string;
   writes: TagPickerWrites | undefined;
@@ -372,6 +379,8 @@ function TagTreeBody<Row extends TagPickerRow>({
   markOf,
   indicator,
   counts,
+  countsOf,
+  flatMarks,
   fadeEmpty,
   noun,
   writes,
@@ -414,6 +423,8 @@ function TagTreeBody<Row extends TagPickerRow>({
     }
     return out;
   }, [tags, visible, collapsed, draftParent]);
+
+  const countOf = shownCounts(tags, counts, countsOf, collapsed);
 
   const applyExpanded = useCallback(
     (changes: readonly ExpandChange[]) =>
@@ -473,8 +484,9 @@ function TagTreeBody<Row extends TagPickerRow>({
                 activeId={activeId}
                 mark={markOf(line.node.id)}
                 indicator={indicator}
+                flatMark={flatMarks}
                 renaming={renamingId === line.node.id}
-                count={counts?.get(line.node.id)}
+                count={countOf(line.node.id)}
                 showCount={counts !== undefined}
                 fadeEmpty={fadeEmpty}
                 noun={noun}
@@ -494,6 +506,29 @@ function TagTreeBody<Row extends TagPickerRow>({
   );
 }
 
+/**
+ * The count each row shows: `counts` as given (rolled up), or — own counts —
+ * a folded tag's subtree total, what the fold hides.
+ */
+function shownCounts(
+  tags: readonly TagPickerRow[],
+  counts: ReadonlyMap<string, number> | undefined,
+  countsOf: "rolled-up" | "own",
+  collapsed: ReadonlySet<string>,
+): (id: string) => number | undefined {
+  if (counts === undefined) return () => undefined;
+  if (countsOf === "rolled-up") return (id) => counts.get(id);
+  const kids = new Map<string, string[]>();
+  for (const t of tags) {
+    if (t.parentId === null) continue;
+    kids.set(t.parentId, [...(kids.get(t.parentId) ?? []), t.id]);
+  }
+  const subtree = (id: string): number =>
+    (kids.get(id) ?? []).reduce((n, k) => n + subtree(k), counts.get(id) ?? 0);
+  return (id) =>
+    collapsed.has(id) && kids.has(id) ? subtree(id) : counts.get(id);
+}
+
 function TagTreeRow<Row extends TagPickerRow>({
   node,
   tag,
@@ -502,6 +537,7 @@ function TagTreeRow<Row extends TagPickerRow>({
   activeId,
   mark,
   indicator,
+  flatMark,
   renaming,
   count,
   showCount,
@@ -522,6 +558,7 @@ function TagTreeRow<Row extends TagPickerRow>({
   activeId: string | null;
   mark: Mark;
   indicator: Indicator;
+  flatMark: boolean;
   renaming: boolean;
   count: number | undefined;
   showCount: boolean;
@@ -602,7 +639,7 @@ function TagTreeRow<Row extends TagPickerRow>({
         />
       ) : null}
       {indicator === "checkbox" ? <MarkBox mark={mark} /> : null}
-      <TagMark tag={tag} tags={tags} />
+      <TagMark tag={tag} tags={tags} flat={flatMark} />
       <Fill>
         {renaming ? (
           <TagNameInput
@@ -662,6 +699,7 @@ function SearchResults<Row extends TagPickerRow>({
   markOf,
   indicator,
   counts,
+  flatMarks,
   onPick,
   onCreate,
 }: {
@@ -671,6 +709,7 @@ function SearchResults<Row extends TagPickerRow>({
   markOf: (tagId: string) => Mark;
   indicator: Indicator;
   counts: ReadonlyMap<string, number> | undefined;
+  flatMarks: boolean;
   onPick(tagId: string): void;
   /** Create the typed path; absent on a read-only panel (no Create row). */
   onCreate: ((segments: readonly string[]) => Promise<void>) | undefined;
@@ -700,7 +739,7 @@ function SearchResults<Row extends TagPickerRow>({
           onSelect={() => onPick(tag.id)}
         >
           {indicator === "checkbox" ? <MarkBox mark={markOf(tag.id)} /> : null}
-          <TagMark tag={tag} tags={tags} />
+          <TagMark tag={tag} tags={tags} flat={flatMarks} />
           <Fill>
             <Text>
               <PathLabel tagId={tag.id} tags={tags} highlight={lower} />

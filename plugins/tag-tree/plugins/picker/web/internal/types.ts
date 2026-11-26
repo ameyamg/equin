@@ -93,6 +93,21 @@ export interface TagPickerOptions<Row extends TagPickerRow = TagPickerRow> {
   /** Rolled-up carrier counts (`rolledUpTagCounts`); absent → no count column. */
   counts?: ReadonlyMap<string, number>;
   /**
+   * What `counts` holds: each tag's count with its subtree's already in it
+   * (`rolled-up`, the default — carrier counts), or each tag's own alone
+   * (`own` — an unread badge): an unfolded tag then shows its own, and a
+   * folded one the total of everything under it, which the fold hides.
+   */
+  countsOf?: "rolled-up" | "own";
+  /**
+   * How each tag's mark is drawn: `nested` (the default) tells an inherited
+   * colour (a smaller, faded dot) and no colour (a dashed ring) apart from a
+   * colour of its own; `flat` draws every tag as one full dot of the colour it
+   * wears, a tag no colour reaches in the muted ink — a navigation tree,
+   * where the mark only says which colour the label shows in.
+   */
+  marks?: "nested" | "flat";
+  /**
    * Ids picked as NOT (a filter's exclusions): struck through in the
    * destructive tone. A click on one picks it like any other row.
    */

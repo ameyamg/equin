@@ -15,7 +15,11 @@ import {
 import type React from "react";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
-export type RowSize = "sm" | "md";
+/**
+ * `nav`: a sidebar's place to go — the sidebar-metrics row (its height,
+ * inline padding, glyph size and glyph-to-name gap) in the label role.
+ */
+export type RowSize = "sm" | "md" | "nav";
 
 /**
  * The row's focusable control, as a capability rather than a node. `Row` decides
@@ -112,7 +116,7 @@ export type RowControlProps = Pick<
 export interface RowProps extends RowControlProps, Passthrough {
   /** Persistent selection → bg-selected-fill + text-selected-foreground; aria-current on buttons. */
   selected?: boolean;
-  /** Text+gap density only; PADDING is always p-row. sm=text-xs gap-1.5, md=text-sm gap-2. Default "md". */
+  /** Text+gap density: sm=caption gap-xs, md=body gap-sm (PADDING p-row); nav=the sidebar-metrics row (its own height, padding, glyph and gap). Default "md". */
   size?: RowSize;
   /** Adds a `border` (bordered chip-rows). */
   bordered?: boolean;
@@ -315,13 +319,19 @@ export function Row({
   // every row in its popovers at once.
   const onPanel = useMenuSurface();
   const chromeClass = cn(
-    "group w-full p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+    "group w-full text-left transition-colors",
+    size === "nav"
+      ? "h-sidebar-row px-sidebar-row py-none [&_svg:not([class*='size-'])]:size-sidebar-icon"
+      : "p-row [&_svg:not([class*='size-'])]:icon-auto",
     onPanel ? "rounded-panel-row" : "rounded-md",
     "focus-ring focus-ring-from",
     rowActionsAnchor,
     "disabled:pointer-events-none disabled:opacity-50",
     size === "sm" && "gap-xs text-caption",
     size === "md" && "gap-sm text-body",
+    // A place to go reads in its sidebar's ink, brightening under the pointer.
+    size === "nav" && "gap-sidebar-icon text-label",
+    size === "nav" && !selected && "hover:text-foreground",
     // Each tint co-publishes itself as `--scrim` — the color the pinned action
     // cluster's mask paints so it hides the row instead of letting the label
     // show through the action icons. Same contract as a Surface publishing
@@ -450,7 +460,11 @@ export function Row({
             // `outline-none`: the ring is painted by the box, so the UA outline
             // would be a second, tighter indicator hugging the label inside it.
             "flex min-w-0 flex-1 items-center text-left outline-none",
-            size === "sm" ? "gap-xs" : "gap-sm",
+            size === "sm"
+              ? "gap-xs"
+              : size === "nav"
+                ? "gap-sidebar-icon"
+                : "gap-sm",
             "disabled:pointer-events-none disabled:opacity-50",
           )}
         >

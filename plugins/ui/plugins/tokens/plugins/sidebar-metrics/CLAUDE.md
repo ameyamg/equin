@@ -47,9 +47,11 @@ agent manager's conversation rows and view switcher) sizes it with the same
   - Tokens used by:
     - `apps-core/app-launcher`
     - `apps/file-explorer/places`
+    - `apps/mail/threads`
     - `apps/pages/shell`
     - `conversations/conversation-ui/item`
     - `primitives/app-shell`
+    - `primitives/css/row`
     - `primitives/css/ui-kit`
     - `primitives/data-view/view-core`
     - `ui/sidebar-framing/floating`
@@ -58,6 +60,7 @@ agent manager's conversation rows and view switcher) sizes it with the same
   - Imported by:
     - `apps/agent-manager/shell`
     - `apps/file-explorer/shell`
+    - `apps/mail/shell`
     - `apps/pages/shell`
     - `ui/tokens/sidebar-metrics/customizer`
 - Sub-plugins:

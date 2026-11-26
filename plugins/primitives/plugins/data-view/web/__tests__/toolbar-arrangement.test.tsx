@@ -14,6 +14,7 @@ import type {
 } from "../../core";
 import { DataViewToolbar } from "../components/toolbar/data-view-toolbar";
 import { ToolbarPill } from "../components/toolbar/pills-toolbar";
+import { ToolbarLine } from "../components/toolbar/toolbar-line";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -474,6 +475,40 @@ describe("DataViewToolbar: the global floating bar's room", () => {
   it("not when the band is not the surface's top bar", () => {
     const { container } = renderToolbar({ arrangement: recordingArrangement });
     expect(band(container).className).not.toContain("floating-bar");
+  });
+
+  // A band drawn on two lines (Mail: the search line, then the view's rule
+  // chips): the bar's anchor is the line it sits on, the innermost anchor in
+  // tree order, so a second line growing under it leaves the bar where it is.
+  const twoLines: ToolbarArrangement = {
+    ...recordingArrangement,
+    component: (parts) => (
+      <div>
+        <ToolbarLine>
+          <div data-testid="bar-line">{parts.search}</div>
+        </ToolbarLine>
+        <div data-testid="second-line" />
+      </div>
+    ),
+  };
+
+  it("anchors a many-line arrangement's ToolbarLine, inside the reserving band", () => {
+    const { container } = renderToolbar({
+      arrangement: twoLines,
+      reservesFloatingBar: true,
+    });
+    const anchors = [
+      ...container.querySelectorAll(".anchor-floating-bar-band"),
+    ];
+    expect(anchors[0]).toBe(band(container));
+    const line = anchors.at(-1)!;
+    expect(line.contains(screen.getByTestId("bar-line"))).toBe(true);
+    expect(line.contains(screen.getByTestId("second-line"))).toBe(false);
+  });
+
+  it("a ToolbarLine anchors nothing when the band does not reserve", () => {
+    const { container } = renderToolbar({ arrangement: twoLines });
+    expect(container.querySelector(".anchor-floating-bar-band")).toBeNull();
   });
 
   it("not for an arrangement that is never the top bar (topBar: false)", () => {

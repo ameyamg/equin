@@ -46,7 +46,8 @@ function FieldRow({
   return (
     <Inset x="lg">
       <Line as="label" className="h-9 gap-smd border-t border-border">
-        <Text variant="label" tone="muted" className={cn("w-12", rigidClass())}>
+        {/* As wide as its word (`.cf`): a fixed column cut "Subject". */}
+        <Text variant="label" tone="faint" className={rigidClass()}>
           {label}
         </Text>
         {children}

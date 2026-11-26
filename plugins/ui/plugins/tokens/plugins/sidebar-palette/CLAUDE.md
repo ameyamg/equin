@@ -17,6 +17,7 @@
     - `apps-core/app-launcher`
     - `apps/browser/shell`
     - `apps/file-explorer/places`
+    - `apps/mail/threads`
     - `conversations/conversations-view/data-view`
     - `primitives/app-shell`
     - `primitives/css/theme-boundary`

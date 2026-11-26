@@ -107,8 +107,8 @@ discarded on close); the signature is not shown in the editor yet.
   - Contributes:
     - `IdKinds.Kind` "mdraft"
     - `ConfigV2.WebRegister` "mail-compose"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×4
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `config_v2.ConfigV2`
@@ -239,6 +239,7 @@ discarded on close); the signature is not shown in the editor yet.
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --space-2xs`
@@ -249,6 +250,7 @@ discarded on close); the signature is not shown in the editor yet.
     - `ui/tokens/shape --radius-control`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-label-strong`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/mail/shell`
     - `apps/mail/threads`

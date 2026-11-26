@@ -3,6 +3,8 @@ import { writeRows } from "@plugins/network/plugins/live/plugins/optimistic-muta
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { TagPickerPopover } from "@plugins/tag-tree/plugins/picker/web";
@@ -132,17 +134,19 @@ function primaryIcon(op: ReturnType<typeof primaryMailAction>) {
 
 /**
  * A thread's own actions, as the row's hover cluster and the reader's bar
- * draw them: Label, Delete (not in the trash), Mark as unread (`withUnread`:
- * the reader) and the primary action — Done in the inbox, Restore in the
- * trash, Not spam in spam, Move to Inbox elsewhere.
+ * draw them: Label, Delete (not in the trash), Mark as unread (the reader)
+ * and the primary action — Done in the inbox, Restore in the trash, Not spam
+ * in spam, Move to Inbox elsewhere: an icon on a row, a labelled button
+ * ending the reader's bar (the prototype's).
  */
 export function ThreadActions({
   row,
-  withUnread = false,
+  place = "row",
   onLeave,
 }: {
   row: MailActionRow;
-  withUnread?: boolean;
+  /** Where they are drawn: a row's hover cluster, or the reader's bar. */
+  place?: "row" | "reader";
   /** After an action that moves the thread away (the reader closes on it). */
   onLeave?: () => void;
 }): ReactNode {
@@ -155,7 +159,7 @@ export function ThreadActions({
   return (
     <Line className="gap-2xs">
       <LabelPicker ids={[row.id]} selected={row.mailboxes} />
-      {withUnread ? (
+      {place === "reader" ? (
         <IconButton
           icon={row.unread ? readIcon : unreadIcon}
           label={row.unread ? "Mark as read" : "Mark as unread"}
@@ -175,11 +179,18 @@ export function ThreadActions({
           onClick={() => leave({ kind: "trash" })}
         />
       )}
-      <IconButton
-        icon={primaryIcon(primary)}
-        label={primary.label}
-        onClick={() => leave({ kind: primary.op })}
-      />
+      {place === "reader" ? (
+        <Button variant="outline" onClick={() => leave({ kind: primary.op })}>
+          <Icon icon={primaryIcon(primary)} />
+          {primary.label}
+        </Button>
+      ) : (
+        <IconButton
+          icon={primaryIcon(primary)}
+          label={primary.label}
+          onClick={() => leave({ kind: primary.op })}
+        />
+      )}
     </Line>
   );
 }

@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useOpenCompose } from "../internal/use-draft";
@@ -14,13 +18,17 @@ export function ComposeButton({
 }): ReactNode {
   const openCompose = useOpenCompose();
   return (
+    // The prototype's `.compose`: a raised 34px button ringed in the input
+    // line, its pen in the accent.
+    <ControlSizeProvider size="lg">
     <Button
-      variant="outline"
-      className={className}
+        variant="secondary"
+        className={cn("font-semibold ring-1 ring-input ring-inset", className)}
       onClick={() => openCompose({ kind: "new" })}
     >
       <Icon icon={composeIcon} className="text-primary-text" />
       Compose
     </Button>
+    </ControlSizeProvider>
   );
 }

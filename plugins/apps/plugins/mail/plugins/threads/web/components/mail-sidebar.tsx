@@ -93,7 +93,10 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
 
   return (
     // The DataView sizes an in-flow aside to the scroller's viewport.
-    <Stack gap="none" className={`${SIDEBAR_WIDTH} h-full`}>
+    <Stack
+      gap="none"
+      className={`${SIDEBAR_WIDTH} h-full text-sidebar-foreground`}
+    >
       <Line className="h-12 gap-smd pr-lg pl-xl">
         <span
           aria-hidden
@@ -111,7 +114,7 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
           </span>
         ) : null}
       </Line>
-      <Inset l="lg" r="smd" b="smd" className={rigidClass()}>
+      <Inset l="smd" r="smd" b="smd" className={rigidClass()}>
         <ComposeButton className="w-full" />
       </Inset>
       <Scroll fill className="pr-smd pb-lg">
@@ -123,17 +126,22 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
             countFor={countFor}
           />
           <Row
-            size="sm"
+            size="nav"
             className="rounded-nav-row"
             icon={<Icon icon={more ? collapseIcon : expandIcon} />}
             onClick={() => setMore((m) => !m)}
           >
-            <Text variant="label" tone="muted">
+            <Text variant="label" tone="faint">
               {more ? "Less" : "More"}
             </Text>
           </Row>
-          <Line className="pt-lg pb-xs pl-lg">
-            <Text as="h2" variant="caption" tone="faint">
+          <Line className="px-sidebar-row pt-lg pb-xs">
+            <Text
+              as="h2"
+              variant="caption"
+              tone="faint"
+              className="font-medium"
+            >
               Labels
             </Text>
           </Line>
@@ -154,7 +162,7 @@ function AccountFooter() {
   const address = status.data.address;
   return (
     <Line
-      className={`h-12 gap-smd pr-smd pl-xl ${rigidClass()}`}
+      className={`h-12 gap-smd px-sidebar-row pr-smd ${rigidClass()}`}
       title={address}
     >
       <Center
@@ -167,7 +175,7 @@ function AccountFooter() {
           {address.slice(0, 1).toUpperCase()}
         </Text>
       </Center>
-      <Text variant="caption" tone="muted" className="truncate">
+      <Text variant="caption" tone="faint" className="truncate">
         {address}
       </Text>
     </Line>
@@ -204,7 +212,8 @@ function Labels({ mailboxes }: { mailboxes: MailboxesState }) {
  * label's view (highlighted while open), ＋ adds a sub-label, double-click
  * renames, drag nests, ⋯ renames, recolours (the provider's palette), moves
  * out, deletes or duplicates the view, and "New label" at the foot. Each
- * label's own unread count beside it.
+ * label's own unread count beside it — a folded one's, the total under it
+ * (the prototype's). Every label wears a full dot of its colour.
  */
 function LabelTree({ mailboxes }: { mailboxes: readonly Mailbox[] }) {
   const { viewModel, activeViewId } = useDataViewControls();
@@ -241,6 +250,8 @@ function LabelTree({ mailboxes }: { mailboxes: readonly Mailbox[] }) {
       autoFocus={false}
       pickCreated={false}
       counts={unread}
+      countsOf="own"
+      marks="flat"
       fadeEmpty={false}
       selected={selected}
       rowMenuExtra={(tag) => (

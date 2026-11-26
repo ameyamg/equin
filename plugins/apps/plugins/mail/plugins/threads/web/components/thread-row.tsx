@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import {
@@ -60,9 +64,10 @@ export function ThreadAvatar({
       className={cn("size-6 rounded-full text-white", rigidClass())}
       style={{ backgroundColor: avatarColor(key) }}
     >
-      <Text variant="caption" className="font-semibold">
+      {/* The prototype's `.av`: 10px initials. */}
+      <span className="text-3xs font-semibold">
         {who === undefined ? "?" : initials(who.name, who.address)}
-      </Text>
+      </span>
     </Center>
   );
 }
@@ -70,8 +75,8 @@ export function ThreadAvatar({
 /**
  * One thread, as the prototype's row: who (first names, the message count),
  * the subject then its snippet, the user's labels on it and an attachment
- * mark, the time. Unread threads read in the text colour, bold. Read-only in
- * this step: no actions yet.
+ * mark, the time. Unread threads read in the text colour, bold. Narrow (the
+ * reader open beside the list), the three stack.
  */
 export function ThreadRow({
   thread,
@@ -88,72 +93,110 @@ export function ThreadRow({
       : people.length === 1
         ? fullName(people[0]!)
         : people.map(shortName).join(", ");
-  const labels = thread.mailboxes.flatMap((id) => {
-    const chip = id === ctx.viewLabel ? undefined : ctx.labels.get(id);
-    return chip === undefined ? [] : [{ id, ...chip }];
-  });
+  const labels = threadLabelChips(thread.mailboxes, ctx.labels, ctx.viewLabel);
   const unread = thread.unread;
-  return (
-    <Line className="w-full gap-md" data-unread={unread || undefined}>
-      <Rigid as={Line} className="w-41 gap-xs">
-        <Text
-          variant="label"
-          className={cn(
-            unread ? "font-semibold text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {ctx.names === "recipients" ? `To ${who}` : who}
-        </Text>
-        {thread.messageCount > 1 ? (
-          <Text variant="caption" tone="faint" className="tabular-nums">
-            {thread.messageCount}
-          </Text>
-        ) : null}
-      </Rigid>
-      <Fill>
-        <Text
-          variant="label"
-          className={cn(
-            "truncate",
-            unread ? "font-medium text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {thread.subject === "" ? "(no subject)" : thread.subject}
-          {thread.snippet !== "" ? (
-            <span className="font-normal text-faint-foreground">
-              {" — "}
-              {oneLine(thread.snippet)}
-            </span>
-          ) : null}
-        </Text>
-      </Fill>
-      {labels.length > 0 || thread.hasAttachment ? (
-        <Rigid>
-          <Line className="gap-sm">
-            {labels.map((l) => (
-              <LabelChip key={l.id} name={l.name} color={l.color} />
-            ))}
-            {thread.hasAttachment ? (
-              <Icon
-                icon={attachIcon}
-                className="size-3.5 text-faint-foreground"
-                aria-label="Has attachments"
-              />
-            ) : null}
-          </Line>
-        </Rigid>
-      ) : null}
-      <Rigid className="min-w-19 text-right">
+  const whoLine = (
+    <>
+      <Text
+        variant="label"
+        className={cn(
+          unread ? "font-semibold text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {ctx.names === "recipients" ? `To ${who}` : who}
+      </Text>
+      {thread.messageCount > 1 ? (
         <Text variant="caption" tone="faint" className="tabular-nums">
-          {listTime(thread.date, ctx.now)}
+          {thread.messageCount}
         </Text>
-      </Rigid>
-    </Line>
+      ) : null}
+    </>
+  );
+  const subject = (
+    <Text
+      variant="label"
+      className={cn(
+        "truncate",
+        unread ? "font-medium text-foreground" : "text-muted-foreground",
+      )}
+    >
+      {thread.subject === "" ? "(no subject)" : thread.subject}
+      {thread.snippet !== "" ? (
+        <span className="font-normal text-faint-foreground">
+          {" — "}
+          {oneLine(thread.snippet)}
+        </span>
+      ) : null}
+    </Text>
+  );
+  const marks =
+    labels.length > 0 || thread.hasAttachment ? (
+      <Line className="gap-sm">
+        {labels.map((l) => (
+          <LabelChip key={l.id} name={l.name} color={l.color} />
+        ))}
+        {thread.hasAttachment ? (
+          <Icon
+            icon={attachIcon}
+            className="size-3.5 text-faint-foreground"
+            aria-label="Has attachments"
+          />
+        ) : null}
+      </Line>
+    ) : null;
+  const time = (
+    <Text variant="caption" tone="faint" className="tabular-nums">
+      {listTime(thread.date, ctx.now)}
+    </Text>
+  );
+  // One line on a wide list; below 640px (the reader open beside it) the
+  // prototype's stacked row: who and the time, the subject, the marks.
+  return (
+    <Stack
+      gap="none"
+      className="@container/thread w-full"
+      data-unread={unread || undefined}
+    >
+      <Line className="gap-md @max-[640px]/thread:hidden">
+        <Rigid as={Line} className="w-41 gap-xs">
+          {whoLine}
+        </Rigid>
+        <Fill>{subject}</Fill>
+        {marks === null ? null : <Rigid>{marks}</Rigid>}
+        {/* The time ends the row's 76px column (`.row` last track). */}
+        <Rigid as={Line} className="min-w-19">
+          <Fill />
+          {time}
+        </Rigid>
+      </Line>
+      <Stack gap="none" className="@min-[640px]/thread:hidden">
+        <Line className="gap-md">
+          <Fill as={Line} className="gap-xs">
+            {whoLine}
+          </Fill>
+          <Rigid>{time}</Rigid>
+        </Line>
+        {subject}
+        {marks === null ? null : <Inset t="xs">{marks}</Inset>}
+      </Stack>
+    </Stack>
   );
 }
 
-/** A label on a row: its colour as a dot over a wash of it, its `/` path. */
-function LabelChip({
+/** A thread's user labels as chips, in its order (`except`: the view's own label, which would say nothing). */
+export function threadLabelChips(
+  mailboxes: readonly string[],
+  labels: ReadonlyMap<string, LabelChipInfo>,
+  except: MailboxId | null = null,
+): (LabelChipInfo & { id: string })[] {
+  return mailboxes.flatMap((id) => {
+    const chip = id === except ? undefined : labels.get(id);
+    return chip === undefined ? [] : [{ id, ...chip }];
+  });
+}
+
+/** A label on a row (and over the reader's thread): its colour as a dot over a wash of it, its `/` path. */
+export function LabelChip({
   name,
   color,
 }: {

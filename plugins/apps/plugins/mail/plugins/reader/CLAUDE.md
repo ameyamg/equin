@@ -60,7 +60,8 @@ the messages oldest first — the last and the unread ones open, the others
 folded to one line (a click opens one) — an HTML body framed on a light page
 of its own, a text body as text, each message's files. The bar ends with the
 caller's `tools`, and the thread ends with the caller's `footer` (the
-thread pane passes compose's reply box). Not yet: the label chips.
+thread pane passes compose's reply box), and the caller's `labels` sit under
+the subject (the thread pane passes the thread's label chips).
 
 ## Measuring
 

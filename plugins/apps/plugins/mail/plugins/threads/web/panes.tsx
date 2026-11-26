@@ -19,7 +19,10 @@ import { mailThread } from "@plugins/apps/plugins/mail/plugins/reader/core";
 import { ThreadReader } from "@plugins/apps/plugins/mail/plugins/reader/web";
 import { ReplyBox } from "@plugins/apps/plugins/mail/plugins/compose/web";
 import { mailAccountStatus } from "@plugins/apps/plugins/mail/plugins/cache/core";
-import { MailScreen } from "./components/mail-screen";
+import { labelChips, MailScreen } from "./components/mail-screen";
+import { LabelChip, threadLabelChips } from "./components/thread-row";
+import { useMailboxes } from "./internal/mailboxes";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 
 /**
  * Mail's index pane — what bare `/mail` shows: the threads list with the mail
@@ -126,14 +129,31 @@ function MailThreadPaneView() {
     error: () => null,
     ready: (s) => (s.kind === "none" ? null : s.address),
   });
+  // The thread's user labels, as its rows show them. Until the labels are
+  // read (or when that read failed — the sidebar says so, with Retry) the
+  // reader draws none.
+  const { state: mailboxes } = useMailboxes();
+  const chips =
+    row === null || mailboxes.kind !== "ready"
+      ? []
+      : threadLabelChips(row.mailboxes, labelChips(mailboxes.mailboxes));
   return (
     <ThreadReader
       threadId={threadId}
       onClose={close}
+      labels={
+        chips.length === 0 ? undefined : (
+          <Cluster gap="xs">
+            {chips.map((c) => (
+              <LabelChip key={c.id} name={c.name} color={c.color} />
+            ))}
+          </Cluster>
+        )
+      }
       footer={(thread) => <ReplyBox key={thread.id} thread={thread} me={me} />}
       tools={
         row === null ? null : (
-          <ThreadActions row={row} withUnread onLeave={leave} />
+          <ThreadActions row={row} place="reader" onLeave={leave} />
         )
       }
     />

@@ -218,11 +218,12 @@ genuine transient-chrome list escapes with
     - `Row`
     - `SectionHeaderRow`
 - Cross-plugin:
-  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/type-scale` ×11
+  - Uses tokens: 37 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×14
     - `ui/tokens/data-view` ×7
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/density` ×4
+    - `ui/tokens/sidebar-metrics` ×4
     - `ui/tokens/shape` ×2
   - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15

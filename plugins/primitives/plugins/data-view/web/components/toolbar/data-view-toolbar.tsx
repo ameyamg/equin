@@ -42,6 +42,7 @@ import { barArrangement } from "./bar-arrangement";
 import { SearchWithSuggestions } from "./search-suggestions";
 import { QuickFilters } from "./quick-filters";
 import { PillsRow, ToolbarPill } from "./pills-toolbar";
+import { BandAnchorsBarContext } from "./toolbar-line";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
@@ -191,7 +192,8 @@ export interface DataViewToolbarProps {
    * (`useReservesFloatingBar`, read by the host above its own
    * `TopChromeTaken`): it reserves the bar's room on its right — every
    * arrangement, wide or folded — and names itself the bar's anchor, so the
-   * bar is centred on the band's line. Ignored when the arrangement declares
+   * bar is centred on the band's line (on its `ToolbarLine`, for an
+   * arrangement drawn on several lines). Ignored when the arrangement declares
    * `topBar: false`.
    */
   reservesFloatingBar?: boolean;
@@ -492,34 +494,39 @@ export function DataViewToolbar({
     />
   );
 
+  // A many-line arrangement narrows the bar's anchor to its bar line
+  // (`ToolbarLine`, which reads this), so the bar stays on that line whatever
+  // grows under it. The compact fold is always one line: the band is its line.
   const bandBody = !compact ? (
-    <Arrangement
-      title={titleNode}
-      switcher={switcher}
-      quickFilters={quickFiltersRow}
-      search={searchInput}
-      query={query}
-      controls={
-        controls.kind === "known"
-          ? controls.items.controls.map((c) => (
-              <ControlTrigger key={c.id} control={c} form={forms.controls} />
-            ))
-          : // Not known yet (or failed with no layout ever known): no
-            // triggers — never a claim that nothing narrows this view.
-            null
-      }
-      foldedControls={
-        <CompactControls
-          controls={controls}
-          searching={false}
-          revealOnHover={false}
-          form={forms.controls}
-        />
-      }
-      actions={actions}
-      creators={creatorsControl}
-      asideInset={asideInset}
-    />
+    <BandAnchorsBarContext value={bandReserve !== undefined}>
+      <Arrangement
+        title={titleNode}
+        switcher={switcher}
+        quickFilters={quickFiltersRow}
+        search={searchInput}
+        query={query}
+        controls={
+          controls.kind === "known"
+            ? controls.items.controls.map((c) => (
+                <ControlTrigger key={c.id} control={c} form={forms.controls} />
+              ))
+            : // Not known yet (or failed with no layout ever known): no
+              // triggers — never a claim that nothing narrows this view.
+              null
+        }
+        foldedControls={
+          <CompactControls
+            controls={controls}
+            searching={false}
+            revealOnHover={false}
+            form={forms.controls}
+          />
+        }
+        actions={actions}
+        creators={creatorsControl}
+        asideInset={asideInset}
+      />
+    </BandAnchorsBarContext>
   ) : (
     compactRow
   );

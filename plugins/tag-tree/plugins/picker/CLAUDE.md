@@ -98,8 +98,11 @@ Two shapes of use, one component:
   new tag carries nothing, so picking it would filter everything out).
 - **A navigation tree** (Mail's sidebar labels): `indicator="none"` (the
   open view's tag only highlighted), `search={false}`, `fadeEmpty={false}`
-  (the counts are an unread badge, not carriers), `noun="label"` ("New
-  label", "Add sub-label").
+  (the counts are an unread badge, not carriers), `countsOf="own"` (each
+  label's own unread, a folded label the total under it), `marks="flat"`
+  (every label one full dot of the colour it shows in — no faded inherited
+  dot, no dashed "no colour" ring), `noun="label"` ("New label", "Add
+  sub-label").
 
 ## Backends that are not a tag tree
 

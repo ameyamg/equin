@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
+import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import type {
   ToolbarArrangement,
   ToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
 import {
   DataViewFilterChips,
+  ToolbarLine,
   useDataViewControls,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -49,28 +51,32 @@ function MailToolbar({
 }: ToolbarParts): ReactNode {
   return (
     <Stack gap="none" className="px-xl rail-follow">
-      <Line className="h-12">
-        <div className={cn(MAIL_COLUMN, MAIL_ROW)}>
-          <ControlSizeProvider size="sm">
-            <Line className="@container/mail-search h-8.5 gap-smd rounded-lg bg-card pr-xs pl-md focus-within:ring-1 focus-within:ring-input">
-              <Fill className="h-full" data-mail-search>
-                {search}
-              </Fill>
-              <Center axis="horizontal" className="h-5 px-2xs">
-                <Separator orientation="vertical" className="bg-input" />
-              </Center>
-              <Line
-                className={cn("gap-2xs", "@max-[420px]/mail-search:hidden")}
-              >
-                {controls}
+      {/* The floating action bar's line: it stays centred on the search line
+          while the rules row grows under it. */}
+      <ToolbarLine>
+        <Line className="h-12">
+          <div className={cn(MAIL_COLUMN, MAIL_ROW)}>
+            <ControlSizeProvider size="sm">
+              <Line className="@container/mail-search h-8.5 gap-smd rounded-lg bg-card pr-xs pl-md focus-within:ring-1 focus-within:ring-input">
+                <Fill className="h-full" data-mail-search>
+                  {search}
+                </Fill>
+                <Center axis="horizontal" className="h-5 px-2xs">
+                  <Separator orientation="vertical" className="bg-input" />
+                </Center>
+                <Line
+                  className={cn("gap-2xs", "@max-[420px]/mail-search:hidden")}
+                >
+                  {controls}
+                </Line>
+                <Line className="@min-[420px]/mail-search:hidden">
+                  {foldedControls}
+                </Line>
               </Line>
-              <Line className="@min-[420px]/mail-search:hidden">
-                {foldedControls}
-              </Line>
-            </Line>
-          </ControlSizeProvider>
-        </div>
-      </Line>
+            </ControlSizeProvider>
+          </div>
+        </Line>
+      </ToolbarLine>
       <ViewRules query={query} />
     </Stack>
   );
@@ -127,5 +133,7 @@ function ViewRules({ query }: { query: string }): ReactNode {
 export const mailToolbar: ToolbarArrangement = {
   id: "mail",
   forms: { search: "bare", controls: "ghost", creators: "round" },
+  // The first day's header sits under the bar by the theme's runway.
+  spaceBelow: `var(${dataViewGroup.vars.toolbarSpaceBelow})`,
   component: MailToolbar,
 };
