@@ -4,7 +4,7 @@
  * band starts at the heading band's 36px; 12px more here) and ends 96px above
  * the footer's rule (the band's 64px, 32px more). Inside it, 48px from the
  * install panel to the caveats, 64px from the caveats to "Once it is running",
- * and 48px from the steps to the try-the-demo card — distances above the
+ * and 56px from the steps to the closing cards — distances above the
  * spacing ramp, as the site's band rhythms are. */
 .website-download {
   padding-block: 0.75rem 2rem;
@@ -18,8 +18,8 @@
   margin-top: 4rem;
 }
 
-.website-download-try {
-  margin-top: 3rem;
+.website-download-closing {
+  margin-top: 3.5rem;
 }
 
 /* ---- the audience switch: two segments in one hairline tray ----

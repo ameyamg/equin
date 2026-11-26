@@ -1,0 +1,31 @@
+/* The tips' lit bulb — the one warm colour on the site.
+ *
+ * The site's theme is azure and cyan, and none of its roles is a lit bulb's
+ * yellow: `--warning` is a status (and an orange one), which a tip is not. A
+ * lit bulb is yellow in either mode, the way the Foundations iceberg's sky is
+ * its own picture, so its light is declared once, here, by the plugin the
+ * bulb belongs to. Everything else warm about a tip (the Download page's
+ * Learn the tricks card: its tile and its wash) is mixed from this one value. */
+:root {
+  --website-tip-light: oklch(0.87 0.15 92);
+}
+
+/* The bulb glows in its own light: a soft halo, decorative paint rather than
+ * an elevation shadow (the hero property dots glow the same way). */
+.website-tips-bulb {
+  color: var(--website-tip-light);
+  filter: drop-shadow(
+    0 0 18px color-mix(in srgb, var(--website-tip-light) 55%, transparent)
+  );
+}
+
+/* In the page's heading: the bulb set in the headline's line, a little under
+ * the words' cap height, a short gap before "Tips". */
+.website-tips-heading-bulb {
+  /* An svg is a block by the reset; in the heading it runs in the words' line. */
+  display: inline-block;
+  width: 0.78em;
+  height: 0.78em;
+  margin-right: 0.12em;
+  vertical-align: -0.02em;
+}

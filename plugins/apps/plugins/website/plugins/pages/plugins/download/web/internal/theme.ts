@@ -10,9 +10,9 @@ import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
  * already speaks through:
  *
  * - `title` 22px/1.6 — "One command" / "One prompt".
- * - `heading` 17px/1.6 — the try-the-demo card's heading.
+ * - `heading` 18px/1.6 — a closing card's title.
  * - `subheading` 15px/1.6 — a next step's title; the agent prompt (regular).
- * - `body` 14px/1.5 — a step's line, the installer's steps, the demo card's line.
+ * - `body` 14px/1.5 — a step's line, the installer's steps, a closing card's line.
  * - `label` 14px/1.6 — the site's own: "Then open …", "What does install.sh do?".
  * - `caption` 12px/1.6 — the site's own: the eyebrow, a step's number.
  * - `code` 13.5px/1.6 — the install command.
@@ -20,7 +20,7 @@ import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
  *
  * The rhythm inside the column (4 / 5 / 8 / 10 / 12 / 14 / 22 / 24 / 28px)
  * and an 8px radius step (the copy button's corner). The larger distances —
- * 48px to the caveats and the demo card, 64px to "Once it is running" — are the
+ * 48px to the caveats, 56px to the closing cards, 64px to "Once it is running" — are the
  * page's score, in `download.css`.
  */
 export const equinDownloadTheme = defineSubTheme({
@@ -31,8 +31,8 @@ export const equinDownloadTheme = defineSubTheme({
       both({
         fontSizeTitle: "1.375rem",
         lineHeightTitle: "2.2rem",
-        fontSizeHeading: "1.0625rem",
-        lineHeightHeading: "1.7rem",
+        fontSizeHeading: "1.125rem",
+        lineHeightHeading: "1.8rem",
         fontSizeSubheading: "0.9375rem",
         lineHeightSubheading: "1.5rem",
         fontSizeBody: "0.875rem",
@@ -46,7 +46,7 @@ export const equinDownloadTheme = defineSubTheme({
     ),
     densityGroup.fragment(
       both({
-        // 4px — a step's title and its line; the demo card's heading and line.
+        // 4px — a step's title and its line.
         "space-2xs": "0.25rem",
         // 5px — between two installer steps, two caveats.
         "space-xs": "0.3125rem",
@@ -60,7 +60,7 @@ export const equinDownloadTheme = defineSubTheme({
         // 14px — a heading and its panel; the panel and the line under it; a
         // step's number and its title.
         "space-md": "0.875rem",
-        // 22px — the demo card's picture and its words.
+        // 22px — (unused since the closing cards set their own 16px row).
         "space-lg": "1.375rem",
         // 24px — the eyebrow and the steps.
         "space-xl": "1.5rem",

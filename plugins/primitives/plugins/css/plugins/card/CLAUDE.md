@@ -57,8 +57,8 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --pad-card`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×14
     - `page` ×3
     - `primitives` ×3
     - `tasks` ×3

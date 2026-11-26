@@ -8,8 +8,8 @@ It is not a product page — there is nothing to download and nothing to install
 One developer's open-source proof of concept, so the homepage's job is to state
 the claim, show what it looks like, and then get out of the way:
 
-- [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, the
-  screenshot, the layers, the story link, the contact block.
+- [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, Try
+  it (Open the demo / Download), the layers, the contact block.
 - [`demos`](plugins/demos/CLAUDE.md) — the live demos, one plugin each, each owning
   its data and writing it into its own browser host through the apps' fixture
   writers (`demos/workspace`: the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin).
@@ -104,7 +104,7 @@ everywhere a reader can see it; the old name survives only as an internal identi
   - **`demos`** [test helpers] [2 sub-plugins] — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
   - **`improve`** — The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a…
   - **`isle-building`** — The website's building on Isle: the shopfront — the island's public face: a painted shop with two awninged display windows under a great false-front sign board carrying the app's device in a…
-  - **`landing`** [6 sub-plugins] — Landing-page bands of the public website: the hero, the live demo, the three layers of equin, the story link, and the contact block.
+  - **`landing`** [7 sub-plugins] — Landing-page bands of the public website: the hero, the live demo, the three layers of equin, the story link, and the contact block.
   - **`live-demo`** — The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's…
   - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into…
   - **`pages`** [12 sub-plugins] — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.

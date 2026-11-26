@@ -135,6 +135,11 @@ const fontFamily = fontFamilyGroup.fragment(
     fontSerif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
     fontMono: "'Cascadia Code Variable', monospace",
     letterSpacing: "0em",
+    // Grayscale antialiasing, as the design draws its type: the platform's
+    // default (subpixel on macOS) sets the site's light-on-dark words a weight
+    // heavier than the mock. A token rather than a class on the page, so every
+    // theme boundary inside it (a page's sub-theme) keeps it.
+    fontSmoothing: "antialiased",
   }),
 );
 

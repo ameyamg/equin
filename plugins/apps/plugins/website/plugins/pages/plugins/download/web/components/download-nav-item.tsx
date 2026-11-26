@@ -46,16 +46,16 @@ export function DemoNavItem() {
   return (
     <WebsiteNavLink
       emphasis="outline"
-        label="Demo"
-        // A small filled triangle in the brand blue: the one mark of colour in
-        // the pill, sized to the label rather than to a 16px glyph box, whose
-        // own margin read as a gap before the word. 12px: the Material glyph
-        // fills less of its box than a drawn triangle, so this is what draws
-        // the mock's ~6×7 mark.
-        icon={
-          <Icon icon={playIcon} active className="text-primary-text size-3" />
-        }
-        {...appLinkProps(DEMO_URL)}
+      label="Demo"
+      // A small filled triangle in the brand blue: the one mark of colour in
+      // the pill, sized to the label rather than to a 16px glyph box, whose
+      // own margin read as a gap before the word. 12px: the Material glyph
+      // fills less of its box than a drawn triangle, so this is what draws
+      // the mock's ~6×7 mark.
+      icon={
+        <Icon icon={playIcon} active className="text-primary-text size-3" />
+      }
+      {...appLinkProps(DEMO_URL)}
       onClickCapture={() => track("header_demo")}
     />
   );

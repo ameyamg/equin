@@ -670,6 +670,7 @@ dropped and re-copied.
     - `apps/website/landing/hero`
     - `apps/website/landing/layers`
     - `apps/website/landing/screenshot`
+    - `apps/website/landing/try`
     - `apps/website/live-demo`
     - `apps/website/pages/apps`
     - `apps/website/pages/download`

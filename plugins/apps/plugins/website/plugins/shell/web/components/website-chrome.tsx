@@ -42,13 +42,12 @@ export function WebsiteChrome({
   children: ReactNode;
 }) {
   return (
-    // Grayscale antialiasing, as the design draws its type: the platform's
-    // default (subpixel on macOS) sets the site's light-on-dark words a weight
-    // heavier than the mock.
+    // Its type is drawn with grayscale antialiasing by the theme's own
+    // `fontSmoothing` (`internal/theme.ts`), which every boundary inside keeps.
     <Theme
       name={subThemeScope(equinDocumentTheme)}
       surface="canvas"
-      className="h-full antialiased"
+      className="h-full"
     >
       <PaneChrome
         pane={pane}

@@ -2293,6 +2293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/landing/hero`
                   - `apps/website/landing/layers`
                   - `apps/website/landing/screenshot`
+                  - `apps/website/landing/try`
                   - `apps/website/live-demo`
                   - `apps/website/pages/apps`
                   - `apps/website/pages/download`
@@ -13805,7 +13806,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-semibold`
-            - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal). The landing page's head (DocumentHead.Fragment): preloads the showcase film's poster — the page's largest paint — from t0, on the landing page only, instead of once the hero has rendered.
+            - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal), as plain words under the film. The landing page's head (DocumentHead.Fragment): preloads the showcase film's poster — the page's largest paint — from t0, on the landing page only, instead of once the hero has rendered.
               - Web:
                 - Contributes: `Website.Section` "Hero" → `HeroSection`
                 - Uses:
@@ -13814,7 +13815,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteHero`
                   - `infra/endpoints.useAssetSrc`
                   - `media/player.MediaPlayer`
-                  - `primitives/css/card.Card`
                   - `primitives/css/center.Center`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/inline.Inline`
@@ -13832,11 +13832,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --border`
-                  - `ui/tokens/color-palette --card`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --primary-text`
-                  - `ui/tokens/density --space-lg`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --font-weight-semibold`
@@ -13919,7 +13917,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --foreground`
                       - `ui/tokens/color-palette --primary`
                       - `ui/tokens/density --space-lg`
-                    - Imported by: `apps/website/live-demo`
+                    - Imported by:
+                      - `apps/website/landing/try`
+                      - `apps/website/live-demo`
             - **`story-link`** — Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
               - Web:
                 - Contributes: `Website.Section` "Story link" → `StoryLinkSection`
@@ -13936,6 +13936,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/type-scale --font-weight-normal`
+            - **`try`** — Landing Try it band: between the hero and the layers, a title, one line and two pill buttons — Open the demo (the live demo page, its box growing out of the button as the demo's Maximize grows the frame) and Download (the download page).
+              - Web:
+                - Contributes: `Website.Section` "Try it" → `TrySection`
+                - Uses:
+                  - `apps-core/tabs.useNavigate`
+                  - `apps/deploy/analytics/collect.track`
+                  - `apps/website/landing/screenshot/chrome.morphDemoFrame`
+                  - `apps/website/pages/download.downloadPane`
+                  - `apps/website/shell.Website`
+                  - `apps/website/shell.WebsiteBand`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.ControlSizeProvider`
+                  - `primitives/link-gesture.linkProps`
+                  - `primitives/pane.useOpenPane`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --primary-text`
+                  - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-weight-semibold`
         - **`live-demo`** — The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's surface — mounted once a page first asks for the demo, never ended by a page switch — and drawn through a portal into the box the current page claims (DemoTarget): the homepage's frame (its place kept in memory: the homepage's URL stays /about) or the demo page /about/demo, the demo alone filling the page (its place the page's embed tail, /about/demo/at/<place>, each move a history entry; Esc is the demo's alone). Maximize (under the frame, with Reset demo) opens the demo page where the visitor is, Maximize and Back running as the morph view transition. The demo page always shows a draggable site bar hanging from its top edge, centred — Back to equin.ai (into the frame after a Maximize, else the homepage) and the LiveDemo.BarLink links (Download) — however the visitor got there; a new browser tab opened from inside the demo opens the demo page there. The website's demo page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
             - Slots:
@@ -13992,6 +14015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/website`
               - `apps/website/landing/screenshot`
+              - `apps/website/landing/try`
               - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `companions/browser-extension/equin-site`
@@ -14086,7 +14110,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website`
                   - `apps/website/landing/layers`
                   - `apps/website/readme`
-            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish), and Download in the demo page's site bar (LiveDemo.BarLink). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, then two closing cards: Learn the tricks (the tips page) and Try it in your browser first (the live demo full screen, agents off there), its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish), and Download in the demo page's site bar (LiveDemo.BarLink). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-download"
@@ -14096,12 +14120,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ThemeEngine.SubTheme` "equin download note"
                   - `ThemeEngine.SubTheme` "equin download tabs"
                   - `ThemeEngine.SubTheme` "equin download"
-                - Uses: 36 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
+                - Uses: 38 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
                   - `apps/website/shell` ×7
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
                   - `primitives/pane` ×3
                   - `apps/website/live-demo` ×2
+                  - `apps/website/pages/tips` ×2
                   - `primitives/css/ui-kit` ×2
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
@@ -14134,14 +14159,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted`
                   - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --primary-text`
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/font-family --font-sans`
                   - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --font-weight-semibold`
-                - Imported by: `apps/website/pages/apps`
+                - Imported by:
+                  - `apps/website/landing/try`
+                  - `apps/website/pages/apps`
             - **`foundations`** — The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its entry in the header's Learn menu. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
@@ -14372,13 +14399,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Exports (values): `SkillsGraph`
                   - Cross-plugin:
                     - Imported by: `apps/website/pages/story/essay`
-            - **`tips`** — The tips page of the equin website: the tips feed declared to the editor (SiteFeeds.Feed), the /about/tips pane showing the published tips newest first — title, text, then each screenshot and video — and its entry in the header's Learn menu. Declares the tips feed to the box (SiteFeeds.Feed), which validates every published tip against it and serves the newest 60 to visitors, and the tips page's sitemap entry (WebsitePages.Page).
+            - **`tips`** — The tips page of the equin website: the tips feed declared to the editor (SiteFeeds.Feed), the /about/tips pane showing the published tips newest first — title, text, then each screenshot and video — its entry in the header's Learn menu, and the tips' mark (TipsBulb: a lit lightbulb in the site's one warm light, declared once here), which the page's heading and the Download page's Learn the tricks card wear. Declares the tips feed to the box (SiteFeeds.Feed), which validates every published tip against it and serves the newest 60 to visitors, and the tips page's sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `SiteFeeds.Feed` "tips"
                   - `Pane.Register` "website-tips"
                   - `Website.LearnEntry` "Tips" → `TipsNavItem`
-                - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
+                - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
                   - `apps/website/shell` ×7
                   - `apps/deploy/site-feeds/box` ×4
                   - `primitives/pane` ×3
@@ -14390,8 +14417,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/center.Center`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
                   - `primitives/loading.Loading`
-                - Exports (values): `tipsPane`
+                  - `ui/icons.Icon`
+                - Exports (values):
+                  - `TipsBulb`
+                  - `tipsPane`
               - Server:
                 - Contributes:
                   - `site-feeds.feed` "tips"
@@ -14415,6 +14446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --ring`
                   - `ui/tokens/shape --radius`
+                - Imported by: `apps/website/pages/download`
             - **`vision`** — The vision page of the equin website: the /about/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteVision.Section`
@@ -14563,6 +14595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Website.Section` ← `apps.website.landing.layers`
               - `Website.Section` ← `apps.website.landing.screenshot`
               - `Website.Section` ← `apps.website.landing.story-link`
+              - `Website.Section` ← `apps.website.landing.try`
               - `Website.Layer` ← `apps.website.pages.privacy`
               - `Website.Resident` ← `apps.website.live-demo`
               - `Website.LearnEntry` ← `apps.website.pages.foundations`
@@ -14690,8 +14723,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --font-weight-semibold`
-            - Imported by: 23 plugins — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 24 plugins — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+              - `apps` ×22
               - `companions/browser-extension/equin-site`
               - `hints/help-menu`
 
@@ -15503,8 +15536,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShowsAppsSideBySide`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 51 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×21
+        - Imported by: 52 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×22
           - `apps-core` ×9
           - `debug` ×4
           - `shell` ×3
@@ -53321,8 +53354,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --pad-card`
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
-              - `apps` ×15
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+              - `apps` ×14
               - `page` ×3
               - `primitives` ×3
               - `tasks` ×3
@@ -53399,8 +53432,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×26
+            - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×27
               - `debug` ×12
               - `conversations` ×7
               - `primitives` ×7
@@ -54358,8 +54391,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 479 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×114
+            - Imported by: 480 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×115
               - `conversations` ×79
               - `primitives` ×57
               - `debug` ×39
@@ -54598,8 +54631,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 452 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×114
+            - Imported by: 453 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×115
               - `conversations` ×84
               - `primitives` ×49
               - `debug` ×39
@@ -54924,9 +54957,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 491 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 493 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `apps` ×116
               - `primitives` ×116
-              - `apps` ×114
               - `conversations` ×53
               - `page` ×26
               - `debug` ×25
@@ -58194,10 +58227,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×22
           - `primitives` ×19
-          - `apps` ×15
+          - `apps` ×16
           - `tasks` ×8
           - `page` ×4
           - `apps-core` ×3
@@ -59837,8 +59870,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 221 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×77
+        - Imported by: 222 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×78
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
@@ -69747,8 +69780,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 620 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×156
+        - Imported by: 622 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×158
           - `conversations` ×123
           - `primitives` ×56
           - `page` ×51
@@ -71094,8 +71127,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 572 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×127
+            - Tokens used by: 573 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×128
               - `conversations` ×94
               - `primitives` ×83
               - `debug` ×42
@@ -71254,8 +71287,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 372 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `apps` ×76
+            - Tokens used by: 371 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×75
               - `primitives` ×75
               - `conversations` ×50
               - `debug` ×29
@@ -71728,9 +71761,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 426 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 427 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
-              - `apps` ×82
+              - `apps` ×83
               - `primitives` ×64
               - `page` ×35
               - `debug` ×28
@@ -71927,8 +71960,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 243 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×64
+            - Tokens used by: 244 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×65
               - `conversations` ×39
               - `primitives` ×39
               - `debug` ×15

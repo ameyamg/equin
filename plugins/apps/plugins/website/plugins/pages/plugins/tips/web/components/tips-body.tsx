@@ -24,6 +24,7 @@ import {
 } from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box/web";
 import { tipsFeed, type TipsFeed } from "../../core";
 import { tipsPane } from "../panes";
+import { TipsBulb } from "./tips-bulb";
 
 /** The column the tips read in: the layers' width, centred in the measure. */
 const COLUMN = "mx-auto w-full max-w-[53.75rem]";
@@ -50,8 +51,8 @@ export function TipsBody() {
     <WebsiteChrome pane={tipsPane}>
       <WebsiteHero
         kind="page"
-        lead="Tips of the "
-        accent="day"
+        icon={<TipsBulb className="website-tips-heading-bulb" />}
+        lead="Tips"
         lede="Small things equin can do that you might not have found yet."
       />
       <WebsiteBand section="tips" rhythm="page-body">

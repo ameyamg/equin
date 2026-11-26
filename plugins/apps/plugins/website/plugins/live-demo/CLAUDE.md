@@ -111,6 +111,7 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
   - Imported by:
     - `apps/website`
     - `apps/website/landing/screenshot`
+    - `apps/website/landing/try`
     - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `companions/browser-extension/equin-site`

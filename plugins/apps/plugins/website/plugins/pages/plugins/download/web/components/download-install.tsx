@@ -27,7 +27,7 @@ import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/co
 import { DownloadCode } from "./download-code";
 import { LocalAppLink } from "./download-link";
 import { DownloadNextSteps } from "./download-next-steps";
-import { DownloadTryDemo } from "./download-try-demo";
+import { DownloadClosing } from "./download-closing";
 import {
   equinDownloadNoteTheme,
   equinDownloadTabsTheme,
@@ -102,7 +102,7 @@ export function DownloadInstall() {
           </Stack>
           <Disclaimer />
           <DownloadNextSteps />
-          <DownloadTryDemo />
+          <DownloadClosing />
         </Stack>
       </Theme>
     </WebsiteBand>

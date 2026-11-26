@@ -1,4 +1,3 @@
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -39,11 +38,11 @@ const PROPERTIES = [
  *
  * The heading, its lede and the glow behind them are the shell's
  * `WebsiteHero` — every page opens the same way. What is the homepage's own is
- * the row of three properties under the lede: small flat tiles, left-aligned
- * inside the centred heading so each reads as a sentence, capped at 860px so
- * the row stays narrower than the reading measure. The film sits between the
- * lede and that row, so it reads as part of the claim — and the row keeps it
- * apart from the live demo below.
+ * the row of three properties under the film: plain words, no boxes — a
+ * glowing dot, the name, a line — left-aligned inside the centred heading so
+ * each reads as a sentence, capped at 860px so the row stays narrower than the
+ * reading measure. The film sits between the lede and that row, so it reads as
+ * part of the claim.
  */
 export function HeroSection() {
   return (
@@ -63,14 +62,11 @@ export function HeroSection() {
       <Grid
         minCellWidth="14rem"
         mode="fit"
-        gap="md"
+        gap="2xl"
         className="w-full max-w-[53.75rem] text-left"
       >
         {PROPERTIES.map((property) => (
-          <Card
-            key={property.name}
-            className="website-hero-property p-lg rounded-xl shadow-none"
-          >
+          <div key={property.name}>
             <Stack gap="2xs">
               <Inline gap="sm">
                 <StatusDot
@@ -85,7 +81,7 @@ export function HeroSection() {
                 {property.body}
               </Text>
             </Stack>
-          </Card>
+          </div>
         ))}
       </Grid>
     </WebsiteHero>

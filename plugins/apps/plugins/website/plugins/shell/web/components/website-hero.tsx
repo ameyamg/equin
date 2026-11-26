@@ -32,8 +32,10 @@ export interface WebsiteHeroProps {
   kind: "home" | "page";
   /** The heading's plain run, before the accent. */
   lead: string;
-  /** The heading's emphasised run, painted with the accent gradient. */
-  accent: string;
+  /** The heading's emphasised run, painted with the accent gradient. A heading of one plain word (Tips) has none. */
+  accent?: string;
+  /** A mark drawn before the heading's words, in the heading's line (the Tips page's lightbulb). */
+  icon?: ReactNode;
   /** What closes the heading after the accent — the homepage's full stop. */
   trail?: string;
   /** The paragraph under the heading. */
@@ -62,6 +64,7 @@ export function WebsiteHero({
   lead,
   accent,
   trail,
+  icon,
   lede,
   children,
 }: WebsiteHeroProps) {
@@ -99,8 +102,11 @@ export function WebsiteHero({
                   : "tracking-[-0.045em]",
               )}
             >
+              {icon}
               {lead}
-              <span className="website-hero-accent">{accent}</span>
+              {accent !== undefined && (
+                <span className="website-hero-accent">{accent}</span>
+              )}
               {trail}
             </Text>
             <Text

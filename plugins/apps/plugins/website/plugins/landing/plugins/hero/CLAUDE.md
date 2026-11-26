@@ -31,7 +31,7 @@ and the paragraph says what it means.
 
 ## Plugin reference
 
-- Description: Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal). The landing page's head (DocumentHead.Fragment): preloads the showcase film's poster — the page's largest paint — from t0, on the landing page only, instead of once the hero has rendered.
+- Description: Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal), as plain words under the film. The landing page's head (DocumentHead.Fragment): preloads the showcase film's poster — the page's largest paint — from t0, on the landing page only, instead of once the hero has rendered.
 - Web:
   - Contributes: `Website.Section` "Hero" → `HeroSection`
   - Uses:
@@ -40,7 +40,6 @@ and the paragraph says what it means.
     - `apps/website/shell.WebsiteHero`
     - `infra/endpoints.useAssetSrc`
     - `media/player.MediaPlayer`
-    - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
@@ -58,11 +57,9 @@ and the paragraph says what it means.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/density --space-lg`
     - `ui/tokens/shape --radius`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`

@@ -1,0 +1,93 @@
+/* The download page's closing cards (Learn the tricks, Try it in your
+ * browser first): one shape, told apart by their light — `--card-light`, set
+ * by the card's tone from a token (the tips' warm light, the accent's text
+ * blue). The light washes in from the card's top-left corner and tints the
+ * icon's tile and its edge; the card itself is the site's card. */
+.download-card {
+  padding: 1.25rem 1.375rem;
+  border-radius: 18px;
+  background: radial-gradient(
+      circle at 0 0,
+      color-mix(in srgb, var(--card-light) 10%, transparent),
+      transparent 55%
+    ),
+    var(--card);
+}
+
+.download-card[data-tone="tips"] {
+  --card-light: var(--website-tip-light);
+}
+
+.download-card[data-tone="demo"] {
+  --card-light: var(--primary-text);
+}
+
+/* 44px, a 12px corner: the light at 10% under the glyph, 25% on the edge. */
+.download-card-tile {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  color: var(--card-light);
+  background: color-mix(in srgb, var(--card-light) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-light) 25%, transparent);
+}
+
+.download-card-tile svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* The row: tile, words, pill, 16px apart — between the ramp's 14px and 22px,
+ * the design's own. */
+.download-card .download-card-row {
+  gap: 1rem;
+}
+
+/* The line sits 2px under the title. */
+.download-card-line {
+  margin-top: 0.125rem;
+}
+
+/* A card's way on: a quiet outlined pill, nothing filled — 8px × 14px around
+ * a 14px medium label on its 1.6 line (40px tall), a 20% foreground edge
+ * coming up to 40% (with a 7% wash) under the pointer, and the design's "→" —
+ * the font's own arrow, its long shaft, a space after the label — stepping
+ * 3px on under the pointer. */
+.download-card-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.download-card-pill:hover,
+.download-card-pill:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 40%, transparent);
+}
+
+.download-card-arrow {
+  transition: transform 0.2s ease;
+}
+
+.download-card-pill:hover .download-card-arrow,
+.download-card-pill:focus-visible .download-card-arrow {
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .download-card-arrow {
+    transition: none;
+  }
+}

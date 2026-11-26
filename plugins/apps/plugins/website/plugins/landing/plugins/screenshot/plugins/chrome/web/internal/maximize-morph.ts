@@ -22,10 +22,15 @@ let running = false;
  * cross-fading. The old side is a picture; `update` commits synchronously
  * inside the transition (`flushSync`), and the new box is matched by name.
  *
+ * `from` is the box the old side grows out of when it is not the demo's own
+ * (a page with no demo frame — the homepage's Open the demo button): the
+ * transition starts from that element's box instead, its picture clearing
+ * as the demo's box grows over the page.
+ *
  * Where the browser has no view transitions, the visitor prefers reduced
  * motion or a morph is already running, `update` just runs.
  */
-export function morphDemoFrame(update: () => void): void {
+export function morphDemoFrame(update: () => void, from?: HTMLElement): void {
   if (
     running ||
     typeof document.startViewTransition !== "function" ||
@@ -36,15 +41,16 @@ export function morphDemoFrame(update: () => void): void {
   }
   running = true;
   let named: HTMLElement | null = null;
-  const nameFrame = (): void => {
-    named = document.querySelector<HTMLElement>(`[${DEMO_FRAME_ATTR}]`);
+  const nameFrame = (source?: HTMLElement): void => {
+    named =
+      source ?? document.querySelector<HTMLElement>(`[${DEMO_FRAME_ATTR}]`);
     if (named !== null) named.style.viewTransitionName = NAME;
   };
   const clear = (): void => {
     if (named !== null) named.style.viewTransitionName = "";
     named = null;
   };
-  nameFrame();
+  nameFrame(from);
   document.documentElement.setAttribute(ACTIVE_ATTR, "");
   const transition = document.startViewTransition(() => {
     clear();

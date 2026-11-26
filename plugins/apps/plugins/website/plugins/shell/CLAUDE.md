@@ -99,6 +99,7 @@ hover.
     - `Website.Section` ← `apps.website.landing.layers`
     - `Website.Section` ← `apps.website.landing.screenshot`
     - `Website.Section` ← `apps.website.landing.story-link`
+    - `Website.Section` ← `apps.website.landing.try`
     - `Website.Layer` ← `apps.website.pages.privacy`
     - `Website.Resident` ← `apps.website.live-demo`
     - `Website.LearnEntry` ← `apps.website.pages.foundations`
@@ -226,8 +227,8 @@ hover.
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×21
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×22
     - `companions/browser-extension/equin-site`
     - `hints/help-menu`
 
