@@ -1,10 +1,8 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
-import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import {
   siteFeedEntryIdKind,
   type SiteFeedDecl,
@@ -13,10 +11,10 @@ import {
   judgeSiteFeedValues,
   siteFeedOf,
 } from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box/server";
-import { siteFeedSearchText, type SiteFeedPublishState } from "../../core";
+import { siteFeedSearchText } from "../../core";
 import type { UpdateSiteFeedItemAnswer } from "../../shared";
 import { siteFeedItemAttachments } from "./schema-attachments";
-import { _siteFeedItems } from "./tables";
+import { _siteFeedItems, _siteFeedPublications } from "./tables";
 
 /** A stored item row. */
 export type SiteFeedItemRecord = typeof _siteFeedItems.$inferSelect;
@@ -34,26 +32,18 @@ export async function requireItem(
   return row;
 }
 
-/** A new draft of `feedId` on `deploymentId`, its values the declaration's defaults. */
+/** A new draft of `feedId`, its values the declaration's defaults. */
 export async function createItem(
-  deploymentId: string,
   feedId: string,
 ): Promise<
   { kind: "created"; id: string } | { kind: "unknown-feed"; feedId: string }
 > {
   const feed = siteFeedOf(feedId);
   if (feed === null) return { kind: "unknown-feed", feedId };
-  const [deployment] = await db
-    .select({ id: _deployDeployments.id })
-    .from(_deployDeployments)
-    .where(eq(_deployDeployments.id, deploymentIdKind.key(deploymentId)));
-  if (!deployment)
-    throw new HttpError(404, `Unknown deployment: ${deploymentId}`);
   const id = siteFeedEntryIdKind.mint();
   const values = feed.valuesSchema.parse({}) as Record<string, unknown>;
   await db.insert(_siteFeedItems).values({
     id,
-    deploymentId: deployment.id,
     feedId,
     values,
     searchText: siteFeedSearchText(feed.fields, values),
@@ -104,46 +94,33 @@ async function mergeItemValues(
   return { answer: { kind: "saved" }, item: saved };
 }
 
-/** Delete a draft; a published or in-flight item is refused (unpublish first). */
+/**
+ * Delete a draft. A published item is refused (unpublish first), and so is a
+ * draft some destination still holds or is on its way to (`busy`): its
+ * unpublish has not finished everywhere yet.
+ */
 export async function deleteItem(
   id: string,
 ): Promise<{ kind: "deleted" } | { kind: "published" } | { kind: "busy" }> {
   const item = await requireItem(id);
   if (item.state === "published") return { kind: "published" };
-  const deleted = await db
-    .delete(_siteFeedItems)
-    .where(
-      and(
-        eq(_siteFeedItems.id, item.id),
-        eq(_siteFeedItems.state, "draft"),
-        inArray(_siteFeedItems.publishState, ["idle", "failed"]),
-      ),
-    )
-    .returning({ id: _siteFeedItems.id });
-  return deleted.length > 0 ? { kind: "deleted" } : { kind: "busy" };
-}
-
-/**
- * Move an item's publish state to `to` — only from a state that allows it,
- * so a publish never overtakes an unpublish in flight (or the reverse).
- * Answers whether it moved.
- */
-export async function claimPublishState(
-  id: string,
-  to: Extract<SiteFeedPublishState, "publishing" | "unpublishing">,
-): Promise<boolean> {
-  const from: SiteFeedPublishState[] = ["idle", "failed", to];
-  const moved = await db
-    .update(_siteFeedItems)
-    .set({ publishState: to, publishError: null })
-    .where(
-      and(
-        eq(_siteFeedItems.id, siteFeedEntryIdKind.key(id)),
-        inArray(_siteFeedItems.publishState, from),
-      ),
-    )
-    .returning({ id: _siteFeedItems.id });
-  return moved.length > 0;
+  return db.transaction(async (tx) => {
+    const held = await tx
+      .select({ destination: _siteFeedPublications.destination })
+      .from(_siteFeedPublications)
+      .where(eq(_siteFeedPublications.itemId, item.id))
+      .limit(1);
+    if (held.length > 0) return { kind: "busy" as const };
+    const deleted = await tx
+      .delete(_siteFeedItems)
+      .where(
+        and(eq(_siteFeedItems.id, item.id), eq(_siteFeedItems.state, "draft")),
+      )
+      .returning({ id: _siteFeedItems.id });
+    return deleted.length > 0
+      ? { kind: "deleted" as const }
+      : { kind: "busy" as const };
+  });
 }
 
 /** The feed an item belongs to, as this app declares it — or null (its site plugin is gone). */

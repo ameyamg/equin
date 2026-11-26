@@ -18,6 +18,9 @@ import {
   DISCORD_CONTENT_MAX,
   DISCORD_FILES_MAX,
   discordContent,
+  discordMessageLink,
+  parseWebhookInfo,
+  webhookInfoUrl,
   discordForm,
   executeWebhookUrl,
   parseDiscordResponse,
@@ -174,14 +177,27 @@ function asPostResult(answer: DiscordAnswer): SyndicationPostResult {
   }
 }
 
+/**
+ * Post a new message, answering its link too. The webhook's guild and
+ * channel (what a message link needs; a posted message carries no guild) are
+ * read BEFORE posting: a failure there throws with nothing posted, so the
+ * retry can never post twice.
+ */
 async function postMessage(
   hook: DiscordWebhook,
   message: PreparedMessage,
   signal: AbortSignal,
 ): Promise<SyndicationPostResult> {
-  return asPostResult(
+  const infoRes = await fetch(webhookInfoUrl(hook), { signal });
+  const info = parseWebhookInfo(infoRes.status, await infoRes.text());
+  const result = asPostResult(
     await send("POST", executeWebhookUrl(hook), message, signal),
   );
+  if (!result.ok || info === null) return result;
+  return {
+    ...result,
+    url: discordMessageLink(info.guildId, info.channelId, result.remoteId),
+  };
 }
 
 /** Discord through one channel webhook: post, edit (text and files replaced), delete. */

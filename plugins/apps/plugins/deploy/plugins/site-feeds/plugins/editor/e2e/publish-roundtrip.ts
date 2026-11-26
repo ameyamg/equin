@@ -1,21 +1,18 @@
 /**
  * A site-feed item's whole life, end to end on this checkout's build, through
- * the UI: Deploy → a `website` site → Feeds → New item → title, text, a
- * screenshot and a short video → Publish → the tip is on the site's Tips page
- * (`/about/tips`) and its video seeks (the media route answers byte ranges,
- * 206) → edit the title → the page shows the new one → Unpublish → the tip is
- * gone and its media route answers 404.
+ * the UI only: Deploy → Feeds (the sidebar page) → New item → title, text, a
+ * screenshot and a short video → Publish → the tip is on THIS instance's own
+ * Tips page (`/about/tips` — the local destination, published in-process,
+ * no server or deployment needed) and its video seeks (the media route
+ * answers byte ranges, 206) → edit the title → the page shows the new one →
+ * Unpublish → the tip is gone and its media route answers 404.
  *
- * The site's box is THIS instance: the script registers a server and a
- * `website` deployment through the Deploy app's own endpoints, then marks the
- * server a stand-in box (`deploy_host_stand_ins`, the row
- * `markServerBoxIsThisInstance` writes — `deploy/host-query`), seeded through
- * the harness's deploy DB as any e2e seeds rows. The publish job then runs
- * its real flow (missing media → staged copy → import → upsert) against this
- * instance's own host-only routes, with no SSH.
+ * A worktree publishes to no deployed site (its database holds production's
+ * deployment rows): the script checks the Publish queued this instance only.
  *
- * Everything it made is removed at the end (also on failure), and a killed
- * run's leftovers (servers named `e2e-site-feeds-…`) first.
+ * What it made is removed at the end (also on failure), and a killed run's
+ * leftovers (items titled `… (e2e-site-feeds-…)`) first, through the app's
+ * own endpoints.
  *
  *   ./equin run plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/e2e/publish-roundtrip.ts [--headed]
  */
@@ -57,67 +54,6 @@ const BODY = "Drag a tab to the edge of a pane.\nIt splits in two.";
 const db = openDeployDb();
 const scratch = await mkdtemp(join(tmpdir(), "site-feeds-roundtrip-"));
 
-/** Delete a server and every deployment on it, through the Deploy app's endpoints. */
-async function removeServer(serverId: string): Promise<void> {
-  const deps = await db.query<{ id: string }>(
-    "SELECT id FROM deploy_deployments WHERE server_id = $1",
-    [serverId],
-  );
-  for (const { id } of deps) {
-    // Its items cascade with it; what a killed run left published on the box
-    // (this instance) is unpublished first, as the editor would.
-    const items = await db.query<{ id: string }>(
-      "SELECT id FROM site_feed_items WHERE deployment_id = $1",
-      [id],
-    );
-    for (const item of items) {
-      const res = await agentFetch(
-        `/api/deploy/site-feeds/items/${item.id}/unpublish`,
-        { method: "POST" },
-      );
-      if (!res.ok)
-        throw new Error(
-          `unpublish ${item.id}: ${res.status} ${await res.text()}`,
-        );
-    }
-    if (items.length > 0) {
-      await waitFor(
-        () =>
-          db.query<{ n: number }>(
-            "SELECT count(*)::int AS n FROM site_feed_entries WHERE id = ANY($1)",
-            [items.map((i) => i.id)],
-          ),
-        (rows) => rows[0]?.n === 0,
-        { timeoutMs: 60_000 },
-      );
-    }
-    const res = await agentFetch(`/api/deploy/deployments/${id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok)
-      throw new Error(
-        `delete deployment ${id}: ${res.status} ${await res.text()}`,
-      );
-  }
-  const res = await agentFetch(`/api/deploy/servers/${serverId}`, {
-    method: "DELETE",
-  });
-  if (!res.ok)
-    throw new Error(
-      `delete server ${serverId}: ${res.status} ${await res.text()}`,
-    );
-}
-
-let serverId: string | null = null;
-let cleaned = false;
-onBeforeFinish(async () => {
-  if (cleaned) return;
-  cleaned = true;
-  if (serverId !== null) await removeServer(serverId);
-  await db.close();
-  await rm(scratch, { recursive: true, force: true });
-});
-
 /** A request's answer, or a throw naming it. */
 async function call<T>(path: string, init: RequestInit): Promise<T> {
   const res = await agentFetch(path, {
@@ -127,6 +63,46 @@ async function call<T>(path: string, init: RequestInit): Promise<T> {
   if (!res.ok) throw new Error(`${path}: ${res.status} ${await res.text()}`);
   return (await res.json()) as T;
 }
+
+/** Unpublish an item everywhere, wait for every copy to drop it, then delete it. */
+async function removeItem(id: string): Promise<void> {
+  await call(`/api/deploy/site-feeds/items/${id}/unpublish`, {
+    method: "POST",
+  });
+  const gone = await waitFor(
+    () =>
+      db.query<{ n: number }>(
+        "SELECT count(*)::int AS n FROM site_feed_publications WHERE item_id = $1",
+        [id],
+      ),
+    (rows) => rows[0]?.n === 0,
+    { timeoutMs: 60_000 },
+  );
+  if (!gone.ok) throw new Error(`item ${id} is still published somewhere`);
+  const answer = await call<{ kind: string }>(
+    `/api/deploy/site-feeds/items/${id}`,
+    { method: "DELETE" },
+  );
+  if (answer.kind !== "deleted") {
+    throw new Error(`delete ${id}: ${JSON.stringify(answer)}`);
+  }
+}
+
+/** Items a run (this one, or a killed one) made: their title carries the prefix. */
+const ownItems = () =>
+  db.query<{ id: string }>(
+    "SELECT id FROM site_feed_items WHERE values->>'title' LIKE $1",
+    [`%(${PREFIX}%`],
+  );
+
+let cleaned = false;
+onBeforeFinish(async () => {
+  if (cleaned) return;
+  cleaned = true;
+  for (const { id } of await ownItems()) await removeItem(id);
+  await db.close();
+  await rm(scratch, { recursive: true, force: true });
+});
 
 /**
  * The opened item's editor, and its first text input (the feed's Title). The
@@ -141,11 +117,7 @@ const titleBox = (page: Page) =>
 const pageText = (page: Page) => page.evaluate(() => document.body.innerText);
 
 // 0. A killed run's leftovers.
-for (const { id } of await db.query<{ id: string }>(
-  "SELECT id FROM deploy_servers WHERE name LIKE $1",
-  [`${PREFIX}%`],
-))
-  await removeServer(id);
+for (const { id } of await ownItems()) await removeItem(id);
 
 // 1. Media: a screenshot and a 4 s video, made with ffmpeg.
 const ff = await resolveFfmpeg();
@@ -188,32 +160,23 @@ await spawnExpectOk(
   { timeoutMs: 60_000 },
 );
 
-// 2. The site: a `website` deployment on a server whose box is this instance.
-const server = await call<{ id: string }>("/api/deploy/servers", {
-  method: "POST",
-  body: JSON.stringify({ name: tag, host: "127.0.0.1" }),
-});
-serverId = server.id;
-const deployment = await call<{ id: string }>("/api/deploy/deployments", {
-  method: "POST",
-  body: JSON.stringify({ compositionId: "website", serverId: server.id }),
-});
-await db.query(
-  "INSERT INTO deploy_host_stand_ins (server_id) VALUES ($1) ON CONFLICT DO NOTHING",
-  [server.id],
-);
-
 await withBrowser(async (h) => {
   const r = report("Site feeds · publish → edit → unpublish, end to end");
   const { page } = await h.session({ viewport: { width: 1440, height: 1000 } });
 
-  // 3. Deploy → the site → Feeds → New item.
-  await boot(page, pathUrl(`/deploy/site/${deployment.id}/feeds`), {
-    marker: "text=Tips of the day",
+  // 3. Deploy → Feeds (the sidebar entry) → New item.
+  await boot(page, pathUrl("/deploy"), {
+    marker: "text=Activity",
     timeoutMs: 120_000,
     settleMs: 500,
   });
-  r.ok("the site's Feeds tab lists the tips feed", true);
+  await page.getByText("Feeds", { exact: true }).first().click();
+  await page.getByText("Tips of the day").first().waitFor({ timeout: 60_000 });
+  r.ok(
+    "the sidebar's Feeds page lists the tips feed",
+    page.url().includes("/deploy/feeds"),
+    page.url(),
+  );
   await page.getByRole("button", { name: "New item" }).click();
   const title = titleBox(page);
   await title.waitFor({ timeout: 30_000 });
@@ -228,8 +191,8 @@ await withBrowser(async (h) => {
   const saved = await waitFor(
     () =>
       db.query<{ values: { title: string; body: string; media: unknown[] } }>(
-        "SELECT values FROM site_feed_items WHERE deployment_id = $1",
-        [deployment.id],
+        "SELECT values FROM site_feed_items WHERE values->>'title' = $1",
+        [TITLE],
       ),
     (rows) =>
       rows.length === 1 &&
@@ -244,8 +207,8 @@ await withBrowser(async (h) => {
     JSON.stringify(saved.value),
   );
   const [item] = await db.query<{ id: string }>(
-    "SELECT id FROM site_feed_items WHERE deployment_id = $1",
-    [deployment.id],
+    "SELECT id FROM site_feed_items WHERE values->>'title' = $1",
+    [TITLE],
   );
   if (item === undefined) throw new Error("no item was created");
 
@@ -272,27 +235,52 @@ await withBrowser(async (h) => {
   }
   await snap(page, OUT, "draft");
 
-  // 4. Publish.
+  // 4. Publish: this instance is a destination wherever this runs.
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   const published = await waitFor(
     () =>
-      db.query<{
-        state: string;
-        publish_state: string;
-        publish_error: string | null;
-      }>(
-        "SELECT state, publish_state, publish_error FROM site_feed_items WHERE id = $1",
+      db.query<{ destination: string; state: string; error: string | null }>(
+        "SELECT destination, state, error FROM site_feed_publications WHERE item_id = $1 ORDER BY destination",
         [item.id],
       ),
     (rows) =>
-      rows[0]?.publish_state === "failed" ||
-      (rows[0]?.state === "published" && rows[0]?.publish_state === "idle"),
+      rows.some(
+        (p) =>
+          p.destination === "local" &&
+          (p.state === "published" || p.state === "failed"),
+      ),
     { timeoutMs: 120_000 },
   );
+  const local = published.value?.find((p) => p.destination === "local");
   r.ok(
-    "Publish lands the item on the box",
-    published.ok && published.value?.[0]?.state === "published",
+    "Publish lands the item on this instance's own copy of the site",
+    published.ok && local?.state === "published",
     JSON.stringify(published.value),
+  );
+  const entry = await db.query<{ n: number }>(
+    "SELECT count(*)::int AS n FROM site_feed_entries WHERE id = $1",
+    [item.id],
+  );
+  r.ok("its entry is in this instance's site_feed_entries", entry[0]?.n === 1);
+  const remoteRows = (published.value ?? []).filter(
+    (p) => p.destination !== "local",
+  );
+  r.ok(
+    "a worktree queues no deployed site (production's rows are in its DB fork)",
+    remoteRows.length === 0,
+    JSON.stringify(remoteRows),
+  );
+  const line = page.locator('[data-destination="local"]');
+  await line.waitFor({ timeout: 30_000 });
+  const lineShown = await waitFor(
+    () => line.innerText(),
+    (t) => t.includes("This instance") && t.includes("Published"),
+    { timeoutMs: 30_000 },
+  );
+  r.ok(
+    "the editor's Published to row shows this instance as published",
+    lineShown.ok,
+    lineShown.value,
   );
   await snap(page, OUT, "published");
 
@@ -401,7 +389,7 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "tips-page");
 
   // 6. Edit the title: the published tip is published again.
-  await page.goto(pathUrl(`/deploy/site/${deployment.id}/feeds`));
+  await page.goto(pathUrl("/deploy/feeds"));
   await page.getByText(TITLE).first().click();
   const editTitle = titleBox(page);
   await editTitle.waitFor({ timeout: 30_000 });
@@ -416,7 +404,10 @@ await withBrowser(async (h) => {
     (rows) => rows[0]?.title === TITLE_EDITED,
     { timeoutMs: 120_000 },
   );
-  r.ok("an edit to a published item reaches the box", republished.ok);
+  r.ok(
+    "an edit to a published item reaches this instance's copy",
+    republished.ok,
+  );
   await page.goto(pathUrl("/about/tips"));
   const updated = await waitFor(
     () => pageText(page),
@@ -426,19 +417,19 @@ await withBrowser(async (h) => {
   r.ok("the Tips page shows the new title", updated.ok);
 
   // 7. Unpublish: gone from the page, its media 404.
-  await page.goto(pathUrl(`/deploy/site/${deployment.id}/feeds`));
+  await page.goto(pathUrl("/deploy/feeds"));
   await page.getByText(TITLE_EDITED).first().click();
   await page.getByRole("button", { name: "Unpublish" }).click();
   const unpublished = await waitFor(
     () =>
-      db.query<{ state: string; publish_state: string }>(
-        "SELECT state, publish_state FROM site_feed_items WHERE id = $1",
+      db.query<{ state: string; held: number }>(
+        "SELECT state, (SELECT count(*)::int FROM site_feed_publications WHERE item_id = $1) AS held FROM site_feed_items WHERE id = $1",
         [item.id],
       ),
-    (rows) => rows[0]?.state === "draft" && rows[0]?.publish_state === "idle",
+    (rows) => rows[0]?.state === "draft" && rows[0]?.held === 0,
     { timeoutMs: 120_000 },
   );
-  r.ok("Unpublish takes the item off the box", unpublished.ok);
+  r.ok("Unpublish takes the item off every copy", unpublished.ok);
   await page.goto(pathUrl("/about/tips"));
   const gone = await waitFor(
     () => pageText(page),

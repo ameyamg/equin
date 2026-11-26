@@ -17,11 +17,18 @@ own, so a plan that fits here fits there.
 ## A message (machine)
 
 - `content` (`discordContent`): the title in **bold** (its `*` escaped), then
-  each paragraph, blank lines between; ≤ 2000 characters, else refused before
-  anything is sent. `allowed_mentions: { parse: [] }`: a tip never pings.
+  each paragraph, then the post's `url` (the feed's page on the item's primary
+  copy of the site) in angle brackets — so no preview card covers the
+  attached files — blank lines between; ≤ 2000 characters, else refused
+  before anything is sent. `allowed_mentions: { parse: [] }`: a tip never pings.
 - ≤ 10 files, multipart `payload_json` + `files[i]` (`discordForm`), each
   listed in `attachments` by index; `POST …/webhooks/<id>/<token>?wait=true`
-  answers the message, whose id is the post's `remoteId`.
+  answers the message, whose id is the post's `remoteId`. A new post first
+  `GET`s the webhook (`webhookInfoUrl`, `parseWebhookInfo`) for its guild and
+  channel — a posted message carries no guild — so it answers the message's
+  link too (`discordMessageLink`: `https://discord.com/channels/<guild>/<channel>/<id>`),
+  what Send test post shows. Read BEFORE posting: a failure there throws with
+  nothing posted, so a retry never posts twice.
 - **The files must fit ONE request** (`planUploads`, pure): everything under
   the limit → sent as is. An image is never re-encoded: over the limit, or
   leaving no room, the post is refused with each file's size and the limit.
@@ -42,8 +49,9 @@ own, so a plan that fits here fits there.
 
 ## Tests
 
-- `machine/internal/discord-api.test.ts` — webhook URL spellings, URLs, content,
-  payload and multipart, every answer the parser reads.
+- `machine/internal/discord-api.test.ts` — webhook URL spellings, URLs, content
+  (the link last), payload and multipart, every answer the parser reads, the
+  webhook info and the message link.
 - `machine/internal/upload-plan.test.ts` — the budget across files: kept,
   re-encoded to equal shares, refused (an image over, no room left), never
   over the budget in total.

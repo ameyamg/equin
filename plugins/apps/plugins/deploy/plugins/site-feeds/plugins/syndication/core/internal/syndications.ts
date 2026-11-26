@@ -82,7 +82,7 @@ export const siteFeedSyndications = liveCollection("site-feeds.syndications", {
 export type SiteFeedSyndicationRow =
   typeof siteFeedSyndications extends LiveRowsCollection<infer R> ? R : never;
 
-/** One target's settings for one site's feed, as the browser sees them. */
+/** One target's settings for one feed, as the browser sees them. */
 export const SyndicationTargetSettingsSchema = z.object({
   enabled: z.boolean(),
   /** The non-secret config values (a secret's never leaves the computer). */
@@ -99,7 +99,7 @@ export type SyndicationTargetSettings = z.infer<
 >;
 
 /**
- * Every target's settings for one site's feed, keyed by target id — only the
+ * Every target's settings for one feed, keyed by target id — only the
  * targets configured so far (an absent one is off, its config the defaults).
  * Served by the computer (its secrets store says which secrets are set).
  */
@@ -109,7 +109,7 @@ export const syndicationTargetSettings = liveValue(
     schema: cappedRecord(SyndicationTargetSettingsSchema, {
       max: SYNDICATION_TARGETS_MAX,
     }),
-    params: ["deploymentId", "feedId"],
+    params: ["feedId"],
     needsMachine: { feature: "Reading where a feed is posted" },
   },
 );

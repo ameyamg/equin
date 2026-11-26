@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-deploy-site-feeds-syndication",
-  "description": "Posting a site feed's items to other services (an open set of targets): per site and feed target settings, a job per item and target that posts, edits or removes, and the state of each in the Feeds tab.",
+  "description": "Posting a site feed's items to other services (an open set of targets): per feed target settings, a job per item and target that posts, edits or removes — once per item, whatever copies of the site it is on — a test post, and the state of each on the Feeds page.",
   "private": true,
   "version": "0.0.1"
 }

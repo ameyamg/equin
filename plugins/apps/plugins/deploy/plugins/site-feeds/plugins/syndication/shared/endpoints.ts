@@ -7,7 +7,7 @@ import { SYNDICATION_TARGET_ID_PATTERN } from "../core";
 const TargetIdSchema = z.string().regex(SYNDICATION_TARGET_ID_PATTERN);
 
 /**
- * `PUT …/syndication/settings` — one target's settings for one site's feed:
+ * `PUT …/syndication/settings` — one target's settings for one feed:
  * whether it is on, and the config values one edit changed (`set`, merged onto
  * the stored ones; a secret field's value goes to the secrets store). The
  * target may refuse a config it cannot use (`invalid`), and nothing is saved.
@@ -15,7 +15,6 @@ const TargetIdSchema = z.string().regex(SYNDICATION_TARGET_ID_PATTERN);
 export const saveSyndicationSettings = defineEndpoint({
   route: "PUT /api/deploy/site-feeds/syndication/settings",
   body: z.object({
-    deploymentId: z.string().min(1),
     feedId: SiteFeedIdSchema,
     targetId: TargetIdSchema,
     enabled: z.boolean().optional(),
@@ -45,4 +44,30 @@ export const retrySyndication = defineEndpoint({
     z.object({ kind: z.literal("nothing-to-do") }),
   ]),
   needsMachine: { feature: "Posting a feed item elsewhere" },
+});
+
+/**
+ * `POST …/syndication/test` — post one item to one target NOW, with the
+ * target's settings as saved (whether or not it is switched on), recording
+ * nothing: no row, no remote id kept — what the target answers is shown, and
+ * the post stays on the target (point a test at a private channel).
+ */
+export const sendTestPost = defineEndpoint({
+  route: "POST /api/deploy/site-feeds/syndication/test",
+  body: z.object({
+    feedId: SiteFeedIdSchema,
+    targetId: TargetIdSchema,
+    itemId: z.string().min(1),
+  }),
+  response: z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("posted"),
+      remoteId: z.string(),
+      /** Where the post is seen (a message link), when the target says. */
+      url: z.string().optional(),
+    }),
+    /** The target, or the item, refused — in words; nothing was posted. */
+    z.object({ kind: z.literal("failed"), error: z.string() }),
+  ]),
+  needsMachine: { feature: "Sending a test post" },
 });

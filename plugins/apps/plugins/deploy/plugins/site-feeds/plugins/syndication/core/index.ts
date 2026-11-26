@@ -12,11 +12,7 @@ export type {
   SyndicationRemoveResult,
   SyndicationTargetDecl,
 } from "./internal/target";
-export {
-  feedPageUrl,
-  syndicatedMediaRefs,
-  syndicatedText,
-} from "./internal/compose";
+export { syndicatedMediaRefs, syndicatedText } from "./internal/compose";
 export type { SyndicatedText } from "./internal/compose";
 export {
   defaultTargetSettings,

@@ -1,4 +1,4 @@
-// @hash 28d73b4b4353
+// @hash 454558cc6ad9
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "apps.deploy.deploy-history:activity",
     "apps.deploy.deployments:overview",
     "apps.deploy.deployments:sites",
-    "apps.deploy.health:servers"
+    "apps.deploy.health:servers",
+    "apps.deploy.site-feeds.editor:feeds"
   ]
 }

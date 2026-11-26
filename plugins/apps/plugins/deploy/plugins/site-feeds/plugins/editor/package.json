@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-deploy-site-feeds-editor",
-  "description": "The Feeds tab of a site's page: a site's feed items on this computer (drafts and published), edited with the feed's own fields, published to the site's box and unpublished from it by a job over SSH.",
+  "description": "The Deploy app's Feeds page: every feed's items on this computer (drafts and published), edited with the feed's own fields, published to every copy of the site serving the feed — this instance in-process, deployed sites (from main only) over SSH — one job per item and copy.",
   "private": true,
   "version": "0.0.1"
 }

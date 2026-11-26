@@ -11,6 +11,7 @@
     - `Deploy.Sidebar` ← `apps.deploy.deploy-history`
     - `Deploy.Sidebar` ← `apps.deploy.deployments`
     - `Deploy.Sidebar` ← `apps.deploy.health`
+    - `Deploy.Sidebar` ← `apps.deploy.site-feeds.editor`
   - Contributes:
     - `ThemeEngine.Theme` "Deploy Graphite"
     - `Apps.App` "Deploy" → `DeployLayout`
@@ -42,6 +43,7 @@
     - `apps/deploy/health`
     - `apps/deploy/isle-building`
     - `apps/deploy/servers`
+    - `apps/deploy/site-feeds/editor`
     - `apps/deploy/site-messages/inbox`
     - `apps/website`
 

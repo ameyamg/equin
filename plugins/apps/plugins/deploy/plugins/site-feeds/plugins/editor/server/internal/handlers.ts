@@ -4,7 +4,7 @@ import { createItem, deleteItem } from "./items-repo";
 
 export const handleCreateItem = implement(
   createSiteFeedItem,
-  async ({ body }) => createItem(body.deploymentId, body.feedId),
+  async ({ body }) => createItem(body.feedId),
 );
 
 export const handleDeleteItem = implement(

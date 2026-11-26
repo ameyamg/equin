@@ -4,20 +4,24 @@ import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 /** What a publish or unpublish of one feed item tells its subscribers. */
 export interface SiteFeedItemEventPayload {
   itemId: string;
-  deploymentId: string;
   feedId: string;
   [key: string]: unknown;
 }
 
-/** `siteFeeds.itemPublished` — also `firstPublish`: false when an edit was published again. */
+/**
+ * `siteFeeds.itemPublished` — also `firstPublish`: false when an edit was
+ * published again. Emitted once per publish of the item, when its PRIMARY
+ * destination has it (the first deployment this instance publishes to, else
+ * this instance) — never once per destination.
+ */
 export interface SiteFeedItemPublishedPayload extends SiteFeedItemEventPayload {
   firstPublish: boolean;
 }
 
 // The hook point of whatever follows a publish (syndication: posting the item
-// to other services). Emitted by the publish job once the box has the entry —
+// to other services). Emitted by the publish job once the item's primary destination has it —
 // a subscriber binds a job with `Trigger({ on: siteFeedItemPublished, … })`,
-// filtered by feed or site, rather than the job naming it.
+// filtered by feed, rather than the job naming it.
 export const {
   event: siteFeedItemPublished,
   table: _siteFeedItemPublishedTriggers,
@@ -25,11 +29,10 @@ export const {
   name: "siteFeeds.itemPublished",
   filters: {
     feedId: text("feed_id"),
-    deploymentId: text("deployment_id"),
   },
 });
 
-// Emitted by the unpublish job once the box no longer serves the entry.
+// Emitted once no destination serves the item any more.
 export const {
   event: siteFeedItemUnpublished,
   table: _siteFeedItemUnpublishedTriggers,
@@ -37,6 +40,5 @@ export const {
   name: "siteFeeds.itemUnpublished",
   filters: {
     feedId: text("feed_id"),
-    deploymentId: text("deployment_id"),
   },
 });

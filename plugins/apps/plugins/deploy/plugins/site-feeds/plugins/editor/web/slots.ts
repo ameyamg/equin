@@ -3,10 +3,10 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { SiteFeedDecl } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
 import type { SiteFeedItemRow } from "../core";
 
-/** What a feed card's section is handed: the site and the feed. */
+/** What a feed card's section is handed: the feed, and the item open in it (null: none). */
 export interface SiteFeedCardProps {
-  deploymentId: string;
   feed: SiteFeedDecl;
+  openItemId: string | null;
 }
 
 /** What an item's part is handed: the item's live row and its feed. */
@@ -17,7 +17,7 @@ export interface SiteFeedItemProps {
 
 /**
  * Where what follows a publish (posting it elsewhere — `site-feeds/syndication`)
- * shows itself in the Feeds tab, without the editor naming it:
+ * shows itself on the Feeds page, without the editor naming it:
  *
  * - `FeedSection` — under a feed's items list (per-feed settings);
  * - `ItemStatus` — inline in the item's row, after its state (small chips);

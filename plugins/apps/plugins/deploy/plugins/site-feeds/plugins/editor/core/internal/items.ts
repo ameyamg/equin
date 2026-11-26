@@ -25,9 +25,10 @@ import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import { siteFeedEntryIdKind } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
 
 /**
- * Where an item stands on its site: `draft` — not on the box (never
- * published, or unpublished since); `published` — the box serves it.
- * What the box holds, as far as this computer last heard.
+ * What the user wants of an item: `draft` — on no copy of the site (never
+ * published, or unpublished since); `published` — on every copy it was
+ * published to. Where each copy actually stands is its publication's
+ * (`site_feed_publications`), written by the publish jobs.
  */
 export const SITE_FEED_ITEM_STATES = ["draft", "published"] as const;
 export type SiteFeedItemState = (typeof SITE_FEED_ITEM_STATES)[number];
@@ -40,42 +41,20 @@ export const SITE_FEED_ITEM_STATE_META: {
 };
 
 /**
- * The publish job's side of an item: `idle` — nothing in flight;
- * `publishing` / `unpublishing` — a job is on its way to the box; `failed` —
- * the last one ended for good, `publishError` saying why.
- */
-export const SITE_FEED_PUBLISH_STATES = [
-  "idle",
-  "publishing",
-  "unpublishing",
-  "failed",
-] as const;
-export type SiteFeedPublishState = (typeof SITE_FEED_PUBLISH_STATES)[number];
-
-export const SITE_FEED_PUBLISH_STATE_META: {
-  readonly [S in SiteFeedPublishState]: FieldOptionMeta;
-} = {
-  idle: { label: "Up to date", variant: "muted" },
-  publishing: { label: "Publishing…", variant: "info" },
-  unpublishing: { label: "Unpublishing…", variant: "info" },
-  failed: { label: "Failed", variant: "destructive" },
-};
-
-/**
  * One item of a site feed, on this computer — the source of truth: drafts,
- * the published ones' current text and media. The box holds only the
- * published copy (`site-feeds/box`), written by the publish job.
+ * the published ones' current text and media. It belongs to its feed, never
+ * to one deployment: every copy of the site serving the feed (this instance,
+ * each deployment shipping the declaring plugin) is a destination it is
+ * published to (`site_feed_publications`).
  */
 export const siteFeedItemFields = {
-  /** The item's id here AND its entry's id on the box (`sfe-…`). */
+  /** The item's id here AND its entry's id on every destination (`sfe-…`). */
   id: idKindField(siteFeedEntryIdKind),
-  /** The deployment (site) whose feed this item belongs to. */
-  deploymentId: textField({ label: "Site" }),
   /** The feed's id, as its site plugin declares it (`defineSiteFeed`). */
   feedId: textField({ label: "Feed" }),
   /**
    * One value per field of the feed's declaration, validated against it
-   * (`valuesSchema`) on every write here, and again by the box on publish.
+   * (`valuesSchema`) on every write here, and again by each box on publish.
    */
   values: jsonField<Record<string, unknown>>({
     schema: wholeRecord(z.unknown(), {
@@ -96,12 +75,6 @@ export const siteFeedItemFields = {
   }),
   /** When it was first published (the feed's order on the site); null while a draft. */
   publishedAt: nullable(dateField({ label: "Published" })),
-  publishState: enumTextField(SITE_FEED_PUBLISH_STATES, {
-    label: "Publishing",
-    options: SITE_FEED_PUBLISH_STATE_META,
-  }),
-  /** Why the last publish or unpublish ended for good, in words. */
-  publishError: nullable(textField({ label: "Publish error" })),
   createdAt: dateField({ label: "Created" }),
   updatedAt: dateField({ label: "Edited" }),
 } satisfies FieldsRecord;
@@ -134,8 +107,8 @@ export const siteFeedItemAttachmentLinksEntityRef = entityRef(
 );
 
 /**
- * The items of one site's feed, newest first — a bounded window every read
- * scopes to one `(deploymentId, feedId)`; `:rows` reads one item by id (the
+ * The items of one feed, newest first — a bounded window every read scopes
+ * to one `feedId`; `:rows` reads one item by id (the
  * editor). Values ride as a carried field: what each holds is the feed's
  * declaration's to say, so the list derives its columns from it.
  */
@@ -143,15 +116,13 @@ export const siteFeedItems = liveCollection("site-feeds.items", {
   from: siteFeedItemsEntityRef,
   pick: [
     "state",
-    "publishState",
     "publishedAt",
     "updatedAt",
     "createdAt",
-    "deploymentId",
     "feedId",
     "searchText",
   ],
-  carry: { pick: ["id", "values", "publishError"] },
+  carry: { pick: ["id", "values"] },
   id: "id",
   sortable: ["createdAt", "updatedAt", "publishedAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 50 },

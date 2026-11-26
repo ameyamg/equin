@@ -75,7 +75,9 @@ export interface SyndicatedMedia {
  * its own way (a chat's markdown, a plain-text network): the feed's first
  * `syndicate.text` field as `title` (null when empty), the others as
  * `paragraphs` (empty ones dropped), the `syndicate.media` field's files, and
- * the page showing the feed on the site (null: the site has no hostname).
+ * the page showing the feed on the item's primary copy of the site — the
+ * first deployment this instance publishes to, else this instance (null: that
+ * copy has no address for it).
  */
 export interface SyndicatedPost {
   readonly title: string | null;
@@ -93,6 +95,12 @@ export type SyndicationFailure = {
 };
 
 export type SyndicationPostResult =
-  { ok: true; remoteId: string } | SyndicationFailure;
+  | {
+      ok: true;
+      remoteId: string;
+      /** Where a person sees the post (a message link), when the target can say. */
+      url?: string;
+    }
+  | SyndicationFailure;
 
 export type SyndicationRemoveResult = { ok: true } | SyndicationFailure;

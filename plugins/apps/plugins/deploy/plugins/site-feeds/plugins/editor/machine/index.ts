@@ -4,7 +4,7 @@ import {
   unpublishSiteFeedItem,
   updateSiteFeedItem,
 } from "../shared";
-import { siteFeedPublishJob, siteFeedUnpublishJob } from "./internal/jobs";
+import { siteFeedPublishJob } from "./internal/jobs";
 import {
   handlePublishItem,
   handleUnpublishItem,
@@ -13,11 +13,11 @@ import {
 
 export default {
   description:
-    "Publishing site feed items: the site-feeds.publish job (asks the site's box which of the item's files it lacks, copies each out of the attachment store — hashed — into the box's staging dir over scp and has the box import it, then upserts the entry, which the box validates against its own declaration; a refusal ends it failed with the reason in words, a transport failure is retried) and site-feeds.unpublish (deletes the entry on the box), one at a time per backend; the update (autosave, a published item published again), publish and unpublish routes that queue them; both jobs emit siteFeeds.itemPublished / itemUnpublished when done.",
+    "Publishing site feed items to every copy of their site: the site-feeds.publish job, keyed by item and destination, brings one copy to what the item now asks — published: the files it lacks sent (for a deployed site: copied out of the attachment store, hashed, scp'd into the box's staging dir and imported there; for this instance: none, its box half is called in-process) then the entry upserted, which that copy validates against its own declaration; a draft: the entry deleted there. A refusal ends it failed in words, a transport failure is retried; a deployed site is never published to off main (a worktree's database holds production's rows). The update (autosave — a published item published again wherever it is), publish (every destination, or one) and unpublish routes that queue it; siteFeeds.itemPublished once the item's primary destination has it, siteFeeds.itemUnpublished once no destination does.",
   httpRoutes: {
     [updateSiteFeedItem.route]: handleUpdateItem,
     [publishSiteFeedItem.route]: handlePublishItem,
     [unpublishSiteFeedItem.route]: handleUnpublishItem,
   },
-  register: [siteFeedPublishJob, siteFeedUnpublishJob],
+  register: [siteFeedPublishJob],
 } satisfies MachinePluginDefinition;

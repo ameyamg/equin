@@ -3,19 +3,19 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { siteFeedEntryIdKind } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
-import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
-import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import {
   _siteFeedItems,
   feedOfItem,
+  primarySiteFeedDestination,
   type SiteFeedItemRecord,
 } from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/server";
 import {
-  feedPageUrl,
   syndicatedMediaRefs,
   syndicatedText,
   type SyndicatedMedia,
+  type SyndicatedPost,
 } from "../../core";
+import type { SiteFeedDecl } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
 import { syndicationTargetOf } from "../../server";
 import { _siteFeedSyndications } from "../../server/internal/tables";
 import { syndicateOnce, type SyndicationWorld } from "./flow";
@@ -24,7 +24,9 @@ import { makeWorkDir, stageMedia } from "./stage";
 
 const ItemTargetSchema = z.object({ itemId: z.string(), targetId: z.string() });
 
-async function readItem(itemId: string): Promise<SiteFeedItemRecord | null> {
+export async function readItem(
+  itemId: string,
+): Promise<SiteFeedItemRecord | null> {
   const [row] = await db
     .select()
     .from(_siteFeedItems)
@@ -40,7 +42,7 @@ function rowWhere(itemId: string, targetId: string) {
 }
 
 /** Why an item cannot be posted anywhere, in words — null when it can. */
-function unpostableReason(item: SiteFeedItemRecord): string | null {
+export function unpostableReason(item: SiteFeedItemRecord): string | null {
   const feed = feedOfItem(item);
   if (feed === null) {
     return `No plugin of this app declares the feed "${item.feedId}" any more.`;
@@ -49,6 +51,29 @@ function unpostableReason(item: SiteFeedItemRecord): string | null {
     return `The feed "${feed.label}" declares nothing to post elsewhere.`;
   }
   return null;
+}
+
+/**
+ * An item as a post: its feed's `syndicate` text, its media copied into
+ * `workDir`, and the feed's page on its primary copy of the site (the first
+ * deployment this instance publishes to, else this instance).
+ */
+export async function buildPost(
+  item: SiteFeedItemRecord,
+  feed: SiteFeedDecl,
+  workDir: string,
+): Promise<SyndicatedPost> {
+  const text = syndicatedText(feed, item.values) ?? {
+    title: null,
+    paragraphs: [],
+  };
+  const primary = await primarySiteFeedDestination(feed.id);
+  const media: SyndicatedMedia[] = [];
+  const refs = syndicatedMediaRefs(feed, item.values);
+  for (const [i, ref] of refs.entries()) {
+    media.push(await stageMedia(ref, i, workDir));
+  }
+  return { ...text, media, url: primary?.url ?? null };
 }
 
 /** The real world one run reads: the item, its row, the target's settings, the files. */
@@ -80,7 +105,7 @@ function worldFor(
     settings: async () => {
       const it = await loadItem();
       if (it === null || target === null) return null;
-      return loadTargetSettings(it.deploymentId, it.feedId, target);
+      return loadTargetSettings(it.feedId, target);
     },
     stage: async () => {
       const it = await loadItem();
@@ -88,27 +113,8 @@ function worldFor(
       if (it === null || feed === null) {
         throw new Error(`site-feeds: item ${itemId} vanished mid-run`);
       }
-      const text = syndicatedText(feed, it.values) ?? {
-        title: null,
-        paragraphs: [],
-      };
-      const [deployment] = await db
-        .select({ hostnames: _deployDeployments.hostnames })
-        .from(_deployDeployments)
-        .where(
-          eq(_deployDeployments.id, deploymentIdKind.key(it.deploymentId)),
-        );
-      const media: SyndicatedMedia[] = [];
-      const refs = syndicatedMediaRefs(feed, it.values);
-      for (const [i, ref] of refs.entries()) {
-        media.push(await stageMedia(ref, i, workDir));
-      }
       return {
-        post: {
-          ...text,
-          media,
-          url: feedPageUrl(deployment?.hostnames ?? [], feed.pagePath),
-        },
+        post: await buildPost(it, feed, workDir),
         // The run's work dir goes whole when the run ends.
         dispose: async () => undefined,
       };
@@ -229,10 +235,7 @@ export const syndicateItemJob = defineJob({
     if (item === null) return;
     if (item.state === "published") {
       if (unpostableReason(item) !== null) return;
-      for (const target of await enabledTargets(
-        item.deploymentId,
-        item.feedId,
-      )) {
+      for (const target of await enabledTargets(item.feedId)) {
         await queueSyndication(item.id, target.target.id);
       }
       return;

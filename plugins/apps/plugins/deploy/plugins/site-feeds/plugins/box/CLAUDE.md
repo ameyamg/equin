@@ -1,9 +1,13 @@
 # box
 
-Site feeds on the deployed box: the published copy of each feed's entries and
-everything that reads or writes it. It knows no SSH and no editor — the
-computer holding the items (the source of truth) writes here through the
-host-only routes [`site-feeds`](../../CLAUDE.md) declares.
+Site feeds on the deployed box — and on this instance, which runs the box half
+too and is a copy of the site of its own: the published copy of each feed's
+entries and everything that reads or writes it. It knows no SSH and no editor
+— the computer holding the items (the source of truth) writes a deployed box
+through the host-only routes [`site-feeds`](../../CLAUDE.md) declares, and
+this instance's own copy in-process (`upsertSiteFeedEntry` /
+`deleteSiteFeedEntry` / `missingSiteFeedMedia` + `presentSiteFeedMedia`, the
+same code the routes run, exported from `server/`).
 
 **A site renders a feed by importing the `web` barrel** (`useSiteFeed`), never
 only `core`: a composition's closure follows same-runtime imports, so the
@@ -18,6 +22,8 @@ validated against and what the public read admits (`siteFeedOf(id)`); the web
 slot (`web`, data, never drawn) is what the editor lists, read with
 `useSiteFeedDeclarations()` → `{ feed, pluginId }[]` — the plugin id is the
 contribution's own stamp, what `useDeploymentShips` asks a deployment about.
+The server twin, `siteFeedDeclarationOf(id)` → `{ feed, pluginId } | null`, is
+what the editor resolves a feed's destinations with.
 
 ## Tables
 
@@ -125,10 +131,16 @@ contribution's own stamp, what `useDeploymentShips` asks a deployment about.
   - Exports (types):
     - `JudgedSiteFeedValues`
     - `SiteFeedContribution`
+    - `SiteFeedServerDeclaration`
   - Exports (values):
+    - `deleteSiteFeedEntry`
     - `judgeSiteFeedValues`
+    - `missingSiteFeedMedia`
+    - `presentSiteFeedMedia`
+    - `siteFeedDeclarationOf`
     - `siteFeedOf`
     - `SiteFeeds`
+    - `upsertSiteFeedEntry`
   - Resources:
     - `site-feeds.entries` (push, capped: SITE_FEED_PUBLIC_LIMIT_MAX)
     - `site-feeds.entry-attachment-links` (keyed)

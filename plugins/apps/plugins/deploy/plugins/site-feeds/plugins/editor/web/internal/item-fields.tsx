@@ -8,6 +8,7 @@ import {
 import type { SiteFeedDecl } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
 import type { SiteFeedItemRow } from "../../core";
 import { SiteFeedEditor } from "../slots";
+import { ItemPublicationChips } from "../components/destinations";
 
 /** A text value's first line, for a one-line cell. */
 function firstLine(value: unknown): string {
@@ -67,6 +68,17 @@ export function feedItemFields(
       width: primary ? "minmax(0,1fr)" : "minmax(0,16rem)",
     });
   }
+  // Where the item is: a chip per copy of the site holding (or getting) it.
+  fields.push({
+    id: "publishedTo",
+    label: "Published to",
+    type: "text",
+    value: () => "",
+    cell: (row) => <ItemPublicationChips item={row} />,
+    sortable: false,
+    filterable: false,
+    width: "minmax(0,14rem)",
+  });
   if (withElsewhere) {
     fields.push({
       id: "elsewhere",

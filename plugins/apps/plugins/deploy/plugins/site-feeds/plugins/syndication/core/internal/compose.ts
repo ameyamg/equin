@@ -40,16 +40,3 @@ export function syndicatedMediaRefs(
   if (key === undefined) return [];
   return MediaRefSchema.array().parse(values[key] ?? []);
 }
-
-/**
- * Where the site shows the feed: its first hostname plus the feed's
- * `pagePath` (the root when it declares none). Null for a site with no
- * hostname — reachable only on its server.
- */
-export function feedPageUrl(
-  hostnames: readonly string[],
-  pagePath: string | undefined,
-): string | null {
-  const host = hostnames.find((h) => !h.startsWith("*."));
-  return host === undefined ? null : `https://${host}${pagePath ?? "/"}`;
-}

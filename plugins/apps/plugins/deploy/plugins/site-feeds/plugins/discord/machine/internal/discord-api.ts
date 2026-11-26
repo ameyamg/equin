@@ -23,18 +23,66 @@ export function webhookMessageUrl(
   return `${DISCORD_API}/webhooks/${hook.id}/${hook.token}/messages/${messageId}`;
 }
 
+/** `GET` here answers the webhook itself — its guild and channel (no auth beyond the token). */
+export function webhookInfoUrl(hook: DiscordWebhook): string {
+  return `${DISCORD_API}/webhooks/${hook.id}/${hook.token}`;
+}
+
+/** Where a person opens a message: `https://discord.com/channels/<guild>/<channel>/<message>`. */
+export function discordMessageLink(
+  guildId: string,
+  channelId: string,
+  messageId: string,
+): string {
+  return `https://discord.com/channels/${guildId}/${channelId}/${messageId}`;
+}
+
+const WebhookInfoSchema = z.object({
+  guild_id: z.string().min(1).nullish(),
+  channel_id: z.string().min(1).nullish(),
+});
+
+/**
+ * The webhook's guild and channel from a `GET` of it — null when Discord did
+ * not answer them (a non-2xx, or a webhook of no guild): the post then simply
+ * carries no link.
+ */
+export function parseWebhookInfo(
+  status: number,
+  body: string,
+): { guildId: string; channelId: string } | null {
+  if (status < 200 || status >= 300) return null;
+  let json: unknown;
+  try {
+    json = JSON.parse(body);
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    return null;
+  }
+  const parsed = WebhookInfoSchema.safeParse(json);
+  if (!parsed.success) return null;
+  const { guild_id, channel_id } = parsed.data;
+  return guild_id && channel_id
+    ? { guildId: guild_id, channelId: channel_id }
+    : null;
+}
+
 /**
  * A post's text as one message: the title in bold (its asterisks escaped, so
- * it cannot close the bold early), then each paragraph, blank lines between.
+ * it cannot close the bold early), then each paragraph, blank lines between,
+ * then the link to the feed's page on the site — in angle brackets, so
+ * Discord shows no preview card over the attached files.
  */
 export function discordContent(text: {
   title: string | null;
   paragraphs: readonly string[];
+  url?: string | null;
 }): string {
   const parts: string[] = [];
   if (text.title !== null)
     parts.push(`**${text.title.replace(/\*/g, "\\*")}**`);
   parts.push(...text.paragraphs);
+  if (text.url !== undefined && text.url !== null) parts.push(`<${text.url}>`);
   return parts.join("\n\n");
 }
 

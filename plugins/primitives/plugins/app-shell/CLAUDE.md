@@ -106,8 +106,8 @@ reads what is on screen rather than a per-app flag.
     - `ui/tokens/sidebar-palette --sidebar-accent`
     - `ui/tokens/sidebar-palette --sidebar-foreground`
     - `ui/tokens/sidebar-palette --sidebar-icon`
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×23
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×24
     - `tasks` ×4
     - `apps-core` ×2
     - `conversations` ×2

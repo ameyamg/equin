@@ -3008,8 +3008,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sitesIndexPane.Actions`
               - `sitePane.Actions`
               - `deploy-deployment-detail.actions`
-            - Slot contributors: 27 contributors — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
-              - `SiteTabs.View` ×6
+            - Slot contributors: 26 contributors — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+              - `SiteTabs.View` ×5
               - `DeploymentDetail.Section` ×3
               - `SiteBanner` ×3
               - `SiteCheck` ×3
@@ -3284,7 +3284,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/remote-deploy`
               - `apps/deploy/remote-deploy/site-live`
               - `apps/deploy/site-feeds/editor`
-              - `apps/deploy/site-feeds/syndication`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
               - `framework/cli/deploy`
@@ -3836,6 +3835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Deploy.Sidebar` ← `apps.deploy.deploy-history`
               - `Deploy.Sidebar` ← `apps.deploy.deployments`
               - `Deploy.Sidebar` ← `apps.deploy.health`
+              - `Deploy.Sidebar` ← `apps.deploy.site-feeds.editor`
             - Contributes:
               - `ThemeEngine.Theme` "Deploy Graphite"
               - `Apps.App` "Deploy" → `DeployLayout`
@@ -3867,6 +3867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/health`
               - `apps/deploy/isle-building`
               - `apps/deploy/servers`
+              - `apps/deploy/site-feeds/editor`
               - `apps/deploy/site-messages/inbox`
               - `apps/website`
         - **`site-feeds`** — Umbrella for the content a deployed site publishes itself (feeds — its tips, its news): defineSiteFeed (a site's own declaration of an entry's fields, how it syndicates, how many entries visitors read) and the host-only route contracts the computer publishes through; the box half ships inside the site.
@@ -3982,10 +3983,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (types):
                   - `JudgedSiteFeedValues`
                   - `SiteFeedContribution`
+                  - `SiteFeedServerDeclaration`
                 - Exports (values):
+                  - `deleteSiteFeedEntry`
                   - `judgeSiteFeedValues`
+                  - `missingSiteFeedMedia`
+                  - `presentSiteFeedMedia`
+                  - `siteFeedDeclarationOf`
                   - `siteFeedOf`
                   - `SiteFeeds`
+                  - `upsertSiteFeedEntry`
                 - Resources:
                   - `site-feeds.entries` (push, capped: SITE_FEED_PUBLIC_LIMIT_MAX)
                   - `site-feeds.entry-attachment-links` (keyed)
@@ -4040,35 +4047,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DISCORD_DEFAULT_UPLOAD_LIMIT_MB`
                   - `discordTarget`
                   - `parseDiscordWebhookUrl`
-            - **`editor`** — Feeds tab of a site's page, shown only when the deployment's composition ships a plugin declaring a site feed (SiteFeeds.Feed): one card per shipped feed — its items on this computer as a live DataView (columns derived from the feed's own fields: its text as the title, its media as thumbnails; state, publishing, published), New item, and the opened item's editor (the feed's FieldsForm, autosaved; Publish / Publish again / Unpublish / Delete; the last publish error in words). What follows a publish shows itself through the SiteFeedEditor slots: a section under a feed's list, chips in an item's row, a section in the opened item. Site feed items on this computer — the source of truth for what a site's feeds publish: the site_feed_items table (a draft or published item of one deployment's feed, its values validated against the feed's declaration on every write, its publish state and last error) and its attachment links (set from the values' media on every save, so drafts keep their files); the live site-feeds.items window, scoped per site and feed; the create and delete routes (a draft only); and the siteFeeds.itemPublished / siteFeeds.itemUnpublished events the publish jobs emit once the box has (or no longer has) the entry — what follows a publish (syndication) subscribes to them.
+            - **`editor`** — The Feeds page of the Deploy app (/deploy/feeds, its sidebar entry): one card per feed a plugin of this app declares (SiteFeeds.Feed) — its items on this computer as a live DataView (columns derived from the feed's own fields: its text as the title, its media as thumbnails; state, published, and a chip per copy of the site it is on), New item, and the opened item's editor (the feed's FieldsForm, autosaved; Publish / Publish again / Unpublish / Delete) with its Published to row: this instance and each deployment shipping the feed's declaring plugin, where the item stands there, its last error, Publish here / Retry — a deployed site said to be published to from main only off main. A failed publication has an Investigate action. What follows a publish shows itself through the SiteFeedEditor slots: a section under a feed's list, chips in an item's row, a section in the opened item. Site feed items on this computer — the source of truth for what a site's feeds publish: the site_feed_items table (a draft or published item of one feed — never of one deployment — its values validated against the feed's declaration on every write) and its attachment links (set from the values' media on every save, so drafts keep their files); site_feed_publications (one item on one destination — this instance, or a deployment shipping the feed — publishing, published, unpublishing or failed with why) served live per item; the live site-feeds.items window per feed; site-feeds.publish-scope (whether this instance publishes to deployed sites: main only, never a worktree whose database is a fork holding production's rows); the destinations a feed's items go to (siteFeedDestinations: every deployment whose composition closure includes the feed's declaring plugin, then this instance); the create and delete routes (a draft only); and the siteFeeds.itemPublished / siteFeeds.itemUnpublished events — once per item, when its primary destination has it (or no destination holds it any more) — that syndication subscribes to.
               - Web:
                 - Slots:
                   - `SiteFeedEditor.FeedSection`
                   - `SiteFeedEditor.ItemStatus`
                   - `SiteFeedEditor.ItemSection`
+                  - `deploy-feeds.actions`
                 - Slot contributors:
                   - `SiteFeedEditor.FeedSection` ← `apps.deploy.site-feeds.syndication`
                   - `SiteFeedEditor.ItemStatus` ← `apps.deploy.site-feeds.syndication`
                   - `SiteFeedEditor.ItemSection` ← `apps.deploy.site-feeds.syndication`
+                  - `deploy-feeds.actions` ← `primitives.pane`
                 - Contributes:
-                  - `DataViewSlots.CollectionItemAction` "site-feeds.items:investigate" → `CollectionInvestigate`
-                  - `SiteTabs.View` "Feeds" → `FeedsSection`
-                - Uses: 27 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md)
+                  - `DataViewSlots.CollectionItemAction` "site-feeds.publications:investigate" → `CollectionInvestigate`
+                  - `Pane.Register` "deploy-feeds"
+                  - `Deploy.Sidebar` "Feeds"
+                - Uses: 33 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md)
                   - `primitives/data-view` ×4
-                  - `apps/deploy/deployments` ×3
-                  - `apps/deploy/site-feeds/box` ×2
+                  - `primitives/pane` ×3
+                  - `apps/deploy/deployments` ×2
+                  - `network/live/live-state` ×2
                   - `network/live` ×2
-                  - `apps/deploy/host-query.useDeploymentShipsEach`
+                  - `primitives/css/spacing` ×2
+                  - `primitives/css/text` ×2
+                  - `apps/deploy/host-query.useDeploymentShips`
+                  - `apps/deploy/shell.Deploy`
+                  - `apps/deploy/site-feeds/box.useSiteFeedDeclarations`
                   - `config_v2/fields.FieldsForm`
                   - `fields/media/table.mediaFieldDef`
                   - `infra/endpoints.useEndpointMutation`
-                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/app-shell.opensPane`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/launch/investigate.Investigate`
                   - `primitives/loading.Loading`
@@ -4085,10 +4098,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `resource.declare` "site-feeds.items"
                   - `resource.declare` "site-feeds.items:groups"
                   - `resource.declare` "site-feeds.items:rows"
+                  - `resource.declare` "site-feeds.publications"
+                  - `resource.declare` "site-feeds.publications:rows"
+                  - `resource.declare` "site-feeds.publish-scope"
                   - `attachments.link` "site_feed_items"
                 - Uses:
                   - `apps/deploy/deployments._deployDeployments`
                   - `apps/deploy/site-feeds/box.judgeSiteFeedValues`
+                  - `apps/deploy/site-feeds/box.siteFeedDeclarationOf`
                   - `apps/deploy/site-feeds/box.siteFeedOf`
                   - `database.db`
                   - `infra/attachments.Attachments`
@@ -4098,11 +4115,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/entities.defineEntity`
                   - `infra/events.defineTriggerEvent`
                   - `network/live.serveCollection`
+                  - `network/live.serveValue`
+                  - `plugin-meta/composition.compositionIncludesEach`
                 - DB schema:
                   - `plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/server/internal/schema-attachments.ts`
                   - `plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/server/internal/tables-events.ts`
                   - `plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/server/internal/tables.ts`
                 - Exports (types):
+                  - `ResolvedDestination`
                   - `SiteFeedItemEventPayload`
                   - `SiteFeedItemPublishedPayload`
                   - `SiteFeedItemRecord`
@@ -4111,6 +4131,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `_siteFeedItems`
                   - `_siteFeedItemUnpublishedTriggers`
                   - `feedOfItem`
+                  - `primarySiteFeedDestination`
+                  - `siteFeedDestinations`
                   - `siteFeedItemPublished`
                   - `siteFeedItemUnpublished`
                 - Register:
@@ -4122,6 +4144,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `site-feeds.items` (keyed, window)
                   - `site-feeds.items:groups` (push)
                   - `site-feeds.items:rows` (keyed, point)
+                  - `site-feeds.publications` (keyed)
+                  - `site-feeds.publications:rows` (keyed, point)
+                  - `site-feeds.publish-scope` (push, fixed)
                 - Routes:
                   - `POST /api/deploy/site-feeds/items`
                   - `DELETE /api/deploy/site-feeds/items/:id`
@@ -4130,9 +4155,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/host-query.uploadToBoxDataDir`
                   - `infra/endpoints.implementMachine`
                   - `infra/endpoints.machineHandler`
-                - Register:
-                  - `defineJob('site-feeds.publish')`
-                  - `defineJob('site-feeds.unpublish')`
+                - Register: `defineJob('site-feeds.publish')`
                 - Routes:
                   - `PATCH /api/deploy/site-feeds/items/:id`
                   - `POST /api/deploy/site-feeds/items/:id/publish`
@@ -4153,24 +4176,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/entities.entityRef`
                   - `network/live.liveCollection`
                   - `network/live.LiveRowsCollection`
+                  - `network/live.liveValue`
                   - `network/live/query-resource.compositeKey`
                   - `packages/list-bound.wholeRecord`
                 - Exports (types):
+                  - `SiteFeedDestination`
                   - `SiteFeedItemRow`
                   - `SiteFeedItemState`
-                  - `SiteFeedPublishState`
+                  - `SiteFeedPublicationRow`
+                  - `SiteFeedPublicationState`
+                  - `SitePublishScope`
                 - Exports (values):
+                  - `deploymentDestination`
+                  - `parseDestination`
+                  - `SITE_FEED_DESTINATIONS_MAX`
                   - `SITE_FEED_ITEM_STATE_META`
                   - `SITE_FEED_ITEM_STATES`
-                  - `SITE_FEED_PUBLISH_STATE_META`
-                  - `SITE_FEED_PUBLISH_STATES`
+                  - `SITE_FEED_LOCAL_DESTINATION`
+                  - `SITE_FEED_PUBLICATION_STATE_META`
+                  - `SITE_FEED_PUBLICATION_STATES`
+                  - `SiteFeedDestinationSchema`
                   - `siteFeedItemAttachmentLinks`
                   - `siteFeedItemAttachmentLinksEntityRef`
                   - `siteFeedItemFields`
                   - `siteFeedItems`
                   - `siteFeedItemsEntityRef`
+                  - `siteFeedPublicationFields`
+                  - `siteFeedPublications`
+                  - `siteFeedPublicationsEntityRef`
                   - `siteFeedSearchText`
+                  - `sitePublishScope`
+                  - `SitePublishScopeSchema`
               - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/density --space-2xl`
+                  - `ui/tokens/density --space-xl`
                 - Imported by: `apps/deploy/site-feeds/syndication`
               - Exemptions:
                 - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
@@ -4182,7 +4222,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `publishSiteFeedItem`
                   - `unpublishSiteFeedItem`
                   - `updateSiteFeedItem`
-            - **`syndication`** — Posting a site feed's items elsewhere, in the Feeds tab: the SyndicationTargets.Target slot a target plugin contributes its declaration to (label, icon, settings fields — nothing here names a target); under each feed, Also post to — every target switched on or off and set up with its own fields (a secret shown only as set or not), or why the feed cannot be cross-posted; in each item's row a chip per target it was sent to; in the opened item, each target's state, its last error and Retry. Where a site feed's items are posted besides the site: the SyndicationTargets.Target contribution a target plugin's machine half provides (its declaration and its post / edit / remove calls — nothing here names a target), the site_feed_syndications table (one item on one target: pending, posted with the target's id for it, or failed with why) served live per item, and the per site, feed and target settings table (on or off, the non-secret config).
+            - **`syndication`** — Posting a site feed's items elsewhere, on the Deploy app's Feeds page: the SyndicationTargets.Target slot a target plugin contributes its declaration to (label, icon, settings fields — nothing here names a target); under each feed, Also post to — every target switched on or off and set up with its own fields (a secret shown only as set or not), or why the feed cannot be cross-posted; in each item's row a chip per target it was sent to; in the opened item, each target's state, its last error and Retry; per target, Send test post — the open item posted with the settings as saved, recording nothing, the target's answer (its post's link) shown. Where a site feed's items are posted besides the site: the SyndicationTargets.Target contribution a target plugin's machine half provides (its declaration and its post / edit / remove calls — nothing here names a target), the site_feed_syndications table (one item on one target: pending, posted with the target's id for it, or failed with why) served live per item, and the per feed and target settings table (on or off, the non-secret config).
               - Web:
                 - Slots: `SyndicationTargets.Target`
                 - Slot contributors: `SyndicationTargets.Target` ← `apps.deploy.site-feeds.discord`
@@ -4216,7 +4256,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `trigger` "site-feeds.syndicate-item"
                   - `trigger` "site-feeds.syndicate-item"
                 - Uses:
-                  - `apps/deploy/deployments._deployDeployments`
                   - `apps/deploy/site-feeds/editor._siteFeedItems`
                   - `infra/entities.defaultNow`
                   - `infra/entities.defineEntity`
@@ -4246,6 +4285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes:
                   - `PUT /api/deploy/site-feeds/syndication/settings`
                   - `POST /api/deploy/site-feeds/syndication/retry`
+                  - `POST /api/deploy/site-feeds/syndication/test`
               - Core:
                 - Uses:
                   - `apps/deploy/site-feeds.siteFeedEntryIdKind`
@@ -4282,7 +4322,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `defaultTargetSettings`
                   - `defineSyndicationTarget`
-                  - `feedPageUrl`
                   - `secretConfigKeys`
                   - `siteFeedSyndicationFields`
                   - `siteFeedSyndications`
@@ -4302,6 +4341,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `retrySyndication`
                   - `saveSyndicationSettings`
+                  - `sendTestPost`
         - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email, the site_messages mirror set) and the inbox half in the local deploy app (a live window over this computer's copy of the site's messages).
           - Plugins:
             - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card, the tab's badge and the health report's deployed-site row (both "N new messages" since the tab was last opened, the row linking to it) read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page. Owns the deploy_deployments_ext_messages_seen side-table — how far the user has read each site's messages, as the site's clock when they last opened the Messages tab — served by id (deploy-site-messages.seen) and moved forward by POST /api/deploy/deployments/:id/messages-seen.
@@ -41442,9 +41482,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderGatewayPortRecord`
               - `servedGatewayPort`
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
+            - Imported by: 40 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
+              - `apps` ×7
               - `debug` ×7
-              - `apps` ×6
               - `framework` ×6
               - `infra` ×5
               - `conversations` ×3
@@ -41831,9 +41871,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+          - `apps` ×16
           - `framework` ×16
-          - `apps` ×15
           - `debug` ×12
           - `infra` ×12
           - `conversations` ×7
@@ -42591,12 +42631,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×17
           - `debug` ×16
+          - `apps` ×9
           - `build` ×9
           - `conversations` ×9
-          - `apps` ×8
           - `database` ×4
           - `tasks` ×4
           - `framework` ×3
@@ -50694,7 +50734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/closure`
               - `plugin-meta/composition`
               - `plugin-meta/plugin-refs`
-    - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
+    - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config; compositionIncludesEach(name, pluginIds) — which of these plugins a composition's resolved closure includes, the server twin of useCompositionIncludesEach.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "compositions"
         - Uses:
@@ -50746,10 +50786,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "composition.data"
         - Uses:
           - `config_v2.ConfigV2`
+          - `config_v2.getConfig`
           - `network/live.serveValue`
           - `plugin-meta/plugin-tree.getFacetsTreeCached`
           - `plugin-meta/plugin-tree.onPluginFacetsChanged`
           - `plugin-meta/plugin-tree.pluginFacetsGeneration`
+        - Exports (types): `CompositionInclusionEach`
+        - Exports (values): `compositionIncludesEach`
         - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides, whole: one entry per host (a closed set of two), whole: the folders one edge holds through — a closed set of a dozen)
       - Core:
         - Uses:
@@ -50802,8 +50845,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SERVE_MODES`
           - `serveModeLabel`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
-          - `apps` ×16
+        - Imported by: 29 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
+          - `apps` ×17
           - `framework` ×5
           - `build` ×3
           - `plugin-meta` ×2
@@ -52609,8 +52652,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent`
           - `ui/tokens/sidebar-palette --sidebar-foreground`
           - `ui/tokens/sidebar-palette --sidebar-icon`
-        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
-          - `apps` ×23
+        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+          - `apps` ×24
           - `tasks` ×4
           - `apps-core` ×2
           - `conversations` ×2
@@ -59319,9 +59362,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 103 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×103
-        - Contributes: 133 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 104 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×104
+        - Contributes: 134 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -59372,6 +59415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dependencies.actions` "title" → `PaneTitleItem`
           - `deploy-activity.actions` "title" → `PaneTitleItem`
           - `deploy-deployment-detail.actions` "title" → `PaneTitleItem`
+          - `deploy-feeds.actions` "title" → `PaneTitleItem`
           - `deploy-session-replay.actions` "title" → `PaneTitleItem`
           - `eventListPane.Actions` "title" → `PaneTitleItem`
           - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
@@ -59629,8 +59673,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 220 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×76
+        - Imported by: 221 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×77
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
@@ -62165,8 +62209,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 314 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×314
+    - Contributes: 315 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×315
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -62190,8 +62234,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 313 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×313
+    - Contributes: 314 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×314
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -71045,9 +71089,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 370 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 371 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×75
               - `primitives` ×75
-              - `apps` ×74
               - `conversations` ×50
               - `debug` ×29
               - `ui` ×28

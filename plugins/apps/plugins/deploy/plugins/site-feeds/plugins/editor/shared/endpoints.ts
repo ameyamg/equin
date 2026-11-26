@@ -5,13 +5,14 @@ import {
   SiteFeedIssueSchema,
   SiteFeedValuesWireSchema,
 } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
+import { SITE_FEED_DESTINATIONS_MAX, SiteFeedDestinationSchema } from "../core";
 
 // The editor's writes. Reads are the live `site-feeds.items` collection.
 
-/** `POST …/items` — a new draft of a feed of a site, its values the declaration's defaults. */
+/** `POST …/items` — a new draft of a feed, its values the declaration's defaults. */
 export const createSiteFeedItem = defineEndpoint({
   route: "POST /api/deploy/site-feeds/items",
-  body: z.object({ deploymentId: z.string().min(1), feedId: SiteFeedIdSchema }),
+  body: z.object({ feedId: SiteFeedIdSchema }),
   response: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("created"), id: z.string() }),
     /** No plugin of this app declares the feed (its site plugin was removed). */
@@ -34,7 +35,7 @@ export type UpdateSiteFeedItemAnswer = z.infer<typeof UpdateAnswerSchema>;
  * `PATCH …/items/:id` — autosave of the fields one edit changed (`set`),
  * merged onto the stored values by the server, so two edits in flight at once
  * (a title typed while a video uploads) both land — the form never sends
- * values it read before the other edit. A published item is published again.
+ * values it read before the other edit. A published item is published again wherever it is.
  */
 export const updateSiteFeedItem = defineEndpoint({
   route: "PATCH /api/deploy/site-feeds/items/:id",
@@ -54,22 +55,36 @@ export const deleteSiteFeedItem = defineEndpoint({
   ]),
 });
 
-const QueuedAnswerSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("queued") }),
-  /** An unpublish (for a publish) or publish (for an unpublish) is in flight. */
-  z.object({ kind: z.literal("busy") }),
-]);
-
-/** `POST …/items/:id/publish` — queue the publish job (media, then the entry). */
+/**
+ * `POST …/items/:id/publish` — the item is wanted published. Without
+ * `destination`: on every copy of the site this instance publishes to (every
+ * deployment shipping the feed — from main only — and this instance), one job
+ * each. With one: on that copy only (a deployment added since, a Retry).
+ */
 export const publishSiteFeedItem = defineEndpoint({
   route: "POST /api/deploy/site-feeds/items/:id/publish",
-  response: QueuedAnswerSchema,
+  body: z.object({ destination: SiteFeedDestinationSchema.optional() }),
+  response: z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("queued"),
+      destinations: z.array(z.string()).max(SITE_FEED_DESTINATIONS_MAX),
+    }),
+    /** The destination is not one this instance publishes to — why, in words. */
+    z.object({ kind: z.literal("refused"), message: z.string() }),
+    z.object({ kind: z.literal("unknown-feed"), feedId: z.string() }),
+  ]),
   needsMachine: { feature: "Publishing a site feed item" },
 });
 
-/** `POST …/items/:id/unpublish` — queue the job that deletes the entry on the box. */
+/**
+ * `POST …/items/:id/unpublish` — the item is wanted a draft again: one job
+ * per destination holding it (or on its way to) deletes it there.
+ */
 export const unpublishSiteFeedItem = defineEndpoint({
   route: "POST /api/deploy/site-feeds/items/:id/unpublish",
-  response: QueuedAnswerSchema,
+  response: z.object({
+    kind: z.literal("queued"),
+    destinations: z.array(z.string()).max(SITE_FEED_DESTINATIONS_MAX),
+  }),
   needsMachine: { feature: "Unpublishing a site feed item" },
 });

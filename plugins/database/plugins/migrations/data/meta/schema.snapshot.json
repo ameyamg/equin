@@ -1,6 +1,6 @@
 {
-  "id": "490eacf5-660e-47b6-94e9-89beb8442578",
-  "prevId": "1ed7c052-6577-4bf6-abfe-0b462eadc4fb",
+  "id": "1d4997c7-ddcc-4dc1-8f1b-43f8f0f5b7de",
+  "prevId": "490eacf5-660e-47b6-94e9-89beb8442578",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2646,12 +2646,6 @@
           "primaryKey": true,
           "notNull": true
         },
-        "deployment_id": {
-          "name": "deployment_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "feed_id": {
           "name": "feed_id",
           "type": "text",
@@ -2685,19 +2679,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "publish_state": {
-          "name": "publish_state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'idle'"
-        },
-        "publish_error": {
-          "name": "publish_error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2714,15 +2695,9 @@
         }
       },
       "indexes": {
-        "site_feed_items_deployment_feed_created_idx": {
-          "name": "site_feed_items_deployment_feed_created_idx",
+        "site_feed_items_feed_created_idx": {
+          "name": "site_feed_items_feed_created_idx",
           "columns": [
-            {
-              "expression": "deployment_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
             {
               "expression": "feed_id",
               "isExpression": false,
@@ -2742,13 +2717,64 @@
           "with": {}
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.site_feed_publications": {
+      "name": "site_feed_publications",
+      "schema": "",
+      "columns": {
+        "item_id": {
+          "name": "item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination": {
+          "name": "destination",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'publishing'"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
       "foreignKeys": {
-        "site_feed_items_deployment_id_deploy_deployments_id_fk": {
-          "name": "site_feed_items_deployment_id_deploy_deployments_id_fk",
-          "tableFrom": "site_feed_items",
-          "tableTo": "deploy_deployments",
+        "site_feed_publications_item_id_site_feed_items_id_fk": {
+          "name": "site_feed_publications_item_id_site_feed_items_id_fk",
+          "tableFrom": "site_feed_publications",
+          "tableTo": "site_feed_items",
           "columnsFrom": [
-            "deployment_id"
+            "item_id"
           ],
           "columnsTo": [
             "id"
@@ -2757,7 +2783,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "site_feed_publications_item_id_destination_pk": {
+          "name": "site_feed_publications_item_id_destination_pk",
+          "columns": [
+            "item_id",
+            "destination"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -2767,12 +2801,6 @@
       "name": "site_feed_syndication_settings",
       "schema": "",
       "columns": {
-        "deployment_id": {
-          "name": "deployment_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "feed_id": {
           "name": "feed_id",
           "type": "text",
@@ -2808,26 +2836,11 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "site_feed_syndication_settings_deployment_id_deploy_deployments_id_fk": {
-          "name": "site_feed_syndication_settings_deployment_id_deploy_deployments_id_fk",
-          "tableFrom": "site_feed_syndication_settings",
-          "tableTo": "deploy_deployments",
-          "columnsFrom": [
-            "deployment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {
-        "site_feed_syndication_settings_deployment_id_feed_id_target_id_pk": {
-          "name": "site_feed_syndication_settings_deployment_id_feed_id_target_id_pk",
+        "site_feed_syndication_settings_feed_id_target_id_pk": {
+          "name": "site_feed_syndication_settings_feed_id_target_id_pk",
           "columns": [
-            "deployment_id",
             "feed_id",
             "target_id"
           ]
@@ -19610,12 +19623,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "deployment_id": {
-          "name": "deployment_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -19624,22 +19631,6 @@
           "columns": [
             {
               "expression": "feed_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "enabled",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "siteFeeds_itemPublished_triggers_deploymentId_idx": {
-          "name": "siteFeeds_itemPublished_triggers_deploymentId_idx",
-          "columns": [
-            {
-              "expression": "deployment_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -19715,12 +19706,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "deployment_id": {
-          "name": "deployment_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -19729,22 +19714,6 @@
           "columns": [
             {
               "expression": "feed_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "enabled",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "siteFeeds_itemUnpublished_triggers_deploymentId_idx": {
-          "name": "siteFeeds_itemUnpublished_triggers_deploymentId_idx",
-          "columns": [
-            {
-              "expression": "deployment_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

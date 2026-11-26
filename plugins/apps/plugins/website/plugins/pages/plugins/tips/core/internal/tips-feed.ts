@@ -2,6 +2,7 @@ import { defineSiteFeed } from "@plugins/apps/plugins/deploy/plugins/site-feeds/
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 import { mediaField } from "@plugins/fields/plugins/media/core";
+import { tipsPage } from "../page";
 
 /** A tip's video can be a long screen recording: up to attachments' 500 MB ceiling. */
 const TIP_MEDIA_MAX_BYTES = 500 * 1024 * 1024;
@@ -28,6 +29,7 @@ export const tipsFeed = defineSiteFeed({
   syndicate: { text: ["title", "body"], media: "media" },
   publicLimit: 60,
   pagePath: "/tips",
+  localPagePath: tipsPage.path,
 });
 
 export type TipsFeed = typeof tipsFeed;

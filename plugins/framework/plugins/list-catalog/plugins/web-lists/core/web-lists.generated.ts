@@ -68,6 +68,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"apps.deploy.servers.section","plugin":"apps.deploy.servers","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.deploy.shell.sidebar","plugin":"apps.deploy.shell","key":"sidebar","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.deploy.site-feeds.box.feed","plugin":"apps.deploy.site-feeds.box","key":"feed","meta":{"kind":"slot","reorderable":false},"inMain":true},
+  {"id":"apps.deploy.site-feeds.editor.deploy-feeds.actions","plugin":"apps.deploy.site-feeds.editor","key":"deploy-feeds.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.deploy.site-feeds.editor.feed-section","plugin":"apps.deploy.site-feeds.editor","key":"feed-section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.deploy.site-feeds.editor.item-section","plugin":"apps.deploy.site-feeds.editor","key":"item-section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.deploy.site-feeds.editor.item-status","plugin":"apps.deploy.site-feeds.editor","key":"item-status","meta":{"kind":"render","reorderable":true},"inMain":true},

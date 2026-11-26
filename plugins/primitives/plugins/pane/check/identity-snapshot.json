@@ -373,6 +373,12 @@
       "parent": "deploy-server-detail"
     },
     {
+      "paneId": "deploy-feeds",
+      "segment": "feeds",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "deploy-index",
       "segment": "",
       "appIndex": true,

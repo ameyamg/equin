@@ -9,7 +9,7 @@ export interface SyndicationTargetWebContribution {
 /**
  * The services a feed's items can be posted to, in the browser — the web twin
  * of the machine's `SyndicationTargets.Target` (same declaration). Read by the
- * Feeds tab's "Also post to" section; data, never drawn.
+ * Feeds page's "Also post to" section; data, never drawn.
  */
 export const SyndicationTargets = {
   Target: defineSlot<SyndicationTargetWebContribution>({

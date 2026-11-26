@@ -17,7 +17,18 @@ import {
 } from "./internal/host-routes";
 import { handleSiteFeedMedia } from "./internal/media-route";
 
-export { SiteFeeds, siteFeedOf } from "./internal/registry";
+export {
+  SiteFeeds,
+  siteFeedDeclarationOf,
+  siteFeedOf,
+} from "./internal/registry";
+export type { SiteFeedServerDeclaration } from "./internal/registry";
+export {
+  missingIds as missingSiteFeedMedia,
+  presentAttachmentIds as presentSiteFeedMedia,
+  upsertSiteFeedEntry,
+} from "./internal/upsert";
+export { deleteSiteFeedEntry } from "./internal/delete";
 export { judgeUpsertValues as judgeSiteFeedValues } from "./internal/upsert";
 export type { JudgedUpsert as JudgedSiteFeedValues } from "./internal/upsert";
 export type { SiteFeedContribution } from "./internal/registry";

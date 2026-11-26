@@ -21,22 +21,24 @@ import {
   type SyndicationTargetDecl,
   type SyndicationTargetSettings,
 } from "../../core";
-import { saveSyndicationSettings } from "../../shared";
+import { saveSyndicationSettings, sendTestPost } from "../../shared";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SyndicationTargets } from "../slots";
+
+type TestPostResult =
+  | { kind: "posted"; remoteId: string; url?: string }
+  | { kind: "failed"; error: string };
 
 /**
  * **Also post to** — under a feed's items: every target this app provides,
- * each switched on or off for this site's feed and set up with its own
+ * each switched on or off for this feed and set up with its own
  * fields. A feed whose declaration has no `syndicate` says it cannot be.
  */
-export function AlsoPostTo({
-  deploymentId,
-  feed,
-}: SiteFeedCardProps): ReactNode {
+export function AlsoPostTo({ feed, openItemId }: SiteFeedCardProps): ReactNode {
   const targets = SyndicationTargets.Target.useContributions();
   const settings = useLive(
     syndicationTargetSettings,
-    feed.syndicate === undefined ? null : { deploymentId, feedId: feed.id },
+    feed.syndicate === undefined ? null : { feedId: feed.id },
   );
   return (
     <Stack gap="sm">
@@ -57,8 +59,8 @@ export function AlsoPostTo({
               {targets.map(({ target }) => (
                 <TargetSettings
                   key={target.id}
-                  deploymentId={deploymentId}
                   feedId={feed.id}
+                  openItemId={openItemId}
                   target={target}
                   settings={all[target.id] ?? defaultTargetSettings()}
                 />
@@ -75,13 +77,13 @@ export function AlsoPostTo({
 const ENABLED_KEY = "enabled";
 
 function TargetSettings({
-  deploymentId,
   feedId,
+  openItemId,
   target,
   settings,
 }: {
-  deploymentId: string;
   feedId: string;
+  openItemId: string | null;
   target: SyndicationTargetDecl;
   settings: SyndicationTargetSettings;
 }): ReactNode {
@@ -148,7 +150,6 @@ function TargetSettings({
             save.mutate(
               {
                 body: {
-                  deploymentId,
                   feedId,
                   targetId: target.id,
                   ...body,
@@ -171,6 +172,79 @@ function TargetSettings({
       {refusal !== null && (
         <Text as="p" variant="caption" tone="destructive">
           {refusal}
+        </Text>
+      )}
+      <TestPost feedId={feedId} targetId={target.id} openItemId={openItemId} />
+    </Stack>
+  );
+}
+
+/**
+ * **Send test post** — the item open above, posted to this target NOW with
+ * its settings as saved (on or off), recording nothing: the target's answer
+ * is shown — its post's link when it gives one. Point it at a private
+ * channel: the post stays there.
+ */
+function TestPost({
+  feedId,
+  targetId,
+  openItemId,
+}: {
+  feedId: string;
+  targetId: string;
+  openItemId: string | null;
+}): ReactNode {
+  const test = useEndpointMutation(sendTestPost);
+  const [answer, setAnswer] = useState<TestPostResult | null>(null);
+  if (test.kind === "unavailable") return null;
+  return (
+    <Stack gap="2xs">
+      <Line gap="xs">
+        <Button
+          variant="outline"
+          disabled={openItemId === null}
+          tooltip={
+            openItemId === null
+              ? "Open an item to send it as a test"
+              : undefined
+          }
+          onClick={async () => {
+            if (openItemId === null) return;
+            setAnswer(
+              await test.mutateAsync({
+                body: { feedId, targetId, itemId: openItemId },
+              }),
+            );
+          }}
+        >
+          Send test post
+        </Button>
+        {openItemId === null && (
+          <Text variant="caption" tone="muted">
+            Open an item to send it
+          </Text>
+        )}
+      </Line>
+      {answer?.kind === "posted" && (
+        <Text as="p" variant="caption" tone="muted" data-test-post="posted">
+          Posted (not recorded).{" "}
+          {answer.url !== undefined ? (
+            <a href={answer.url} target="_blank" rel="noopener noreferrer">
+              {answer.url}
+            </a>
+          ) : (
+            `Its id there: ${answer.remoteId}`
+          )}
+        </Text>
+      )}
+      {answer?.kind === "failed" && (
+        <Text
+          as="p"
+          variant="caption"
+          tone="destructive"
+          data-test-post="failed"
+        >
+          Not posted: {answer.error}
         </Text>
       )}
     </Stack>

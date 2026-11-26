@@ -367,7 +367,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
 
 ## Plugin reference
 
-- Description: Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
+- Description: Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config; compositionIncludesEach(name, pluginIds) — which of these plugins a composition's resolved closure includes, the server twin of useCompositionIncludesEach.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "compositions"
   - Uses:
@@ -419,10 +419,13 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `resource.declare` "composition.data"
   - Uses:
     - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
     - `network/live.serveValue`
     - `plugin-meta/plugin-tree.getFacetsTreeCached`
     - `plugin-meta/plugin-tree.onPluginFacetsChanged`
     - `plugin-meta/plugin-tree.pluginFacetsGeneration`
+  - Exports (types): `CompositionInclusionEach`
+  - Exports (values): `compositionIncludesEach`
   - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides, whole: one entry per host (a closed set of two), whole: the folders one edge holds through — a closed set of a dozen)
 - Core:
   - Uses:
@@ -475,8 +478,8 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `SERVE_MODES`
     - `serveModeLabel`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×16
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×17
     - `framework` ×5
     - `build` ×3
     - `plugin-meta` ×2

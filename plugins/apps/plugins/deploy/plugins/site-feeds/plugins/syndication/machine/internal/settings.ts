@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineSecretNamespace } from "@plugins/infra/plugins/secrets/core";
 import {
@@ -7,7 +7,6 @@ import {
   setSecret,
 } from "@plugins/infra/plugins/secrets/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
-import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import {
   secretConfigKeys,
   syndicationTargetSettings,
@@ -20,44 +19,28 @@ import {
 import { _siteFeedSyndicationSettings } from "../../server/internal/tables";
 
 /**
- * A target's secret config values (a webhook URL, a token), one per site,
- * feed, target and field. `instance` — like the settings rows they belong to:
+ * A target's secret config values (a webhook URL, a token), one per feed,
+ * target and field. `instance` — like the settings rows they belong to:
  * a worktree testing a target keeps its own copy and never overwrites main's.
  */
 export const SYNDICATION_SECRETS = defineSecretNamespace("site-feeds", {
   scope: "instance",
 });
 
-function secretRef(
-  deploymentId: string,
-  feedId: string,
-  targetId: string,
-  fieldKey: string,
-) {
+function secretRef(feedId: string, targetId: string, fieldKey: string) {
   return {
     namespace: SYNDICATION_SECRETS,
-    key: `${deploymentId}/${feedId}/${targetId}/${fieldKey}`,
+    key: `${feedId}/${targetId}/${fieldKey}`,
   };
 }
 
 type SettingsRow = typeof _siteFeedSyndicationSettings.$inferSelect;
 
-async function readRows(
-  deploymentId: string,
-  feedId: string,
-): Promise<SettingsRow[]> {
+async function readRows(feedId: string): Promise<SettingsRow[]> {
   return db
     .select()
     .from(_siteFeedSyndicationSettings)
-    .where(
-      and(
-        eq(
-          _siteFeedSyndicationSettings.deploymentId,
-          deploymentIdKind.key(deploymentId),
-        ),
-        eq(_siteFeedSyndicationSettings.feedId, feedId),
-      ),
-    );
+    .where(eq(_siteFeedSyndicationSettings.feedId, feedId));
 }
 
 /** The stored non-secret values of a target's config, minus any key that is now a secret. */
@@ -73,7 +56,7 @@ function plainConfig(
   );
 }
 
-/** Every saved target's settings for one site's feed, as the browser sees them. */
+/** Every saved target's settings for one feed, as the browser sees them. */
 export const syndicationSettingsServed = serveValue(syndicationTargetSettings, {
   source: "external",
   // The truth is the settings table plus the secrets store (which no change
@@ -84,16 +67,16 @@ export const syndicationSettingsServed = serveValue(syndicationTargetSettings, {
     reason:
       "a target's row says whether it is on and holds its plain config; the secrets beside it are set only by the same save, which notifies",
   },
-  loader: async ({ deploymentId, feedId }) => {
+  loader: async ({ feedId }) => {
     const out: Record<string, SyndicationTargetSettings> = {};
-    for (const row of await readRows(deploymentId, feedId)) {
+    for (const row of await readRows(feedId)) {
       const target = syndicationTargetOf(row.targetId);
       // A target whose plugin was removed: its row stays, unseen.
       if (target === null) continue;
       const secretsSet: Record<string, boolean> = {};
       for (const key of secretConfigKeys(target.target.configFields)) {
         const meta = await getSecretMetadata(
-          secretRef(deploymentId, feedId, row.targetId, key),
+          secretRef(feedId, row.targetId, key),
         );
         secretsSet[key] = meta.set;
       }
@@ -108,27 +91,25 @@ export const syndicationSettingsServed = serveValue(syndicationTargetSettings, {
 });
 
 /**
- * One target's whole config for a site's feed — the stored values with its
+ * One target's whole config for a feed — the stored values with its
  * secrets read back, parsed against its declaration (defaults filled) — and
  * whether it is on. Null when never saved.
  */
 export async function loadTargetSettings(
-  deploymentId: string,
   feedId: string,
   target: SyndicationTargetContribution,
 ): Promise<{ enabled: boolean; config: Record<string, unknown> } | null> {
-  const row = (await readRows(deploymentId, feedId)).find(
+  const row = (await readRows(feedId)).find(
     (r) => r.targetId === target.target.id,
   );
   if (row === undefined) return null;
   return {
     enabled: row.enabled,
-    config: await fullConfig(deploymentId, feedId, target, row.config, {}),
+    config: await fullConfig(feedId, target, row.config, {}),
   };
 }
 
 async function fullConfig(
-  deploymentId: string,
   feedId: string,
   target: SyndicationTargetContribution,
   stored: Record<string, unknown>,
@@ -138,9 +119,7 @@ async function fullConfig(
   for (const key of secretConfigKeys(target.target.configFields)) {
     config[key] =
       newSecrets[key] ??
-      (await getSecret(
-        secretRef(deploymentId, feedId, target.target.id, key),
-      )) ??
+      (await getSecret(secretRef(feedId, target.target.id, key))) ??
       "";
   }
   return config;
@@ -152,14 +131,13 @@ export type SaveSettingsAnswer =
   | { kind: "unknown-target"; targetId: string };
 
 /**
- * Save one target's settings for a site's feed: `enabled` if given, and the
+ * Save one target's settings for a feed: `enabled` if given, and the
  * config values one edit changed merged onto the stored ones — a secret
  * field's value into the secrets store, the rest into the row. The merged
  * config must parse against the target's declaration, and an enabled target
  * must accept it (`validate`): otherwise nothing is saved.
  */
 export async function saveTargetSettings(input: {
-  deploymentId: string;
   feedId: string;
   targetId: string;
   enabled?: boolean;
@@ -191,18 +169,12 @@ export async function saveTargetSettings(input: {
     newSecrets[k] = v.trim();
   }
 
-  const row = (await readRows(input.deploymentId, input.feedId)).find(
+  const row = (await readRows(input.feedId)).find(
     (r) => r.targetId === input.targetId,
   );
   const stored = { ...(row?.config ?? {}), ...plainSet };
   const enabled = input.enabled ?? row?.enabled ?? false;
-  const merged = await fullConfig(
-    input.deploymentId,
-    input.feedId,
-    target,
-    stored,
-    newSecrets,
-  );
+  const merged = await fullConfig(input.feedId, target, stored, newSecrets);
   const parsed = target.target.configSchema.safeParse(merged);
   if (!parsed.success) {
     return {
@@ -219,16 +191,12 @@ export async function saveTargetSettings(input: {
   if (why !== null) return { kind: "invalid", message: why };
 
   for (const [k, v] of Object.entries(newSecrets)) {
-    await setSecret(
-      secretRef(input.deploymentId, input.feedId, input.targetId, k),
-      v,
-    );
+    await setSecret(secretRef(input.feedId, input.targetId, k), v);
   }
   const config = plainConfig(target, stored);
   await db
     .insert(_siteFeedSyndicationSettings)
     .values({
-      deploymentId: deploymentIdKind.key(input.deploymentId),
       feedId: input.feedId,
       targetId: input.targetId,
       enabled,
@@ -236,25 +204,20 @@ export async function saveTargetSettings(input: {
     })
     .onConflictDoUpdate({
       target: [
-        _siteFeedSyndicationSettings.deploymentId,
         _siteFeedSyndicationSettings.feedId,
         _siteFeedSyndicationSettings.targetId,
       ],
       set: { enabled, config },
     });
-  syndicationSettingsServed.notify({
-    deploymentId: input.deploymentId,
-    feedId: input.feedId,
-  });
+  syndicationSettingsServed.notify({ feedId: input.feedId });
   return { kind: "saved" };
 }
 
-/** The targets switched on for a site's feed that this app still provides. */
+/** The targets switched on for a feed that this app still provides. */
 export async function enabledTargets(
-  deploymentId: string,
   feedId: string,
 ): Promise<SyndicationTargetContribution[]> {
-  return (await readRows(deploymentId, feedId))
+  return (await readRows(feedId))
     .filter((r) => r.enabled)
     .map((r) => syndicationTargetOf(r.targetId))
     .filter((t): t is SyndicationTargetContribution => t !== null);

@@ -3,6 +3,9 @@ import { parseDiscordWebhookUrl } from "../../core";
 import {
   discordContent,
   discordForm,
+  discordMessageLink,
+  parseWebhookInfo,
+  webhookInfoUrl,
   discordPayload,
   executeWebhookUrl,
   parseDiscordResponse,
@@ -183,5 +186,38 @@ describe("parseDiscordResponse", () => {
       kind: "failed",
       retryable: false,
     });
+  });
+});
+
+describe("the post's link and the message's", () => {
+  it("ends the content with the feed's page, in angle brackets (no preview card)", () => {
+    expect(
+      discordContent({
+        title: "Split a pane",
+        paragraphs: ["Drag a tab."],
+        url: "https://equin.ai/tips",
+      }),
+    ).toBe("**Split a pane**\n\nDrag a tab.\n\n<https://equin.ai/tips>");
+    expect(discordContent({ title: "T", paragraphs: [], url: null })).toBe(
+      "**T**",
+    );
+  });
+
+  it("reads the webhook's guild and channel, or nothing", () => {
+    const hook = { id: "1", token: TOKEN };
+    expect(webhookInfoUrl(hook)).toBe(
+      `https://discord.com/api/v10/webhooks/1/${TOKEN}`,
+    );
+    expect(
+      parseWebhookInfo(200, JSON.stringify({ guild_id: "9", channel_id: "8" })),
+    ).toEqual({ guildId: "9", channelId: "8" });
+    expect(parseWebhookInfo(200, JSON.stringify({ channel_id: "8" }))).toBe(
+      null,
+    );
+    expect(parseWebhookInfo(404, "{}")).toBe(null);
+    expect(parseWebhookInfo(200, "not json")).toBe(null);
+    expect(discordMessageLink("9", "8", "7")).toBe(
+      "https://discord.com/channels/9/8/7",
+    );
   });
 });

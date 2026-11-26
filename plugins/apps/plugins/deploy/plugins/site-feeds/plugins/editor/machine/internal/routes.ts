@@ -1,3 +1,5 @@
+import { eq } from "drizzle-orm";
+import { db } from "@plugins/database/server";
 import {
   implementMachine,
   machineHandler,
@@ -7,28 +9,23 @@ import {
   unpublishSiteFeedItem,
   updateSiteFeedItem,
 } from "../../shared";
-import {
-  claimPublishState,
-  requireItem,
-  saveItemValues,
-} from "../../server/internal/items-repo";
-import { siteFeedPublishJob, siteFeedUnpublishJob } from "./jobs";
+import { siteFeedDestinations, siteFeedItemUnpublished } from "../../server";
+import { _siteFeedItems } from "../../server/internal/tables";
+import { requireItem, saveItemValues } from "../../server/internal/items-repo";
+import { publishTargets } from "./fan-out";
+import { queuePublication, requeueHeld } from "./jobs";
 
 /**
- * Autosave: the fields one edit changed, merged onto the stored values. A published item (or one on its way)
- * is published again — the keyed job folds a burst of edits into the run
- * still pending.
+ * Autosave: the fields one edit changed, merged onto the stored values. A
+ * published item is published again wherever it has a copy — each keyed job
+ * folds a burst of edits into the run still pending.
  */
 export const handleUpdateItem = machineHandler(
   updateSiteFeedItem,
   implementMachine(updateSiteFeedItem, async ({ params, body }) => {
     const { answer, item } = await saveItemValues(params.id, body.set);
-    if (
-      answer.kind === "saved" &&
-      (item.state === "published" || item.publishState === "publishing") &&
-      (await claimPublishState(item.id, "publishing"))
-    ) {
-      await siteFeedPublishJob.enqueue({ itemId: item.id });
+    if (answer.kind === "saved" && item.state === "published") {
+      await requeueHeld(item.id, "publishing");
     }
     return answer;
   }),
@@ -36,12 +33,23 @@ export const handleUpdateItem = machineHandler(
 
 export const handlePublishItem = machineHandler(
   publishSiteFeedItem,
-  implementMachine(publishSiteFeedItem, async ({ params }) => {
+  implementMachine(publishSiteFeedItem, async ({ params, body }) => {
     const item = await requireItem(params.id);
-    if (!(await claimPublishState(item.id, "publishing")))
-      return { kind: "busy" };
-    await siteFeedPublishJob.enqueue({ itemId: item.id });
-    return { kind: "queued" };
+    const destinations = await siteFeedDestinations(item.feedId);
+    if (destinations === null) {
+      return { kind: "unknown-feed", feedId: item.feedId };
+    }
+    const targets = publishTargets(destinations, body.destination);
+    if (targets.kind === "refused") return targets;
+    // The intent first: every run reads it.
+    await db
+      .update(_siteFeedItems)
+      .set({ state: "published", publishedAt: item.publishedAt ?? new Date() })
+      .where(eq(_siteFeedItems.id, item.id));
+    for (const d of targets.destinations) {
+      await queuePublication(item.id, d, "publishing");
+    }
+    return { kind: "queued", destinations: targets.destinations };
   }),
 );
 
@@ -49,9 +57,19 @@ export const handleUnpublishItem = machineHandler(
   unpublishSiteFeedItem,
   implementMachine(unpublishSiteFeedItem, async ({ params }) => {
     const item = await requireItem(params.id);
-    if (!(await claimPublishState(item.id, "unpublishing")))
-      return { kind: "busy" };
-    await siteFeedUnpublishJob.enqueue({ itemId: item.id });
-    return { kind: "queued" };
+    await db
+      .update(_siteFeedItems)
+      .set({ state: "draft", publishedAt: null })
+      .where(eq(_siteFeedItems.id, item.id));
+    const destinations = await requeueHeld(item.id, "unpublishing");
+    // No copy held it: it is off every one already — say so now, since no
+    // run will (syndication removes the posts it made of it).
+    if (destinations.length === 0) {
+      await siteFeedItemUnpublished.emit({
+        itemId: item.id,
+        feedId: item.feedId,
+      });
+    }
+    return { kind: "queued", destinations };
   }),
 );

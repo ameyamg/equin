@@ -1,1 +1,5 @@
-export { retrySyndication, saveSyndicationSettings } from "./endpoints";
+export {
+  retrySyndication,
+  saveSyndicationSettings,
+  sendTestPost,
+} from "./endpoints";

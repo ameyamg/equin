@@ -59,6 +59,13 @@ export interface SiteFeedDecl<F extends FieldsRecord = FieldsRecord> {
    * elsewhere links to. Absent: the site's root.
    */
   readonly pagePath?: string;
+  /**
+   * Where THIS app shows the feed (`/about/tips`) — the route the deployed
+   * site serves at `pagePath`, on this instance's own copy of the site: what a
+   * post elsewhere links to when the item is published here only. Absent:
+   * such a post carries no link.
+   */
+  readonly localPagePath?: string;
   /** `fieldsToZodObject(fields)`: an entry's values, defaults applied. */
   readonly valuesSchema: z.ZodType<SiteFeedValues<F>>;
 }
@@ -74,6 +81,7 @@ export interface SiteFeedInput<F extends FieldsRecord> {
   };
   readonly publicLimit: number;
   readonly pagePath?: string;
+  readonly localPagePath?: string;
 }
 
 /** A feed declaration that cannot be served (thrown at module eval). */
@@ -117,6 +125,14 @@ export function defineSiteFeed<const F extends FieldsRecord>(
   ) {
     fail(`pagePath must be a path from the site's root ("${input.pagePath}")`);
   }
+  if (
+    input.localPagePath !== undefined &&
+    !/^\/[A-Za-z0-9\-._~/]*$/.test(input.localPagePath)
+  ) {
+    fail(
+      `localPagePath must be a path from the app's root ("${input.localPagePath}")`,
+    );
+  }
   const { syndicate } = input;
   if (syndicate !== undefined) {
     if (syndicate.text.length === 0) {
@@ -153,6 +169,9 @@ export function defineSiteFeed<const F extends FieldsRecord>(
       : {}),
     publicLimit: input.publicLimit,
     ...(input.pagePath !== undefined ? { pagePath: input.pagePath } : {}),
+    ...(input.localPagePath !== undefined
+      ? { localPagePath: input.localPagePath }
+      : {}),
     valuesSchema: fieldsToZodObject(input.fields) as unknown as z.ZodType<
       SiteFeedValues<F>
     >,

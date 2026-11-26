@@ -10,7 +10,6 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
-import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { _siteFeedItems } from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/server";
 import { siteFeedSyndicationsEntityRef } from "../../core";
 
@@ -39,7 +38,6 @@ export const _siteFeedSyndications = siteFeedSyndications.table;
 export { siteFeedSyndications as siteFeedSyndicationsEntity };
 
 const settingsFields = {
-  deploymentId: textField({ label: "Site" }),
   feedId: textField({ label: "Feed" }),
   targetId: textField({ label: "Target" }),
   enabled: boolField({ label: "On" }),
@@ -57,14 +55,13 @@ const settingsFields = {
   updatedAt: dateField({ label: "Updated" }),
 } satisfies FieldsRecord;
 
-// One target's settings for one site's feed; goes with its deployment.
+// One target's settings for one feed — wherever the feed is published.
 const siteFeedSyndicationSettings = defineEntity(
   entityRef("site_feed_syndication_settings", settingsFields),
   {
-    primaryKey: ["deploymentId", "feedId", "targetId"],
+    primaryKey: ["feedId", "targetId"],
     updatedAt: {
       touchedBy: {
-        deploymentId: false,
         feedId: false,
         targetId: false,
         enabled: true,
@@ -72,12 +69,6 @@ const siteFeedSyndicationSettings = defineEntity(
       },
     },
     columns: {
-      deploymentId: {
-        references: {
-          column: () => _deployDeployments.id,
-          onDelete: "cascade",
-        },
-      },
       enabled: { default: false },
       config: { default: {} },
       updatedAt: { default: defaultNow() },
