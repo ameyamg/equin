@@ -56,11 +56,12 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
   substrings. Never re-evaluate `from` / `to` / `subject` / `query` over
   cached rows.
 - **`MAIL_QUERY_OPS` is the contract**, not one provider's reach
-  (`core/internal/query.ts`; published from `server/testing` for providers'
-  compile tests, and from `core` once the filter UI reads it; `isDeclaredMailOp`
-  is the public test). Every
+  (`core/internal/query.ts`; published from `core` and `server/testing`;
+  `isDeclaredMailOp` is the public test). Every
   registered provider compiles every pair; its compile test walks the table.
-  The filter UI should offer exactly these pairs.
+  `mail.threads` declares it as its `filterOps`, so the live codec refuses any
+  other pair on both sides of the wire and the threads list's Filter offers
+  exactly these.
 - **`compileQuery` answers** `query` (a `ProviderQuery`), `nothing` (`or: []`:
   empty without asking), or `refused` with the clause and a reason
   (`unsupported-op`, `unknown-mailbox`, `unsupported-mailbox`,
@@ -194,6 +195,7 @@ The cache and e2e tests run on it, never on Gmail.
     - `isDeclaredMailOp`
     - `listCursor`
     - `MAIL_QUERY_COLUMNS`
+    - `MAIL_QUERY_OPS`
     - `MAILBOX_ROLES`
     - `mailboxRoleOf`
     - `MailNotConnectedError`

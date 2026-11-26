@@ -113,8 +113,11 @@ export interface ListViewOptions<TRow> {
    * (no fill, border or shadow, the entries flush), and opening it raises the
    * row and its detail into one card: a heading over what it folds open
    * (decisions under their panel), never a row with a separate box under it.
+   * `"section"`: each SECTION is one raised card — a day group's rows, or the
+   * whole list ungrouped — its rows flush inside it, a hairline between two:
+   * rows that read as one batch under their header (a mail list's days).
    */
-  frame?: "card" | "fold";
+  frame?: "card" | "fold" | "section";
   /**
    * The row's action cluster stays painted at rest, not only while the row
    * is hovered — for a short list whose item action IS the point of the row

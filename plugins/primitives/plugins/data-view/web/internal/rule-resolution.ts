@@ -26,8 +26,44 @@ export function resolveRuleOperator<TRow>(
   if (!field) return null;
   const set = resolveOperatorSet(field.type ?? "text");
   const op = set?.operators.find((o) => o.id === rule.operatorId);
-  if (!set || !op) return null;
+  if (!set || !op || !isOperatorOffered(op, field)) return null;
   return { field, set, op };
+}
+
+/**
+ * Whether `field` takes `op`: every language op it may lower to is one the
+ * field's source runs (`FieldDef.filterOps`; absent, all of them). The ONE
+ * answer the operator picker, a new rule's default operator and the rule
+ * resolution read — so an operator the source cannot run is never offered,
+ * and a saved rule on one is an unavailable rule, never sent.
+ */
+export function isOperatorOffered(
+  op: FilterOperator,
+  field: Pick<FieldDef<unknown>, "filterOps">,
+): boolean {
+  const allowed = field.filterOps;
+  return allowed === undefined || op.ops.every((o) => allowed.includes(o));
+}
+
+/** The operators of `set` that `field` is offered, in the set's order. */
+export function offeredOperators(
+  set: FilterOperatorSet,
+  field: Pick<FieldDef<unknown>, "filterOps">,
+): FilterOperator[] {
+  return set.operators.filter((op) => isOperatorOffered(op, field));
+}
+
+/**
+ * The operator a new rule on `field` starts with: the set's default when the
+ * field is offered it, else its first offered one; `null` when none is.
+ */
+export function defaultOperatorFor(
+  set: FilterOperatorSet,
+  field: Pick<FieldDef<unknown>, "filterOps">,
+): string | null {
+  const offered = offeredOperators(set, field);
+  const preferred = offered.find((o) => o.id === set.defaultOperator);
+  return (preferred ?? offered[0])?.id ?? null;
 }
 
 /**

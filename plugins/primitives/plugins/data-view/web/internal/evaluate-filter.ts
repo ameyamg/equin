@@ -13,6 +13,7 @@ import type {
   FilterGroup,
   FilterLowerContext,
   FilterNode,
+  FilterOperator,
   FilterOperatorSet,
 } from "../../core";
 import { resolveRuleOperator } from "./rule-resolution";
@@ -104,10 +105,30 @@ export function lowerFilterGroup<TRow>(
         return now;
       },
     };
-    return resolved.op.lower(node.value, ctx);
+    const lowered = resolved.op.lower(node.value, ctx);
+    if (lowered !== undefined) assertDeclaredOps(lowered, resolved.op);
+    return lowered;
   };
   const filter = group ? lowerNode(group) : undefined;
   return { filter, readsClock, unavailable };
+}
+
+/**
+ * A lowering names only the ops its operator declares (`FilterOperator.ops`)
+ * — what the Filter offers by is the declaration, so a drifted one throws
+ * here rather than send a source an op it was never asked to run.
+ */
+function assertDeclaredOps(lowered: Filter, op: FilterOperator): void {
+  const walk = (f: Filter): void => {
+    if ("and" in f) f.and.forEach(walk);
+    else if ("or" in f) f.or.forEach(walk);
+    else if (!op.ops.includes(f.op)) {
+      throw new Error(
+        `data-view: operator "${op.id}" lowered to op "${f.op}", which its \`ops\` (${op.ops.join(", ")}) does not declare.`,
+      );
+    }
+  };
+  walk(lowered);
 }
 
 /**

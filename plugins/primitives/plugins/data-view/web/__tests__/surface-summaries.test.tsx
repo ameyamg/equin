@@ -216,6 +216,7 @@ const isOp: FilterOperatorSet = {
       id: "is",
       label: "Is",
       hasValue: true,
+      ops: ["eq"],
       lower: (op: unknown, { column }: FilterLowerContext) =>
         typeof op === "string" ? clause(column, "eq", op) : undefined,
     },

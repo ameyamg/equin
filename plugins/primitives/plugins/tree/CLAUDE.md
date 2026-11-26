@@ -204,10 +204,10 @@ any menu open inside it. Consequences to keep in mind:
   (color-palette, default `var(--border)`). It lives in the padding, so no label, icon or
   column moves.
 - **A selected row's text** wears `text-selected-foreground` (color-palette
-  `selectedForeground`, default `currentColor` = unchanged) and publishes
+  `selectedForeground`, default the accent's own text — the tier a selected
+  `Row` wears too) and publishes
   `--row-meta: var(--selected-meta-foreground)` (default the muted tier) for its
-  secondary cells, which read `text-row-meta` (= `--row-meta`, else muted). A
-  theme that sets neither token sees no change.
+  secondary cells, which read `text-row-meta` (= `--row-meta`, else muted).
 - The placeholder row indents by the `--tree-indent` token like its siblings
   (it used to hard-code 16px, the token's default).
 - **The row's geometry is density tokens**, read in one place

@@ -16,6 +16,7 @@ export const boolOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is",
       hasValue: true,
       ValueInput: BoolValueInput,
+      ops: ["eq", "ne"],
       lower: boolLower.is,
     },
     {
@@ -23,6 +24,7 @@ export const boolOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is not",
       hasValue: true,
       ValueInput: BoolValueInput,
+      ops: ["eq", "ne"],
       lower: boolLower["is-not"],
     },
   ],

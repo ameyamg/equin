@@ -28,6 +28,7 @@ export function numberOperatorSetWith(
       label: "=",
       hasValue: true,
       ValueInput: NumberValueInput,
+        ops: ["eq"],
       lower: numberLower["="],
     },
     {
@@ -35,6 +36,7 @@ export function numberOperatorSetWith(
       label: "≠",
       hasValue: true,
       ValueInput: NumberValueInput,
+        ops: ["ne"],
       lower: numberLower["≠"],
     },
     {
@@ -42,6 +44,7 @@ export function numberOperatorSetWith(
       label: ">",
       hasValue: true,
       ValueInput: NumberValueInput,
+        ops: ["gt"],
       lower: numberLower[">"],
     },
     {
@@ -49,6 +52,7 @@ export function numberOperatorSetWith(
       label: "<",
       hasValue: true,
       ValueInput: NumberValueInput,
+        ops: ["lt"],
       lower: numberLower["<"],
     },
     {
@@ -56,6 +60,7 @@ export function numberOperatorSetWith(
       label: "≥",
       hasValue: true,
       ValueInput: NumberValueInput,
+        ops: ["gte"],
       lower: numberLower["≥"],
     },
     {
@@ -63,6 +68,7 @@ export function numberOperatorSetWith(
       label: "≤",
       hasValue: true,
       ValueInput: NumberValueInput,
+        ops: ["lte"],
       lower: numberLower["≤"],
     },
     {
@@ -70,18 +76,21 @@ export function numberOperatorSetWith(
       label: "Between",
       hasValue: true,
       ValueInput: NumberRangeInput,
+        ops: ["gte", "lte"],
       lower: numberLower.between,
     },
     {
       id: "is-empty",
       label: "Is empty",
       hasValue: false,
+        ops: ["isEmpty"],
       lower: numberLower["is-empty"],
     },
     {
       id: "is-not-empty",
       label: "Is not empty",
       hasValue: false,
+        ops: ["isNotEmpty"],
       lower: numberLower["is-not-empty"],
     },
   ],

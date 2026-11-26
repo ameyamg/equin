@@ -9,6 +9,7 @@ const band: SurfaceChrome = {
   sectioned: false,
   overlay: false,
   aside: undefined,
+  measure: undefined,
   asideEnd: undefined,
   backdrop: undefined,
   reserve: undefined,
@@ -36,5 +37,12 @@ describe("assertSurfaceChrome", () => {
     expect(check({ ...band, sectioned: true, aside: "a" })).toThrow(/aside/);
     expect(check({ ...band, backdrop: "map" })).toThrow(/backdrop/);
     expect(check({ ...band, aside: "a" })).not.toThrow();
+  });
+  it("takes a measure beside an in-flow band only", () => {
+    expect(check({ ...band, measure: "50rem" })).not.toThrow();
+    expect(check({ ...overlay, measure: "50rem" })).toThrow(/in-flow band/);
+    expect(check({ ...band, hosted: true, measure: "50rem" })).toThrow(
+      /in-flow band/,
+    );
   });
 });

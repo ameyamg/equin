@@ -3,6 +3,7 @@ import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-pa
 import type { FilterConjunction, FilterGroup } from "../../../core";
 import { countRules, findGroup } from "../../internal/filter-tree-ops";
 import { useFilterEditor } from "../../internal/use-filter-editor";
+import { lockedRules } from "../../internal/locked-rules";
 import { AddFilterRow } from "./add-filter-affordance";
 import { ConjunctionCell } from "./conjunction-cell";
 import { useFilterPanelStack } from "./filter-scope";
@@ -33,6 +34,10 @@ export function FilterGroupPanel({ groupId }: { groupId: string }): ReactNode {
 
   const setConjunction = (c: FilterConjunction) =>
     editor.setConjunction(group.id, c);
+  // A root holding the view's locked rules stays an `and` (they are ANDed
+  // into whatever else it says).
+  const fixedConjunction =
+    group.id === editor.root.id && lockedRules(editor.root).length > 0;
 
   return (
     <ControlPanel.Section needs="builder">
@@ -48,6 +53,7 @@ export function FilterGroupPanel({ groupId }: { groupId: string }): ReactNode {
                 index={index}
                 groupConjunction={group.conjunction}
                 onSetConjunction={setConjunction}
+                fixedConjunction={fixedConjunction}
               />
             ) : (
               <NestedGroupRow
@@ -56,6 +62,7 @@ export function FilterGroupPanel({ groupId }: { groupId: string }): ReactNode {
                 index={index}
                 parentConjunction={group.conjunction}
                 onSetConjunction={setConjunction}
+                fixedConjunction={fixedConjunction}
               />
             ),
           )}
@@ -85,6 +92,7 @@ function NestedGroupRow(props: {
   index: number;
   parentConjunction: FilterConjunction;
   onSetConjunction: (conjunction: FilterConjunction) => void;
+  fixedConjunction: boolean;
 }): ReactNode {
   const { group } = props;
   const editor = useFilterEditor();
@@ -98,6 +106,7 @@ function NestedGroupRow(props: {
           index={props.index}
           conjunction={props.parentConjunction}
           onChange={props.onSetConjunction}
+          fixed={props.fixedConjunction}
         />
       }
       field={

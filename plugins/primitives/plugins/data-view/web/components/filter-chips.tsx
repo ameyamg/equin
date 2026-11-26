@@ -13,6 +13,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { FieldDef, FilterNode } from "../../core";
 import { deleteNode } from "../internal/filter-tree-ops";
+import { unlockedFilter } from "../internal/locked-rules";
 import { describeFilterRuleParts } from "../internal/summarize-filter";
 import { useDataViewControls } from "./controls/controls-context";
 import { FilterControlPanel } from "./filter/filter-control-panel";
@@ -39,7 +40,8 @@ export function DataViewFilterChips(props: {
   const { filter: controller, fields } = useDataViewControls();
   const { filter, setFilter, resolveOperatorSet } = controller;
   const [open, setOpen] = useState<string | null>(null);
-  const nodes = filter?.children ?? [];
+  // A locked rule is the view's base, never a chip (`FilterRule.locked`).
+  const nodes = unlockedFilter(filter)?.children ?? [];
   const panel = (key: string, trigger: React.ReactElement) => (
     <ControlPanelPopover
       key={key}

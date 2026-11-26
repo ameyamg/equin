@@ -34,6 +34,7 @@ import { AddViewMenuItems } from "./add-view-menu-items";
 import { ViewList } from "./view-list";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { ViewGlyph } from "./view-glyph";
 
 const addIcon = symbol("add");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
@@ -115,7 +116,6 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   const active =
     instances.find((r) => r.instance.id === activeId) ?? instances[0] ?? null;
   if (!active) return null;
-  const ActiveIcon = active.instance.icon;
   const others = instances.filter((r) => r.instance.id !== active.instance.id);
   const settingsInstance = settingsForId === active.instance.id ? active : null;
 
@@ -183,8 +183,8 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
         // reads as one more line of the sidebar rather than a smaller caption.
         className="gap-sidebar-icon text-label font-medium"
         icon={
-          <Icon
-            icon={ActiveIcon}
+          <ViewGlyph
+            view={active.instance}
             className={cn(
               "size-sidebar-icon text-muted-foreground",
               rigidClass(),
@@ -211,7 +211,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
         shape="pill"
         aria-label={label}
       >
-        <Icon icon={ActiveIcon} className="text-muted-foreground" />
+        <ViewGlyph view={active.instance} className="text-muted-foreground" />
         {active.instance.name}
         {status}
         <Icon icon={keyboardArrowDownIcon} className="text-faint-foreground" />
@@ -267,7 +267,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
                       onSelect(r.instance.id);
                     }}
                   >
-                    <Icon icon={r.instance.icon} className="size-4" />
+                    <ViewGlyph view={r.instance} className="size-4" />
                     {r.instance.name}
                   </DropdownMenuItem>
                 );

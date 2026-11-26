@@ -8,7 +8,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -20,6 +19,7 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { ViewGlyph } from "./view-glyph";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
@@ -172,13 +172,7 @@ function ViewListRow<T extends ViewTypeMeta>(props: {
       size="sm"
       selected={active}
       data-view-id={instance.instance.id}
-      icon={
-        instance.instance.color !== undefined ? (
-          <ViewColorDot color={instance.instance.color} />
-        ) : (
-          <Icon icon={instance.instance.icon} />
-        )
-      }
+      icon={<ViewGlyph view={instance.instance} />}
       onClick={renaming ? undefined : props.onSelect}
       actions={
         menu !== "none" && !renaming ? (
@@ -269,17 +263,5 @@ function RenameField(props: {
         }
       }}
     />
-  );
-}
-
-/** A coloured view's glyph: a dot of its colour, in an icon's box. */
-export function ViewColorDot({ color }: { color: string }): ReactNode {
-  return (
-    <Center axis="both" className="size-4" aria-hidden>
-      <span
-        className="size-2.5 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-    </Center>
   );
 }

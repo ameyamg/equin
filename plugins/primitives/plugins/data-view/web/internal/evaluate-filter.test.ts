@@ -35,6 +35,7 @@ const sets: Record<string, FilterOperatorSet> = {
         id: "contains",
         label: "Contains",
         hasValue: true,
+        ops: ["contains"],
         lower: (op, { column }) =>
           typeof op === "string" && op !== ""
             ? clause(column, "contains", op)
@@ -50,6 +51,7 @@ const sets: Record<string, FilterOperatorSet> = {
         id: ">",
         label: ">",
         hasValue: true,
+        ops: ["gt"],
         lower: (op, { column }) =>
           typeof op === "number" ? clause(column, "gt", op) : undefined,
       },
@@ -63,6 +65,7 @@ const sets: Record<string, FilterOperatorSet> = {
         id: "after-now",
         label: "After now",
         hasValue: false,
+        ops: ["gt"],
         lower: (_op, ctx) =>
           clause(ctx.column, "gt", new Date(ctx.now).toISOString()),
       },

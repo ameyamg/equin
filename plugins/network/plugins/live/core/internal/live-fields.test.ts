@@ -476,3 +476,35 @@ describe("schemaDomain", () => {
     expect(schemaDomain(z.object({ a: z.string() }))).toBeNull();
   });
 });
+
+describe("liveCollection — `filterOps`", () => {
+  const declare = (filterOps: Record<string, readonly string[]>) =>
+    liveCollection("test.filter-ops", {
+      fields: {
+        labels: stringListField({ label: "Labels" }),
+        subject: textField({ label: "Subject" }),
+      },
+      carry: { fields: { id: textField() } },
+      id: "id",
+      sortable: ["subject"],
+      default: { orderBy: [["subject", "asc"]], limit: 10 },
+      maxLimit: 20,
+      filterOps: filterOps as never,
+    });
+
+  test("stamps the declared ops on the column; an undeclared one takes its domain's", () => {
+    const c = declare({ labels: ["hasAny", "hasNone"] });
+    expect(c.filterable).toEqual({
+      labels: { domain: "stringArray", ops: ["hasAny", "hasNone"] },
+      subject: { domain: "text" },
+    });
+  });
+
+  test("refuses a name that is no filterable field, an empty list, an op its domain does not take", () => {
+    expect(() => declare({ nope: ["eq"] })).toThrow(/not a listed field/);
+    expect(() => declare({ labels: [] })).toThrow(/is empty/);
+    expect(() => declare({ labels: ["contains"] })).toThrow(
+      /a stringArray column does not take/,
+    );
+  });
+});

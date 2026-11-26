@@ -272,8 +272,9 @@ describe("Row — focusRef is a capability, not a node", () => {
   });
 });
 
-// A selected row reads brighter than its neighbours: the accent's own text
-// colour rides the selected fill (`--selected`, default = the accent), on both
+// A selected row reads brighter than its neighbours: the selected tier's text
+// (`--selected-foreground`, default the accent's own text colour) rides the
+// selected fill (`--selected`, default = the accent), on both
 // paths (the box carries the chrome).
 describe("Row — selected text", () => {
   it("paints the accent text colour on a selected accent row", () => {
@@ -284,13 +285,15 @@ describe("Row — selected text", () => {
     );
     const box = container.firstElementChild!;
     expect(box.classList.contains("bg-selected-fill")).toBe(true);
-    expect(box.classList.contains("text-accent-foreground")).toBe(true);
+    expect(box.classList.contains("text-selected-foreground")).toBe(true);
   });
 
   it("leaves an unselected row's text colour alone", () => {
     const { container } = render(<Row onClick={() => {}}>label</Row>);
     expect(
-      container.firstElementChild!.classList.contains("text-accent-foreground"),
+      container.firstElementChild!.classList.contains(
+        "text-selected-foreground",
+      ),
     ).toBe(false);
   });
 
@@ -301,7 +304,9 @@ describe("Row — selected text", () => {
       </Row>,
     );
     expect(
-      container.firstElementChild!.classList.contains("text-accent-foreground"),
+      container.firstElementChild!.classList.contains(
+        "text-selected-foreground",
+      ),
     ).toBe(true);
   });
 });

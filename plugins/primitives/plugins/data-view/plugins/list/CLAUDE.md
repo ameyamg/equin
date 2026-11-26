@@ -274,6 +274,10 @@ conditional hook.
   `frame?: "fold"` — the same card ghosted at rest: a closed entry is a bare
   row (no fill, border, shadow or spacing), opening raises the row and its
   detail into one card — the row is the detail's heading. The decisions panel.
+  `frame?: "section"` — each SECTION is one raised card (a group's rows, or
+  the whole list ungrouped), its rows flush inside it with a hairline between
+  two (on each entry's own box, so a windowed section draws the same). Mail's
+  day groups.
 - `lines?` — rows per item, `1 | 2` (default: 2 when `line2` holds a field — see above).
 - `columnCaptions?` — a caption row over the list (title label, each trailing
   label over its slot). Default off; also the view type's `configSchema`

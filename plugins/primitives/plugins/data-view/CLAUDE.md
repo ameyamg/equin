@@ -1326,12 +1326,22 @@ For a surface whose view IS its canvas (a map; reference `floating-toolbar`, Pla
 
   Rendered inside a `DataViewControlsProvider` (`useDataViewControls()`).
 - **`asideEnd?: ReactNode`** — the right-edge mirror, below the band; overlay only.
+- **An in-flow aside is the scroller's height**: its sticky column is sized to
+  the scroll parent's viewport (measured), so a sidebar fills the pane under
+  the tab bar — never `100dvh`, which overshoots by the chrome.
+- **`measure?: string`** — the reading column (Mail's 860px threads): the body
+  is centred in a column at most this wide, in the room the band and the aside
+  leave, published as `--dv-measure` (`DATA_VIEW_MEASURE_VAR`) on band and
+  body, so an arrangement centres its own content on the same column
+  (`max-w-(--dv-measure)`). In-flow bands only (thrown beside an overlay,
+  hosted or sections toolbar).
 
 All rules are checked in ONE place: `web/internal/surface-chrome-rules.ts`
 (`assertSurfaceChrome`):
 
 - `aside` needs a band;
 - `asideEnd` / `backdrop` need an overlay band;
+- `measure` needs an in-flow band;
 - `reserve` needs a `backdrop` or `asideEnd`;
 - `backdrop` needs a fullBleed type.
 
@@ -1394,6 +1404,23 @@ arrangement or the `aside`; when to show it is the surface's call.
 `DataViewViewList` takes `include` (list some views — a surface drawing
 others elsewhere; a drop maps back to the full order) and `countFor` (the
 surface's own count per view).
+
+A view's `color` is drawn wherever the view is (the list, the chip strip,
+the collapsed chip and its menu): every switcher draws a view's glyph through
+view-core's ONE `ViewGlyph` (a dot in the icon's box, else the icon).
+
+**Locked rules** — `FilterRule.locked: true` on a direct child of an `and`
+root: a base rule of the view (Mail's spam / trash exclusion), authored with
+it and carried into every copy (Duplicate, Save as new). The view's ONE
+filter write path (`useDataViewModel`'s `setFilter`) runs `keepLockedRules`
+(`web/internal/locked-rules.ts`): the current locked rules lead the root
+whatever the edit — a remove, Clear, a quick filter, a preset, a chip's × —
+and a node of the edit naming a locked rule's id, or marked locked, is
+dropped, so no edit drops, changes or adds one. The Filter panel draws it
+dimmed and inert with a lock where remove would be (`ControlPanel.RuleRow
+locked`), and its root's conjunction stays And; it is no chip
+(`DataViewFilterChips`), no badge count, no summary (`ruleCount`,
+`summarizeFilter`), so "Clear filter" leaves the view's base.
 
 ### Row hover: `rowHover`
 
@@ -2216,8 +2243,22 @@ The nested table applies it subtree-preserving; the fold's `keep` uses the same
 `web/internal/live-filter.ts`:
 
 - **A saved rule the source cannot run** (column not filterable / gone, operator
-  gone) is refused (`UnavailableFilterRuleError`, sort likewise) — never silently
-  run partially. Incomplete rules are not errors.
+  gone, or an operator the field is not offered) is refused
+  (`UnavailableFilterRuleError`, sort likewise) — never silently run
+  partially. Incomplete rules are not errors.
+- **Per-column ops: the collection declares, the Filter offers.** A
+  collection whose source runs fewer ops than a column's domain declares them
+  (`liveCollection({ filterOps: { col: [ops] } })`, network/live) — stamped on
+  the column (`FilterColumn.ops`), so the codec refuses any other op on both
+  sides of the wire. A live source stamps them on the field
+  (`FieldDef.filterOps`), and the Filter offers only the operators whose
+  declared `FilterOperator.ops` (every language op its `lower` may emit — a
+  lowering naming another throws) are all among them: `isOperatorOffered` /
+  `offeredOperators` / `defaultOperatorFor` (`rule-resolution.ts`), read by
+  the picker (one not offered is hidden, still labelled), a new rule's
+  default, quick filters and the rule resolution (a saved rule on one is an
+  unavailable rule, with Remove). A field offered no operator is not
+  filterable. Reference: Mail (`MAIL_QUERY_OPS`).
 - **`useViewFilter`** lowers the view's group against `useFilterClock`;
   **`lowerSearch`** → `or(contains(col, q) …)` over `searchable` columns.
 - **Over the language's bounds** (depth 4, 50 clauses, 100 list values):
@@ -2551,7 +2592,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 148 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 149 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2571,6 +2612,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/css/spacing` ×2
     - `primitives/css/sticky` ×2
     - `primitives/cursor-pagination` ×2
+    - `primitives/dom/auto-scroll` ×2
     - `primitives/dom/element-size` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
@@ -2595,7 +2637,6 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/css/scroll.Scroll`
     - `primitives/css/surface.Surface`
     - `primitives/css/yield.yieldClass`
-    - `primitives/dom/auto-scroll.KeepAnchorAcross`
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/dom/web-storage.defineStore`
@@ -3008,6 +3049,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `compareValues`
     - `createLinkedHover`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
+    - `DATA_VIEW_MEASURE_VAR`
     - `DATA_VIEW_PARTS`
     - `DATA_VIEW_SECTION_OFFSET_VAR`
     - `dataPart`

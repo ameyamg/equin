@@ -1328,9 +1328,12 @@ function DataViewBodyInner<TRow>(
       }
       const ids = error.rules.map((r) => r.id);
       if (error.tree === "filter") {
+        // A locked rule that no longer resolves is removed too: kept, it
+        // would leave the view refusing to render with no way out.
         viewModel.setFilter(
           activeViewId,
           activeState.filter && pruneRules(activeState.filter, ids),
+          { dropLocked: new Set(ids) },
         );
         return;
       }
@@ -2143,6 +2146,7 @@ function DataViewBodyInner<TRow>(
           <BandSurface
             overlay={arrangement?.overlay === true}
             aside={chrome.aside}
+            measure={chrome.measure}
             asideEnd={chrome.asideEnd}
             reserve={chrome.reserve}
             fullBleed={activeInstance.viewType.fullBleed === true}

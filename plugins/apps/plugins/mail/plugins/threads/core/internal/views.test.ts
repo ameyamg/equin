@@ -64,7 +64,9 @@ describe("the built-in views", () => {
           r.operatorId === "lacks-nested" &&
           Array.isArray(r.value) &&
           r.value.includes("role:spam") &&
-          r.value.includes("role:trash"),
+          r.value.includes("role:trash") &&
+          // A base rule of the view: no copy of it can drop it.
+          r.locked === true,
       );
       expect(leavesOut, v.id).toBe(true);
     }
@@ -86,6 +88,7 @@ describe("label views", () => {
       expect.objectContaining({
         operatorId: "lacks-nested",
         value: ["role:spam", "role:trash"],
+        locked: true,
       }),
     ]);
   });

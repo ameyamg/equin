@@ -61,6 +61,10 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
   `number` op over an `integer` column compares exactly (at the cost of a btree
   index on that column), and a `text` op over a `uuid` column fails loudly until
   its target is rendered `col::text`.
+- **A column may take fewer ops than its domain**: `FilterColumn.ops` (a
+  source that cannot run every op — a mail provider). The codec refuses any
+  other op on that column, in `canonicalizeFilter`, `encodeFilter` and
+  `decodeFilter` alike. Absent: every op of the domain.
 - **Expression** (`core/internal/expr.ts`, `codec.ts`): `Filter = clause |
   { and } | { or }`, no `not` node. Canonical form: same-kind groups flattened,
   singletons unwrapped, children sorted + deduped by canonical JSON, list operands

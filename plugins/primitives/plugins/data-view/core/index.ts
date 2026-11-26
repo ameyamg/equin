@@ -5,6 +5,7 @@ export type { DataViewId } from "./internal/define-data-view";
 
 export {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  DATA_VIEW_MEASURE_VAR,
   DATA_VIEW_SECTION_OFFSET_VAR,
 } from "./internal/header-offset";
 

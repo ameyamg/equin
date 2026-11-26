@@ -15,6 +15,7 @@ import {
   applyQuickOperand,
   applyQuickOption,
 } from "../../internal/quick-filter";
+import { isOperatorOffered } from "../../internal/rule-resolution";
 
 /**
  * The surface's quick filters (`DataViewProps.quickFilters`), over the active
@@ -97,7 +98,10 @@ function OperandQuickFilterControl({
   const operator = filter
     .resolveOperatorSet(field.type ?? "text")
     ?.operators.find((o) => o.id === qf.operatorId);
-  const ValueInput = operator?.hasValue ? operator.ValueInput : undefined;
+  const ValueInput =
+    operator?.hasValue === true && isOperatorOffered(operator, field)
+      ? operator.ValueInput
+      : undefined;
   if (ValueInput === undefined)
     throw new Error(
       `DataView quick filter "${qf.id}": "${qf.operatorId}" is not an operator with a value of field "${qf.fieldId}".`,

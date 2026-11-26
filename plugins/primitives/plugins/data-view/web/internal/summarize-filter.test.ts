@@ -39,11 +39,18 @@ const sets: Record<string, FilterOperatorSet> = {
     match: "enum",
     domain: "text",
     operators: [
-      { id: "is", label: "Is", hasValue: true, lower: needsOperand },
+      {
+        id: "is",
+        label: "Is",
+        hasValue: true,
+        ops: ["isNotEmpty"],
+        lower: needsOperand,
+      },
       {
         id: "none-of",
         label: "Is none of",
         hasValue: true,
+        ops: ["isNotEmpty"],
         lower: needsOperand,
       },
     ],
@@ -56,12 +63,14 @@ const sets: Record<string, FilterOperatorSet> = {
         id: "contains",
         label: "Contains",
         hasValue: true,
+        ops: ["isNotEmpty"],
         lower: needsOperand,
       },
       {
         id: "empty",
         label: "Is empty",
         hasValue: false,
+        ops: ["isEmpty"],
         lower: always,
       },
     ],
@@ -77,6 +86,7 @@ const sets: Record<string, FilterOperatorSet> = {
         // The `bool` shape that made the count and the evaluator disagree: an
         // absent operand still means something ("Unchecked"), so the rule
         // lowers (is complete) and filters.
+        ops: ["isEmpty"],
         lower: always,
         summarize: (operand) => (operand === true ? "checked" : "unchecked"),
       },

@@ -14,6 +14,7 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: EnumSingleInput,
       arity: "one",
+      ops: ["eq", "in", "isEmpty"],
       lower: enumLower.is,
     },
     {
@@ -22,6 +23,7 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: EnumSingleInput,
       arity: "one",
+      ops: ["ne", "notIn", "isNotEmpty"],
       lower: enumLower["is-not"],
     },
     {
@@ -30,6 +32,7 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: EnumMultiInput,
       arity: "many",
+      ops: ["eq", "in", "isEmpty"],
       lower: enumLower["is-any-of"],
     },
     {
@@ -38,18 +41,21 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: EnumMultiInput,
       arity: "many",
+      ops: ["ne", "notIn", "isNotEmpty"],
       lower: enumLower["is-none-of"],
     },
     {
       id: "is-empty",
       label: "Is empty",
       hasValue: false,
+      ops: ["isEmpty"],
       lower: enumLower["is-empty"],
     },
     {
       id: "is-not-empty",
       label: "Is not empty",
       hasValue: false,
+      ops: ["isNotEmpty"],
       lower: enumLower["is-not-empty"],
     },
   ],

@@ -15,6 +15,7 @@ export const FilterRuleSchema: z.ZodType<FilterRule> = z.object({
   fieldId: z.string(),
   operatorId: z.string(),
   value: z.unknown().optional(),
+  locked: z.literal(true).optional(),
 });
 
 export const FilterNodeSchema: z.ZodType<FilterNode> = z.lazy(() =>

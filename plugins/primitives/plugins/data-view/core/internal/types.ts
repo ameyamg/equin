@@ -2,6 +2,7 @@ import { type ComponentType, type ReactNode } from "react";
 import type {
   Filter,
   FilterDomainId,
+  FilterOpId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 import type {
@@ -890,6 +891,15 @@ interface FieldDefBase<TRow> {
   groupable?: boolean;
   /** Include in default search accessor; default true for text/enum. */
   filterable?: boolean;
+  /**
+   * The filter-language ops this field's rules may lower to, when fewer than
+   * its domain's: the Filter offers only the operators whose `ops` are all
+   * among them (a saved rule on another operator is an unavailable rule, with
+   * Remove). Stamped by a live `source` from its collection's per-column
+   * declaration (`liveCollection({ filterOps })` → `FilterColumn.ops`);
+   * absent: every operator of the field's type.
+   */
+  filterOps?: readonly FilterOpId[];
   /**
    * Under a live `source`: the collection column this field sorts and filters
    * by, when its id is not that column's name (`labels` → `labelIds`) — minted
@@ -1868,6 +1878,14 @@ export interface FilterOperator {
    */
   arity?: "one" | "many";
   /**
+   * Every filter-language op `lower` may emit, for any operand — what a
+   * source must run for this operator to be offered on its field
+   * (`FieldDef.filterOps`). Checked on every lowering: a lowered clause
+   * naming an op not listed here throws, so the list cannot drift from
+   * `lower`.
+   */
+  ops: readonly FilterOpId[];
+  /**
    * The rule as a filter-language `Filter` over `ctx.column` (whose domain is
    * the set's `domain`), or `undefined` when the rule is INCOMPLETE — it
    * constrains nothing (an empty operand, an open range with no bound).
@@ -1927,6 +1945,15 @@ export interface FilterRule {
   operatorId: string;
   /** Operand, JSON-serializable. */
   value?: unknown;
+  /**
+   * A base rule of the view: part of what the view IS (a mail view leaving
+   * spam and trash out), authored with it and carried into every copy (Save
+   * as new view, Duplicate). Only on a direct child of an `and` root. No edit
+   * of the filter drops or changes it (`keepLockedRules`, the one write
+   * path); the Filter panel draws it dimmed, without remove, and it is no
+   * chip, no badge count and nothing "Clear filter" clears.
+   */
+  locked?: true;
 }
 
 export interface FilterGroup {
@@ -2802,6 +2829,17 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    * takes it: a hosted or sections toolbar throws.
    */
   aside?: ReactNode;
+  /**
+   * The reading column: the widest the view body is drawn (a CSS length,
+   * `"53.75rem"`), centred in the room the band and the `aside` leave — a
+   * list read like a page (Mail's threads) rather than a table spanning the
+   * pane. Published as `--dv-measure` (`DATA_VIEW_MEASURE_VAR`) on the band
+   * and body, so a toolbar arrangement centres its own content on the same
+   * column (`max-w-(--dv-measure)`) with no second number. An in-flow band
+   * only (an overlay one throws: its view is the canvas). Absent: the body
+   * spans the room.
+   */
+  measure?: string;
   /**
    * A view type (`"map"`) the surface keeps mounted UNDER every view — its
    * canvas. Only beside an {@link ToolbarArrangement.overlay} arrangement, and

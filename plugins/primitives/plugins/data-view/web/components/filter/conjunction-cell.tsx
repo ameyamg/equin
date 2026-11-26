@@ -25,9 +25,12 @@ export function ConjunctionCell(props: {
   index: number;
   conjunction: FilterConjunction;
   onChange: (conjunction: FilterConjunction) => void;
+  /** The conjunction cannot change (a root holding the view's locked rules
+   *  is an `and`): drawn as static text at every index. */
+  fixed?: boolean;
 }): ReactNode {
   if (props.index === 0) return "Where";
-  if (props.index > 1) return LABEL[props.conjunction];
+  if (props.index > 1 || props.fixed === true) return LABEL[props.conjunction];
 
   return (
     <DropdownMenu>

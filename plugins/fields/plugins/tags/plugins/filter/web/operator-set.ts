@@ -14,6 +14,7 @@ export const tagsOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: TagSingleInput,
       arity: "one",
+      ops: ["hasAll"],
       lower: tagsLower.contains,
     },
     {
@@ -22,6 +23,7 @@ export const tagsOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: TagSingleInput,
       arity: "one",
+      ops: ["hasNone"],
       lower: tagsLower["does-not-contain"],
     },
     {
@@ -30,6 +32,7 @@ export const tagsOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: TagMultiInput,
       arity: "many",
+      ops: ["hasAny"],
       lower: tagsLower["contains-any-of"],
     },
     {
@@ -38,6 +41,7 @@ export const tagsOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: TagMultiInput,
       arity: "many",
+      ops: ["hasAll"],
       lower: tagsLower["contains-all-of"],
     },
     {
@@ -46,6 +50,7 @@ export const tagsOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: TagMultiInput,
       arity: "many",
+      ops: ["hasAny"],
       lower: tagsLower["has-nested"],
     },
     {
@@ -54,18 +59,21 @@ export const tagsOperatorSet: Omit<FilterOperatorSet, "match"> = {
       hasValue: true,
       ValueInput: TagMultiInput,
       arity: "many",
+      ops: ["hasNone"],
       lower: tagsLower["lacks-nested"],
     },
     {
       id: "is-empty",
       label: "Is empty",
       hasValue: false,
+      ops: ["isEmpty"],
       lower: tagsLower["is-empty"],
     },
     {
       id: "is-not-empty",
       label: "Is not empty",
       hasValue: false,
+      ops: ["isNotEmpty"],
       lower: tagsLower["is-not-empty"],
     },
   ],

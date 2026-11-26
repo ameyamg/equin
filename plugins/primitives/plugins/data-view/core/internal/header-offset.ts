@@ -21,3 +21,11 @@ export const DATA_VIEW_HEADER_OFFSET_VAR = "--dv-header-offset";
  * ungrouped, the var is absent and it pins under the toolbar.
  */
 export const DATA_VIEW_SECTION_OFFSET_VAR = "--dv-section-offset";
+
+/**
+ * CSS custom property a band surface publishes on its band and body when the
+ * surface declares a reading column (`DataViewProps.measure`): the column's
+ * width, so a toolbar arrangement centres its content on the same column the
+ * body is drawn in (`max-w-(--dv-measure)`). Unset otherwise.
+ */
+export const DATA_VIEW_MEASURE_VAR = "--dv-measure";

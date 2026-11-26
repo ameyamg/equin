@@ -28,6 +28,7 @@ const textSet: FilterOperatorSet = {
       id: "contains",
       label: "Contains",
       hasValue: true,
+      ops: ["contains"],
       lower: (operand, { column }) =>
         typeof operand === "string" && operand !== ""
           ? clause(column, "contains", operand)
@@ -44,6 +45,7 @@ const numberSet: FilterOperatorSet = {
       id: "gt",
       label: ">",
       hasValue: true,
+      ops: ["gt"],
       lower: (operand, { column }) =>
         typeof operand === "number" ? clause(column, "gt", operand) : undefined,
     },

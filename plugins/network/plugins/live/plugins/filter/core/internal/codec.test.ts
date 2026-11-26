@@ -222,3 +222,27 @@ describe("types", () => {
     expect(typed.length).toBe(10);
   });
 });
+
+describe("a column's declared ops", () => {
+  const narrowed = {
+    labels: { ...liveStringArray(), ops: ["hasAny", "hasNone"] as const },
+    title: liveText(),
+  };
+
+  it("accepts the declared ops and refuses the domain's others, both ways", () => {
+    const ok = clause("labels", "hasAny", ["a"]);
+    const json = encodeFilter(ok, narrowed);
+    expect(json).toBeDefined();
+    expect(decodeFilter(json!, narrowed)).toEqual(ok);
+    expect(() =>
+      canonicalizeFilter(clause("labels", "hasAll", ["a"]), narrowed),
+    ).toThrow(/not one this column takes \(hasAny, hasNone\)/);
+    expect(() =>
+      decodeFilter('{"column":"labels","op":"isEmpty"}', narrowed),
+    ).toThrow(/not one this column takes/);
+  });
+
+  it("leaves a column without `ops` every op of its domain", () => {
+    expect(encodeFilter(clause("title", "eqCi", "x"), narrowed)).toBeDefined();
+  });
+});

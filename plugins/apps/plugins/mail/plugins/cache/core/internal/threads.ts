@@ -11,7 +11,10 @@ import {
   liveCollection,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { THREAD_PARTICIPANTS_MAX } from "@plugins/apps/plugins/mail/plugins/provider/core";
+import {
+  MAIL_QUERY_OPS,
+  THREAD_PARTICIPANTS_MAX,
+} from "@plugins/apps/plugins/mail/plugins/provider/core";
 
 const ParticipantSchema = z.object({
   name: z.string().nullable(),
@@ -103,6 +106,9 @@ export const mailThreads = liveCollection("mail.threads", {
   default: { orderBy: [["date", "desc"]], limit: 50 },
   maxLimit: MAIL_THREADS_MAX_LIMIT,
   refusals: MAIL_THREADS_REFUSALS,
+  // The provider contract's ops per column: the codec refuses any other, and
+  // the threads list's Filter offers only the operators lowering to these.
+  filterOps: MAIL_QUERY_OPS,
 });
 
 /** One thread: a row of {@link mailThreads}. */

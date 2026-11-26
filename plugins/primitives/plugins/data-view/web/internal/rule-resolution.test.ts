@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
-import { isRuleActive } from "./rule-resolution";
+import {
+  defaultOperatorFor,
+  isOperatorOffered,
+  isRuleActive,
+  offeredOperators,
+  resolveRuleOperator,
+} from "./rule-resolution";
 import { applyFilter } from "./evaluate-filter";
 import type {
   FieldDef,
@@ -31,6 +37,7 @@ const sets: Record<string, FilterOperatorSet> = {
         id: "contains",
         label: "Contains",
         hasValue: true,
+        ops: ["contains"],
         lower: (op, { column }) =>
           typeof op === "string" && op !== ""
             ? clause(column, "contains", op)
@@ -46,6 +53,7 @@ const sets: Record<string, FilterOperatorSet> = {
         id: "is",
         label: "Is",
         hasValue: true,
+        ops: ["eq", "ne"],
         lower: (op, { column }) =>
           op === true ? clause(column, "eq", true) : clause(column, "ne", true),
       },
@@ -101,5 +109,77 @@ describe("count ⇔ filter parity (the chip-vs-filter bug)", () => {
     const r = rule("nope", "contains", "x");
     expect(isRuleActive(r, fields, resolve)).toBe(false);
     expect(keeps(r, modifiedRow)).toBe(true);
+  });
+});
+
+describe("operators a field is offered (`FieldDef.filterOps`)", () => {
+  const set: FilterOperatorSet = {
+    match: "tags",
+    domain: "stringArray",
+    defaultOperator: "contains",
+    operators: [
+      {
+        id: "contains",
+        label: "Contains",
+        hasValue: true,
+        ops: ["hasAll"],
+        lower: () => undefined,
+      },
+      {
+        id: "any",
+        label: "Any of",
+        hasValue: true,
+        ops: ["hasAny"],
+        lower: () => undefined,
+      },
+      {
+        id: "empty",
+        label: "Is empty",
+        hasValue: false,
+        ops: ["isEmpty"],
+        lower: () => undefined,
+      },
+    ],
+  };
+
+  it("offers every operator without a declaration", () => {
+    expect(offeredOperators(set, {}).map((o) => o.id)).toEqual([
+      "contains",
+      "any",
+      "empty",
+    ]);
+    expect(defaultOperatorFor(set, {})).toBe("contains");
+  });
+
+  it("offers only the operators whose ops are all declared", () => {
+    const field = { filterOps: ["hasAny", "hasNone"] as const };
+    expect(offeredOperators(set, field).map((o) => o.id)).toEqual(["any"]);
+    // The set's default is not offered: the first offered one is.
+    expect(defaultOperatorFor(set, field)).toBe("any");
+    expect(isOperatorOffered(set.operators[2]!, field)).toBe(false);
+    expect(defaultOperatorFor(set, { filterOps: ["eq"] })).toBeNull();
+  });
+
+  it("makes a saved rule on an operator not offered unresolvable", () => {
+    const tagFields: FieldDef<{ tags: string[] }>[] = [
+      {
+        id: "tags",
+        label: "Tags",
+        type: "tags",
+        filterOps: ["hasAny"],
+        values: (r) => r.tags,
+      },
+    ];
+    const r: FilterRule = {
+      kind: "rule",
+      id: "r",
+      fieldId: "tags",
+      operatorId: "contains",
+      value: ["a"],
+    };
+    expect(resolveRuleOperator(r, tagFields, () => set)).toBeNull();
+    expect(
+      resolveRuleOperator({ ...r, operatorId: "any" }, tagFields, () => set),
+    ).not.toBeNull();
   });
 });

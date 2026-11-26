@@ -230,6 +230,7 @@ summaries, membership re-check, reset, refusals.
     - `mail.threads:rows` (keyed, point)
 - Core:
   - Uses:
+    - `apps/mail/provider.MAIL_QUERY_OPS`
     - `apps/mail/provider.Mailbox`
     - `apps/mail/provider.MAILBOX_ROLES`
     - `apps/mail/provider.MailboxId`

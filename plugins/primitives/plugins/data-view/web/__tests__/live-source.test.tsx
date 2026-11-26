@@ -123,6 +123,7 @@ const SETS: Record<string, FilterOperatorSet> = {
         id: "is",
         label: "is",
         hasValue: true,
+        ops: ["eq"],
         lower: (operand, ctx) =>
           typeof operand === "string" && operand !== ""
             ? clause(ctx.column, "eq", operand)
@@ -138,6 +139,7 @@ const SETS: Record<string, FilterOperatorSet> = {
         id: "has-any",
         label: "has any",
         hasValue: true,
+        ops: ["hasAny"],
         lower: (operand, ctx) =>
           Array.isArray(operand) && operand.length > 0
             ? clause(ctx.column, "hasAny", operand as string[])

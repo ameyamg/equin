@@ -93,7 +93,8 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
   };
 
   return (
-    <Stack gap="none" className={`${SIDEBAR_WIDTH} h-dvh`}>
+    // The DataView sizes an in-flow aside to the scroller's viewport.
+    <Stack gap="none" className={`${SIDEBAR_WIDTH} h-full`}>
       <Line className="h-12 gap-smd pr-lg pl-xl">
         <span
           aria-hidden

@@ -40,6 +40,7 @@ import { dataViewDescriptors } from "./descriptors";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useViewEphemeral } from "./use-view-ephemeral";
 import { canonicalViewValue } from "./canonical-view";
+import { keepLockedRules } from "./locked-rules";
 
 /** Instance actions for the editable view-switcher (every DataView has these). */
 export interface ViewActions {
@@ -81,7 +82,16 @@ export interface ReadyViewModel {
   setSortRules: (id: string, rules: SortRule[]) => void;
   /** Replace the Properties list for THIS view (null = the schema default). */
   setProperties: (id: string, entries: PropertyEntry[] | null) => void;
-  setFilter: (id: string, filter: FilterGroup | null) => void;
+  /**
+   * Write THIS view's filter. Its locked rules stay whatever the edit
+   * (`keepLockedRules`); `dropLocked` names locked rules removed on purpose —
+   * only the repair of rules that no longer resolve.
+   */
+  setFilter: (
+    id: string,
+    filter: FilterGroup | null,
+    opts?: { dropLocked?: ReadonlySet<string> },
+  ) => void;
   /** Set (or clear with `null`) THIS view's group-by rule (field + grouping). */
   setGroupBy: (id: string, rule: GroupByRule | null) => void;
   /** Set (or clear with `null`) THIS view's fold rule. An empty `keep` group
@@ -417,7 +427,18 @@ export function useDataViewModel(
   );
 
   const setFilter = useCallback(
-    (id: string, filter: FilterGroup | null) => {
+    (
+      id: string,
+      next: FilterGroup | null,
+      opts?: { dropLocked?: ReadonlySet<string> },
+    ) => {
+      // The one write path of a view's filter: its locked rules stay, whatever
+      // the edit (`keepLockedRules`).
+      const filter = keepLockedRules(
+        readFilter(core.viewFor(id)),
+        next,
+        opts?.dropLocked,
+      );
       // A null filter or an empty group is semantically "no filter" — omit the
       // key rather than persist `filter: null` / `filter: { children: [] }`.
       const isEmptyFilter =

@@ -38,6 +38,7 @@ const plugin = {
           id: "contains",
           label: "Contains",
           hasValue: true,
+          ops: ["contains"],
           lower: (op, { column }) =>
             typeof op === "string" && op !== ""
               ? clause(column, "contains", op)

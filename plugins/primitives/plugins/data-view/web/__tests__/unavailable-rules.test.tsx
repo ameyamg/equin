@@ -76,6 +76,7 @@ const plugin = {
           id: "contains",
           label: "Contains",
           hasValue: true,
+          ops: ["contains"],
           lower: (op, { column }) =>
             typeof op === "string" && op !== ""
               ? clause(column, "contains", op)
@@ -229,9 +230,11 @@ describe("an unavailable filter rule, once every plugin loaded", () => {
       ),
     });
     fireEvent.click(screen.getByRole("button", { name: "Remove rule" }));
+    // A locked rule among the removed ones goes too (`dropLocked`).
     expect(setFilter).toHaveBeenCalledWith(
       "favorites",
       and(rule("kept", "tag", "user")),
+      { dropLocked: new Set(["gone"]) },
     );
   });
 
@@ -240,7 +243,9 @@ describe("an unavailable filter rule, once every plugin loaded", () => {
       filter: and(rule("gone", "deleted-column", "x")),
     });
     fireEvent.click(screen.getByRole("button", { name: "Remove rule" }));
-    expect(setFilter).toHaveBeenCalledWith("favorites", null);
+    expect(setFilter).toHaveBeenCalledWith("favorites", null, {
+      dropLocked: new Set(["gone"]),
+    });
   });
 
   it("a hideWhenEmpty section shows the error — neither hidden nor listing everything", () => {

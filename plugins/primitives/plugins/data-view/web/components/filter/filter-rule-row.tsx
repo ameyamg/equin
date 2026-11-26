@@ -7,6 +7,7 @@ import { useFilterEditor } from "../../internal/use-filter-editor";
 import { ConjunctionCell } from "./conjunction-cell";
 import { FieldPicker } from "./field-picker";
 import { OperatorPicker } from "./operator-picker";
+import { isOperatorOffered } from "../../internal/rule-resolution";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const accountTreeIcon = symbol("account-tree");
@@ -30,6 +31,7 @@ export function FilterRuleRow(props: {
   index: number;
   groupConjunction: FilterConjunction;
   onSetConjunction: (conjunction: FilterConjunction) => void;
+  fixedConjunction: boolean;
 }): ReactNode {
   const { rule } = props;
   const editor = useFilterEditor();
@@ -47,6 +49,7 @@ export function FilterRuleRow(props: {
           index={props.index}
           conjunction={props.groupConjunction}
           onChange={props.onSetConjunction}
+          fixed={props.fixedConjunction}
         />
       }
       field={
@@ -59,7 +62,11 @@ export function FilterRuleRow(props: {
       operator={
         opSet ? (
           <OperatorPicker
-            operators={opSet.operators}
+            operators={opSet.operators.map((o) =>
+              // One the field's source cannot run stays resolvable (its
+              // label), never offered.
+              isOperatorOffered(o, field!) ? o : { ...o, hidden: true },
+            )}
             value={rule.operatorId}
             onChange={(operatorId) =>
               editor.changeRuleOperator(rule.id, operatorId)
@@ -80,15 +87,20 @@ export function FilterRuleRow(props: {
           />
         ) : null
       }
-      actions={
-        <IconButton
-          icon={accountTreeIcon}
-          label="Turn into group"
-          onClick={() => editor.wrapRuleInGroup(rule.id)}
-        />
-      }
-      onRemove={() => editor.deleteNode(rule.id)}
-      removeLabel="Remove filter"
+      {...(rule.locked === true
+        ? // The view's base rule: shown, never changed (`FilterRule.locked`).
+          { locked: { label: "Part of this view" } }
+        : {
+            actions: (
+              <IconButton
+                icon={accountTreeIcon}
+                label="Turn into group"
+                onClick={() => editor.wrapRuleInGroup(rule.id)}
+              />
+            ),
+            onRemove: () => editor.deleteNode(rule.id),
+            removeLabel: "Remove filter",
+          })}
     />
   );
 }

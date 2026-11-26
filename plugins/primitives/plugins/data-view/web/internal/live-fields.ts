@@ -18,6 +18,7 @@ import type {
   LiveDataSource,
   SurfaceCustomColumns,
 } from "../../core";
+import { offeredOperators } from "./rule-resolution";
 
 // A live DataView source's field resolution — pure, so the checks run wherever
 // a field is declared (the host's body, or a field-extension contributor's
@@ -240,10 +241,20 @@ export function resolveLiveFields<TRow>(
             Object.hasOwn(ownFilterable, column.name)
           ? (ownFilterable[column.name]?.domain ?? null)
           : null;
+    // A server section reads `eq(col, value)` (and `isEmpty` for "None"):
+    // a column whose declared ops leave either out cannot be read by section.
+    const ownOps =
+      column.handle === undefined && Object.hasOwn(ownFilterable, column.name)
+        ? ownFilterable[column.name]?.ops
+        : undefined;
+    const readsSections =
+      ownOps === undefined ||
+      (ownOps.includes("eq") && ownOps.includes("isEmpty"));
     if (
       field.value !== undefined &&
       groupDomain !== null &&
-      GROUPABLE_DOMAINS.has(groupDomain)
+      GROUPABLE_DOMAINS.has(groupDomain) &&
+      readsSections
     ) {
       groupColumns.set(field.id, {
         name: column.name,
@@ -269,8 +280,23 @@ export function resolveLiveFields<TRow>(
         );
       }
       if (scopeColumns.has(column.name)) continue;
-      filterFields.push(field);
-      filterable[field.id] = { domain: column.domain } as FilterColumn;
+      // The ops the collection's column takes, when fewer than its domain's
+      // (`liveCollection({ filterOps })`): the field is offered only the
+      // operators lowering to them — none, and it is not offered at all.
+      const ops =
+        column.handle === undefined && Object.hasOwn(ownFilterable, column.name)
+          ? ownFilterable[column.name]?.ops
+          : undefined;
+      const offered: FieldDef<TRow> =
+        ops === undefined ? field : { ...field, filterOps: ops };
+      if (ops !== undefined && offeredOperators(set, offered).length === 0)
+        continue;
+      filterFields.push(offered);
+      filterable[field.id] = (
+        ops === undefined
+          ? { domain: column.domain }
+          : { domain: column.domain, ops }
+      ) as FilterColumn;
     }
   }
   return {

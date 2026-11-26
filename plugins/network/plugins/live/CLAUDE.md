@@ -242,6 +242,13 @@ useLive(blocks, { where: { pageId } });
   `serveCollection` refuses a collection declaring them (compiled SQL never
   refuses). Tests: `core/internal/serve-on-refusals.test.ts`,
   `web/__tests__/use-live-collection-refusal.test.tsx`.
+- **Per-column ops — `filterOps: { col: [ops] }`** (fields spelling): the
+  ops a listed field's column takes when the source runs fewer than its
+  domain's (Mail: `MAIL_QUERY_OPS`). Stamped on `c.filterable[col].ops`, so
+  the codec refuses any other op on both sides of the wire, and a DataView's
+  Filter offers only the operators lowering to them. A name that is no
+  listed filterable field, an empty list, or an op the domain does not take
+  throws at declaration.
 - **Collection rows are marked** `CollectionRow<Row>` (type-only key). A
   DataView's hand-`fields` arm takes `NotCollectionRow` rows only, so a list
   over a collection derives its fields (`collection=`) instead of restating
@@ -1739,9 +1746,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/filter` ×12
     - `network/live/query-resource` ×8
-    - `network/live/filter` ×7
     - `network/live/live-state` ×7
     - `fields` ×6
     - `packages/zod-introspect` ×6

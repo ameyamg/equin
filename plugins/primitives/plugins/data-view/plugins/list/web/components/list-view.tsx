@@ -253,8 +253,9 @@ interface ListRowConfig {
   /** Opens or closes one row's detail — closing every other open one first
    *  under `ListViewOptions.detailExclusive`. Stable identity. */
   toggleDetail: (key: string, open: boolean) => void;
-  /** The entry's box (`ListViewOptions.frame`). */
-  frame: ListViewOptions<unknown>["frame"];
+  /** The entry's box (`ListViewOptions.frame`, never `"section"`: that one
+   *  is the section's, drawn by `renderSection`). */
+  frame: "card" | "fold" | undefined;
   /** What the row's leading disclosure folds (`TreeLeading` in `Row`'s
    *  `lead`, the tree's own disclosure in the icon's place): its attached
    *  rows (`attach`, while any entry holds some), else its detail band;
@@ -647,7 +648,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       detail,
       detailOnActivate,
       toggleDetail,
-      frame,
+      // The section frame is the section's box, drawn around its rows.
+      frame: frame === "section" ? undefined : frame,
       // A row that IS its detail's disclosure draws no glyph for it.
       disclosure: anyAttached
         ? "attach"
@@ -844,6 +846,40 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         : rowSize === "sm"
           ? 28
           : 32;
+  // `frame: "section"`: the section's rows in one raised card, clipped to its
+  // radius (a row's hover and selection fill keep its corners), a hairline
+  // above every row but the section's first — on the entry's own box, so a
+  // windowed section (rows positioned one by one) draws the same.
+  const sectionFrame = (rows: ReactNode): ReactNode =>
+    frame === "section" ? (
+      <Surface
+        level="raised"
+        className={clipClasses({ axis: "both", fill: false })}
+      >
+        {rows}
+      </Surface>
+    ) : (
+      rows
+    );
+  const framedEntry = (
+    entry: DataViewRowEntry<unknown>,
+    group: string | null,
+    firstKey: string,
+  ): ReactNode =>
+    frame === "section" ? (
+      // Always the same wrapper — only its hairline follows the first row —
+      // so a row becoming the first (new mail on top) never remounts.
+      <div
+        key={entry.key}
+        className={
+          entry.key === firstKey ? undefined : "border-t border-border/60"
+        }
+      >
+        {renderEntry(entry, group)}
+      </div>
+    ) : (
+      renderEntry(entry, group)
+    );
   // One section's body: its rows — windowed past the threshold, else a plain
   // `.map` — inside the section's `SectionBody` band, which pays the rail and
   // ends in the fold line, so the line's caption sits on the rows' own column.
@@ -890,22 +926,28 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
             section.paging === undefined ? (
               <EmptySectionBand group={group} />
             ) : null
-          ) : windowed ? (
-            <VirtualRows<DataViewRowEntry<unknown>>
-              items={entries}
-              estimateSize={estimateSize}
-              getKey={(entry) => entry.key}
-              keepMounted={activeId ? [activeId] : undefined}
-              raisedKey={activeId ?? undefined}
-              // A j / k step onto a row the window has not mounted.
-              revealKey={stepRevealKey}
-            >
-              {(entry) => renderEntry(entry, group)}
-            </VirtualRows>
           ) : (
-            <Stack gap="none">
-              {entries.map((entry) => renderEntry(entry, group))}
-            </Stack>
+            sectionFrame(
+              windowed ? (
+                <VirtualRows<DataViewRowEntry<unknown>>
+                  items={entries}
+                  estimateSize={estimateSize}
+                  getKey={(entry) => entry.key}
+                  keepMounted={activeId ? [activeId] : undefined}
+                  raisedKey={activeId ?? undefined}
+                  // A j / k step onto a row the window has not mounted.
+                  revealKey={stepRevealKey}
+                >
+                  {(entry) => framedEntry(entry, group, entries[0]!.key)}
+                </VirtualRows>
+              ) : (
+                <Stack gap="none">
+                  {entries.map((entry) =>
+                    framedEntry(entry, group, entries[0]!.key),
+                  )}
+                </Stack>
+              ),
+            )
           )}
         </SectionBody>
       </DropBackground>

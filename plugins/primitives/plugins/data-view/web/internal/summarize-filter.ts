@@ -94,8 +94,9 @@ export function summarizeFilter(
 
   const rules: FilterRule[] = [];
   flatten(filter, rules);
-  const active = rules.filter((r) =>
-    isRuleActive(r, fields, resolveOperatorSet),
+  // A locked rule is the view's base, not a narrowing (`FilterRule.locked`).
+  const active = rules.filter(
+    (r) => r.locked !== true && isRuleActive(r, fields, resolveOperatorSet),
   );
 
   const first = active[0];

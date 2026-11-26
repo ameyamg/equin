@@ -552,3 +552,65 @@ const TEST_SURFACE = {
   unscoped: { reason: "a test surface" },
 };
 const SCOPED = "test.surface" as DataViewId<"test.surface">;
+
+describe("resolveLiveFields — a column's declared ops", () => {
+  const narrowed = () =>
+    liveCollection(`test.data-view.live-source-${n++}`, {
+      fields: THREAD_FIELDS,
+      carry: { fields: { id: textField() } },
+      id: "id",
+      sortable: ["subject", "lastMessageAt"],
+      default: { orderBy: [["lastMessageAt", "desc"]], limit: 10 },
+      maxLimit: 30,
+      filterOps: { subject: ["contains", "notContains"], unread: ["eq", "ne"] },
+    });
+
+  test("are stamped on the field, and a column without `eq` / `isEmpty` reads no server sections", () => {
+    const source = liveDataSource(narrowed(), {
+      searchable: ["subject"],
+      ...TEST_SURFACE,
+    });
+    const fields: FieldDef<Thread>[] = [
+      {
+        id: "subject",
+        label: "Subject",
+        type: "text",
+        value: (t) => t.subject,
+      },
+      { id: "unread", label: "Unread", type: "bool", value: (t) => t.unread },
+    ];
+    const op = (
+      id: string,
+      ops: FilterOperatorSet["operators"][number]["ops"],
+    ) => ({
+      id,
+      label: id,
+      hasValue: true,
+      ops,
+      lower: () => undefined,
+    });
+    const sets: Record<string, FilterOperatorSet> = {
+      text: {
+        match: "text",
+        domain: "text",
+        operators: [op("contains", ["contains"]), op("is", ["eqCi"])],
+      },
+      bool: {
+        match: "bool",
+        domain: "boolean",
+        operators: [op("is", ["eq", "ne"])],
+      },
+    };
+    const plan = resolveLiveFields(fields, source, (t) => sets[t], "host");
+    expect(plan.filterFields.map((f) => f.id)).toEqual(["subject", "unread"]);
+    expect(
+      plan.filterFields.find((f) => f.id === "subject")?.filterOps,
+    ).toEqual(["contains", "notContains"]);
+    expect(plan.filterable.subject).toEqual({
+      domain: "text",
+      ops: ["contains", "notContains"],
+    });
+    expect(plan.groupColumns.has("subject")).toBe(false);
+    expect(plan.groupColumns.has("unread")).toBe(false);
+  });
+});

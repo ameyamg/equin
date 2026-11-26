@@ -42,6 +42,7 @@ const numberOps: FilterOperatorSet = {
       id: "lt",
       label: "Is less than",
       hasValue: true,
+      ops: ["lt"],
       lower: (operand, { column }) =>
         typeof operand === "number" ? clause(column, "lt", operand) : undefined,
     },

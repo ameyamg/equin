@@ -7215,6 +7215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mail.threads:rows` (keyed, point)
           - Core:
             - Uses:
+              - `apps/mail/provider.MAIL_QUERY_OPS`
               - `apps/mail/provider.Mailbox`
               - `apps/mail/provider.MAILBOX_ROLES`
               - `apps/mail/provider.MailboxId`
@@ -7313,6 +7314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isDeclaredMailOp`
               - `listCursor`
               - `MAIL_QUERY_COLUMNS`
+              - `MAIL_QUERY_OPS`
               - `MAILBOX_ROLES`
               - `mailboxRoleOf`
               - `MailNotConnectedError`
@@ -7438,10 +7440,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `mail.actions`
             - Slot contributors: `mail.actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "mail-threads"
-            - Uses: 37 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×7
-              - `primitives/pane` ×3
+              - `primitives/pane` ×4
               - `network/live/live-state` ×2
               - `primitives/css/rigid` ×2
               - `apps/mail/provider.MailProviderUi`
@@ -45203,9 +45205,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValue`
           - `sliceRange`
       - Core:
-        - Uses: 42 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Uses: 47 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `network/live/filter` ×12
           - `network/live/query-resource` ×8
-          - `network/live/filter` ×7
           - `network/live/live-state` ×7
           - `fields` ×6
           - `packages/zod-introspect` ×6
@@ -55140,7 +55142,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 148 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 149 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -55160,6 +55162,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing` ×2
           - `primitives/css/sticky` ×2
           - `primitives/cursor-pagination` ×2
+          - `primitives/dom/auto-scroll` ×2
           - `primitives/dom/element-size` ×2
           - `primitives/hover-reveal` ×2
           - `primitives/latest-ref` ×2
@@ -55184,7 +55187,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/surface.Surface`
           - `primitives/css/yield.yieldClass`
-          - `primitives/dom/auto-scroll.KeepAnchorAcross`
           - `primitives/dom/in-view.createInViewWatcher`
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/dom/web-storage.defineStore`
@@ -55597,6 +55599,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `compareValues`
           - `createLinkedHover`
           - `DATA_VIEW_HEADER_OFFSET_VAR`
+          - `DATA_VIEW_MEASURE_VAR`
           - `DATA_VIEW_PARTS`
           - `DATA_VIEW_SECTION_OFFSET_VAR`
           - `dataPart`

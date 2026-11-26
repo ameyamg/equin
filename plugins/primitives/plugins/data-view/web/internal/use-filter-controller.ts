@@ -6,7 +6,8 @@ import type {
   FilterOperatorSet,
 } from "../../core";
 import { useResolveOperatorSet } from "../filter-slot";
-import { isRuleActive } from "./rule-resolution";
+import { isRuleActive, offeredOperators } from "./rule-resolution";
+import { unlockedFilter } from "./locked-rules";
 
 export interface FilterController<TRow> {
   /** The active view's filter tree (null when no filter). */
@@ -19,7 +20,9 @@ export interface FilterController<TRow> {
   resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined;
   /** Count of *active* rules in the tree — rules that resolve and are complete
    *  per the operator (shared `isRuleActive`, the same gate the evaluator uses),
-   *  so the chip count and what actually filters can never disagree. */
+   *  so the chip count and what actually filters can never disagree. A
+   *  locked rule (the view's base, `FilterRule.locked`) is not counted: it
+   *  is what the view is, not a narrowing of it. */
   ruleCount: number;
 }
 
@@ -52,14 +55,22 @@ export function useFilterController<TRow>(
 
   const filterableFields = useMemo(
     () =>
-      fields.filter((f) => resolveOperatorSet(f.type ?? "text") !== undefined),
+      fields.filter((f) => {
+        const set = resolveOperatorSet(f.type ?? "text");
+        return (
+          set !== undefined &&
+          (f.filterOps === undefined || offeredOperators(set, f).length > 0)
+        );
+      }),
     [fields, resolveOperatorSet],
   );
 
-  const ruleCount = useMemo(
-    () => (filter ? countCompleteRules(filter, fields, resolveOperatorSet) : 0),
-    [filter, fields, resolveOperatorSet],
-  );
+  const ruleCount = useMemo(() => {
+    const narrowing = unlockedFilter(filter);
+    return narrowing
+      ? countCompleteRules(narrowing, fields, resolveOperatorSet)
+      : 0;
+  }, [filter, fields, resolveOperatorSet]);
 
   return useMemo(
     () => ({

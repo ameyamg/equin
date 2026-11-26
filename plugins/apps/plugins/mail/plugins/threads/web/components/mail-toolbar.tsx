@@ -18,8 +18,15 @@ import {
   Separator,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-/** The list's column: the search box and the rows share it, centred. */
-export const MAIL_COLUMN = "mx-auto w-full max-w-215";
+/**
+ * The list's reading column (the prototype's 860px): the DataView's
+ * `measure`, so the rows are drawn in it; the toolbar centres the search box
+ * on the same column through `--dv-measure`.
+ */
+export const MAIL_MEASURE = "53.75rem";
+
+/** The toolbar's content on the body's column (`DataViewProps.measure`). */
+const MAIL_COLUMN = "mx-auto w-full max-w-(--dv-measure)";
 
 /**
  * Mail's toolbar: the view's search box over the list's column, the Filter

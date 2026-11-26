@@ -1,4 +1,4 @@
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { ViewGlyph } from "./view-glyph";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import {
   Button,
@@ -308,7 +308,6 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
           className="gap-view-chips"
         >
           {instances.map((r) => {
-            const icon = r.instance.icon;
             const id = r.instance.id;
             const isActive = id === activeId;
             const chip = (
@@ -316,8 +315,8 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                 active={isActive}
                 variant="ghost"
                 icon={
-                  <Icon
-                    icon={icon}
+                  <ViewGlyph
+                    view={r.instance}
                     className={cn(
                       CHIP_ICON_CLASS,
                       mdChip && MD_CHIP_ICON_CLASS,

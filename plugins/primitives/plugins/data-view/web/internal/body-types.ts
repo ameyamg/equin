@@ -57,6 +57,9 @@ export interface DataViewShellChrome {
   /** The surface's right-hand panel (`DataViewProps.asideEnd`), a surface
    *  property carried like `aside`. Validated by the shell. */
   asideEnd?: ReactNode;
+  /** The reading column's width (`DataViewProps.measure`), a surface
+   *  property carried like `aside`. Validated by the shell. */
+  measure?: string;
 }
 
 /** `Omit` over each member of a union — a plain `Omit` of a union is not a union. */
@@ -68,7 +71,7 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
  * `defaultView` / `views` / `density` / `toolbar` /
- * `searchPlaceholder` / `aside` / `backdrop` / `reserve` / `asideEnd` /
+ * `searchPlaceholder` / `aside` / `measure` / `backdrop` / `reserve` / `asideEnd` /
  * `viewEdits` / `switcherForm` / `viewShortcuts`).
  *
  * `density` is on that list for the same reason `title` is: it describes the
@@ -105,6 +108,7 @@ type DataViewSurfaceBundle<TRow> = DistributiveOmit<
   | "toolbar"
   | "searchPlaceholder"
   | "aside"
+  | "measure"
   | "backdrop"
   | "reserve"
   | "asideEnd"

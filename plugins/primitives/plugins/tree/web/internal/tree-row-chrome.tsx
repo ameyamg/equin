@@ -170,8 +170,8 @@ export function TreeRowChrome({
         // row reads as a hole. Same contract as the `Row` primitive.
         // Selected is its own tier (`--selected-fill`: the surface's selected tone
         // fill), so a selected row does not hover to a different tone. Its
-        // text takes `--selected-foreground` (default `currentColor`, i.e.
-        // unchanged) and it publishes `--row-meta` for its secondary cells
+        // text takes `--selected-foreground` (default the accent's text, as a
+        // selected `Row`'s) and it publishes `--row-meta` for its secondary cells
         // (`text-row-meta`, default the muted tier they always wore).
         selected
           ? "bg-selected-fill text-selected-foreground [--scrim:var(--selected-fill)] [--row-meta:var(--selected-meta-foreground)]"

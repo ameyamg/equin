@@ -8,7 +8,7 @@
 // `lockedPlaceholder` (one whose view is gone is dropped, never shown).
 // Everything else is an ordinary view of the user's own: renamable,
 // deletable. "With attachments" ships premade: threads with an attachment,
-// never spam or trash, by received day.
+// never spam or trash (a locked rule: the view's base), by received day.
 {
   "views": [
     { "id": "inbox", "name": "Inbox", "view": { "type": "list", "lockedPlaceholder": true } },
@@ -41,7 +41,8 @@
               "id": "with-attachments-not-bin",
               "fieldId": "mailboxes",
               "operatorId": "lacks-nested",
-              "value": ["role:spam", "role:trash"]
+              "value": ["role:spam", "role:trash"],
+              "locked": true
             }
           ]
         }

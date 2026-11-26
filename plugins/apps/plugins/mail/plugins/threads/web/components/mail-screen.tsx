@@ -10,7 +10,10 @@ import type {
   DataViewReadFailure,
 } from "@plugins/primitives/plugins/data-view/core";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { usePaneViewParam } from "@plugins/primitives/plugins/pane/web";
+import {
+  PaneScroll,
+  usePaneViewParam,
+} from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -33,7 +36,7 @@ import {
 import type { Mailbox } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { mailboxLabel, useMailboxes, userLabels } from "../internal/mailboxes";
 import { MailSidebar } from "./mail-sidebar";
-import { mailToolbar } from "./mail-toolbar";
+import { MAIL_MEASURE, mailToolbar } from "./mail-toolbar";
 import {
   ThreadAvatar,
   ThreadRow,
@@ -131,6 +134,8 @@ export function MailScreen(): ReactNode {
           <ThreadAvatar thread={t} ctx={rowCtx} />
         ),
         lines: 1 as const,
+        // Each day is one card, as in the prototype.
+        frame: "section" as const,
       },
     }),
     [rowCtx],
@@ -141,7 +146,10 @@ export function MailScreen(): ReactNode {
   if (labelOfView(activeViewId) !== null && mailboxes.kind === "loading") {
     return <Loading variant="rows" count={8} />;
   }
+  // The pane has no chrome (the sidebar names the view), so it opens its own
+  // one scroll: the DataView never owns one, and its sidebar is sized to it.
   return (
+    <PaneScroll>
     <DataView<MailThreadRow>
       source={threadsSource}
       overrides={overrides}
@@ -153,9 +161,11 @@ export function MailScreen(): ReactNode {
       viewOptions={viewOptions}
       searchPlaceholder={`Search ${activeName(activeViewId, lockedViews)}`}
       aside={<MailSidebar mailboxes={mailboxes} />}
+        measure={MAIL_MEASURE}
       errorState={refusalState}
       emptyState={<EmptyMail inbox={activeViewId === MAIL_INBOX_VIEW.id} />}
     />
+    </PaneScroll>
   );
 }
 

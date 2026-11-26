@@ -42,6 +42,15 @@ function rule(
   };
 }
 
+/**
+ * The view's base rule leaving spam and trash out: LOCKED (`FilterRule.locked`)
+ * — carried into every view saved from this one, shown in its Filter panel,
+ * never removable, never a chip.
+ */
+function notBin(id: string): FilterRule {
+  return { ...rule(id, "lacks-nested", BIN), locked: true };
+}
+
 function group(id: string, children: FilterRule[]): FilterGroup {
   return { kind: "group", id, conjunction: "and", children };
 }
@@ -100,7 +109,7 @@ function roleView(
   const mailbox = roleMailboxId(role);
   const rules = [rule(`${role}-in`, "contains-any-of", [mailbox])];
   if (opts?.keepBin !== true) {
-    rules.push(rule(`${role}-not-bin`, "lacks-nested", BIN));
+    rules.push(notBin(`${role}-not-bin`));
   }
   return builtIn(
     role,
@@ -141,8 +150,8 @@ export const MAIL_BUILT_IN_VIEWS: readonly MailBuiltInView[] = [
         roleMailboxId("inbox"),
         roleMailboxId("sent"),
         roleMailboxId("drafts"),
-        ...BIN,
       ]),
+      notBin("done-not-bin"),
     ]),
     null,
   ),
@@ -201,7 +210,7 @@ export function labelView(
           "contains-any-of",
           mailboxViewIds(label.id, mailboxes),
         ),
-        rule(`${label.id}-not-bin`, "lacks-nested", BIN),
+        notBin(`${label.id}-not-bin`),
       ]),
     },
   };

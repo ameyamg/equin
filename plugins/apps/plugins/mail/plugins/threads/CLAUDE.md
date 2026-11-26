@@ -16,7 +16,12 @@ compose (later steps of the design).
   ANDed in, default order and limit, no search): its first page is the tuple
   the boot preload answers. Keep it so.
 - Every view but Spam and Trash leaves spam and trash out (`lacks-nested`):
-  the provider's query is over every message.
+  the provider's query is over every message. That rule is **locked**
+  (`FilterRule.locked`): a base rule of the view, carried into every view
+  saved from it, shown dimmed in the Filter panel, never a chip, never
+  removable.
+- The Filter offers only what the provider runs: `mail.threads` declares
+  `filterOps: MAIL_QUERY_OPS`.
 - **Labels**: one locked view per user label (`labelView`), a parent's
   including its sub-labels (`mailboxViewIds`), coloured by its nearest
   coloured ancestor; drawn as the sidebar's tree, not in the views list.
@@ -47,10 +52,10 @@ compose (later steps of the design).
   - Slots: `mail.actions`
   - Slot contributors: `mail.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-threads"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×7
-    - `primitives/pane` ×3
+    - `primitives/pane` ×4
     - `network/live/live-state` ×2
     - `primitives/css/rigid` ×2
     - `apps/mail/provider.MailProviderUi`

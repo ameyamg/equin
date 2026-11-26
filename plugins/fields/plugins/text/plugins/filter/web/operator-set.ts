@@ -13,6 +13,7 @@ export const textOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Contains",
       hasValue: true,
       ValueInput: TextValueInput,
+      ops: ["contains"],
       lower: textLower.contains,
     },
     {
@@ -20,6 +21,7 @@ export const textOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Does not contain",
       hasValue: true,
       ValueInput: TextValueInput,
+      ops: ["notContains"],
       lower: textLower["does-not-contain"],
     },
     {
@@ -27,6 +29,7 @@ export const textOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is",
       hasValue: true,
       ValueInput: TextValueInput,
+      ops: ["eqCi"],
       lower: textLower.is,
     },
     {
@@ -34,18 +37,21 @@ export const textOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is not",
       hasValue: true,
       ValueInput: TextValueInput,
+      ops: ["neCi"],
       lower: textLower["is-not"],
     },
     {
       id: "is-empty",
       label: "Is empty",
       hasValue: false,
+      ops: ["isEmpty"],
       lower: textLower["is-empty"],
     },
     {
       id: "is-not-empty",
       label: "Is not empty",
       hasValue: false,
+      ops: ["isNotEmpty"],
       lower: textLower["is-not-empty"],
     },
   ],

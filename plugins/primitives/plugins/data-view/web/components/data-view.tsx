@@ -136,6 +136,7 @@ function DataViewHost<TRow>({
       toolbar={props.toolbar}
       searchPlaceholder={props.searchPlaceholder}
       aside={props.aside}
+      measure={props.measure}
       asideEnd={props.asideEnd}
       backdrop={props.backdrop}
       reserve={props.reserve}
@@ -236,6 +237,8 @@ export function DataViewShellFrame(props: {
   reserve?: DataViewReserve;
   /** The surface's right-hand panel (`DataViewProps.asideEnd`). */
   asideEnd?: ReactNode;
+  /** The reading column's width (`DataViewProps.measure`). */
+  measure?: string;
   /** Which switcher form the band shows (`DataViewProps.switcherForm`). */
   switcherForm?: "strip" | "chip" | "none";
   /** ⌥1–9 select the first nine views (`DataViewProps.viewShortcuts`). */
@@ -292,6 +295,7 @@ export function DataViewShellFrame(props: {
     toolbar,
     searchPlaceholder,
     aside,
+    measure,
     asideEnd,
     backdrop,
     reserve,
@@ -356,6 +360,7 @@ export function DataViewShellFrame(props: {
     sectioned,
     overlay,
     aside,
+    measure,
     asideEnd,
     backdrop,
     reserve,
@@ -562,6 +567,7 @@ export function DataViewShellFrame(props: {
     searchPlaceholder,
     stickyRef: toolbarRef,
     aside,
+    measure,
     asideEnd,
     backdrop,
     reserve,

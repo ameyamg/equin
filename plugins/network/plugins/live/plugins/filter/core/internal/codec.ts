@@ -99,6 +99,12 @@ function canonClause(
   if (!opAllowsDomain(op, domain)) {
     fail(`"${column}": op "${op}" does not take a ${domain} column`);
   }
+  const ops = filterable[column]!.ops;
+  if (ops !== undefined && !ops.includes(op)) {
+    fail(
+      `"${column}": op "${op}" is not one this column takes (${ops.join(", ")})`,
+    );
+  }
   let filter: Filter;
   let operandJson: string | undefined;
   switch (getFilterOp(op).operand) {

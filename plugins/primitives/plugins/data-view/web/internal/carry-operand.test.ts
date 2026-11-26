@@ -17,6 +17,7 @@ function op(
     hasValue: ValueInput !== undefined,
     ValueInput,
     arity,
+    ops: [],
     lower: () => undefined,
   };
 }

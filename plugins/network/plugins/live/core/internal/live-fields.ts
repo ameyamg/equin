@@ -12,9 +12,12 @@ import type {
   PresentationReadsOf,
 } from "@plugins/infra/plugins/entities/core";
 import type { AnyExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import type {
-  FilterColumn,
-  FilterDomainId,
+import {
+  isFilterOpId,
+  opAllowsDomain,
+  type FilterColumn,
+  type FilterDomainId,
+  type FilterOpId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   isCompositeKey,
@@ -258,6 +261,17 @@ export interface LiveFieldsSpec<
    * to be larger (the queue reads the ranks of every live conversation).
    */
   maxIds?: number;
+  /**
+   * The filter ops a listed field's column takes, when fewer than its
+   * domain's — a source that cannot run every op (a mail provider's search
+   * runs `hasAny` / `hasNone` on labels, not `hasAll`). Stamped on the
+   * column (`FilterColumn.ops`), so the codec refuses any other op on both
+   * sides of the wire and a DataView's Filter offers only the operators that
+   * lower to these. Absent for a field: every op of its domain.
+   */
+  filterOps?: {
+    readonly [K in P | (keyof OF & string)]?: readonly FilterOpId[];
+  };
   /** The old spelling's — `row` / `filterable` / `exposes` are derived here. */
   row?: never;
   filterable?: never;
@@ -461,6 +475,25 @@ export function resolveFieldsSpec(
   for (const [name, field] of listed) {
     const domain = fieldDomain(field);
     if (domain !== null) filterable[name] = { domain } as FilterColumn;
+  }
+  for (const [name, ops] of Object.entries(spec.filterOps ?? {})) {
+    const column = filterable[name];
+    if (column === undefined) {
+      fail(
+        `filterOps names "${name}", which is not a listed field with a filter domain.`,
+      );
+    }
+    if (ops === undefined || ops.length === 0) {
+      fail(`filterOps."${name}" is empty — omit it to take every op.`);
+    }
+    for (const op of ops!) {
+      if (!isFilterOpId(op) || !opAllowsDomain(op, column!.domain)) {
+        fail(
+          `filterOps."${name}" names "${op}", which a ${column!.domain} column does not take.`,
+        );
+      }
+    }
+    filterable[name] = { ...column!, ops: Object.freeze([...ops!]) };
   }
   const exposes: Record<string, EntityRef> = {};
   if (from !== undefined && shape === undefined && spec.baseExposures !== false)

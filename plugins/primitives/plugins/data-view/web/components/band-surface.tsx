@@ -1,5 +1,8 @@
-import type { CSSProperties, ReactNode } from "react";
-import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useElementSize,
+  useResizeObserver,
+} from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -12,7 +15,12 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
-import { DATA_VIEW_HEADER_OFFSET_VAR, type DataViewReserve } from "../../core";
+import {
+  DATA_VIEW_HEADER_OFFSET_VAR,
+  DATA_VIEW_MEASURE_VAR,
+  type DataViewReserve,
+} from "../../core";
+import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -63,6 +71,10 @@ export function BandSurface(props: {
   controls: DataViewControlsContextValue;
   /** Renders the toolbar band, given `ToolbarParts.asideInset`. */
   band: (asideInset: string) => ReactNode;
+  /** The reading column's width (`DataViewProps.measure`): the body is
+   *  centred in a column at most this wide, published as `--dv-measure`.
+   *  In-flow bands only (the shell refuses it beside an overlay). */
+  measure?: string;
   /** The view body. */
   children: ReactNode;
   /**
@@ -80,10 +92,44 @@ export function BandSurface(props: {
     fullBleed,
     controls,
     band,
-    children,
+    measure,
     backdrop,
   } = props;
+  // The reading column: the body centred, at most `measure` wide.
+  const children =
+    measure === undefined ? (
+      props.children
+    ) : (
+      <div className="mx-auto w-full max-w-(--dv-measure)">
+        {props.children}
+      </div>
+    );
+  const measureStyle: CSSProperties | undefined =
+    measure === undefined
+      ? undefined
+      : ({ [DATA_VIEW_MEASURE_VAR]: measure } as CSSProperties);
   const [asideRef, asideWidth] = useElementSize((s) => s.width);
+  // An in-flow aside is a column as tall as the scroller's viewport (pinned
+  // to its top), scrolling inside itself — so it fills the pane under the
+  // tab bar, never a guess like `100dvh` that overshoots by the chrome. The
+  // viewport is the scroller's client box (padding in, borders out); the
+  // document's own scroller's viewport is the window's.
+  const [asideColumn, setAsideColumn] = useState<HTMLElement | null>(null);
+  const [viewportHeight, setViewportHeight] = useState<string | null>(null);
+  const scrollerOf = (el: HTMLElement): HTMLElement => findScrollParent(el);
+  useResizeObserver(
+    () => (asideColumn === null ? null : scrollerOf(asideColumn)),
+    () => {
+      if (asideColumn === null) return;
+      const scroller = scrollerOf(asideColumn);
+      const next =
+        scroller === document.scrollingElement
+          ? "100dvh"
+          : `${scroller.clientHeight}px`;
+      setViewportHeight((prev) => (prev === next ? prev : next));
+    },
+    { deps: [asideColumn] },
+  );
   const [asideEndRef, asideEndWidth] = useElementSize((s) => s.width);
   const hasAside = aside !== undefined;
   const hasAsideEnd = asideEnd !== undefined;
@@ -235,20 +281,32 @@ export function BandSurface(props: {
   }
 
   if (!asideNode) {
-    return (
+    return measureStyle === undefined ? (
       <>
         {bandNode}
         {children}
       </>
+    ) : (
+      <Stack gap="none" style={measureStyle}>
+        {bandNode}
+        {children}
+      </Stack>
     );
   }
 
   return (
     <Stack direction="row" gap="none" align="start">
-      <Sticky edge="top" className={rigidClass()}>
-        {asideNode}
+      <Sticky
+        edge="top"
+        ref={setAsideColumn}
+        className={rigidClass()}
+        style={viewportHeight === null ? undefined : { height: viewportHeight }}
+      >
+        <Stack gap="none" className="h-full">
+          {asideNode}
+        </Stack>
       </Sticky>
-      <Stack gap="none" className={fillClasses("x")}>
+      <Stack gap="none" className={fillClasses("x")} style={measureStyle}>
         {bandNode}
         {children}
       </Stack>

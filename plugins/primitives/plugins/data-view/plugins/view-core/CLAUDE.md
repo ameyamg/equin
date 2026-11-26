@@ -174,7 +174,7 @@ the bare id, as before.
 
 `useViewModel(…, { drafts: true, locked })` (`LockedViewRow[]`): views the
 consumer defines (code, data) — copy-only (`ViewInstance.locked`,
-`color`), listed first unless a config row of the same id holds their place
+`color` — drawn by every switcher through the one `ViewGlyph`), listed first unless a config row of the same id holds their place
 (a PLACEHOLDER, `view: { type, lockedPlaceholder: true }`; one whose locked
 view is gone is dropped). Rename / icon / delete / `drafts.save` throw;
 duplicate / `saveAsNew` `insertView` a config row from the working copy;

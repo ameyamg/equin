@@ -39,6 +39,10 @@ const colorPalette = colorPaletteGroup.fragment(
     faintForeground: INK_3,
     accent: RAISE,
     accentForeground: INK,
+    // The prototype's current view / label (`.nav.on`): an accent wash on
+    // the ground, its name and glyph in the accent.
+    selected: `color-mix(in srgb, ${ACCENT} 17%, ${BG})`,
+    selectedForeground: ACCENT,
     destructive: DANGER,
     info: ACCENT,
     border: LINE,

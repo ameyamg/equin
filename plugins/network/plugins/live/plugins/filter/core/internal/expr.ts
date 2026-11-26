@@ -21,6 +21,14 @@ export interface FilterColumn<
   V = unknown,
 > {
   readonly domain: D;
+  /**
+   * The ops this column takes, when fewer than its domain's: a source that
+   * cannot run every op of the domain (a mail provider's search) declares the
+   * ones it runs, and a clause naming another is refused by the codec — on
+   * the encoding side and the decoding side alike — so a list's filter UI
+   * offers exactly these. Absent: every op of the domain.
+   */
+  readonly ops?: readonly FilterOpId[];
   readonly [operandType]?: V;
 }
 

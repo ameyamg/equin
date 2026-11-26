@@ -166,12 +166,14 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--accent)",
     label: "Selected row",
   },
-  // A selected tree row's text: its name. Default `currentColor` = the colour
-  // the row's text always inherited, so a theme that leaves it out changes
-  // nothing; a theme sets it to tint the selection's name (a file browser's
-  // accent-blue selection).
+  // A selected row's text — a `Row`, a tree row, a table row: one tier, so
+  // a list and a tree beside it select alike. Default = the accent's own
+  // text, which a selected `Row` always wore (it reads brighter than its
+  // neighbours where the accent text is brighter than the body text); a
+  // theme sets it to tint the selection (a file browser's accent-blue
+  // selection, Mail's accent).
   selectedForeground: {
-    default: "currentColor",
+    default: "var(--accent-foreground)",
     label: "Selected row text",
   },
   // A selected tree row's secondary cells (an aligned date / size column).

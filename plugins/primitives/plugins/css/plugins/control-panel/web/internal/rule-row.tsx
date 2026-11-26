@@ -10,6 +10,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
+const lockIcon = symbol("lock");
 const dragIndicatorIcon = symbol("drag-indicator");
 
 export interface ControlPanelRuleRowProps {
@@ -35,6 +36,12 @@ export interface ControlPanelRuleRowProps {
   onRemove?: () => void;
   /** Accessible name for the remove button; default "Remove". */
   removeLabel?: string;
+  /**
+   * A rule the builder shows but cannot change (a view's base rule): its
+   * cells are drawn dimmed and inert, and a lock stands where remove would
+   * be — `onRemove` / `actions` beside it are a mistake (thrown).
+   */
+  locked?: { label: string };
   /** Shows the drag handle in the gutter track (revealed on row hover/focus). */
   handle?: boolean;
   /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
@@ -80,12 +87,21 @@ export function ControlPanelRuleRow({
   actionsAtRest = false,
   onRemove,
   removeLabel = "Remove",
+  locked,
   handle,
   handleProps,
   ref,
   style,
   className,
 }: ControlPanelRuleRowProps) {
+  if (locked !== undefined && (onRemove !== undefined || actions != null)) {
+    throw new Error(
+      "ControlPanel.RuleRow: a locked rule takes no onRemove or actions — it cannot be changed.",
+    );
+  }
+  // Inert and dimmed: the pickers show the rule, never edit it.
+  const cell = locked !== undefined ? "min-w-0 opacity-55" : "min-w-0";
+  const inert = locked !== undefined ? true : undefined;
   return (
     <div
       ref={ref}
@@ -121,15 +137,15 @@ export function ControlPanelRuleRow({
       <span data-cp-cell="prefix" className="truncate text-muted-foreground">
         {prefix}
       </span>
-      <span data-cp-cell="field" className="min-w-0">
+      <span data-cp-cell="field" className={cell} inert={inert}>
         {field}
       </span>
       {operator != null ? (
-        <span data-cp-cell="operator" className="min-w-0">
+        <span data-cp-cell="operator" className={cell} inert={inert}>
           {operator}
         </span>
       ) : null}
-      <span data-cp-cell="value" className="min-w-0">
+      <span data-cp-cell="value" className={cell} inert={inert}>
         {value}
       </span>
       {/* Two clusters in the one reserved trailing track — the shape the
@@ -156,6 +172,15 @@ export function ControlPanelRuleRow({
           <RowActions pin={null} alwaysVisible={actionsAtRest}>
             {actions}
           </RowActions>
+        ) : null}
+        {locked !== undefined ? (
+          <span
+            title={locked.label}
+            aria-label={locked.label}
+            className="flex size-6 items-center justify-center text-muted-foreground"
+          >
+            <Icon icon={lockIcon} />
+          </span>
         ) : null}
         {onRemove ? (
           <RowActions pin={null} alwaysVisible>

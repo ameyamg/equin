@@ -110,7 +110,7 @@ export type RowControlProps = Pick<
  * the row).
  */
 export interface RowProps extends RowControlProps, Passthrough {
-  /** Persistent selection → bg-accent + text-accent-foreground; aria-current on buttons. */
+  /** Persistent selection → bg-selected-fill + text-selected-foreground; aria-current on buttons. */
   selected?: boolean;
   /** Text+gap density only; PADDING is always p-row. sm=text-xs gap-1.5, md=text-sm gap-2. Default "md". */
   size?: RowSize;
@@ -330,9 +330,10 @@ export function Row({
     // publishes its composite over the ambient mask, which is why this is a
     // second property and not a `--chrome-mask` re-declaration — a custom
     // property whose value reads itself is a cycle, and CSS drops it.
-    // A selected row also takes the accent's own text colour, so its label
-    // reads brighter than its neighbours' (a theme whose accent text equals its
-    // body text sees no change). Leaves that set their own tone (a muted
+    // A selected row also takes the selected tier's text (`--selected-foreground`,
+    // default the accent's own text colour — the tree's and the table's token),
+    // so its label reads brighter than its neighbours' (a theme whose accent
+    // text equals its body text sees no change). Leaves that set their own tone (a muted
     // subtitle, a finished row's dimmed title) keep it.
     // The hover is the SURFACE's, never the caller's: every surface publishes
     // `--hover-fill` (a card its muted tone, the sidebar its accent, a popover
@@ -346,7 +347,7 @@ export function Row({
         // palette's `--selected` on the canvas, a popover's own
         // `popoverSelected` in a menu), so a theme can set hover and
         // selection apart and a selected row shows on every surface.
-        "bg-selected-fill text-accent-foreground [--scrim:var(--selected-fill)]"
+        "bg-selected-fill text-selected-foreground [--scrim:var(--selected-fill)]"
       : "hover:bg-hover-fill hover:[--scrim:var(--hover-fill)]",
     bordered && "border",
     className,

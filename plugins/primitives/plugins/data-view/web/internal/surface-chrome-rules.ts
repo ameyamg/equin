@@ -10,6 +10,7 @@ export interface SurfaceChrome {
   /** A band floating over the view (`ToolbarArrangement.overlay`). */
   overlay: boolean;
   aside: ReactNode;
+  measure: string | undefined;
   asideEnd: ReactNode;
   backdrop: string | undefined;
   reserve: DataViewReserve | undefined;
@@ -20,6 +21,7 @@ export interface SurfaceChrome {
  * checked once by the shell — each throws rather than being silently dropped:
  *
  * - `aside` needs a band (hosted / sections have none to place it beside);
+ * - `measure` needs an in-flow band (it centres the body under it);
  * - `asideEnd` and `backdrop` need an overlay band — only a band floating over
  *   the view leaves room for a card on the right, or a canvas under every view;
  * - `reserve` moves the floating cards (the view card of a `backdrop`, the
@@ -29,8 +31,23 @@ export function assertSurfaceChrome(
   storageKey: string,
   chrome: SurfaceChrome,
 ): void {
-  const { hosted, sectioned, overlay, aside, asideEnd, backdrop, reserve } =
-    chrome;
+  const {
+    hosted,
+    sectioned,
+    overlay,
+    aside,
+    measure,
+    asideEnd,
+    backdrop,
+    reserve,
+  } = chrome;
+  if (measure !== undefined && (hosted || sectioned || overlay)) {
+    throw new Error(
+      `DataView(${storageKey}): \`measure\` needs an in-flow band toolbar — ` +
+        "it centres the body under the band, and an overlay view is the " +
+        "canvas itself (a hosted or sections toolbar has no band).",
+    );
+  }
   if (aside !== undefined && (hosted || sectioned)) {
     throw new Error(
       `DataView(${storageKey}): \`aside\` needs a band toolbar — a hosted ` +

@@ -44,6 +44,7 @@ export {
 export {
   isDeclaredMailOp,
   MAIL_QUERY_COLUMNS,
+  MAIL_QUERY_OPS,
   type CompiledMailQuery,
   type MailQuery,
   type MailQueryColumn,

@@ -18,6 +18,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
+      ops: ["gte", "lt"],
       lower: dateLower.is,
     },
     {
@@ -26,6 +27,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
+      ops: ["lt"],
       lower: dateLower["is-before"],
     },
     {
@@ -34,6 +36,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
+      ops: ["gte"],
       lower: dateLower["is-after"],
     },
     // NOT `hidden`, and do not make them so again. The inclusive pair is the
@@ -48,6 +51,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
+      ops: ["lt"],
       lower: dateLower["is-on-or-before"],
     },
     {
@@ -56,6 +60,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
+      ops: ["gte"],
       lower: dateLower["is-on-or-after"],
     },
     {
@@ -64,6 +69,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateRangeInput,
+      ops: ["gte", "lt"],
       lower: dateLower["is-between"],
     },
     {
@@ -72,6 +78,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Relative",
       hasValue: true,
       ValueInput: RelativeRangeInput,
+      ops: ["gte", "lt"],
       lower: dateLower["is-within-past"],
     },
     {
@@ -80,6 +87,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       group: "Relative",
       hasValue: true,
       ValueInput: RelativeRangeInput,
+      ops: ["gte", "lt"],
       lower: dateLower["is-within-next"],
     },
     {
@@ -87,6 +95,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is empty",
       group: "Presence",
       hasValue: false,
+      ops: ["isEmpty"],
       lower: dateLower["is-empty"],
     },
     {
@@ -94,6 +103,7 @@ export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is not empty",
       group: "Presence",
       hasValue: false,
+      ops: ["isNotEmpty"],
       lower: dateLower["is-not-empty"],
     },
   ],

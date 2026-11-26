@@ -17,6 +17,7 @@ import {
   wrapRuleInGroup,
 } from "./filter-tree-ops";
 import { carryOperand } from "./carry-operand";
+import { defaultOperatorFor } from "./rule-resolution";
 
 /**
  * Everything the filter panel's rows need to read the schema and mutate the tree
@@ -87,10 +88,11 @@ export function useFilterEditor(): FilterEditor {
   );
 
   return useMemo<FilterEditor>(() => {
-    /** A field type's default operator id (defaultOperator → operators[0]). */
-    const defaultOperator = (typeId: string): string => {
-      const set = controller.resolveOperatorSet(typeId);
-      return set?.defaultOperator ?? set?.operators[0]?.id ?? "";
+    /** A field's default operator id: its type's default when the field is
+     *  offered it, else its first offered operator (`defaultOperatorFor`). */
+    const defaultOperator = (field: FieldDef<unknown>): string => {
+      const set = controller.resolveOperatorSet(field.type ?? "text");
+      return set === undefined ? "" : (defaultOperatorFor(set, field) ?? "");
     };
 
     return {
@@ -100,9 +102,7 @@ export function useFilterEditor(): FilterEditor {
       addRuleForField: (groupId, fieldId) => {
         const field = controller.filterableFields.find((f) => f.id === fieldId);
         if (!field) return;
-        commit((r) =>
-          addRule(r, groupId, fieldId, defaultOperator(field.type ?? "text")),
-        );
+        commit((r) => addRule(r, groupId, fieldId, defaultOperator(field)));
       },
       addGroup: (groupId) => commit((r) => addGroup(r, groupId, "and")),
       setConjunction: (groupId, conjunction) =>
@@ -111,7 +111,7 @@ export function useFilterEditor(): FilterEditor {
       wrapRuleInGroup: (ruleId) => commit((r) => wrapRuleInGroup(r, ruleId)),
       changeRuleField: (ruleId, fieldId) => {
         const field = controller.filterableFields.find((f) => f.id === fieldId);
-        const operatorId = field ? defaultOperator(field.type ?? "text") : "";
+        const operatorId = field ? defaultOperator(field) : "";
         commit((r) =>
           updateRule(r, ruleId, { fieldId, operatorId, value: undefined }),
         );
