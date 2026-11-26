@@ -71917,10 +71917,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `HealthReport.Row` "Releases"
       - `HealthReport.Row` "Updates"
       - `Notifications.Action` "equin-update"
-    - Uses: 29 symbols — full list in [`plugins/upstream/REFERENCE.md`](../plugins/upstream/REFERENCE.md)
+    - Uses: 30 symbols — full list in [`plugins/upstream/REFERENCE.md`](../plugins/upstream/REFERENCE.md)
       - `primitives/css/ui-kit` ×6
       - `config_v2` ×3
-      - `network/live/live-state` ×2
+      - `network/live/live-state` ×3
       - `primitives/relative-time` ×2
       - `shell/notifications` ×2
       - `apps-core/tabs.useAppLinkProps`
@@ -71942,6 +71942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigV2.Register` "reminders"
       - `ConfigV2.Register` "upstream-merge"
       - `taskCategory` "upstream"
+      - `resource.declare` "upstream.publication"
       - `resource.declare` "upstream.publisher-status"
       - `resource.declare` "upstream.release-status"
       - `restart-skip.adopted` "whether the served build holds the newest upstream release, and the commit a release would tag"
@@ -71952,7 +71953,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-category.TaskCategory`
     - DB schema: `plugins/upstream/server/internal/tables.ts`
     - Resources:
-      - `upstream.publisher-status` (push, notified, capped: PUBLICATION_ASSETS_MAX)
+      - `upstream.publication` (push, notified, capped: PUBLICATION_ASSETS_MAX)
+      - `upstream.publisher-status` (push, notified)
       - `upstream.release-status` (push, notified)
   - Machine:
     - Uses:
@@ -72042,6 +72044,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `releaseTagMessage`
           - `releaseTags`
           - `releaseVersion`
+          - `upstreamPublication`
           - `upstreamPublisherStatus`
           - `upstreamReleaseStatus`
       - Cross-plugin:

@@ -92,8 +92,9 @@ export type GitHubPublication = z.infer<typeof GitHubPublicationSchema>;
  *   absent.
  * - `publisher`     — `latest`, the newest release on local `main` (`null`:
  *   none cut yet) and when it was cut (ISO); `unreleased`, the commits on
- *   `main` since it; `releasable`, whether the commit main serves can be cut;
- *   `github`, what GitHub published of `latest` (`null` while none is cut).
+ *   `main` since it; `releasable`, whether the commit main serves can be cut.
+ *   What GitHub published of `latest` is its own value,
+ *   {@link upstreamPublication}.
  */
 export const PublisherStatusSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("not-publisher") }),
@@ -102,18 +103,32 @@ export const PublisherStatusSchema = z.discriminatedUnion("kind", [
     latest: z.object({ tag: z.string(), taggedAt: z.string() }).nullable(),
     unreleased: z.number().int().nonnegative(),
     releasable: ReleasabilitySchema,
-    github: GitHubPublicationSchema.nullable(),
   }),
 ]);
 export type PublisherStatus = z.infer<typeof PublisherStatusSchema>;
 
 /**
  * The live publisher status. One small value, pushed; recomputed when `main`
- * moves, when a build starts or ends, when the backend serves a new build,
- * and after a cut through {@link cutReleaseEndpoint}.
+ * moves, when a tag is created or deleted, when a build starts or ends and
+ * when the backend serves a new build. Read from git: never from GitHub's
+ * events, which reach {@link upstreamPublication} instead — so a forwarder
+ * connecting or a run of another watched repo re-runs no git.
  */
 export const upstreamPublisherStatus = liveValue("upstream.publisher-status", {
   schema: PublisherStatusSchema,
+  needsMachine: { feature: "Releases" },
+});
+
+/**
+ * What GitHub published of one release tag (the publisher's `latest`), read on
+ * main from the events GitHub pushed: memory and two small tables, no git.
+ * Its own value, apart from {@link upstreamPublisherStatus}, because its
+ * change signals (every watched repo's forwarder state, every stored run or
+ * release) are many and none of them moves git.
+ */
+export const upstreamPublication = liveValue("upstream.publication", {
+  schema: GitHubPublicationSchema,
+  params: ["tag"],
   needsMachine: { feature: "Releases" },
 });
 

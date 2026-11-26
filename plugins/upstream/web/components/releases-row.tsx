@@ -2,17 +2,13 @@ import { buildDetailRoute } from "@plugins/build/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import {
-  cutReleaseEndpoint,
-  upstreamPublisherStatus,
-} from "@plugins/upstream/plugins/release/core";
+import { cutReleaseEndpoint } from "@plugins/upstream/plugins/release/core";
 import {
   commitLineParts,
   githubPublication,
@@ -21,6 +17,7 @@ import {
   type Publisher,
   type ReleaseAction,
 } from "../internal/releases-view";
+import { usePublisher } from "../internal/use-publisher";
 
 /** Re-read "6h ago" and the next tag's day once a minute while drawn. */
 const NOW_TICK_MS = 60_000;
@@ -31,7 +28,7 @@ const NOW_TICK_MS = 60_000;
  * main's backend). Nothing elsewhere — the row itself is absent there.
  */
 export function ReleasesGlance() {
-  const read = useLive(upstreamPublisherStatus);
+  const read = usePublisher();
   const now = useNow(NOW_TICK_MS);
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();

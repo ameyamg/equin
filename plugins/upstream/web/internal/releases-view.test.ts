@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { INSTALLER_BINARIES } from "@plugins/installer/plugins/release-assets/core";
 import type {
   GitHubPublication,
-  PublisherStatus,
   Releasability,
 } from "@plugins/upstream/plugins/release/core";
 import {
@@ -13,10 +12,11 @@ import {
   releasesHealth,
   releasesSubtitle,
   type Publisher,
+  type PublisherView,
 } from "./releases-view";
 
 const refetch = async () => {};
-const ready = (data: PublisherStatus) =>
+const ready = (data: PublisherView) =>
   ({ status: "ready", data, refetch }) as const;
 const now = new Date("2026-11-17T14:00:00.000Z");
 const served = "247f2541c0ffee0000000000000000000000beef";

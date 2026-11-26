@@ -24,6 +24,7 @@ export {
   PUBLICATION_ASSETS_MAX,
   PublisherStatusSchema,
   ReleasabilitySchema,
+  upstreamPublication,
   upstreamPublisherStatus,
 } from "./internal/publisher-value";
 export type {

@@ -116,7 +116,14 @@ everywhere else): git, the served dist's `.build-commit` and main's own
 `build_runs` (`inflightRunOn` / `lastClosedRunOn`, the run ledger's reads the
 cut runs too). It recomputes on `main` moving, a tag created or deleted
 (git-watcher's `git-watcher.tags`: a cut through the button or from a
-terminal alike), a `build_runs` write and an adopted deploy.
+terminal alike), a `build_runs` write and an adopted deploy. What GitHub
+published of the newest release is a second value, `upstream.publication
+{tag}` (`machine/internal/publication.ts`: the forwarder's state and the stored
+run and Release — memory and two small tables, no git), recomputed on GitHub's
+events; the row joins the two (`web/internal/use-publisher.ts`). Kept apart so
+GitHub's many signals — every watched repo's forwarder connecting on each main
+restart, every run stored — never re-run the publisher's git reads
+(report-1794960600-sz5i1r).
 
 **The button runs the CLI.** `POST /api/upstream/release` spawns `./equin
 version cut` in the backend's checkout (main's slot): one implementation,
@@ -223,10 +230,10 @@ that cannot run on this database).
     - `HealthReport.Row` "Releases"
     - `HealthReport.Row` "Updates"
     - `Notifications.Action` "equin-update"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `config_v2` ×3
-    - `network/live/live-state` ×2
+    - `network/live/live-state` ×3
     - `primitives/relative-time` ×2
     - `shell/notifications` ×2
     - `apps-core/tabs.useAppLinkProps`
@@ -248,6 +255,7 @@ that cannot run on this database).
     - `ConfigV2.Register` "reminders"
     - `ConfigV2.Register` "upstream-merge"
     - `taskCategory` "upstream"
+    - `resource.declare` "upstream.publication"
     - `resource.declare` "upstream.publisher-status"
     - `resource.declare` "upstream.release-status"
     - `restart-skip.adopted` "whether the served build holds the newest upstream release, and the commit a release would tag"
@@ -258,7 +266,8 @@ that cannot run on this database).
     - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/upstream/server/internal/tables.ts`
   - Resources:
-    - `upstream.publisher-status` (push, notified, capped: PUBLICATION_ASSETS_MAX)
+    - `upstream.publication` (push, notified, capped: PUBLICATION_ASSETS_MAX)
+    - `upstream.publisher-status` (push, notified)
     - `upstream.release-status` (push, notified)
 - Machine:
   - Uses:

@@ -55,6 +55,7 @@ declarations.
     - `releaseTagMessage`
     - `releaseTags`
     - `releaseVersion`
+    - `upstreamPublication`
     - `upstreamPublisherStatus`
     - `upstreamReleaseStatus`
 - Cross-plugin:

@@ -11,8 +11,18 @@ import {
 } from "@plugins/upstream/plugins/release/core";
 import type { Read } from "./updates-view";
 
-/** The publisher's releases, as the row draws them. */
-export type Publisher = Extract<PublisherStatus, { kind: "publisher" }>;
+/**
+ * The publisher's releases, as the row draws them: the publisher status
+ * joined with what GitHub published of its `latest` (`github`: `null` while
+ * none is cut) — two live values, `upstream.publisher-status` (git) and
+ * `upstream.publication` (GitHub's events), joined by `usePublisher`.
+ */
+export type Publisher = Extract<PublisherStatus, { kind: "publisher" }> & {
+  github: GitHubPublication | null;
+};
+
+/** What the row reads: the joined publisher, or not the publisher. */
+export type PublisherView = { kind: "not-publisher" } | Publisher;
 
 export const RELEASES_TITLE = `${PRODUCT_NAME} releases`;
 
@@ -239,7 +249,7 @@ export function githubPublication(g: GitHubPublication): GitHubPublicationView {
  * GitHub is not connected the row is `unknown` — it never claims "published"
  * on stale news.
  */
-export function releasesHealth(read: Read<PublisherStatus>): HealthStatus {
+export function releasesHealth(read: Read<PublisherView>): HealthStatus {
   if (read.status === "unavailable") return { state: "absent" };
   if (read.status === "loading") return { state: "unknown" };
   if (read.status === "error")

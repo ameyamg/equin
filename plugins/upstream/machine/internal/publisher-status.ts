@@ -20,22 +20,9 @@ import { serveValue } from "@plugins/network/plugins/live/machine";
 import { readOwnReleases, releasesHolding } from "@plugins/upstream/core";
 import {
   upstreamPublisherStatus,
-  type GitHubPublication,
   type PublisherStatus,
   type Releasability,
 } from "@plugins/upstream/plugins/release/core";
-import { SOURCE_REPO } from "@plugins/framework/plugins/product-name/core";
-import {
-  _githubReleases,
-  _githubRuns,
-} from "@plugins/integrations/plugins/github-events/server";
-import {
-  forwarderStatusOf,
-  githubEventsStatusServed,
-  newestRunOf,
-  releaseOf,
-} from "@plugins/integrations/plugins/github-events/machine";
-import { RELEASE_WORKFLOW } from "@plugins/installer/plugins/release-assets/core";
 
 /**
  * The publisher's releases (see `PublisherStatus`): served by main's backend
@@ -48,19 +35,21 @@ import { RELEASE_WORKFLOW } from "@plugins/installer/plugins/release-assets/core
  * or deleted (a cut, from the endpoint or `./equin version cut` in a
  * terminal: the latest release and the unreleased count), a write to
  * `build_runs` (a build starting or ending), and the backend serving a new
- * build (a restart reads it fresh; an adopted deploy notifies, machine barrel),
- * and GitHub telling what it did of the newest tag (a run or release of it
- * stored, a forwarder connecting or dropping) — pushed by GitHub, never fetched.
+ * build (a restart reads it fresh; an adopted deploy notifies, machine barrel).
+ * Nothing GitHub says reaches it: that is `upstream.publication`
+ * (./publication.ts), which reads no git. Bundled here, every forwarder
+ * connecting (three repos, on every main restart) and every run stored re-ran
+ * this loader's git spawns for an unchanged value (report-1794960600-sz5i1r).
  */
 export const publisherStatusServed = serveValue(upstreamPublisherStatus, {
   source: "external",
   changes: "notified",
   reads: {
-    tables: [_buildRuns, _githubRuns, _githubReleases],
+    tables: [_buildRuns],
     reason:
-      "a build starting or ending changes whether the served commit can be released; a run or release GitHub reported changes what it published of the newest tag",
+      "a build starting or ending changes whether the served commit can be released",
   },
-  recomputeOn: [refHeadServed, gitTagsServed, githubEventsStatusServed],
+  recomputeOn: [refHeadServed, gitTagsServed],
   loader: () => readPublisherStatus(),
 });
 
@@ -76,39 +65,6 @@ async function readPublisherStatus(): Promise<PublisherStatus> {
     latest: own.latest,
     unreleased: own.unreleased,
     releasable: await readReleasability(root),
-    github:
-      own.latest === null ? null : await readGitHubPublication(own.latest.tag),
-  };
-}
-
-/**
- * What GitHub published of `tag`: the release workflow's newest run of it and
- * its Release, as the product repo's forwarder stored them. Claims nothing
- * while that forwarder is not connected — what was stored may be stale.
- */
-async function readGitHubPublication(tag: string): Promise<GitHubPublication> {
-  const forwarder = forwarderStatusOf(SOURCE_REPO);
-  if (forwarder === null) return { kind: "not-connected", state: "not-set-up" };
-  if (forwarder.state !== "connected")
-    return { kind: "not-connected", state: forwarder.state };
-  const [run, release] = await Promise.all([
-    newestRunOf({
-      repo: SOURCE_REPO,
-      workflowPath: RELEASE_WORKFLOW,
-      head: tag,
-    }),
-    releaseOf(SOURCE_REPO, tag),
-  ]);
-  return {
-    kind: "connected",
-    run:
-      run === null
-        ? null
-        : { status: run.status, conclusion: run.conclusion, url: run.url },
-    release:
-      release === null
-        ? null
-        : { draft: release.draft, assets: release.assets, url: release.url },
   };
 }
 
