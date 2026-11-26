@@ -8,9 +8,11 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { identifierField } from "@plugins/fields/plugins/identifier/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { idKindField } from "@plugins/ids/core";
 import { deployRunIdKind } from "./id-kinds";
+import { DeployRemedySchema } from "./refusal";
 import {
   liveCollection,
   liveValue,
@@ -164,6 +166,12 @@ export const DeployRunSchema = z.object({
    */
   message: z.string().nullable(),
   /**
+   * On a refusal whose fix is somewhere else in the app (connect an account):
+   * that place, as data the UI turns into the action — read from the CLI's
+   * remedy line (`./refusal`), never from its sentence. Null otherwise.
+   */
+  remedy: DeployRemedySchema.nullable(),
+  /**
    * A `needs-approval` run's links: the ids of the site Settings tab's sections
    * where what it waits on is approved (`DeployGatesVerdict.resolveIn`). Empty
    * on every other run.
@@ -243,6 +251,8 @@ export const DeployRunRecordSchema = z.object({
   exitCode: z.number().int().nullable(),
   /** On failure: the CLI's own words, stored and rendered verbatim. */
   message: z.string().nullable(),
+  /** What clears the refusal, as data — as on the live run. */
+  remedy: DeployRemedySchema.nullable(),
   /** Where a held run is approved — as on the live run. */
   approvalSections: wholeList(z.string(), { reason: APPROVAL_SECTIONS_WHOLE }),
 });
@@ -308,6 +318,8 @@ export const deployRunFields = {
   exitCode: nullable(intField({ label: "Exit code" })),
   /** On failure: the CLI's own words, stored and rendered verbatim. */
   message: nullable(textField({ label: "Message" })),
+  /** On a refusal with a fix elsewhere in the app: that place (`DeployRemedy`). */
+  remedy: nullable(jsonField({ schema: DeployRemedySchema })),
   /**
    * A `needs-approval` run's links: the deployment-pane section ids where what
    * it waits on is approved. Empty on every other run.
@@ -362,6 +374,7 @@ export const deployRunHistory = liveCollection("deploy.run-history", {
       "phaseFailed",
       "exitCode",
       "approvalSections",
+      "remedy",
     ],
   },
   id: "id",

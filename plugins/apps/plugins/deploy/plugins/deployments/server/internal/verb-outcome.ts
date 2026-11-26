@@ -19,20 +19,11 @@
  */
 
 import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import {
+  readRefusal,
+  type DeployRemedy,
+} from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import type { DeployLeg } from "./legs";
-
-/**
- * The prefix `./equin deploy`'s `refuse()` puts on every named refusal.
- *
- * A failing run's `message` is the CLI's own words, and this is how the ONE line
- * that states the problem is picked out of a failure whose transcript also
- * carries the remote script's whole output. It is a coupling to the CLI's output
- * format, and the honest fix is a shared constant on the CLI side — but that file
- * is the engine and is deliberately not edited from here. When it does not match,
- * the fallback is the last non-blank line, which is never worse than a generic
- * "it failed".
- */
-const REFUSAL_PREFIX = "deploy: ";
 
 /**
  * Everything known about a finished leg, as ONE value.
@@ -78,24 +69,53 @@ export function verbSucceeded(ending: VerbEnding): boolean {
   return ending.signalCode === null && ending.exitCode === 0;
 }
 
+/** How a failed leg is recorded: its sentence, and the remedy its refusal named. */
+export interface VerbFailure {
+  readonly message: string;
+  readonly remedy: DeployRemedy | null;
+}
+
 /**
- * The one line that says what went wrong.
+ * The one line that says what went wrong, and what clears it.
  *
  * The two endings that are their own answer are checked first, and for the same
  * reason in each: the leg printed no refusal, and its transcript tail is only
  * whatever it had got round to, never the reason — so quoting it would present
  * an unrelated progress line as the cause. Otherwise it is the CLI's named
- * refusal, else its last word, else the status.
+ * refusal (`readRefusal`, the line format the CLI's `refuse()` prints, with its
+ * remedy line), else its last word, else the status. Only a refusal carries a
+ * remedy.
  */
-export function verbFailureMessage(ending: VerbEnding): string {
+export function verbFailure(ending: VerbEnding): VerbFailure {
   if (ending.exitCode === HARD_KILL_EXIT_CODE && ending.signalCode === null) {
-    return hardKilledMessage(ending);
+    return { message: hardKilledMessage(ending), remedy: null };
   }
-  if (ending.signalCode !== null) return killedMessage(ending);
-  const refusal = ending.lines.find((line) => line.startsWith(REFUSAL_PREFIX));
-  if (refusal) return refusal.slice(REFUSAL_PREFIX.length);
-  const last = [...ending.lines].reverse().find((line) => line.trim() !== "");
-  return last ?? `Exited with code ${ending.exitCode}`;
+  if (ending.signalCode !== null) {
+    return { message: killedMessage(ending), remedy: null };
+  }
+  const refusal = readRefusal(ending.lines);
+  switch (refusal.kind) {
+    case "refused":
+      return { message: refusal.message, remedy: refusal.remedy };
+    case "malformed-remedy":
+      // A CLI and this reader out of step: keep the sentence, and say loudly
+      // that its remedy was lost rather than dropping it unseen.
+      return {
+        message:
+          `${refusal.message} (its remedy could not be read: ${refusal.error} — ` +
+          `${refusal.line})`,
+        remedy: null,
+      };
+    case "none": {
+      const last = [...ending.lines]
+        .reverse()
+        .find((line) => line.trim() !== "");
+      return {
+        message: last ?? `Exited with code ${ending.exitCode}`,
+        remedy: null,
+      };
+    }
+  }
 }
 
 /**

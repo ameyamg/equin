@@ -44,6 +44,7 @@ export function SiteInvestigateActionExhibit({
         finishedAt: run.finishedAt === null ? null : new Date(run.finishedAt),
         exitCode: 1,
         approvalSections: [],
+        remedy: null,
         // A ledger row as the history read hands it: no other plugin's columns.
         $columns: {},
       }}

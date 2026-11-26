@@ -321,7 +321,7 @@ Four things follow, and none of them are optional:
 
 - **The child is detached and its output goes to a transcript FILE**, tailed into
   the `deploy` channel by the primitive. A restart mid-run republishes it, and
-  `verbFailureMessage` picks its sentence from that same file — the one copy, for
+  `verbFailure` picks its sentence (and the refusal's remedy) from that same file — the one copy, for
   a leg this process started and for one it merely adopted. stdout and stderr are
   merged (one fd), so the per-line stream classification is gone; the `deploy: `
   refusal scan is keyed on line _content_ and is unaffected, while the fallback
@@ -454,7 +454,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
     - `network/live/live-state` ×6
@@ -462,6 +462,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/servers` ×5
     - `primitives/slot-render` ×4
     - `infra/endpoints` ×3
+    - `auth` ×2
     - `network/live` ×2
     - `primitives/app-shell` ×2
     - `primitives/css/badge` ×2
@@ -506,6 +507,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `ApprovalLinks`
     - `DeploymentDetail`
     - `DeploymentItemActions`
+    - `RemedyAction`
     - `SITE_CARD_LIST_TOOLBAR`
     - `SiteBanner`
     - `SiteCard`
@@ -586,6 +588,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `fields/date/config.dateField`
     - `fields/identifier/config.identifierField`
     - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
     - `fields/string-list/config.stringListField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
@@ -606,11 +609,13 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeploymentEdge`
     - `DeploymentId`
     - `DeployPhase`
+    - `DeployRemedy`
     - `DeployRun`
     - `DeployRunId`
     - `DeployRunRecord`
     - `DeployVerb`
     - `InstallLayout`
+    - `ReadRefusal`
     - `RunDeploymentBody`
     - `UpdateDeploymentBody`
   - Exports (values):
@@ -631,6 +636,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `deployments`
     - `DeploymentSchema`
     - `DeployPhaseSchema`
+    - `DeployRemedySchema`
     - `deployRunFields`
     - `deployRunHistory`
     - `deployRunIdKind`
@@ -647,6 +653,8 @@ default, a left rail revealing each (`useRevealSection`).
     - `LOOPBACK_HOST`
     - `loopbackOnlySentence`
     - `publicUrls`
+    - `readRefusal`
+    - `refusalLines`
     - `releaseAppPath`
     - `releaseDir`
     - `REMOTE_SCRIPT_SHEBANG`

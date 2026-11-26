@@ -175,6 +175,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `GrantAccessButton`
     - `missingScopes`
     - `startConnectFlow`
+    - `useAccountName`
     - `useAccountStatus`
     - `useAuthState`
 - Server:
@@ -321,6 +322,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/settings/accounts`
     - `auth/apple-signing/setup-wizard`
     - `auth/cloudflare`

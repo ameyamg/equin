@@ -139,6 +139,7 @@ export async function writeDeployFixture(
           exitCode: run.status === "failed" ? run.exitCode : 0,
           message: run.status === "failed" ? run.message : null,
           approvalSections: [],
+          remedy: null,
           legRunId: null,
           pid: null,
         });

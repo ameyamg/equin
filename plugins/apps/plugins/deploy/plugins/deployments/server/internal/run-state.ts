@@ -33,11 +33,7 @@ import {
   type DeployLeg,
 } from "./legs";
 import { legStarted, readTranscriptTail } from "./transcript";
-import {
-  verbFailureMessage,
-  verbSucceeded,
-  type VerbEnding,
-} from "./verb-outcome";
+import { verbFailure, verbSucceeded, type VerbEnding } from "./verb-outcome";
 import { _deployRuns } from "./tables";
 import { deployRunIdKind } from "../../core/id-kinds";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
@@ -190,6 +186,7 @@ function liveRunOf(
     finishedAt: row.finishedAt?.toISOString() ?? null,
     exitCode: row.exitCode,
     message: row.message,
+    remedy: row.remedy,
     approvalSections: row.approvalSections,
   });
 }
@@ -466,6 +463,7 @@ async function endRunBeforeLeg(
       finishedAt: new Date(),
       exitCode: null,
       message: end.message,
+      remedy: null,
       approvalSections: [...(end.approvalSections ?? [])],
     })
     .where(
@@ -648,6 +646,7 @@ async function closeDeployRow(
   // More legs to come: this run is not over.
   if (ok && parsed.leg !== finalLeg(verb)) return;
 
+  const failure = ok ? null : verbFailure(ending);
   await db
     .update(_deployRuns)
     .set({
@@ -657,7 +656,8 @@ async function closeDeployRow(
       phaseFailed: !ok && verb === "update" ? legPhase(parsed.leg) : null,
       finishedAt: terminal.finishedAt,
       exitCode: terminal.exitCode,
-      message: ok ? null : verbFailureMessage(ending),
+      message: failure?.message ?? null,
+      remedy: failure?.remedy ?? null,
     })
     .where(and(eq(_deployRuns.id, row.id), isNull(_deployRuns.finishedAt)));
 

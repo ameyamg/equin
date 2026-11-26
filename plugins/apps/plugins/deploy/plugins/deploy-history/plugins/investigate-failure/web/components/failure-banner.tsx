@@ -1,8 +1,9 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import type {
-  SiteBannerAnswer,
-  SiteBannerSpec,
-  SiteProps,
+import {
+  RemedyAction,
+  type SiteBannerAnswer,
+  type SiteBannerSpec,
+  type SiteProps,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import {
   deployRunHistory,
@@ -27,8 +28,8 @@ const errorIcon = symbol("error");
 /**
  * The site page's failure banner: the site's newest run (from the durable
  * ledger, so it survives a restart) failed. Says on which leg and when, the
- * CLI's own message verbatim, what the box still serves, and offers
- * Investigate — the same agent brief as the history row's action.
+ * CLI's own message verbatim, what the box still serves, and offers the
+ * refusal's remedy (when it names one) and Investigate — the same agent brief as the history row's action.
  */
 export function useFailureBanner({ deployment }: SiteProps): SiteBannerAnswer {
   const newest = useLive(deployRunHistory, {
@@ -67,6 +68,13 @@ function failureSpec(
     icon: errorIcon,
     title: run.phaseFailed ? `Failed on ${run.phaseFailed}` : "Deploy failed",
     body: `${when}${run.message ? ` — ${run.message}` : ""}.${serves}`,
-    actions: <InvestigateRun run={run} />,
+    // The refusal's own fix first (a typed remedy, e.g. the account to
+    // connect), then Investigate for everything a remedy does not cover.
+    actions: (
+      <>
+        <RemedyAction remedy={run.remedy} />
+        <InvestigateRun run={run} />
+      </>
+    ),
   };
 }

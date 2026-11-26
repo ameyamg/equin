@@ -9,7 +9,7 @@ export type {
   AuthScopeRequirement,
   IntegrationStatus,
 } from "./slots";
-export { accountsPane, accountPane } from "./panes";
+export { accountsPane, accountPane, useAccountName } from "./panes";
 export { useAuthState, useAccountStatus } from "./hooks";
 export { ConnectButton } from "./components/connect-button";
 export { GrantAccessButton } from "./components/grant-access-button";

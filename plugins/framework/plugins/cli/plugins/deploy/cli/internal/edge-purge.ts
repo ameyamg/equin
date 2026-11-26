@@ -26,6 +26,7 @@ import {
   EDGE_DOCUMENT_MAX_AGE_SEC,
   edgeDocumentCacheTag,
 } from "./converge-script";
+import type { DeployRemedy } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { refuse, toBackend, type DeployTarget } from "./target";
 
 /** What a deployment's edge purge acts on: its token, zones and tag. */
@@ -41,6 +42,12 @@ export interface EdgePurge {
  * proves the token may purge a zone before the host is touched.
  */
 const PROBE_TAG = "equin-purge-probe";
+
+/** Every Cloudflare refusal's fix: the Cloudflare account in Settings. */
+const CONNECT_CLOUDFLARE: DeployRemedy = {
+  kind: "account",
+  accountId: CLOUDFLARE_PROVIDER_ID,
+};
 
 const SET_UP =
   `Connect Cloudflare in Settings → Accounts → Cloudflare: a Custom Token with ` +
@@ -71,12 +78,14 @@ export async function resolveEdgePurge(
     refuse(
       `this deployment's edge is cloudflare, so Cloudflare keeps its pages and every ship must purge them — ` +
         `but ${token.needsConsent ? "no Cloudflare account is connected" : `the Cloudflare token could not be read (${token.message})`}. ${SET_UP}`,
+      CONNECT_CLOUDFLARE,
     );
   }
   const readable = await listZones(token.accessToken).catch((err: unknown) => {
     if (!(err instanceof Error)) throw err;
     return refuse(
       `reading the Cloudflare token's zones failed: ${err.message}. ${SET_UP}`,
+      CONNECT_CLOUDFLARE,
     );
   });
   const zones = new Map<string, CloudflareZone>();
@@ -87,6 +96,7 @@ export async function resolveEdgePurge(
         `the Cloudflare token reads no zone for ${hostname} (it reads: ${
           readable.map((z) => z.name).join(", ") || "none"
         }). ${SET_UP}`,
+        CONNECT_CLOUDFLARE,
       );
     }
     zones.set(zone.id, zone);
@@ -97,6 +107,7 @@ export async function resolveEdgePurge(
         if (!(err instanceof CloudflareApiError)) throw err;
         refuse(
           `the Cloudflare token may not purge ${zone.name}'s cache (${err.message}). ${SET_UP}`,
+          CONNECT_CLOUDFLARE,
         );
       },
     );
@@ -149,5 +160,6 @@ export function refuseOnPurgeFailures(failures: readonly string[]): void {
     `the change is live, but purging Cloudflare's copies of the site's pages failed: ${failures.join("; ")}\n` +
       `Until they expire (at most ${EDGE_DOCUMENT_MAX_AGE_SEC / 60} min, then one more visit each) visitors may read the previous pages. ` +
       `Fix the token (Settings → Accounts → Cloudflare) and deploy again.`,
+    CONNECT_CLOUDFLARE,
   );
 }

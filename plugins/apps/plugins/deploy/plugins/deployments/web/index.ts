@@ -58,6 +58,7 @@ export {
 } from "./components/site-card";
 export { useSetSiteTab, useSiteTabLink } from "./internal/site-tab";
 export { ApprovalLinks } from "./components/approval-links";
+export { RemedyAction } from "./components/remedy-action";
 export { sitePane, sitesIndexPane } from "./panes";
 export { useSiteStatus } from "./internal/site-status";
 export type { SiteStatus } from "./internal/site-status";

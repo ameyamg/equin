@@ -28,8 +28,12 @@ export const accountsPane = Pane.define({
   chrome: { history: true },
 });
 
-/** The row's name, from its provider or integration contribution. */
-function useAccountTitle({
+/**
+ * An account's name, from its provider or integration contribution (undefined
+ * when no plugin contributes that id) — what a surface that links to
+ * {@link accountPane} labels its link with.
+ */
+export function useAccountName({
   accountId,
 }: {
   accountId: string;
@@ -68,7 +72,7 @@ export const accountPane = Pane.define({
   app: settingsApp,
   component: AccountBody,
   useResolve: useResolveAccount,
-  title: { useText: useAccountTitle, fallback: "Account" },
+  title: { useText: useAccountName, fallback: "Account" },
 });
 
 function AccountBody() {

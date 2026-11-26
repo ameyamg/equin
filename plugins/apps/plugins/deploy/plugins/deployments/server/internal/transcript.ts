@@ -51,7 +51,7 @@ export async function legStarted(legId: string): Promise<boolean> {
 }
 
 /**
- * The last lines a leg wrote, for {@link verbFailureMessage} to pick from.
+ * The last lines a leg wrote, for {@link verbFailure} to pick from.
  *
  * Read from the transcript FILE rather than accumulated in memory, and that is
  * the supervised-run contract rather than an implementation choice: the child's

@@ -2789,8 +2789,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SiteTabs.View` "Deployments" → `DeployHistorySection`
               - `SiteOverview.Card` "deployments" → `DeployOverviewCard`
               - `SiteLive.Action` "open-run" → `SiteOpenRunAction`
-            - Uses: 38 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md)
-              - `apps/deploy/deployments` ×9
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md)
+              - `apps/deploy/deployments` ×10
               - `primitives/data-view` ×6
               - `network/live/live-state` ×3
               - `primitives/pane` ×3
@@ -2821,7 +2821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xl`
             - Imported by: `apps/deploy/deploy-history/rollback`
           - Plugins:
-            - **`investigate-failure`** — Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, Investigate) and the investigate row action to every failed run in a site's Deployments tab, launching an agent briefed on that failure (also offered on the health report's deployed-site row while its latest run failed) — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
+            - **`investigate-failure`** — Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, the action its refusal names as a remedy, Investigate) and the investigate row action to every failed run in a site's Deployments tab, launching an agent briefed on that failure (also offered on the health report's deployed-site row while its latest run failed) — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
               - Web:
                 - Contributes:
                   - `SiteBanner` "failed"
@@ -2829,7 +2829,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteLive.Action` "investigate" → `SiteInvestigateAction`
                 - Uses:
                   - `apps/deploy/box-link/site-row.SiteLive`
+                  - `apps/deploy/deployments.RemedyAction`
                   - `apps/deploy/deployments.SiteBanner`
+                  - `apps/deploy/deployments.SiteBannerAnswer`
+                  - `apps/deploy/deployments.SiteBannerSpec`
+                  - `apps/deploy/deployments.SiteProps`
                   - `network/live.rowOrStale`
                   - `network/live.useLive`
                   - `network/live/live-state.foldResource`
@@ -3018,7 +3022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-            - Uses: 85 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 87 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `primitives/css/ui-kit` ×14
               - `primitives/data-view` ×7
               - `network/live/live-state` ×6
@@ -3026,6 +3030,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/servers` ×5
               - `primitives/slot-render` ×4
               - `infra/endpoints` ×3
+              - `auth` ×2
               - `network/live` ×2
               - `primitives/app-shell` ×2
               - `primitives/css/badge` ×2
@@ -3070,6 +3075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ApprovalLinks`
               - `DeploymentDetail`
               - `DeploymentItemActions`
+              - `RemedyAction`
               - `SITE_CARD_LIST_TOOLBAR`
               - `SiteBanner`
               - `SiteCard`
@@ -3150,6 +3156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/date/config.dateField`
               - `fields/identifier/config.identifierField`
               - `fields/int/config.intField`
+              - `fields/json/config.jsonField`
               - `fields/string-list/config.stringListField`
               - `fields/text/config.enumTextField`
               - `fields/text/config.textField`
@@ -3170,11 +3177,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentEdge`
               - `DeploymentId`
               - `DeployPhase`
+              - `DeployRemedy`
               - `DeployRun`
               - `DeployRunId`
               - `DeployRunRecord`
               - `DeployVerb`
               - `InstallLayout`
+              - `ReadRefusal`
               - `RunDeploymentBody`
               - `UpdateDeploymentBody`
             - Exports (values):
@@ -3195,6 +3204,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deployments`
               - `DeploymentSchema`
               - `DeployPhaseSchema`
+              - `DeployRemedySchema`
               - `deployRunFields`
               - `deployRunHistory`
               - `deployRunIdKind`
@@ -3211,6 +3221,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LOOPBACK_HOST`
               - `loopbackOnlySentence`
               - `publicUrls`
+              - `readRefusal`
+              - `refusalLines`
               - `releaseAppPath`
               - `releaseDir`
               - `REMOTE_SCRIPT_SHEBANG`
@@ -15140,6 +15152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `GrantAccessButton`
       - `missingScopes`
       - `startConnectFlow`
+      - `useAccountName`
       - `useAccountStatus`
       - `useAuthState`
   - Server:
@@ -15286,6 +15299,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --font-weight-normal`
       - `ui/tokens/type-scale --line-height-caption`
     - Imported by:
+      - `apps/deploy/deployments`
       - `apps/settings/accounts`
       - `auth/apple-signing/setup-wizard`
       - `auth/cloudflare`
@@ -31726,8 +31740,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 47 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 48 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+              - `apps` ×12
               - `conversations` ×8
               - `debug` ×5
               - `infra` ×5

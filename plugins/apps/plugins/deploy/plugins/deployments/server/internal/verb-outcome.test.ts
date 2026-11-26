@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import {
-  verbFailureMessage,
-  verbSucceeded,
-  type VerbEnding,
-} from "./verb-outcome";
+import { refusalLines } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { verbFailure, verbSucceeded, type VerbEnding } from "./verb-outcome";
+
+const verbFailureMessage = (e: VerbEnding): string => verbFailure(e).message;
 
 function ending(over: Partial<VerbEnding> = {}): VerbEnding {
   return { verb: "ship", exitCode: 1, signalCode: null, lines: [], ...over };
@@ -140,5 +139,52 @@ describe("verbFailureMessage", () => {
       ending({ exitCode: -1, signalCode: null, lines: ["deploy: unrelated"] }),
     );
     expect(message).not.toContain("unrelated");
+  });
+});
+
+describe("verbFailure's remedy", () => {
+  test("a refusal's remedy line is read back as data", () => {
+    const failure = verbFailure(
+      ending({
+        lines: [
+          "uploading bundle",
+          ...refusalLines("no Cloudflare account is connected", {
+            kind: "account",
+            accountId: "cloudflare",
+          }),
+        ],
+      }),
+    );
+    expect(failure).toEqual({
+      message: "no Cloudflare account is connected",
+      remedy: { kind: "account", accountId: "cloudflare" },
+    });
+  });
+
+  test("a refusal with no remedy line has none", () => {
+    expect(
+      verbFailure(ending({ lines: refusalLines("refused", null) })).remedy,
+    ).toBeNull();
+  });
+
+  test("a remedy line that does not parse is said, not dropped", () => {
+    const failure = verbFailure(
+      ending({ lines: ["deploy: refused", 'deploy-remedy: {"kind":"nope"}'] }),
+    );
+    expect(failure.remedy).toBeNull();
+    expect(failure.message).toStartWith(
+      "refused (its remedy could not be read",
+    );
+  });
+
+  test("a killed leg carries no remedy, whatever its tail printed", () => {
+    const failure = verbFailure(
+      ending({
+        exitCode: 143,
+        signalCode: "TERM",
+        lines: refusalLines("refused", { kind: "account", accountId: "x" }),
+      }),
+    );
+    expect(failure.remedy).toBeNull();
   });
 });

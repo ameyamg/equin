@@ -6,6 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { DeployRun } from "../../core";
 import { ApprovalLinks } from "./approval-links";
+import { RemedyAction } from "./remedy-action";
 
 /**
  * A deployment's last run as the row's trailing chip — deliberately one line,
@@ -124,6 +125,7 @@ export function RunFailureNotice({
           {last.message}
         </Text>
       )}
+      <RemedyAction remedy={last.remedy} />
     </Stack>
   );
 }

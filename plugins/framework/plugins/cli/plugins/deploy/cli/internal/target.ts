@@ -32,7 +32,9 @@ import {
   createDeployment,
   deriveInstall,
   listDeployments,
+  refusalLines,
   type Deployment,
+  type DeployRemedy,
   type InstallLayout,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import {
@@ -96,9 +98,16 @@ export const SETTLE_SILENCE_SEC = 30;
  * A named refusal: the user's problem, stated once, with no stack trace. Every
  * guard in this file exits through here, so "the command refused" and "the
  * command crashed" stay visibly different things.
+ *
+ * `remedy` is where the fix is when it is somewhere in the app (connect an
+ * account): printed as its own line (`refusalLines`), which the Deploy app
+ * reads back onto the run and draws as the action itself.
  */
-export function refuse(message: string): never {
-  console.error(`deploy: ${message}`);
+export function refuse(
+  message: string,
+  remedy: DeployRemedy | null = null,
+): never {
+  for (const line of refusalLines(message, remedy)) console.error(line);
   process.exit(1);
 }
 

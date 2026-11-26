@@ -1,6 +1,6 @@
 {
-  "id": "8d3b0d68-c3a0-423f-845d-f8cf4304457f",
-  "prevId": "53faf749-fb2b-4e01-becd-758dee6b6de5",
+  "id": "4c2859b5-8da6-4f66-b0be-65ca4c4d03e1",
+  "prevId": "8d3b0d68-c3a0-423f-845d-f8cf4304457f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2194,6 +2194,12 @@
         "message": {
           "name": "message",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "remedy": {
+          "name": "remedy",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

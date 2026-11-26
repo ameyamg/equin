@@ -1,5 +1,6 @@
 import {
   ApprovalLinks,
+  RemedyAction,
   SiteCard,
   SiteCardBody,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
@@ -75,7 +76,7 @@ const extraFields: FieldDef<DeployRunRecord>[] = [
     type: "multiline-text",
     value: (r) => r.message,
     cell: (r) =>
-      r.message || r.status === "needs-approval" ? (
+      r.message || r.status === "needs-approval" || r.remedy !== null ? (
         <Stack gap="2xs">
           {r.message && (
             <Text
@@ -89,6 +90,7 @@ const extraFields: FieldDef<DeployRunRecord>[] = [
             </Text>
           )}
           {r.status === "needs-approval" && <ApprovalLinks run={r} />}
+          <RemedyAction remedy={r.remedy} />
         </Stack>
       ) : null,
     width: "24rem",

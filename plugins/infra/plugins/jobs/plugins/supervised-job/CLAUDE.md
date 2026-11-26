@@ -448,7 +448,7 @@ trade, which is worse for a transcript read top to bottom. Cost: log viewers
 that tint `stream === "stderr"` red render a supervised run in one colour.
 Nothing counts, filters or badges on it.
 
-For a consumer reading the transcript back (deploy's `verbFailureMessage`): a
+For a consumer reading the transcript back (deploy's `verbFailure`): a
 scan keyed on line CONTENT survives the merge unchanged — feed it the transcript
 lines instead of a stderr-only array. Only a "last non-blank **stderr** line"
 fallback degrades, to "last non-blank line".
