@@ -290,6 +290,57 @@ describe("mail cache: coverage and fill", () => {
   });
 });
 
+describe("mail cache: a window nobody is owed any more", () => {
+  test("its fill stops at the next provider call, keeping every batch it committed", async () => {
+    // task-1795724905-sk9a06: cold views the person had left kept filling
+    // from Gmail, and the view they were on waited for the quota.
+    const h = harness({ threads: inboxThreads(120) });
+    const ac = new AbortController();
+    const first = h.f.holdNext("getThreads", "foreground");
+    const filling = h.cache.window(win({ limit: 100 }), { signal: ac.signal });
+    await first.reached;
+    const second = h.f.holdNext("getThreads", "foreground");
+    first.release();
+    await second.reached;
+    // The person left: the second batch is already on its way, nothing after it.
+    ac.abort(new Error("left"));
+    second.release();
+    const fillingErr = await filling.then(
+      () => null,
+      (err: unknown) => err,
+    );
+    expect(fillingErr).toEqual(new Error("left"));
+    const calls = h.count("getThreads");
+    expect(calls).toBe(2);
+    const { n } = (
+      await t.db.execute(sql`select count(*)::int as n from mail_query_members`)
+    ).rows[0] as { n: number };
+    // Both batches placed (50 threads each, minus the slack's last claim).
+    expect(n).toBeGreaterThanOrEqual(50);
+
+    // The next read resumes at the cut: only what the first one lacked.
+    h.resetCalls();
+    const rows = await h.cache.window(win({ limit: 100 }));
+    expect(rows).toHaveLength(100);
+    expect(h.ids("getThreads")).toBeLessThan(100 - 50 + 25);
+    await settle(h);
+  });
+
+  test("a window left while it waited for its query's lock starts no fill", async () => {
+    const h = harness({ threads: inboxThreads(10) });
+    const ac = new AbortController();
+    ac.abort(new Error("left"));
+    const left = h.cache.window(win({}), { signal: ac.signal });
+    const leftErr = await left.then(
+      () => null,
+      (err: unknown) => err,
+    );
+    expect(leftErr).toEqual(new Error("left"));
+    expect(h.count("getThreads")).toBe(0);
+    await settle(h);
+  });
+});
+
 describe("mail cache: catch-up", () => {
   test("a locally maintained query re-checks changed threads per message: archive leaves, new mail enters", async () => {
     const h = harness({ threads: inboxThreads(4) });

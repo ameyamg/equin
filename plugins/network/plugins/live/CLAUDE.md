@@ -416,6 +416,12 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
     cached): the reader's error arm is `kind: "refused"`, never a
     misleading empty list nor a reported failure. An undeclared code is
     `loader-failed`.
+  - **Every answer is asked under a `read: { signal }`** (`LiveSourceRead`,
+    the last argument of `window` / `rows` / `all` / `groups` / `count`): it
+    aborts once every subscriber of the tuple left while the answer was being
+    computed (resource-runtime's `LoadRun.signal`); never for a read nobody
+    can abandon. A source doing paced or slow work passes it on and stops,
+    keeping what it stored (Mail's fill and Gmail's quota pacer).
   - **Every answer is checked** (loud loader error): rows against the schema,
     string ids, no duplicates, ≤ `q.limit`, strictly ascending `$key` order
     within `(after, until]`; `keyText.<field>` must give text whose code-point
@@ -1945,6 +1951,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveScopedColumnsOf`
     - `LiveSnapshotBrand`
     - `LiveSortDirection`
+    - `LiveSourceRead`
     - `LiveTooLarge`
     - `LiveTree`
     - `LiveTreeCollection`

@@ -220,7 +220,7 @@ describe("loaded follow routes", () => {
     expect(f.loads.length).toBe(at + 1);
   });
 
-  test("a loader is handed a LoadRun only when its plan has loaded routes", async () => {
+  test("a loader is handed loaded-route bookkeeping only when its plan has loaded routes", async () => {
     const h = createHarness();
     const f = follower(h, () => ["f1"]);
     const plain: (LoadRun | undefined)[] = [];
@@ -252,7 +252,11 @@ describe("loaded follow routes", () => {
     await h.subscribe("follower", { owner: "o1" });
     await h.subscribe("plain", {});
     expect(f.runs[0]).toBeDefined();
-    expect(plain).toEqual([undefined]);
+    // A subscription's read gets its cut signal (`LoadRun.signal`); nothing
+    // of the loaded-route bookkeeping (a no-op `noteLoaded`, no follows).
+    expect(plain).toHaveLength(1);
+    expect(Object.keys(plain[0]!).sort()).toEqual(["noteLoaded", "signal"]);
+    expect(plain[0]!.signal).toBeInstanceOf(AbortSignal);
   });
 
   test("mint refuses a follow whose routes disagree on `loaded`", () => {

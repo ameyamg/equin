@@ -202,7 +202,7 @@ export const mailThreadsServed = serveCollection(mailThreads, {
   source: "external",
   changes: "notified",
   reads: CACHE_READS,
-  window: (q) => mailCache.window(q),
+  window: (q, read) => mailCache.window(q, read),
   rows: (ids) => mailCache.rows(ids),
   keyText: { date: (d: Date) => d.toISOString() },
   // ONE watcher for every open mail view: the fallback tick runs while any

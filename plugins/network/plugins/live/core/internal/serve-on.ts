@@ -308,6 +308,24 @@ export type LiveCollectionChanges = Exclude<
 type Answer<T> = Promise<T> | T;
 
 /**
+ * What a source's answer is asked under. `signal` aborts once nobody is owed
+ * the answer any more — every subscriber of the tuple left while it was
+ * being computed (resource-runtime's `LoadRun.signal`). A source doing slow
+ * or paced work (a provider's quota) passes it on and stops there, keeping
+ * whatever it already stored. For a read nobody can abandon (a push re-read,
+ * an HTTP read) it never aborts.
+ */
+export type LiveSourceRead = { readonly signal: AbortSignal };
+
+/** The signal of a read no one can abandon. */
+const NEVER_CUT: AbortSignal = new AbortController().signal;
+const sourceRead = (
+  run: { signal?: AbortSignal } | undefined,
+): LiveSourceRead => ({
+  signal: run?.signal ?? NEVER_CUT,
+});
+
+/**
  * What an external source answers for a row: the row WITHOUT `$columns`. An
  * exposing collection's `$columns` is the fold of every exposure served on the
  * host (`LiveColumns.Expose`), as the SQL arm folds them — and an external
@@ -376,7 +394,7 @@ type CountOption<Cn> = [Cn] extends [null]
   ? { count?: never }
   : {
       /** How many rows match `q.where` — the window's rows, uncut and unlimited. */
-      count: (q: LiveDecodedCountQuery) => Answer<number>;
+      count: (q: LiveDecodedCountQuery, read: LiveSourceRead) => Answer<number>;
     };
 
 /** What a `"notified"` collection's `whileSubscribed` is handed: the served collection's own `notify`. */
@@ -419,7 +437,10 @@ type ExternalCollectionBase<Row, C extends LiveCollectionChanges> = {
    */
   changes: C;
   /** The rows with these ids (any order; an id it cannot find is absent). */
-  rows: (ids: readonly string[]) => Answer<readonly Row[]>;
+  rows: (
+    ids: readonly string[],
+    read: LiveSourceRead,
+  ) => Answer<readonly Row[]>;
 } & ChangeHooks<C>;
 
 /** An external window collection's answers (see the section header). */
@@ -431,10 +452,14 @@ export type ServeExternalWindowOptions<
   C extends LiveCollectionChanges,
 > = ExternalCollectionBase<Row, C> & {
   /** The window `q` asks for: its rows matching `q.where`, in `q.orderBy` (the id breaking ties), inside `(q.after, q.until]`, at most `q.limit`. */
-  window: (q: LiveDecodedQuery<S>) => Answer<readonly Row[]>;
+  window: (
+    q: LiveDecodedQuery<S>,
+    read: LiveSourceRead,
+  ) => Answer<readonly Row[]>;
   /** The values `q.groupBy` takes over the rows matching `q.where`, with counts — count descending, then value; at most `q.limit`. Absent: `:groups` is not served. */
   groups?: (
     q: LiveDecodedGroupQuery<keyof F & string>,
+    read: LiveSourceRead,
   ) => Answer<readonly LiveGroup<FilterScalar>[]>;
   /**
    * The windows an app's first frame reads, preloaded in that app's boot
@@ -452,7 +477,7 @@ export type ServeExternalAllOptions<
   Row,
   C extends LiveCollectionChanges,
 > = ExternalCollectionBase<Row, C> & {
-  all: () => Answer<readonly Row[]>;
+  all: (read: LiveSourceRead) => Answer<readonly Row[]>;
   window?: never;
   groups?: never;
   count?: never;
@@ -670,13 +695,20 @@ type ZodSafeParse =
 export interface AnyExternalCollectionOptions {
   source: string;
   changes?: LiveCollectionChanges;
-  rows: (ids: readonly string[]) => Answer<readonly unknown[]>;
-  window?: (q: LiveDecodedQuery<string>) => Answer<readonly unknown[]>;
-  all?: () => Answer<readonly unknown[]>;
+  rows: (
+    ids: readonly string[],
+    read: LiveSourceRead,
+  ) => Answer<readonly unknown[]>;
+  window?: (
+    q: LiveDecodedQuery<string>,
+    read: LiveSourceRead,
+  ) => Answer<readonly unknown[]>;
+  all?: (read: LiveSourceRead) => Answer<readonly unknown[]>;
   groups?: (
     q: LiveDecodedGroupQuery<string>,
+    read: LiveSourceRead,
   ) => Answer<readonly LiveGroup<FilterScalar>[]>;
-  count?: (q: LiveDecodedCountQuery) => Answer<number>;
+  count?: (q: LiveDecodedCountQuery, read: LiveSourceRead) => Answer<number>;
   keyText?: Record<string, ((value: unknown) => string | null) | undefined>;
   preloadWindows?: {
     windows: () => unknown;
@@ -1076,19 +1108,23 @@ export function compileExternalCollection(
     (common) =>
       rt.defineExternalResource(collection.rows, {
         membership: { kind: "point", idsOf: (params) => pointDecode(params) },
-      loader: async (params: PointParams) => {
-        const ids = pointDecode(params);
-        const asked = new Set(ids);
-        const out = checkedRows("rows(ids)", await opts.rows(ids), ids.length);
-        for (const row of out) {
-          if (!asked.has(row[collection.id] as string)) {
-            fail(
-              `rows(ids) returned the id "${row[collection.id] as string}", which was not asked for.`,
-            );
+        loader: async (params: PointParams, _ctx, run) => {
+          const ids = pointDecode(params);
+          const asked = new Set(ids);
+          const out = checkedRows(
+            "rows(ids)",
+            await opts.rows(ids, sourceRead(run)),
+            ids.length,
+          );
+          for (const row of out) {
+            if (!asked.has(row[collection.id] as string)) {
+              fail(
+                `rows(ids) returned the id "${row[collection.id] as string}", which was not asked for.`,
+              );
+            }
           }
-        }
-        return out;
-      },
+          return out;
+        },
         ...common,
       }),
     (params) => pointDecode(params),
@@ -1124,8 +1160,12 @@ export function compileExternalCollection(
             kind: "window",
             limitOf: () => max ?? Number.MAX_SAFE_INTEGER,
           },
-          loader: async () => {
-            const out = checkedRows("all()", await allAnswer!(), max);
+          loader: async (_params, _ctx, run) => {
+            const out = checkedRows(
+              "all()",
+              await allAnswer!(sourceRead(run)),
+              max,
+            );
             checkSetBudget(collection.key, bound, {}, out.length);
             return out;
           },
@@ -1197,9 +1237,13 @@ export function compileExternalCollection(
           limitOf: (params) => codec.decode(params).limit,
           familyOf: (params) => codec.familyOf(params as LiveWindowParams),
         },
-        loader: async (params: LiveWindowParams) => {
+        loader: async (params: LiveWindowParams, _ctx, run) => {
           const q = codec.decode(params);
-          return windowRows("window(q)", q, await windowAnswer!(q));
+          return windowRows(
+            "window(q)",
+            q,
+            await windowAnswer!(q, sourceRead(run)),
+          );
         },
         ...common,
       }),
@@ -1241,9 +1285,14 @@ export function compileExternalCollection(
           > & { keyed?: never },
           {
             mode: "push",
-            loader: async (params: LiveGroupParams) => {
+            loader: async (params: LiveGroupParams, _ctx, run) => {
               const q = groupCodec.decode(params);
-              return checkedGroups(fail, collection, q, await groupsAnswer(q));
+              return checkedGroups(
+                fail,
+                collection,
+                q,
+                await groupsAnswer(q, sourceRead(run)),
+              );
             },
             ...common,
           },
@@ -1271,8 +1320,11 @@ export function compileExternalCollection(
           > & { keyed?: never },
           {
             mode: "push",
-            loader: async (params: LiveCountParams) => {
-              const n = await countAnswer(countDescriptor.count.decode(params));
+            loader: async (params: LiveCountParams, _ctx, run) => {
+              const n = await countAnswer(
+                countDescriptor.count.decode(params),
+                sourceRead(run),
+              );
               if (!Number.isSafeInteger(n) || n < 0) {
                 fail(`count(q) returned ${JSON.stringify(n)}, not a count.`);
               }

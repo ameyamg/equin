@@ -285,3 +285,146 @@ describe("read-admission: an abandoned flight is not joined", () => {
     ).toHaveLength(1);
   });
 });
+
+/**
+ * A read already RUNNING when its tuple's last subscriber leaves is cut: its
+ * loader's `run.signal` aborts, its slot is given back, nothing is sent.
+ * From task-1795724905-sk9a06: Mail's cold label views, clicked through in
+ * ~10 s, kept filling from Gmail for nobody, and the 8th view waited 36.9 s
+ * for quota the abandoned fills took.
+ */
+describe("a running read nobody holds any more", () => {
+  /** A `row` whose loader waits until released or aborted, recording what it saw. */
+  function defineAbortable(h: Harness) {
+    const seen: { signal: AbortSignal | undefined }[] = [];
+    const releases: (() => void)[] = [];
+    h.runtime.defineExternalResource<string, { id: string }>({
+      key: "row",
+      mode: "push",
+      schema: z.string(),
+      loader: ({ id }, _ctx, run) => {
+        const signal = run?.signal;
+        seen.push({ signal });
+        return new Promise<string>((resolve, reject) => {
+          releases.push(() => resolve(`row ${id}`));
+          signal?.addEventListener("abort", () => reject(new Error("cut")), {
+            once: true,
+          });
+        });
+      },
+    });
+    return {
+      seen,
+      release: () => {
+        for (const r of releases.splice(0)) r();
+      },
+    };
+  }
+
+  async function cutLoadsOf(h: Harness, key: string): Promise<number> {
+    const res = await h.runtime.handleResourceHttp(
+      new Request("http://localhost/api/resources/_debug"),
+      { key: "_debug" },
+    );
+    const body = (await res.json()) as {
+      resources: Array<{ key: string; cutLoads: number }>;
+    };
+    return body.resources.find((r) => r.key === key)!.cutLoads;
+  }
+
+  test("is cut: its signal aborts, its slot is given back, no frame is sent", async () => {
+    const h = createHarness();
+    const row = defineAbortable(h);
+    await h.subscribe("row", { id: "a" });
+    await tick();
+    expect(row.seen).toHaveLength(1);
+    expect(row.seen[0]!.signal?.aborted).toBe(false);
+    expect(h.runtime.readGateStats().active).toBe(1);
+
+    await h.unsub("row", { id: "a" });
+    await tick();
+    await tick();
+    expect(row.seen[0]!.signal?.aborted).toBe(true);
+    expect(h.runtime.readGateStats()).toMatchObject({ active: 0, queued: 0 });
+    expect(h.frames.filter((f) => f.key === "row")).toEqual([]);
+    expect(await cutLoadsOf(h, "row")).toBe(1);
+    expect(await abandonedReadsOf(h, "row")).toBe(1);
+  });
+
+  test("is not cut while another socket holds the tuple", async () => {
+    const h = createHarness({ sockets: 2 });
+    const row = defineAbortable(h);
+    await h.subscribe("row", { id: "a" }, { socket: 0 });
+    await h.subscribe("row", { id: "a" }, { socket: 1 });
+    await tick();
+    await h.unsub("row", { id: "a" }, { socket: 0 });
+    await tick();
+    expect(row.seen).toHaveLength(1);
+    expect(row.seen[0]!.signal?.aborted).toBe(false);
+
+    row.release();
+    await tick();
+    await tick();
+    const acks = h.frames.filter(
+      (f) => f.key === "row" && f.kind === "sub-ack",
+    );
+    expect(acks.map((f) => f.socket).sort()).toEqual([0, 1]);
+    expect(await cutLoadsOf(h, "row")).toBe(0);
+  });
+
+  test("is not cut while an HTTP read awaits it", async () => {
+    const h = createHarness();
+    const row = defineAbortable(h);
+    await h.subscribe("row", { id: "a" });
+    await tick();
+    const http = h.runtime.handleResourceHttp(
+      new Request("http://localhost/api/resources/row?id=a"),
+      { key: "row" },
+    );
+    await tick();
+    await h.unsub("row", { id: "a" });
+    await tick();
+    expect(row.seen[0]!.signal?.aborted).toBe(false);
+
+    row.release();
+    const res = await http;
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { value: string }).value).toBe("row a");
+    expect(row.seen).toHaveLength(1);
+  });
+
+  test("a sub arriving after the cut starts a fresh read and is answered", async () => {
+    const h = createHarness();
+    const row = defineAbortable(h);
+    await h.subscribe("row", { id: "a" });
+    await tick();
+    await h.unsub("row", { id: "a" });
+    await tick();
+
+    await h.subscribe("row", { id: "a" });
+    await tick();
+    expect(row.seen).toHaveLength(2);
+    expect(row.seen[1]!.signal?.aborted).toBe(false);
+    row.release();
+    await tick();
+    await tick();
+    expect(
+      h.frames.filter((f) => f.key === "row" && f.kind === "sub-ack"),
+    ).toHaveLength(1);
+  });
+
+  test("an HTTP read's own load is never cut", async () => {
+    const h = createHarness();
+    const row = defineAbortable(h);
+    const http = h.runtime.handleResourceHttp(
+      new Request("http://localhost/api/resources/row?id=a"),
+      { key: "row" },
+    );
+    await tick();
+    expect(row.seen).toHaveLength(1);
+    // Its caller is counted on the flight, so no tuple leaving cuts it.
+    expect(row.seen[0]!.signal?.aborted ?? false).toBe(false);
+    row.release();
+    expect((await http).status).toBe(200);
+  });
+});

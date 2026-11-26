@@ -784,6 +784,18 @@ All but the version are co-produced by the starter. A push drain mints
   the same step (`inflight`'s `detach()`), so a caller arriving later starts a
   fresh read instead of inheriting the rejection. Counted per key in
   `_debug.abandonedReads`.
+- **A running read nobody is owed is cut (`LoadRun.signal`).** A gated
+  read's load, once admitted, is handed `run.signal`; when the tuple's last
+  subscriber leaves (`releaseSubRefcount` N→0 — a lingering socket still
+  holds it) and no untracked caller awaits the flight, the runtime detaches
+  the flight and aborts the signal (`cuttableLoad`, `cutUnwantedLoad`). The
+  load's rejection — whatever the loader threw on the abort — is a
+  `ReadAbandoned`, so `serveSub` sends nothing and the slot is given back. A
+  loader that ignores the signal runs to its end as before. A push drain, an
+  HTTP read and a scoped refill get no signal (nobody can abandon them).
+  Counted per key in `_debug.cutLoads`. Mail's cold fills, paced by Gmail's
+  quota, kept running for views the person had left (task-1795724905-sk9a06).
+  Pinned by `runtime-read-abandon.test.ts` (*a running read*).
 - **The gate names its holders.** Every gated read is labelled (`<key>
   <params>`, a probe `revalidate <key> <params>`), so `readGateStats().holders`
   says who holds the slots; the profiler stamps them on a filed `wait

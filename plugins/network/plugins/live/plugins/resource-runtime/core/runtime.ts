@@ -1567,6 +1567,16 @@ export interface LoadRun {
   noteLoaded(state: unknown): void;
   /** The tuple's held followed rows (`HeldFollows`) — absent for a tuple nobody tracks. */
   readonly follows?: HeldFollows;
+  /**
+   * Aborted when nobody is owed this load any more: a subscription's read
+   * whose tuple every subscriber left while it ran (no HTTP read or push
+   * drain awaiting it either — `ReadAbandoned`). A loader doing paced or slow
+   * work (an external source's provider calls) stops there; whatever it
+   * already committed stays. Absent for a load no one can abandon (a push
+   * drain, an HTTP read, a scoped refill). A loader that ignores it runs to
+   * its end, as before, and its answer is dropped.
+   */
+  readonly signal?: AbortSignal;
 }
 
 /**
@@ -3232,6 +3242,13 @@ class ReadAbandoned extends Error {
   }
 }
 
+/** A gated read's running load the runtime may still cut (`cuttableLoad`). */
+interface RunningLoad {
+  entry: RegistryEntry;
+  pk: string;
+  cut: () => void;
+}
+
 /**
  * A subscription's `revalidate` probe, shareable while it waits for its
  * read-admission slot (see `computeEtag`).
@@ -3431,6 +3448,10 @@ export function createResourceRuntime(
   // want is invisible to `entry.tracked`, so a queued read counts them before
   // it concludes nobody is left (`readWanted`).
   const untrackedFlightReaders = new Map<string, number>();
+  // Per flight (`flightKeyOf`): the gated loads running now that the runtime
+  // may cut (`cuttableLoad`), and per key how many it cut (`_debug.cutLoads`).
+  const runningLoads = new Map<string, Set<RunningLoad>>();
+  const cutLoads = new Map<string, number>();
   // How many times a socket's buffer filled and the runtime held frames for
   // its drain (`deliver`), this boot.
   let backlogEpisodes = 0;
@@ -3975,6 +3996,7 @@ export function createResourceRuntime(
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
     sink?: { raw: unknown; heldFollows?: boolean },
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const bracket = loadBracket(entry, params);
     const held = heldFollowsFor(entry, paramsKey(params));
@@ -3992,9 +4014,13 @@ export function createResourceRuntime(
           )
         : null;
     const loadRun: LoadRun | undefined =
-      held === undefined
+      held === undefined && signal === undefined
         ? bracket?.run
-        : { noteLoaded: bracket?.run.noteLoaded ?? (() => {}), follows: held };
+        : {
+            noteLoaded: bracket?.run.noteLoaded ?? (() => {}),
+            ...(held === undefined ? {} : { follows: held }),
+            ...(signal === undefined ? {} : { signal }),
+          };
     const run = async () => {
       const raw = await declaredLoad(entry, params, ctx, loadRun);
       if (sink) {
@@ -4667,7 +4693,7 @@ export function createResourceRuntime(
     // The flight factory: watermark capture FIRST (Rule B — the floor is valid
     // only if captured before the loader's first read), then the loader. Runs
     // only in the STARTER's frame; joiners coalesce onto the resolved object.
-    const load = async (): Promise<FlightValue> => {
+    const load = async (signal?: AbortSignal): Promise<FlightValue> => {
       let watermark: string | undefined;
       if (opts.captureWatermark && readsDb(entry)) {
         try {
@@ -4684,7 +4710,7 @@ export function createResourceRuntime(
       const sink: { raw: unknown; heldFollows?: boolean } = {
         raw: undefined,
       };
-      const value = await timedLoad(entry, params, undefined, sink);
+      const value = await timedLoad(entry, params, undefined, sink, signal);
       return {
         value,
         raw: sink.raw,
@@ -4730,9 +4756,11 @@ export function createResourceRuntime(
                   seedEtag,
                   seedAckTx,
                 })
-              : admitRead(entry, { params, pk, probe: false }, wanted, load);
+              : admitRead(entry, { params, pk, probe: false }, wanted, () =>
+                  cuttableLoad(flightKey, entry, pk, inFlight, load),
+                );
           }
-        : load,
+        : () => load(),
       {
         onJoin: opts.onCoalesceJoin,
         // Undefined for every read caller ⇒ join any live flight, exactly as
@@ -5146,6 +5174,63 @@ export function createResourceRuntime(
       entry.tracked.has(pk) ||
       (untrackedFlightReaders.get(flightKeyOf(entry.key, pk)) ?? 0) > 0
     );
+  }
+
+  // A gated read's load, admitted and running, that the runtime may still cut
+  // (`LoadRun.signal`): registered for as long as it runs, and aborted the
+  // moment nobody is owed it (`cutUnwantedLoad`, asked when a tuple's last
+  // subscriber leaves). A cut load detaches from its single-flight key first,
+  // so a reader arriving later starts a fresh read rather than inherit the
+  // cut; its rejection — whatever the loader threw on the abort — is a
+  // `ReadAbandoned`, which `serveSub` answers by sending nothing.
+  function cuttableLoad(
+    flightKey: string,
+    entry: RegistryEntry,
+    pk: string,
+    inFlight: { detach(): void },
+    load: (signal: AbortSignal) => Promise<FlightValue>,
+  ): Promise<FlightValue> {
+    const cut = new AbortController();
+    const running: RunningLoad = {
+      entry,
+      pk,
+      cut: () => {
+        // Cut once: a tuple left, re-held and left again while its loader
+        // still runs (ignoring the first abort) is not counted twice.
+        if (cut.signal.aborted) return;
+        inFlight.detach();
+        cut.abort(new ReadAbandoned(entry.key));
+        cutLoads.set(entry.key, (cutLoads.get(entry.key) ?? 0) + 1);
+      },
+    };
+    let set = runningLoads.get(flightKey);
+    if (set === undefined) runningLoads.set(flightKey, (set = new Set()));
+    set.add(running);
+    const leave = () => {
+      const now = runningLoads.get(flightKey);
+      now?.delete(running);
+      if (now?.size === 0) runningLoads.delete(flightKey);
+    };
+    return load(cut.signal).then(
+      (value) => {
+        leave();
+        return value;
+      },
+      (err: unknown) => {
+        leave();
+        if (cut.signal.aborted && !(err instanceof ReadAbandoned)) {
+          throw Object.assign(new ReadAbandoned(entry.key), { cause: err });
+        }
+        throw err;
+      },
+    );
+  }
+
+  // Cut every running load of (entry, pk) nobody is owed any more.
+  function cutUnwantedLoad(entry: RegistryEntry, pk: string): void {
+    const set = runningLoads.get(flightKeyOf(entry.key, pk));
+    if (set === undefined || readWanted(entry, pk)) return;
+    for (const running of [...set]) running.cut();
   }
 
   function recordAbandonedRead(key: string): void {
@@ -10990,6 +11075,9 @@ export function createResourceRuntime(
       // persisted) evict like any other keyed entry — the resubscribe opens a
       // new tracking span, so it takes the full path and re-seeds.
       if (!keepsIdleSnapshot(entry)) evictSnapshot(entry, pk);
+      // A read of the tuple still loading is owed to nobody now (unless an
+      // HTTP read or a push drain awaits it): cut it (`LoadRun.signal`).
+      cutUnwantedLoad(entry, pk);
       if (entry.onLastUnsubscribe) {
         try {
           entry.onLastUnsubscribe(params);
@@ -11442,6 +11530,7 @@ export function createResourceRuntime(
       notifyStats: NotifyCounts;
       subShortCircuits: number;
       abandonedReads: number;
+      cutLoads: number;
       sharedProbes: number;
       pointBatches: { runs: number; joined: number };
       handoff: string;
@@ -11584,6 +11673,9 @@ export function createResourceRuntime(
         // Reads skipped at the read-admission gate because every subscriber
         // of the tuple left while they queued (see `ReadAbandoned`).
         abandonedReads: abandonedReads.get(entry.key) ?? 0,
+        // Running loads cut because every subscriber left while they ran
+        // (`LoadRun.signal`, `cuttableLoad`).
+        cutLoads: cutLoads.get(entry.key) ?? 0,
         // `revalidate` probes that shared another queued probe's signature
         // read (no slot, no read; see `computeEtag`).
         sharedProbes: sharedProbes.get(entry.key) ?? 0,

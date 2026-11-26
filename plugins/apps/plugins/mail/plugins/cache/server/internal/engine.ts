@@ -1644,7 +1644,17 @@ export function createMailCache(deps: MailCacheDeps) {
 
   // ── the served answers ──────────────────────────────────────────────────
 
-  async function window(w: MailWindowQuery): Promise<MailThreadRow[]> {
+  /**
+   * `read.signal` aborts once nobody is owed the window (every view of it
+   * left while it was filling): the fill stops at its next provider call,
+   * keeping every batch it committed, so the quota goes to the view the
+   * person is on (task-1795724905-sk9a06).
+   */
+  async function window(
+    w: MailWindowQuery,
+    read?: { signal: AbortSignal },
+  ): Promise<MailThreadRow[]> {
+    const signal = read?.signal;
     const a = await account();
     const mailboxes = await mailboxesOf(a);
     const canonical = canonicalizeFilter(
@@ -1663,22 +1673,28 @@ export function createMailCache(deps: MailCacheDeps) {
     }
     if (compiled.kind === "nothing") return [];
     const qr0 = await queryRow(a, compiled.providerQuery, canonical);
-    const qr = await queryMutex.run(String(qr0.queryId), async () => {
-      const current = await queryById(qr0.queryId);
-      if ((await missing(current, w)) === 0) return current;
-      const uncovered = current.floorAt === null && !current.exhausted;
-      const filled = await orRefuse("this view", () =>
-        fill(a, qr0.queryId, (q) => missing(q, w), fg),
-      );
-      if (!uncovered) return filled;
-      // Listed from the head just now: the provider's answer as of (at least)
-      // the cursor its summaries are current at.
-      await db
-        .update(_mailQueries)
-        .set({ verifiedCursor: a.cursor })
-        .where(eq(_mailQueries.queryId, qr0.queryId));
-      return queryById(qr0.queryId);
-    });
+    const qr = await queryMutex.run(
+      String(qr0.queryId),
+      async () => {
+        const current = await queryById(qr0.queryId);
+        if ((await missing(current, w)) === 0) return current;
+        // Left while it read the coverage: nothing to fill for.
+        signal?.throwIfAborted();
+        const uncovered = current.floorAt === null && !current.exhausted;
+        const filled = await orRefuse("this view", () =>
+          fill(a, qr0.queryId, (q) => missing(q, w), { ...fg, signal }),
+        );
+        if (!uncovered) return filled;
+        // Listed from the head just now: the provider's answer as of (at least)
+        // the cursor its summaries are current at.
+        await db
+          .update(_mailQueries)
+          .set({ verifiedCursor: a.cursor })
+          .where(eq(_mailQueries.queryId, qr0.queryId));
+        return queryById(qr0.queryId);
+      },
+      signal === undefined ? undefined : { signal },
+    );
     const rows = await answer(a, qr, w);
     catchUps.trigger(a.id);
     prefetches.trigger(a.id);

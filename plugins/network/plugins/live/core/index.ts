@@ -188,6 +188,7 @@ export type {
   ServeExternalLookupOptions,
   ServeExternalWindowOptions,
   ServeValueOnOptions,
+  LiveSourceRead,
 } from "./internal/serve-on";
 export type { LiveRuntime } from "./internal/compile-value";
 export type { LiveCutKey } from "./internal/row-key";
