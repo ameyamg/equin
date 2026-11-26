@@ -23,7 +23,12 @@ import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto
 import { findViewAnchor } from "./internal/view-anchor";
 import { claimBottomPin, releaseBottomPin } from "./internal/bottom-pin";
 import { listenForNavigation } from "./announce-navigation";
-import { markFollows, markKept } from "./scroller-marks";
+import {
+  followerMoved,
+  joinReloadRestore,
+  markFollows,
+  markKept,
+} from "./scroller-marks";
 import {
   distanceToBottom,
   resolveRestore,
@@ -270,12 +275,15 @@ export function useStickyScroll(
   const applyMode = useCallback(
     (next: ScrollMode) => {
       const wasFollowing = modeRef.current.kind === "following";
+      const moved = modeRef.current.kind !== next.kind;
       modeRef.current = next;
       const nowFollowing = next.kind === "following";
       if (wasFollowing !== nowFollowing) {
         setIsFollowing(nowFollowing);
         applyAnchoring(nowFollowing);
       }
+      // The scroller's reload keep saves an offset only while parked.
+      if (moved && scrollRef.current) followerMoved(scrollRef.current);
       schedulePersist();
     },
     [schedulePersist, applyAnchoring],
@@ -345,6 +353,19 @@ export function useStickyScroll(
       lastWrittenTopRef.current = el.scrollTop;
       return;
     }
+    // Not persisting, the reader's place across a reload is the scroller's
+    // reload keep's (`<Scroll>` keeps by default): when it is putting back an
+    // offset saved while this was parked, start parked there instead of at
+    // the bottom. The keep writes the offset as content arrives; it ends when
+    // the reader takes over, and follows again if the keep gives it up.
+    if (!cfg && joinReloadRestore(el, () => dispatch({ t: "jump" }))) {
+      modeRef.current = { kind: "anchored" };
+      setIsFollowing(false);
+      // The browser's scroll anchoring is left to the keep: it stands it down
+      // while restoring and gives it back (`auto`, a parked reader's) after.
+      lastWrittenTopRef.current = null;
+      return;
+    }
     if (outcome.kind === "missing" && cfg) {
       // The row this named is gone (filter set changed, transcript compacted, a
       // key-scheme change). Drop the stale record so it cannot keep failing, and
@@ -359,17 +380,32 @@ export function useStickyScroll(
     // empty dep array. The pane remounts per conversation (PaneResolveGuard
     // keys on the route params), which is what makes a `resetKey` option
     // unnecessary.
-  }, [sentinelEl, writeToBottom, persistRef, applyAnchoring, positions]);
+  }, [
+    sentinelEl,
+    writeToBottom,
+    persistRef,
+    applyAnchoring,
+    positions,
+    dispatch,
+  ]);
 
   // ---- marks: a follower, kept when it persists ---------------------------
   // What the dev loss detector reads (`scroller-marks.ts`): a follower at its
   // bottom opens there after a reload anyway; a persisting one keeps the row
-  // being read.
+  // being read. The scroller's reload keep reads the follower mark too: it
+  // stands down for a persisting follower, and keeps a parked reader's offset
+  // for one that does not.
   const persistKey = persist?.key;
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !sentinelEl) return;
-    const unfollow = markFollows(el);
+    const unfollow = markFollows(el, {
+      persists: persistKey !== undefined,
+      stance: () => {
+        const kind = modeRef.current.kind;
+        return kind === "anchored" ? "parked" : kind;
+      },
+    });
     const unkeep =
       persistKey === undefined ? null : markKept(el, `sticky:${persistKey}`);
     return () => {

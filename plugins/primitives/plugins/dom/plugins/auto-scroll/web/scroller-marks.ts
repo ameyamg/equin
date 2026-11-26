@@ -7,9 +7,9 @@
  *   value is empty, or the reason it is transient by design
  *   (`<Scroll keep={transient("<why>")}>`).
  * - `data-scroll-kept` — something keeps its offset: `useScrollAcrossReload`
- *   (every `<Scroll keep="…">` and `PaneScroll`) or a persisting
- *   `useStickyScroll`. Set by the keeper itself while it is attached, so a
- *   scroller is marked kept exactly when it is.
+ *   (every `<Scroll keep="…">` and `PaneScroll`, a follower's included unless
+ *   it persists) or a persisting `useStickyScroll`. Set by the keeper itself
+ *   while it is attached, so a scroller is marked kept exactly when it is.
  * - `data-scroll-follows` — a `useStickyScroll` follower: at its bottom it is
  *   where a reload opens it anyway.
  */
@@ -42,43 +42,114 @@ export function markKept(el: HTMLElement, key: string): () => void {
   };
 }
 
-/** Whoever waits to hear that a scroller became a follower ({@link onFollows}). */
-const followWatchers = new Map<HTMLElement, Set<() => void>>();
+/** A stick-to-bottom follower on a scroller, as the scroller's reload keep sees it. */
+export interface FollowerMark {
+  /**
+   * It keeps the reader's place itself (`useStickyScroll({ persist })`): the
+   * reload keep stands down for good. A follower that does not persist leaves
+   * the reload to the keep, which saves the offset only while it is parked.
+   */
+  readonly persists: boolean;
+  /**
+   * Where it stands now: chasing the bottom, being moved by the reader (until
+   * their scroll settles), or parked where the reader left it.
+   */
+  stance(): "following" | "driving" | "parked";
+}
+
+const followers = new Map<HTMLElement, FollowerMark>();
+/** Whoever watches a scroller's follower ({@link watchFollower}). */
+const followWatchers = new Map<HTMLElement, Set<(f: FollowerMark) => void>>();
+
+function tellWatchers(el: HTMLElement, follower: FollowerMark): void {
+  for (const watcher of [...(followWatchers.get(el) ?? [])]) watcher(follower);
+}
 
 /** Mark `el` a stick-to-bottom follower while it is; returns the unmark. */
-export function markFollows(el: HTMLElement): () => void {
+export function markFollows(
+  el: HTMLElement,
+  follower: FollowerMark,
+): () => void {
   el.setAttribute(FOLLOWS_ATTR, "");
-  for (const watcher of [...(followWatchers.get(el) ?? [])]) watcher();
-  return () => el.removeAttribute(FOLLOWS_ATTR);
+  followers.set(el, follower);
+  tellWatchers(el, follower);
+  return () => {
+    if (followers.get(el) !== follower) return;
+    followers.delete(el);
+    el.removeAttribute(FOLLOWS_ATTR);
+  };
+}
+
+/** The follower on `el` changed its stance ({@link FollowerMark.stance}). */
+export function followerMoved(el: HTMLElement): void {
+  const follower = followers.get(el);
+  if (follower !== undefined) tellWatchers(el, follower);
 }
 
 /**
- * Call `then` once `el` is a stick-to-bottom follower — now, when it already
- * is, else when {@link markFollows} marks it. A follower owns its scroller's
- * offset (it pins the bottom, or keeps its own reading position when it
- * persists), so a reload keep on the same scroller stands down through this:
- * the follower marks its scroller in a passive effect, after the scroller's
- * own keep attached. Returns the stop.
+ * Call `then` with `el`'s follower whenever it marks the scroller (now, when
+ * it already has) and whenever its stance changes ({@link followerMoved}). A follower marks its scroller in a passive effect,
+ * after the scroller's own keep attached, so the keep learns of it through
+ * this. Returns the stop.
  */
-export function onFollows(el: HTMLElement, then: () => void): () => void {
-  if (el.hasAttribute(FOLLOWS_ATTR)) {
-    then();
-    return () => {};
-  }
+export function watchFollower(
+  el: HTMLElement,
+  then: (follower: FollowerMark) => void,
+): () => void {
   let watchers = followWatchers.get(el);
   if (watchers === undefined) followWatchers.set(el, (watchers = new Set()));
-  // Once: a follower marks again whenever its sentinel or persist key changes.
-  const stop = () => {
-    watchers.delete(once);
+  const watcher = (f: FollowerMark) => then(f);
+  watchers.add(watcher);
+  const now = followers.get(el);
+  if (now !== undefined) then(now);
+  return () => {
+    watchers.delete(watcher);
     if (watchers.size === 0 && followWatchers.get(el) === watchers)
       followWatchers.delete(el);
   };
-  const once = () => {
-    stop();
-    then();
+}
+
+/**
+ * Scrollers whose reload keep is putting a saved offset back now, each with
+ * who must hear if the keep gives the restore up without the reader having
+ * taken over ({@link joinReloadRestore}).
+ */
+const restoring = new Map<HTMLElement, Set<() => void>>();
+
+/**
+ * The reload keep starts putting `el`'s saved offset back. Returns the end:
+ * `abandoned` when the keep stood down without the reader taking over (the
+ * offset will not be put back after all).
+ */
+export function beginReloadRestore(
+  el: HTMLElement,
+): (abandoned: boolean) => void {
+  const abandons = new Set<() => void>();
+  restoring.set(el, abandons);
+  return (abandoned) => {
+    if (restoring.get(el) !== abandons) return;
+    restoring.delete(el);
+    if (abandoned) for (const abandon of abandons) abandon();
   };
-  watchers.add(once);
-  return stop;
+}
+
+/**
+ * Whether `el`'s reload keep is putting back an offset saved before this
+ * reload — the place a follower that does not persist was parked at. When it
+ * is, the follower starts parked instead of pinning the bottom, and
+ * `onAbandon` runs if the keep gives the restore up (the follower then
+ * follows). The keep attaches in the scroller's layout effect, which runs
+ * before the follower's mount restore: the scroller is the follower's
+ * descendant, and both wait on a node set in the same commit.
+ */
+export function joinReloadRestore(
+  el: HTMLElement,
+  onAbandon: () => void,
+): boolean {
+  const abandons = restoring.get(el);
+  if (abandons === undefined) return false;
+  abandons.add(onAbandon);
+  return true;
 }
 
 /**

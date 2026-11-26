@@ -8,10 +8,12 @@ import { listenForNavigation } from "./announce-navigation";
 import { useScrollRevival } from "./scroll-revival";
 import { generatesBox } from "@plugins/primitives/plugins/dom/plugins/box-presence/web";
 import {
+  beginReloadRestore,
   claimKeptKey,
   claimSharedKey,
   markKept,
-  onFollows,
+  watchFollower,
+  type FollowerMark,
 } from "./scroller-marks";
 
 /**
@@ -78,9 +80,13 @@ const SCROLL_KEYS = new Set([
  * key, an announced navigation). A restore is a compensation, not a
  * navigation: it announces nothing.
  *
- * A stick-to-bottom follower owns its scroller's offset: once the scroller is
- * marked one (`useStickyScroll`), this keep stands down for good — it would
- * otherwise put back an old offset while the follower pins the bottom.
+ * On a stick-to-bottom follower's scroller (`useStickyScroll`) the follower
+ * decides. One that persists keeps the reader's place itself: this keep stands
+ * down for good. One that does not leaves the reload to this keep, which saves
+ * the offset only while the follower is parked (following, it saves nothing:
+ * the reload opens at the bottom, following) — so after a reload the follower
+ * starts parked where the reader left it (`joinReloadRestore`), and the
+ * restore ends as soon as the follower follows again.
  */
 export function useScrollAcrossReload(
   key: string | undefined,
@@ -108,6 +114,8 @@ export function useScrollAcrossReload(
     }
     const unmark = markKept(el, key);
     const saved = store.read(key);
+    // The follower on this scroller, once it marked it (see watchFollower).
+    let follower: FollowerMark | null = null;
     let target =
       saved.kind === "value" &&
       (saved.value.doc !== DOCUMENT_ID ||
@@ -124,6 +132,13 @@ export function useScrollAcrossReload(
       // being unloaded) reads 0, which is not where the reader left it: keep
       // what was saved while it was shown.
       if (!generatesBox(el)) return;
+      // Only a parked follower's offset is the reader's place: following, the
+      // reload opens it at the bottom anyway (an offset saved would park it),
+      // and driving, the reader's scroll has not settled yet.
+      if (follower !== null && follower.stance() !== "parked") {
+        store.remove(key);
+        return;
+      }
       const top = el.scrollTop;
       if (top > 0) store.write(key, { top, doc: DOCUMENT_ID });
       else store.remove(key);
@@ -138,6 +153,9 @@ export function useScrollAcrossReload(
     // frequency and each would otherwise be a storage write.
     const onScroll = () => {
       if (target !== null) return;
+      // A follower's offset changes stance-first (its watcher saves then):
+      // while it is not parked, its scrolls save nothing.
+      if (follower !== null && follower.stance() !== "parked") return;
       if (saveTimer !== null) clearTimeout(saveTimer);
       saveTimer = setTimeout(flush, SAVE_DEBOUNCE_MS);
     };
@@ -154,12 +172,23 @@ export function useScrollAcrossReload(
     // the half-built layout — and the offset is held until the reader acts.
     const arrivals = new MutationObserver(() => apply());
     const anchoring = el.style.overflowAnchor;
-    const stopRestoring = () => {
+    // Tells a follower on this scroller it starts parked at the saved offset.
+    const endRestore = target === null ? null : beginReloadRestore(el);
+    // Why the restore ends: the reader took over, the follower on this
+    // scroller follows again, or this keep gave it up (standing down).
+    const stopRestoring = (
+      why: "reader" | "follows" | "abandoned" = "reader",
+    ) => {
       if (target === null) return;
       target = null;
       arrivals.disconnect();
-      setAnchoring(el, anchoring);
+      // A follower following owns the scroller's anchoring (it stands it
+      // down while it pins the bottom): giving the old value back would undo
+      // it.
+      if (why !== "follows") setAnchoring(el, anchoring);
+      endRestore?.(why === "abandoned");
     };
+    const readerTakesOver = () => stopRestoring();
     const apply = () => {
       if (target === null) return;
       const max = Math.max(0, el.scrollHeight - el.clientHeight);
@@ -171,7 +200,7 @@ export function useScrollAcrossReload(
     const onKeyDown = (e: KeyboardEvent) => {
       const inside = e.target instanceof Node && el.contains(e.target);
       if (inside || (e.target === document.body && SCROLL_KEYS.has(e.key)))
-        stopRestoring();
+        readerTakesOver();
     };
 
     if (target !== null) {
@@ -183,7 +212,7 @@ export function useScrollAcrossReload(
       if (instances === "one") apply();
       else queueMicrotask(apply);
     }
-    const unlisten = listenForNavigation(el, stopRestoring);
+    const unlisten = listenForNavigation(el, readerTakesOver);
     let detached = false;
     const detach = () => {
       if (detached) return;
@@ -193,16 +222,16 @@ export function useScrollAcrossReload(
       stopRestoring();
       unlisten();
       el.removeEventListener("scroll", onScroll);
-      el.removeEventListener("wheel", stopRestoring);
-      el.removeEventListener("touchstart", stopRestoring);
-      el.removeEventListener("pointerdown", stopRestoring);
+      el.removeEventListener("wheel", readerTakesOver);
+      el.removeEventListener("touchstart", readerTakesOver);
+      el.removeEventListener("pointerdown", readerTakesOver);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("pagehide", flush);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
-    el.addEventListener("wheel", stopRestoring, { passive: true });
-    el.addEventListener("touchstart", stopRestoring, { passive: true });
-    el.addEventListener("pointerdown", stopRestoring);
+    el.addEventListener("wheel", readerTakesOver, { passive: true });
+    el.addEventListener("touchstart", readerTakesOver, { passive: true });
+    el.addEventListener("pointerdown", readerTakesOver);
     // eslint-disable-next-line shortcuts/no-window-key-listener -- observes, never handles: a key the reader presses in this scroller (or a scroll key on the body) ends the restore; nothing is prevented
     window.addEventListener("keydown", onKeyDown);
     // A reload unmounts nothing: the page hiding is the last chance to save.
@@ -212,11 +241,24 @@ export function useScrollAcrossReload(
     standDown = () => {
       if (saveTimer !== null) clearTimeout(saveTimer);
       saveTimer = null;
+      stopRestoring("abandoned");
       detach();
       store.remove(key);
     };
-    // A follower took the scroller: its offset is the follower's from now on.
-    const stopWatchingFollows = onFollows(el, () => standDown());
+    const stopWatchingFollows = watchFollower(el, (f) => {
+      if (detached) return;
+      // A persisting follower took the scroller: its offset is the
+      // follower's from now on.
+      if (f.persists) {
+        standDown();
+        return;
+      }
+      follower = f;
+      // Following again (the reader sent a turn, jumped, scrolled to the
+      // end): the offset being put back is no longer theirs.
+      if (f.stance() === "following") stopRestoring("follows");
+      flush();
+    });
     return () => {
       stopWatchingFollows();
       if (!detached) flush();

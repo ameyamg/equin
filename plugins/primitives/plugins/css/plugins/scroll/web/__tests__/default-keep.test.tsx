@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import {
   KeepScrollScope,
   useStickyScroll,
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import { writeEntryUnchecked } from "@plugins/primitives/plugins/dom/plugins/web-storage/web/testing";
 import { PopupSurface } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import type { ScrollSite } from "../../core";
 import { Scroll } from "../index";
@@ -115,12 +116,14 @@ describe("Scroll's default keep", () => {
     );
   });
 
-  it("a stick-to-bottom follower on the scroller takes its offset over", () => {
+  it("a persisting follower keeps the reader's place itself: the keep stands down", () => {
     function Follower() {
-      const { scrollRef, bottomSentinel } = useStickyScroll();
+      const { scrollRef, bottomSentinel } = useStickyScroll({
+        persist: { key: "f-1", anchorAttr: "data-row" },
+      });
       return (
         <Scroll
-          keep={site("a.tsx#F#0")}
+          keep={site("a.tsx#P#0")}
           ref={(el) => {
             scrollRef.current = el as HTMLDivElement | null;
           }}
@@ -137,6 +140,97 @@ describe("Scroll's default keep", () => {
     );
     const el = view.container.querySelector("[data-scroller]")!;
     expect(el.hasAttribute("data-scroll-follows")).toBe(true);
-    expect(el.hasAttribute("data-scroll-kept")).toBe(false);
+    expect(el.getAttribute("data-scroll-kept")).toBe("sticky:f-1");
+  });
+
+  describe("a follower that does not persist", () => {
+    // jsdom lays nothing out: give the scroller room to scroll.
+    function sized(el: HTMLElement | null): void {
+      if (!el) return;
+      Object.defineProperty(el, "scrollHeight", {
+        configurable: true,
+        value: 2000,
+      });
+      Object.defineProperty(el, "clientHeight", {
+        configurable: true,
+        value: 400,
+      });
+    }
+    let handle: { isFollowing: boolean; jumpToBottom: () => void } | null =
+      null;
+    function Follower() {
+      const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
+        useStickyScroll();
+      handle = { isFollowing, jumpToBottom };
+      return (
+        <Scroll
+          keep={site("a.tsx#F#0")}
+          ref={(el) => {
+            sized(el);
+            scrollRef.current = el as HTMLDivElement | null;
+          }}
+        >
+          <div>rows</div>
+          {bottomSentinel}
+        </Scroll>
+      );
+    }
+    const mount = () =>
+      render(
+        <KeepScrollScope scope="pane-9">
+          <Follower />
+        </KeepScrollScope>,
+      );
+    const scroller = (view: ReturnType<typeof render>) =>
+      view.container.querySelector<HTMLElement>("[data-scroller]")!;
+
+    it("stays kept by the scroller's reload keep", () => {
+      const el = scroller(mount());
+      expect(el.hasAttribute("data-scroll-follows")).toBe(true);
+      expect(el.getAttribute("data-scroll-kept")).toBe("pane-9#a.tsx#F#0");
+    });
+
+    it("opens at the bottom, following, with nothing saved", () => {
+      const el = scroller(mount());
+      expect(handle?.isFollowing).toBe(true);
+      expect(el.scrollTop).toBe(2000);
+    });
+
+    it("after a reload starts parked where the reader left it", async () => {
+      // Saved by the page before the reload (another document).
+      writeEntryUnchecked("auto-scroll.reload-offsets", "pane-9#a.tsx#F#0", {
+        top: 700,
+        doc: "the page before the reload",
+      });
+      const el = scroller(mount());
+      expect(handle?.isFollowing).toBe(false);
+      // A call site's key waits out the commit before it writes (a microtask).
+      await Promise.resolve();
+      expect(el.scrollTop).toBe(700);
+      // Content arriving keeps it there, and does not pull it to the bottom.
+      el.append(document.createElement("div"));
+      await Promise.resolve();
+      expect(el.scrollTop).toBe(700);
+      expect(handle?.isFollowing).toBe(false);
+    });
+
+    it("following again ends the restore: arriving content no longer puts the old offset back", async () => {
+      writeEntryUnchecked("auto-scroll.reload-offsets", "pane-9#a.tsx#F#0", {
+        top: 700,
+        doc: "the page before the reload",
+      });
+      const el = scroller(mount());
+      await Promise.resolve();
+      expect(el.scrollTop).toBe(700);
+      act(() => handle!.jumpToBottom());
+      expect(handle?.isFollowing).toBe(true);
+      expect(el.scrollTop).toBe(2000);
+      // The follower owns the anchoring again: off while it pins the bottom.
+      expect(el.style.overflowAnchor).toBe("none");
+      // A turn arriving: a restore still pending would put 700 back.
+      el.prepend(document.createElement("div"));
+      await Promise.resolve();
+      expect(el.scrollTop).toBe(2000);
+    });
   });
 });

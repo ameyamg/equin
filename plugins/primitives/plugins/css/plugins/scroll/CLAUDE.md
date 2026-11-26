@@ -77,9 +77,12 @@ name). So forgetting to keep a scroller cannot be written; opting out is
 
 - Only the vertical offset is kept, so an `axis="x"` scroller keeps nothing
   by default.
-- A stick-to-bottom follower (`useStickyScroll`) owns its scroller: the keep
-  stands down when it marks the scroller (persist the follower to keep a
-  parked reader's place).
+- A stick-to-bottom follower (`useStickyScroll`) on the scroller: one that
+  persists keeps the reader's row itself and the keep stands down; one that
+  does not is kept by this keep — a parked reader's offset is saved, and a
+  reload opens the follower parked there; a reader at the bottom saves nothing
+  and still follows after the reload (auto-scroll's CLAUDE.md, "A follower
+  decides who keeps its scroller").
 - A spread after the stamp (`{...props}`) carrying `keep` overrides it, as a
   written one would.
 - Tests run no build pass: there an unset `keep` keeps nothing; a test writes

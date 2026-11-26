@@ -217,11 +217,26 @@ every holder stands down and drops its entry, for the rest of the document.
 Instances of one call site have no identity across a reload; numbering them
 by mount order put one's offset into another.
 
-**A follower owns its scroller.** When `useStickyScroll` marks the scroller a
-follower (`markFollows`, in a passive effect — after the keep attached), the
-reload keep stands down for good (`onFollows`): it stops restoring and drops
-its mark, claim and entry. Otherwise it would put an old offset back while the
-follower pins the bottom.
+**A follower decides who keeps its scroller.** `useStickyScroll` marks the
+scroller a follower (`markFollows`, in a passive effect — after the keep
+attached), and the reload keep hears it (`watchFollower`):
+
+- **A persisting follower** (`persist`) keeps the row being read itself: the
+  reload keep stands down for good — it stops restoring and drops its mark,
+  claim and entry.
+- **A follower that does not persist** leaves the reload to the keep, so every
+  follower drawn in a `<Scroll>` keeps a parked reader's place with nothing
+  written at the call site. The keep saves the offset only while the follower
+  is parked (following, it removes its entry: the reload opens at the bottom,
+  following). After a reload, while the keep is putting a saved offset back
+  (`beginReloadRestore`), the follower's mount restore joins it
+  (`joinReloadRestore`) and starts parked instead of pinning the bottom; the
+  keep writes the offset as content arrives. The restore ends when the reader
+  takes over or the follower follows again (a jump, a `followKey` change, a
+  scroll to the end — `followerMoved`); if the keep gives it up (its call-site
+  key turned out shared) the follower jumps to the bottom. The keep attaches
+  in the scroller's layout effect, before the follower's: the scroller is the
+  follower's descendant and both wait on nodes set in the same commit.
 
 **Each scroller says how its offset fares, as DOM marks** (`scroller-marks.ts`,
 read with `scrollerKeep`): `<Scroll>` stamps `data-scroller` (vertical only;
