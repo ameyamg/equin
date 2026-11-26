@@ -63,7 +63,7 @@ const UNREACHABLE_DATE_DEFAULT: EventDate = {
  * Sources are rows rather than a config singleton because the user adds N
  * instances of the same type and `events` FK back to them. Runtime/derived state
  * (`status`, `lastFingerprint`, the run watermarks, the classified error) lives
- * here and never in `config` — the `mail_accounts` + `mail_sync_state` split.
+ * here and never in `config`.
  * `config` holds only the per-type user input, validated against the source
  * type's own `configFields`.
  */

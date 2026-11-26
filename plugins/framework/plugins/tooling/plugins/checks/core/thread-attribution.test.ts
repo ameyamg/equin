@@ -76,14 +76,14 @@ describe("ownerOf", () => {
 
   test("module evaluation → import, keeping the evaluated module's plugin as detail", () => {
     const frames = [
-      js("(module)", "/repo/plugins/apps/plugins/mail/core/index.ts"),
+      js("(module)", "/repo/plugins/apps/plugins/places/core/index.ts"),
       native("evaluate", "Unknown Executable"),
       native("moduleEvaluation"),
       native("requestImportModule"),
     ];
     expect(ownerOf(frames, ROOTS)).toEqual({
       kind: "import",
-      plugin: "apps/mail",
+      plugin: "apps/places",
     });
   });
 
@@ -159,7 +159,7 @@ describe("ownerOf", () => {
 
   const IMPORTING = {
     name: "barrel import",
-    detail: "plugins/apps/plugins/mail/web/index.ts",
+    detail: "plugins/apps/plugins/places/web/index.ts",
   };
 
   test("native frames only, taken during an activity → named by the activity", () => {
@@ -170,7 +170,7 @@ describe("ownerOf", () => {
     expect(ownerOf(frames, ROOTS, IMPORTING)).toEqual({
       kind: "activity",
       name: "barrel import",
-      detail: "plugins/apps/plugins/mail/web/index.ts",
+      detail: "plugins/apps/plugins/places/web/index.ts",
     });
   });
 
@@ -256,10 +256,10 @@ describe("createOwnerTally", () => {
     tally.add({ kind: "check", module: "database/migrations" }, [
       js("other", CHECK, 20),
     ]);
-    tally.add({ kind: "import", plugin: "apps/mail" }, [
+    tally.add({ kind: "import", plugin: "apps/places" }, [
       native("moduleEvaluation"),
     ]);
-    tally.add({ kind: "import", plugin: "apps/mail" }, [
+    tally.add({ kind: "import", plugin: "apps/places" }, [
       native("moduleEvaluation"),
     ]);
     tally.add({ kind: "import", plugin: "pages" }, [
@@ -282,7 +282,7 @@ describe("createOwnerTally", () => {
     });
     expect(imports?.owner).toBe("import");
     expect(imports?.detail).toEqual([
-      { name: "apps/mail", samples: 2 },
+      { name: "apps/places", samples: 2 },
       { name: "pages", samples: 1 },
     ]);
     expect(tally.top(1)).toHaveLength(1);

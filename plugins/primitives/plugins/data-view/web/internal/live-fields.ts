@@ -193,7 +193,7 @@ function columnFor<TRow>(
  * (a derived value): never offered, never checked.
  *
  * A field over a column the source's SCOPE constrains (`source.scoped({ where
- * })` — mail's account) is never offered to the Filter control: the scope is
+ * })` — e.g. one account) is never offered to the Filter control: the scope is
  * the surface's, stated as data, and a user rule over the same column could
  * only restate it or contradict it into an empty list. It still sorts.
  *

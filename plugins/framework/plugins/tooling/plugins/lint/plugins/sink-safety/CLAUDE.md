@@ -91,7 +91,7 @@ profiler, not starting a perf sink.
 
 A new `defineEntity` perf **table** with a `defineJob` sampler. `defineEntity` and
 `defineJob` are universal APIs; "is this table perf data?" is semantic, not
-syntactic — and most tables (pages, tasks, mail) grow unbounded by design, so a
+syntactic — and most tables (pages, tasks, events) grow unbounded by design, so a
 "report every unbounded table" monitor would be pure noise. The table hole is
 closed structurally instead by the **firehose opt-in** model in
 `research/2026-07-09-global-firehose-retention-enforcement.md` (a table declares

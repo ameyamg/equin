@@ -66,7 +66,7 @@ code (see `plugins/auth/CLAUDE.md`). The public section call works regardless.
 
 ## Why every body is zod-parsed
 
-Unlike places-api / gmail-api (plain interfaces + an `as T` cast), every
+Unlike places-api (plain interfaces + an `as T` cast), every
 success body is parsed at the fetch boundary. The section payload is a
 free-form editor document from an undocumented endpoint, so a change in its
 shape has to fail there, with the field named, not deep in the trainer.

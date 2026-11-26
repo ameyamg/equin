@@ -71,8 +71,8 @@ emoji search) is drawn through `render={<Lib.Search />}`, keeping this chrome.
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
     - `ui/tokens/type-scale --line-height-label`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×10
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
     - `primitives` ×4
     - `page` ×3
     - `ui` ×2

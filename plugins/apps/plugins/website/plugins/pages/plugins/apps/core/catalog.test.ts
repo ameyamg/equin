@@ -9,7 +9,6 @@ import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import { isleApp } from "@plugins/apps/plugins/isle/plugins/shell/core";
 import { keyboardPartyApp } from "@plugins/apps/plugins/keyboard-party/plugins/shell/core";
-import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import { placesApp } from "@plugins/apps/plugins/places/plugins/shell/core";
 import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
@@ -30,7 +29,6 @@ const DEFINITIONS: readonly AppRef[] = [
   fileExplorerApp,
   isleApp,
   keyboardPartyApp,
-  mailApp,
   pagesApp,
   placesApp,
   prototypesApp,

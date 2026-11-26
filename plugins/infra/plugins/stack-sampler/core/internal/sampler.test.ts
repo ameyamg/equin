@@ -276,7 +276,7 @@ describe("activities", () => {
     const interval = activities.begin(
       {
         name: "barrel import",
-        detail: "plugins/apps/plugins/mail/web/index.ts",
+        detail: "plugins/apps/plugins/places/web/index.ts",
       },
       20,
     );
@@ -286,8 +286,8 @@ describe("activities", () => {
 
     expect(sampler.drain().map((s) => s.activity?.detail ?? null)).toEqual([
       null,
-      "plugins/apps/plugins/mail/web/index.ts",
-      "plugins/apps/plugins/mail/web/index.ts",
+      "plugins/apps/plugins/places/web/index.ts",
+      "plugins/apps/plugins/places/web/index.ts",
       null,
       null,
     ]);

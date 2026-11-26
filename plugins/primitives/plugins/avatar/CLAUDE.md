@@ -165,7 +165,6 @@ color palette.
   - Imported by:
     - `apps-core/app-icon`
     - `apps-core/app-launcher`
-    - `apps/mail/reading-pane`
     - `code-explorer/commit-detail`
     - `conversations/agents`
     - `conversations/conversation-category`

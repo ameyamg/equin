@@ -244,7 +244,6 @@ pane declares `chrome.keepMountedWhenCollapsed` (kept mounted, hidden).
     - `apps/file-explorer/shell`
     - `apps/isle/shell`
     - `apps/keyboard-party/shell`
-    - `apps/mail/shell`
     - `apps/pages/shell`
     - `apps/plugin-studio/shell`
     - `apps/settings/shell`

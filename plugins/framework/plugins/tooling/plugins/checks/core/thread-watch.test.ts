@@ -74,7 +74,7 @@ describe("stepWatch", () => {
       atMs: null,
       activity: {
         name: "barrel import",
-        detail: "plugins/apps/plugins/mail/web/index.ts",
+        detail: "plugins/apps/plugins/places/web/index.ts",
       },
     };
     const stall = stepWatch(
@@ -88,7 +88,7 @@ describe("stepWatch", () => {
       [
         "native during barrel import",
         2,
-        [{ name: "plugins/apps/plugins/mail/web/index.ts", samples: 2 }],
+        [{ name: "plugins/apps/plugins/places/web/index.ts", samples: 2 }],
       ],
       ["native readdirSync [native]", 1, []],
     ]);

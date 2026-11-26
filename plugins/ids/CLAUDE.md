@@ -52,7 +52,7 @@ rows going dark.
 - **`legacyBareUuid: true`** makes `parse` / `schema` — and `key` — upgrade a
   bare uuid to `<prefix>-<uuid>`, so old URLs keep resolving after a rewrite.
   Declare it only on a kind whose stored rows WERE rewritten (phase 4: song,
-  bkmk, bhist, mail*, evrun, sess, ver, trash): `key` upgrading a bare uuid
+  bkmk, bhist, evrun, sess, ver, trash): `key` upgrading a bare uuid
   would miss a row still stored bare.
 - **The pattern's one built-in guard is leading**: no letter, digit, `_` or `-`
   right before the prefix (`legacy-claude-…`, `xtask-…` are not ids, not even
@@ -134,8 +134,8 @@ is reported by the schema file that exports it, which is where its plugin's
   - Slots:
     - `IdKinds.Kind`
     - `IdKinds.Presenter`
-  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `IdKinds.Kind` ×39
+  - Slot contributors: 49 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `IdKinds.Kind` ×38
     - `IdKinds.Presenter` ×11
   - Exports (types):
     - `IdPresenter`
@@ -190,8 +190,8 @@ is reported by the schema file that exports it, which is where its plugin's
     - `parseKindLabel`
     - `storedIdSchema`
 - Cross-plugin:
-  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×19
+  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×18
     - `conversations` ×8
     - `tasks` ×7
     - `infra` ×4

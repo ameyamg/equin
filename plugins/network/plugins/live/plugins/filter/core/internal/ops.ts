@@ -170,7 +170,7 @@ const positiveOps = {
     sql: tpl`(jsonb_typeof(${T}) = 'array' AND ${T} @> to_jsonb(${L}))`,
   }),
   // One `@>` per element rather than `?|`: a `jsonb_path_ops` GIN index
-  // (mail's label ids) serves `@>` only.
+  // (a tag/label id array) serves `@>` only.
   hasAny: op({
     domains: ["stringArray"],
     operand: "list",

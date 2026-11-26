@@ -13,9 +13,7 @@
 //
 // Onboarding never sits on a capture: tips are answered as they show (the
 // hints engine's own helper), and a snap is refused while any piece of the
-// hints stage is up. The mail reader opens one message seeded into THIS
-// deploy's database through the mail threads fixture (refused on main, every
-// id under an `e2e-` prefix) and deleted at the end.
+// hints stage is up.
 
 import type { Page } from "playwright";
 import {
@@ -31,10 +29,6 @@ import {
   ELEMENT_TIMEOUT_MS,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
-import {
-  openThreadFixture,
-  type ThreadFixture,
-} from "@plugins/apps/plugins/mail/plugins/threads/e2e";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 
 export const e2e = {
@@ -43,22 +37,18 @@ export const e2e = {
   writes: true,
   run: {
     manual: ["arguments"],
-    why: "Before/after capture set keyed by --out/--suffix (some surfaces need --conv/--tool-use); seeds a mail fixture.",
+    why: "Before/after capture set keyed by --out/--suffix (some surfaces need --conv/--tool-use).",
   },
 } satisfies E2eScript;
 
 interface Surface {
   name: string;
-  /** A route, or a function of the run's fixtures. */
-  path: string | ((f: Fixtures) => string);
+  /** A route. */
+  path: string;
   /** Which pane to measure: the rightmost (default) or the leftmost. */
   pane?: "last" | "first";
   /** A button to press first, by the start of its text (a collapsed card). */
   open?: string;
-}
-
-interface Fixtures {
-  mailMessageId: string;
 }
 
 const conv = arg("conv");
@@ -103,7 +93,6 @@ const SURFACES: readonly Surface[] = [
   { name: "compare", path: "/plugins/compositions/compare" },
   { name: "conv-summary", path: "/agents/c/conv-1777333537-usf7/summary" },
   { name: "server-create", path: "/deploy/servers/server/new" },
-  { name: "mail-message", path: (f) => `/mail/search/m/${f.mailMessageId}` },
   // The workflow step pane, in the arm a worktree can reach without a
   // Workflow call in any transcript: a call whose input is no workflow.
   ...(conv !== undefined && toolUse !== undefined
@@ -342,99 +331,56 @@ if (out === undefined) {
 const suffix = arg("suffix", "shot");
 const only = arg("only")?.split(",");
 
-let mail: ThreadFixture | null = null;
-try {
-  mail = await openThreadFixture();
-  const thread = await mail.seed({
-    name: "inset-review",
-    labels: ["INBOX"],
-    minutesAgo: 30,
+await withBrowser(async (h) => {
+  const { page } = await h.session({
+    viewport: { width: 1280, height: 900 },
+    colorScheme: "light",
   });
-  const messageId = `${thread.id}-m1`;
-  await mail.exec(
-    `INSERT INTO mail_messages
-       (id, thread_id, account_id, from_addr, to_addrs, subject, snippet,
-        body_text, internal_date, body_fetched_at)
-     VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7, $8,
-             now() - interval '30 minutes', now())`,
-    [
-      messageId,
-      thread.id,
-      mail.accountId,
-      JSON.stringify({ name: "Ada Example", email: "ada@example.invalid" }),
-      JSON.stringify([{ name: "You", email: "you@example.invalid" }]),
-      "Quarterly planning notes",
-      "A seeded message for the inset review",
-      "Hi,\n\nHere are the notes from Tuesday's planning session. The three priorities for the quarter are the onboarding flow, the sync reliability work and the new reporting view.\n\nThanks,\nAda",
-    ],
-  );
-  const fixtures: Fixtures = { mailMessageId: messageId };
-
-  await withBrowser(async (h) => {
-    const { page } = await h.session({
-      viewport: { width: 1280, height: 900 },
-      colorScheme: "light",
-    });
-    await answerTipsAsTheyShow(page);
-    const set = arg("set");
-    const surfaces =
-      set === "global"
-        ? GLOBAL_SURFACES
-        : set === "hj"
-          ? HEADER_JUMP_SURFACES
-          : SURFACES;
-    for (const s of surfaces) {
-      if (only && !only.includes(s.name)) continue;
-      let failed: string | null = null;
-      try {
-        const path = typeof s.path === "string" ? s.path : s.path(fixtures);
-        await page.goto(pathUrl(path), { waitUntil: "domcontentloaded" });
-        await waitForNetworkIdle(page);
-        await waitForNotBusy(page, { timeoutMs: ELEMENT_TIMEOUT_MS });
-        await page.waitForTimeout(2500);
-        await clearToasts(page);
-        failed = await clearHints(page);
-        if (failed === null && s.open !== undefined) {
-          const label = s.open;
-          await page
-            .getByRole("button")
-            .filter({ hasText: new RegExp(`^\\s*${label}`) })
-            .filter({ visible: true })
-            .first()
-            .click();
-          await page.waitForTimeout(1500);
-        }
-        await clearToasts(page);
-      } catch (err) {
-        failed = err instanceof Error ? err.message : String(err);
-      }
-      if (failed !== null) {
-        console.log(`${s.name}: FAILED ${failed}`);
-        process.exitCode = 1;
-        continue;
-      }
-      console.log(
-        `measure ${s.name} ${JSON.stringify(await measureBody(page, s.pane ?? "last"))}`,
-      );
-      // A report toast can land at any moment; it is never part of a surface.
-      await clearToasts(page);
-      await page.waitForTimeout(400);
-      const shot = await snap(page, `${out}/${s.name}`, suffix);
-      console.log(`${s.name}: ${shot.ok ? "ok" : "FAILED (snap)"}`);
-      if (!shot.ok) process.exitCode = 1;
-    }
-  });
-} finally {
-  if (mail !== null) {
-    // Close the fixture even when the message delete fails (it would also
-    // cascade from its thread, which cleanup() deletes).
+  await answerTipsAsTheyShow(page);
+  const set = arg("set");
+  const surfaces =
+    set === "global"
+      ? GLOBAL_SURFACES
+      : set === "hj"
+        ? HEADER_JUMP_SURFACES
+        : SURFACES;
+  for (const s of surfaces) {
+    if (only && !only.includes(s.name)) continue;
+    let failed: string | null = null;
     try {
-      await mail.exec("DELETE FROM mail_messages WHERE id LIKE $1", [
-        "e2e-%-inset-review-m1",
-      ]);
-    } finally {
-      await mail.cleanup();
-      console.log("removed the seeded mail fixture");
+      await page.goto(pathUrl(s.path), { waitUntil: "domcontentloaded" });
+      await waitForNetworkIdle(page);
+      await waitForNotBusy(page, { timeoutMs: ELEMENT_TIMEOUT_MS });
+      await page.waitForTimeout(2500);
+      await clearToasts(page);
+      failed = await clearHints(page);
+      if (failed === null && s.open !== undefined) {
+        const label = s.open;
+        await page
+          .getByRole("button")
+          .filter({ hasText: new RegExp(`^\\s*${label}`) })
+          .filter({ visible: true })
+          .first()
+          .click();
+        await page.waitForTimeout(1500);
+      }
+      await clearToasts(page);
+    } catch (err) {
+      failed = err instanceof Error ? err.message : String(err);
     }
+    if (failed !== null) {
+      console.log(`${s.name}: FAILED ${failed}`);
+      process.exitCode = 1;
+      continue;
+    }
+    console.log(
+      `measure ${s.name} ${JSON.stringify(await measureBody(page, s.pane ?? "last"))}`,
+    );
+    // A report toast can land at any moment; it is never part of a surface.
+    await clearToasts(page);
+    await page.waitForTimeout(400);
+    const shot = await snap(page, `${out}/${s.name}`, suffix);
+    console.log(`${s.name}: ${shot.ok ? "ok" : "FAILED (snap)"}`);
+    if (!shot.ok) process.exitCode = 1;
   }
-}
+});

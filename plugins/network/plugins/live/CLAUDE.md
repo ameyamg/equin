@@ -532,7 +532,7 @@ collection's window, and a value declared `paged`. Design:
   re-subscribed alone) and an insert near the head never re-mints later pages.
   No cursor chains. A source with only forward tokens (`pageToken` /
   `nextCursor`) cannot be paged: use one bounded `liveValue`, or mirror into
-  Postgres as a collection (as `mail.threads`).
+  Postgres as a collection.
 - **D2 — the viewport only decides liveness.**
 
   | Read | Live pages | Depth | Result |
@@ -1550,8 +1550,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Slots:
     - `FieldPresentation.Register`
     - `ClientFields.Resolve`
-  - Slot contributors: 48 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×44
+  - Slot contributors: 47 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×43
     - `ClientFields.Resolve` ×4
   - Uses:
     - `network/live/live-state.PagedResourceResult`
@@ -1938,8 +1938,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 378 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×98
+  - Imported by: 372 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×92
     - `conversations` ×74
     - `debug` ×36
     - `tasks` ×36

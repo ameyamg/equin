@@ -12,8 +12,8 @@
   - Exports (types): `SpinnerProps`
   - Exports (values): `Spinner`
 - Cross-plugin:
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
     - `primitives` ×3
     - `companions` ×2
     - `conversations` ×2

@@ -33,7 +33,7 @@ export type LiveFacetColumn<F> = LiveSearchableColumn<F>;
 /**
  * A live source's scope — the base filter ANDed into every tuple before the
  * view's own: `all` (the whole collection), `where` (the canonical filter
- * `scoped` built), or `awaiting` — the scope's value is not known yet (mail's
+ * `scoped` built), or `awaiting` — the scope's value is not known yet (an
  * account still loading), only the columns it will constrain. An awaiting
  * source reads nothing and renders the DataView's loading state, its toolbar
  * already mounted, so a surface whose scope arrives late shows one loading
@@ -133,7 +133,7 @@ export interface LiveDataSourceOf<
 > extends LiveDataSource<TRow, T> {
   /**
    * The same source over the rows matching `where` too — scope stated as data
-   * (mail's account). Its columns must be filterable (they are routed like any
+   * (e.g. one account). Its columns must be filterable (they are routed like any
    * other); no field lowers to a scope-only column, so the view's own filter
    * control can neither name nor widen it.
    */

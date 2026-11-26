@@ -1,12 +1,12 @@
 # gmail
 
 Gmail integration: a Settings toggle that requests the broad Gmail scope on the
-shared Google connection, plus the **public consumer API** a Gmail/mail app uses
+shared Google connection, plus the **public consumer API** a Gmail consumer uses
 to read tokens and connection state.
 
 ## Public API
 
-This plugin owns the Gmail vocabulary so consumers (e.g. the mail app) go through
+This plugin owns the Gmail vocabulary so consumers go through
 it and **never** import `@plugins/auth/*` directly or name the Gmail scope string.
 
 - **`core`** (`@plugins/integrations/plugins/gmail/core`)
@@ -21,7 +21,7 @@ it and **never** import `@plugins/auth/*` directly or name the Gmail scope strin
   - `blocker: "disabled" | "disconnected" | "scopes" | null` — the ONE next unmet prerequisite, in the order it must be resolved. Branch on this rather than re-deriving a precedence from the three booleans, so every Gmail surface offers the same next step.
   - `GmailAccessAction` — renders the control that actually resolves the current `blocker` **in place** (toggle / connect popup / grant popup), or `null` when ready. `reconnect` forces the grant affordance even when local state looks healthy — a server-side auth failure (grant revoked upstream) is invisible to the browser's cached scope list.
   - `GMAIL_BLOCKER_BODY` — the shared per-blocker explanation copy.
-  - `GmailAccessEmptyState({ title?, whenReady? })` — the one "Gmail is not usable yet" surface: the blocker copy above `GmailAccessAction`, centred; the loading state while access resolves; `whenReady` (what the consumer still waits on, no action) when nothing blocks. Mail's landing and its threads pane both render it.
+  - `GmailAccessEmptyState({ title?, whenReady? })` — the one "Gmail is not usable yet" surface: the blocker copy above `GmailAccessAction`, centred; the loading state while access resolves; `whenReady` (what the consumer still waits on, no action) when nothing blocks.
 
 Consumers must depend on these barrels only — the integration brokers all auth
 access on their behalf. In particular, a Gmail surface that can't sync renders
@@ -71,15 +71,6 @@ for themselves.
   - Exports (values):
     - `getGmailToken`
     - `isGmailEnabled`
-- Cross-plugin:
-  - Imported by:
-    - `apps/mail/mail-core`
-    - `apps/mail/search`
-    - `apps/mail/shell`
-    - `apps/mail/sync`
-    - `apps/mail/sync-status`
-    - `apps/mail/sync/auto-resume`
-    - `apps/mail/threads`
 - Core:
   - Exports (types): `GmailTokenResult`
   - Exports (values):

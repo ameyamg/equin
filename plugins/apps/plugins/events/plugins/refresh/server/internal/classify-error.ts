@@ -11,7 +11,7 @@
 // retries.
 //
 // Pure — no DB, no IO, no imports that touch either — so it is unit-testable in
-// isolation, mirroring mail-sync's `classify-error.ts`.
+// isolation.
 
 /**
  * Why a refresh failed, coarsely. Free text on the row (`lastErrorCode` is a

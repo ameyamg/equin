@@ -1,1 +1,0 @@
-export { mailApp } from "./app";

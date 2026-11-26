@@ -559,8 +559,8 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `isE2eScriptPath`
     - `MANUAL_REASONS`
 - Cross-plugin:
-  - Imported by: 213 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×66
+  - Imported by: 212 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×65
     - `primitives` ×30
     - `conversations` ×26
     - `page` ×26

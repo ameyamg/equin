@@ -822,65 +822,6 @@
       "name": "@equin/plugin-apps-keyboard-party-shell",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/mail": {
-      "name": "@equin/plugin-apps-mail",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/attachments": {
-      "name": "@equin/plugin-apps-mail-attachments",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/gmail-api": {
-      "name": "@equin/plugin-apps-mail-gmail-api",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/isle-building": {
-      "name": "@equin/plugin-apps-mail-isle-building",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/mail-core": {
-      "name": "@equin/plugin-apps-mail-mail-core",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/mail-html": {
-      "name": "@equin/plugin-apps-mail-mail-html",
-      "version": "0.0.1",
-      "dependencies": {
-        "dompurify": "^3.4.17",
-      },
-    },
-    "plugins/apps/plugins/mail/plugins/reading-pane": {
-      "name": "@equin/plugin-apps-mail-reading-pane",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/remote-images": {
-      "name": "@equin/plugin-apps-mail-remote-images",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/search": {
-      "name": "@equin/plugin-apps-mail-search",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/shell": {
-      "name": "@equin/plugin-apps-mail-shell",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/sync": {
-      "name": "@equin/plugin-apps-mail-sync",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/sync-status": {
-      "name": "@equin/plugin-apps-mail-sync-status",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/sync/plugins/auto-resume": {
-      "name": "@equin/plugin-apps-mail-sync-auto-resume",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/mail/plugins/threads": {
-      "name": "@equin/plugin-apps-mail-threads",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/pages": {
       "name": "@equin/plugin-apps-pages",
       "version": "0.0.1",
@@ -8955,34 +8896,6 @@
     "@equin/plugin-apps-keyboard-party-party": ["@equin/plugin-apps-keyboard-party-party@workspace:plugins/apps/plugins/keyboard-party/plugins/party"],
 
     "@equin/plugin-apps-keyboard-party-shell": ["@equin/plugin-apps-keyboard-party-shell@workspace:plugins/apps/plugins/keyboard-party/plugins/shell"],
-
-    "@equin/plugin-apps-mail": ["@equin/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
-
-    "@equin/plugin-apps-mail-attachments": ["@equin/plugin-apps-mail-attachments@workspace:plugins/apps/plugins/mail/plugins/attachments"],
-
-    "@equin/plugin-apps-mail-gmail-api": ["@equin/plugin-apps-mail-gmail-api@workspace:plugins/apps/plugins/mail/plugins/gmail-api"],
-
-    "@equin/plugin-apps-mail-isle-building": ["@equin/plugin-apps-mail-isle-building@workspace:plugins/apps/plugins/mail/plugins/isle-building"],
-
-    "@equin/plugin-apps-mail-mail-core": ["@equin/plugin-apps-mail-mail-core@workspace:plugins/apps/plugins/mail/plugins/mail-core"],
-
-    "@equin/plugin-apps-mail-mail-html": ["@equin/plugin-apps-mail-mail-html@workspace:plugins/apps/plugins/mail/plugins/mail-html"],
-
-    "@equin/plugin-apps-mail-reading-pane": ["@equin/plugin-apps-mail-reading-pane@workspace:plugins/apps/plugins/mail/plugins/reading-pane"],
-
-    "@equin/plugin-apps-mail-remote-images": ["@equin/plugin-apps-mail-remote-images@workspace:plugins/apps/plugins/mail/plugins/remote-images"],
-
-    "@equin/plugin-apps-mail-search": ["@equin/plugin-apps-mail-search@workspace:plugins/apps/plugins/mail/plugins/search"],
-
-    "@equin/plugin-apps-mail-shell": ["@equin/plugin-apps-mail-shell@workspace:plugins/apps/plugins/mail/plugins/shell"],
-
-    "@equin/plugin-apps-mail-sync": ["@equin/plugin-apps-mail-sync@workspace:plugins/apps/plugins/mail/plugins/sync"],
-
-    "@equin/plugin-apps-mail-sync-auto-resume": ["@equin/plugin-apps-mail-sync-auto-resume@workspace:plugins/apps/plugins/mail/plugins/sync/plugins/auto-resume"],
-
-    "@equin/plugin-apps-mail-sync-status": ["@equin/plugin-apps-mail-sync-status@workspace:plugins/apps/plugins/mail/plugins/sync-status"],
-
-    "@equin/plugin-apps-mail-threads": ["@equin/plugin-apps-mail-threads@workspace:plugins/apps/plugins/mail/plugins/threads"],
 
     "@equin/plugin-apps-pages": ["@equin/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 

@@ -66,8 +66,8 @@
  * ids — all `narrowing-fixture`-marked) and deleted after, so no argument is
  * needed. Phases per value: ten writes about another subject Y (pass = 0
  * loads, 0 frames), then the same writes about X (one load each). Not
- * measured here: `mail.message-body` and `events.run-events` (their rows hang
- * off FK chains no fixture creates yet).
+ * measured here: `events.run-events` (its rows hang off FK chains no fixture
+ * creates yet).
  *
  *   ./equin run plugins/network/plugins/live/e2e/narrowing.ts --suite byid [--runs 3]
  */

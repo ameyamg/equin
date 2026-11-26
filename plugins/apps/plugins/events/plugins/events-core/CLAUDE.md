@@ -60,8 +60,7 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
 
 - `event_sources` — one row per *configured instance*. Runtime/derived state
   (`status`, `lastFingerprint`, `lastRunAt`/`nextRunAt`, the classified error,
-  `last_outcome`/`last_event_count`) lives here, never in `config` — the
-  `mail_accounts` + `mail_sync_state` split. `extractionStatus(source)` (`core/`)
+  `last_outcome`/`last_event_count`) lives here, never in `config`. `extractionStatus(source)` (`core/`)
   derives never/ok/empty/failed from the last two and is **never stored**: one
   fact, one derivation, nothing to drift. `empty` is its own arm on purpose — a
   successful extraction that found nothing is how a source goes silently broken,

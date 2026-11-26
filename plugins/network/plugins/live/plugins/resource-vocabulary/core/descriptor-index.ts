@@ -83,8 +83,8 @@ export type FileBindings = Map<string, Binding>;
  * Resolve a descriptor imported from ANOTHER plugin's barrel — `null` when the
  * specifier names no plugin this resolver can read.
  *
- * Cross-plugin descriptors are rare but real: `mail/sync` serves
- * `mail-sync-state`, whose descriptor is declared in `mail/mail-core`.
+ * Cross-plugin descriptors are rare but real: a plugin may serve a resource
+ * whose descriptor is declared in a sibling `-core` plugin.
  */
 export type ImportedDescriptorResolver = (
   specifier: string,

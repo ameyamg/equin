@@ -66,7 +66,6 @@ property of the thing being filtered. Say it in the field's `description`.
     - `apps/events/events-core`
     - `apps/events/sources/coworkmeet`
     - `apps/events/sources/salsanueva`
-    - `apps/mail/threads`
     - `apps/places/places-core`
     - `page/tags`
     - `plugin-meta/composition`

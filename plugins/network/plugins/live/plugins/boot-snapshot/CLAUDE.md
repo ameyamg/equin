@@ -88,7 +88,7 @@ Two kinds of preload, told apart by the `Resource.Declare` payload alone:
   reads it, and `assembleBootSnapshot({ webPlugins })` loads only those of the
   page's composition — the endpoint passes its backend's
   `composedWebPlugins()`, the crawlable static host its composition's. A
-  config document of the mail app never rides the public website's snapshot
+  config document of an app the website does not load never rides the public website's snapshot
   (2026-11-13: website snapshot 134 KB → 35 KB raw, 412 config documents → 59). Config's
   documents are the first user. A collection's `:rows` sibling served with
   `preloadRows: { idsOf }` is one too: its one tuple is the id set of another

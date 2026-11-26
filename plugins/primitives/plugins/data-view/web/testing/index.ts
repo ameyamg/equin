@@ -1,10 +1,10 @@
 export { lowersToMatch, testField } from "./lower-and-match";
 // The real DataView → filter-language lowering, for another plugin's test to
-// lower AUTHORED filter trees exactly as the host does (e.g. mail's authored
-// mailbox tabs).
+// lower AUTHORED filter trees exactly as the host does (e.g. authored view
+// tabs).
 export { lowerFilterGroup } from "../internal/evaluate-filter";
 // The live source's real field plan and field → column rename, so a host's
-// test lowers exactly as the live source does (e.g. mail's authored tabs).
+// test lowers exactly as the live source does (e.g. authored view tabs).
 export { renameColumns, resolveLiveFields } from "../internal/live-fields";
 // A paged DataView against a laid-out page: one view mounted through the real
 // body, a scroller the test drives and an IntersectionObserver answering from

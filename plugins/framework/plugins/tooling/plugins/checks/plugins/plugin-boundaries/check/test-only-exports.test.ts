@@ -35,9 +35,9 @@ function r13(files: Record<string, string>): string[] {
 }
 
 const TEST =
-  "plugins/apps/plugins/mail/plugins/mail-core/server/internal/queue.test.ts";
+  "plugins/apps/plugins/places/plugins/places-core/server/internal/queue.test.ts";
 const SHIPPING =
-  "plugins/apps/plugins/mail/plugins/mail-core/server/internal/queue.ts";
+  "plugins/apps/plugins/places/plugins/places-core/server/internal/queue.ts";
 
 describe("barrelExportNames", () => {
   it("lists the published names, skipping the default export", () => {
@@ -125,7 +125,7 @@ describe("findTestOnlyExports", () => {
       r13({
         [TEST]:
           'import { defineJob } from "@plugins/infra/plugins/jobs/server";',
-        "plugins/apps/plugins/mail/plugins/mail-core/server/index.ts":
+        "plugins/apps/plugins/places/plugins/places-core/server/index.ts":
           'export { defineJob } from "@plugins/infra/plugins/jobs/server";',
       }),
     ).toEqual([]);
@@ -134,15 +134,15 @@ describe("findTestOnlyExports", () => {
   it("treats a testing/ importer as test code, and check/ as shipping", () => {
     expect(
       r13({
-        "plugins/apps/plugins/mail/plugins/mail-core/server/testing/queue.ts":
+        "plugins/apps/plugins/places/plugins/places-core/server/testing/queue.ts":
           'import { defineJob } from "@plugins/infra/plugins/jobs/server";',
-        "plugins/apps/plugins/mail/plugins/mail-core/check/index.ts":
+        "plugins/apps/plugins/places/plugins/places-core/check/index.ts":
           'import type { JobCtx } from "@plugins/infra/plugins/jobs/server";',
         [TEST]:
           'import type { JobCtx } from "@plugins/infra/plugins/jobs/server";',
       }),
     ).toEqual([
-      "`defineJob` is public, but only tests import it: `plugins/apps/plugins/mail/plugins/mail-core/server/testing/queue.ts`",
+      "`defineJob` is public, but only tests import it: `plugins/apps/plugins/places/plugins/places-core/server/testing/queue.ts`",
     ]);
   });
 
@@ -158,12 +158,12 @@ describe("findTestOnlyExports", () => {
   it("names at most three test importers", () => {
     const files = Object.fromEntries(
       [1, 2, 3, 4, 5].map((i) => [
-        `plugins/apps/plugins/mail/plugins/mail-core/server/q${i}.test.ts`,
+        `plugins/apps/plugins/places/plugins/places-core/server/q${i}.test.ts`,
         'import { defineJob } from "@plugins/infra/plugins/jobs/server";',
       ]),
     );
     expect(r13(files)).toEqual([
-      "`defineJob` is public, but only tests import it: `plugins/apps/plugins/mail/plugins/mail-core/server/q1.test.ts`, `plugins/apps/plugins/mail/plugins/mail-core/server/q2.test.ts`, `plugins/apps/plugins/mail/plugins/mail-core/server/q3.test.ts` and 2 more",
+      "`defineJob` is public, but only tests import it: `plugins/apps/plugins/places/plugins/places-core/server/q1.test.ts`, `plugins/apps/plugins/places/plugins/places-core/server/q2.test.ts`, `plugins/apps/plugins/places/plugins/places-core/server/q3.test.ts` and 2 more",
     ]);
   });
 });

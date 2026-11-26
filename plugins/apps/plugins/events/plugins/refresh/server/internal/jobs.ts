@@ -72,8 +72,7 @@ async function selectDueSources(now: Date): Promise<{ id: string }[]> {
 /**
  * The cadence driver — the documented exception to the no-polling rule. A
  * scraped venue page publishes no change signal to subscribe to, so the only
- * way to notice a new party is to look; a scheduled `defineJob` (mail's
- * `sync-tick` sets the precedent) is the sanctioned mechanism, never an
+ * way to notice a new party is to look; a scheduled `defineJob` is the sanctioned mechanism, never an
  * in-process `setInterval`.
  *
  * **Main-only** (`perWorktree` left unset), deliberately. Worktrees inherit

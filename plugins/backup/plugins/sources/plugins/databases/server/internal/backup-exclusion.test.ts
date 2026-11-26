@@ -107,8 +107,8 @@ describe("backupDatabase with ExcludeFromBackup", () => {
   });
 
   /**
-   * `mail_messages` links to `mail_threads`, so leaving out the threads' rows
-   * while keeping the messages makes an archive `pg_restore` cannot load. For
+   * `chord_answers` links to `chord_rounds`, so leaving out the rounds' rows
+   * while keeping the answers makes an archive `pg_restore` cannot load. For
    * the running namespace's own database (strict) that is a bad declaration:
    * the planner refuses before `pg_dump` starts, naming the database.
    */
@@ -119,7 +119,7 @@ describe("backupDatabase with ExcludeFromBackup", () => {
     const err = await backupDatabase(
       name,
       out,
-      { tables: ["mail_threads"] },
+      { tables: ["chord_rounds"] },
       { strict: true },
     ).then(
       () => null,
@@ -131,8 +131,8 @@ describe("backupDatabase with ExcludeFromBackup", () => {
     // The database, which is the fact that makes this diagnosable.
     expect(message).toContain(`database "${name}"`);
     // And the link itself, so the reader knows what to do about it.
-    expect(message).toContain("mail_messages");
-    expect(message).toContain("mail_threads");
+    expect(message).toContain("chord_answers");
+    expect(message).toContain("chord_rounds");
 
     // Refused BEFORE pg_dump ran, so there is no half-written archive claiming
     // to be this database.
@@ -152,16 +152,16 @@ describe("backupDatabase with ExcludeFromBackup", () => {
     const plan = await backupDatabase(
       name,
       out,
-      { tables: ["mail_threads", "traces"] },
+      { tables: ["chord_rounds", "traces"] },
       { strict: false },
     );
 
     expect(plan.excludedTables).toEqual(["traces"]);
     expect(new Set(plan.keptForLinks.map((k) => k.table))).toEqual(
-      new Set(["mail_threads"]),
+      new Set(["chord_rounds"]),
     );
     expect(plan.keptForLinks.map((k) => k.linkedFrom)).toContain(
-      "mail_messages",
+      "chord_answers",
     );
     expect(await Bun.file(out).exists()).toBe(true);
   });

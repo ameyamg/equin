@@ -1,4 +1,4 @@
-// @hash 09704a69d1af
+// @hash 5b09ca5554ab
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -14,10 +14,10 @@
   // Prototypes, Files, Keyboard Party, Desktop, Settings. Desktop switches the
   // surface into the desktop (windows + shelf) rather than opening an app.
   // Every other app comes after Settings, in its previous relative order:
-  // the content apps (Mail, Events — fed by external sources, beside Mail —
-  // Chord, Browser), then the spacer, then developer and system tooling
-  // (Studio, Website, Demo — temporary, right after the Website it is headed
-  // for — Deploy, Debug).
+  // the content apps (Events — fed by external sources —, Chord, Browser),
+  // then the spacer, then developer and system tooling (Studio, Website,
+  // Demo — temporary, right after the Website it is headed for — Deploy,
+  // Debug).
   "items": [
     "apps.home.shell:home",
     "apps.agent-manager.shell:agent-manager",
@@ -31,7 +31,6 @@
     "apps.isle.shell:isle",
     "apps.desktop.shell:desktop",
     "apps.settings.shell:settings",
-    "apps.mail.shell:mail",
     "apps.events.shell:events",
     "apps.chord.shell:chord",
     "apps.browser.shell:browser",

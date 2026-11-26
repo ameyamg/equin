@@ -29,7 +29,6 @@
     - `servedConfigDirSync`
 - Cross-plugin:
   - Imported by:
-    - `apps/mail/threads`
     - `build/converge`
     - `build/serve-composition`
     - `conversations/conversations-view/data-view`

@@ -928,9 +928,9 @@ out of the way: **what it opens takes its column**.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 106 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×106
-  - Contributes: 137 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 102 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×102
+  - Contributes: 132 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -1004,10 +1004,6 @@ out of the way: **what it opens takes its column**.
     - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
     - `logChannelPane.Actions` "title" → `PaneTitleItem`
     - `logsPane.Actions` "title" → `PaneTitleItem`
-    - `mail-message.actions` "title" → `PaneTitleItem`
-    - `mail-root.actions` "title" → `PaneTitleItem`
-    - `mail-search.actions` "title" → `PaneTitleItem`
-    - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
     - `mcp-tool.actions` "title" → `PaneTitleItem`
     - `mcp-tools.actions` "title" → `PaneTitleItem`
     - `memoryPane.Actions` "title" → `PaneTitleItem`
@@ -1062,7 +1058,6 @@ out of the way: **what it opens takes its column**.
     - `test-file.actions` "title" → `PaneTitleItem`
     - `tests.actions` "title" → `PaneTitleItem`
     - `themeCustomizerPane.Actions` "title" → `PaneTitleItem`
-    - `threadPane.Actions` "title" → `PaneTitleItem`
     - `traceDetailPane.Actions` "title" → `PaneTitleItem`
     - `webPagePane.Actions` "title" → `PaneTitleItem`
     - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -1242,8 +1237,8 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 222 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×78
+  - Imported by: 218 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×74
     - `conversations` ×33
     - `debug` ×29
     - `active-data` ×14

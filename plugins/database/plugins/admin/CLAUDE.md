@@ -72,8 +72,7 @@ can produce either:
 - a kept table with a foreign key to a left-out table (read from the catalog,
   self-references and partition clones skipped) — `pg_restore` re-adds the
   constraint after the data, so a kept row pointing at a left-out row fails the
-  restore. Leave the linking table out too, or make the link a plain id (as
-  `mail_drafts.thread_id` is). Shared with backups via `planTableExclusions`.
+  restore. Leave the linking table out too, or make the link a plain id. Shared with backups via `planTableExclusions`.
 
 **Reported, never fatal.** Everything the source database can cause on its own,
 because the exclusion set comes from the forking checkout while the catalog comes
@@ -169,12 +168,12 @@ other, because they answer different questions:
 - fork: *does a fresh worktree need these rows?*
 - backup: *does losing these rows cost anything?*
 
-The answers differ often enough to matter: `mail_sync_state` stays in every
-fork but is left out of backups, together with the Gmail corpus it watermarks.
+The answers differ often enough to matter: a sync watermark stays in every
+fork but is left out of backups, together with the remote corpus it watermarks.
 
 `reason` must say one of two things: **the rows expire anyway** (`traces`, 7-day
 evidence swept nightly), or **how they come back** (a cache rebuilt from a
-snapshot file; the mail corpus refetched by sync). Anything a human authored,
+snapshot file; a remote corpus refetched by sync). Anything a human authored,
 or nothing can rebuild, does not qualify.
 
 Mechanics mirror the fork, sharing `internal/catalog-plan.ts` (catalog read,
@@ -255,12 +254,12 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `reclaimForkTemp`
     - `recreateDatabase`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×10
     - `infra` ×7
     - `database` ×5
-    - `apps` ×4
     - `framework` ×4
+    - `apps` ×3
     - `build` ×2
     - `network` ×2
     - `backup/sources/databases`

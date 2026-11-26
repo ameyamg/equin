@@ -39,7 +39,7 @@ export default {
     // a fork loses startup latency and nothing else.
     //
     // It must not be inherited, because a persisted value is computed FROM other
-    // tables and the fork empties several of them (notifications, mail, the
+    // tables and the fork empties several of them (notifications, the
     // observability set). Keeping the snapshot while emptying its sources would
     // make a fresh worktree serve a value that disagrees with the rows behind it
     // — and for a boot-critical resource that stale value is what the very first

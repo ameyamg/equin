@@ -18,8 +18,7 @@
 // Onboarding never sits on a capture (tips answered as they show, a snap is
 // refused while any hints-stage piece is up), toasts are cleared before each
 // snap. Page-backed surfaces open on a blank page created through the app in
-// THIS checkout's database; the mail reader opens a seeded message. Both are
-// deleted at the end.
+// THIS checkout's database, deleted at the end.
 
 import type { Page } from "playwright";
 import {
@@ -37,10 +36,6 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
-import {
-  openThreadFixture,
-  type ThreadFixture,
-} from "@plugins/apps/plugins/mail/plugins/threads/e2e";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 
 export const e2e = {
@@ -53,14 +48,10 @@ export const e2e = {
   },
 } satisfies E2eScript;
 
-interface Fixtures {
-  mailMessageId: string;
-}
-
 interface Surface {
   name: string;
-  /** A route, `blank-page` (a page created for the run), or a function of the fixtures. */
-  path: string | ((f: Fixtures) => string);
+  /** A route, or `blank-page` (a page created for the run). */
+  path: string;
 }
 
 const SURFACES: readonly Surface[] = [
@@ -86,8 +77,6 @@ const SURFACES: readonly Surface[] = [
   { name: "pages-list", path: "/pages" },
   { name: "pages-page", path: "blank-page" },
   { name: "places", path: "/places" },
-  { name: "mail-inbox", path: "/mail" },
-  { name: "mail-message", path: (f) => `/mail/search/m/${f.mailMessageId}` },
   { name: "sonata", path: "/sonata" },
   { name: "studio-contributions", path: "/plugins/contributions" },
   { name: "studio-table", path: "/plugins/t/build/build_runs" },
@@ -258,38 +247,8 @@ const only = arg("only")?.split(",");
 const surfaces = arg("set") === "hj" ? HEADER_JUMP_SURFACES : SURFACES;
 const wanted = (s: Surface): boolean => !only || only.includes(s.name);
 
-let mail: ThreadFixture | null = null;
 const createdPages: string[] = [];
 try {
-  let fixtures: Fixtures = { mailMessageId: "" };
-  if (surfaces.some((s) => wanted(s) && typeof s.path === "function")) {
-    mail = await openThreadFixture();
-    const thread = await mail.seed({
-      name: "header-review",
-      labels: ["INBOX"],
-      minutesAgo: 30,
-    });
-    const messageId = `${thread.id}-m1`;
-    await mail.exec(
-      `INSERT INTO mail_messages
-         (id, thread_id, account_id, from_addr, to_addrs, subject, snippet,
-          body_text, internal_date, body_fetched_at)
-       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7, $8,
-               now() - interval '30 minutes', now())`,
-      [
-        messageId,
-        thread.id,
-        mail.accountId,
-        JSON.stringify({ name: "Ada Example", email: "ada@example.invalid" }),
-        JSON.stringify([{ name: "You", email: "you@example.invalid" }]),
-        "Quarterly planning notes",
-        "A seeded message for the header review",
-        "Hi,\n\nHere are the notes from Tuesday's planning session. The three priorities for the quarter are the onboarding flow, the sync reliability work and the new reporting view.\n\nThanks,\nAda",
-      ],
-    );
-    fixtures = { mailMessageId: messageId };
-  }
-
   await withBrowser(async (h) => {
     const { page } = await h.session({
       viewport: { width: 1280, height: 900 },
@@ -304,8 +263,7 @@ try {
           const doc = await openBlankPage(page, { settleMs: 2000 });
           createdPages.push(doc.pageId);
         } else {
-          const path = typeof s.path === "string" ? s.path : s.path(fixtures);
-          await page.goto(pathUrl(path), { waitUntil: "domcontentloaded" });
+          await page.goto(pathUrl(s.path), { waitUntil: "domcontentloaded" });
         }
         await waitForNetworkIdle(page);
         await waitForNotBusy(page, { timeoutMs: ELEMENT_TIMEOUT_MS });
@@ -335,15 +293,5 @@ try {
   for (const id of createdPages) {
     const res = await agentFetch(`/api/blocks/${id}`, { method: "DELETE" });
     console.log(`removed fixture page ${id}: ${res.status}`);
-  }
-  if (mail !== null) {
-    try {
-      await mail.exec("DELETE FROM mail_messages WHERE id LIKE $1", [
-        "e2e-%-header-review-m1",
-      ]);
-    } finally {
-      await mail.cleanup();
-      console.log("removed the seeded mail fixture");
-    }
   }
 }

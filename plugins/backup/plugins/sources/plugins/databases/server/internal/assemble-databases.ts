@@ -163,7 +163,7 @@ function describeFailures(
 // as a table, because its DDL is in the archive.
 //
 // A table whose rows were kept only because this database still links to it
-// says so, e.g. "(rows of mail_threads kept: mail_drafts still links to it)" —
+// says so, e.g. "(rows of threads kept: drafts still links to it)" —
 // the one sign on the card that this database's schema is older than the code.
 function describeDump(
   tables: readonly TableStat[],

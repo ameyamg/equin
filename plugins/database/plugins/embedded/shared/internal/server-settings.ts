@@ -12,7 +12,8 @@ const MB = 1024 * 1024;
  *
  * Sized to the working set, measured on the dev machine on 2026-11-15
  * (task-1794712858-a1qjk5): main's database is 2.6 GB, 770 MB of it outside
- * its three append-only archives (traces, mail_messages, chord_loop_windows),
+ * its three append-only archives (traces, mail_messages — since dropped —,
+ * chord_loop_windows),
  * its hot tables (tasks, conversations, notifications, conversation_turns,
  * live_state_*, page_blocks, slow_ops…) about 300 MB — and every running
  * worktree backend reads its own copy of the same tables (7 databases had

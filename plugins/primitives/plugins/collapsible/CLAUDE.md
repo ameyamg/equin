@@ -45,8 +45,7 @@ rejects it. Its sources of a disclosure boolean: `open` from `useCollapsible` /
 or label swap) is the trigger's own chrome and passes. It also rejects a native
 `<details>`. Not seen: an early `if (!open) return`, and a toggle that reports
 its state nowhere — give it `useCollapsible`'s trigger props. A summary/full
-swap is two folds (`<FoldMotion {...contentProps}>` + `<FoldMotion open={!open}>`,
-the mail message card); a one-way inline "+N more" in a wrapping chip row is not
+swap is two folds (`<FoldMotion {...contentProps}>` + `<FoldMotion open={!open}>`); a one-way inline "+N more" in a wrapping chip row is not
 a disclosure and stays a plain slice.
 
 ## `useCollapsible` hands out a trigger bag and a content bag
@@ -137,8 +136,8 @@ background.
 ## Closed content: unmounted live, in the markup statically
 
 - **Live, by default, closed content is unmounted** (warm aside, above): a
-  transcript of closed tool-call cards, a tree of closed nodes, a mail card's
-  HTML frame cost nothing while closed.
+  transcript of closed tool-call cards, a tree of closed nodes cost nothing while
+  closed.
 - **In a static render** (`dom/render-mode`: the website's crawlable snapshot,
   never hydrated, so nothing can open a fold) a closed fold's content is
   rendered, under the `hidden` attribute, so a robot reads its text. React 19
@@ -215,10 +214,10 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×15
-    - `apps` ×12
     - `ui` ×12
+    - `apps` ×10
     - `primitives` ×9
     - `plugin-meta` ×4
     - `review` ×3

@@ -747,7 +747,7 @@ switch it would draw "off" over a grid table that does show its labels.
   move every row on screen.
 - **Why time goes last.** The row's right edge is its time.
 - **Why the blast radius is small.** High-traffic lists (conversations sidebar,
-  mail threads, events, deploy history) override `renderRow` wholesale. Only the
+  events, deploy history) override `renderRow` wholesale. Only the
   field-driven default changes.
 
 ## Quiet rows and common-value elision

@@ -91,7 +91,7 @@ Non-2xx throws `PlacesApiError` carrying Google's own message and `error.status`
 an address throws rather than producing a card with blanks. An empty suggestion
 array only ever means Google found nothing.
 
-There is no retry ladder (unlike gmail-api's `gmailRequest`): both calls sit on a
+There is no retry ladder: both calls sit on a
 human's keystroke inside an autocomplete session, where a silent 30-second
 backoff is worse than a visible failure.
 

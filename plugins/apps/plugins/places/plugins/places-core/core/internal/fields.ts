@@ -33,7 +33,7 @@ import { TAG_ROLES } from "./tag-tree";
 // order; DDL (defaults, unique indexes) lives in the `defineEntity` meta.
 
 // `jsonField<string[]>`, not `stringListField`: the string-list type has no
-// storage contribution (the `mail_threads.labelIds` idiom). `tags` is the
+// storage contribution. `tags` is the
 // exception: a `tagsField` is the same `jsonb` string array, and its type is
 // what the places list filters it by (has any / all / none of, nested).
 const stringList = () =>

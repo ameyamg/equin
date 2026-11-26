@@ -89,7 +89,7 @@ type EnumTextOptions<V extends string> = Omit<
 };
 
 // The closed-set sugar over `parsedTextField`. Pass the allowed values — a
-// `readonly` const array (e.g. `MAIL_LABEL_TYPES`) or a zod enum's `.options`;
+// `readonly` const array (e.g. `["a", "b"] as const`) or a zod enum's `.options`;
 // an empty list throws. `InferFieldValue` then
 // reports the exact union, so a column built from this field and a `z.infer` of
 // the same record agree by construction. `default` defaults to the first value

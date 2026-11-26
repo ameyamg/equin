@@ -541,36 +541,6 @@
       "parent": "logs"
     },
     {
-      "paneId": "mail-message",
-      "segment": "m/:messageId",
-      "appIndex": false,
-      "parent": "mail-search"
-    },
-    {
-      "paneId": "mail-root",
-      "segment": "",
-      "appIndex": true,
-      "parent": null
-    },
-    {
-      "paneId": "mail-search",
-      "segment": "search",
-      "appIndex": false,
-      "parent": null
-    },
-    {
-      "paneId": "mail-thread",
-      "segment": "thread/:threadId",
-      "appIndex": false,
-      "parent": null
-    },
-    {
-      "paneId": "mail-threads",
-      "segment": "threads",
-      "appIndex": false,
-      "parent": null
-    },
-    {
       "paneId": "notifications",
       "segment": "notifications",
       "appIndex": false,

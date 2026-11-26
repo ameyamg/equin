@@ -56,7 +56,6 @@ const APP_INDEXES: Array<{ basePath: string; paneId: string }> = [
   { basePath: "/agents", paneId: "welcome" },
   { basePath: "/deploy", paneId: "deploy-servers" },
   { basePath: "/events", paneId: "events-root" },
-  { basePath: "/mail", paneId: "mail-root" },
   { basePath: "/pages", paneId: "pages-root" },
   { basePath: "/prototypes", paneId: "prototypes-gallery" },
   { basePath: "/settings", paneId: "settings-config-index" },

@@ -248,7 +248,7 @@ function imageAt(images: readonly ViewerImage[], index: number): ViewerImage {
  * The full-window image viewer, controlled: the caller owns which image is on
  * screen and when the viewer is mounted. Most callers never render this —
  * `ViewerThumbnail` / `useImageViewerTrigger` open it through a gallery. It is
- * for sites that have images but no thumbnails of their own (mail HTML).
+ * for sites that have images but no thumbnails of their own (a file viewer, a place's photos).
  */
 export function ImageViewer(props: ImageViewerProps) {
   return (

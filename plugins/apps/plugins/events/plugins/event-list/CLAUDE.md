@@ -4,7 +4,7 @@ The Events app's main surface: every event, as a **live DataView**
 (`defineDataView("events.list")`) over the `events.list` collection
 (`core/internal/collection.ts`). The set grows without bound and the user
 filters/sorts across all of it, so filter/sort/search compile to SQL per window
-tuple, read as live key-range pages — the mail threads shape.
+tuple, read as live key-range pages.
 
 ```
 events-core: eventFields (labels, options, types)  →  eventsEntityRef
@@ -103,10 +103,9 @@ axis to every view to serve one view's chrome.
 
 The src passes `externalUrl()` (absolute `http(s)` only — rows come from
 untrusted scraped pages). The browser then loads it **directly from the event's
-host**, unlike mail's `remote-images` proxy: an email image is an attacker-chosen
-per-recipient tracking pixel, an event poster is a public asset on a site the
-user configured. A same-origin proxy here would belong in a generic primitive,
-not a copy of mail's app-scoped route.
+host**: an event poster is a public asset on a site the user configured, not
+an attacker-chosen per-recipient tracking pixel (an email image is). A
+same-origin proxy, if one is ever needed, belongs in a generic primitive.
 
 ## A row opens the event's page, else its source's
 

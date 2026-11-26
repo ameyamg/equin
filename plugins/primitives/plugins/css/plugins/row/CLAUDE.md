@@ -222,9 +222,9 @@ genuine transient-chrome list escapes with
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×2
-  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×16
+  - Imported by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×14
+    - `apps` ×13
     - `page` ×11
     - `primitives` ×9
     - `conversations` ×7

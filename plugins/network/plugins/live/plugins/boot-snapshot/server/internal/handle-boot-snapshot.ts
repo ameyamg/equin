@@ -57,7 +57,7 @@ function reportOmitted(key: string, what: string, err: unknown): void {
 // shipped under `tuples[key]`. A tuple whose loader fails is omitted and
 // reported; the rest of the key still ships. Only the tuples a web plugin of
 // the page's composition reads are loaded (`webPlugins`): the public website's
-// page never reads the mail app's config documents. The serving backend passes
+// page never reads the config documents of apps it does not load. The serving backend passes
 // its own composition's (`composedWebPlugins()`); a host rendering another
 // composition's pages (the crawlable static host) passes that one's.
 export async function assembleBootSnapshot(opts: {

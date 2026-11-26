@@ -34,7 +34,7 @@ slideshow start fresh on every open.
 |---|---|
 | An image to show inline (a transcript image, an attachment chip) | `<ViewerThumbnail image={…}>` — `size="chip"` for the compact 64px form |
 | Your own `<img>` that must stay yours (a resizable page image block) | `useImageViewerTrigger(image)`, spread onto that `<img>`, inside an `<ImageGallery>` you render (it throws outside one) |
-| Images with no thumbnails of your own (mail HTML) | `<ImageViewer images index onIndexChange onClose originOf>`, controlled |
+| Images with no thumbnails of your own (images inside rendered HTML) | `<ImageViewer images index onIndexChange onClose originOf>`, controlled |
 | A region whose images belong together (a conversation transcript) | wrap it in `<ImageGallery>` |
 | Your own `<img>` that should fail the way a thumbnail does | `useImageLoad(src)` for its state, `<MissingImage>` while it is `failed` |
 | An image cropped to fill a box (a page cover) | the same, with `<MissingImage size="fill">` |

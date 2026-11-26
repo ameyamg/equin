@@ -28,8 +28,8 @@ nested followers would pay twice. A centred empty state is `<Center>` around it
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 103 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×31
+  - Imported by: 101 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×29
     - `debug` ×19
     - `primitives` ×12
     - `conversations` ×6

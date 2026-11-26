@@ -207,7 +207,7 @@ export const APPS: readonly CatalogEntry[] = [
   },
   {
     id: "mail",
-    appId: "mail",
+    appId: null,
     color: "rose",
     name: "Mail",
     category: "next",

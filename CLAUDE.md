@@ -4,7 +4,7 @@ equin is a platform where agents build and maintain large apps on their own.
 
 - **Plugins all the way down.** Every feature is a self-contained plugin that any app can reuse.
 - **Self-evolving.** The app is developed from inside itself: the agent manager runs many sessions in parallel, and background agents fix, push and update it.
-- **Vision: a shared plugin marketplace.** Each user's OS is their own composition of marketplace plugins. Today's apps (agent manager, pages, mail, places, music, …) are just one person's set among many.
+- **Vision: a shared plugin marketplace.** Each user's OS is their own composition of marketplace plugins. Today's apps (agent manager, pages, places, music, …) are just one person's set among many.
 - **Real users.** People already fork it, and each change ships to an app someone uses every day.
 
 How the vision unfolds: [`docs/vision.md`](docs/vision.md).

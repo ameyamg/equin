@@ -8,10 +8,10 @@ import { tableLabel } from "./table-label";
 //
 // A SEPARATE DECISION FROM `ExcludeFromFork` (./fork-exclusion), on purpose.
 // The fork asks "does a fresh worktree need these rows?"; the backup asks "does
-// losing these rows cost anything?". The answers often differ: `mail_sync_state`
+// losing these rows cost anything?". The answers often differ: a sync watermark
 // stays in every fork (a worktree still needs the account's sync state) yet is
-// left out of backups, together with the Gmail corpus it watermarks. So neither
-// token implies the other.
+// left out of backups, together with the remote corpus it watermarks. So
+// neither token implies the other.
 //
 // A kept table must not have a foreign key to a left-out one: the restore would
 // fail re-adding it. In the schema this checkout declares, that is refused
@@ -24,8 +24,7 @@ import { tableLabel } from "./table-label";
 //   - **The rows expire anyway.** `traces` is 7-day debugging evidence swept
 //     nightly; a restore a week later would find it gone regardless.
 //   - **How the rows come back.** A cache rebuilt from a file or an upstream
-//     source (the chord trainer's song index reloads from its snapshot; the
-//     mail corpus is refetched from Gmail by the next sync).
+//     source (the chord trainer's song index reloads from its snapshot).
 //
 // Anything a human authored, or that nothing can rebuild, does not qualify.
 // And because a restore hands the owning plugin an EMPTY table, that plugin

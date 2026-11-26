@@ -193,8 +193,8 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `attachmentsEntityRef`
     - `getAttachmentFile`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
     - `page` ×6
     - `tasks` ×4
     - `conversations` ×3

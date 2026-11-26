@@ -13,7 +13,6 @@
     - `apps/events/sources/dmda`
     - `apps/events/sources/salsanueva`
     - `apps/events/sources/url-extract`
-    - `apps/mail/remote-images`
     - `apps/sonata/sources/ultimate-guitar`
     - `infra/claude-cli/usage-ledger/pricing/price-table`
     - `infra/safe-fetch/browser-fetch`

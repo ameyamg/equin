@@ -1,4 +1,4 @@
-// Drives the usage stats end to end: spends a few active seconds in Mail
+// Drives the usage stats end to end: spends a few active seconds in Events
 // (pointer input keeps the tracker non-idle), returns to Home, switches the app
 // grid to its Stats table view and snapshots it.
 //
@@ -26,16 +26,16 @@ const out = arg("out", "/tmp/usage-stats");
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport: { width: 1400, height: 900 } });
   await page.goto(pathUrl("/home"));
-  await page.getByText("Mail", { exact: true }).waitFor();
-  await page.getByText("Mail", { exact: true }).click();
+  await page.getByText("Events", { exact: true }).waitFor();
+  await page.getByText("Events", { exact: true }).click();
   // Active time: input every second for 5s.
   for (let i = 0; i < 5; i++) {
     await page.mouse.move(200 + i * 10, 300);
     await page.waitForTimeout(1000);
   }
-  // A fresh load of Home: the pagehide flush sends Mail's time.
+  // A fresh load of Home: the pagehide flush sends Events' time.
   await page.goto(pathUrl("/home"));
-  await page.getByText("Mail", { exact: true }).waitFor();
+  await page.getByText("Events", { exact: true }).waitFor();
   // The view chip (labelled with the active view's name) opens the view list.
   await page
     .locator("button", { hasText: /^Apps$/ })
