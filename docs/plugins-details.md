@@ -62707,11 +62707,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fork-data-exclusion` "report_fix_claims_unknown"
           - `fork-data-exclusion` "report_fix_days"
           - `fork-data-exclusion` "report_fixes"
+          - `fork-data-exclusion` "report_standing_conditions"
           - `fork-data-exclusion` "report_trend_days"
           - `fork-data-exclusion` "reports"
           - `change-feed-exclusion` "report_fingerprints_seen"
           - `change-feed-exclusion` "report_fix_claims_unknown"
           - `change-feed-exclusion` "report_fix_days"
+          - `change-feed-exclusion` "report_standing_conditions"
           - `change-feed-exclusion` "report_trend_days"
           - `db-trigger` "reports.trend"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
@@ -62740,7 +62742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReportTrend`
           - `RestateOccurrence`
           - `RestateResult`
-          - `StandingReportResult`
+          - `StandingSyncResult`
         - Exports (values):
           - `DEFAULT_REPORT_DEBOUNCE_MS`
           - `investigateReport`
@@ -62749,7 +62751,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordReport`
           - `recordReportDebounced`
           - `recordReportIncident`
-          - `recordStandingReport`
           - `renderReportTask`
           - `reportOutboxFatalSink`
           - `reportOutboxSink`
@@ -62757,6 +62758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reportWorklist`
           - `reportWorklistCounts`
           - `restateReportOccurrence`
+          - `syncStandingReports`
         - Register:
           - `defineWarmup('reports.backfill-noise')`
           - `defineJob('retention.reports')`

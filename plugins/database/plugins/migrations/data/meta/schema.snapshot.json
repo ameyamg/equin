@@ -1,6 +1,6 @@
 {
-  "id": "9843b671-d083-449f-b52d-edf95c8294b5",
-  "prevId": "48b502df-ad3b-477e-b7f4-c3977f283cc7",
+  "id": "1ed7c052-6577-4bf6-abfe-0b462eadc4fb",
+  "prevId": "9843b671-d083-449f-b52d-edf95c8294b5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -15039,6 +15039,109 @@
           "columns": [
             "report_id",
             "commit"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.report_standing_conditions": {
+      "name": "report_standing_conditions",
+      "schema": "",
+      "columns": {
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "worktree": {
+          "name": "worktree",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "report_id": {
+          "name": "report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "since": {
+          "name": "since",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "report_standing_conditions_kind_idx": {
+          "name": "report_standing_conditions_kind_idx",
+          "columns": [
+            {
+              "expression": "worktree",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "report_standing_conditions_report_idx": {
+          "name": "report_standing_conditions_report_idx",
+          "columns": [
+            {
+              "expression": "report_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "report_standing_conditions_report_id_reports_id_fk": {
+          "name": "report_standing_conditions_report_id_reports_id_fk",
+          "tableFrom": "report_standing_conditions",
+          "tableTo": "reports",
+          "columnsFrom": [
+            "report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "report_standing_conditions_fingerprint_worktree_pk": {
+          "name": "report_standing_conditions_fingerprint_worktree_pk",
+          "columns": [
+            "fingerprint",
+            "worktree"
           ]
         }
       },

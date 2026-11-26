@@ -50,6 +50,7 @@ export const serverListEntries: Readonly<
     { node: "reports/plugins/engine", entry: {"reason":"Host-local crash history; inherited rows surface main's failures in a fresh worktree and link to tasks it cannot resolve.","table":"reports"} },
     { node: "reports/plugins/engine", entry: {"reason":"Fixes of main's reports, recorded from main's history and main's deploys; a fork holds none of those reports.","table":"report_fixes"} },
     { node: "reports/plugins/engine", entry: {"reason":"Fix claims main's history makes for reports main's database does not hold, recorded by main's ingest; a fork ingests no claims.","table":"report_fix_claims_unknown"} },
+    { node: "reports/plugins/engine", entry: {"reason":"Standing conditions this worktree's audits filed onto its own reports; a fork's reports are its own.","table":"report_standing_conditions"} },
     { node: "reports/plugins/engine", entry: {"reason":"History of this host's own reports; a fork's reports are its own.","table":"report_trend_days"} },
     { node: "reports/plugins/engine", entry: {"reason":"History of this host's own reports; a fork's reports are its own.","table":"report_fingerprints_seen"} },
     { node: "reports/plugins/engine", entry: {"reason":"History of this host's own reports; a fork's reports are its own.","table":"report_fix_days"} },

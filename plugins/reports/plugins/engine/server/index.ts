@@ -22,6 +22,7 @@ import {
   _reportFixClaimsUnknown,
   _reportFixDays,
   _reportFixes,
+  _reportStandingConditions,
   _reportTrendDays,
 } from "./internal/tables";
 import { reportTrendTriggers } from "./internal/trend-triggers";
@@ -48,8 +49,8 @@ export {
 } from "./internal/record-report";
 export { restateReportOccurrence } from "./internal/restate-report";
 export {
-  recordStandingReport,
-  type StandingReportResult,
+  syncStandingReports,
+  type StandingSyncResult,
 } from "./internal/standing-report";
 export type {
   RestateOccurrence,
@@ -112,6 +113,18 @@ export default {
       table: _reportFixClaimsUnknown,
       reason:
         "Read only by the fix ledger's ingest, in process; no live reader.",
+    }),
+    // Which standing conditions hold now (./internal/standing-report.ts):
+    // they point at this worktree's own reports, which a fork does not get.
+    ExcludeFromFork({
+      table: _reportStandingConditions,
+      reason:
+        "Standing conditions this worktree's audits filed onto its own reports; a fork's reports are its own.",
+    }),
+    ExcludeFromChangeFeed({
+      table: _reportStandingConditions,
+      reason:
+        "Read and written only by syncStandingReports, in process; no live reader.",
     }),
     // The report history (./internal/trend-triggers.ts): kept by triggers on
     // every write of `reports` and `report_fixes`; read on demand by the

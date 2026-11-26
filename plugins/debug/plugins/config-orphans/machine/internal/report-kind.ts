@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ReportKind } from "@plugins/reports/server";
-import { recordStandingReport } from "@plugins/reports/plugins/engine/server";
+import { syncStandingReports } from "@plugins/reports/plugins/engine/server";
 import type { ReportInput } from "@plugins/reports/core";
 import type { OrphanReport } from "@plugins/config_v2/core";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
@@ -44,10 +44,12 @@ const StoredStrandedConfigPayloadSchema = z.union([
  * Only real user overrides count. Leftover generated snapshots (origins,
  * ancestors) hold no user data and never report.
  *
- * One row per stranded config (the fingerprint is its store key), filed as a
- * STANDING condition (`recordStandingReport`): the boot audit re-observes it on
+ * One row per stranded config (the fingerprint is its store key), synced as a
+ * STANDING condition (`syncStandingReports`): the boot audit re-observes it on
  * every restart, and that is not another occurrence. A config stranded later is
- * a new row, so it is news exactly once. Before this, one row per namespace was
+ * a new row, so it is news exactly once. Once it is no longer stranded
+ * (discarded, or a live config reads it again) the next audit clears it — its
+ * report closed when nobody took it up — and a later stranding files again. Before this, one row per namespace was
  * re-recorded on every boot: report-1795697585-xixclh counted 26 "occurrences"
  * of one leftover in 3.5 hours — every restart, never a new stranding.
  */
@@ -110,11 +112,15 @@ export function strandedConfigReports(report: OrphanReport): ReportInput[] {
     });
 }
 
-/** Audit this namespace's saved settings and file each newly stranded one. */
+/**
+ * Audit this namespace's saved settings: file each newly stranded one, and
+ * clear each that no longer is.
+ */
 export async function reportStrandedConfig(): Promise<void> {
-  for (const input of strandedConfigReports(await auditUserConfigOrphans())) {
-    await recordStandingReport(input);
-  }
+  await syncStandingReports(
+    STRANDED_CONFIG_KIND,
+    strandedConfigReports(await auditUserConfigOrphans()),
+  );
 }
 
 /**

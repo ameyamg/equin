@@ -124,3 +124,30 @@ export const _reportFixDays = pgTable(
   },
   (t) => [primaryKey({ columns: [t.day, t.kind] })],
 );
+
+/**
+ * The standing conditions that hold right now: one row per condition an audit
+ * last saw (`syncStandingReports`, ./standing-report.ts), pointing at the
+ * report it was filed on. A condition with a row is not filed again while it
+ * lasts; one the audit no longer sees loses its row, so seeing it again later
+ * files a new occurrence — whatever became of the report meanwhile
+ * (investigated, claimed fixed). A report swept by retention takes its row
+ * with it, so a condition still standing is filed again (a reminder).
+ */
+export const _reportStandingConditions = pgTable(
+  "report_standing_conditions",
+  {
+    fingerprint: text("fingerprint").notNull(),
+    worktree: text("worktree").notNull(),
+    kind: text("kind").notNull(),
+    reportId: idRef(reportIdKind, "report_id", () => _reports.id, {
+      onDelete: "cascade",
+    }).notNull(),
+    since: timestamp("since", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.fingerprint, t.worktree] }),
+    index("report_standing_conditions_kind_idx").on(t.worktree, t.kind),
+    index("report_standing_conditions_report_idx").on(t.reportId),
+  ],
+);

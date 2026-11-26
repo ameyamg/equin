@@ -64,18 +64,32 @@ So never merge co-occurring reports into one fingerprint to quiet the bell:
 that puts unrelated incidents on one row and hides the member that only ever
 co-occurs. First user: slow-ops' per-batch bursts.
 
-## A standing condition is filed once
+## A standing condition lives as long as the condition
 
 An audit that re-runs (a boot warm-up, an hourly pass) re-observes the same
 fact while it lasts; through `recordReport` each look is an occurrence, so a
 leftover nobody touched read as a report firing on every restart
-(report-1795697585-xixclh: 26 in 3.5 h). `recordStandingReport(input)` files
-it only when no row of its fingerprint exists in this worktree (else
-`{ outcome: "standing" }`: nothing written, nothing rings). Its fingerprint
-must name the condition itself (one stranded config), so a new condition is a
-new row and news exactly once; a row retention swept is filed again, as a
-reminder. Serving backend only (it throws elsewhere: the outbox would count
-every hand-off). First user: `debug/config-orphans`.
+(report-1795697585-xixclh: 26 in 3.5 h). `syncStandingReports(kind, inputs)`
+takes EVERY condition of the kind the audit sees now, and the engine keeps
+which ones stand in `report_standing_conditions` (one row per condition,
+pointing at its report):
+
+- a condition with no standing row is filed through `recordReport` (a new row,
+  or a new occurrence of the one it came back on — a fixed one regresses);
+- one already standing writes nothing: `count` counts the times the condition
+  arose, never the times something looked;
+- one the audit no longer sees is cleared, and its report deleted (through the
+  producer) when nobody took it up — no task, fix state `open`, retention's own
+  rule. A report with a task or a claimed fix stays for them.
+
+Because the audit hands over the whole set, a report cannot outlive its
+condition and a condition that comes back is never mistaken for one still
+standing — there is no "clear" call to forget. A caller that removes a
+condition (config-orphans' Discard) re-runs its audit. The fingerprint must
+name the condition itself (one stranded config); a report retention swept
+takes its standing row with it, so a condition still standing is filed again,
+as a reminder. Serving backend only (it throws elsewhere: the outbox would
+count every hand-off). First user: `debug/config-orphans`.
 
 ## An occurrence says when the machine had just woken
 
@@ -330,11 +344,13 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `fork-data-exclusion` "report_fix_claims_unknown"
     - `fork-data-exclusion` "report_fix_days"
     - `fork-data-exclusion` "report_fixes"
+    - `fork-data-exclusion` "report_standing_conditions"
     - `fork-data-exclusion` "report_trend_days"
     - `fork-data-exclusion` "reports"
     - `change-feed-exclusion` "report_fingerprints_seen"
     - `change-feed-exclusion` "report_fix_claims_unknown"
     - `change-feed-exclusion` "report_fix_days"
+    - `change-feed-exclusion` "report_standing_conditions"
     - `change-feed-exclusion` "report_trend_days"
     - `db-trigger` "reports.trend"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
@@ -363,7 +379,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `ReportTrend`
     - `RestateOccurrence`
     - `RestateResult`
-    - `StandingReportResult`
+    - `StandingSyncResult`
   - Exports (values):
     - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `investigateReport`
@@ -372,7 +388,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `recordReport`
     - `recordReportDebounced`
     - `recordReportIncident`
-    - `recordStandingReport`
     - `renderReportTask`
     - `reportOutboxFatalSink`
     - `reportOutboxSink`
@@ -380,6 +395,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportWorklist`
     - `reportWorklistCounts`
     - `restateReportOccurrence`
+    - `syncStandingReports`
   - Register:
     - `defineWarmup('reports.backfill-noise')`
     - `defineJob('retention.reports')`

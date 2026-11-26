@@ -8,6 +8,7 @@ import { ConfigStore } from "@plugins/config_v2/server";
 import { discardConfigOrphanEndpoint } from "../../shared/discard";
 import { auditUserConfigOrphans } from "./orphan-audit";
 import { configOrphansReportServed } from "./report-resource";
+import { reportStrandedConfig } from "./report-kind";
 
 /**
  * Remove one orphan's files from the served generation, one store edit per
@@ -68,6 +69,9 @@ export const handleDiscardConfigOrphan = implementMachine(
     // The writer refreshes what it changed: the dir watcher is push latency,
     // not correctness (config_v2 — a missed event must not leave the row up).
     configOrphansReportServed.notify();
+    // Its report follows: the re-audit no longer sees it, so the sync clears
+    // its condition and closes the report nobody took up.
+    await reportStrandedConfig();
     return { removed };
   },
 );
