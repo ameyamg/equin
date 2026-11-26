@@ -22,6 +22,19 @@ export interface PlayerKey {
 }
 
 /**
+ * Whether a key is this player's: a video-only key on a video, a volume or
+ * mute key only on a player with sound (`silent` has none).
+ */
+export function keyApplies(
+  k: PlayerKey,
+  player: { kind: "video" | "audio"; silent: boolean },
+): boolean {
+  if (k.videoOnly && player.kind !== "video") return false;
+  const sound = k.action.kind === "volume" || k.action.kind === "mute";
+  return !(sound && player.silent);
+}
+
+/**
  * The player's keyboard, as data: Space / K play, ← → 5 s of watching (scaled by the speed), ↑ ↓ volume,
  * M mute, F full screen, P picture in picture, R loop, < > speed, 0–9 jump,
  * Esc closes the settings. Space itself is bound through

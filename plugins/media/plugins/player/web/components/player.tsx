@@ -43,6 +43,7 @@ import {
 } from "../internal/geometry";
 import {
   PLAYER_KEYS,
+  keyApplies,
   matchesKeys,
   type PlayerAction,
 } from "../internal/keymap";
@@ -64,6 +65,7 @@ import {
   seekMedia,
   setMediaLoop,
   setMediaRate,
+  muteMedia,
   setMediaVolume,
   toggleMediaMute,
   togglePlayback,
@@ -99,6 +101,8 @@ export interface PlayerProps {
   src: string;
   label: string;
   autoPlay: boolean | "in-view";
+  /** No sound: always muted, no volume controls or keys (`MediaPlayerProps.silent`). */
+  silent: boolean;
   /** The kept playhead's key (`MediaPlayerProps.keep`). */
   keep: string | null;
   poster?: string;
@@ -212,6 +216,7 @@ export function Player({
   src,
   label,
   autoPlay: autoPlayAsked,
+  silent,
   keep,
   poster,
   onError,
@@ -313,6 +318,10 @@ export function Player({
     if (el) setMediaVolume(el, v);
   };
 
+  // Silent: muted from the start, and nothing on it can unmute it.
+  useEffect(() => {
+    if (silent && el) muteMedia(el);
+  }, [silent, el]);
   const inViewPlay = useInViewPlay(inView, el, root, pip?.open === true);
   const toggle = () => {
     if (!el) return;
@@ -490,7 +499,7 @@ export function Player({
   const settingsOpenNow = useEventCallback(() => settingsOpen);
   const descriptors = useMemo(
     () =>
-      PLAYER_KEYS.filter((k) => kind === "video" || !k.videoOnly).map((k) => ({
+      PLAYER_KEYS.filter((k) => keyApplies(k, { kind, silent })).map((k) => ({
         id: `media-player.${k.id}`,
         keys: k.keys,
         label: k.label,
@@ -500,7 +509,7 @@ export function Player({
           (k.action.kind !== "close-settings" || settingsOpenNow()),
         handler: () => run(k.action),
       })),
-    [kind, root, run, settingsOpenNow],
+    [kind, silent, root, run, settingsOpenNow],
   );
   useSurfaceShortcuts(descriptors);
 
@@ -519,7 +528,7 @@ export function Player({
     }
     const hit = PLAYER_KEYS.find(
       (k) =>
-        (kind === "video" || !k.videoOnly) &&
+        keyApplies(k, { kind, silent }) &&
         matchesKeys(k.keys, native) &&
         (k.action.kind !== "close-settings" || settingsOpen),
     );
@@ -636,6 +645,7 @@ export function Player({
               ended={media.ended}
               duration={media.duration}
               volume={volume}
+              silent={silent}
               rate={rate}
               remaining={remaining}
               fullscreen={fullscreen}
@@ -676,6 +686,7 @@ export function Player({
           paused={media.paused && !seeking}
           duration={media.duration}
           volume={volume}
+              silent={silent}
           rate={rate}
           remaining={remaining}
           settingsOpen={settingsOpen}
@@ -702,6 +713,7 @@ export function Player({
           }}
           gearRef={gearRef}
         />
+            {!silent && (
         <VolumeCapsule
           ref={volumeRef}
           open={volumeOpen}
@@ -719,6 +731,7 @@ export function Player({
               openVolume(false);
           }}
         />
+            )}
           </>
         )}
         <SettingsPanel

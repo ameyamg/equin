@@ -44,6 +44,8 @@ export interface TouchControlsProps {
   duration: number;
   /** What the volume reads as (0 when muted). */
   volume: number;
+  /** No sound: no mute button. */
+  silent: boolean;
   rate: number;
   remaining: boolean;
   fullscreen: boolean;
@@ -88,6 +90,7 @@ export function TouchControls(props: TouchControlsProps) {
     paused,
     ended,
     volume,
+    silent,
     rate,
     fullscreen,
     settingsOpen,
@@ -162,14 +165,16 @@ export function TouchControls(props: TouchControlsProps) {
             <Text variant="body" className="mp-t-title mp-t-fade">
               {label}
             </Text>
-            <TouchButton
-              icon={
-                volumeGlyph(volume) === "off" ? volumeOffIcon : volumeUpIcon
-              }
-              label={muteLabel}
-              className="mp-t-fade"
-              onClick={press(onMute)}
-            />
+            {!silent && (
+              <TouchButton
+                icon={
+                  volumeGlyph(volume) === "off" ? volumeOffIcon : volumeUpIcon
+                }
+                label={muteLabel}
+                className="mp-t-fade"
+                onClick={press(onMute)}
+              />
+            )}
             <span ref={gearRef} className="mp-gear mp-t-fade">
               <TouchButton
                 icon={settingsIcon}

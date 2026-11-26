@@ -39,6 +39,8 @@ export interface ControlPillProps {
   duration: number;
   /** What the volume reads as (0 when muted). */
   volume: number;
+  /** No sound: no speaker (and so no volume capsule). */
+  silent: boolean;
   rate: number;
   /** The right-hand time shows what is left (`-0:42`) rather than the total. */
   remaining: boolean;
@@ -79,6 +81,7 @@ export function ControlPill({
   paused,
   duration,
   volume,
+  silent,
   rate,
   remaining,
   settingsOpen,
@@ -114,6 +117,7 @@ export function ControlPill({
               tooltipAlign="start"
               onClick={onPlay}
             />
+            {!silent && (
             <span
               ref={speakerRef}
               onPointerEnter={onSpeakerEnter}
@@ -132,6 +136,7 @@ export function ControlPill({
                 onClick={onMute}
               />
             </span>
+            )}
             <Timeline
               el={el}
               duration={duration}

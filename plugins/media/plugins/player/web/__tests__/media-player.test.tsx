@@ -670,3 +670,19 @@ describe("a live playhead (WebKit)", () => {
     expect(q(".mp-time").textContent).toBe("0:00");
   });
 });
+
+describe("silent", () => {
+  it("is muted, with no speaker, capsule or volume keys", () => {
+    const { root, video, key } = setup({ silent: true });
+    expect(video.muted).toBe(true);
+    expect(
+      Array.from(root.querySelectorAll("button")).some((b) =>
+        /mute/i.test(b.getAttribute("aria-label") ?? ""),
+      ),
+    ).toBe(false);
+    expect(root.querySelector(".mp-volume")).toBeNull();
+    key(root, "m");
+    key(root, "ArrowUp");
+    expect(video.muted).toBe(true);
+  });
+});

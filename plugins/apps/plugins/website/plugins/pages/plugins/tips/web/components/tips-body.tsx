@@ -106,9 +106,10 @@ function TipCard({ entry }: { entry: SiteFeedEntry<TipsFields> }) {
 
 /**
  * One screenshot or video of a tip, from the site's public media route. A
- * video plays in the themed player (byte ranges, so it seeks), muted and
- * looping while it is on screen (`autoPlay="in-view"`), like a GIF; nothing
- * is kept across a reload, so a clip always plays again when read.
+ * video plays in the themed player (byte ranges, so it seeks), looping while
+ * it is on screen (`autoPlay="in-view"`) and without sound (`silent`: no
+ * volume controls), like a GIF; nothing is kept across a reload, so a clip
+ * always plays again when read.
  */
 function TipMedia({ entryId, media }: { entryId: string; media: MediaRef }) {
   const src = useAssetSrc(siteFeedMediaAsset(entryId, media.attachmentId));
@@ -127,6 +128,7 @@ function TipMedia({ entryId, media }: { entryId: string; media: MediaRef }) {
         src={src.src}
         label={media.filename}
         autoPlay="in-view"
+        silent
         keep={null}
         onError={(error) =>
           setFailed(

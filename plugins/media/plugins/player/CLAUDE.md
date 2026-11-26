@@ -1,6 +1,6 @@
 # media-player
 
-`<MediaPlayer kind src label keep autoPlay? poster? onError? onPlay? className? />` — a themed
+`<MediaPlayer kind src label keep autoPlay? silent? poster? onError? onPlay? className? />` — a themed
 video / audio player in place of the browser's native `controls`, which
 cannot be themed, cannot grow a control (a fine speed, loop in the bar) and
 float an unthemable picture in picture. The design is the prototype
@@ -44,6 +44,12 @@ below the fold fetches only its metadata until it is scrolled to. Once the
 user plays or pauses it themselves, visibility stops driving it; unmuting
 does not count. In its own picture-in-picture window it is never paused for
 being off the page. Like `autoPlay`, it does nothing for a resumed player.
+
+## Silent
+
+`silent`: a clip whose sound is not part of it (the website's tips). Always
+muted; no speaker, volume capsule, touch mute button, or ↑ ↓ / M keys
+(`keyApplies` in `internal/keymap.ts`).
 
 ## What it draws
 

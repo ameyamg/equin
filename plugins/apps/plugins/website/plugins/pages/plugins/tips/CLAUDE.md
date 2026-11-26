@@ -16,7 +16,7 @@ machinery is generic: [`apps/deploy/site-feeds`](../../../../../deploy/plugins/s
   (`config/apps/website/shell/learn-entry.jsonc`). The page: the
   `WebsiteHero`, then one card per tip, newest first — its date, title, text
   (line breaks kept), then each image (`<img>`, its pixel size reserved when
-  known) and video (`MediaPlayer`, `autoPlay="in-view"`: muted and looping while on screen), loaded from the
+  known) and video (`MediaPlayer`, `autoPlay="in-view"` + `silent`: looping while on screen, always muted, no volume controls), loaded from the
   box's public media route. Loading and a failed read are shown; no tip
   published → a line saying so. **The homepage is not touched.**
 

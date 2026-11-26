@@ -47,6 +47,12 @@ export interface MediaPlayerProps {
    */
   autoPlay?: boolean | "in-view";
   /**
+   * Plays without sound (a clip whose sound is not part of it — the website's
+   * tips): always muted, with no speaker, volume capsule or volume / mute
+   * keys.
+   */
+  silent?: boolean;
+  /**
    * The playhead's key among this place's players (the ambient `KeepScope`:
    * the pane, else the tab) — stable across a reload, and naming the media
    * (a file's location, a block's id). The player keeps where it stood under
@@ -139,6 +145,7 @@ function LiveMediaPlayer({
   src,
   label,
   autoPlay = false,
+  silent = false,
   keep,
   poster,
   onError,
@@ -273,6 +280,7 @@ function LiveMediaPlayer({
           src={src}
           label={label}
           autoPlay={autoPlay}
+          silent={silent}
           keep={keep}
           poster={poster}
           onError={onError}

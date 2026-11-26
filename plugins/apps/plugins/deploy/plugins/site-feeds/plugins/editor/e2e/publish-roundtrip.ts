@@ -343,6 +343,16 @@ await withBrowser(async (h) => {
     autoplayed.ok,
     JSON.stringify(autoplayed.value),
   );
+  const soundControls = await page
+    .locator(
+      'article [data-media-player] button[aria-label="Mute"], article [data-media-player] button[aria-label="Unmute"], article .mp-volume',
+    )
+    .count();
+  r.ok(
+    "its player has no sound controls",
+    soundControls === 0,
+    String(soundControls),
+  );
   await video.evaluate((el) => {
     (el as HTMLVideoElement).currentTime = 3;
   });
