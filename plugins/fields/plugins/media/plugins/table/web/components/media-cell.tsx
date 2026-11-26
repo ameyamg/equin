@@ -4,7 +4,7 @@ import {
   MediaRefSchema,
   type MediaRef,
 } from "@plugins/fields/plugins/media/core";
-import { MediaThumb } from "@plugins/fields/plugins/media/web";
+import { MediaSetThumb } from "@plugins/fields/plugins/media/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type {
@@ -26,7 +26,8 @@ export class MediaCellDataError extends Error {
 
 /**
  * Read-only media cell: the first file's thumbnail and, after it, `+N` for the
- * rest. The refs are the field's `data` projection (`mediaFieldDef`), parsed
+ * rest. A click on the thumbnail opens the image viewer over every image and
+ * video of the cell. The refs are the field's `data` projection (`mediaFieldDef`), parsed
  * — a wrong payload throws rather than drawing an empty cell.
  */
 export function MediaCell(props: TableCellProps): ReactNode {
@@ -41,7 +42,7 @@ export function MediaCell(props: TableCellProps): ReactNode {
   if (first === undefined) return null;
   return (
     <Stack direction="row" align="center" gap="xs">
-      <MediaThumb media={first} className="size-8" />
+      <MediaSetThumb media={parsed.data} className="size-8" />
       {rest.length > 0 ? (
         <Text as="span" variant="caption" tone="muted">
           +{rest.length}

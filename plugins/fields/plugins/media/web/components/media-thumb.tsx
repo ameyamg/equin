@@ -1,8 +1,14 @@
-import type { MouseEventHandler, ReactNode, RefCallback } from "react";
+import {
+  useState,
+  type MouseEventHandler,
+  type ReactNode,
+  type RefCallback,
+} from "react";
 import { getAttachmentFile } from "@plugins/infra/plugins/attachments/core";
 import { assetPath } from "@plugins/infra/plugins/endpoints/core";
 import {
   useAssetSrc,
+  useAssetSrcs,
   type AssetSrc,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -10,7 +16,11 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { useImageViewerTrigger } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import {
+  ImageViewer,
+  useImageViewerTrigger,
+  type ViewerImage,
+} from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import type { MediaRef } from "../../core";
 
 const fileIcon = symbol("draft");
@@ -56,6 +66,131 @@ export function ViewableMediaThumb(props: MediaThumbProps): ReactNode {
       props.media.mime.startsWith("video/"));
   if (!viewable) return <ThumbBody {...props} src={src} />;
   return <ViewerTrigger {...props} src={src} />;
+}
+
+export interface MediaSetThumbProps {
+  /** Every file of the set; the first is the one drawn. */
+  media: readonly MediaRef[];
+  className?: string;
+}
+
+/**
+ * A set of files drawn as its first one's {@link MediaThumb}: a click opens
+ * the image viewer on it, and ← / → step through the set's other images and
+ * videos (the ones not drawn fade in, having no thumbnail to grow from). For
+ * a compact surface that shows one file for many — a table cell. The click
+ * stops at the thumbnail, and so do the viewer's own (it renders in this
+ * React tree), so a clickable row around it is not activated. A first file
+ * that is not an image or a video stays a plain thumbnail.
+ */
+export function MediaSetThumb({
+  media,
+  className,
+}: MediaSetThumbProps): ReactNode {
+  const [first] = media;
+  if (first === undefined) throw new Error("MediaSetThumb: an empty set");
+  return <SetThumb first={first} media={media} className={className} />;
+}
+
+function isViewable(media: MediaRef): boolean {
+  return media.mime.startsWith("image/") || media.mime.startsWith("video/");
+}
+
+function SetThumb({
+  first,
+  media,
+  className,
+}: MediaSetThumbProps & { first: MediaRef }): ReactNode {
+  const src = useMediaSrc(first);
+  // The file on screen, by attachment id — the viewer is closed at null.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [origin, setOrigin] = useState<HTMLElement | null>(null);
+  if (src.kind !== "ready" || !isViewable(first)) {
+    return <ThumbBody media={first} className={className} src={src} />;
+  }
+  return (
+    <>
+      <ThumbBody
+        media={first}
+        className={className}
+        src={src}
+        open={{
+          ref: setOrigin,
+          onClick: (e) => {
+            e.stopPropagation();
+            setOpenId(first.attachmentId);
+          },
+        }}
+      />
+      {openId !== null ? (
+        // The viewer is portaled, but its events still bubble up this React
+        // tree — stop them here, before a clickable row.
+        <span
+          className="contents"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <SetViewer
+            media={media.filter(isViewable)}
+            openId={openId}
+            onOpen={setOpenId}
+            onClose={() => setOpenId(null)}
+            origin={{ id: first.attachmentId, element: origin }}
+          />
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/** The viewer over a set's viewable files, mounted only while open — so the
+ *  files not drawn are fetched only once someone looks. A file whose bytes
+ *  are not here yet joins the set when they are. */
+function SetViewer({
+  media,
+  openId,
+  onOpen,
+  onClose,
+  origin,
+}: {
+  media: readonly MediaRef[];
+  openId: string;
+  onOpen: (id: string) => void;
+  onClose: () => void;
+  origin: { id: string; element: Element | null };
+}): ReactNode {
+  const srcs = useAssetSrcs(
+    media.map((m) => assetPath(getAttachmentFile, { id: m.attachmentId })),
+  );
+  const ready: { id: string; image: ViewerImage }[] = [];
+  media.forEach((m, i) => {
+    const s = srcs[i];
+    if (s?.kind !== "ready") return;
+    ready.push({
+      id: m.attachmentId,
+      image: {
+        kind: m.mime.startsWith("video/") ? "video" : "image",
+        src: s.src,
+        name: m.filename,
+        width: m.width,
+        height: m.height,
+      },
+    });
+  });
+  const index = ready.findIndex((r) => r.id === openId);
+  if (index < 0) return null;
+  return (
+    <ImageViewer
+      images={ready.map((r) => r.image)}
+      index={index}
+      onIndexChange={(i) => {
+        const next = ready[i];
+        if (next) onOpen(next.id);
+      }}
+      onClose={onClose}
+      originOf={(i) => (ready[i]?.id === origin.id ? origin.element : null)}
+    />
+  );
 }
 
 function ViewerTrigger({

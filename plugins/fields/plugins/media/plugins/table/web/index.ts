@@ -10,7 +10,7 @@ export {
 
 export default {
   description:
-    "Media field type: data-view table cell (the first file's thumbnail and how many more) plus the mediaFieldDef authoring helper.",
+    "Media field type: data-view table cell (the first file's thumbnail — a click opens the image viewer over all its images and videos — and how many more) plus the mediaFieldDef authoring helper.",
   contributions: [
     DataViewSlots.Cell({
       match: "media",

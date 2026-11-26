@@ -12,11 +12,11 @@ a type error rather than a render-time throw.
 
 ## Plugin reference
 
-- Description: Media field type: data-view table cell (the first file's thumbnail and how many more) plus the mediaFieldDef authoring helper.
+- Description: Media field type: data-view table cell (the first file's thumbnail — a click opens the image viewer over all its images and videos — and how many more) plus the mediaFieldDef authoring helper.
 - Web:
   - Contributes: `DataViewSlots.Cell` "media" → `MediaCell`
   - Uses:
-    - `fields/media.MediaThumb`
+    - `fields/media.MediaSetThumb`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/data-view.DataViewSlots`

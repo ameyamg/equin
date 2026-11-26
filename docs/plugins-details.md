@@ -31985,22 +31985,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/text.Text`
               - `primitives/data-view.DataViewSlots`
-    - **`media`** — Media field type: identity, plus MediaThumb — one MediaRef as a small square (an image, a video's first frame, a file glyph) shared by the config renderer and the table cell; ViewableMediaThumb opens it (image or video) in the enclosing ImageGallery's viewer.
+    - **`media`** — Media field type: identity, plus MediaThumb — one MediaRef as a small square (an image, a video's first frame, a file glyph) shared by the config renderer and the table cell; ViewableMediaThumb opens it (image or video) in the enclosing ImageGallery's viewer; MediaSetThumb draws a set as its first file and opens the viewer over the whole set (the table cell).
       - Web:
         - Contributes: `Fields.Identity` "media"
         - Uses:
           - `fields.Fields`
           - `infra/endpoints.AssetSrc`
           - `infra/endpoints.useAssetSrc`
+          - `infra/endpoints.useAssetSrcs`
           - `primitives/css/center.Center`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/ui-kit.cn`
+          - `primitives/overlay/image-viewer.ImageViewer`
           - `primitives/overlay/image-viewer.useImageViewerTrigger`
+          - `primitives/overlay/image-viewer.ViewerImage`
           - `ui/icons.Icon`
         - Exports (types):
           - `MediaMetadata`
+          - `MediaSetThumbProps`
           - `MediaThumbProps`
         - Exports (values):
+          - `MediaSetThumb`
           - `MediaThumb`
           - `ViewableMediaThumb`
       - Core:
@@ -32085,11 +32090,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/server-capabilities.Fields`
           - Cross-plugin:
             - Imported by: `fields/server-capabilities-loader`
-        - **`table`** — Media field type: data-view table cell (the first file's thumbnail and how many more) plus the mediaFieldDef authoring helper.
+        - **`table`** — Media field type: data-view table cell (the first file's thumbnail — a click opens the image viewer over all its images and videos — and how many more) plus the mediaFieldDef authoring helper.
           - Web:
             - Contributes: `DataViewSlots.Cell` "media" → `MediaCell`
             - Uses:
-              - `fields/media.MediaThumb`
+              - `fields/media.MediaSetThumb`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/data-view.DataViewSlots`
