@@ -45,6 +45,44 @@ export function $tokenizedLineNodes(
 }
 
 /**
+ * Build the inline leaf nodes of a whole raw text, LINE BY LINE: one node list
+ * per line of the source, the shape a paragraph-per-line host materializes.
+ *
+ * A family that {@link InlineTokenExtension.spansLines} is scanned over the
+ * whole text first, so its token (a pasted block) is ONE node even though its
+ * text holds newlines: it sits in the line where it starts, and the text after
+ * it continues that line. Every other family is scanned per line, exactly as
+ * {@link $tokenizedLineNodes} does — with no spanning family registered this is
+ * `text.split("\n").map($tokenizedLineNodes)`.
+ *
+ * Must run inside an `editor.update()`.
+ */
+export function $tokenizedTextLines(
+  text: string,
+  extensions: readonly InlineTokenExtension[],
+): LexicalNode[][] {
+  const spanning = extensions.filter((e) => e.spansLines);
+  const perLine = extensions.filter((e) => !e.spansLines);
+  const lines: LexicalNode[][] = [[]];
+  const pushText = (chunk: string) => {
+    chunk.split("\n").forEach((line, i) => {
+      if (i > 0) lines.push([]);
+      lines[lines.length - 1]!.push(...$tokenizedLineNodes(line, perLine));
+    });
+  };
+  let lastIdx = 0;
+  for (const match of matchTokens(text, undefined, spanning)) {
+    pushText(text.slice(lastIdx, match.start));
+    const node = match.extension.createNodeFromMatch(match.match);
+    if (node) lines[lines.length - 1]!.push(node);
+    else pushText(match.text);
+    lastIdx = match.end;
+  }
+  pushText(text.slice(lastIdx));
+  return lines;
+}
+
+/**
  * Insert raw text at the caret, materializing every token it carries as its
  * node — so a token dropped at the cursor is the same thing as the same token
  * arriving through a value round-trip. Newlines become real `LineBreakNode`s
@@ -65,9 +103,9 @@ export function $insertTokenizedText(
     if (!$isRangeSelection(selection)) return;
   }
   const nodes: LexicalNode[] = [];
-  text.split("\n").forEach((line, i) => {
+  $tokenizedTextLines(text, extensions).forEach((line, i) => {
     if (i > 0) nodes.push($createLineBreakNode());
-    nodes.push(...$tokenizedLineNodes(line, extensions));
+    nodes.push(...line);
   });
   selection.insertNodes(nodes);
 }

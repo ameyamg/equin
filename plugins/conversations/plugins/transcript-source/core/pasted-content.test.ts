@@ -69,4 +69,13 @@ describe("unwrapPastedContent", () => {
     const once = unwrapPastedContent(raw);
     expect(unwrapPastedContent(once)).toBe(once);
   });
+
+  test("the app's own pasted block is not the CLI's, and is left alone", () => {
+    // A composer's pasted block must read back from the transcript exactly as
+    // it was sent — else its pending turn never confirms and it loses its block.
+    // The block as `primitives/text-editor/pasted-text` writes it.
+    const text =
+      "see:\n<pasted_content>\nline 1\nline 2\n</pasted_content>\nthanks";
+    expect(unwrapPastedContent(text)).toBe(text);
+  });
 });

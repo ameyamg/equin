@@ -29,6 +29,8 @@ export function registerNodeExtension(spec: {
   id: string;
   node: InlineTokenNodeRef;
   pattern: RegExp;
+  /** The token may hold newlines — see `InlineTokenExtension.spansLines`. */
+  spansLines?: boolean;
 }): () => void {
   return registry.register(tokenExtension(spec));
 }

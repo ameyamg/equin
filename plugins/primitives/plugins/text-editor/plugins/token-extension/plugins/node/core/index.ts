@@ -7,7 +7,11 @@ export {
   tokenDomFields,
 } from "./token-dom";
 
-export { $insertTokenizedText, $tokenizedLineNodes } from "./insert-tokens";
+export {
+  $insertTokenizedText,
+  $tokenizedLineNodes,
+  $tokenizedTextLines,
+} from "./insert-tokens";
 
 export {
   $separateFromNeighbours,

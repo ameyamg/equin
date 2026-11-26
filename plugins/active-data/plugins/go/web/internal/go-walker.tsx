@@ -9,11 +9,22 @@ import { GoEcho } from "../components/go-echo";
 
 const GO_REGION_RE = /<go>([\s\S]*?)<\/go>/g;
 
+// Handed the raw string seed, or the runs of a walker before it (the pasted
+// text walker cuts a message around its blocks): each string run is split, and
+// every component — a pasted block — is left alone.
 function splitGoRegions(children: ReactNode): ReactNode {
-  // Registered before every other walker, so it is handed the raw string seed;
-  // anything else is already another walker's output and is left alone.
-  if (typeof children !== "string" || !children.includes("<go>"))
-    return children;
+  if (Array.isArray(children))
+    return children.flatMap((c: ReactNode, i) => {
+      if (typeof c !== "string") return [c];
+      const split = splitGoString(c, `go${i}-`);
+      return Array.isArray(split) ? split : [split];
+    });
+  if (typeof children !== "string") return children;
+  return splitGoString(children, "");
+}
+
+function splitGoString(children: string, keyPrefix: string): ReactNode {
+  if (!children.includes("<go>")) return children;
   const out: ReactNode[] = [];
   let last = 0;
   // Paired on the text with its code blanked out, so a `<go>` written as
@@ -23,7 +34,7 @@ function splitGoRegions(children: ReactNode): ReactNode {
     const bodyStart = m.index + "<go>".length;
     out.push(
       <GoEcho
-        key={m.index}
+        key={`${keyPrefix}${m.index}`}
         body={children.slice(bodyStart, bodyStart + m[1]!.length)}
       />,
     );

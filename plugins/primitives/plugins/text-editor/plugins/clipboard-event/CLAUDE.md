@@ -11,6 +11,7 @@
     - `page/inline-page-link`
     - `page/url-paste`
     - `primitives/text-editor/paste-images`
+    - `primitives/text-editor/pasted-text`
     - `primitives/text-editor/token-extension/node`
 - Core:
   - Exports (values): `clipboardEventOf`

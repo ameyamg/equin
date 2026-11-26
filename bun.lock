@@ -7327,6 +7327,14 @@
       "name": "@equin/plugin-primitives-text-editor-paste-images",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/text-editor/plugins/pasted-text": {
+      "name": "@equin/plugin-primitives-text-editor-pasted-text",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.53.0",
+        "lexical": "^0.53.0",
+      },
+    },
     "plugins/primitives/plugins/text-editor/plugins/token-extension": {
       "name": "@equin/plugin-primitives-text-editor-token-extension",
       "version": "0.0.1",
@@ -12011,6 +12019,8 @@
     "@equin/plugin-primitives-text-editor-inline-chip": ["@equin/plugin-primitives-text-editor-inline-chip@workspace:plugins/primitives/plugins/text-editor/plugins/inline-chip"],
 
     "@equin/plugin-primitives-text-editor-paste-images": ["@equin/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
+
+    "@equin/plugin-primitives-text-editor-pasted-text": ["@equin/plugin-primitives-text-editor-pasted-text@workspace:plugins/primitives/plugins/text-editor/plugins/pasted-text"],
 
     "@equin/plugin-primitives-text-editor-token-extension": ["@equin/plugin-primitives-text-editor-token-extension@workspace:plugins/primitives/plugins/text-editor/plugins/token-extension"],
 

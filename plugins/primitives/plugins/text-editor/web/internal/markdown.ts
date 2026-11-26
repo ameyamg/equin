@@ -17,7 +17,7 @@ import {
 import { hasToken } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
 import {
   $insertTokenizedText,
-  $tokenizedLineNodes,
+  $tokenizedTextLines,
 } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/core";
 import { getNodeExtensions, type NodeExtension } from "./node-extensions";
 
@@ -63,26 +63,10 @@ export function $serializeRootToMarkdown(
   return lines.join("\n");
 }
 
-// Deserialize one raw source line into Lexical nodes: every extension pattern
-// (`<ui-context …>`, image markdown, …) becomes its node, the rest stays text.
-// The single deserialization path — shared by the whole-value apply below and
-// the caret insert — so a snippet dropped at the cursor yields the same nodes
-// as the same snippet arriving through the value round-trip.
-//
-// The scan itself is the shared one (`token-extension`), so this editor and the
-// page editor agree byte-for-byte about where a token starts and which of two
-// overlapping candidates wins.
-function $lineToNodes(
-  line: string,
-  extensions: readonly NodeExtension[],
-): LexicalNode[] {
-  return $tokenizedLineNodes(line, extensions);
-}
-
 // Does this raw snippet carry at least one node-extension token? The gate the
 // paste path uses to decide between "deserialize into nodes" and "let the
 // editor insert it as plain text" — same registry, same patterns as
-// `$lineToNodes`, so the two can never disagree about what is a token.
+// `$tokenizedTextLines`, so the two can never disagree about what is a token.
 export function hasNodeExtensionToken(
   text: string,
   extensions: readonly NodeExtension[] = getNodeExtensions(),
@@ -111,10 +95,11 @@ export function applyMarkdownToEditor(
       const carried = $captureCaret(extensions);
       const root = $getRoot();
       root.clear();
-      const lines = markdown.split("\n");
-      for (const line of lines) {
+      // One paragraph per source line — a token that spans lines (a pasted
+      // block) is one node inside the line it starts on.
+      for (const line of $tokenizedTextLines(markdown, extensions)) {
         const para = $createParagraphNode();
-        for (const node of $lineToNodes(line, extensions)) para.append(node);
+        for (const node of line) para.append(node);
         root.append(para);
       }
       if (root.getChildrenSize() === 0) {

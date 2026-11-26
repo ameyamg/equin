@@ -1,0 +1,10 @@
+{
+  "name": "@equin/plugin-primitives-text-editor-pasted-text",
+  "private": true,
+  "version": "0.0.1",
+  "description": "A large paste as a folded, editable block in every text editor, sent as a <pasted_content> tag and drawn back as the same block on read surfaces.",
+  "dependencies": {
+    "lexical": "^0.53.0",
+    "@lexical/react": "^0.53.0"
+  }
+}

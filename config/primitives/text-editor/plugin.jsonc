@@ -1,4 +1,4 @@
-// @hash 1f41a047dc75
+// @hash 9ece59037cbf
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
 {
   "items": [
     "primitives.text-editor.paste-images:paste-images",
+    "primitives.text-editor.pasted-text:pasted-text",
     "active-data.go:go-region"
   ]
 }

@@ -25,8 +25,18 @@ import type { InlineTokenNodeRef } from "./inline-token-types";
 export interface InlineTokenExtension {
   /** Stable id (a React key where the host renders a companion plugin). */
   readonly id: string;
-  /** Non-global pattern matching one token within a single line. */
+  /**
+   * Non-global pattern matching one token — within a single line, unless
+   * {@link spansLines}.
+   */
   readonly pattern: RegExp;
+  /**
+   * The token's text may contain newlines (a pasted block). A host that
+   * deserializes line by line scans these families over the WHOLE text first,
+   * then every other family per line as before — opt-in, so a pattern that
+   * merely could match across lines (`[\s\S]*?`) keeps its one-line meaning.
+   */
+  readonly spansLines: boolean;
   /** The node this extension's tokens materialize as. */
   readonly node: InlineTokenNodeRef;
   /** Build the node for a regex match; `null` when the match is not a token. */
@@ -40,11 +50,13 @@ export function tokenExtension(spec: {
   id: string;
   pattern: RegExp;
   node: InlineTokenNodeRef;
+  spansLines?: boolean;
 }): InlineTokenExtension {
-  const { id, pattern, node } = spec;
+  const { id, pattern, node, spansLines = false } = spec;
   return {
     id,
     pattern,
+    spansLines,
     node,
     createNodeFromMatch(match: RegExpExecArray): LexicalNode | null {
       return node.createFromMatch(match);

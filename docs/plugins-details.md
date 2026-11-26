@@ -52686,10 +52686,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×6
-          - `primitives` ×5
+          - `primitives` ×6
           - `page` ×4
           - `debug` ×3
           - `infra` ×3
@@ -52869,9 +52869,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×21
-              - `primitives` ×11
+              - `primitives` ×12
               - `conversations` ×8
               - `page` ×6
               - `debug` ×5
@@ -53191,6 +53191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/timeline`
               - `primitives/css/fill`
               - `primitives/markdown`
+              - `primitives/text-editor/pasted-text`
           - Web:
             - Exports (values): `growClass`
         - **`grow-relay`** — The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
@@ -53321,9 +53322,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×44
-              - `primitives` ×21
+              - `primitives` ×22
               - `conversations` ×20
               - `debug` ×10
               - `tasks` ×9
@@ -53613,10 +53614,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 155 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 156 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×37
               - `conversations` ×29
-              - `primitives` ×21
+              - `primitives` ×22
               - `debug` ×14
               - `tasks` ×11
               - `page` ×8
@@ -53717,10 +53718,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×30
               - `apps` ×21
-              - `primitives` ×16
+              - `primitives` ×17
               - `debug` ×10
               - `page` ×5
               - `build` ×2
@@ -53849,10 +53850,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 470 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 471 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×80
-              - `primitives` ×55
+              - `primitives` ×56
               - `debug` ×39
               - `ui` ×32
               - `page` ×26
@@ -54089,10 +54090,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 447 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 448 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×84
-              - `primitives` ×48
+              - `primitives` ×49
               - `debug` ×39
               - `page` ×25
               - `tasks` ×20
@@ -54415,8 +54416,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 486 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×114
+            - Imported by: 487 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×115
               - `apps` ×111
               - `conversations` ×54
               - `page` ×26
@@ -54550,9 +54551,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
-              - `primitives` ×10
+              - `primitives` ×11
               - `conversations` ×9
               - `debug` ×5
               - `tasks` ×3
@@ -57238,10 +57239,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×12
           - `page` ×9
-          - `primitives` ×8
+          - `primitives` ×9
           - `ui` ×4
           - `conversations` ×2
           - `fields` ×2
@@ -57265,9 +57266,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
-          - `primitives` ×23
+          - `primitives` ×24
           - `conversations` ×21
           - `tasks` ×11
           - `page` ×7
@@ -57347,6 +57348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `InlineTextWalkerSlot` ← `active-data`
           - `InlineTextWalkerSlot` ← `active-data.go`
           - `InlineTextWalkerSlot` ← `conversations.conversation-view.markdown-extensions`
+          - `InlineTextWalkerSlot` ← `primitives.text-editor.pasted-text`
         - Exports (types):
           - `InlineTextWalker`
           - `StackedInlineWalkers`
@@ -57363,6 +57365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/markdown-extensions`
           - `infra/claude-cli`
           - `primitives/text-editor/paste-images`
+          - `primitives/text-editor/pasted-text`
     - **`kept-state`** — Kept state: what a reload, a tab switch or an upgrade must give back. defineKept declares a piece of it in one of two tiers — work (what the user made and the server does not have yet: its own local store, refused when full, one entry per subject) or view (where the user was looking: one pooled session store, keyed by the ambient KeepScope — the pane instance, else the tab — and dropped when that place closes, forgetKeepScope) — and useKept reads it as a useState drop-in. useDraft is the same over a store the caller declared (defineStore). Writes are batched to the end of the frame and flushed on pagehide (flushKept). submitKept clears work only once its send is taken, so a reload between the click and the ack keeps it. readDraft/writeDraft are the render-free twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in one composition scope; legacyDraftKeys carries drafts written before web-storage into a store. core/ holds the required `keep` prop of every text-input primitive (TextKeep: a kept binding, a part projected from one — keptPart / keptField / keptItem, so plain state has no spelling as kept — or transient("<why>")), and lint/ bans raw text fields (kept-state/no-raw-text-input).
       - Web:
         - Uses:
@@ -57407,9 +57410,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×37
-          - `primitives` ×27
+          - `primitives` ×28
           - `conversations` ×13
           - `fields` ×11
           - `page` ×9
@@ -60636,6 +60639,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors:
           - `TextEditorSlots.Plugin` ← `active-data.go`
           - `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
+          - `TextEditorSlots.Plugin` ← `primitives.text-editor.pasted-text`
         - Uses:
           - `primitives/css/ui-kit.cn`
           - `primitives/css/yield.yieldClass`
@@ -60686,6 +60690,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor/composer`
           - `primitives/text-editor/inline-chip`
           - `primitives/text-editor/paste-images`
+          - `primitives/text-editor/pasted-text`
           - `screenshot`
           - `tasks/decisions`
           - `tasks/supervisor-roles/pane`
@@ -60741,6 +60746,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/inline-page-link`
               - `page/url-paste`
               - `primitives/text-editor/paste-images`
+              - `primitives/text-editor/pasted-text`
               - `primitives/text-editor/token-extension/node`
           - Core:
             - Exports (values): `clipboardEventOf`
@@ -60979,6 +60985,55 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot` ×2
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/attachment-file-chip.tsx` (debt)
+        - **`pasted-text`** — A large paste (10+ lines or 1000+ characters) in any text editor becomes a pasted block: a folded box with a 'Pasted log / code / JSON / text' header and its line count, unfolding on click to its editable text, with Copy, Delete and Expand-to-plain-text on hover. It is sent as a <pasted_content> tag (so the agent knows the text was pasted) and drawn back as the same block, read-only, in sent messages.
+          - Web:
+            - Contributes:
+              - `TextEditorSlots.Plugin` → `PastedTextPastePlugin`
+              - `InlineTextWalkerSlot`
+            - Uses: 22 symbols — full list in [`plugins/primitives/plugins/text-editor/plugins/pasted-text/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/pasted-text/REFERENCE.md)
+              - `primitives/inline-text` ×4
+              - `primitives/css/ui-kit` ×3
+              - `primitives/hover-reveal` ×2
+              - `primitives/text-editor` ×2
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/grow.growClass`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/text.Text`
+              - `primitives/css/yield.yieldClass`
+              - `primitives/icon-button.IconButton`
+              - `ui/icons.Icon`
+            - Exports (types): `PastedTextEditing`
+            - Exports (values): `PastedTextBlock`
+          - Core:
+            - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+            - Exports (types):
+              - `PastedTextFields`
+              - `PastedTextKind`
+              - `PastedTextSegment`
+            - Exports (values):
+              - `isLargePaste`
+              - `LARGE_PASTE_CHARS`
+              - `LARGE_PASTE_LINES`
+              - `lineCount`
+              - `PASTED_TEXT_RE`
+              - `pastedTextKind`
+              - `pastedTextNode`
+              - `splitPastedText`
+              - `wrapPastedText`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary-text`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
         - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
           - Cross-plugin:
             - Imported by:
@@ -61057,6 +61112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/text-editor`
                   - `primitives/text-editor/inline-chip`
                   - `primitives/text-editor/paste-images`
+                  - `primitives/text-editor/pasted-text`
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent), the tree model (useTreeModel: flattened visible lines, DnD, lazy children, keyboard) and the tree-row pieces a renderer composes (TreeRowChrome, TreeLeading, useTreeRow, TreeRowActions, TreeRootAdd, flatExpandAll) — drawn by data-view's nested table.
       - Web:
         - Slots: `Tree.Disclosure`
@@ -69004,10 +69060,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 613 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 614 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×152
           - `conversations` ×124
-          - `primitives` ×54
+          - `primitives` ×55
           - `page` ×51
           - `fields` ×43
           - `debug` ×30
@@ -70351,10 +70407,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 567 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 568 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×124
               - `conversations` ×95
-              - `primitives` ×81
+              - `primitives` ×82
               - `debug` ×42
               - `page` ×33
               - `plugin-meta` ×27
@@ -70509,9 +70565,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 368 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 369 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `primitives` ×74
               - `apps` ×73
-              - `primitives` ×73
               - `conversations` ×51
               - `debug` ×29
               - `ui` ×28
@@ -70981,10 +71037,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 421 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 422 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×95
               - `apps` ×80
-              - `primitives` ×62
+              - `primitives` ×63
               - `page` ×35
               - `debug` ×28
               - `ui` ×25
