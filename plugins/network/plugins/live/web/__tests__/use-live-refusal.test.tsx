@@ -20,6 +20,7 @@ vi.mock(
 
 import { renderHook, waitFor } from "@testing-library/react";
 import { z } from "zod";
+import { pendingMountSnapshot } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   type LiveStateHarness,
@@ -137,5 +138,67 @@ describe("useLive — a value's declared refusals", () => {
       void plain.refuse("missing", "x");
     };
     expect(typeof useTypeOnly).toBe("function");
+  });
+
+  // A refusal is the read's answer: the page waits on it no more. Counting
+  // it held /agents' page loads "loading" until the ledger's 60 s cap
+  // (task-1795742660-dvmhjx: a transcript chip's stat of a path now gone).
+  it("a refused read is no longer a pending mount", async () => {
+    const v = liveValue(key(), {
+      schema: Result,
+      params: ["path"],
+      load: "on-demand",
+      refusals: ["missing"],
+    });
+    refuseWith({ code: "missing", detail: "no such file" });
+    const before = pendingMountSnapshot().pending;
+    const { result, unmount } = mount(createLiveStateHarness(), () =>
+      useLive(v, { path: "/gone" }),
+    );
+    expect(pendingMountSnapshot().pending).toBe(before + 1);
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(pendingMountSnapshot().pending).toBe(before);
+    expect(pendingMountSnapshot().pendingKeys).not.toContain(v.key);
+    unmount();
+    expect(pendingMountSnapshot().pending).toBe(before);
+  });
+
+  it("a refused tuple of a list read is no longer a pending mount", async () => {
+    const v = liveValue(key(), {
+      schema: Result,
+      params: ["path"],
+      load: "on-demand",
+      refusals: ["missing"],
+    });
+    refuseWith({ code: "missing", detail: "no such file" });
+    const before = pendingMountSnapshot().pending;
+    const { result, unmount } = mount(createLiveStateHarness(), () =>
+      useLive(v, [{ path: "/a" }, { path: "/b" }]),
+    );
+    expect(pendingMountSnapshot().pending).toBe(before + 2);
+    await waitFor(() =>
+      expect(result.current.map((r) => r.status)).toEqual(["error", "error"]),
+    );
+    expect(pendingMountSnapshot().pending).toBe(before);
+    unmount();
+  });
+
+  it("a failure that is no refusal stays a pending mount (it may heal)", async () => {
+    const v = liveValue(key(), {
+      schema: Result,
+      params: ["path"],
+      load: "on-demand",
+      refusals: ["missing"],
+    });
+    // An undeclared code: a contract mismatch, not an answer.
+    refuseWith({ code: "gone", detail: "it went away" });
+    const before = pendingMountSnapshot().pending;
+    const { result, unmount } = mount(createLiveStateHarness(), () =>
+      useLive(v, { path: "/x" }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(pendingMountSnapshot().pending).toBe(before + 1);
+    unmount();
+    expect(pendingMountSnapshot().pending).toBe(before);
   });
 });

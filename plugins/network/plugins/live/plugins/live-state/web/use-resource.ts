@@ -817,11 +817,13 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // change). The page-wide count is how a page load or a navigation knows it is
   // on screen — see pending-mount-tracker.ts. Keyed on `hasValue`, not
   // `pending`: a transient error does not make the page "loading again".
-  // A skipped read waits on nothing, so it is never counted.
+  // A skipped read waits on nothing, so it is never counted — nor does a
+  // refused one (`answeredWithoutValue`): the refusal IS its answer.
+  const refused = answeredWithoutValue(q.error, skipped);
   useEffect(() => {
-    if (hasValue || skipped) return;
+    if (hasValue || refused || skipped) return;
     return notePendingMount(key);
-  }, [hasValue, skipped, key, keyStr]);
+  }, [hasValue, refused, skipped, key, keyStr]);
 
   // Report the mount→settle duration once, the first time this resource leaves
   // `pending` (`reportTupleSettled`).
@@ -868,6 +870,21 @@ interface TupleState {
  * merges one tuple's previous data into another's and hands out a deep COPY —
  * a kept tuple's data would lose its identity on every list change.
  */
+/**
+ * Whether a read with no value has its answer anyway: the loader REFUSED it
+ * (`kind: "refused"` — a declared code such as `missing`; the message is what
+ * the read shows, and it is never retried). Such a read waits on nothing, so
+ * it is no pending mount: counting it held every page showing a transcript
+ * chip of a path that is gone (a refused `files.computer.stat`) "loading"
+ * until the latency ledger's 60 s cap — 23 of 24 censored /agents loads
+ * (task-1795742660-dvmhjx). Any other failure is not an answer: it may heal
+ * on a retry, and is reported on its own (`resourceErrorReportSink`).
+ */
+function answeredWithoutValue(rawError: unknown, skipped: boolean): boolean {
+  if (skipped || rawError === null) return false;
+  return toResourceError(rawError).kind === "refused";
+}
+
 function combineTuples(
   results: readonly QueryObserverResult<unknown>[],
   tupleKeys: readonly string[],
@@ -1053,7 +1070,11 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
   // Tuples with no value yet: counted as pending mounts. (A cold-start HTTP
   // prime is the sub's own, sent by `observe` — see `useResource`.)
   const waitingJson = JSON.stringify(
-    tupleKeys.filter((_, i) => states[i]?.hasValue !== true),
+    tupleKeys.filter(
+      (_, i) =>
+        states[i]?.hasValue !== true &&
+        !answeredWithoutValue(states[i]?.error ?? null, false),
+    ),
   );
   const releasesRef = useRef<Map<string, () => void>>(new Map());
   useEffect(() => {
