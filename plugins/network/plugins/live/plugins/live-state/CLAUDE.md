@@ -818,6 +818,31 @@ Details:
     consume).
   - Pinned by `notifications-update-latency.test.ts`.
 
+## A drop is stale until its replay answers — `getRecoveries`
+
+`NotificationsClient` keeps one recovery per socket
+(`web/internal/recovery-tracker.ts`): from the moment a socket that was open
+leaves `open`, until every sub with a reader that its next open's replay asked
+again has its answer (`noteAnswered`: sub-ack, up-to-date incl. the batch,
+sub-error, matched by request id; a resend replaces the id; a release drops
+it). A second drop mid-replay keeps the first drop's start. A read the
+unanswered-sub deadline gives up on (reported, or its link replaced) stops
+being waited for (`unanswered` on the end), so one lost answer never holds
+the recovery open. Only a replay on an open socket counts (the missed-update
+probe also replays a reconnecting one). Meanwhile the tab shows what it held
+before, possibly stale.
+
+- `getRecoveries()` / `useLiveRecoveries()` — each socket still recovering,
+  `reconnecting` or `replaying` (the Connection row's "Catching up").
+- `subscribeRecovery(fn)` — start / replaying / end; the end carries the
+  awake time and `sleptMs` (the wall clock gained on the performance clock
+  since the last frame the socket heard before the drop: page-clock).
+- `recoveryPendingKeys(socket, max)` — what is still unanswered (`key×n`).
+
+Read by `debug/latency-ledger` (the `reconnect` metric and the `live-again`
+alert). Pinned by `internal/recovery-tracker.test.ts` and
+`notifications-reconnect.test.ts`.
+
 ## A read off screen holds no page — `OnScreenScope`
 
 The pending-mount count (what tells the latency ledger a page is ready)
@@ -868,6 +893,9 @@ Pinned by `on-screen-pending.test.tsx`.
     - `GateInput`
     - `GateStatus`
     - `HttpStaleDropReport`
+    - `LiveRecovery`
+    - `LiveRecoveryEnd`
+    - `LiveRecoveryEvent`
     - `LiveRegistries`
     - `LiveStateSocketKind`
     - `LoadWait`
@@ -933,6 +961,7 @@ Pinned by `on-screen-pending.test.tsx`.
     - `useBoxOnScreen`
     - `useCombinedResources`
     - `useFailingResources`
+    - `useLiveRecoveries`
     - `useLiveRegistries`
     - `useLiveSocketKindOf`
     - `useNotificationsChannelStatuses`

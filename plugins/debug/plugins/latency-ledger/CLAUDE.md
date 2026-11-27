@@ -19,6 +19,7 @@ ledger keeps **all** of them, as per-minute histograms.
 | `deliver-server` | the server notices the change | it sends the frame | server |
 | `watch-delivery` | a write to a watched file (its ctime), or the watch's arming when the write predates it | the watch hears it (before any debounce); ≤ 1 sample / watcher instance / 5 s | server (`infra/file-watcher`'s `onWatchDelivery`) |
 | `turn-echo` | the agent took a sent message (`submittedAt`) | its transcript line is on screen in the tab — the signal's `totalMs`, so a `/compact` turn's compaction (which runs before its line is written) is in it; Slow Events judges the echo without it | browser (`turn-echo` signal) |
+| `reconnect` | a tab's live socket leaves `open` (a server restart, a network change) | every read its reopen replayed (with a reader) has its answer — live-state's recovery (`subscribeRecovery`); awake time | browser (`web/internal/live-again-tracker.ts`) |
 | `input` | a person's click, tap or keypress (`pointerdown` / `keydown`, trusted) | the next painted frame — Event Timing's `duration` (input delay + handlers + rendering, what INP is made of) | browser (`web/internal/input-tracker.ts`) |
 | `thread-lag` | — | worst event-loop lag of each 10 s health sample | server |
 
@@ -57,6 +58,19 @@ it waits for. A load quiet at the budget (its reads not mounted yet: a slow
 bundle, lazy app code) that then ends past it is filed when it ends, naming
 the read that answered last. Never for a tab hidden at any point, a load cut
 short, or an in-app navigation.
+
+**A tab still not live again at its budget is reported** the same way:
+slow-ops' `liveAgainMs` (10 s) from the drop, a recovery still pending in a
+visible tab files one `live-again` slow-op — its route pattern, the replayed
+reads still unanswered (or the socket, still reconnecting; a central read
+prefixed `central:`), censored. A `reconnect` sample is excluded from the
+percentiles when the tab was hidden in it, or the machine slept (> 1 s) between
+the last frame the socket heard and the end — a drop a sleep or a wake caused;
+such a recovery is never reported. Past 60 s it is recorded censored. While it
+is pending the health report's Connection row reads "Catching up after
+reconnecting…" (infra/health/connection-row). This is the measure decision D25
+(hold the replay until boot hooks finish) is judged by. Design:
+`research/2026-11-27-debug-live-again-after-reconnect.md`.
 
 An interaction ends when the count is zero and stays zero for a short
 quiet window (the next screen's components mount a little after the click). The
@@ -196,6 +210,7 @@ state rather than the previous window's numbers.
     - `infra/endpoints.fetchEndpointOver`
     - `network/live/live-state.pendingMountSnapshot`
     - `network/live/live-state.subscribePendingMounts`
+    - `network/live/live-state.useNotificationsClient`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/log-channels.clientLog`
     - `primitives/networking/page-transport.pageTransport`

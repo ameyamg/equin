@@ -14,6 +14,7 @@ export {
   useFailingResources,
   useLiveRegistries,
   useLiveSocketKindOf,
+  useLiveRecoveries,
 } from "./use-resource";
 export { useQueryResource } from "./use-query-resource";
 export type {
@@ -87,6 +88,9 @@ export type {
   TransportInfo,
   MissedFrame,
   LiveRegistries,
+  LiveRecovery,
+  LiveRecoveryEnd,
+  LiveRecoveryEvent,
 } from "./notifications-client";
 export { resourceDescriptorByKey, ResourceError } from "../core";
 export type {

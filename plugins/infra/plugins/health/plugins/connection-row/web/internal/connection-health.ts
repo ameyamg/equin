@@ -1,4 +1,7 @@
-import type { ChannelStatuses } from "@plugins/network/plugins/live/plugins/live-state/web";
+import type {
+  ChannelStatuses,
+  LiveRecovery,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { PUSH_STALL_MS } from "@plugins/infra/plugins/health/web";
 
@@ -50,6 +53,12 @@ function joinKeys(keys: readonly string[]): string {
  *   for `PUSH_STALL_MS` or more while the rest flow → attention, naming the
  *   resources: only what reads them is frozen (2026-11-05: `host-fs.peek`
  *   hung on the filesystem read as the whole app stuck).
+ * - otherwise a socket that reopened after a drop with replayed reads still
+ *   unanswered (`recoveries`, phase `replaying`) → info, `transitioning`:
+ *   "Catching up after reconnecting" — what the tab shows from it may be
+ *   stale until its reads answer, so it does not say "connected" yet. Calm
+ *   (blue, not counted as a problem): it ends by itself, and a recovery that
+ *   does not is the `live-again` slow-op's to report.
  * - every opened socket open and flowing → ok, naming those ("Server
  *   connected" when the page never needed central).
  *
@@ -61,7 +70,10 @@ function joinKeys(keys: readonly string[]): string {
  * or a server that stopped pushing is worse than a socket that is still trying.
  * One stuck resource is the least of them: everything else still updates.
  */
-export function connectionHealth(statuses: ChannelStatuses): HealthStatus {
+export function connectionHealth(
+  statuses: ChannelStatuses,
+  recoveries: readonly LiveRecovery[] = [],
+): HealthStatus {
   const closed = CHANNELS.filter((c) => statuses[c.key] === "closed");
   if (closed.length > 0) {
     return {
@@ -118,6 +130,23 @@ export function connectionHealth(statuses: ChannelStatuses): HealthStatus {
     return {
       state: "attention",
       summary: `Live updates stuck for ${formatStall(longest)} on ${joinKeys(keys)} — everything else is still updating`,
+    };
+  }
+
+  const catchingUp = CHANNELS.flatMap((c) => {
+    const r = recoveries.find(
+      (x) => x.socket === c.key && x.phase === "replaying",
+    );
+    return r !== undefined && statuses[c.key] === "open" ? [{ c, r }] : [];
+  });
+  if (catchingUp.length > 0) {
+    const reads = catchingUp.reduce((n, x) => n + x.r.replayed, 0);
+    return {
+      state: "info",
+      summary:
+        `Catching up after reconnecting to ${joinNames(catchingUp.map((x) => x.c.name))}` +
+        ` — refreshing ${reads.toLocaleString("en-US")} live read${reads === 1 ? "" : "s"}…`,
+      transitioning: true,
     };
   }
 

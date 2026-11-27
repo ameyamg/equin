@@ -75,6 +75,12 @@ trace (`clientBoot`). It replaced a first-paint timer that fired before any
 data (2 reports for 66 loads over 2 s in a week, 2026-11-27).
 Design: `research/2026-11-27-debug-page-ready-alert.md`.
 
+**`live-again` is "tab not live again after N s"** (`liveAgainMs`, default
+10 s), filed by `debug/latency-ledger` the same way: a tab whose socket dropped
+and whose reconnect's replayed reads are still unanswered at the budget files
+one censored item per route pattern, `waitingFor` those reads (or the socket,
+still reconnecting). Design: `research/2026-11-27-debug-live-again-after-reconnect.md`.
+
 An `element` item (`elementSlowOp`, `web/internal/element-slow-op.ts`) follows
 the same identity rule as the latency kinds below: `operation` is the resource
 key alone, and the tuple's `canonicalJson(params)` is its `detail.variant`, so a

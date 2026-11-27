@@ -24,6 +24,7 @@ flow is attention, naming the resources — the least of the four.
   - Contributes: `HealthReport.Row` "Connection"
   - Uses:
     - `infra/health.PUSH_STALL_MS`
+    - `network/live/live-state.useLiveRecoveries`
     - `network/live/live-state.useNotificationsChannelStatuses`
     - `shell/health-report.HealthReport`
 

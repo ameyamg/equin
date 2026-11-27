@@ -164,6 +164,61 @@ describe("NotificationsClient — reconnect + resync", () => {
     expect(qc.getQueryData(["k"])).toEqual({ status: "v3" });
   });
 
+  test("a drop is a recovery until every read the replay asked again is answered", async () => {
+    const { client, hub, socket } = await setup();
+    client.observe("a", {}, undefined, { schema: pushSchema });
+    client.observe("b", {}, undefined, { schema: pushSchema });
+    // A keep-alive sub (no reader) is replayed but nobody waits on it.
+    client.observe("gone", {}, undefined, { schema: pushSchema });
+    client.unobserve("gone", {});
+    await flush();
+    const events: string[] = [];
+    client.subscribeRecovery((e) => events.push(e.kind));
+    expect(client.getRecoveries()).toEqual([]);
+
+    socket.serverClose();
+    await flush();
+    expect(client.getRecoveries()).toMatchObject([
+      { socket: "worktree", phase: "reconnecting" },
+    ]);
+
+    await vi.advanceTimersByTimeAsync(500);
+    const socket2 = nextSocket(hub);
+    socket2.open();
+    await flush();
+    expect(client.getRecoveries()).toMatchObject([
+      { phase: "replaying", replayed: 2 },
+    ]);
+    const batch = batchFrames(socket2)[0]!;
+    const idOf = (key: string): number =>
+      batch.entries.find((e) => e.key === key)!.id!;
+    expect(client.recoveryPendingKeys("worktree", 8).sort()).toEqual([
+      "a",
+      "b",
+    ]);
+
+    socket2.serverSend({
+      kind: "sub-ack",
+      id: idOf("a"),
+      tabId: batch.tabId,
+      key: "a",
+      params: {},
+      value: { status: "a" },
+      version: 1,
+    });
+    await flush();
+    expect(client.recoveryPendingKeys("worktree", 8)).toEqual(["b"]);
+    socket2.serverSend({
+      kind: "up-to-date-batch",
+      tabId: batch.tabId,
+      epoch: "boot-2",
+      entries: [{ id: idOf("b"), key: "b", params: {}, version: 0 }],
+    });
+    await flush();
+    expect(client.getRecoveries()).toEqual([]);
+    expect(events).toEqual(["start", "replaying", "end"]);
+  });
+
   test("H1b: the replay is a single complete sub-batch with per-sub version echoes + the known epoch, baselines reset at send", async () => {
     const { client, hub, socket } = await setup();
     const keys = Array.from({ length: 8 }, (_, i) => `k${i}`);

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type {
   ChannelStatus,
   ChannelStatuses,
+  LiveRecovery,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { PUSH_STALL_MS } from "@plugins/infra/plugins/health/web";
 import { connectionHealth } from "./connection-health";
@@ -270,5 +271,54 @@ describe("connectionHealth — one resource stuck while the rest flow", () => {
         ),
       ).state,
     ).toBe("critical");
+  });
+});
+
+describe("connectionHealth — catching up after a reconnect", () => {
+  const replaying = (
+    socket: "worktree" | "central",
+    replayed: number,
+  ): LiveRecovery => ({ socket, droppedAt: 0, phase: "replaying", replayed });
+
+  test("an open socket whose replay is still answering is calm info, transitioning", () => {
+    expect(
+      connectionHealth(sockets("open", "open"), [replaying("worktree", 1671)]),
+    ).toEqual({
+      state: "info",
+      summary:
+        "Catching up after reconnecting to server — refreshing 1,671 live reads…",
+      transitioning: true,
+    });
+  });
+
+  test("still reconnecting says so, not catching up", () => {
+    expect(
+      connectionHealth(sockets("reconnecting", "open"), [
+        {
+          socket: "worktree",
+          droppedAt: 0,
+          phase: "reconnecting",
+          replayed: 0,
+        },
+      ]).state,
+    ).toBe("attention");
+  });
+
+  test("a closed socket outranks the other catching up", () => {
+    expect(
+      connectionHealth(sockets("open", "closed"), [replaying("worktree", 3)])
+        .state,
+    ).toBe("critical");
+  });
+
+  test("both catching up are named together", () => {
+    expect(
+      connectionHealth(sockets("open", "open"), [
+        replaying("worktree", 1),
+        replaying("central", 2),
+      ]).summary,
+    ).toBe(
+      "Catching up after reconnecting to server and central — refreshing 3 live reads…",
+    );
   });
 });

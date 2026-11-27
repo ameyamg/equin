@@ -28518,6 +28518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.fetchEndpointOver`
           - `network/live/live-state.pendingMountSnapshot`
           - `network/live/live-state.subscribePendingMounts`
+          - `network/live/live-state.useNotificationsClient`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/log-channels.clientLog`
           - `primitives/networking/page-transport.pageTransport`
@@ -40749,6 +40750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `HealthReport.Row` "Connection"
             - Uses:
               - `infra/health.PUSH_STALL_MS`
+              - `network/live/live-state.useLiveRecoveries`
               - `network/live/live-state.useNotificationsChannelStatuses`
               - `shell/health-report.HealthReport`
     - **`host`** — How much of the shared host machine may I take right now, and is the box still healthy? — the host-wide admission pools (host-admission), the heavy git/filesystem read budget declared through them (host-read-pool), the box's load snapshot (contention), and the 'the box is in trouble' latch plus the shed engine that rides it (duress).
@@ -46518,6 +46520,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GateInput`
               - `GateStatus`
               - `HttpStaleDropReport`
+              - `LiveRecovery`
+              - `LiveRecoveryEnd`
+              - `LiveRecoveryEvent`
               - `LiveRegistries`
               - `LiveStateSocketKind`
               - `LoadWait`
@@ -46583,6 +46588,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useBoxOnScreen`
               - `useCombinedResources`
               - `useFailingResources`
+              - `useLiveRecoveries`
               - `useLiveRegistries`
               - `useLiveSocketKindOf`
               - `useNotificationsChannelStatuses`
@@ -60940,6 +60946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `debug/slow-ops`
               - `framework/web-sdk`
+              - `network/live/live-state`
               - `primitives/perfs/page-pauses`
               - `reports/main-thread-stall`
           - Core:

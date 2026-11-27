@@ -68,6 +68,11 @@ import {
 } from "./unanswered-sub-reporter";
 import { toResourceError } from "./resource-error";
 import {
+  RecoveryTracker,
+  type LiveRecovery,
+  type LiveRecoveryEvent,
+} from "./internal/recovery-tracker";
+import {
   resourceErrorReportSink,
   type FailingResource,
 } from "./resource-error-reporter";
@@ -363,6 +368,11 @@ export type ChannelStatuses = {
 
 /** Live-state pipeline socket kind, as classified from a ws-status-bus url. */
 export type LiveStateSocketKind = SocketKind;
+export type {
+  LiveRecovery,
+  LiveRecoveryEnd,
+  LiveRecoveryEvent,
+} from "./internal/recovery-tracker";
 
 /**
  * Classify a ws-status-bus url as a live-state pipeline socket, or return null
@@ -916,6 +926,8 @@ export class NotificationsClient {
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
   /** Fired on any sub/version/socket/transport change for the Layer-2 inspector. */
   private debugListeners = new Set<() => void>();
+  /** Each socket's way back to live after a drop (`getRecoveries`). */
+  private readonly recovery = new RecoveryTracker();
   private readonly loadWaitListeners = new Set<() => void>();
   private loadWaitChanges = 0;
   private unsubscribeFromBus: () => void;
@@ -1057,10 +1069,14 @@ export class NotificationsClient {
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
       const kind = this.socketKindOf(url);
       if (kind === null) return;
-      if (this.channelStatuses.get(url) !== status) {
+      const prev = this.channelStatuses.get(url);
+      if (prev !== status) {
         this.serverPushStallMs[kind] = 0;
         this.serverStalledResources[kind] = [];
       }
+      // A socket that was open and no longer is: its reads are stale from now
+      // until its next open's replay is answered (`getRecoveries`).
+      if (prev === "open" && status !== "open") this.recovery.noteDrop(kind);
       this.channelStatuses.set(url, status);
       // Stamp the first instant THIS channel reached "open" (per-origin cold-
       // start latch; see `firstReadyByKind`). Written once per kind, never
@@ -1432,6 +1448,33 @@ export class NotificationsClient {
     if (!channel) return { attachedTabs: null, connection: null };
     const ws = channel.ws;
     return { attachedTabs: ws.attachedTabs, connection: ws.connection };
+  }
+
+  // --- Recovery after a drop ------------------------------------------------
+
+  /**
+   * Every socket of this client on its way back to live after it dropped —
+   * reconnecting, or reopened with replayed reads still unanswered — the same
+   * array until one starts, moves phase or ends. While a socket is in it,
+   * what the tab shows from it may be stale.
+   */
+  getRecoveries(): readonly LiveRecovery[] {
+    return this.recovery.getRecoveries();
+  }
+
+  /** Each recovery's start, its replay, and its end (every replayed read answered). */
+  subscribeRecovery(listener: (e: LiveRecoveryEvent) => void): () => void {
+    return this.recovery.subscribe(listener);
+  }
+
+  /** The reads `socket`'s replay still waits for (`key` / `key×n`, most first, at most `max`). */
+  recoveryPendingKeys(socket: SocketKind, max: number): string[] {
+    return this.recovery.pendingKeys(socket, max);
+  }
+
+  /** How long the machine slept since the last frame `socket` heard before its current drop (0: none, or no recovery). */
+  recoverySleptMs(socket: SocketKind): number {
+    return this.recovery.sleptSinceDrop(socket);
   }
 
   private emitDebug(): void {
@@ -1889,6 +1932,7 @@ export class NotificationsClient {
     }
     if (release === "now") {
       channel.subs.delete(id);
+      this.recovery.noteReleased(channel.kind, id);
       this.queryClient.removeQueries({
         queryKey: queryKeyFor(key, params),
         exact: true,
@@ -1915,6 +1959,7 @@ export class NotificationsClient {
         return;
       }
       channel.subs.delete(id);
+      this.recovery.noteReleased(channel.kind, id);
       channel.pendingTeardown.delete(id);
       channel.ws.send(wire({ op: "unsub", key, params, tabId: this.tabId }));
       trace(`teardown key=${key} params=${pk}`);
@@ -2621,6 +2666,7 @@ export class NotificationsClient {
         arrivedAt: ev.arrivedAt,
         receivedAt: Date.now(),
       };
+      this.recovery.noteHeard(channel.kind);
       let msg: ServerMsg;
       try {
         msg = JSON.parse(ev.data);
@@ -2718,6 +2764,10 @@ export class NotificationsClient {
     // would reconcile nothing; skipping keeps the wire quiet, matching the old
     // per-sub behavior.
     if (channel.subs.size === 0) {
+      // Only a replay on an open socket is the recovery's: the missed-update
+      // probe replays a reconnecting one too, its batch only queued.
+      if (channel.ws.connection !== null)
+        this.recovery.noteReplay(channel.kind, []);
       this.emitDebug();
       return;
     }
@@ -2732,6 +2782,9 @@ export class NotificationsClient {
     // Counted, not traced per sub: a replay carries the tab's whole set (hundreds
     // of subs), and the always-on channel logs transitions, not per-item lines.
     let unbacked = 0;
+    // The replayed reads someone reads now (a keep-alive sub has no reader on
+    // screen): the recovery is over once each is answered.
+    const read: { sub: string; key: string; id: number }[] = [];
     for (const sub of channel.subs.values()) {
       // Can we still back a freshness claim with the value it describes? A
       // gc'd cache entry (or one that never applied) makes both the version and
@@ -2754,6 +2807,12 @@ export class NotificationsClient {
       sub.lastAckVersion = -1;
       const id = this.nextMsgId++;
       this.markAwaiting(channel, sub, id);
+      if (sub.refcount > 0)
+        read.push({
+          sub: `${sub.key}\0${paramsKey(sub.params)}`,
+          key: sub.key,
+          id,
+        });
       if (!backed) unbacked++;
       entries.push({
         id,
@@ -2788,6 +2847,8 @@ export class NotificationsClient {
       trace(
         `replaySubs socket=${socket} unbacked=${unbacked}/${entries.length}`,
       );
+    if (channel.ws.connection !== null)
+      this.recovery.noteReplay(channel.kind, read);
     this.armUnansweredCheck(channel);
     this.emitDebug();
   }
@@ -2804,6 +2865,11 @@ export class NotificationsClient {
     id: number,
   ): void {
     sub.judging = undefined;
+    this.recovery.noteResent(
+      channel.kind,
+      `${sub.key}\0${paramsKey(sub.params)}`,
+      id,
+    );
     // A resent request is told afresh: a read still waiting says so again.
     this.setWaiting(sub, undefined);
     if (channel.ws.connection === null) {
@@ -2876,6 +2942,11 @@ export class NotificationsClient {
     answer: { id?: number; tabId?: string },
   ): void {
     if (answer.tabId !== this.tabId) return;
+    this.recovery.noteAnswered(
+      channel.kind,
+      `${entry.key}\0${paramsKey(entry.params)}`,
+      answer.id,
+    );
     if (entry.judging !== undefined && answer.id === entry.judging.id)
       entry.judging = undefined;
     if (entry.awaiting !== undefined && answer.id === entry.awaiting.id) {
@@ -3003,6 +3074,13 @@ export class NotificationsClient {
         return;
       }
       for (const sub of late) sub.judging = undefined;
+      // Given up on (reported, or its connection replaced — whose open
+      // replays it again): a recovery waiting on it no longer does.
+      for (const sub of late)
+        this.recovery.noteAbandoned(
+          channel.kind,
+          `${sub.key}\0${paramsKey(sub.params)}`,
+        );
       if (connection !== null && verdict === "dead-link") {
         trace(
           `unanswered-dead-link socket=${socket} conn=${connection} count=${late.length}: replacing the connection`,

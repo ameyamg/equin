@@ -11,6 +11,7 @@ import {
   type ReadyBudget,
 } from "../internal/interaction-tracker";
 import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+import type { LiveAgainHooks } from "../internal/live-again-tracker";
 
 type ClientSlowOpSignal = Parameters<typeof clientSlowOpSink.emit>[0];
 import { LatencyCollector } from "../components/latency-collector";
@@ -29,9 +30,24 @@ vi.mock("../internal/interaction-tracker", () => ({
   },
   cutActiveInteraction: vi.fn(() => order.push("cut")),
 }));
+let liveAgain: LiveAgainHooks | undefined;
+vi.mock("../internal/live-again-tracker", () => ({
+  startLiveAgainTracking: (_: unknown, hooks: LiveAgainHooks) => {
+    liveAgain = hooks;
+    return () => {};
+  },
+}));
+const fakeClient = {};
+vi.mock(
+  "@plugins/network/plugins/live/plugins/live-state/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useNotificationsClient: () => fakeClient,
+  }),
+);
 vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useConfig: () => ({ pageLoadMs: 5000 }),
+  useConfig: () => ({ pageLoadMs: 5000, liveAgainMs: 10000 }),
 }));
 let pageHidden = false;
 vi.mock(
@@ -154,5 +170,36 @@ describe("a page not ready at its budget", () => {
     });
     expect(seen[0]?.waitingFor?.[0]).toBe("files.computer.stat×4");
     expect(seen[0]?.waitingFor?.[1]).toHaveLength(200);
+  });
+});
+
+describe("a tab not live again at its budget", () => {
+  it("arms the budget from the slow-op config, records the sample, and files live-again naming what it waits for", () => {
+    const seen: ClientSlowOpSignal[] = [];
+    const off = clientSlowOpSink.subscribe((s) => seen.push(s));
+    render(<LatencyCollector />);
+    expect(liveAgain?.budgetMs()).toBe(10000);
+    liveAgain?.onSample(3100, { censored: false, excluded: false });
+    expect(recordMock).toHaveBeenCalledWith("reconnect", 3100, {
+      censored: false,
+      excluded: false,
+    });
+    liveAgain?.onNotLive({
+      route: "/agents/c/:convId",
+      socket: "central",
+      elapsedMs: 10001.2,
+      budgetMs: 10000,
+      waitingFor: ["claude-code-status×4"],
+    });
+    off();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({
+      operationKind: "live-again",
+      operation: "/agents/c/:convId",
+      durationMs: 10001,
+      thresholdMs: 10000,
+      detail: { censored: true },
+      waitingFor: ["central: claude-code-status×4"],
+    });
   });
 });

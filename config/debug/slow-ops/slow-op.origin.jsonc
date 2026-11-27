@@ -1,7 +1,9 @@
-// @hash 708ef90cae65
+// @hash d7821a203848
 {
   // Report a slow-op when a page load is still not ready after this long — some live read on screen has no answer yet — naming the reads it is waiting for.
   "pageLoadMs": 5000,
+  // Report a slow-op when a tab whose live connection dropped is still not live again after this long — the socket is still reconnecting, or some read it replayed has no answer yet — naming the reads it is waiting for.
+  "liveAgainMs": 10000,
   // Report a slow-op when a live-state resource takes longer than this to settle (mount → first data).
   "elementMs": 1000,
   // Report a slow-op when an in-browser server (a demo's worker) takes longer than this from the page asking for it to it being ready — filed once per boot.

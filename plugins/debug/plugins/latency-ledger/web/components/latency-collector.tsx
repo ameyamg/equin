@@ -16,6 +16,11 @@ import {
   startInteractionTracking,
   type NotReady,
 } from "../internal/interaction-tracker";
+import {
+  startLiveAgainTracking,
+  type NotLiveAgain,
+} from "../internal/live-again-tracker";
+import { useNotificationsClient } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
 import {
@@ -48,6 +53,20 @@ export function LatencyCollector() {
         onNotReady: fileNotReady,
       }),
     [cfgRef],
+  );
+  // Every socket drop, until the tab is live again: every read the reconnect
+  // replayed answered. Its budget is slow-ops' live-again threshold, read as
+  // the drop happens.
+  const notifications = useNotificationsClient();
+  useEffect(
+    () =>
+      startLiveAgainTracking(notifications, {
+        budgetMs: () => cfgRef.current.liveAgainMs,
+        maxWaitingFor: MAX_WAITING_FOR,
+        onNotLive: fileNotLiveAgain,
+        onSample: (ms, flags) => recordSample("reconnect", ms, flags),
+      }),
+    [notifications, cfgRef],
   );
   // Every click and keypress, input → next paint. Interactions happen only in a
   // visible tab, so none is excluded as hidden.
@@ -106,5 +125,32 @@ function fileNotReady(info: NotReady): void {
       .slice(0, MAX_WAITING_FOR)
       .map((k) => k.slice(0, MAX_WAITING_FOR_NAME)),
     clientBoot: toClientBootSection(getBootTrace()),
+  });
+}
+
+/**
+ * A tab still not live again at its budget after its socket dropped, filed as
+ * the `live-again` slow-op — one per route pattern, naming the replayed reads
+ * still unanswered (or the socket, still reconnecting). Its duration is a
+ * lower bound (`censored`); the ledger's `reconnect` sample keeps how long it
+ * really took. A drop of central's socket says so in what it waits for.
+ */
+function fileNotLiveAgain(info: NotLiveAgain): void {
+  const durationMs = Math.max(info.budgetMs, Math.round(info.elapsedMs));
+  clientSlowOpSink.emit({
+    operationKind: "live-again",
+    operation: info.route,
+    durationMs,
+    thresholdMs: info.budgetMs,
+    detail: { censored: true as const },
+    endedAt: Date.now(),
+    waitingFor: info.waitingFor
+      .slice(0, MAX_WAITING_FOR)
+      .map((k) =>
+        (info.socket === "central" ? `central: ${k}` : k).slice(
+          0,
+          MAX_WAITING_FOR_NAME,
+        ),
+      ),
   });
 }

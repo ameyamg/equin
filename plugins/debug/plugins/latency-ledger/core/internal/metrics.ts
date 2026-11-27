@@ -10,6 +10,7 @@ export const LATENCY_METRICS = [
   "watch-delivery",
   "turn-echo",
   "input",
+  "reconnect",
   "thread-lag",
 ] as const;
 export type LatencyMetric = (typeof LATENCY_METRICS)[number];
@@ -42,6 +43,10 @@ export const METRIC_LABELS: Record<
     label: "Message shown",
     what: "The agent taking a sent message, until the transcript line it wrote is on screen in an open tab.",
   },
+  reconnect: {
+    label: "Live again after a reconnect",
+    what: "A tab's live connection dropping (a server restart, a network change), until every read it asked for again on reconnecting has its answer — until then it shows what it held before. A span the machine slept in is left out.",
+  },
   input: {
     label: "Click or keypress",
     what: "A click, tap or keypress, until the next frame is painted (Event Timing: input delay, handlers and rendering). One under 16 ms is counted at 16 ms — the browser does not time it more finely.",
@@ -59,6 +64,7 @@ export const CLIENT_METRICS = [
   "update-e2e",
   "turn-echo",
   "input",
+  "reconnect",
 ] as const;
 export type ClientLatencyMetric = (typeof CLIENT_METRICS)[number];
 

@@ -29,6 +29,7 @@ import {
   rootLiveRegistries,
   liveStateSocketKind,
   type LiveRegistries,
+  type LiveRecovery,
   type LiveStateSocketKind,
 } from "./notifications-client";
 import { createWatermarkRegistry } from "./watermark-registry";
@@ -307,6 +308,27 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
   const [statuses, setStatuses] = useState(() => client.getChannelStatuses());
   useEffect(() => client.subscribeChannelStatuses(setStatuses), [client]);
   return statuses;
+}
+
+/**
+ * Every socket of the enclosing pipeline on its way back to live after a drop
+ * (`NotificationsClient.getRecoveries`): reconnecting, or reopened with
+ * replayed reads still unanswered — what it shows from that socket may be
+ * stale meanwhile. Re-renders only when one starts, moves phase or ends.
+ */
+export function useLiveRecoveries(): readonly LiveRecovery[] {
+  const client = useContext(NotificationsContext);
+  if (!client)
+    throw new Error("useLiveRecoveries must be inside NotificationsProvider");
+  const subscribe = useCallback(
+    (fn: () => void) => client.subscribeRecovery(fn),
+    [client],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => client.getRecoveries(),
+    () => client.getRecoveries(),
+  );
 }
 
 /**

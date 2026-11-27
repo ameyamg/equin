@@ -23,6 +23,21 @@ export const slowOpConfig = defineConfig({
       description:
         "Report a slow-op when a page load is still not ready after this long — some live read on screen has no answer yet — naming the reads it is waiting for.",
     }),
+    // A tab whose socket dropped (a server restart, a network change) and is
+    // still not live again after this long is filed: some read its reconnect
+    // replayed has no answer yet (the latency ledger's `reconnect` measure).
+    // Sized from main's logs (audit task-1795742367-qhngox, 2026-11-27): a
+    // tab current again p50 3.1 s, p90 7.0 s, p99 65 s after its socket
+    // closed — 10 s sits above the ordinary restart and catches the tail.
+    liveAgainMs: intField({
+      default: 10_000,
+      // Every recovery is pending at its first instant: a budget near 0
+      // would file one report per drop.
+      min: 1_000,
+      label: "Live again threshold (ms)",
+      description:
+        "Report a slow-op when a tab whose live connection dropped is still not live again after this long — the socket is still reconnecting, or some read it replayed has no answer yet — naming the reads it is waiting for.",
+    }),
     elementMs: intField({
       default: 1000,
       min: 0,

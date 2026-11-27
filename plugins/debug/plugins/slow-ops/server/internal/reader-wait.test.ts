@@ -27,6 +27,7 @@ import {
 
 const thresholds: Thresholds = {
   pageLoadMs: 2000,
+  liveAgainMs: 10000,
   elementMs: 1000,
   updateMs: 1000,
   confirmMs: 2000,
