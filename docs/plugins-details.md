@@ -718,12 +718,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "welcome"
               - `Shell.Sidebar` "New conversation"
-            - Uses: 27 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
               - `primitives/kept-state` ×4
               - `primitives/pane` ×3
               - `network/live/live-state` ×2
               - `tasks/launch-options` ×2
               - `conversations.useConversations`
+              - `fields/date/format.useDateFormatter`
               - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
               - `infra/claude-cli/sign-in.ClaudeCodeFix`
               - `primitives/app-shell.opensPane`
@@ -1500,7 +1501,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/curriculum`
               - `apps/chord/trainer`
           - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+            - Exempts itself from:
+              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+              - `date-format/no-raw-date-format` — `core/progress.ts` (sanctioned)
         - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours and the neutral grey as the chord-palette tokens, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
           - Web:
             - Contributes:
@@ -2321,7 +2324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteOverview.Card` "traffic" → `TrafficCard`
                   - `SiteOverview.Card` "top" → `TopCards`
                   - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
-                - Uses: 53 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Uses: 54 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
                   - `apps/deploy/box-link/site-row` ×8
                   - `apps/deploy/deployments` ×6
                   - `apps/deploy/host-query` ×4
@@ -2331,6 +2334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/kept-state` ×2
                   - `primitives/link-gesture` ×2
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
+                  - `fields/date/format.useDateFormatter`
                   - `network/live/live-state.ResourceErrorInline`
                   - `network/live.useLive`
                   - `primitives/collapsible.FoldMotion`
@@ -2478,7 +2482,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Pane.Register` "deploy-session-replay"
                   - `SiteTabs.View` "Sessions" → `SessionsSection`
                   - `sources` "Visits" → `VisitsSource`
-                - Uses: 61 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                - Uses: 62 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `primitives/data-view` ×8
                   - `primitives/css/ui-kit` ×6
                   - `primitives/pane` ×6
@@ -2492,6 +2496,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/toggle-chip` ×2
                   - `apps-core.Apps`
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
+                  - `fields/date/format.useDateFormatter`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/center.Center`
                   - `primitives/css/cluster.Cluster`
@@ -2730,6 +2735,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteLive.Action` "retry" → `RetryAction`
                   - `SiteLive.Action` "open-site" → `OpenSiteAction`
                 - Uses:
+                  - `fields/date/format.useDateFormatter`
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLive`
                   - `network/live/live-state.mapResource`
@@ -3556,7 +3562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SiteCheck` "bundle"
               - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
               - `FieldPresentation.Register` "client:deploy.deployments:release"
-            - Uses: 37 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
               - `apps/deploy/deployments` ×7
               - `network/live/live-state` ×6
               - `apps/deploy/health` ×3
@@ -3564,6 +3570,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit` ×3
               - `primitives/css/spacing` ×2
               - `primitives/relative-time` ×2
+              - `fields/date/format.useDateFormatter`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
@@ -4064,7 +4071,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DataViewSlots.CollectionItemAction` "site-feeds.publications:investigate" → `CollectionInvestigate`
                   - `Pane.Register` "deploy-feeds"
                   - `Deploy.Sidebar` "Feeds"
-                - Uses: 33 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md)
+                - Uses: 34 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-feeds/plugins/editor/REFERENCE.md)
                   - `primitives/data-view` ×4
                   - `primitives/pane` ×3
                   - `apps/deploy/deployments` ×2
@@ -4076,6 +4083,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/shell.Deploy`
                   - `apps/deploy/site-feeds/box.useSiteFeedDeclarations`
                   - `config_v2/fields.FieldsForm`
+                  - `fields/date/format.useDateFormatter`
                   - `fields/media/table.mediaFieldDef`
                   - `infra/endpoints.useEndpointMutation`
                   - `primitives/app-shell.opensPane`
@@ -4352,7 +4360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteVisitors.Note` "new-messages" → `NewMessagesNote`
                   - `SiteTabs.View` "Messages" → `MessagesSection`
                   - `SiteOverview.Card` "messages" → `MessagesCard`
-                - Uses: 35 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
+                - Uses: 36 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
                   - `apps/deploy/deployments` ×8
                   - `primitives/data-view` ×4
                   - `apps/deploy/host-query` ×3
@@ -4361,6 +4369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/analytics/dashboard.SiteVisitors`
                   - `apps/deploy/box-link/site-row.SiteLiveAside`
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
+                  - `fields/date/format.useDateFormatter`
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live/live-state.ResourceErrorInline`
                   - `primitives/css/card.Card`
@@ -4940,7 +4949,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`shelf`** — The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
           - Web:
             - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
-            - Uses: 44 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+            - Uses: 45 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
               - `apps/desktop/windows` ×14
               - `primitives/css/ui-kit` ×4
               - `apps-core` ×3
@@ -4951,6 +4960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tabs.useTabs`
               - `apps/desktop/launcher.toggleLauncher`
               - `apps/desktop/shell.DesktopAppTile`
+              - `fields/date/format.useDateFormatter`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/layer.Layer`
@@ -5357,6 +5367,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/events/events-core.useEventSourceOrigin`
               - `apps/events/shell.Events`
+              - `fields/date/format.useDateFormatter`
               - `network/live.FieldPresentation`
               - `primitives/css/badge.Badge`
               - `primitives/css/placeholder.Placeholder`
@@ -6039,6 +6050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/events/sources.SOURCE_STATUS_LABEL`
                       - `apps/events/sources.SOURCE_STATUS_VARIANT`
                       - `apps/events/sources.useEventSource`
+                      - `fields/date/format.useDateFormatter`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
@@ -6129,7 +6141,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "files"
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `ThemeEngine.SubTheme` "Files document"
-            - Uses: 114 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 115 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/pane` ×13
               - `primitives/data-view` ×11
               - `primitives/css/ui-kit` ×7
@@ -6151,6 +6163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts` ×2
               - `shell/notifications` ×2
               - `companions/menu-bar/app-window.useNativeFileDrag`
+              - `fields/date/format.useDateFormatter`
               - `primitives/action-presentation.MenuItemForm`
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
@@ -7159,6 +7172,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HealthReport.Row` "Mail"
             - Uses:
               - `config_v2.ConfigV2`
+              - `fields/date/format.useDateFormatter`
               - `network/live.useLive`
               - `shell/health-report.HealthReport`
           - Server:
@@ -7336,7 +7350,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fork-data-exclusion` "mail_drafts"
               - `fork-data-exclusion` "mail_drafts_attachments"
               - `ConfigV2.Register` "mail-compose"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
               - `infra/attachments` ×4
               - `config_v2` ×2
               - `database/derived-updated-at` ×2
@@ -7349,6 +7363,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/cache.mailCache`
               - `database/admin.ExcludeFromFork`
               - `database.db`
+              - `fields/date/format.serverDateFormatter`
               - `shell/notifications.recordNotification`
             - DB schema:
               - `plugins/apps/plugins/mail/plugins/compose/server/internal/schema-attachments.ts`
@@ -7557,7 +7572,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `MailProviderUi.Connect` "gmail" → `GmailConnect`
                   - `Auth.Integration` "Gmail instant updates"
-                - Uses: 24 symbols — full list in [`plugins/apps/plugins/mail/plugins/providers/plugins/gmail/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/providers/plugins/gmail/REFERENCE.md)
+                - Uses: 25 symbols — full list in [`plugins/apps/plugins/mail/plugins/providers/plugins/gmail/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/providers/plugins/gmail/REFERENCE.md)
                   - `network/live/live-state` ×5
                   - `primitives/setup-steps` ×5
                   - `integrations/google-pubsub` ×3
@@ -7565,6 +7580,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit` ×2
                   - `apps/mail/provider.MailProviderUi`
                   - `auth.Auth`
+                  - `fields/date/format.useDateFormatter`
                   - `integrations/gmail.GmailAccessEmptyState`
                   - `network/live.useLive`
                   - `primitives/css/spacing.Stack`
@@ -7649,12 +7665,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GET /api/mail/inline/:sig`
               - `GET /api/mail/attachment/:threadId/:messageId/:partId`
           - Web:
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
               - `primitives/css/fill` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `apps/mail/provider.MailProviderConnect`
+              - `fields/date/format.useDateFormatter`
               - `infra/endpoints.useAssetUrl`
               - `network/live/live-state.ResourceError`
               - `network/live.useLive`
@@ -7767,7 +7784,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 54 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses: 55 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/data-view` ×9
               - `network/live/live-state` ×5
               - `primitives/css/ui-kit` ×5
@@ -7779,6 +7796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/picker` ×2
               - `apps/mail/provider.MailProviderConnect`
               - `apps/mail/reader.ThreadReader`
+              - `fields/date/format.useDateFormatter`
               - `network/live/optimistic-mutation.writeRows`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
@@ -8510,6 +8528,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `searchCountOf`
           - Cross-plugin:
             - Imported by: `apps/places/places-map`
+          - Exemptions:
+            - Exempts itself from: `date-format/no-raw-date-format` — `machine/internal/instructions.ts` (sanctioned)
         - **`fixtures`** — Places fixtures, server half: writePlacesFixture writes a PlacesFixture through the app's real write paths — the starter tag tree a fresh install seeds, the fixture's tags through the tag tree's own endpoints (create path, then colour and icon), each place through insertPlace with its icon given — so no Google call and no model is needed. Derives nothing else.
           - Server:
             - Uses:
@@ -8832,7 +8852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `renderer` "mcp__equin__places_show_picks" → `ParsedToolView`
-            - Uses: 148 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 149 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×15
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
@@ -8862,6 +8882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tabs.useAppLinkProps`
               - `apps/places/place-details.usePlaceDetails`
               - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+              - `fields/date/format.useDateFormatter`
               - `integrations/google-maps/usage.useMapsBudget`
               - `page/editor.PageIcon`
               - `primitives/app-shell.AppShellBrand`
@@ -9263,6 +9284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
                     - Uses:
                       - `apps/plugin-studio/compositions/release.ReleaseDetail`
+                      - `fields/date/format.useDateFormatter`
                       - `network/live.useLive`
                       - `network/live/live-state.ResourceErrorInline`
                       - `primitives/copy-to-clipboard.CopyButton`
@@ -14627,11 +14649,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteFeeds.Feed` "tips"
                   - `Pane.Register` "website-tips"
                   - `Website.LearnEntry` "Tips" → `TipsNavItem`
-                - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
+                - Uses: 27 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
                   - `apps/website/shell` ×7
                   - `apps/deploy/site-feeds/box` ×4
                   - `primitives/pane` ×3
                   - `primitives/overlay/image-viewer` ×2
+                  - `fields/date/format.useDateFormatter`
                   - `infra/endpoints.useAssetSrc`
                   - `media/player.MediaPlayer`
                   - `network/live/live-state.ResourceErrorInline`
@@ -16705,7 +16728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
-    - Uses: 44 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 45 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `network/live/live-state` ×4
       - `primitives/css/ui-kit` ×4
       - `infra/endpoints` ×3
@@ -16718,6 +16741,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `audience.useAudience`
       - `build/deployment.DeploymentChain`
       - `config_v2.ConfigV2`
+      - `fields/date/format.useDateFormatter`
       - `ids.IdKinds`
       - `network/live.useLive`
       - `primitives/css/line.Line`
@@ -17575,12 +17599,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `commitDetailPane.Actions`
         - Slot contributors: `commitDetailPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "commit-detail"
-        - Uses: 34 symbols — full list in [`plugins/code-explorer/plugins/commit-detail/REFERENCE.md`](../plugins/code-explorer/plugins/commit-detail/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/code-explorer/plugins/commit-detail/REFERENCE.md`](../plugins/code-explorer/plugins/commit-detail/REFERENCE.md)
           - `primitives/data-view` ×7
           - `primitives/pane` ×5
           - `primitives/css/ui-kit` ×3
           - `ids` ×2
           - `primitives/css/spacing` ×2
+          - `fields/date/format.useDateFormatter`
           - `network/live/live-state.foldResource`
           - `network/live.useLive`
           - `primitives/avatar.Avatar`
@@ -18228,8 +18253,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 114 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×114
+    - Slot contributors: 115 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×115
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -18496,7 +18521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withListOrder`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 164 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 165 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×44
       - `debug` ×17
       - `conversations` ×15
@@ -18509,13 +18534,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `framework` ×5
       - `build` ×3
       - `primitives` ×3
+      - `fields` ×2
       - `integrations` ×2
       - `plugin-meta` ×2
       - `shell` ×2
       - `stats` ×2
       - `audience`
       - `companions/browser-extension/recorder`
-      - `fields/secret/config`
       - `hints/ask`
       - `map/google`
       - `music/background`
@@ -19398,7 +19423,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 63 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 64 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/pane` ×8
           - `primitives/data-view` ×5
           - `conversations/conversation-ui/item` ×4
@@ -19415,6 +19440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider.ModelSelect`
           - `conversations.useConversationById`
           - `fields/avatar/table.avatarFieldDef`
+          - `fields/date/format.useDateFormatter`
           - `ids.IdKinds`
           - `primitives/app-shell.opensPane`
           - `primitives/css/center.Center`
@@ -20945,7 +20971,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 56 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 57 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
               - `primitives/dom/auto-scroll` ×7
               - `conversations/conversation-view/pending-turn` ×6
@@ -20954,6 +20980,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/working-dots` ×2
               - `primitives/relative-time` ×2
               - `primitives/slot-render` ×2
+              - `fields/date/format.useDateFormatter`
               - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/css/grow.growClass`
@@ -21264,6 +21291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
+                      - `fields/date/format.useDateFormatter`
                       - `ui/icons.Icon`
                   - Cross-plugin:
                     - Uses tokens:
@@ -22065,6 +22093,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `JsonlRowActions.Item` ← `conversations.conversation-view.jsonl-viewer.user-text`
                   - `JsonlRowActions.Item` ← `conversations.conversation-view.rewind`
                 - Uses:
+                  - `fields/date/format.useDateFormatter`
                   - `primitives/copy-to-clipboard.useCopyToClipboard`
                   - `primitives/icon-button.IconButton`
                   - `primitives/relative-time.RelativeTime`
@@ -23241,6 +23270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
+                      - `fields/date/format.useDateFormatter`
                       - `network/live.useLive`
                 - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering. Serves the token-budget stat's fold of a conversation's transcript before the page's window.
                   - Web:
@@ -25011,6 +25041,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DebugApp.Sidebar` "Recovery"
         - Uses:
           - `apps/debug/shell.DebugApp`
+          - `fields/date/format.useDateFormatter`
           - `infra/endpoints.useFetchEndpoint`
           - `infra/endpoints.useMachineAvailability`
           - `network/live.useLive`
@@ -25105,7 +25136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
           - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
           - `ConfigV2.WebRegister` "runtime-sdk-context-nudge"
-        - Uses: 57 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+        - Uses: 58 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `infra/claude-cli/availability` ×4
           - `infra/endpoints` ×4
@@ -25121,6 +25152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/control-panel` ×2
           - `audience/developer-mark.ForAudience`
           - `conversations/conversation-view.conversationPane`
+          - `fields/date/format.useDateFormatter`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
@@ -27202,6 +27234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` "Database"
         - Uses:
           - `debug/trace/engine.TraceChip`
+          - `fields/date/format.useDateFormatter`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
@@ -28089,13 +28122,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "claude-cli-call-detail"
           - `Pane.Register` "claude-cli-calls"
           - `DebugApp.Sidebar` "Claude CLI Calls"
-        - Uses: 21 symbols — full list in [`plugins/debug/plugins/claude-cli-calls/REFERENCE.md`](../plugins/debug/plugins/claude-cli-calls/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/debug/plugins/claude-cli-calls/REFERENCE.md`](../plugins/debug/plugins/claude-cli-calls/REFERENCE.md)
           - `primitives/pane` ×6
           - `primitives/data-view` ×4
           - `infra/claude-cli` ×2
           - `network/live` ×2
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
+          - `fields/date/format.useDateFormatter`
           - `primitives/css/badge.Badge`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
@@ -28209,11 +28243,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "debug-health-monitor"
           - `DebugApp.Sidebar` "Health"
-        - Uses: 23 symbols — full list in [`plugins/debug/plugins/health-monitor/REFERENCE.md`](../plugins/debug/plugins/health-monitor/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/debug/plugins/health-monitor/REFERENCE.md`](../plugins/debug/plugins/health-monitor/REFERENCE.md)
           - `stats/commits` ×7
           - `primitives/pane` ×3
           - `primitives/css/text` ×2
           - `apps/debug/shell.DebugApp`
+          - `fields/date/format.useDateFormatter`
           - `network/live/live-state.ResourceErrorInline`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
@@ -28653,13 +28688,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "logs"
           - `Pane.Register` "logs-channel"
           - `DebugApp.Sidebar` "Logs"
-        - Uses: 30 symbols — full list in [`plugins/debug/plugins/logs/REFERENCE.md`](../plugins/debug/plugins/logs/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/debug/plugins/logs/REFERENCE.md`](../plugins/debug/plugins/logs/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/data-view` ×5
           - `primitives/pane` ×4
           - `primitives/css/spacing` ×3
           - `primitives/relative-time` ×2
           - `apps/debug/shell.DebugApp`
+          - `fields/date/format.useDateFormatter`
           - `network/live/live-state.foldResource`
           - `network/live.useLive`
           - `primitives/copy-to-clipboard.CopyButton`
@@ -29428,7 +29464,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Core.Root` → `TabMemoryRecorder`
               - `Pane.Register` "debug-tab-memory"
               - `DebugApp.Sidebar` "Tab memory"
-            - Uses: 29 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
               - `stats/commits` ×7
               - `primitives/pane` ×4
               - `primitives/data-view` ×3
@@ -29437,6 +29473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tabs.peekTabSets`
               - `apps/debug/shell.DebugApp`
               - `config_v2.ConfigV2`
+              - `fields/date/format.useDateFormatter`
               - `network/live/live-state.ResourceErrorInline`
               - `network/live.useLive`
               - `primitives/css/placeholder.Placeholder`
@@ -29552,7 +29589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger-actions` "enabled" → `TriggerEnabledAction`
           - `trigger-actions` "delete" → `DeleteTriggerAction`
           - `DebugApp.Sidebar` "Queue"
-        - Uses: 52 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
+        - Uses: 53 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
           - `primitives/pane` ×7
           - `network/live/live-state` ×6
           - `network/live` ×5
@@ -29562,6 +29599,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit` ×2
           - `apps/debug/shell.DebugApp`
           - `debug/background.backgroundEntryPane`
+          - `fields/date/format.useDateFormatter`
           - `infra/background/catalog.useBackgroundEntry`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/badge.Badge`
@@ -30073,6 +30111,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
             - Uses:
               - `debug/sentinel/machine-usage.MachineUsageBreakdown`
+              - `fields/date/format.useDateFormatter`
               - `network/live.useLive`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/cluster.Cluster`
@@ -30106,6 +30145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources: `sentinel.machine-usage` (push, notified, capped: MACHINE_USAGE_BUCKETS.length)
           - Web:
             - Uses:
+              - `fields/date/format.useDateFormatter`
               - `network/live.useLive`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/clip.Clip`
@@ -30563,7 +30603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.CollectionItemAction` "tests.file-status:investigate" → `CollectionInvestigate`
           - `DataViewSlots.CollectionItemAction` "tests.file-runs:investigate" → `CollectionInvestigate`
           - `DebugApp.Sidebar` "Tests"
-        - Uses: 40 symbols — full list in [`plugins/debug/plugins/tests/REFERENCE.md`](../plugins/debug/plugins/tests/REFERENCE.md)
+        - Uses: 41 symbols — full list in [`plugins/debug/plugins/tests/REFERENCE.md`](../plugins/debug/plugins/tests/REFERENCE.md)
           - `primitives/data-view` ×6
           - `primitives/pane` ×6
           - `config_v2` ×2
@@ -30573,6 +30613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch/investigate` ×2
           - `apps/debug/shell.DebugApp`
           - `config_v2/config-link.ConfigGearButton`
+          - `fields/date/format.useDateFormatter`
           - `infra/endpoints.useEndpointMutation`
           - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/badge.Badge`
@@ -30875,6 +30916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/mcp-tool.ts`, `server/internal/sources/health.ts` (debt)
+          - `date-format/no-raw-date-format` — `server/internal/format.ts` (sanctioned)
     - **`trace`** — Umbrella for the durable slow-event trace engine: the generic perf-event trace registry + storage (engine) and the built-in event classes (spans, gates, contention).
       - Plugins:
         - **`boot`** — Boot trace lane: a self-contained phase-grouped Gantt card of the server-boot profile (gateway readiness wait, per-phase spans, memory checkpoints) on the boot section's own clock axis. Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and supplied by the producer through bootClass.supply.
@@ -31829,6 +31871,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/data-view.DataViewSlots`
           - Core:
             - Uses:
+              - `fields/date/format.createDateFormatter`
+              - `fields/date/format.DateFormatter`
+              - `fields/date/format.DEFAULT_DATE_FORMAT_PREFS`
               - `primitives/date-picker.addDays`
               - `primitives/date-picker.addMonths`
               - `primitives/date-picker.isSameDay`
@@ -31844,6 +31889,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
             - Uses:
+              - `fields/date/format.useDateFormatter`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/spacing.Inset`
@@ -31877,6 +31923,60 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveAnchorDay`
               - `TODAY`
               - `withinRange`
+        - **`format`** — Registers the Clock / Date order / Numeric dates config and reads it live as useDateFormatter() — the formatter every surface writes a date or a time with. Registers the Clock / Date order / Numeric dates config and reads it on the server as serverDateFormatter().
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "date-format"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
+            - Exports (values): `useDateFormatter`
+          - Server:
+            - Contributes: `ConfigV2.Register` "date-format"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
+            - Exports (values): `serverDateFormatter`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/enum/config.enumField`
+            - Exports (types):
+              - `DateFormatPrefs`
+              - `DateFormatter`
+              - `DateOptions`
+              - `NumericOptions`
+              - `TimeOptions`
+            - Exports (values):
+              - `createDateFormatter`
+              - `dateFormatConfig`
+              - `DEFAULT_DATE_FORMAT_PREFS`
+              - `formatterFor`
+              - `prefsOf`
+          - Cross-plugin:
+            - Imported by: 54 plugins — full list in [`plugins/fields/plugins/date/plugins/format/REFERENCE.md`](../plugins/fields/plugins/date/plugins/format/REFERENCE.md)
+              - `apps` ×19
+              - `debug` ×8
+              - `conversations` ×7
+              - `infra` ×6
+              - `tasks` ×3
+              - `fields` ×2
+              - `primitives` ×2
+              - `build`
+              - `code-explorer/commit-detail`
+              - `database/query-deadline`
+              - `integrations/google-maps/usage`
+              - `page/inline-date`
+              - `review`
+              - `stats/responsiveness`
+          - Exemptions:
+            - Exempts itself from: `date-format/no-raw-date-format` — `core/internal/formatter.ts` (sanctioned)
+            - Exempted by:
+              - `apps/chord/progress` (0 debt)
+              - `apps/places/ask` (0 debt)
+              - `debug/timeline` (0 debt)
+              - `fields/date/format` (0 debt)
+              - `packages/wall-clock` (0 debt)
+              - `primitives/metrics` (0 debt)
         - **`inline`** — Date field type: data-view inline cell editor (native date input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "date" → `DateEditor`
@@ -32205,11 +32305,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `enumField`
               - `enumSample`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/fields/plugins/enum/plugins/config/REFERENCE.md`](../plugins/fields/plugins/enum/plugins/config/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/fields/plugins/enum/plugins/config/REFERENCE.md`](../plugins/fields/plugins/enum/plugins/config/REFERENCE.md)
               - `apps` ×12
               - `conversations` ×2
+              - `fields` ×2
               - `primitives` ×2
-              - `fields/variant/config`
               - `infra/audio-analysis`
               - `plugin-meta/composition`
               - `tasks/automations`
@@ -38108,6 +38208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `conversations/model-provider.familyClass`
+          - `fields/date/format.useDateFormatter`
           - `network/live.useLive`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/badge.Badge`
@@ -39686,7 +39787,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "events-test"
           - `DebugApp.Sidebar` "Events Test"
-        - Uses: 27 symbols — full list in [`plugins/infra/plugins/events-test/REFERENCE.md`](../plugins/infra/plugins/events-test/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/infra/plugins/events-test/REFERENCE.md`](../plugins/infra/plugins/events-test/REFERENCE.md)
           - `network/live/live-state` ×4
           - `primitives/css/ui-kit` ×3
           - `primitives/data-view` ×3
@@ -39694,6 +39795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane` ×2
           - `shell/notifications` ×2
           - `apps/debug/shell.DebugApp`
+          - `fields/date/format.useDateFormatter`
           - `infra/endpoints.useFetchEndpoint`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
@@ -39952,6 +40054,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`background-arm`** — File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its scope from mainOnly, and its facts (open instances and the directories each watches, the native backend, the last change batch) — plus its handler runs in this process. Pushes the catalog as instances open and close and as runs land (throttled by the file-watcher registry).
           - Server:
             - Uses:
+              - `fields/date/format.serverDateFormatter`
               - `infra/background/catalog.defineBackgroundKind`
               - `infra/file-watcher.fileWatcherRecentRuns`
               - `infra/file-watcher.FileWatcherSnapshot`
@@ -40763,6 +40866,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Reports.KindView` → `HostIoDegradedSummary`
               - `HealthReport.Row` "Disk I/O"
             - Uses:
+              - `fields/date/format.useDateFormatter`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/inline.Inline`
@@ -42157,6 +42261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `HealthReport.Row` "Agent browser" → `AgentBrowserDetail`
             - Uses:
               - `conversations.useConversationById`
+              - `fields/date/format.useDateFormatter`
               - `network/live.rowOrStale`
               - `network/live.useLive`
               - `network/live/live-state.foldResource`
@@ -43513,6 +43618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand, its scope from `where`, and its facts (each instance's state, pid, since when, restarts, memory and CPU from one `ps`, the last exit, the restart policy, how liveness is known) — plus each incarnation as a run in this process. Pushes the catalog on every instance transition (start, ready, death, respawn, give-up, stop).
               - Server:
                 - Uses:
+                  - `fields/date/format.serverDateFormatter`
                   - `infra/background/catalog.defineBackgroundKind`
                   - `infra/spawn/daemon.backoffPolicy`
                   - `infra/spawn/daemon.DaemonInstanceInfo`
@@ -44551,6 +44657,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.ConfigV2`
               - `config_v2.useConfigResult`
               - `config_v2/config-link.useConfigLink`
+              - `fields/date/format.useDateFormatter`
               - `network/live.useClockParam`
               - `network/live.useLive`
               - `network/live/live-state.foldResource`
@@ -48014,6 +48121,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps/usage`
           - `network/live`
           - `primitives/metrics`
+      - Exemptions:
+        - Exempts itself from: `date-format/no-raw-date-format` — `core/internal/wall-clock.ts` (sanctioned)
       - Core:
         - Exports (types): `WallClock`
         - Exports (values):
@@ -49826,11 +49935,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('page.reminders.reconcile')`
           - `defineJob('page.reminders.fire')`
       - Web:
-        - Uses: 22 symbols — full list in [`plugins/page/plugins/inline-date/REFERENCE.md`](../plugins/page/plugins/inline-date/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/page/plugins/inline-date/REFERENCE.md`](../plugins/page/plugins/inline-date/REFERENCE.md)
           - `primitives/text-editor/caret-trigger` ×4
           - `page/editor` ×3
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
+          - `fields/date/format.useDateFormatter`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
@@ -53405,6 +53515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat / raw+numstat parsers, the runGit invocation and commit row types for reuse across plugins.
       - Web:
         - Uses:
+          - `fields/date/format.useDateFormatter`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
@@ -56618,6 +56729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`date-picker`** — Themed date-picker primitive: <Calendar> month grid, <TimeField> native clock input, <DatePickerPanel> (presets + calendar + time + clear), and <DatePickerPopover>. Day math lives in core/ and is local-calendar, never UTC.
       - Web:
         - Uses:
+          - `fields/date/format.useDateFormatter`
           - `primitives/announce.announce`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -59044,6 +59156,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --primary`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `date-format/no-raw-date-format` — `core/intervals.ts` (sanctioned)
       - Plugins:
         - **`chart-kit`** — Hand-rolled SVG chart kit, knowing nothing about metrics: TimeChart (area / line / stack / mirror / net, a dashed compare line, gaps for null, partial buckets drawn lighter / dashed, hover + keyboard tooltip, onPick), Sparkline, Histogram, the ChartTable twin, ChartOrTable and ChartState (loading / empty / error at chart height). Series take --categorical-1…10 in fixed order, the tail folding into Other; chrome is neutral tokens.
           - Web:
@@ -64160,13 +64274,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `Pane.Register` "conv-review"
       - `Conversation.ActionBar` → `ReviewButton`
-    - Uses: 22 symbols — full list in [`plugins/review/REFERENCE.md`](../plugins/review/REFERENCE.md)
+    - Uses: 23 symbols — full list in [`plugins/review/REFERENCE.md`](../plugins/review/REFERENCE.md)
       - `primitives/pane` ×6
       - `network/live` ×2
       - `primitives/css/spacing` ×2
       - `conversations/conversation-view/action-bar.Conversation`
       - `conversations/conversation-view.conversationPane`
       - `conversations.useConversationById`
+      - `fields/date/format.useDateFormatter`
       - `network/live/live-state.ResourceErrorInline`
       - `primitives/css/placeholder.Placeholder`
       - `primitives/css/scroll.Scroll`
@@ -65637,6 +65752,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Stats.Chart` "Responsiveness" → `ResponsivenessSection`
         - Uses:
+          - `fields/date/format.useDateFormatter`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/grid.Grid`
@@ -68035,7 +68151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `adhoc-actions` "open" → `OpenAdhocAction`
               - `backlog-actions` "adopt" → `AdoptAction`
               - `backlog-actions` "drop" → `DropAction`
-            - Uses: 76 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md)
+            - Uses: 77 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `network/live/live-state` ×5
               - `primitives/data-view` ×5
@@ -68053,6 +68169,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×2
               - `conversations/conversation-view.useConversationOpener`
               - `conversations.useConversationById`
+              - `fields/date/format.useDateFormatter`
               - `primitives/app-shell.opensPane`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
@@ -68187,13 +68304,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "supervisors-spend"
               - `SupervisorsList.Head` "Spent this week" → `SpendGlance`
               - `row-actions` "open" → `OpenConversationAction`
-            - Uses: 33 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md)
+            - Uses: 34 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md)
               - `primitives/data-view` ×7
               - `network/live/live-state` ×3
               - `primitives/breadcrumb` ×3
               - `primitives/link-gesture` ×3
               - `primitives/pane` ×3
               - `conversations/conversation-view.conversationPane`
+              - `fields/date/format.useDateFormatter`
               - `network/live.useLive`
               - `primitives/css/coords.Placed`
               - `primitives/css/placeholder.Placeholder`
@@ -68674,6 +68792,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/conversation-ui/row.ConversationRow`
           - `conversations/conversation-view.useConversationOpener`
+          - `fields/date/format.useDateFormatter`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
           - `network/live/live-state.ResourceErrorInline`

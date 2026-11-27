@@ -1,5 +1,23 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
+import type * as FormatCore from "@plugins/fields/plugins/date/plugins/format/core";
+
+// The date formatter reads its prefs from config_v2, which has no
+// registration here: format with the defaults.
+vi.mock(
+  "@plugins/fields/plugins/date/plugins/format/web",
+  async (importOriginal) => {
+    const core = await vi.importActual<typeof FormatCore>(
+      "@plugins/fields/plugins/date/plugins/format/core",
+    );
+    const fmt = core.createDateFormatter(core.DEFAULT_DATE_FORMAT_PREFS);
+    return {
+      ...(await importOriginal<object>()),
+      useDateFormatter: () => fmt,
+    };
+  },
+);
+
 import type { RichText } from "@plugins/page/plugins/editor/core";
 // Side-effect import: registering `page/inline-date` is what puts the date family
 // in the block-text registry this renderer reads. It is the SUBJECT of the token
