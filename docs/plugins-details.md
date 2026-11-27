@@ -2632,8 +2632,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`box`** — Ships on the deployed box: the BoxSignal contribution kind ({ source, subscribe(emit) }) — the signal sources a box's link stream relays, collected generically (site-mirror/box contributes the table-mirror one). Its machine half serves the stream. Imported by site-mirror/box, so it ships wherever a mirror set does.
               - Machine:
                 - Uses: `infra/endpoints.machineHandler`
+                - Exports (values): `boxLinkStreamResponse`
               - Cross-plugin:
-                - Imported by: `apps/deploy/site-mirror/box`
+                - Imported by:
+                  - `apps/deploy/box-link/link`
+                  - `apps/deploy/site-mirror/box`
               - Server:
                 - Exports (types): `BoxSignalSpec`
                 - Exports (values): `BoxSignal`
@@ -2677,6 +2680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `deploy.site-health` (push, notified, whole: one entry per deployment row — a handful)
               - Machine:
                 - Uses:
+                  - `apps/deploy/box-link/box.boxLinkStreamResponse`
                   - `infra/endpoints.implementMachine`
                   - `network/live.serveValue`
                 - Register:
@@ -42297,9 +42301,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderGatewayPortRecord`
               - `servedGatewayPort`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
-              - `apps` ×7
+            - Imported by: 40 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
               - `debug` ×7
+              - `apps` ×6
               - `framework` ×6
               - `infra` ×5
               - `conversations` ×3
@@ -42688,9 +42692,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 93 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
-          - `apps` ×16
+        - Imported by: 92 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×16
+          - `apps` ×15
           - `debug` ×12
           - `infra` ×12
           - `conversations` ×7

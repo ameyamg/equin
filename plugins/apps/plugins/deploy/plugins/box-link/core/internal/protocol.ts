@@ -4,8 +4,8 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 
 // The box link's stream: one long-lived NDJSON GET a deployed box answers to
-// this computer (over an SSH tunnel to its gateway's loopback port, or through
-// this instance's own gateway for a demo's stand-in box). It carries SIGNALS,
+// this computer (over an SSH tunnel to its gateway's loopback port; a demo's
+// stand-in box is read in-process, never through a connection). It carries SIGNALS,
 // never data — the table mirror stays the one data path, so a lost frame costs
 // nothing: every reconnect runs one catch-up pull.
 
@@ -15,8 +15,8 @@ import type { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/anal
  */
 export const boxLinkStreamEndpoint = defineEndpoint({
   route: "GET /api/host-only/box-link/stream",
-  // Read by the computer holding the box link (over its SSH tunnel, or for a
-  // demo's stand-in box through its own gateway), never by a browser.
+  // Read by the computer holding the box link over its SSH tunnel, never by a
+  // browser (a demo's stand-in box is read in-process, without this route).
   needsMachine: { feature: "The box link's stream" },
 });
 

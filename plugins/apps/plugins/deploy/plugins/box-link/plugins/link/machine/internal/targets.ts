@@ -16,7 +16,7 @@ export interface LinkDeployment {
  * How the links of one server's deployments are reached:
  *
  * - `stand-in` — a demo's server whose box is THIS instance (host-query's
- *   stand-ins): no tunnel, the stream comes through this instance's gateway;
+ *   stand-ins): no tunnel and no connection, its stream is read in-process;
  * - `ssh` — a real box: one tunnel, one forward per deployment. `signature`
  *   names everything the tunnel's argv is built from (address, user, key,
  *   pinned host key, ports): a changed one restarts the tunnel;

@@ -47,8 +47,11 @@ Tests: `./equin test plugins/apps/plugins/deploy/plugins/box-link/plugins/box`.
 - Description: Ships on the deployed box: the BoxSignal contribution kind ({ source, subscribe(emit) }) — the signal sources a box's link stream relays, collected generically (site-mirror/box contributes the table-mirror one). Its machine half serves the stream. Imported by site-mirror/box, so it ships wherever a mirror set does.
 - Machine:
   - Uses: `infra/endpoints.machineHandler`
+  - Exports (values): `boxLinkStreamResponse`
 - Cross-plugin:
-  - Imported by: `apps/deploy/site-mirror/box`
+  - Imported by:
+    - `apps/deploy/box-link/link`
+    - `apps/deploy/site-mirror/box`
 - Server:
   - Exports (types): `BoxSignalSpec`
   - Exports (values): `BoxSignal`

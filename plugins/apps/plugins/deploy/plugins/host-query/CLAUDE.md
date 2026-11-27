@@ -77,8 +77,8 @@ principal, one hop, the same 10 s deadline) instead of SSH, and maps it onto
 the same failures: network error -> `request-failed` 7, 404 -> `route-missing`,
 any other HTTP >= 400 -> `request-failed` 22. No SSH key or pinned host key is needed. Used by
 `deploy/fixtures` (`box: "this-instance"`). `standInServerIds()` lists the
-marked servers (the box link links them through this instance's gateway, no
-tunnel); `deployHostStandIns` is exported for the box link's targets trigger.
+marked servers (the box link reads their stream in-process, no tunnel and no
+gateway connection); `deployHostStandIns` is exported for the box link's targets trigger.
 
 `server/internal/query-over-ssh.ts` holds the argv, the mapping and the query
 with its two effects injected, tested without a box.

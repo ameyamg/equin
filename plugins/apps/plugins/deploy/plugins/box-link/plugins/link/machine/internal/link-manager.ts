@@ -1,12 +1,11 @@
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInRootContext,
+  runTracked,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
-import {
-  isMain,
-  runtimeNamespace,
-} from "@plugins/infra/plugins/runtime-identity/core";
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
-import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { boxLinkStreamResponse } from "@plugins/apps/plugins/deploy/plugins/box-link/plugins/box/machine";
 import {
   onSleepReadingChanged,
   sleptDuring,
@@ -19,9 +18,10 @@ import {
   latestDeployRun,
   onDeployRunChanged,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
-import type {
-  BoxLink,
-  LinkRefusal,
+import {
+  BOX_LINK_STREAM_PATH,
+  type BoxLink,
+  type LinkRefusal,
 } from "@plugins/apps/plugins/deploy/plugins/box-link/core";
 import type { SshTunnelFailureKind } from "@plugins/infra/plugins/ssh/core";
 import {
@@ -158,11 +158,28 @@ function sameTarget(a: LinkTarget, b: LinkTarget): boolean {
   return JSON.stringify(a.deployments) === JSON.stringify(b.deployments);
 }
 
-/** Through this instance's own gateway: a demo's stand-in box is this instance. */
-const throughOwnGateway: StreamTransport = (path, signal) =>
-  fetch(namespaceUrl(runtimeNamespace(), path, servedGatewayPort()), {
-    signal,
-  });
+/**
+ * In this process: a demo's stand-in box IS this instance, so its stream is
+ * produced right here, never dialed. Through the gateway it was a connection
+ * from this backend to its own namespace, held open by the beats forever, so
+ * the gateway's idle sweep never stopped the backend (five promo-film
+ * backends held up for days, 2026-11-27). With no connection to hold, a
+ * backend cannot keep itself awake through its own link.
+ */
+const inThisProcess: StreamTransport = (path, signal) => {
+  if (path !== BOX_LINK_STREAM_PATH) {
+    throw new Error(
+      `box-link: a stand-in serves only ${BOX_LINK_STREAM_PATH}, not ${path}`,
+    );
+  }
+  // Its own context, as a served request's would be: the producer outlives
+  // the client's "stream connect" span it would otherwise start inside.
+  return Promise.resolve(
+    runInRootContext(() =>
+      boxLinkStreamResponse(new Request(`http://stand-in${path}`, { signal })),
+    ),
+  );
+};
 
 /** Through the tunnel's socket to the box gateway's loopback port. */
 function throughSocket(socket: string, d: LinkDeployment): StreamTransport {
@@ -185,7 +202,7 @@ function downFailure(deploymentId: string, error: string): void {
 
 /**
  * A stream's failure, on evidence: the box answered → `down`. With no answer
- * there is no tunnel to doubt on a stand-in (this instance's own gateway did
+ * there is no tunnel to doubt on a stand-in (this process's own producer did
  * not answer: `down`); through a tunnel it is `down` only once ssh shows it
  * answered — until then it concludes nothing, and the tunnel's exit names it.
  */
@@ -285,7 +302,7 @@ async function openServer(target: LinkTarget): Promise<void> {
   switch (target.kind) {
     case "stand-in":
       for (const d of target.deployments) {
-        const stream = streamFor(d.deploymentId, throughOwnGateway, null);
+        const stream = streamFor(d.deploymentId, inThisProcess, null);
         entry.streams.set(d.deploymentId, stream);
         stream.enable();
       }

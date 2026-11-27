@@ -18,9 +18,13 @@ the boxes. Local only — nothing on a box imports it.
   each exit (`classifyTunnelStderr`); a kind no respawn can fix (`auth`,
   `host-key-mismatch`, `forwarding-refused`) stops the tunnel for good —
   `refused` — until a Retry or a changed target.
-- **Demo stand-in boxes: every namespace**, through this instance's own
-  gateway (`namespaceUrl(runtimeNamespace(), …)`), no tunnel — so a worktree
-  exercises the whole path (`host-query`'s `standInServerIds`).
+- **Demo stand-in boxes: every namespace**, in-process: a stand-in's box IS
+  this instance, so its stream client reads `box`'s `boxLinkStreamResponse`
+  directly — the same producer, NDJSON body and client, no tunnel, no socket
+  (`host-query`'s `standInServerIds`). Never through its own gateway: that
+  was a connection from the backend to its own namespace, its 15 s beats
+  keeping it open forever, so the gateway's idle sweep never stopped the
+  backend (five promo-film composition backends held up for days, 2026-11-27).
 - A server without an SSH key or a pinned host key is `refused`
   (`no-ssh-key` / `unverified`) without dialing.
 
@@ -63,7 +67,7 @@ event, concluding nothing; it becomes `down` only once ssh shows the
 session answered after the attempt began (a forward's target refused —
 `infra/ssh`'s `isForwardTargetRefusal`), whichever arrives first
 (`machine/internal/tunnel-evidence.ts`), and the tunnel's exit names it
-`unreachable` otherwise. A stand-in has no tunnel to doubt: no answer is
+`unreachable` otherwise. A stand-in has no tunnel to doubt: a failure is
 `down`.
 
 ## The state machine (`shared/reducer.ts`, pure)
@@ -231,6 +235,7 @@ Tests: `./equin test plugins/apps/plugins/deploy/plugins/box-link/plugins/link`.
     - `deploy.site-health` (push, notified, whole: one entry per deployment row — a handful)
 - Machine:
   - Uses:
+    - `apps/deploy/box-link/box.boxLinkStreamResponse`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Register:
