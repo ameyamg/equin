@@ -28,7 +28,8 @@ import {
   formatAddressList,
   isDraftEmpty,
   messageIdsIn,
-  messageText,
+  messageParts,
+  plainTextBody,
   MAIL_ATTACHMENTS_MAX_BYTES,
   mailDraftIdKind,
   parseAddressList,
@@ -122,8 +123,6 @@ function draftRecipients(field: string): Participant[] {
   return parseAddressList(field).addresses;
 }
 
-/** The text a message carries: the body, then (a reply) the quote of what it answers. */
-
 export function createOutbox(deps: OutboxDeps) {
   const { db } = deps;
   const now = deps.now ?? (() => new Date());
@@ -150,6 +149,7 @@ export function createOutbox(deps: OutboxDeps) {
       state: r.state,
       sendAt: r.sendAt?.toISOString() ?? null,
       sendError: r.sendError,
+      quote: r.quote,
       content: r.content,
     };
   }
@@ -265,7 +265,9 @@ export function createOutbox(deps: OutboxDeps) {
       cc: formatAddressList(message.cc),
       bcc: formatAddressList(message.bcc),
       subject: message.subject,
-      body: plainTextOf(message),
+      // Written elsewhere: its text, as plain paragraphs.
+      body: plainTextBody(plainTextOf(message)),
+      bodyFormat: "document",
       attachments: files,
       // Signed already when its body holds the delimiter (`bodySigned`).
       signature: true,
@@ -325,7 +327,9 @@ export function createOutbox(deps: OutboxDeps) {
         cc: c.cc,
         bcc: "",
         subject: c.subject,
-        body: c.body,
+        // A forward's forwarded message: plain text, as plain paragraphs.
+        body: plainTextBody(c.body),
+        bodyFormat: "document",
         attachments: c.attachments,
         signature: true,
       },
@@ -471,8 +475,11 @@ export function createOutbox(deps: OutboxDeps) {
       messageId: o.messageId,
       inReplyTo: r.inReplyTo,
       references: r.references,
-      text: messageText(
+      // text/plain and, for a body written as a document, HTML beside it
+      // (multipart/alternative) — the provider's draft carries both too.
+      ...messageParts(
         r.content.body,
+        r.content.bodyFormat,
         // Removed for this message in the editor: unsigned.
         r.content.signature ? signatureText(identity.signature) : null,
         r.quote,

@@ -82,7 +82,35 @@ serves (`mailCache.sender()`), the bytes built by `packages/mime`.
   last message is a draft. A reply is written in place (Open in a window
   moves it). Keys `r`, `a`, `f`.
 - `ComposeButton`: the sidebar's Compose.
-- Bodies are plain text (sent `text/plain`, quoted-printable).
+- The body is one document field (`page/document-field`) over the draft's
+  text in Mail's dialect (`MAIL_BODY_DIALECT`, see "The body" below), with
+  the Markdown | Rich switch in the footer before Discard. The view is the
+  user's last choice for every editor (`mail-compose` `editorView`, written
+  by the switch). Under the body, in one scroll area: the signature, then a
+  reply's quote folded behind "…" (Show quoted text), drawn read-only in the
+  same view.
+
+## The body
+
+Design: [`research/2026-11-27-apps-mail-compose-text-format.md`](../../../../../../research/2026-11-27-apps-mail-compose-text-format.md).
+
+- `DraftContent.body` is a string in Pages' text format over Mail's block
+  set (paragraphs, headings 1-3, lists, quote, code, divider; a blank line
+  an empty paragraph). `bodyFormat` says how it is written: `document`, or
+  `text` for a draft saved before formatting, which the editor opens as
+  plain paragraphs (`asDocumentContent` → `plainTextBody`, nothing in it
+  read as markdown) and saves back as a document. A forward's forwarded
+  message and an adopted provider draft (`plainTextOf`) start as plain
+  paragraphs too (an adopted draft's own formatting is not read back).
+- A message built (mirror and send alike) is `messageParts`:
+  multipart/alternative of text/plain (`forestToEmailText`: markdown marks
+  kept, underline and colour dropped, a quote as `> ` lines, then the
+  signature under `-- ` and the reply's quote, as `messageText` always did)
+  and HTML (`forestToEmailHtml`, then the signature as a `gmail_signature`
+  and the quote under its header in a `gmail_quote`, so Gmail folds it). A
+  `text` body still goes out as text alone.
+- The quote stays outside the body (`mail_drafts.quote`, `MailDraft.quote`);
+  `quoteForest` reads it as its header line and one quote.
 
 ## Who it is written as
 
@@ -117,11 +145,12 @@ footer's Add signature puts it back.
   - Contributes:
     - `IdKinds.Kind` "mdraft"
     - `ConfigV2.WebRegister` "mail-compose"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×5
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
+    - `config_v2` ×3
+    - `page/document-field` ×3
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
-    - `config_v2.ConfigV2`
     - `ids.IdKinds`
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.useFetchEndpoint`
@@ -131,6 +160,7 @@ footer's Add signature puts it back.
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
+    - `primitives/css/scroll.Scroll`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
@@ -192,18 +222,17 @@ footer's Add signature puts it back.
     - `POST /api/mail/drafts/:id/undo-send`
     - `DELETE /api/mail/drafts/:id`
 - Core:
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/document-field` ×8
+    - `ids` ×2
+    - `infra/attachments` ×2
+    - `network/live` ×2
     - `config_v2.defineConfig`
+    - `fields/enum/config.enumField`
     - `fields/int/config.intField`
-    - `ids.defineIdKind`
-    - `ids.IdOf`
-    - `infra/attachments.ATTACHMENT_LINKS_MAX`
-    - `infra/attachments.attachmentLinkFields`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `infra/html-decode.decodeHtmlText`
-    - `network/live.liveCollection`
-    - `network/live.liveValue`
     - `network/live/query-resource.compositeKey`
     - `packages/list-bound.cappedList`
   - Exports (types):
@@ -216,8 +245,11 @@ footer's Add signature puts it back.
     - `DraftState`
     - `MailDraft`
     - `MailDraftId`
+    - `MessageParts`
   - Exports (values):
+    - `asDocumentContent`
     - `bodySigned`
+    - `bodyText`
     - `discardMailDraft`
     - `DRAFT_KINDS`
     - `DRAFT_STATES`
@@ -229,6 +261,7 @@ footer's Add signature puts it back.
     - `htmlToPlainText`
     - `isDraftEmpty`
     - `MAIL_ATTACHMENTS_MAX_BYTES`
+    - `MAIL_BODY_DIALECT`
     - `MAIL_DRAFT_ATTACHMENTS_MAX`
     - `MAIL_DRAFT_REFUSALS`
     - `mailComposeConfig`
@@ -239,10 +272,14 @@ footer's Add signature puts it back.
     - `MailDraftSchema`
     - `mailSignature`
     - `messageIdsIn`
+    - `messageParts`
     - `messageText`
     - `parseAddressList`
+    - `plainTextBody`
     - `plainTextOf`
     - `prefixedSubject`
+    - `quoteBody`
+    - `quoteForest`
     - `quoteOf`
     - `saveMailDraft`
     - `sendMailDraft`

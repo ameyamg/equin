@@ -4,9 +4,11 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
+  asDocumentContent,
   discardMailDraft,
   isDraftEmpty,
   MAIL_ATTACHMENTS_MAX_BYTES,
+  mailComposeConfig,
   mailDraftIdKind,
   mailSignature,
   saveMailDraft,
@@ -17,6 +19,8 @@ import {
   type MailDraft,
 } from "../../core";
 import { useComposeActions } from "./windows";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import type { DocumentFieldMode } from "@plugins/page/plugins/document-field/web";
 
 /** How long the editor waits after a keystroke before it saves (the server mirrors to the provider after its own settle). */
 const SAVE_QUIET_MS = 700;
@@ -99,8 +103,11 @@ export function useDraftEditor(draft: MailDraft): DraftEditor {
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
   const { sent } = useComposeActions();
-  const [content, setContent] = useState<DraftContent>(draft.content);
-  const latest = useRef<DraftContent>(draft.content);
+  // A body saved as plain text opens as plain paragraphs, and is saved back
+  // as a document with the next change.
+  const [seed] = useState(() => asDocumentContent(draft.content));
+  const [content, setContent] = useState<DraftContent>(seed);
+  const latest = useRef<DraftContent>(seed);
   const dirty = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chain = useRef<Promise<void>>(Promise.resolve());
@@ -242,4 +249,21 @@ export function useDraftEditor(draft: MailDraft): DraftEditor {
       await fetchEndpoint(discardMailDraft, { id });
     },
   };
+}
+
+/**
+ * The editor view every Mail editor shows (Markdown or Rich), and its switch:
+ * the user's last choice, kept in Settings → Config (`mail-compose`).
+ */
+export function useEditorView(): [
+  DocumentFieldMode,
+  (mode: DocumentFieldMode) => void,
+] {
+  const { editorView } = useConfig(mailComposeConfig);
+  const set = useSetConfig(mailComposeConfig);
+  const setMode = useCallback(
+    (mode: DocumentFieldMode) => void set("editorView", mode),
+    [set],
+  );
+  return [editorView === "rich" ? "rich" : "markdown", setMode];
 }

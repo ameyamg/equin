@@ -2218,9 +2218,11 @@ set is asserted equal to the registry's). Design:
   serializer asks `claimersOf` / `claimOf` (the parser's own dispatch: fence, claimers by
   `precedence`, default text); a claimed line gets one leading backslash.
   - The probe reads the left-stripped line; the text keeps its spaces.
-  - **A whitespace-only paragraph is escaped too** (`\ `): no claimer takes it, but the
-    blank-line rule would read it back as an EMPTY paragraph — and `edit_page` would then
-    refuse every edit to the page as a rewrite of the author's block.
+  - **A paragraph opening with whitespace is escaped too** (`\ `, `\    code`): no
+    claimer takes it, but the indent rule would read its whitespace as nesting, and the
+    blank-line rule a whitespace-only one as an EMPTY paragraph — and `edit_page` would
+    then refuse every edit to the page as a rewrite of the author's block. The parser
+    strips the backslash before whitespace and keeps the rest.
   - **Only the default-text type may be escaped**; any other type whose line is claimed
     elsewhere THROWS.
   - **Two asserts, our dialect only**: a `lines`-branch block emits ONE line unless it

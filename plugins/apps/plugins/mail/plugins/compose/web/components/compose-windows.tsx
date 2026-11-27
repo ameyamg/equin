@@ -4,7 +4,7 @@ import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -25,6 +25,7 @@ import {
 } from "../../core";
 import {
   useDraftEditor,
+  useEditorView,
   useMailSignature,
   useOpenCompose,
 } from "../internal/use-draft";
@@ -35,8 +36,7 @@ import {
 } from "../internal/windows";
 import {
   AttachmentList,
-  SignatureBlock,
-  BodyField,
+  EditorBody,
   EditorFooter,
   HeaderFields,
   SendError,
@@ -191,6 +191,7 @@ function ComposeEditor({
 }): ReactNode {
   const editor = useDraftEditor(draft);
   const signature = useMailSignature();
+  const view = useEditorView();
   const { close } = useComposeActions();
   const toast = useToast();
   const title =
@@ -214,17 +215,20 @@ function ComposeEditor({
     saveAndClose,
     <>
       <HeaderFields editor={editor} />
-      <BodyField
+      <EditorBody
         editor={editor}
-        className="h-56 border-t border-border"
+        signature={signature}
+        view={view}
+        className={cn("h-[clamp(200px,44vh,420px)] border-t border-border")}
+        bodyClassName={cn("min-h-32")}
         autoFocus={editor.content.to !== ""}
       />
-      <SignatureBlock editor={editor} signature={signature} />
       <AttachmentList editor={editor} />
       <SendError editor={editor} />
       <EditorFooter
         editor={editor}
         signature={signature}
+        view={view}
         onSent={() => close(draft.id)}
         onDiscarded={() => close(draft.id)}
       />

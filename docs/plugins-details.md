@@ -7316,11 +7316,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `IdKinds.Kind` "mdraft"
               - `ConfigV2.WebRegister` "mail-compose"
-            - Uses: 27 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
-              - `primitives/css/ui-kit` ×5
+            - Uses: 32 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
+              - `primitives/css/ui-kit` ×4
+              - `config_v2` ×3
+              - `page/document-field` ×3
               - `primitives/css/fill` ×2
               - `primitives/css/spacing` ×2
-              - `config_v2.ConfigV2`
               - `ids.IdKinds`
               - `infra/attachments.uploadAttachment`
               - `infra/endpoints.useFetchEndpoint`
@@ -7330,6 +7331,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
+              - `primitives/css/scroll.Scroll`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
@@ -7391,18 +7393,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/mail/drafts/:id/undo-send`
               - `DELETE /api/mail/drafts/:id`
           - Core:
-            - Uses:
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
+              - `page/document-field` ×8
+              - `ids` ×2
+              - `infra/attachments` ×2
+              - `network/live` ×2
               - `config_v2.defineConfig`
+              - `fields/enum/config.enumField`
               - `fields/int/config.intField`
-              - `ids.defineIdKind`
-              - `ids.IdOf`
-              - `infra/attachments.ATTACHMENT_LINKS_MAX`
-              - `infra/attachments.attachmentLinkFields`
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
               - `infra/html-decode.decodeHtmlText`
-              - `network/live.liveCollection`
-              - `network/live.liveValue`
               - `network/live/query-resource.compositeKey`
               - `packages/list-bound.cappedList`
             - Exports (types):
@@ -7415,8 +7416,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DraftState`
               - `MailDraft`
               - `MailDraftId`
+              - `MessageParts`
             - Exports (values):
+              - `asDocumentContent`
               - `bodySigned`
+              - `bodyText`
               - `discardMailDraft`
               - `DRAFT_KINDS`
               - `DRAFT_STATES`
@@ -7428,6 +7432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `htmlToPlainText`
               - `isDraftEmpty`
               - `MAIL_ATTACHMENTS_MAX_BYTES`
+              - `MAIL_BODY_DIALECT`
               - `MAIL_DRAFT_ATTACHMENTS_MAX`
               - `MAIL_DRAFT_REFUSALS`
               - `mailComposeConfig`
@@ -7438,10 +7443,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailDraftSchema`
               - `mailSignature`
               - `messageIdsIn`
+              - `messageParts`
               - `messageText`
               - `parseAddressList`
+              - `plainTextBody`
               - `plainTextOf`
               - `prefixedSubject`
+              - `quoteBody`
+              - `quoteForest`
               - `quoteOf`
               - `saveMailDraft`
               - `sendMailDraft`
@@ -32419,8 +32428,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `enumField`
               - `enumSample`
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/fields/plugins/enum/plugins/config/REFERENCE.md`](../plugins/fields/plugins/enum/plugins/config/REFERENCE.md)
-              - `apps` ×12
+            - Imported by: 23 plugins — full list in [`plugins/fields/plugins/enum/plugins/config/REFERENCE.md`](../plugins/fields/plugins/enum/plugins/config/REFERENCE.md)
+              - `apps` ×13
               - `conversations` ×2
               - `fields` ×2
               - `primitives` ×2
@@ -49265,6 +49274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.isValidLinkUrl`
           - `page/editor.scheduleWithLexicalHistory`
           - `primitives/css/pin.Pin`
+          - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/scroll-reveal.focusElement`
@@ -49304,10 +49314,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DOCUMENT_BLOCK_TYPES`
           - `documentBlockHandle`
           - `documentMarkdownContext`
+          - `EMAIL_TEXT_COLORS`
+          - `escapeHtml`
+          - `forestToEmailHtml`
+          - `forestToEmailText`
           - `isDocumentBlockType`
           - `lineSegments`
           - `parseDocument`
+          - `plainTextForest`
           - `serializeDocument`
+          - `serializeDocumentKeeping`
           - `sourceFormatState`
           - `sourceLines`
           - `sourceOffsetOf`
@@ -49318,6 +49334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
+        - Imported by: `apps/mail/compose`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
@@ -54975,9 +54992,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Imported by: 106 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 107 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×30
-              - `apps` ×23
+              - `apps` ×24
               - `primitives` ×18
               - `debug` ×10
               - `page` ×5
@@ -55370,12 +55387,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 458 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×117
               - `conversations` ×84
               - `primitives` ×50
               - `debug` ×39
-              - `page` ×25
+              - `page` ×26
               - `tasks` ×22
               - `ui` ×18
               - `plugin-meta` ×15

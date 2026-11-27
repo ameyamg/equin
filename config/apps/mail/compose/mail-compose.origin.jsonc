@@ -1,5 +1,8 @@
-// @hash 0f7d439b0ca1
+// @hash 0a3fbb9b607f
 {
   // How long a message you send waits in the outbox before it goes, so Undo can still take it back to the draft. 0 sends at once (no Undo).
-  "undoSendSeconds": 10
+  "undoSendSeconds": 10,
+  // How the message you write is shown: Markdown (its text, the formatting marks dimmed) or Rich (formatted). Both edit the same text; the switch under every editor changes it, and the last choice is kept.
+  // Allowed values: "markdown", "rich"
+  "editorView": "markdown"
 }

@@ -287,12 +287,12 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/type-scale` ×38
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family` ×2
-  - Imported by: 458 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 459 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×117
     - `conversations` ×84
     - `primitives` ×50
     - `debug` ×39
-    - `page` ×25
+    - `page` ×26
     - `tasks` ×22
     - `ui` ×18
     - `plugin-meta` ×15

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -17,6 +17,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { MailDraft } from "../../core";
 import {
   useDraftEditor,
+  useEditorView,
   useMailSignature,
   useOpenCompose,
   useStartDraft,
@@ -24,8 +25,7 @@ import {
 import { useComposeActions } from "../internal/windows";
 import {
   AttachmentList,
-  SignatureBlock,
-  BodyField,
+  EditorBody,
   EditorFooter,
   SendError,
 } from "./draft-fields";
@@ -224,6 +224,7 @@ function InlineReply({
 }): ReactNode {
   const editor = useDraftEditor(draft);
   const signature = useMailSignature();
+  const view = useEditorView();
   const { open } = useComposeActions();
   return (
     <Inset x="lg" b="lg">
@@ -251,18 +252,21 @@ function InlineReply({
               }}
             />
           </Line>
-          <BodyField
+          <EditorBody
             editor={editor}
+            signature={signature}
+            view={view}
             placeholder="Write a reply"
-            className="min-h-24"
+            className={cn("max-h-[42vh]")}
+            bodyClassName={cn("min-h-20")}
             autoFocus
           />
-          <SignatureBlock editor={editor} signature={signature} />
           <AttachmentList editor={editor} />
           <SendError editor={editor} />
           <EditorFooter
             editor={editor}
             signature={signature}
+            view={view}
             onSent={onDone}
             onDiscarded={onDone}
           />

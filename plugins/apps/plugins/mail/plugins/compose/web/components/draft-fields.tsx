@@ -1,10 +1,9 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   Input,
-  Textarea,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -17,18 +16,38 @@ import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { bodySigned, parseAddressList, type DraftContent } from "../../core";
+import {
+  DocumentField,
+  DocumentFieldModeSwitch,
+  type DocumentFieldMode,
+} from "@plugins/page/plugins/document-field/web";
+import {
+  bodySigned,
+  MAIL_BODY_DIALECT,
+  parseAddressList,
+  quoteBody,
+  type DraftContent,
+} from "../../core";
 import type { DraftEditor, SignatureRead } from "../internal/use-draft";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+
+/** The editor view and its setter (`useEditorView`). */
+export type EditorView = readonly [
+  DocumentFieldMode,
+  (mode: DocumentFieldMode) => void,
+];
 
 const sendIcon = symbol("send");
 const attachIcon = symbol("attach-file");
 const discardIcon = symbol("delete");
 const removeIcon = symbol("close");
 const signatureIcon = symbol("signature");
+const moreIcon = symbol("more-horiz");
 
 type Ready = DraftEditor;
 
@@ -151,32 +170,86 @@ export function HeaderFields({ editor }: { editor: Ready }): ReactNode {
   );
 }
 
-/** The body: a plain-text field (the message is sent as text). */
+/**
+ * The body: one document field over the draft's text in Mail's dialect —
+ * paragraphs, headings, lists, a quote, code, dividers, and the page editor's
+ * marks — shown as Markdown or Rich (`view`). Sent as HTML with a text/plain
+ * alternative.
+ */
 export function BodyField({
   editor,
+  view,
   placeholder,
   className,
   autoFocus,
 }: {
   editor: Ready;
+  view: EditorView;
   placeholder?: string;
-  className?: string;
+  className?: ClassName;
   autoFocus?: boolean;
 }): ReactNode {
+  const [mode, setMode] = view;
   return (
-    <Textarea
-      bare
-      aria-label="Message"
-      placeholder={placeholder}
-      autoFocus={autoFocus}
-      className={cn(
-        "block w-full resize-none bg-transparent px-lg py-smd text-foreground outline-none",
-        className,
-      )}
-      keep={transient("saved to the server's draft as it is typed")}
-      value={editor.content.body}
-      onChange={(e) => editor.update({ body: e.currentTarget.value })}
-    />
+    <Inset x="lg" y="smd">
+      <DocumentField
+        initial={editor.content.body}
+        onChange={(body) => editor.update({ body })}
+        mode={mode}
+        onModeChange={setMode}
+        dialect={MAIL_BODY_DIALECT}
+        ariaLabel="Message"
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className={cn("text-foreground", className)}
+      />
+    </Inset>
+  );
+}
+
+/**
+ * The quote of what a reply answers, under the body and signature: folded
+ * behind "…" (Show quoted text) as the prototype does, shown when opened in the
+ * editor's view — its header line, then the original as one quote. Read-only:
+ * the send appends it as it was answered.
+ */
+export function QuoteBlock({
+  editor,
+  view,
+}: {
+  editor: Ready;
+  view: EditorView;
+}): ReactNode {
+  const [open, setOpen] = useState(false);
+  const quote = editor.draft.quote;
+  const body = useMemo(
+    () => (quote === null ? null : quoteBody(quote)),
+    [quote],
+  );
+  if (body === null) return null;
+  if (!open) {
+    return (
+      <Inset x="lg" b="xsm">
+        <IconButton
+          icon={moreIcon}
+          label="Show quoted text"
+          onClick={() => setOpen(true)}
+        />
+      </Inset>
+    );
+  }
+  return (
+    <Inset x="lg" b="xsm">
+      <DocumentField
+        initial={body}
+        onChange={() => {}}
+        readOnly
+        mode={view[0]}
+        dialect={MAIL_BODY_DIALECT}
+        ariaLabel="Quoted text"
+        className={cn("text-muted-foreground")}
+      />
+    </Inset>
   );
 }
 
@@ -245,6 +318,44 @@ export function SignatureBlock({
   });
 }
 
+/**
+ * What an editor writes, in one scroll area (the prototype's): the body, the
+ * signature under it, then the quote of what a reply answers.
+ */
+export function EditorBody({
+  editor,
+  signature,
+  view,
+  placeholder,
+  autoFocus,
+  className,
+  bodyClassName,
+}: {
+  editor: Ready;
+  signature: SignatureRead;
+  view: EditorView;
+  placeholder?: string;
+  autoFocus?: boolean;
+  /** The scroll area's box (its height, its border). */
+  className?: ClassName;
+  /** The body field's own box (its least height). */
+  bodyClassName?: ClassName;
+}): ReactNode {
+  return (
+    <Scroll className={className}>
+      <BodyField
+        editor={editor}
+        view={view}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className={bodyClassName}
+      />
+      <SignatureBlock editor={editor} signature={signature} />
+      <QuoteBlock editor={editor} view={view} />
+    </Scroll>
+  );
+}
+
 /** The draft's files, each with its size and a remove. */
 export function AttachmentList({ editor }: { editor: Ready }): ReactNode {
   const files = editor.content.attachments;
@@ -291,10 +402,13 @@ export function SendError({ editor }: { editor: Ready }): ReactNode {
 export function EditorFooter({
   editor,
   signature,
+  view,
   onSent,
   onDiscarded,
 }: {
   editor: Ready;
+  /** The editor view: its Markdown | Rich switch sits before Discard. */
+  view: EditorView;
   /** The account's signature: Add signature shows while it was removed from this message. */
   signature: SignatureRead;
   onSent: () => void;
@@ -358,6 +472,7 @@ export function EditorFooter({
         />
       ) : null}
       <Fill />
+      <DocumentFieldModeSwitch mode={view[0]} onModeChange={view[1]} />
       <IconButton
         icon={discardIcon}
         label="Discard draft"

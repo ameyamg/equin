@@ -44,6 +44,16 @@ export {
 } from "./internal/reply";
 export { mailComposeConfig } from "./internal/config";
 export {
+  asDocumentContent,
+  bodyText,
+  MAIL_BODY_DIALECT,
+  messageParts,
+  plainTextBody,
+  quoteBody,
+  quoteForest,
+  type MessageParts,
+} from "./internal/body";
+export {
   mailDraftAttachmentLinks,
   mailDraftAttachmentLinksEntityRef,
 } from "./internal/attachment-links";

@@ -187,6 +187,8 @@ const content = (over: Partial<DraftContent> = {}): DraftContent => ({
   bcc: "",
   subject: "Hello",
   body: "Hi Bob",
+  // Most cases here are about the envelope: a plain body, sent as text alone.
+  bodyFormat: "text",
   attachments: [],
   signature: true,
   ...over,
@@ -436,6 +438,35 @@ describe("the send-as identity", () => {
     await h.due(id);
     expect(h.written[0]!.mime.split("-- ")).toHaveLength(2);
     expect(h.written[0]!.mime).not.toContain("Mia M.");
+  });
+
+  test("a document body goes out as HTML beside its text, in the provider's draft and in the send", async () => {
+    const h = harness({
+      identity: { displayName: null, signature: { text: "Mia M." } },
+    });
+    const id = newId();
+    await h.outbox.start(id, { kind: "new" });
+    const doc = content({
+      body: "Hi **Bob**\n\n* one\n* two",
+      bodyFormat: "document",
+    });
+    await h.outbox.save(id, doc);
+    await h.outbox.mirror(id);
+    await h.outbox.send(id, doc);
+    h.advance(10_000);
+    await h.due(id);
+    expect(h.written.map((w) => w.method)).toEqual(["saveDraft", "send"]);
+    for (const { mime } of h.written) {
+      expect(mime).toContain("Content-Type: multipart/alternative");
+      expect(mime).toContain(
+        "Hi **Bob**\r\n\r\n* one\r\n* two\r\n\r\n-- \r\nMia M.",
+      );
+      expect(mime).toContain("<b>Bob</b>");
+      expect(mime).toContain(
+        '<ul style="margin:0"><li>one</li><li>two</li></ul>',
+      );
+      expect(mime).toContain('<div class=\"gmail_signature\">Mia M.</div>');
+    }
   });
 });
 

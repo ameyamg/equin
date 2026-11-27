@@ -57,6 +57,13 @@ export const DraftContentSchema = z.object({
   bcc: z.string().max(20_000),
   subject: z.string().max(998),
   body: z.string().max(2_000_000),
+  /**
+   * How `body` is written: `document` — Mail's dialect (`MAIL_BODY_DIALECT`:
+   * Pages' text format, formatting and all); `text` — plain text, a draft
+   * saved before Mail wrote formatting (the editor reads it as plain
+   * paragraphs, `plainTextBody`, and saves it back as a document).
+   */
+  bodyFormat: z.enum(["text", "document"]).default("text"),
   attachments: cappedList(DraftAttachmentSchema, {
     max: MAIL_DRAFT_ATTACHMENTS_MAX,
   }),
@@ -70,6 +77,7 @@ export const EMPTY_DRAFT_CONTENT: DraftContent = {
   bcc: "",
   subject: "",
   body: "",
+  bodyFormat: "document",
   attachments: [],
   signature: true,
 };
@@ -81,7 +89,9 @@ export function isDraftEmpty(c: DraftContent): boolean {
     c.cc.trim() === "" &&
     c.bcc.trim() === "" &&
     c.subject.trim() === "" &&
-    c.body.trim() === "" &&
+    // A paragraph of spaces is written `\   ` (the line escape that keeps
+    // them): spaces alone, still nothing written.
+    c.body.replace(/^\\(?=\s)/gm, "").trim() === "" &&
     c.attachments.length === 0
   );
 }
@@ -109,6 +119,8 @@ export const MailDraftSchema = z.object({
   sendAt: z.string().nullable(),
   /** Why the last send did not go, in words; null when none failed. */
   sendError: z.string().nullable(),
+  /** The quote of what a reply answers (`quoteOf`: "On …, … wrote:" then `> ` lines), sent under the body; null: none. */
+  quote: z.string().nullable(),
   content: DraftContentSchema,
 });
 export type MailDraft = z.infer<typeof MailDraftSchema>;

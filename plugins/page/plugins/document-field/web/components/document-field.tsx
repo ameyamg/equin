@@ -28,6 +28,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   BLOCK_TEXT_THEME,
@@ -40,7 +41,7 @@ import {
 } from "@plugins/page/plugins/editor/web";
 import {
   parseDocument,
-  serializeDocument,
+  serializeDocumentKeeping,
   type BlockPoint,
   type DocumentDialect,
 } from "../../core";
@@ -83,6 +84,13 @@ export interface DocumentFieldProps {
   ariaLabel: string;
   placeholder?: string;
   className?: ClassName;
+  /**
+   * Shown, not edited (a reply's quoted original under the body): both faces
+   * still switch with `mode`, with no toolbar, shortcuts or autoformat.
+   */
+  readOnly?: boolean;
+  /** Takes the focus on mount, the caret at the text's end. */
+  autoFocus?: boolean;
 }
 
 /** The update that seeds a face with text the other face wrote. */
@@ -112,7 +120,7 @@ class Face {
   hold(value: string): void {
     this.holds = value;
   }
-  read(value: string): void {
+  read(value: string | null): void {
     this.reads = value;
   }
 }
@@ -146,8 +154,13 @@ export function DocumentField({
   ariaLabel,
   placeholder,
   className,
+  readOnly = false,
+  autoFocus = false,
 }: DocumentFieldProps) {
   const value = useRef(initial);
+  // A change a face could not write as text (the inline serializer refused
+  // it): the value stays the last one written, and the field says so.
+  const [unwritable, setUnwritable] = useState<Error | null>(null);
   const onChangeRef = useLatestRef(onChange);
   const [faces] = useState<Record<DocumentFieldMode, Face>>(() => ({
     rich: new Face(initial),
@@ -155,6 +168,7 @@ export function DocumentField({
   }));
   const report = useCallback(
     (face: Face, next: string) => {
+      setUnwritable(null);
       face.hold(next);
       if (next === value.current) return;
       value.current = next;
@@ -206,6 +220,17 @@ export function DocumentField({
     if (seed) target.hold(value.current);
   }, [mode, dialect, faces]);
 
+  // Each face's editor is attached by its own plugin's effect, which runs
+  // before this one.
+  const autoFocusRef = useRef(autoFocus);
+  useEffect(() => {
+    if (!autoFocusRef.current) return;
+    const editor = faces[shown.current].editor;
+    if (!editor)
+      throw new Error("DocumentField: autoFocus before the face mounted");
+    editor.focus(undefined, { defaultSelection: "rootEnd" });
+  }, [faces]);
+
   const toggleMode = useMemo(
     () =>
       onModeChange
@@ -216,18 +241,19 @@ export function DocumentField({
 
   const mdSource = useMemo(() => markdownFormatSource(dialect), [dialect]);
   const editable = cn("min-h-[1.5em] outline-none", className);
-  const placeholderNode = placeholder ? (
-    // `base`: it shares its box with the caret and must not paint over it.
-    <Pin
-      to="top-left"
-      layer="base"
-      decorative
-      aria-hidden
-      className="text-body text-muted-foreground"
-    >
-      {placeholder}
-    </Pin>
-  ) : null;
+  const placeholderNode =
+    placeholder && !readOnly ? (
+      // `base`: it shares its box with the caret and must not paint over it.
+      <Pin
+        to="top-left"
+        layer="base"
+        decorative
+        aria-hidden
+        className="text-body text-muted-foreground"
+      >
+        {placeholder}
+      </Pin>
+    ) : null;
 
   return (
     <div className="relative">
@@ -236,6 +262,7 @@ export function DocumentField({
           initialConfig={{
             namespace: "document-field-rich",
             theme: BLOCK_TEXT_THEME,
+            editable: !readOnly,
             nodes: [LinkNode, ...DOC_RICH_NODES],
             onError: (error: Error) => {
               throw error;
@@ -257,20 +284,29 @@ export function DocumentField({
           <HistoryPlugin />
           <LinkPlugin validateUrl={isValidLinkUrl} />
           <ClickableLinkPlugin newTab />
-          <FormatShortcutsPlugin />
-          <FormatToolbarPlugin />
-          <InlineAutoformatPlugin
-            schedule={scheduleWithLexicalHistory}
-            $skip={$caretInCode}
-          />
-          <RichKeysPlugin dialect={dialect} />
-          <BlockShortcutsPlugin dialect={dialect} />
+          {readOnly ? null : (
+            <>
+              <FormatShortcutsPlugin />
+              <FormatToolbarPlugin />
+              <InlineAutoformatPlugin
+                schedule={scheduleWithLexicalHistory}
+                $skip={$caretInCode}
+              />
+              <RichKeysPlugin dialect={dialect} />
+              <BlockShortcutsPlugin dialect={dialect} />
+            </>
+          )}
           <NormalizePlugin />
           <MarkersPlugin />
           <FacePlugin
             face={faces.rich}
-            read={() => serializeDocument($rootForest(), dialect)}
+            // Only the lines an edit touched are respelled: the rest keep the
+            // spelling the text has (`- `, `_x_`), whoever wrote it.
+            read={() =>
+              serializeDocumentKeeping($rootForest(), value.current, dialect)
+            }
             report={report}
+            unwritable={setUnwritable}
             toggleMode={toggleMode}
           />
         </LexicalComposer>
@@ -280,6 +316,7 @@ export function DocumentField({
           initialConfig={{
             namespace: "document-field-markdown",
             theme: BLOCK_TEXT_THEME,
+            editable: !readOnly,
             onError: (error: Error) => {
               throw error;
             },
@@ -298,19 +335,28 @@ export function DocumentField({
             ErrorBoundary={LexicalErrorBoundary}
           />
           <HistoryPlugin />
-          <FormatSourceProvider value={mdSource}>
-            <FormatShortcutsPlugin />
-            <FormatToolbarPlugin />
-          </FormatSourceProvider>
+          {readOnly ? null : (
+            <FormatSourceProvider value={mdSource}>
+              <FormatShortcutsPlugin />
+              <FormatToolbarPlugin />
+            </FormatSourceProvider>
+          )}
           <SourceCutPlugin dialect={dialect} />
           <FacePlugin
             face={faces.markdown}
             read={$sourceText}
             report={report}
+            unwritable={setUnwritable}
             toggleMode={toggleMode}
           />
         </LexicalComposer>
       </div>
+      {unwritable ? (
+        <Text as="p" role="alert" variant="caption" tone="destructive">
+          Your last change can't be written as text, so it isn't saved (
+          {unwritable.message}). Undo it (⌘Z) to go on.
+        </Text>
+      ) : null}
     </div>
   );
 }
@@ -320,16 +366,20 @@ function FacePlugin({
   face,
   read,
   report,
+  unwritable,
   toggleMode,
 }: {
   face: Face;
   read: () => string;
   report: (face: Face, value: string) => void;
+  /** A change this face's content could not be read as text for. */
+  unwritable: (error: Error) => void;
   toggleMode: (() => void) | null;
 }) {
   const [editor] = useLexicalComposerContext();
   const readRef = useLatestRef(read);
   const reportRef = useLatestRef(report);
+  const unwritableRef = useLatestRef(unwritable);
   const toggleRef = useLatestRef(toggleMode);
 
   useEffect(() => {
@@ -362,14 +412,26 @@ function FacePlugin({
         ({ tags, dirtyElements, dirtyLeaves, editorState }) => {
           // A selection-only update changed no text; a seed is the field's own.
           if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
-          const next = editorState.read(readRef.current);
+          let next: string;
+          try {
+            next = editorState.read(readRef.current);
+          } catch (err) {
+            // Shown in the field (the text stays in the editor, the value
+            // the last written): never a change silently lost.
+            if (!(err instanceof Error)) throw err;
+            // Nothing read: the next reading, whatever it is, is reported
+            // (and clears the error).
+            face.read(null);
+            unwritableRef.current(err);
+            return;
+          }
           const unchanged = next === face.reads;
           face.read(next);
           if (unchanged || tags.has(SEED_TAG)) return;
           reportRef.current(face, next);
         },
       ),
-    [editor, face, readRef, reportRef],
+    [editor, face, readRef, reportRef, unwritableRef],
   );
 
   useEffect(

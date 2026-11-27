@@ -925,6 +925,17 @@ describe("prompt (text-bearing, no prefix of its own)", () => {
     expect(parse(md)).toEqual(forest);
   });
 
+  test("a paragraph opening with whitespace keeps it (one line escape)", () => {
+    // Leading whitespace is read as indentation (nesting) or, alone, as a
+    // blank line: the escape keeps it the paragraph's text.
+    for (const text of ["    code", "\tTabbed", "  plain"]) {
+      const forest = [node("text", { text: runs(text) })];
+      const md = serialize(forest);
+      expect(md).toBe(`\\${text}`);
+      expect(parse(md)).toEqual(forest);
+    }
+  });
+
   test("leading/trailing whitespace in the text survives the single-line form", () => {
     // The inner text is VERBATIM: dedenting it (as the multi-line body form
     // does) would eat a space the text genuinely carries.

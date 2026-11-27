@@ -17,3 +17,11 @@ export type {
 } from "./source-format";
 export { blockPointOf, sourceOffsetOf } from "./source-points";
 export type { BlockPoint } from "./source-points";
+export {
+  EMAIL_TEXT_COLORS,
+  escapeHtml,
+  forestToEmailHtml,
+  forestToEmailText,
+  plainTextForest,
+} from "./email";
+export { serializeDocumentKeeping } from "./keep-spelling";
