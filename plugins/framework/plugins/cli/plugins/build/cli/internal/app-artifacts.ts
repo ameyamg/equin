@@ -1324,44 +1324,34 @@ export async function buildAndPublishWebDist(
     // internal fan-out (per-plugin vite builds on a cold store) is the
     // same class of heavy work, so it spends a unit of the build's CPU
     // budget rather than running on top of it.
-    const end = hooks.span("viteBuild", "build:frontend", "web artifacts", {
-      installStep: "build.interface",
-    });
-    const start = performance.now();
+    //
+    // The pipeline's units are taken from the build's grant, which the check
+    // pass beside it shares (`grant-split.ts`): on a one-unit grant — what
+    // admission hands a build when the host's memory window is narrow — the
+    // pipeline waits for the whole check pass to hand its unit back (39 s and
+    // 50 s on main, 2026-11-27). That wait is its own span, marked a wait, and
+    // `viteBuild` opens only once the units are held: inside `viteBuild` it
+    // read as a 12–20× regression of a step that had done its usual ~3 s of
+    // work (report-1795444941-iogu5f).
+    const waitStart = performance.now();
+    let endGrantWait: (() => void) | undefined = hooks.span(
+      "viteBuildGrantWait",
+      "build:frontend",
+      "web artifacts: wait for grant units",
+      { wait: true, installStep: "build.interface" },
+    );
+    const grantWaited = (): void => {
+      endGrantWait?.();
+      endGrantWait = undefined;
+    };
+    let end: ReturnType<ArtifactHooks["span"]> | undefined;
+    let start: number | undefined;
     // Its file calls include its content-addressed stages': it reused only
     // when every one of them did (`BuildSpan.reused`).
     let stagesReused: boolean | undefined;
     const lines: StepResult["lines"] = [];
     let outcome: StepOutcome = { kind: "ok" };
     try {
-      // WHAT the fleet is planned from. Without a composition the pipeline
-      // defaults to the committed FULL registry; with one it MUST be told, or
-      // it composes a green bundle containing every plugin in the repo instead
-      // of the composition's closure — a silently wrong artifact, not a build
-      // failure. The per-name `web.composition.<name>.generated.ts` this reads
-      // was emitted by stage 1 moments ago.
-      //
-      // `vendors` is deliberately NOT passed. The old compose-serve stage
-      // reused MAIN's full-fleet vendor set via `readFleetVendorMeta`, and
-      // copying that here is the obvious wrong optimization: it THROWS unless
-      // the full non-composition fleet is already in this host's artifact store
-      // — which a hermetic release host (fresh `git clone`, cold store) does not
-      // have, and neither does a worktree that has never built main. That throw
-      // is exactly the main-first coupling the serve fan-out exists to remove.
-      // Omitted, the pipeline resolves the vendor set from this fleet's own
-      // requests — correct on any host.
-      const source = composition
-        ? await compositionFleetSource({ root, name: composition })
-        : undefined;
-      // A composition declared `crawlable: true` (the public site) also gets
-      // its pages snapshotted for robots (web-artifacts' crawl-snapshot
-      // stage); every other build passes nothing and pays nothing. Read off
-      // the committed manifests, as codegen read them for the take's graph.
-      const crawlable =
-        composition !== null &&
-        readCompositionManifestsFromDisk(root).some(
-          (m) => m.id === composition && m.crawlable,
-        );
       // The artifact compiles run on a pool of worker threads (about two per
       // three cores, measured — see web-artifacts' pooled-builder.ts), clamped
       // to the grant; the pipeline is admitted for that many units, so the
@@ -1370,16 +1360,47 @@ export async function buildAndPublishWebDist(
         idealArtifactBuildThreads(),
         frontendUnits(grant.units, companions.length > 0),
       );
-      const builder = createPooledArtifactBuilder({
-        repoRoot: root,
-        minify: opts.minify,
-        threads,
-      });
       const result = await grant.run(
-        // The pipeline owns the builder: it closes the pool once its last
-        // compile is done (before the link) and on a failure.
-        async () =>
-          await runWebArtifactsPipeline({
+        async () => {
+          grantWaited();
+          end = hooks.span("viteBuild", "build:frontend", "web artifacts");
+          start = performance.now();
+          // WHAT the fleet is planned from. Without a composition the pipeline
+          // defaults to the committed FULL registry; with one it MUST be told, or
+          // it composes a green bundle containing every plugin in the repo instead
+          // of the composition's closure — a silently wrong artifact, not a build
+          // failure. The per-name `web.composition.<name>.generated.ts` this reads
+          // was emitted by stage 1 moments ago.
+          //
+          // `vendors` is deliberately NOT passed. The old compose-serve stage
+          // reused MAIN's full-fleet vendor set via `readFleetVendorMeta`, and
+          // copying that here is the obvious wrong optimization: it THROWS unless
+          // the full non-composition fleet is already in this host's artifact store
+          // — which a hermetic release host (fresh `git clone`, cold store) does not
+          // have, and neither does a worktree that has never built main. That throw
+          // is exactly the main-first coupling the serve fan-out exists to remove.
+          // Omitted, the pipeline resolves the vendor set from this fleet's own
+          // requests — correct on any host.
+          const source = composition
+            ? await compositionFleetSource({ root, name: composition })
+            : undefined;
+          // A composition declared `crawlable: true` (the public site) also gets
+          // its pages snapshotted for robots (web-artifacts' crawl-snapshot
+          // stage); every other build passes nothing and pays nothing. Read off
+          // the committed manifests, as codegen read them for the take's graph.
+          const crawlable =
+            composition !== null &&
+            readCompositionManifestsFromDisk(root).some(
+              (m) => m.id === composition && m.crawlable,
+            );
+          const builder = createPooledArtifactBuilder({
+            repoRoot: root,
+            minify: opts.minify,
+            threads,
+          });
+          // The pipeline owns the builder: it closes the pool once its last
+          // compile is done (before the link) and on a failure.
+          return await runWebArtifactsPipeline({
               builder,
               root,
               stagingDir: stagingPath,
@@ -1413,7 +1434,8 @@ export async function buildAndPublishWebDist(
                   endStage(reused === undefined ? undefined : { reused });
                 }
               },
-          }),
+          });
+        },
         { units: threads },
       );
       graphHash = result.graphHash;
@@ -1434,12 +1456,21 @@ export async function buildAndPublishWebDist(
         lines.push({ text: line, stream: "stderr" });
       }
     }
-    end(stagesReused === undefined ? undefined : { reused: stagesReused });
+    grantWaited();
+    end?.(stagesReused === undefined ? undefined : { reused: stagesReused });
+    const workStart = start ?? performance.now();
+    const waitedMs = workStart - waitStart;
+    if (waitedMs >= 1000) {
+      lines.push({
+        text: `web artifacts waited ${(waitedMs / 1000).toFixed(1)} s for the grant units the check pass held`,
+        stream: "stdout",
+      });
+    }
     return {
       id: "viteBuild",
       label: "web artifacts",
       lines,
-      durationMs: Math.round(performance.now() - start),
+      durationMs: Math.round(performance.now() - workStart),
       outcome,
     };
   };
