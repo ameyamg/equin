@@ -4,10 +4,13 @@ import { registerPageSection, track } from "./instance";
 import { SECTION_REACH_EVENT, SECTION_REACH_PROP } from "../../core";
 
 /**
- * Records `section_reach` once when `el` first reaches the upper half of the
- * screen — the visitor scrolled far enough to be reading it, not merely to see
- * its top edge peek in. A section taller than the screen counts as soon as its
- * top passes the middle, so a long band is not missed for never fitting.
+ * Records `section_reach` once when `el` is first being read: its top has
+ * passed the middle of the screen (scrolled far enough to be reading it, not
+ * merely to see its top edge peek in), or the whole of it is on screen. A
+ * section taller than the screen counts as soon as its top passes the middle,
+ * so a long band is not missed for never fitting; a short one at the end of a
+ * page (the footer) counts once it is all in view, since its top may never
+ * get above the middle however far the page scrolls.
  *
  * `section` is `<page>/<key>` (`landing/hero`, `vision/idea`): a prop value is
  * reported across every path, so the page is part of it.
@@ -22,19 +25,35 @@ import { SECTION_REACH_EVENT, SECTION_REACH_PROP } from "../../core";
  */
 export function observeSectionReach(el: Element, section: string): () => void {
   const unregister = registerPageSection(el, section);
-  const watcher = createInViewWatcher(
+  // Either rule reaches it; whichever fires first records it and stops both.
+  let done = false;
+  const reached = () => {
+    if (done) return;
+    done = true;
+    pastMiddle.disconnect();
+    wholly.disconnect();
+    track(SECTION_REACH_EVENT, { [SECTION_REACH_PROP]: section });
+  };
+  const pastMiddle = createInViewWatcher(
     (entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
-      watcher.disconnect();
-      track(SECTION_REACH_EVENT, { [SECTION_REACH_PROP]: section });
+      if (entries.some((e) => e.isIntersecting)) reached();
     },
     // the viewport, clipped by every scrolling ancestor (the pane included),
     // with its lower half cut off
     { rootMargin: "0px 0px -50% 0px" },
   );
-  watcher.observe(el);
+  const wholly = createInViewWatcher(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting && e.intersectionRatio >= 1))
+        reached();
+    },
+    { threshold: 1 },
+  );
+  pastMiddle.observe(el);
+  wholly.observe(el);
   return () => {
-    watcher.disconnect();
+    pastMiddle.disconnect();
+    wholly.disconnect();
     unregister();
   };
 }

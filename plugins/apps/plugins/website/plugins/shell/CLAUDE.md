@@ -14,8 +14,9 @@ and the three chrome pieces a page is built out of.
   writes a number.
 - **Section reach** — how far readers get, per page. Every `WebsiteBand` takes a
   required `section` name and records `section_reach` (the deploy analytics'
-  cookieless tracker) once per visit when it reaches the upper half of the
-  screen, its `section` prop spelled `<page>/<section>` (`landing/layers`). The page
+  cookieless tracker) once per visit when its top passes the middle of the
+  screen or the whole band is on screen (so the short footer, whose top never
+  gets above the middle, counts too — before 2026-11-27 it could not), its `section` prop spelled `<page>/<section>` (`landing/layers`). The page
   comes from `WebsiteChrome` (the pane id without its `website-` prefix), so a band names only itself; a page drawing its own scene calls
   `useWebsiteSectionReach` for each part it wants counted. Read it in the Deploy
   app's Analytics tab: Events → `section_reach`, expanded by `section`. Every

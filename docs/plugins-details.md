@@ -14057,6 +14057,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `Website.Section` "Hero" → `HeroSection`
                 - Uses:
                   - `apps/deploy/analytics/collect.track`
+                  - `apps/website/shell.landingPane`
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteHero`
                   - `infra/endpoints.useAssetSrc`
@@ -14067,6 +14068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
+                  - `primitives/dom/scroll-reveal.useRevealOnActive`
                   - `primitives/loading.Loading`
               - Server:
                 - Contributes: `DocumentHead.Fragment` "website-hero-poster"
@@ -57415,8 +57417,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×23
               - `primitives` ×17
               - `page` ×6
               - `conversations` ×4

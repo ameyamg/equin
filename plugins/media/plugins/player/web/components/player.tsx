@@ -73,6 +73,7 @@ import {
 import { useMediaState } from "../internal/use-media-state";
 import { useKeptPlayhead } from "../internal/kept-playhead";
 import { useInViewPlay } from "../internal/use-in-view-play";
+import { useAutoPlay } from "../internal/use-auto-play";
 import { ControlPill } from "./control-pill";
 import { SettingsPanel } from "./settings-panel";
 import { VolumeCapsule } from "./volume-capsule";
@@ -322,6 +323,7 @@ export function Player({
   useEffect(() => {
     if (silent && el) muteMedia(el);
   }, [silent, el]);
+  useAutoPlay(autoPlay, el);
   const inViewPlay = useInViewPlay(inView, el, root, pip?.open === true);
   const toggle = () => {
     if (!el) return;
@@ -574,7 +576,8 @@ export function Player({
     ref: setMediaRef,
     className: "mp-media",
     src,
-    autoPlay,
+    // Not the element's own autoplay attribute: a refusal of it says nothing,
+    // so the play is asked for by useAutoPlay, which falls back to muted.
     preload:
       autoPlay || played ? "auto" : metadataDeferred ? "none" : "metadata",
     onError: (e: SyntheticEvent<HTMLMediaElement>) =>

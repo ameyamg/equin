@@ -36,6 +36,7 @@ and the paragraph says what it means.
   - Contributes: `Website.Section` "Hero" → `HeroSection`
   - Uses:
     - `apps/deploy/analytics/collect.track`
+    - `apps/website/shell.landingPane`
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteHero`
     - `infra/endpoints.useAssetSrc`
@@ -46,6 +47,7 @@ and the paragraph says what it means.
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `DocumentHead.Fragment` "website-hero-poster"

@@ -59,7 +59,19 @@ function leave(r: { unmount(): void }) {
 describe("the kept playhead", () => {
   it("autoplays a first open", () => {
     const { video } = open(`p:${++n}`);
-    expect(video.autoplay).toBe(true);
+    expect(video.paused).toBe(false);
+    expect(video.muted).toBe(false);
+  });
+
+  it("a first open the browser refuses sound for plays muted", async () => {
+    media.play.mockImplementationOnce(() =>
+      Promise.reject(new DOMException("no gesture", "NotAllowedError")),
+    );
+    const { video } = open(`p:${++n}`);
+    await act(async () => {});
+    expect(media.play).toHaveBeenCalledTimes(2);
+    expect(video.muted).toBe(true);
+    expect(video.paused).toBe(false);
   });
 
   it("a reload after the video ended stays at the end, paused — no replay", () => {
@@ -70,9 +82,10 @@ describe("the kept playhead", () => {
       first.video.dispatchEvent(new Event("ended"));
     });
     leave(first);
+    // The first open's own autoplay is not the reload's.
+    media.play.mockClear();
 
     const again = open(place);
-    expect(again.video.autoplay).toBe(false);
     expect(again.video.currentTime).toBe(DURATION);
     expect(again.video.paused).toBe(true);
     expect(media.play).not.toHaveBeenCalled();
@@ -90,7 +103,7 @@ describe("the kept playhead", () => {
     leave(first);
 
     const again = open(place);
-    expect(again.video.autoplay).toBe(false);
+    expect(again.video.paused).toBe(true);
     expect(again.video.currentTime).toBe(12.5);
   });
 
@@ -104,10 +117,10 @@ describe("the kept playhead", () => {
     leave(first);
 
     const elsewhere = open(`p:${++n}`);
-    expect(elsewhere.video.autoplay).toBe(true);
+    expect(elsewhere.video.paused).toBe(false);
     leave(elsewhere);
     const otherFile = open(place, "other");
-    expect(otherFile.video.autoplay).toBe(true);
+    expect(otherFile.video.paused).toBe(false);
   });
 
   it("keep={null} keeps nothing", () => {
@@ -118,6 +131,6 @@ describe("the kept playhead", () => {
       first.video.dispatchEvent(new Event("pause"));
     });
     leave(first);
-    expect(open(place, null).video.autoplay).toBe(true);
+    expect(open(place, null).video.paused).toBe(false);
   });
 });

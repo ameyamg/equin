@@ -16,9 +16,12 @@ import { WebsiteChrome } from "./components/website-chrome";
  * rendered top-to-bottom — the hero, the live demo, the three layers, the story link, the contact band —
  * in the order authored in `config/apps/website/shell/section.jsonc`. That file,
  * not the plugin load order, is what fixes the page's reading order.
+ *
+ * `;film=play` (`equin.ai/;film=play`, the README's Watch the film link) opens
+ * the page on the showcase film, centred and playing — read by the hero band.
  */
 export const landingPane = Pane.define({
-  route: defineRoute({ id: "website-landing", segment: "" }),
+  route: defineRoute({ id: "website-landing", segment: ";film" }),
   app: websiteApp,
   appIndex: true,
   actions: WebsiteHeader,
