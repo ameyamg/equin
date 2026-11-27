@@ -335,6 +335,12 @@ v1-singular but costs nothing.
   - every unread thread on the Inbox's first page;
   - ±3 neighbours of the thread being read.
   - It runs through the quota pacer, so it never starves a foreground read.
+  - **Revised 2026-11-27** (task-1795743099-v6pv5z): prefetch runs at its own
+    `speculative` priority, below upkeep (sync steps, re-lists), admitted only
+    while the minute is mostly idle (Gmail: 720 units, six bodies); the
+    candidates are the neighbours, then the Inbox's unread — the "every view
+    read in the last day" set is gone (6 of 88 bodies it fetched on main were
+    opened, and sharing the background FIFO it held a sync step 53 s).
 
 **Eviction** is one scheduled retention job (`infra/retention`):
 
@@ -521,10 +527,12 @@ provider signal (push) ──► sync step: changesSince(cursor) ──► write
 - **Quota.** All provider calls for an account go through one pacer
   (`integrations/gmail/api`'s `createQuotaPacer`, built in task 1). It keeps a **sliding 60 s
   window** of 6,000 units, which is exactly Gmail's "per user per minute". A token bucket
-  would let a full bucket plus a minute's refill through in one minute. It has two FIFO
-  priorities: foreground reads and writes, then background.
-  - Background (prefetch, revalidation) is admitted only while no foreground call waits, and
-    only into half the window.
+  would let a full bucket plus a minute's refill through in one minute. It has FIFO
+  priorities: foreground reads and writes, then background (a third, `speculative`, below
+  background for prefetch since 2026-11-27 — see the revision under Bodies).
+  - Background (revalidation, sync) is admitted only while no foreground call waits, and
+    only into half the window (as first designed; the Gmail provider's reserve sets it
+    since).
   - Gmail's 403 (`rateLimitExceeded` / `userRateLimitExceeded`) or 429 **pauses the pacer**
     for `Retry-After` or the backoff delay, so every caller backs off, not only the one that
     was refused.

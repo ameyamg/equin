@@ -34,6 +34,18 @@ export const GMAIL_PRIMARY_ACCOUNT = "primary";
 const FOREGROUND_RESERVE_UNITS =
   4 * (GMAIL_QUOTA["messages.list"] + 27 * GMAIL_QUOTA["threads.get"].metadata);
 
+/**
+ * Speculative work (body prefetch) is admitted only while the WHOLE window —
+ * every priority's charges — is under six `threads.get` full (720 units: the
+ * open thread's ±3 neighbours), and its charges never count against
+ * background's own share, so a sync step never waits behind a prefetched
+ * body. Before this, prefetch shared the background FIFO and share and filled
+ * it: a 2-unit sync step waited 53 s behind it on 2026-11-27
+ * (task-1795743099-v6pv5z), so a change Gmail signalled showed up to a
+ * minute late — while ~93% of the bodies it fetched were never opened.
+ */
+const SPECULATIVE_UNITS = 6 * GMAIL_QUOTA["threads.get"].full;
+
 const opened = new Map<
   string,
   { client: GmailClient; provider: MailProvider }
@@ -56,8 +68,14 @@ function openAccount(accountId: string) {
     // ONE pacer per account per process: every read and write of this
     // account goes through this provider instance (opened once, kept).
     pacer: createQuotaPacer({
+      // Lower tiers together never hold more than what the reserve leaves
+      // (~1,660 units): background's own ~940, speculative's 720.
       backgroundShare:
-        1 - FOREGROUND_RESERVE_UNITS / GMAIL_USER_UNITS_PER_MINUTE,
+        (GMAIL_USER_UNITS_PER_MINUTE -
+          FOREGROUND_RESERVE_UNITS -
+          SPECULATIVE_UNITS) /
+        GMAIL_USER_UNITS_PER_MINUTE,
+      speculativeShare: SPECULATIVE_UNITS / GMAIL_USER_UNITS_PER_MINUTE,
     }),
   });
   const entry = {

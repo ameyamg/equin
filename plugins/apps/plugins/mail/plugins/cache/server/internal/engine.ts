@@ -143,12 +143,8 @@ const SUMMARY_EVICT_GRACE_MS = USED_TOUCH_MS + 10 * 60 * 1000;
 const SUMMARY_EVICT_BATCH = 1_000;
 /** Threads either side of the one being read whose bodies are prefetched. */
 const PREFETCH_NEIGHBOURS = 3;
-/** The head of each recently read view whose bodies are prefetched. */
-const PREFETCH_VIEW_TOP = 25;
 /** The Inbox's first page, whose unread threads' bodies are prefetched. */
 const PREFETCH_INBOX_PAGE = 25;
-/** A view read this recently is prefetched (design §3: the last day). */
-const PREFETCH_RECENT_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Why a thread cannot be read: `gone` (deleted at the provider, or no such
@@ -201,7 +197,7 @@ export type MailCacheDeps = {
   /** The cached thread summaries' cap, read per sweep (default {@link MAIL_SUMMARY_CAP}). */
   summaryCap?: () => number;
   /**
-   * Body prefetch (design §3), through the provider's background priority:
+   * Body prefetch (design §3), through the provider's speculative priority:
    * at most `perRun()` bodies a run (read per run; 0: none), a run after each
    * window read, thread open and sync step that moved mail. Absent: no
    * prefetch (tests that count provider calls).
@@ -343,6 +339,8 @@ export function createMailCache(deps: MailCacheDeps) {
   const accountMutex = createKeyedMutex("mail-cache-account");
   const fg: MailCallOptions = { priority: "foreground" };
   const bg: MailCallOptions = { priority: "background" };
+  /** Prefetch: below upkeep, so a sync step never waits behind a body nobody may open. */
+  const speculative: MailCallOptions = { priority: "speculative" };
 
   /** The provider's failures as the window's typed refusals; anything else as is. */
   function refused(err: unknown, what: string): Error {
@@ -1834,8 +1832,12 @@ export function createMailCache(deps: MailCacheDeps) {
   /**
    * The threads whose bodies prefetch wants, most wanted first: the open
    * thread's neighbours in the view it was opened from (the most recently
-   * read query holding it), the Inbox's unread first page, then the head of
-   * every view read in the last day.
+   * read query holding it), then the Inbox's unread first page — the threads
+   * a person is likely to open next. The head of every view read in the last
+   * day was a third set until 2026-11-27: on main it made 88 bodies in 7
+   * minutes of which 6 were opened (~93% wasted; browsers walking label
+   * views on main read views no person was reading), and it is what filled
+   * Gmail's background share (task-1795743099-v6pv5z).
    */
   async function prefetchCandidates(a: Account): Promise<string[]> {
     const m = _mailQueryMembers;
@@ -1920,30 +1922,16 @@ export function createMailCache(deps: MailCacheDeps) {
         for (const r of unread) out.add(r.threadId);
       }
     }
-    const heads = await executeRows(db, {
-      row: z.object({ thread_id: z.string() }),
-      query: sql`
-      select thread_id from (
-        select m.thread_id, q.last_read_at,
-          row_number() over (partition by m.query_id order by m.at desc, m.thread_id collate "C") as rn
-        from ${m} m join ${q} q on q.query_id = m.query_id
-        where q.account_id = ${a.id}
-          and q.last_read_at > ${new Date(wallNow("retention") - PREFETCH_RECENT_MS)}
-      ) h where rn <= ${PREFETCH_VIEW_TOP}
-      order by last_read_at desc, rn`,
-    });
-    for (const r of heads) out.add(r.thread_id);
     return [...out];
   }
 
-  /** One prefetch run: the wanted bodies not stored (or stale), at most `perRun`, background priority. */
-  async function prefetchRun(accountId: string) {
-    const perRun = deps.prefetch?.perRun() ?? 0;
-    if (perRun === 0) return;
-    const a = await account();
-    if (a.id !== accountId) return;
+  /**
+   * The wanted bodies not stored (or stale), most wanted first. A stale
+   * summary is skipped: it is re-read when the thread is listed or opened.
+   */
+  async function prefetchNeed(a: Account): Promise<string[]> {
     const wanted = await prefetchCandidates(a);
-    if (wanted.length === 0) return;
+    if (wanted.length === 0) return [];
     const rows = await db
       .select({
         threadId: _mailThreads.threadId,
@@ -1966,16 +1954,35 @@ export function createMailCache(deps: MailCacheDeps) {
         ),
       );
     const byId = new Map(rows.map((r) => [r.threadId, r]));
-    const need = wanted.filter((id) => {
+    return wanted.filter((id) => {
       const r = byId.get(id);
-      // A stale summary is re-read when the thread is listed or opened.
       if (!r || r.stale) return false;
       return (
         r.messageIds === null ||
         !bodyAnswers(r.messageIds, loadSummary(r.summary))
       );
     });
-    for (const id of need.slice(0, perRun)) await fetchBody(a, id, bg);
+  }
+
+  /**
+   * One prefetch run: at most `perRun` bodies, speculative priority, the
+   * most wanted one picked afresh before EACH fetch. A fetch can wait most
+   * of a minute for idle quota, so a list picked once at the start goes
+   * stale: the neighbours of a thread opened meanwhile would wait behind it,
+   * and a body the reader fetched meanwhile would be fetched again.
+   */
+  async function prefetchRun(accountId: string) {
+    const perRun = deps.prefetch?.perRun() ?? 0;
+    if (perRun === 0) return;
+    const a = await account();
+    if (a.id !== accountId) return;
+    const tried = new Set<string>();
+    for (let i = 0; i < perRun; i++) {
+      const next = (await prefetchNeed(a)).find((id) => !tried.has(id));
+      if (next === undefined) return;
+      tried.add(next);
+      await fetchBody(a, next, speculative);
+    }
   }
 
   const prefetches = createKeyedCoalescer<string>({

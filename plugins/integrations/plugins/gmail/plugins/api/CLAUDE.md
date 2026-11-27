@@ -41,10 +41,21 @@ charged per call. The pacer:
 
 - keeps a **sliding 60 s window** of admitted units. A call is charged
   *before* it is sent, because Google counts refused calls too;
-- runs two FIFO queues, **`foreground` before `background`**. A background call
-  is admitted only while no foreground call waits, and only into
-  `backgroundShare` (default ½) of the window, so prefetch never takes the
-  room a click needs;
+- runs one FIFO queue per priority, strictly in order (a head that does not
+  fit holds every tier below it):
+  - **`foreground`** — a person waits on it;
+  - **`background`** — upkeep that keeps what is shown correct (a sync step,
+    a re-list): admitted only while no foreground call waits and while its
+    OWN charges fit in `backgroundShare` (default ½) of the window;
+  - **`speculative`** — work that may be wasted (body prefetch): admitted
+    only while nothing above it waits and the WHOLE window, every tier
+    counted, fits in `speculativeShare` (default half of
+    `backgroundShare`): it spends only what is idle;
+  - so foreground always finds `1 − backgroundShare − speculativeShare` no
+    lower tier can hold, and speculative charges never count against
+    background's share — prefetch never delays a sync step. Before this
+    tier, prefetch shared the background FIFO and share, and a 2-unit sync
+    step waited 53 s behind it (task-1795743099-v6pv5z);
 - **pauses every caller** when Google refuses one call for rate (429, or 403
   `rateLimitExceeded` / `userRateLimitExceeded`), for `Retry-After` or the
   backoff delay;

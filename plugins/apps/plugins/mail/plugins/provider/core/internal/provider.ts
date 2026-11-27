@@ -23,12 +23,19 @@ import type {
 import type { CompiledMailQuery, MailQuery } from "./query";
 
 /**
- * How a call waits. `foreground`: a click or an open view is waiting on it.
- * `background`: prefetch and revalidation, admitted only while no foreground
- * call waits and into part of the budget (Gmail's pacer gives it half).
+ * How a call waits, highest priority first:
+ * - `foreground`: a click or an open view is waiting on it.
+ * - `background`: upkeep that keeps what is shown correct (a change sync
+ *   step, a re-list): admitted only while no foreground call waits, into
+ *   part of the budget.
+ * - `speculative`: work that may be wasted (body prefetch): admitted only
+ *   while nothing above it waits and the budget is mostly idle, so it never
+ *   delays upkeep (Gmail: `integrations/gmail/api`'s pacer).
  */
+export type MailCallPriority = "foreground" | "background" | "speculative";
+
 export type MailCallOptions = {
-  priority?: "foreground" | "background";
+  priority?: MailCallPriority;
   signal?: AbortSignal;
 };
 

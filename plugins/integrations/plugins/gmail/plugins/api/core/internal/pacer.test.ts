@@ -105,6 +105,103 @@ describe("createQuotaPacer", () => {
     expect(bg.done).toBe(true);
   });
 
+  test("upkeep never waits behind speculative work (task-1795743099-v6pv5z)", async () => {
+    // The incident: prefetch and a sync step shared one background FIFO, and
+    // a 2-unit history.list waited 53 s behind bodies filling the share.
+    const c = fakeClock();
+    const pacer = createQuotaPacer({
+      unitsPerMinute: 100,
+      backgroundShare: 0.5,
+      speculativeShare: 0.3,
+      clock: c.clock,
+    });
+    await pacer.acquire(30, { priority: "speculative" });
+    const more = track(pacer.acquire(10, { priority: "speculative" }));
+    await Promise.resolve();
+    expect(more.done).toBe(false); // the window is at the speculative cap
+    // Upkeep is admitted at once, its whole share: speculative charges never
+    // count against it.
+    await pacer.acquire(50, { priority: "background" });
+    expect(pacer.stats().windowUnits).toBe(80);
+    await c.advance(60_000);
+    expect(more.done).toBe(true);
+  });
+
+  test("speculative charges never count against background's share, even after a foreground burst", async () => {
+    // Gmail's shape: a cold view (foreground) spent after prefetch filled its
+    // idle cap must not leave a sync step waiting for prefetch's charges.
+    const c = fakeClock();
+    const pacer = createQuotaPacer({
+      unitsPerMinute: 100,
+      backgroundShare: 0.2,
+      speculativeShare: 0.1,
+      clock: c.clock,
+    });
+    await pacer.acquire(10, { priority: "speculative" });
+    await pacer.acquire(60, { priority: "foreground" });
+    await pacer.acquire(20, { priority: "background" }); // its own 20 of 20
+    expect(pacer.stats().windowUnits).toBe(90);
+    const next = track(pacer.acquire(1, { priority: "background" }));
+    await Promise.resolve();
+    expect(next.done).toBe(false); // held by its own share, not by prefetch
+    await c.advance(60_000);
+    expect(next.done).toBe(true);
+  });
+
+  test("foreground keeps what the lower tiers' shares leave, however they arrive", async () => {
+    const c = fakeClock();
+    const pacer = createQuotaPacer({
+      unitsPerMinute: 100,
+      backgroundShare: 0.3,
+      speculativeShare: 0.2,
+      clock: c.clock,
+    });
+    await pacer.acquire(20, { priority: "speculative" });
+    await pacer.acquire(30, { priority: "background" });
+    const spec = track(pacer.acquire(1, { priority: "speculative" }));
+    const bg = track(pacer.acquire(1, { priority: "background" }));
+    await Promise.resolve();
+    expect([spec.done, bg.done]).toEqual([false, false]);
+    await pacer.acquire(50, { priority: "foreground" }); // at once
+    expect(pacer.stats().windowUnits).toBe(100);
+  });
+
+  test("speculative is admitted after every waiting upkeep call, whatever the arrival order", async () => {
+    const c = fakeClock();
+    const pacer = createQuotaPacer({
+      unitsPerMinute: 100,
+      backgroundShare: 0.5,
+      clock: c.clock,
+    });
+    await pacer.acquire(50, { priority: "background" });
+    const order: string[] = [];
+    void pacer
+      .acquire(10, { priority: "speculative" })
+      .then(() => order.push("speculative"));
+    void pacer
+      .acquire(10, { priority: "background" })
+      .then(() => order.push("background"));
+    await c.advance(60_000);
+    expect(order).toEqual(["background", "speculative"]);
+    expect(pacer.stats().queued.speculative).toBe(0);
+  });
+
+  test("speculative spends only what is idle: other priorities' charges count against its cap", async () => {
+    const c = fakeClock();
+    const pacer = createQuotaPacer({
+      unitsPerMinute: 100,
+      backgroundShare: 0.5,
+      speculativeShare: 0.2,
+      clock: c.clock,
+    });
+    await pacer.acquire(15, { priority: "foreground" });
+    const spec = track(pacer.acquire(10, { priority: "speculative" }));
+    await Promise.resolve();
+    expect(spec.done).toBe(false); // 15 + 10 > 20, though far under the background share
+    await c.advance(60_000);
+    expect(spec.done).toBe(true);
+  });
+
   test("a pause holds every caller, and a shorter one never shortens it", async () => {
     const c = fakeClock();
     const pacer = createQuotaPacer({ unitsPerMinute: 100, clock: c.clock });
@@ -187,6 +284,18 @@ describe("createQuotaPacer", () => {
     expect(why).toEqual(["budget", "paused"]);
     await c.advance(5_000);
     expect(paused.done).toBe(true);
+  });
+
+  test("refuses a speculative share outside (0, 1]", () => {
+    expect(() => createQuotaPacer({ speculativeShare: 1.5 })).toThrow(
+      "speculativeShare",
+    );
+    expect(() => createQuotaPacer({ speculativeShare: 0 })).toThrow(
+      "speculativeShare",
+    );
+    expect(
+      createQuotaPacer({ unitsPerMinute: 100 }).capacity("speculative"),
+    ).toBe(25);
   });
 
   test("refuses a call that could never fit", () => {

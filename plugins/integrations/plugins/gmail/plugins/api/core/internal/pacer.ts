@@ -1,13 +1,41 @@
 import { GMAIL_USER_UNITS_PER_MINUTE } from "./quota";
 
 /**
- * Who is waiting. `foreground` is a read or write a person waits on (a window
- * being filled, an archive); `background` is work nobody waits on (body
- * prefetch, revalidation). A background call is admitted only while no
- * foreground call waits, and only into `backgroundShare` of the window, so
- * prefetch can never take the room a click needs.
+ * Who is waiting, highest first. Each tier has its own admission rule over
+ * the one 60 s window:
+ * - `foreground`: a read or write a person waits on (a window being filled,
+ *   an archive). Admitted while the whole window has room.
+ * - `background`: upkeep nobody waits on but that keeps what is shown
+ *   correct (a change sync step, a re-list). Admitted only while no
+ *   foreground call waits, and while its OWN charges stay within
+ *   `backgroundShare` of the window (and the whole window has room).
+ * - `speculative`: work that may be wasted (body prefetch). Admitted only
+ *   while nothing above it waits, and only while the WHOLE window — every
+ *   tier's charges — stays within `speculativeShare`: it spends what is idle.
+ *
+ * Why no tier starves the one above it:
+ * - A lower tier is admitted only while every higher queue is empty (a head
+ *   that does not fit holds every tier below it).
+ * - Foreground: background charges never exceed `backgroundShare` and
+ *   speculative ones `speculativeShare`, so foreground always finds
+ *   `1 - backgroundShare - speculativeShare` of the window no lower tier can
+ *   hold.
+ * - Background: speculative charges never count against its share, so
+ *   prefetch never delays a sync step — only a full window can, and
+ *   speculative charges are at most `speculativeShare` of it. (Before this
+ *   tier, prefetch shared the background FIFO and share, and a 2-unit sync
+ *   step waited 53 s behind it: task-1795743099-v6pv5z.)
+ * - Speculative waits as long as the tiers above keep the window busy: it is
+ *   the work meant to yield.
  */
-export type GmailPriority = "foreground" | "background";
+export type GmailPriority = "foreground" | "background" | "speculative";
+
+/** The priorities, highest first: the order the pacer admits queued calls in. */
+const PRIORITIES: readonly GmailPriority[] = [
+  "foreground",
+  "background",
+  "speculative",
+];
 
 /**
  * The clock the pacer waits on; a test hands it a fake one. Monotonic: a
@@ -30,8 +58,13 @@ const systemClock: PacerClock = {
 export type QuotaPacerOptions = {
   /** Units admitted per rolling 60 s. Default: Gmail's per-user budget. */
   unitsPerMinute?: number;
-  /** The part of the window background calls may fill (0–1]. Default 0.5. */
+  /** The part of the window background calls' own charges may fill (0–1]. Default 0.5. */
   backgroundShare?: number;
+  /**
+   * The part of the window under which a speculative call is admitted,
+   * counting every tier's charges (0–1]. Default half of `backgroundShare`.
+   */
+  speculativeShare?: number;
   clock?: PacerClock;
 };
 
@@ -96,7 +129,8 @@ type Waiter = {
 /**
  * One account's Gmail quota pacer: a sliding 60 s window of admitted units —
  * exactly Gmail's "units per user per minute", whatever window Google keeps —
- * with two FIFO queues, foreground ahead of background, and a shared pause.
+ * with one FIFO queue per priority (`GmailPriority`, highest first) and a
+ * shared pause.
  *
  * Make ONE per account per process and pass it to every client of that
  * account: two pacers over one account would each spend the whole budget.
@@ -111,40 +145,95 @@ export function createQuotaPacer(opts: QuotaPacerOptions = {}): QuotaPacer {
   if (!(share > 0 && share <= 1)) {
     throw new Error(`backgroundShare must be in (0, 1], got ${share}`);
   }
+  const speculative = opts.speculativeShare ?? share / 2;
+  if (!(speculative > 0 && speculative <= 1)) {
+    throw new Error(`speculativeShare must be in (0, 1], got ${speculative}`);
+  }
   const capOf = (p: GmailPriority) =>
-    p === "foreground" ? limit : limit * share;
+    p === "foreground"
+      ? limit
+      : p === "background"
+        ? limit * share
+        : limit * speculative;
 
-  const charges: { at: number; units: number }[] = [];
+  const charges: { at: number; units: number; priority: GmailPriority }[] = [];
   let windowUnits = 0;
+  /** Background's own charges in the window: what its share counts. */
+  let backgroundUnits = 0;
   let spentUnits = 0;
   let pausedUntil = 0;
   const queues: Record<GmailPriority, Waiter[]> = {
     foreground: [],
     background: [],
+    speculative: [],
   };
+  const anyQueued = () => PRIORITIES.some((p) => queues[p].length > 0);
   let timer: { handle: unknown; at: number } | null = null;
 
   function prune(now: number) {
     while (charges.length > 0 && charges[0]!.at + WINDOW_MS <= now) {
-      windowUnits -= charges.shift()!.units;
+      const c = charges.shift()!;
+      windowUnits -= c.units;
+      if (c.priority === "background") backgroundUnits -= c.units;
     }
   }
 
-  function charge(now: number, units: number) {
-    charges.push({ at: now, units });
+  function charge(now: number, units: number, priority: GmailPriority) {
+    charges.push({ at: now, units, priority });
     windowUnits += units;
+    if (priority === "background") backgroundUnits += units;
     spentUnits += units;
   }
 
-  /** When `units` more fit under `cap`, as the oldest charges leave the window. */
-  function roomAt(units: number, cap: number): number {
-    let left = windowUnits;
+  /**
+   * When `units` more fit under `cap` counting only `counted` charges (now if
+   * they already do), as the oldest charges leave the window.
+   */
+  function roomAt(
+    units: number,
+    cap: number,
+    used: number,
+    counted: (c: (typeof charges)[number]) => boolean,
+    now: number,
+  ): number {
+    let left = used;
+    if (left + units <= cap) return now;
     for (const c of charges) {
+      if (!counted(c)) continue;
       left -= c.units;
       if (left + units <= cap) return c.at + WINDOW_MS;
     }
     // Unreachable: acquire refuses a call larger than its cap.
     throw new Error(`quota pacer: ${units} units can never fit under ${cap}`);
+  }
+
+  const every = () => true;
+  const ownBackground = (c: (typeof charges)[number]) =>
+    c.priority === "background";
+
+  /** When `priority`'s head of `units` is admissible: now, or the instant room opens. */
+  function admissibleAt(
+    priority: GmailPriority,
+    units: number,
+    now: number,
+  ): number {
+    switch (priority) {
+      case "foreground":
+        return roomAt(units, limit, windowUnits, every, now);
+      case "background":
+        return Math.max(
+          roomAt(
+            units,
+            capOf("background"),
+            backgroundUnits,
+            ownBackground,
+            now,
+          ),
+          roomAt(units, limit, windowUnits, every, now),
+        );
+      case "speculative":
+        return roomAt(units, capOf("speculative"), windowUnits, every, now);
+    }
   }
 
   function arm(at: number) {
@@ -163,28 +252,24 @@ export function createQuotaPacer(opts: QuotaPacerOptions = {}): QuotaPacer {
   function pump() {
     const now = clock.now();
     if (now < pausedUntil) {
-      if (queues.foreground.length + queues.background.length > 0)
-        arm(pausedUntil);
+      if (anyQueued()) arm(pausedUntil);
       return;
     }
     prune(now);
     for (;;) {
-      const priority: GmailPriority | null =
-        queues.foreground.length > 0
-          ? "foreground"
-          : queues.background.length > 0
-            ? "background"
-            : null;
-      if (priority === null) return;
+      // Strictly by priority: a head that does not fit holds every tier
+      // below it too, so a lower tier never takes the room it waits for.
+      const priority = PRIORITIES.find((p) => queues[p].length > 0);
+      if (priority === undefined) return;
       const head = queues[priority][0]!;
-      const cap = capOf(priority);
-      if (windowUnits + head.units > cap) {
-        arm(roomAt(head.units, cap));
+      const at = admissibleAt(priority, head.units, now);
+      if (at > now) {
+        arm(at);
         return;
       }
       queues[priority].shift();
       head.detach();
-      charge(now, head.units);
+      charge(now, head.units, priority);
       head.resolve();
     }
   }
@@ -241,8 +326,7 @@ export function createQuotaPacer(opts: QuotaPacerOptions = {}): QuotaPacer {
       const until = clock.now() + ms;
       if (until <= pausedUntil) return;
       pausedUntil = until;
-      if (queues.foreground.length + queues.background.length > 0)
-        arm(pausedUntil);
+      if (anyQueued()) arm(pausedUntil);
     },
     capacity: capOf,
     stats() {
@@ -254,6 +338,7 @@ export function createQuotaPacer(opts: QuotaPacerOptions = {}): QuotaPacer {
         queued: {
           foreground: queues.foreground.length,
           background: queues.background.length,
+          speculative: queues.speculative.length,
         },
         pausedForMs: now < pausedUntil ? pausedUntil - now : null,
       };

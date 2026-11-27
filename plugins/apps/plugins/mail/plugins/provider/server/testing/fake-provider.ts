@@ -40,6 +40,7 @@ import {
   type ThreadSummary,
 } from "../../core";
 import type { DraftId, MessageId } from "../../core/internal/ids";
+import type { MailCallPriority } from "../../core/internal/provider";
 import type { MailQueryColumns } from "../../core/internal/query";
 
 // An in-memory MailProvider for cache and e2e tests: a label-model mailbox
@@ -102,7 +103,7 @@ type FakeThread = { id: ThreadId; version: number; messages: FakeMessage[] };
 export type FakeCall = {
   method: string;
   ids: number;
-  priority: "foreground" | "background";
+  priority: MailCallPriority;
 };
 
 export type FakeMailProviderOptions = {
@@ -800,7 +801,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
      */
     holdNext(
       method: keyof MailProvider,
-      priority: "foreground" | "background",
+      priority: MailCallPriority,
     ): { reached: Promise<void>; release: () => void } {
       let reached!: () => void;
       let release!: () => void;

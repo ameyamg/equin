@@ -231,19 +231,21 @@ describe("mail cache: thread content", () => {
 });
 
 describe("mail cache: prefetch", () => {
-  test("a window read prefetches the Inbox's unread and the view's head, in the background", async () => {
+  test("a window read prefetches the Inbox's unread — not its read threads — at speculative priority", async () => {
     const h = harness(6, { perRun: 25 });
     await h.cache.window(win(6));
     await h.cache.prefetchSettled();
-    expect(await storedBodies()).toEqual(["t1", "t2", "t3", "t4", "t5", "t6"]);
+    // t1, t3, t5 are unread; the read ones are not prefetched (the head of
+    // every view read in the last day no longer is: ~93% never opened).
+    expect(await storedBodies()).toEqual(["t1", "t3", "t5"]);
     expect(
       h.f.calls
         .filter((c) => c.method === "getThreadContent")
-        .every((c) => c.priority === "background"),
+        .every((c) => c.priority === "speculative"),
     ).toBe(true);
     // Opening a prefetched thread asks the provider for nothing.
     h.resetCalls();
-    await h.cache.thread("t4");
+    await h.cache.thread("t3");
     expect(h.count("getThreadContent")).toBe(0);
     expect(h.background).toEqual([]);
   });

@@ -129,11 +129,18 @@ rounded up>` — a superset, never fewer.
 - **A foreground reserve** (`accounts.ts`, `FOREGROUND_RESERVE_UNITS`): the
   pacer's background share is what a minute leaves after four cold views
   of one page each (`messages.list` + 27 `threads.get` metadata, ~4,340 of
-  6,000 units). Background work (prefetch, re-lists, catch-ups) is paced into the
-  rest, never refused. At the pacer's default half, a background charge's
+  6,000 units). Background work (re-lists, catch-ups) and speculative work
+  (prefetch) are paced into the rest, never refused. At the pacer's default half, a background charge's
   minute in the window left a second cold view waiting up to a minute: a cold
   Inbox read waited 56 s on 2026-11-26 while 18 prefetched bodies held 36% of
   the window.
+- **A speculative cap** (`accounts.ts`, `SPECULATIVE_UNITS`): body prefetch
+  runs at the pacer's `speculative` priority, admitted only while the whole
+  window is under six `threads.get` full (720 units) and no upkeep waits;
+  its charges never count against background's own share (~940 units:
+  what the reserve leaves, less the 720), so a sync step never waits behind
+  a prefetched body. Before it, prefetch filled the whole background share and a
+  sync step waited 53 s behind it (task-1795743099-v6pv5z).
 
 ## Push ("instant updates", `server/internal/push/`)
 
