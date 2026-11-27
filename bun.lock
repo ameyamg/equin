@@ -2945,10 +2945,10 @@
       "name": "@equin/plugin-database-pgbouncer",
       "version": "0.0.1",
       "optionalDependencies": {
-        "@equin/pgbouncer-darwin-arm64": "^1.26.101",
-        "@equin/pgbouncer-darwin-x64": "^1.26.101",
-        "@equin/pgbouncer-linux-arm64": "^1.26.101",
-        "@equin/pgbouncer-linux-x64": "^1.26.101",
+        "@equin/pgbouncer-darwin-arm64": "^1.26.102",
+        "@equin/pgbouncer-darwin-x64": "^1.26.102",
+        "@equin/pgbouncer-linux-arm64": "^1.26.102",
+        "@equin/pgbouncer-linux-x64": "^1.26.102",
       },
     },
     "plugins/database/plugins/pgbouncer/plugins/binary": {
@@ -8612,13 +8612,13 @@
 
     "@equin/pg-client-linux-x64": ["@equin/pg-client-linux-x64@18.6.0", "", { "os": "linux", "cpu": "x64" }, "sha512-v4R/OZP0HXGktF6yNC49pWVcSZxx6uPRGVdLNvpajPT1s9l4FwvySHVbBZbzUMjeaCryAqcxS1sfjc4t3it3mQ=="],
 
-    "@equin/pgbouncer-darwin-arm64": ["@equin/pgbouncer-darwin-arm64@1.26.101", "", { "os": "darwin", "cpu": "arm64" }, "sha512-/NwYoyD+rgFCazOYOX6PB7KGXIgcNHMVhTWc17Hnc/wdSmdXIE1rpqZLHootzpsPvtcJdCQ85YIi/FjtpXvnxA=="],
+    "@equin/pgbouncer-darwin-arm64": ["@equin/pgbouncer-darwin-arm64@1.26.102", "", { "os": "darwin", "cpu": "arm64" }, "sha512-GzBbpLjzK6w0EyUMuFqD2D637fXpYP3OUrXobSdZz9X7Ue/uCa+V1nayY4GCiNHZFKC73J5co1MD+R64GtKcWw=="],
 
-    "@equin/pgbouncer-darwin-x64": ["@equin/pgbouncer-darwin-x64@1.26.101", "", { "os": "darwin", "cpu": "x64" }, "sha512-XdLFzMCtdezZcB+M9QaP8WRkNoylNrbigqrsElQ8obO06yEqSt6fSzZLjAy1MsPktgjaeaxRCouEA9maSvCmgw=="],
+    "@equin/pgbouncer-darwin-x64": ["@equin/pgbouncer-darwin-x64@1.26.102", "", { "os": "darwin", "cpu": "x64" }, "sha512-MqA5qa3+KYjCD0T6CHeliMzVbfp+Qs39kDEPUD7wsV/MVlzReqBoxexF+LE8mtJNqyT7sXnb//KHfmecNB3F7g=="],
 
-    "@equin/pgbouncer-linux-arm64": ["@equin/pgbouncer-linux-arm64@1.26.101", "", { "os": "linux", "cpu": "arm64" }, "sha512-y6LutdWEtefwv4UMBuMNUvz2vDiquUao03OIeYXCmgZzXUoo/oldrXVYTHFmieONFqhnlch7yFIzSos3NL1DaA=="],
+    "@equin/pgbouncer-linux-arm64": ["@equin/pgbouncer-linux-arm64@1.26.102", "", { "os": "linux", "cpu": "arm64" }, "sha512-zt9t5ObVOqDmlzONDs8WWiSvBde1XUOc917RsYbe9A7Wmu2lSwHtdkHgtZ66wgFAjXNlOpBgEKeWx+I3Zjr8zw=="],
 
-    "@equin/pgbouncer-linux-x64": ["@equin/pgbouncer-linux-x64@1.26.101", "", { "os": "linux", "cpu": "x64" }, "sha512-eLtQhNmR80lRENfNlMbdPdhLYThR00QPG13CunrRWZJQR956POfnjzeY8eer1c1rt+i7J2V/Cbqknyi/LBH/dw=="],
+    "@equin/pgbouncer-linux-x64": ["@equin/pgbouncer-linux-x64@1.26.102", "", { "os": "linux", "cpu": "x64" }, "sha512-1qtXJvTq4NpjpnMvYD1slLqdVBS5xNqIacEXT9nWiXcAvR+TI2w2GeqYU/K1p7xUKxCHtrjBopAlTjtHZgIWEA=="],
 
     "@equin/plugin-active-data": ["@equin/plugin-active-data@workspace:plugins/active-data"],
 
