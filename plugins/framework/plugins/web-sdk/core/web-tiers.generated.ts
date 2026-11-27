@@ -277,3 +277,47 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/website/plugins/pages/plugins/tips",
   "apps/plugins/website/plugins/pages/plugins/vision",
 ]);
+
+// Deferred plugins whose code is ANOTHER app's than their folder's: every
+// contribution their web barrel makes goes into that app's slots, and nothing
+// of their own app imports them. They load and are preloaded with that app's
+// code (apps-core/app-preload's appRootOf), never in their folder app's
+// first-paint batch.
+export const APP_CODE_HOSTS: ReadonlyMap<string, string> = new Map([
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/agent-manager/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/browser/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/chord/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/debug/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/deploy/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/desktop/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/events/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/file-explorer/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/home/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/keyboard-party/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/mail/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/pages/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/places/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/plugin-studio/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/prototypes/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/settings/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/sonata/plugins/isle-building", "apps/plugins/isle/"],
+  // contributes into @plugins/apps/plugins/isle/plugins/buildings/web
+  ["apps/plugins/website/plugins/isle-building", "apps/plugins/isle/"],
+]);

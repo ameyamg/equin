@@ -60,6 +60,7 @@ export {
 } from "./page-reach";
 export type { ReachMark, WorkerLaunch, WorkerRelaunch } from "./page-reach";
 export {
+  APP_CODE_HOSTS,
   partitionWebEntries,
   planDeferredLoad,
   isDeferredPluginPath,

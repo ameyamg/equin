@@ -27,7 +27,9 @@ with, and the generator that gives every app without bespoke art a building.
 - **`web/` — the `Isle.Building` slot** `{ app: AppRef, building: BuildingSpec }`.
   Each app contributes its own building from its own deferred
   `apps/<app>/plugins/isle-building` sub-plugin (`core/` the painter and spec,
-  `web/` only the contribution). `useIsleBuildings()` reads them by app id and
+  `web/` only the contribution). That sub-plugin is Isle's code, not its
+  app's (apps-core/app-preload's `appRootOf`): it loads and is preloaded with
+  Isle, never in its own app's first paint. `useIsleBuildings()` reads them by app id and
   stays `loading` until the deferred tier has settled — a plot is sized from
   the building, so an app is never placed with a stand-in. No contribution: a
   `kitBuilding`.

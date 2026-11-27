@@ -237,6 +237,7 @@ describe("planFleet with an injected fleet source", () => {
         webEntries: [{ pluginPath: "shell", id: "shell", dependsOn: [] }],
         webScopedEntries: [{ pluginPath: "tasks", id: "tasks", dependsOn: [] }],
         deferredPaths,
+        appCodeHosts: new Map<string, string>(),
         registryFile,
         catalogSources: {
           page: "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",
@@ -275,6 +276,7 @@ describe("planFleet with an injected fleet source", () => {
       webEntries: [],
       webScopedEntries: [],
       deferredPaths: new Set<string>(),
+      appCodeHosts: new Map<string, string>(),
       registryFile,
       catalogSources: {
         page: "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",

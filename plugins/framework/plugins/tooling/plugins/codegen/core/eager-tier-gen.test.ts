@@ -21,7 +21,7 @@ import {
 } from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { preloadedKeysIn } from "./eager-tier.scan";
+import { contributionSourcesIn, preloadedKeysIn } from "./eager-tier.scan";
 import {
   computeEagerTier,
   isAppContent,
@@ -440,5 +440,139 @@ describe("the scan over a file set", () => {
     );
     expect(manifest).toContain("preloaded descriptor (mailSync)");
     expect(manifest).not.toContain(`  "${APP}/sync",`);
+  });
+});
+
+describe("contributionSourcesIn", () => {
+  const barrel = (imports: string, contributions: string, extra = "") =>
+    `${imports}\nexport default {\n  description: "x",${extra}\n  contributions: [${contributions}],\n} satisfies PluginDefinition;\n`;
+  const ISLE = "@plugins/apps/plugins/isle/plugins/buildings/web";
+
+  test("each contribution's slot head, by the @plugins/ module it is imported from", () => {
+    const src = barrel(
+      `import { Isle } from "${ISLE}";\nimport { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";\nimport { shopfront } from "../core";`,
+      "Isle.Building({ app: websiteApp, building: shopfront })",
+    );
+    expect(contributionSourcesIn(src)).toEqual([ISLE]);
+  });
+
+  test("aliased and several heads are read; a head not from @plugins/ or a non-call element is unreadable", () => {
+    expect(
+      contributionSourcesIn(
+        barrel(
+          `import { Isle as I } from "${ISLE}";\nimport { Pane } from "@plugins/primitives/plugins/pane/web";`,
+          "I.Building({ a: [1, 2] }), Pane.Route({ x: f(1, 2) })",
+        ),
+      ),
+    ).toEqual([ISLE, "@plugins/primitives/plugins/pane/web"].sort());
+    expect(
+      contributionSourcesIn(
+        barrel(`import { Slots } from "./slots";`, "Slots.X({})"),
+      ),
+    ).toBeNull();
+    expect(
+      contributionSourcesIn(
+        barrel(`import { Isle } from "${ISLE}";`, "...items"),
+      ),
+    ).toBeNull();
+  });
+
+  test("a barrel declaring slots of its own is a host, never only a contributor", () => {
+    expect(
+      contributionSourcesIn(
+        barrel(
+          `import { Isle } from "${ISLE}";`,
+          "Isle.Building({})",
+          "\n  slots: Mine,",
+        ),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("computeEagerTier: hosted plugins", () => {
+  const ISLE = "@plugins/apps/plugins/isle/plugins/buildings/web";
+  const base = {
+    preloadOwners: [],
+    watchedSlotHits: [],
+  };
+
+  test("a deferred plugin contributing only into another app's slots loads as that app's code", () => {
+    const { hosted } = computeEagerTier({
+      ...base,
+      webEntryPaths: [
+        "apps/plugins/website/plugins/isle-building",
+        "apps/plugins/website/plugins/landing",
+        "apps/plugins/isle/plugins/buildings",
+      ],
+      deps: new Map([
+        [
+          "apps/plugins/website/plugins/isle-building",
+          ["apps/plugins/isle/plugins/buildings"],
+        ],
+      ]),
+      contributionSources: new Map([
+        ["apps/plugins/website/plugins/isle-building", [ISLE]],
+        [
+          "apps/plugins/website/plugins/landing",
+          ["@plugins/apps/plugins/website/plugins/shell/web"],
+        ],
+      ]),
+    });
+    expect(hosted).toEqual([
+      {
+        path: "apps/plugins/website/plugins/isle-building",
+        root: "apps/plugins/isle/",
+        sources: [ISLE],
+      },
+    ]);
+  });
+
+  test("it stays its folder app's when its own app imports it, or it also contributes elsewhere", () => {
+    const { hosted } = computeEagerTier({
+      ...base,
+      webEntryPaths: [
+        "apps/plugins/a/plugins/used",
+        "apps/plugins/a/plugins/user",
+        "apps/plugins/a/plugins/mixed",
+      ],
+      deps: new Map([
+        ["apps/plugins/a/plugins/user", ["apps/plugins/a/plugins/used"]],
+      ]),
+      contributionSources: new Map([
+        ["apps/plugins/a/plugins/used", [ISLE]],
+        [
+          "apps/plugins/a/plugins/mixed",
+          [ISLE, "@plugins/primitives/plugins/pane/web"],
+        ],
+      ]),
+    });
+    expect(hosted).toEqual([]);
+  });
+
+  test("it stays when the head is another app's core helper, or its own app imports the slot's plugin", () => {
+    const { hosted } = computeEagerTier({
+      ...base,
+      webEntryPaths: [
+        "apps/plugins/a/plugins/helper-made",
+        "apps/plugins/a/plugins/embedded-slot",
+        "apps/plugins/a/plugins/embedder",
+        "apps/plugins/b/plugins/host",
+      ],
+      deps: new Map([
+        ["apps/plugins/a/plugins/embedder", ["apps/plugins/b/plugins/host"]],
+      ]),
+      contributionSources: new Map([
+        [
+          "apps/plugins/a/plugins/helper-made",
+          ["@plugins/apps/plugins/b/plugins/host/core"],
+        ],
+        [
+          "apps/plugins/a/plugins/embedded-slot",
+          ["@plugins/apps/plugins/b/plugins/host/web"],
+        ],
+      ]),
+    });
+    expect(hosted).toEqual([]);
   });
 });

@@ -107,7 +107,7 @@ describe("planDeferredLoad", () => {
     ];
     const { priority, rest } = planDeferredLoad(
       deferred,
-      "apps/plugins/b/",
+      (p) => p.startsWith("apps/plugins/b/"),
       24,
     );
     expect(paths(priority)).toEqual([

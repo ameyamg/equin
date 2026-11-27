@@ -1,16 +1,31 @@
 const APP_ROOT_RE = /^(apps\/plugins\/[^/]+)\//;
 
 /**
- * The app subtree a plugin lies in — `apps/plugins/<app>/` (trailing slash, so
+ * The app whose code a plugin is — `apps/plugins/<app>/` (trailing slash, so
  * it is a path prefix that cannot match a sibling app) — or `null` for a
  * plugin outside every app. A plugin path is the repo path below `plugins/`
  * (`apps/plugins/website/plugins/shell`).
  *
- * The unit the boot loads an app's code by: every deferred plugin under the
- * active app's root is its priority batch (web-core's `App.tsx`), and the same
+ * The app subtree the plugin lies in, except for a plugin `hosts` names: one
+ * whose every contribution goes into ANOTHER app's slots and that nothing of
+ * its own app imports (each app's `isle-building`, contributing only to
+ * Isle's `Isle.Building`). Its folder app never draws it, so it is that other
+ * app's code. `hosts` is web-sdk's generated `APP_CODE_HOSTS` (eager-tier-gen):
+ * a browser or backend caller imports it from web-sdk/core; the build reads it
+ * from its fleet source, as it reads the deferred set, because a build process
+ * may not statically load a manifest it regenerates. Required, so no caller
+ * can fall back to the folder rule by omission.
+ *
+ * The unit the boot loads an app's code by: every deferred plugin of the
+ * active app is its priority batch (web-core's `App.tsx`), and the same
  * root keys the batch's preloads in the served dist ({@link AppPreloads}).
  */
-export function appRootOf(pluginPath: string): string | null {
+export function appRootOf(
+  pluginPath: string,
+  hosts: ReadonlyMap<string, string>,
+): string | null {
+  const hosted = hosts.get(pluginPath);
+  if (hosted !== undefined) return hosted;
   const m = APP_ROOT_RE.exec(pluginPath);
   return m ? m[1] + "/" : null;
 }

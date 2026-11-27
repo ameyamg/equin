@@ -6,6 +6,7 @@ import {
   Core,
   loadPlugins,
   partitionWebEntries,
+  APP_CODE_HOSTS,
   planDeferredLoad,
   markDeferredPluginsLoaded,
   markDeferredLoadComplete,
@@ -322,10 +323,11 @@ function resolveActiveAppPrefix(
     );
   if (!matched) return null;
   // The matched contribution's pluginPath is the app's shell dir
-  // (apps/plugins/<app>/plugins/shell); its root apps/plugins/<app>/ holds all
-  // its deferred content — the same root the served head preloads it by
-  // (apps-core/app-preload).
-  return appRootOf(matched.pluginPath);
+  // (apps/plugins/<app>/plugins/shell); its root apps/plugins/<app>/ names the
+  // app's code — its subtree's deferred plugins, less those that are another
+  // app's code, plus those of other apps that are its (APP_CODE_HOSTS) — the
+  // same unit the served head preloads it by (apps-core/app-preload).
+  return appRootOf(matched.pluginPath, APP_CODE_HOSTS);
 }
 
 // Publish a batch's load failures on the deferred-load signal (so consumers can
@@ -555,10 +557,12 @@ function PageApp() {
       // Dependency-closed (planDeferredLoad): a plugin never registers in a
       // batch before the plugins it depends on, so a surface reached mid-drain
       // never mounts a contribution whose own registrations are still missing.
-      const activePrefix = resolveActiveAppPrefix(eagerResult.plugins, eager);
+      const activeRoot = resolveActiveAppPrefix(eagerResult.plugins, eager);
       const { priority, rest } = planDeferredLoad(
         deferred,
-        activePrefix,
+        activeRoot === null
+          ? null
+          : (p) => appRootOf(p, APP_CODE_HOSTS) === activeRoot,
         DEFERRED_BATCH_SIZE,
       );
       // No app content (a path outside every app) is loaded from the start.

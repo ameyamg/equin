@@ -106,9 +106,20 @@ export interface WatchedSlotHit {
   slot: string;
 }
 
+/** A deferred plugin whose code is another app's: every contribution it makes goes into that app's slots. */
+export interface HostedPlugin {
+  path: string;
+  /** The app root (`apps/plugins/<app>/`) whose code it loads with. */
+  root: string;
+  /** The modules its contributions' slots come from (the pin's reason). */
+  sources: string[];
+}
+
 export interface EagerTierResult {
   /** Sorted deferred plugin paths. */
   deferred: string[];
+  /** Deferred plugins that load as another app's code, sorted by path. */
+  hosted: HostedPlugin[];
   /** App-content plugins pinned eager, with why (sorted) — for the comment block. */
   appContentPins: { path: string; reason: string }[];
 }
@@ -128,6 +139,11 @@ export function computeEagerTier(input: {
   deps: Map<string, string[]>;
   preloadOwners: PreloadOwner[];
   watchedSlotHits: WatchedSlotHit[];
+  /**
+   * Per web entry, the modules its barrel's contributions' slots come from
+   * (`contributionSourcesIn`); absent when its barrel cannot be read so.
+   */
+  contributionSources?: ReadonlyMap<string, readonly string[]>;
 }): EagerTierResult {
   const webSet = new Set(input.webEntryPaths);
 
@@ -196,7 +212,68 @@ export function computeEagerTier(input: {
   }
   appContentPins.sort((a, b) => a.path.localeCompare(b.path));
 
-  return { deferred, appContentPins };
+  const hosted = hostedPlugins(
+    deferred,
+    input.deps,
+    input.contributionSources ?? new Map(),
+  );
+  return { deferred, hosted, appContentPins };
+}
+
+// `apps/plugins/<app>/` — the folder app a plugin path (or an `@plugins/`
+// specifier, prefix stripped) lies in. apps-core/app-preload's `appRootOf`
+// is the runtime reader of the same unit; this module may not import it
+// (it reads the manifest written here).
+const FOLDER_APP_ROOT_RE = /^(apps\/plugins\/[^/]+)\//;
+function folderAppRoot(path: string): string | null {
+  const m = FOLDER_APP_ROOT_RE.exec(path);
+  return m ? m[1] + "/" : null;
+}
+
+// `@plugins/<plugin path>/web` — a plugin's web barrel, where its slots are
+// declared; group 1 is the plugin path.
+const WEB_BARREL_SPEC_RE = /^@plugins\/(.+)\/web$/;
+
+/**
+ * The deferred plugins whose code is ANOTHER app's than their folder's: every
+ * contribution its web barrel makes goes into slots of one other app B (each
+ * head imported from a web barrel under `apps/plugins/<B>/`, where slots are
+ * declared — a helper from B's `core` could make a contribution to a shared
+ * slot), nothing of its own app imports it, and nothing of its own app imports
+ * those slots' plugins either (its own app could draw the slot through a
+ * component of theirs). Its folder app never draws it — an app's `isle-building`
+ * contributes only to Isle's `Isle.Building`, which only Isle reads — so it
+ * must not ride in that app's first-paint batch (nor drag B's code into it);
+ * it loads, and is preloaded, with B's (apps-core/app-preload's `appRootOf`).
+ * A barrel that cannot be read so, a contribution into its own app or into a
+ * shared slot, keeps its folder app: the safe direction.
+ */
+function hostedPlugins(
+  deferred: readonly string[],
+  deps: ReadonlyMap<string, readonly string[]>,
+  contributionSources: ReadonlyMap<string, readonly string[]>,
+): HostedPlugin[] {
+  const importedFrom = new Map<string, string[]>();
+  for (const [from, ds] of deps)
+    for (const d of ds)
+      (importedFrom.get(d) ?? importedFrom.set(d, []).get(d)!).push(from);
+  const out: HostedPlugin[] = [];
+  for (const path of deferred) {
+    const own = folderAppRoot(path);
+    const sources = contributionSources.get(path);
+    if (own === null || sources === undefined || sources.length === 0) continue;
+    const slotPlugins = sources.map((s) => WEB_BARREL_SPEC_RE.exec(s)?.[1]);
+    if (slotPlugins.some((p) => p === undefined)) continue;
+    const roots = new Set(slotPlugins.map((p) => folderAppRoot(p!)));
+    if (roots.size !== 1) continue;
+    const [root] = roots;
+    if (root === null || root === undefined || root === own) continue;
+    const ownImporter = (of: string) =>
+      (importedFrom.get(of) ?? []).some((p) => p !== path && p.startsWith(own));
+    if (ownImporter(path) || slotPlugins.some((p) => ownImporter(p!))) continue;
+    out.push({ path, root, sources: [...sources] });
+  }
+  return out.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 // ── Scanning the file set (the per-file scan: `eager-tier.scan.ts`) ──
@@ -254,6 +331,21 @@ function renderManifest(result: EagerTierResult): string {
   for (const p of result.deferred) lines.push(`  ${JSON.stringify(p)},`);
   lines.push("]);");
   lines.push("");
+  lines.push(
+    "// Deferred plugins whose code is ANOTHER app's than their folder's: every",
+    "// contribution their web barrel makes goes into that app's slots, and nothing",
+    "// of their own app imports them. They load and are preloaded with that app's",
+    "// code (apps-core/app-preload's appRootOf), never in their folder app's",
+    "// first-paint batch.",
+    "export const APP_CODE_HOSTS: ReadonlyMap<string, string> = new Map([",
+  );
+  for (const h of result.hosted)
+    lines.push(
+      `  // contributes into ${h.sources.join(", ")}`,
+      `  [${JSON.stringify(h.path)}, ${JSON.stringify(h.root)}],`,
+    );
+  lines.push("]);");
+  lines.push("");
   return lines.join("\n");
 }
 
@@ -279,6 +371,7 @@ async function scanEagerTierInputs(
 
   const watchedSlotHits: WatchedSlotHit[] = [];
   const preloadOwners: PreloadOwner[] = [];
+  const contributionSources = new Map<string, string[]>();
   const tick = timeSlicer();
   // One scan over every plugin's web/core/shared files, then split by plugin:
   // each file's two answers are a file record (only a file whose blob changed
@@ -301,6 +394,13 @@ async function scanEagerTierInputs(
     if (webSet.has(node.path) && isAppContent(node.path)) {
       const slot = scanned.find((f) => f.watched !== null)?.watched;
       if (slot) watchedSlotHits.push({ path: node.path, slot });
+      // The barrel's contributions' slot sources: the plugin's own web barrel.
+      const barrel = filesOf[i]!.findIndex((rel) =>
+        new RegExp(`^plugins/${node.path}/web/index\\.tsx?$`).test(rel),
+      );
+      const sources =
+        barrel < 0 ? undefined : scanned[barrel]!.contributionSources;
+      if (sources) contributionSources.set(node.path, sources);
     }
 
     // preload scan: EVERY plugin node (reachability is checked
@@ -328,6 +428,7 @@ async function scanEagerTierInputs(
     deps: prunedDeps,
     preloadOwners,
     watchedSlotHits,
+    contributionSources,
   };
 }
 

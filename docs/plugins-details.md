@@ -36196,8 +36196,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 171 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `plugin-meta/parse-utils` ×17
+            - Uses: 173 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `plugin-meta/parse-utils` ×19
               - `config_v2` ×15
               - `framework/plugin-id` ×13
               - `framework/tooling/checks/source-analysis` ×11
@@ -37405,6 +37405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WorkerLaunch`
           - `WorkerRelaunch`
         - Exports (values):
+          - `APP_CODE_HOSTS`
           - `catalogMismatches`
           - `Core`
           - `createPluginRegistry`
@@ -37449,12 +37450,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `whenPageCanFetch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 123 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 124 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×28
           - `apps` ×22
           - `ui` ×10
           - `reports` ×9
-          - `apps-core` ×6
+          - `apps-core` ×7
           - `debug` ×6
           - `config_v2` ×4
           - `framework` ×4

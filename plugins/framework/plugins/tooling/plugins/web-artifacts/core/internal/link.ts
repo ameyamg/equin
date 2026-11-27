@@ -264,6 +264,8 @@ export function linkInputsOf(opts: {
   /** The vendor set: its specifiers are external, served by the import map. */
   vendorSet: { setHash: string; entries: Readonly<Record<string, string>> };
   deferredPaths: ReadonlySet<string>;
+  /** The deferred plugins that load as another app's code (`appRootOf`'s hosts). */
+  appCodeHosts: ReadonlyMap<string, string>;
 }): LinkInputs {
   const vendorSpecs = new Set(Object.keys(opts.vendorSet.entries));
   const eager = new Set<string>();
@@ -274,7 +276,7 @@ export function linkInputsOf(opts: {
       eager.add(t.pluginPath);
       continue;
     }
-    const root = appRootOf(t.pluginPath) ?? ON_DEMAND_GROUP;
+    const root = appRootOf(t.pluginPath, opts.appCodeHosts) ?? ON_DEMAND_GROUP;
     (appPlugins[root] ??= []).push(t.pluginPath);
   }
   for (const paths of Object.values(appPlugins)) paths.sort();

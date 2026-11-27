@@ -52,6 +52,7 @@ describe("map-in-sync re-plans the tree over the dist's recorded edges", () => {
     webEntries: [{ pluginPath: "shell", id: "shell", dependsOn: [] }],
     webScopedEntries: [],
     deferredPaths: new Set<string>(),
+    appCodeHosts: new Map<string, string>(),
     registryFile,
     catalogSources: {
       page: "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",

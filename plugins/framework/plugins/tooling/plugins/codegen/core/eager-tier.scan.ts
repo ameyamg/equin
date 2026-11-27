@@ -1,6 +1,9 @@
 import {
+  defaultExportObjectBody,
   findImports,
   findMarkerCalls,
+  hasField,
+  matchBracket,
   lineAt,
   markerCallSpans,
   maskSource,
@@ -81,17 +84,121 @@ function watchedSlotIn(text: string): string | null {
   return null;
 }
 
-/** One file's eager-tier answers: its first watched slot, and its preloaded keys. */
+/** One file's eager-tier answers: its first watched slot, its preloaded keys, and — a web barrel's — the modules its contributions' slots come from. */
 export const EAGER_TIER_SCAN: FileScan<{
   watched: string | null;
   preload: string[];
+  contributionSources: string[] | null;
 }> = {
   url: import.meta.url,
   scan: (text, rel) => ({
     watched: watchedSlotIn(text),
     preload: preloadedKeysIn(text, rel, { ownerPlugin: false }),
+    contributionSources: WEB_BARREL_RE.test(rel)
+      ? contributionSourcesIn(text)
+      : null,
   }),
 };
+
+/** A plugin's web barrel: `…/web/index.ts(x)`. */
+const WEB_BARREL_RE = /\/web\/index\.tsx?$/;
+
+/** The local names an import clause binds (`A`, `{ B, C as D }`, `* as E`), type-only members left out. */
+function boundNames(clause: string): string[] {
+  const names: string[] = [];
+  const brace = /\{([^}]*)\}/.exec(clause);
+  for (const member of brace?.[1]!.split(",") ?? []) {
+    const m = /^\s*(type\s+)?[\w$]+(?:\s+as\s+([\w$]+))?\s*$/.exec(member);
+    if (!m || m[1]) continue;
+    names.push(m[2] ?? /[\w$]+/.exec(member)![0]);
+  }
+  const outside = brace ? clause.replace(brace[0], "") : clause;
+  const star = /\*\s*as\s+([\w$]+)/.exec(outside);
+  if (star) names.push(star[1]!);
+  const dflt = /^\s*([\w$]+)\s*(?:,|$)/.exec(
+    outside.replace(/\*\s*as\s+[\w$]+/, ""),
+  );
+  if (dflt && dflt[1] !== "type") names.push(dflt[1]!);
+  return names;
+}
+
+/** The top-level elements of an array literal's interior (masked text), split on depth-0 commas. */
+function topLevelElements(
+  masked: string,
+  from: number,
+  to: number,
+): [number, number][] {
+  const out: [number, number][] = [];
+  let start = from;
+  for (let i = from; i < to; i++) {
+    const c = masked[i]!;
+    if (c === "(" || c === "[" || c === "{") {
+      i = matchBracket(masked, i, c, c === "(" ? ")" : c === "[" ? "]" : "}");
+      if (i < 0) return [];
+    } else if (c === ",") {
+      out.push([start, i]);
+      start = i + 1;
+    }
+  }
+  out.push([start, to]);
+  return out.filter(([a, b]) => masked.slice(a, b).trim() !== "");
+}
+
+/**
+ * The module specifiers a web barrel's contributions' slots come from — the
+ * `@plugins/…` import binding the head of each `contributions: [Head.Slot({…}), …]`
+ * element — or null when the barrel cannot be read that way: no
+ * `contributions` array literal, an element that is not one slot call, a head
+ * not imported from an `@plugins/` specifier (its own `./slots`, a local
+ * helper), or a barrel declaring `slots` of its own (a host, not only a
+ * contributor). Null is the safe answer: the plugin's code stays its folder
+ * app's (eager-tier-gen's `computeEagerTier`).
+ */
+export function contributionSourcesIn(src: string): string[] | null {
+  const body = defaultExportObjectBody(src);
+  if (body.kind !== "object") return null;
+  if (hasField(body.body, "slots", { depth0: true })) return null;
+  const masked = maskSource(body.body);
+  // `contributions:` at the object's depth 0.
+  let open = -1;
+  for (let i = 0; i < masked.length; i++) {
+    const c = masked[i]!;
+    if (c === "(" || c === "[" || c === "{") {
+      i = matchBracket(masked, i, c, c === "(" ? ")" : c === "[" ? "]" : "}");
+      if (i < 0) return null;
+      continue;
+    }
+    const m = /^contributions\s*:\s*\[/.exec(masked.slice(i, i + 40));
+    if (m && (i === 0 || /[\s,]/.test(masked[i - 1]!))) {
+      open = i + m[0].length - 1;
+      break;
+    }
+  }
+  if (open < 0) return null;
+  const close = matchBracket(masked, open, "[", "]");
+  if (close < 0) return null;
+  const elements = topLevelElements(masked, open + 1, close);
+  if (elements.length === 0) return null;
+  const sourceOf = new Map<string, string>();
+  for (const imp of findImports(src)) {
+    if (imp.keyword !== "import" || imp.sideEffect || imp.typeOnly) continue;
+    if (!imp.specifier.startsWith("@plugins/")) continue;
+    for (const name of boundNames(imp.clause))
+      sourceOf.set(name, imp.specifier);
+  }
+  const sources = new Set<string>();
+  for (const [a, b] of elements) {
+    const text = masked.slice(a, b).trim();
+    const call = /^([\w$]+)(?:\.[\w$]+)*\s*\(/.exec(text);
+    if (!call) return null;
+    const paren = text.indexOf("(", call[1]!.length);
+    if (matchBracket(text, paren, "(", ")") !== text.length - 1) return null;
+    const source = sourceOf.get(call[1]!);
+    if (source === undefined) return null;
+    sources.add(source);
+  }
+  return [...sources].sort();
+}
 
 /**
  * Every preloaded descriptor key in ONE source file, in source order.

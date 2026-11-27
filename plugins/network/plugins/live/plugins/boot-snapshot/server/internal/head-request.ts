@@ -1,3 +1,4 @@
+import { APP_CODE_HOSTS } from "@plugins/framework/plugins/web-sdk/core";
 import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import {
   DocumentHead,
@@ -65,7 +66,7 @@ export function renderBootSnapshotHead(
   const head: HeadFragments = { "": bootSnapshotHeadScript(null) };
   for (const { path, app } of appHeadPaths(apps)) {
     head[path] = bootSnapshotHeadScript(
-      appRootOf(asFsPath(asPluginId(app.plugin))),
+      appRootOf(asFsPath(asPluginId(app.plugin)), APP_CODE_HOSTS),
     );
   }
   return head;

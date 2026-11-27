@@ -1,3 +1,4 @@
+import { APP_CODE_HOSTS } from "@plugins/framework/plugins/web-sdk/core";
 import { declaredAppPlugins } from "@plugins/apps-core/server";
 import {
   asFsPath,
@@ -59,7 +60,7 @@ export function renderAppPreloadHead(
   preloads: AppPreloads,
 ): HeadFragments {
   const htmlOf = (plugin: string): string => {
-    const root = appRootOf(asFsPath(asPluginId(plugin)));
+    const root = appRootOf(asFsPath(asPluginId(plugin)), APP_CODE_HOSTS);
     const urls = root === null ? [] : (preloads.apps[root] ?? []);
     return urls
       .map((url) => `<link rel="modulepreload" href="${attr(url)}">`)

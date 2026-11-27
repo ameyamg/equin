@@ -752,6 +752,7 @@ async function runPipeline(
           registryDirName: plan.registryTarget.dirName,
           vendorSet: vendors,
           deferredPaths: plan.deferredPaths,
+          appCodeHosts: plan.appCodeHosts,
         }),
         pin: (paths) => lease.pin(paths),
         log,

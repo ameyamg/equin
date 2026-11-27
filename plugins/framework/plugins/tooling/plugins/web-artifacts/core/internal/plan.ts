@@ -71,6 +71,11 @@ export interface FleetSource {
    */
   webScopedEntries: RegistryEntryRecord[];
   deferredPaths: ReadonlySet<string>;
+  /**
+   * The deferred plugins that load as another app's code (web-tiers'
+   * `APP_CODE_HOSTS`), read with `deferredPaths` from the same manifest.
+   */
+  appCodeHosts: ReadonlyMap<string, string>;
   /** The registry module the registry artifact is built from (absolute path). */
   registryFile: AppPath;
   /**
@@ -94,13 +99,17 @@ export async function defaultFleetSource(root: AppPath): Promise<FleetSource> {
     webEntries: RegistryEntryRecord[];
     webScopedEntries: RegistryEntryRecord[];
   };
-  const { DEFERRED_PLUGIN_PATHS } = (await import(
+  const { DEFERRED_PLUGIN_PATHS, APP_CODE_HOSTS } = (await import(
     joinAppPath(root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
-  )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
+  )) as {
+    DEFERRED_PLUGIN_PATHS: ReadonlySet<string>;
+    APP_CODE_HOSTS: ReadonlyMap<string, string>;
+  };
   return {
     webEntries,
     webScopedEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
+    appCodeHosts: APP_CODE_HOSTS,
     registryFile,
     catalogSources: await renderPageCatalog(
       root,
@@ -152,13 +161,17 @@ export async function compositionFleetSource(opts: {
     webEntries: RegistryEntryRecord[];
     webScopedEntries: RegistryEntryRecord[];
   };
-  const { DEFERRED_PLUGIN_PATHS } = (await import(
+  const { DEFERRED_PLUGIN_PATHS, APP_CODE_HOSTS } = (await import(
     joinAppPath(opts.root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
-  )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
+  )) as {
+    DEFERRED_PLUGIN_PATHS: ReadonlySet<string>;
+    APP_CODE_HOSTS: ReadonlyMap<string, string>;
+  };
   return {
     webEntries,
     webScopedEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
+    appCodeHosts: APP_CODE_HOSTS,
     registryFile,
     catalogSources: await renderPageCatalog(
       opts.root,
@@ -191,6 +204,7 @@ export interface FleetPlan {
   /** The fleet's browser hosts (`./browser-hosts.ts`). */
   hosts: BrowserHostPlan[];
   deferredPaths: ReadonlySet<string>;
+  appCodeHosts: ReadonlyMap<string, string>;
   identity: BuilderIdentity;
   webTargets: PlannedTarget[];
   entryTarget: PlannedTarget;
@@ -412,6 +426,7 @@ export async function planFleet(opts: {
       ...source.deferredPaths,
       ...webScopedEntries.map((e) => e.pluginPath),
     ]),
+    appCodeHosts: source.appCodeHosts,
     identity,
     webTargets,
     entryTarget,

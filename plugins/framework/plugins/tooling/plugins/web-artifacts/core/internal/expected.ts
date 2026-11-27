@@ -186,6 +186,7 @@ export async function planExpectedFleet(opts: {
   /** The page's targets (web artifacts + their barrel closure), the link's input. */
   pageTargets: PlannedTarget[];
   deferredPaths: ReadonlySet<string>;
+  appCodeHosts: ReadonlyMap<string, string>;
   registryDirName: string;
   entryDirName: string;
   hosts: ExpectedHost[];
@@ -273,6 +274,7 @@ export async function planExpectedFleet(opts: {
     targets: [...pageTargets, ...hosts.flatMap((h) => [h.entry, ...h.added])],
     pageTargets: [...plan.webTargets, ...barrelTargets.values()],
     deferredPaths: plan.deferredPaths,
+    appCodeHosts: plan.appCodeHosts,
     registryDirName: plan.registryTarget.dirName,
     entryDirName: plan.entryTarget.dirName,
     hosts,
@@ -353,6 +355,7 @@ export async function computeExpectedComposition(opts: {
         registryDirName: fleet.registryDirName,
         vendorSet: vendorMeta,
         deferredPaths: fleet.deferredPaths,
+        appCodeHosts: fleet.appCodeHosts,
       }),
     ),
   };

@@ -3,10 +3,16 @@
 Puts the active app's code in the page's head, so it downloads from t0 with
 the shell's own preloads instead of after the eager tier has evaluated.
 
-- **`core/`** — `appRootOf(pluginPath)` (`apps/plugins/<app>/`): the unit an
-  app's code is loaded by. web-core's `App.tsx` loads every deferred plugin
-  under the active app's root as its priority batch, and the compose step keys
-  the batch's preloads by the same root. Plus the `.app-preloads.json` format.
+- **`core/`** — `appRootOf(pluginPath, hosts)` (`apps/plugins/<app>/`): the
+  unit an app's code is loaded by. web-core's `App.tsx` loads every deferred
+  plugin of the active app as its priority batch, and the compose step keys
+  the batch's preloads by the same root. A plugin's app is its folder's,
+  except one `hosts` names (web-sdk's generated `APP_CODE_HOSTS`): a plugin
+  whose every contribution goes into another app's slots and that nothing of
+  its own app imports — each app's `isle-building`, which only Isle draws, is
+  Isle's code, so it never rides in its own app's first paint. The build reads
+  `hosts` from its fleet source (a build process may not statically load a
+  manifest it regenerates). Plus the `.app-preloads.json` format.
 - **web-artifacts compose** writes `.app-preloads.json` into every dist: per app
   root, the static import closure of its deferred plugins (dependencies
   first), minus the modules the shell already preloads.

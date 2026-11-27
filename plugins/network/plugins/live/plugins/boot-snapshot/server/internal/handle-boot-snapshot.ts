@@ -1,3 +1,4 @@
+import { APP_CODE_HOSTS } from "@plugins/framework/plugins/web-sdk/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
@@ -265,7 +266,7 @@ function loadAppPreloads(
   return Promise.all(
     appPreloads()
       .filter(({ key, plugin }) => {
-        const root = appRootOf(asFsPath(asPluginId(plugin)));
+        const root = appRootOf(asFsPath(asPluginId(plugin)), APP_CODE_HOSTS);
         if (root === null) {
           if (!reportedAppless.has(key)) {
             reportedAppless.add(key);

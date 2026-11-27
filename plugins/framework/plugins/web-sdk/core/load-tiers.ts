@@ -29,6 +29,8 @@
 
 import { DEFERRED_PLUGIN_PATHS } from "./web-tiers.generated";
 
+export { APP_CODE_HOSTS } from "./web-tiers.generated";
+
 /**
  * True IFF `pluginPath` is deferred app content — a membership lookup against the
  * generated {@link DEFERRED_PLUGIN_PATHS} set. Everything not in the set (an
@@ -57,7 +59,9 @@ export function partitionWebEntries<T extends { pluginPath: string }>(
 
 /**
  * Plan the deferred tier's registration: the active app's content first (its
- * `priority` batch), then the `rest` drained in batches of `batchSize`, each
+ * `priority` batch: the entries `isActiveApp` says are the active app's code —
+ * apps-core/app-preload's `appRootOf`, which this leaf cannot import — or none
+ * when it is null), then the `rest` drained in batches of `batchSize`, each
  * batch one `registry.append`.
  *
  * The invariant: **a plugin never registers before a plugin it depends on**
@@ -72,7 +76,7 @@ export function partitionWebEntries<T extends { pluginPath: string }>(
  * its contributions register only when its own entry's batch appends.
  *
  * So the plan is dependency-closed by construction:
- *  - `priority` is the entries under `activePrefix` plus every deferred entry
+ *  - `priority` is the active app's entries plus every deferred entry
  *    they transitively depend on (another app's content they import included);
  *  - `rest` is topo-ordered (dependencies first, input order otherwise kept),
  *    so slicing it puts each entry's deferred dependencies in its own batch or
@@ -84,7 +88,7 @@ export function planDeferredLoad<
   T extends { pluginPath: string; dependsOn: readonly string[] },
 >(
   deferred: readonly T[],
-  activePrefix: string | null,
+  isActiveApp: ((pluginPath: string) => boolean) | null,
   batchSize: number,
 ): { priority: T[]; rest: T[][] } {
   const byPath = new Map(deferred.map((e) => [e.pluginPath, e] as const));
@@ -107,9 +111,8 @@ export function planDeferredLoad<
     placed.add(e.pluginPath);
     ordered.push(e);
   };
-  if (activePrefix !== null) {
-    for (const e of deferred)
-      if (e.pluginPath.startsWith(activePrefix)) visit(e, []);
+  if (isActiveApp !== null) {
+    for (const e of deferred) if (isActiveApp(e.pluginPath)) visit(e, []);
   }
   const priority = [...ordered];
   for (const e of deferred) visit(e, []);
