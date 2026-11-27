@@ -4,16 +4,16 @@
 
 ## Plugin reference
 
-- Description: An agent's decisions in its conversation: a tray above the composer drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions; its side-pane icon opens the same decisions in a Decisions pane beside the conversation (convDecisionsPane), the tray folding to its header while that pane is open. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
+- Description: An agent's decisions in its conversation: a tray at the end of the transcript (it scrolls with the conversation, never pinned over it) drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions; its side-pane icon opens the same decisions in a Decisions pane beside the conversation (convDecisionsPane), the tray folding to its header while that pane is open. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
 - Web:
   - Slots: `conv-decisions.actions`
   - Slot contributors: `conv-decisions.actions` ← `primitives.pane`
   - Contributes:
-    - `Conversation.AbovePromptInput` → `DecisionsTray`
+    - `JsonlViewer.TranscriptEnd` "decisions" → `DecisionsTray`
     - `Pane.Register` "conv-decisions"
   - Uses:
     - `conversations.useConversationById`
-    - `conversations/conversation-view.Conversation`
+    - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`

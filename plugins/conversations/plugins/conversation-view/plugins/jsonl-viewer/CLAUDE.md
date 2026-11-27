@@ -171,13 +171,13 @@ back.
     - `JsonlViewer.ContextRole`
     - `JsonlViewer.Overlay`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 58 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 59 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×31
     - `JsonlViewer.EventRenderer` ×18
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.PendingPrompt` ×2
-    - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
+    - `JsonlViewer.TranscriptEnd` ×2
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -322,12 +322,12 @@ back.
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --measure-reading`
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×49
+    - `tasks` ×2
     - `active-data/plugin-link`
     - `apps/places/places-map`
     - `network/live`
-    - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from:
     - `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)

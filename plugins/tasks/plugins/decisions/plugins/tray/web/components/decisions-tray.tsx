@@ -7,10 +7,12 @@ import { decisionsPane } from "@plugins/tasks/plugins/decisions/plugins/inbox/we
 import { convDecisionsPane } from "../panes";
 
 /**
- * The decisions this conversation's agent raised, above its composer: its
- * task's {@link TaskDecisionsPanel}, absent while none waits on the user. Not drawn in
- * the transcript: the agent edits a decision after opening it, so the record
- * is shown live here, not as the tool call that opened it. Its side-pane icon
+ * The decisions this conversation's agent raised, at the end of its
+ * transcript: its task's {@link TaskDecisionsPanel}, absent while none waits
+ * on the user. It scrolls with the transcript rather than pinned above the
+ * composer, so an open tray never hides the conversation. Drawn live at the
+ * end, not as the tool call that opened it: the agent edits a decision after
+ * opening it. Its side-pane icon
  * moves them into a pane beside the conversation; the tray folds to its
  * header while that pane is open.
  */

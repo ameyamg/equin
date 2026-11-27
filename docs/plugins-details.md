@@ -20440,7 +20440,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.op-status`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.running-agents`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.turn-summary`
-          - `Conversation.AbovePromptInput` ← `tasks.decisions.tray`
           - `conversationPane.Actions` ← `conversations.agents`
           - `conversationPane.Actions` ← `conversations.conversation-preprompt`
           - `conversationPane.Actions` ← `conversations.conversation-progress`
@@ -20491,9 +20490,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 60 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×45
-          - `tasks` ×7
+          - `tasks` ×6
           - `active-data` ×4
           - `debug/profiling/ops`
           - `hints/ask`
@@ -21099,13 +21098,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.ContextRole`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 59 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
               - `JsonlViewer.EventRenderer` ×18
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ×2
-              - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
+              - `JsonlViewer.TranscriptEnd` ×2
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -21250,12 +21249,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --measure-reading`
-            - Imported by: 53 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Imported by: 54 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×49
+              - `tasks` ×2
               - `active-data/plugin-link`
               - `apps/places/places-map`
               - `network/live`
-              - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from:
               - `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
@@ -67672,16 +67671,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-        - **`tray`** — An agent's decisions in its conversation: a tray above the composer drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions; its side-pane icon opens the same decisions in a Decisions pane beside the conversation (convDecisionsPane), the tray folding to its header while that pane is open. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
+        - **`tray`** — An agent's decisions in its conversation: a tray at the end of the transcript (it scrolls with the conversation, never pinned over it) drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions; its side-pane icon opens the same decisions in a Decisions pane beside the conversation (convDecisionsPane), the tray folding to its header while that pane is open. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
           - Web:
             - Slots: `conv-decisions.actions`
             - Slot contributors: `conv-decisions.actions` ← `primitives.pane`
             - Contributes:
-              - `Conversation.AbovePromptInput` → `DecisionsTray`
+              - `JsonlViewer.TranscriptEnd` "decisions" → `DecisionsTray`
               - `Pane.Register` "conv-decisions"
             - Uses:
               - `conversations.useConversationById`
-              - `conversations/conversation-view.Conversation`
+              - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/text.Text`
               - `primitives/loading.Loading`

@@ -3,7 +3,7 @@
  *
  *  1. seeds one task with a `starting` agent conversation, two open decisions
  *     (D1 with A/B options, D2 an FYI) and one closed (D3, with an outcome);
- *  2. opens the conversation: the tray above the composer says "1 decision
+ *  2. opens the conversation: the tray at the transcript's end says "1 decision
  *     needs you", lists D1 and D2 (not D3) and a "1 closed" row;
  *  3. a click on D1 expands it inline into its card; picking A drafts it —
  *     the row says "Your answer: A" and the tray's Submit counts 1;
