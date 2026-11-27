@@ -148,17 +148,19 @@ export interface Recorder {
    */
   wheel(dy: number, opts?: { duration?: number }): Promise<void>;
   /**
-   * The camera's scroll: scroll `within`'s scroller (its nearest scrolling
-   * ancestor) to `top` over `duration` s on `easing` (default `inOutQuad`:
-   * at rest at both ends) — one absolute position per frame, so the move
-   * lands exactly on `top`. Refuses a `top` the scroller cannot reach (past
-   * its end it would overscroll and bounce), checked on every frame: content
-   * still growing must keep ahead of the camera.
+   * The camera's scroll: scroll `within`'s scroller (its nearest ancestor
+   * scrolling along `axis`, default `"y"`) to `to` — its scrollTop, or its
+   * scrollLeft with `axis: "x"` (a row of Miller columns) — over `duration` s
+   * on `easing` (default `inOutQuad`: at rest at both ends) — one absolute
+   * position per frame, so the move lands exactly on `to`. Refuses a `to` the
+   * scroller cannot reach (past its end it would overscroll and bounce),
+   * checked on every frame: content still growing must keep ahead of the
+   * camera.
    */
   scrollTo(
     within: Locator,
-    top: number,
-    opts?: { duration?: number; easing?: Easing },
+    to: number,
+    opts?: { duration?: number; easing?: Easing; axis?: "x" | "y" },
   ): Promise<void>;
   /**
    * Where `target` will be once every animation running on the page now
@@ -776,52 +778,50 @@ export async function record(
         await capture();
       }
     },
-    async scrollTo(within, top, o = {}) {
-      const read = () =>
-        within.evaluate((el) => {
-          let s: HTMLElement | null = el.parentElement;
-          for (; s; s = s.parentElement) {
-            const st = getComputedStyle(s);
-            if (
-              s.scrollHeight > s.clientHeight + 1 &&
-              (st.overflowY === "auto" || st.overflowY === "scroll")
-            )
-              break;
-          }
-          if (!s) return null;
-          return {
-            top: s.scrollTop,
-            max: s.scrollHeight - s.clientHeight,
-          };
-        });
-      const set = (y: number) =>
-        within.evaluate((el, to) => {
-          let s: HTMLElement | null = el.parentElement;
-          for (; s; s = s.parentElement) {
-            const st = getComputedStyle(s);
-            if (
-              s.scrollHeight > s.clientHeight + 1 &&
-              (st.overflowY === "auto" || st.overflowY === "scroll")
-            )
-              break;
-          }
-          s!.scrollTo({ top: to, behavior: "instant" });
-          return { top: s!.scrollTop, max: s!.scrollHeight - s!.clientHeight };
-        }, y);
-      const from = await read();
+    async scrollTo(within, to, o = {}) {
+      const axis = o.axis ?? "y";
+      // One read-or-write of the scroller along `axis`: its position and
+      // reach after setting it to `goal` (null: read only).
+      const at = (goal: number | null) =>
+        within.evaluate(
+          (el, [ax, g]) => {
+            const x = ax === "x";
+            let s: HTMLElement | null = el.parentElement;
+            for (; s; s = s.parentElement) {
+              const st = getComputedStyle(s);
+              const over = x ? st.overflowX : st.overflowY;
+              const room = x
+                ? s.scrollWidth > s.clientWidth + 1
+                : s.scrollHeight > s.clientHeight + 1;
+              if (room && (over === "auto" || over === "scroll")) break;
+            }
+            if (!s) return null;
+            if (g !== null)
+              s.scrollTo(
+                x
+                  ? { left: g, behavior: "instant" }
+                  : { top: g, behavior: "instant" },
+              );
+            return x
+              ? { pos: s.scrollLeft, max: s.scrollWidth - s.clientWidth }
+              : { pos: s.scrollTop, max: s.scrollHeight - s.clientHeight };
+          },
+          [axis, goal] as const,
+        );
+      const from = await at(null);
       if (!from)
         throw new Error(
-          `record: scrollTo: ${String(within)} is in no scroller`,
+          `record: scrollTo: ${String(within)} is in no ${axis} scroller`,
         );
       const n = framesFor(o.duration ?? 0.7);
       for (let i = 1; i <= n; i++) {
         const want =
-          from.top + (top - from.top) * ease(o.easing ?? "inOutQuad", i / n);
-        const got = await set(want);
+          from.pos + (to - from.pos) * ease(o.easing ?? "inOutQuad", i / n);
+        const got = (await at(want))!;
         // The scroller rounds to device pixels; anything more is the end.
-        if (Math.abs(got.top - want) > 1)
+        if (Math.abs(got.pos - want) > 1)
           throw new Error(
-            `record: scrollTo(${Math.round(top)}) would overscroll: at frame ${i}/${n} the scroller reaches ${Math.round(got.max)}, the move wants ${Math.round(want)} (it would bounce)`,
+            `record: scrollTo(${Math.round(to)}) would overscroll: at frame ${i}/${n} the ${axis} scroller reaches ${Math.round(got.max)}, the move wants ${Math.round(want)} (it would bounce)`,
           );
         await capture();
       }

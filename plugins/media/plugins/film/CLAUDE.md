@@ -84,7 +84,8 @@ whichever page renders it. So any split gives the same pictures.
   throws (Chromium's elastic overscroll would bounce the page back), and so
   does a **`scrollTo`** whose position the scroller cannot reach on any frame.
   `scrollTo` is the camera: an absolute eased move (default `inOutQuad`, at
-  rest at both ends) of the target's scroller, landing exactly on its goal.
+  rest at both ends) of the target's scroller, landing exactly on its goal —
+  vertical, or horizontal with `axis: "x"` (a row of Miller columns).
   Its goal comes from **`settledRect`**: where an element will be once every
   running animation has finished (each scrubbed to its end for one
   synchronous layout read, then put back — the virtual clock makes the

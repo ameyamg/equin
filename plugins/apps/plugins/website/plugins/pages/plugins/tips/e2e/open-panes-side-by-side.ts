@@ -1,13 +1,20 @@
-// The tip "Open panes side by side": in Agent Manager's Tasks, one task is
-// already open beside the list; ⌥-click (Alt-click) on another task opens it
-// in a new pane next to the list (the pane clicked from), and the first one
-// stays open beside it.
+// The tip "Open panes side by side", in Agent Manager on the promo-film demo:
+// with the Grieg conversation open, ⌥-click (Alt-click) two more conversations
+// in the sidebar — each opens in a pane of its own beside the others — then
+// ⌥-click the middle one's Close, which closes only that pane. Inside the
+// first conversation, ⌥-click its Pages button and the score it saved: each
+// opens right after it, before the conversation still open on the right (the
+// sidebar folded first, so three panes fit). The row ends scrolled back to its
+// start.
+//
+// The camera never zooms: every click changes another part of the screen (a
+// pane opening beside), so the click and its result stay in one frame.
 //
 //   ./equin run plugins/apps/plugins/website/plugins/pages/plugins/tips/e2e/open-panes-side-by-side.ts --composition promo-film
 //
 // See this plugin's CLAUDE.md (Tip videos) for the flags and the steps.
 
-import type { Page } from "playwright";
+import type { Locator, Page } from "playwright";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 import { tipVideo } from "./internal/tip-video";
 
@@ -21,51 +28,88 @@ export const e2e = {
   },
 } satisfies E2eScript;
 
-// The seed's two wishes: the one open at the start, and the one ⌥-clicked.
-const OPEN = "Weekly grocery list from my recipes";
-const ADDED = "Import my Goodreads shelf into Reading";
-const OPEN_ID = "task-1792800000-film02";
+// The seed's three waiting conversations: the one open at the start, and the
+// two ⌥-clicked open from the sidebar (the second of which stays).
+const GRIEG = "Score and MIDI for Wedding-day at Troldhaugen";
+const GROCERY = "Weekly grocery list from my recipes";
+const GOODREADS = "Import my Goodreads shelf into Reading";
+const GRIEG_ID = "conv-1792800000-film01";
+/**
+ * The score's first page the Grieg conversation saved, a file chip in its last
+ * message: an image, drawn in its pane (the score's PDF stays blank in a
+ * headless browser, which has no PDF viewer).
+ */
+const SCORE_PAGE = "scores/wedding-day-at-troldhaugen-page-1.png";
 
 /** The open pane whose header reads this title. */
-function paneTitled(page: Page, title: string) {
+function paneTitled(page: Page, title: string): Locator {
   return page.locator("[data-pane-id]").filter({
-    has: page.getByRole("button", { name: `${title} Expand pane Close` }),
+    has: page.locator('[data-part="pane.header"]', { hasText: title }),
   });
 }
 
 await tipVideo({
   slug: "open-panes-side-by-side",
-  // The Tasks list with the first wish already open beside it.
-  path: `/agents/tasks/t/${OPEN_ID}`,
-  cursor: { x: 900, y: 420 },
+  path: `/agents/c/${GRIEG_ID}`,
+  cursor: { x: 760, y: 560 },
   async prepare(page) {
-    await paneTitled(page, OPEN).waitFor({ state: "visible", timeout: 30_000 });
+    await paneTitled(page, GRIEG).waitFor({
+      state: "visible",
+      timeout: 30_000,
+    });
   },
   async script(r) {
     const page = r.page;
-    // The Tasks list's title cells (the sidebar's rows are buttons, not cells).
-    const row = page.getByRole("gridcell", { name: ADDED, exact: true });
-    const openRow = page.getByRole("gridcell", { name: OPEN, exact: true });
-    const added = paneTitled(page, ADDED);
-    const addedTop = added.locator('[data-part="pane.header"]');
-    // The task's title field at the top of its Task card.
-    const addedTask = added.getByRole("textbox", { name: "Untitled" });
+    const sidebar = page.locator('[data-sidebar="sidebar"]');
+    const grieg = paneTitled(page, GRIEG);
+    const grocery = paneTitled(page, GROCERY);
 
-    // In on the list while the hand reaches for the second wish.
-    await r.focus([openRow, row], { margin: 48, maxZoom: 1.8 });
-    await r.move(row);
-    await r.hold(0.7);
-    // ⌥-click: the wish opens beside the list, the open one is kept.
-    await r.click(row, { modifiers: ["Alt"] });
-    await r.hold(0.25);
-    // The camera follows the new pane as it opens, while its title is read.
-    await r.focus([addedTop, addedTask], { margin: 40, maxZoom: 1.7 });
+    // Two more conversations from the sidebar, each beside the others.
+    const groceryRow = sidebar.getByRole("button", { name: GROCERY });
+    await r.move(groceryRow);
+    await r.hold(0.5);
+    await r.click(groceryRow, { modifiers: ["Alt"] });
+    await r.hold(0.8);
+    const goodreadsRow = sidebar.getByRole("button", { name: GOODREADS });
+    await r.move(goodreadsRow);
+    await r.hold(0.3);
+    await r.click(goodreadsRow, { modifiers: ["Alt"] });
+    await r.hold(0.9);
+
+    // ⌥ on the middle one's Close: only that pane goes, the one after stays.
+    const close = grocery.getByRole("button", { name: "Close", exact: true });
+    await r.move(close);
+    await r.hold(0.5);
+    await r.click(close, { modifiers: ["Alt"] });
+    await r.hold(0.8);
+
+    // Room for three panes (3 × Miller's 420 px share): the sidebar folds away.
+    const toggle = grieg.getByRole("button", {
+      name: "Toggle Sidebar",
+      exact: true,
+    });
+    await r.move(toggle);
+    await r.hold(0.3);
+    await r.click(toggle);
+    await r.hold(0.6);
+
+    // Inside the first conversation, its pages open right after it…
+    const pages = grieg.getByRole("button", { name: "Pages", exact: true });
+    await r.move(pages);
+    await r.hold(0.4);
+    await r.click(pages, { modifiers: ["Alt"] });
+    await r.hold(1.0);
+    // …and so does the score page it saved, before the pages: the row slides
+    // to its end (Miller always does), the conversation off to the left.
+    const score = grieg.getByRole("button", { name: SCORE_PAGE, exact: true });
+    await r.move(score);
+    await r.hold(0.4);
+    await r.click(score, { modifiers: ["Alt"] });
+    await r.hold(1.3);
+
+    // Back to the start of the row: the conversation, then the two panes it
+    // opened, with the conversation kept from the start further right.
+    await r.scrollTo(grieg, 0, { axis: "x", duration: 1.2 });
     await r.hold(1.6);
-    // Pull back: both wishes, side by side.
-    await r.unfocus();
-    // The hand rests in the new pane's header, between its title and buttons,
-    // off the text while both panes are seen whole.
-    await r.move({ element: addedTop, at: { x: 0.62, y: 0.5 } });
-    await r.hold(1.8);
   },
 });
