@@ -9,6 +9,7 @@
   - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
   - Uses:
     - `apps/plugin-studio/compositions/release.ReleaseDetail`
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/copy-to-clipboard.CopyButton`

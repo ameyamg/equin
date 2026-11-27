@@ -16,6 +16,7 @@ import {
   type DaemonSnapshot,
   type DaemonState,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
+import { serverDateFormatter } from "@plugins/fields/plugins/date/plugins/format/server";
 
 /** At most this many instances are listed one per fact; the rest are counted. */
 const RUNNING_FACTS_MAX = 10;
@@ -73,15 +74,10 @@ async function readUsage(pids: number[]): Promise<Usage> {
   };
 }
 
-function clock(d: Date): string {
-  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-}
-
 function day(d: Date): string {
+  const fmt = serverDateFormatter();
   const sameDay = new Date().toDateString() === d.toDateString();
-  return sameDay
-    ? clock(d)
-    : `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${clock(d)}`;
+  return sameDay ? fmt.time(d) : fmt.dateTime(d, { year: "never" });
 }
 
 /** The OS process an instance's numbers come from. */

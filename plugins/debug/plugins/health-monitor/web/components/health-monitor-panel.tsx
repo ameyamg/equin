@@ -36,6 +36,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
 import {
   MACHINE_USAGE_BUCKET_COLOR,
@@ -77,13 +78,6 @@ const SEVERITY_RANK: Record<SpikeMarker["severity"], number> = {
   destructive: 2,
 };
 
-const fmtTime = (v: number): string =>
-  new Date(v).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-
 function MetricChart({
   data,
   lines,
@@ -93,6 +87,8 @@ function MetricChart({
   lines: LineSpec[];
   markers?: SpikeMarker[];
 }): ReactElement {
+  const fmt = useDateFormatter();
+  const fmtTime = (v: number): string => fmt.time(v, { seconds: true });
   return (
     <div className="h-44 w-full">
       <ChartState empty={data.length === 0} emptyText="No samples yet.">
@@ -449,6 +445,8 @@ type OwnerSamples = HealthData["ownerSamples"];
 // One stacked area per owner bucket, in bucket order, so the stack's height is
 // the machine's total and each band says who held it.
 function StackedOwnerChart({ data }: { data: ChartRow[] }): ReactElement {
+  const fmt = useDateFormatter();
+  const fmtTime = (v: number): string => fmt.time(v, { seconds: true });
   return (
     <div className="h-44 w-full">
       <ChartState empty={data.length === 0} emptyText="No samples yet.">

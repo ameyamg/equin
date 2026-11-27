@@ -1,3 +1,4 @@
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactElement } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
@@ -69,8 +70,10 @@ export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
  */
 function LiveLogs(): ReactElement {
   const toast = useToast();
+  const fmt = useDateFormatter();
   return (
     <LiveLogChannel
+      fmt={fmt}
       channel={RELEASE_LOG_CHANNEL}
       label="Logs"
       emptyState="No release logs yet"

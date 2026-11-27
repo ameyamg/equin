@@ -15,4 +15,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "date-format/no-raw-date-format",
+    paths: ["server/internal/format.ts"],
+    kind: "sanctioned",
+    reason:
+      "Wall-clock parts (formatToParts, en-US, h23) for the get_timeline text report — a fixed, agent-facing stamp format (HH:MM:SS.mmm, YYYY-MM-DD HH:MM:SS) the reader parses, not a date shown to the user in their settings.",
+  },
 ] satisfies Exemptions;

@@ -84,7 +84,7 @@ files a task about the `test-file` subject under the Tests category.
     - `DataViewSlots.CollectionItemAction` "tests.file-status:investigate" → `CollectionInvestigate`
     - `DataViewSlots.CollectionItemAction` "tests.file-runs:investigate" → `CollectionInvestigate`
     - `DebugApp.Sidebar` "Tests"
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
     - `primitives/pane` ×6
     - `config_v2` ×2
@@ -94,6 +94,7 @@ files a task about the `test-file` subject under the Tests category.
     - `primitives/launch/investigate` ×2
     - `apps/debug/shell.DebugApp`
     - `config_v2/config-link.ConfigGearButton`
+    - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useEndpointMutation`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`

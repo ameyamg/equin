@@ -9,6 +9,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   MACHINE_USAGE_BUCKET_COLOR,
   machineUsage,
@@ -132,6 +133,7 @@ export function MachineUsageBreakdownView({
 
 export function MachineUsageBreakdown() {
   const result = useLive(machineUsage);
+  const fmt = useDateFormatter();
   if (result.status === "loading") {
     return <Loading label="Measuring where CPU and memory go…" />;
   }
@@ -145,5 +147,7 @@ export function MachineUsageBreakdown() {
       />
     );
   }
-  return <MachineUsageBreakdownView view={machineUsageView(result.data)} />;
+  return (
+    <MachineUsageBreakdownView view={machineUsageView(result.data, fmt)} />
+  );
 }

@@ -1,3 +1,4 @@
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import type { ClaudeUsageRead } from "@plugins/conversations/plugins/runtime-sdk/core";
 import {
   SYSTEM_ACCOUNT_ID,
@@ -94,18 +95,11 @@ export function spendWindows(windows: readonly AccountWindow[]): SpendWindow[] {
     }));
 }
 
-const SINCE = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-
 /** "Personal: since Mon 09:00", "API key: last 7 days (billed API usage)". */
-export function windowWords(w: AccountWindow): string {
+export function windowWords(fmt: DateFormatter, w: AccountWindow): string {
   switch (w.kind) {
     case "week":
-      return `${w.name}: since ${SINCE.format(w.since).replace(",", "")}`;
+      return `${w.name}: since ${fmt.weekday(w.since)} ${fmt.time(w.since)}`;
     case "approximate":
       return `${w.name}: last 7 days (no usage reading yet)`;
     case "api":

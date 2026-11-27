@@ -22,6 +22,7 @@ import {
   weekdayLabels,
 } from "../../core";
 import { announce } from "@plugins/primitives/plugins/announce/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
@@ -60,8 +61,6 @@ export interface CalendarProps {
   /** Inclusive selectable bounds, day-granular. Days outside are disabled. */
   min?: Date;
   max?: Date;
-  /** BCP-47 locale for the month title + weekday row. Defaults to the runtime's. */
-  locale?: string;
   className?: string;
 }
 
@@ -85,9 +84,9 @@ export function Calendar({
   weekStartsOn = 0,
   min,
   max,
-  locale,
   className,
 }: CalendarProps) {
+  const fmt = useDateFormatter();
   const today = startOfDay(new Date());
   const [ownMonth, setOwnMonth] = useState(() =>
     startOfMonth(value ?? new Date()),
@@ -119,7 +118,7 @@ export function Calendar({
     // one paging path — so both routes report it exactly once. A month change
     // driven from OUTSIDE (a `DatePickerPanel` preset) is not announced, since
     // that press has its own button label.
-    announce(monthTitle(target, locale));
+    announce(monthTitle(target, fmt));
   }
 
   function pick(day: Date) {
@@ -135,7 +134,7 @@ export function Calendar({
   }
 
   const weeks = buildMonthGrid(viewMonth, weekStartsOn);
-  const headings = weekdayLabels(weekStartsOn, locale);
+  const headings = weekdayLabels(weekStartsOn, fmt);
 
   // The roving tab stop is DERIVED, never stored: a `focusedDay` left over from
   // a month the user has since paged away from is ignored outright, so the
@@ -195,7 +194,7 @@ export function Calendar({
         <Fill>
           <Center axis="horizontal">
             <Text variant="label" id={titleId}>
-              {monthTitle(viewMonth, locale)}
+              {monthTitle(viewMonth, fmt)}
             </Text>
           </Center>
         </Fill>
@@ -261,7 +260,7 @@ export function Calendar({
                       shape="pill"
                       variant={selected ? "default" : "ghost"}
                       disabled={disabled}
-                      aria-label={dayLabel(day, locale)}
+                      aria-label={dayLabel(day, fmt)}
                       aria-current={isSameDay(day, today) ? "date" : undefined}
                       // Exactly one day is in the tab order, so entering the
                       // calendar costs one Tab instead of 42; the arrows do the

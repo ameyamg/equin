@@ -15,6 +15,7 @@ import {
   type ErrorStoppedConversation,
 } from "../../core";
 import { formatResets, USAGE_WINDOWS } from "./claude-usage";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 export interface ClaudeCodeRowInputs {
   /** The Claude Code the sdk runtime runs (the Agent SDK's bundled build). */
@@ -72,6 +73,7 @@ export function claudeCodeRowVerdict(
   cli: HealthStatus,
   result: ResourceResult<ClaudeCodeRowInputs> | ResourceUnavailable,
   now: number,
+  fmt: DateFormatter,
 ): HealthStatus {
   const onOwnCredential =
     result.status === "ready" &&
@@ -96,7 +98,7 @@ export function claudeCodeRowVerdict(
     const { label } = USAGE_WINDOWS[reached.id];
     return {
       state: "attention",
-      summary: `${label} usage limit reached · ${formatResets(reached.id, reached.resetsAt, now)}`,
+      summary: `${label} usage limit reached · ${formatResets(fmt, reached.id, reached.resetsAt, now)}`,
     };
   }
   if (stopped.length > 0) {

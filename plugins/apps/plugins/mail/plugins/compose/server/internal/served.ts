@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { serverDateFormatter } from "@plugins/fields/plugins/date/plugins/format/server";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { db } from "@plugins/database/server";
 import { getConfig } from "@plugins/config_v2/server";
@@ -60,6 +61,7 @@ function onBackgroundError(what: string, err: unknown): void {
 
 export const outbox = createOutbox({
   db,
+  dateFormatter: serverDateFormatter,
   sender: () => mailCache.sender(),
   thread: (id) => mailCache.thread(id),
   forwardedFileId: (a) => nameUuid([a.threadId, a.messageId, a.partId]),

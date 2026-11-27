@@ -54,6 +54,7 @@ hard stop if this count is ever wrong.
     - `config_v2.ConfigV2`
     - `config_v2.useConfigResult`
     - `config_v2/config-link.useConfigLink`
+    - `fields/date/format.useDateFormatter`
     - `network/live.useClockParam`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`

@@ -6,6 +6,8 @@ import {
 import { useClockParam, useLive } from "@plugins/network/plugins/live/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 // An API-key account's spend at a glance, in the sidebar foot's trigger:
 // `$4.12 today · $86 in Nov` — what equin's own agents spent on it, at API
@@ -29,9 +31,10 @@ const formatSpend = (usd: number): string =>
   (usd === 0 || usd >= 10 ? dollars : cents).format(usd);
 
 /** A `YYYY-MM` key's month, short (`Nov`). */
-const monthName = (key: string): string =>
-  new Date(`${key}-01T00:00:00Z`).toLocaleString("en-US", {
-    month: "short",
+const monthName = (fmt: DateFormatter, key: string): string =>
+  fmt.date(new Date(`${key}-01T00:00:00Z`), {
+    day: false,
+    year: "never",
     timeZone: "UTC",
   });
 
@@ -57,6 +60,7 @@ export function AccountSpendGlance({
   accountId: string;
   now: number;
 }) {
+  const fmt = useDateFormatter();
   const month = useClockParam(ACCOUNT_SPEND_MONTH);
   const read = useLive(claudeAccountSpend, { accountId, month });
   if (read.status === "loading")
@@ -82,7 +86,7 @@ export function AccountSpendGlance({
         title="What equin's agents spent on this account, at API prices (UTC days). Spend outside equin is not counted."
       >
         {formatSpend(spent.today)} today · {formatSpend(spent.month)} in{" "}
-        {monthName(month)}
+        {monthName(fmt, month)}
       </Text>
     </Line>
   );

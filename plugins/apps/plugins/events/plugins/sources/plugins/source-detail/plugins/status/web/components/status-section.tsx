@@ -7,6 +7,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   SOURCE_STATUS_LABEL,
   SOURCE_STATUS_VARIANT,
@@ -56,6 +57,7 @@ export function SourceStatusSection({
   sourceId: string;
 }): ReactNode {
   const lookup = useEventSource(sourceId);
+  const fmt = useDateFormatter();
 
   if (lookup.status === "pending") return <Loading variant="rows" />;
   if (lookup.status === "error") {
@@ -85,7 +87,7 @@ export function SourceStatusSection({
         {source.refresh === "manual"
           ? "Manual only"
           : source.nextRunAt
-            ? source.nextRunAt.toLocaleString()
+            ? fmt.numeric(source.nextRunAt, { time: true, seconds: true })
             : "Not scheduled"}
       </Field>
       <Field label="Fingerprint">

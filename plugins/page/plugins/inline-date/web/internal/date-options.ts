@@ -3,6 +3,7 @@ import {
   isSameDay,
   relativeDayLabel,
 } from "@plugins/primitives/plugins/date-picker/core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { formatDay, formatMention } from "./format-date";
 
 /** Default time-of-day (local) for reminders whose query specified no time. */
@@ -69,14 +70,23 @@ function dateOnly(now: Date, addDays: number): Date {
 }
 
 /** The preset rows still reachable from `query` (all of them while it is empty). */
-function presetOptions(query: string, now: Date): DateOption[] {
+function presetOptions(
+  query: string,
+  now: Date,
+  fmt: DateFormatter,
+): DateOption[] {
   const lower = query.toLowerCase();
-  return PRESETS.filter((p) => lower === "" || p.label.toLowerCase().startsWith(lower)).map(
-    (p) => {
-      const date = dateOnly(now, p.offsetDays);
-      return { kind: "date" as const, date, label: p.label, detail: formatDay(date) };
-    },
-  );
+  return PRESETS.filter(
+    (p) => lower === "" || p.label.toLowerCase().startsWith(lower),
+  ).map((p) => {
+    const date = dateOnly(now, p.offsetDays);
+    return {
+      kind: "date" as const,
+      date,
+      label: p.label,
+      detail: formatDay(date, fmt),
+    };
+  });
 }
 
 /**
@@ -90,9 +100,13 @@ function presetOptions(query: string, now: Date): DateOption[] {
  * Pure and cheap by contract — it runs twice per keystroke (once in the caret
  * hook's `isQueryValid` open-gate, once for render).
  */
-export function buildMenu(query: string, now: Date): MenuModel {
+export function buildMenu(
+  query: string,
+  now: Date,
+  fmt: DateFormatter,
+): MenuModel {
   const q = query.trim();
-  const presets = presetOptions(q, now);
+  const presets = presetOptions(q, now, fmt);
 
   if (!q) return { open: true, hint: false, options: presets };
 
@@ -101,7 +115,7 @@ export function buildMenu(query: string, now: Date): MenuModel {
     const date = parsed.start.date();
     const hasTime = parsed.start.isCertain("hour");
     const remind = reminderDate(date, hasTime);
-    const day = formatDay(date);
+    const day = formatDay(date, fmt);
     const relative = relativeDayLabel(date, now);
     return {
       open: true,
@@ -115,7 +129,11 @@ export function buildMenu(query: string, now: Date): MenuModel {
           label: relative ?? day,
           detail: relative === null ? undefined : day,
         },
-        { kind: "reminder", date: remind, label: `Remind me · ${formatMention(remind, true)}` },
+        {
+          kind: "reminder",
+          date: remind,
+          label: `Remind me · ${formatMention(remind, true, fmt)}`,
+        },
         // A preset landing on the parsed day is the same offer twice (`@today`).
         ...presets.filter((p) => !isSameDay(p.date, date)),
       ],

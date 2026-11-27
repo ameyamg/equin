@@ -39,11 +39,11 @@ string. `FieldHeader` comes from the slot owner
     - `enumField`
     - `enumSample`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×12
     - `conversations` ×2
+    - `fields` ×2
     - `primitives` ×2
-    - `fields/variant/config`
     - `infra/audio-analysis`
     - `plugin-meta/composition`
     - `tasks/automations`

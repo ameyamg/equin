@@ -18,17 +18,15 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { agentLaunchRows, type AgentLaunchWithStatus } from "../../core";
+import { useMemo } from "react";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 const AGENT_LAUNCHES_VIEW = defineDataView("agent-launches");
 
-function formatDate(value: Date | string): string {
+function formatDate(fmt: DateFormatter, value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return fmt.dateTime(d, { year: "never" });
 }
 
 // Conversation statuses, in lifecycle order — drives the enum field's chip
@@ -61,21 +59,25 @@ const STATUS_OPTIONS: FieldOption[] = [
   },
 ];
 
-function launchTitle(launch: AgentLaunchWithStatus): string {
+function launchTitle(
+  fmt: DateFormatter,
+  launch: AgentLaunchWithStatus,
+): string {
   return (
-    launch.latestConversation?.title ?? `Launch ${formatDate(launch.createdAt)}`
+    launch.latestConversation?.title ??
+    `Launch ${formatDate(fmt, launch.createdAt)}`
   );
 }
 
 // The fields the list computes itself: the title and status come from the
 // launch's joined latest conversation, not from a column. (The `agent-launches`
 // collection lists no field of its own.)
-const EXTRA_FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
+const extraFields = (fmt: DateFormatter): FieldDef<AgentLaunchWithStatus>[] => [
   {
     id: "title",
     label: "Conversation",
     primary: true,
-    value: (l) => launchTitle(l),
+    value: (l) => launchTitle(fmt, l),
   },
   {
     id: "status",
@@ -97,6 +99,8 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   const openPane = useOpenPane();
   const convEntry = conversationPane.useOpenedHere();
   const activeConvId = convEntry?.params.convId;
+  const fmt = useDateFormatter();
+  const fields = useMemo(() => extraFields(fmt), [fmt]);
 
   if (launchesQ.status === "loading") return <Loading variant="text" />;
   if (launchesQ.status === "error")
@@ -124,7 +128,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
       <DataView<AgentLaunchWithStatus>
         rows={launches}
         collection={agentLaunchRows}
-        extraFields={EXTRA_FIELDS}
+        extraFields={fields}
         rowKey={(l) => l.id}
         views={["list"]}
         storageKey={AGENT_LAUNCHES_VIEW}

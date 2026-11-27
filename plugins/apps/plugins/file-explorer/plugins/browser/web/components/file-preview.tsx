@@ -71,6 +71,7 @@ import {
 } from "../internal/explorer-system";
 import { WithLenses } from "../internal/lenses";
 import { baseName, formatModified, formatSize, parentPath } from "../../core";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 const closeIcon = symbol("close");
 const editIcon = symbol("edit");
@@ -479,12 +480,13 @@ function PreviewMeta({
 }): ReactNode {
   const stat = useLive(fileStatOf(fs), { path });
   const [now] = useState(() => Date.now());
+  const fmt = useDateFormatter();
   const parent = parentPath(path, home) ?? "/";
   const parts = [parent];
   if (stat.status === "ready") {
     parts.push(
       formatSize(stat.data.entry.size),
-      formatModified(stat.data.entry.mtimeMs, now),
+      formatModified(stat.data.entry.mtimeMs, now, fmt),
     );
   } else if (stat.status === "error") {
     switch (stat.error.code) {

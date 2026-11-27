@@ -23,6 +23,7 @@ import { restoreBatch } from "../../shared/endpoints";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 const historyIcon = symbol("history");
 
@@ -50,14 +51,6 @@ function groupByEndedAt(items: Conversation[]): Conversation[][] {
     }
   }
   return groups;
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
 }
 
 export function RecoveryView() {
@@ -215,6 +208,7 @@ function ClusterGroup({
   availability: MachineAvailability;
   onRestore: (ids: string[]) => Promise<void>;
 }) {
+  const fmt = useDateFormatter();
   const first = group[0];
   const isCluster = group.length > 1;
   const endedAt = first?.endedAt ?? null;
@@ -234,7 +228,8 @@ function ClusterGroup({
           className="px-lg py-sm bg-muted/30 border-b"
         >
           <Text as="span" variant="caption" className="font-medium">
-            {formatTime(endedAt)} — {group.length} conversations closed
+            {fmt.time(endedAt, { seconds: true })} — {group.length}{" "}
+            conversations closed
           </Text>
           <ControlSizeProvider size="sm">
             <Button
@@ -279,6 +274,7 @@ function ConversationRow({
   availability: MachineAvailability;
   onRestore: () => void;
 }) {
+  const fmt = useDateFormatter();
   return (
     <>
       <Stack
@@ -299,7 +295,7 @@ function ConversationRow({
           >
             <span>{conversation.model}</span>
             {conversation.endedAt && (
-              <span>{formatTime(conversation.endedAt)}</span>
+              <span>{fmt.time(conversation.endedAt, { seconds: true })}</span>
             )}
           </Stack>
         </Stack>

@@ -12,6 +12,7 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { formatEventWhen, urlHost } from "./format";
 
 const repeatIcon = symbol("repeat");
@@ -21,6 +22,22 @@ const repeatIcon = symbol("repeat");
 // eventsEntityRef })`, `../index.ts`), so no list builds them. A field with no
 // presentation here takes its type's cell (`disappearedAt` — a provenance
 // stamp — is a relative time, exactly right there).
+
+/** When the event happens, in the user's date settings. */
+function StartsAtCell({
+  startsAt,
+  allDay,
+}: {
+  startsAt: Date;
+  allDay: boolean;
+}): ReactNode {
+  const fmt = useDateFormatter();
+  return (
+    <Text as="span" variant="body">
+      {formatEventWhen(startsAt, allDay, fmt)}
+    </Text>
+  );
+}
 
 /**
  * External link chip: the host, opening the event's own page in a new tab.
@@ -59,9 +76,7 @@ export const eventPresentation = FieldPresentation.Register({
   fields: {
     startsAt: {
       cell: (startsAt, e) => (
-        <Text as="span" variant="body">
-          {formatEventWhen(startsAt, e.allDay)}
-        </Text>
+        <StartsAtCell startsAt={startsAt} allDay={e.allDay} />
       ),
     },
     // A flag, so the record recipe draws it after the title: the repeat mark

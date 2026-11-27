@@ -14,6 +14,8 @@
  * resolving as an absolute date.
  */
 
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+
 export type DateUnit = "day" | "week" | "month" | "year";
 
 /** Discriminated anchor union. `amount` is signed: <0 = ago, >0 = from now. */
@@ -122,10 +124,10 @@ const UNIT_LABEL: Record<DateUnit, string> = {
  * Human label for an anchor:
  * - relative day 0/-1/+1 → "Today" / "Yesterday" / "Tomorrow"
  * - other relative → "3 days ago" / "2 weeks from now"
- * - absolute → locale short date, e.g. "Jan 15, 2026"
+ * - absolute → a short date with its year, e.g. "Jan 15, 2026" (in the user's date order)
  * - empty → "" (caller shows a placeholder)
  */
-export function formatAnchor(operand: unknown): string {
+export function formatAnchor(operand: unknown, fmt: DateFormatter): string {
   if (operand === null || operand === undefined || operand === "") return "";
 
   if (isRelative(operand)) {
@@ -149,11 +151,7 @@ export function formatAnchor(operand: unknown): string {
   if (iso === "") return "";
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return "";
-  return new Date(t).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return fmt.date(t, { year: "always" });
 }
 
 /** Inclusive date-range operand for the `is-between` operator. */

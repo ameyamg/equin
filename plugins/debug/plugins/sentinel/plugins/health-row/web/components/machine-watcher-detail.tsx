@@ -14,6 +14,7 @@ import {
   sentinelVitals,
   type SentinelVitals,
 } from "@plugins/debug/plugins/sentinel/core";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { METER_TONE, STALE_CLASS, VALUE_CLASS } from "../internal/vitals-tone";
 import {
   vitalsView,
@@ -107,6 +108,7 @@ export function MachineWatcherDetailView({
   vitals: SentinelVitals;
   now: number;
 }) {
+  const fmt = useDateFormatter();
   switch (vitals.kind) {
     case "none":
       return (
@@ -123,7 +125,9 @@ export function MachineWatcherDetailView({
       );
     case "recorded":
       return (
-        <RecordedDetail view={vitalsView(vitals.vitals, vitals.current, now)} />
+        <RecordedDetail
+          view={vitalsView(vitals.vitals, vitals.current, now, fmt)}
+        />
       );
   }
 }

@@ -12,6 +12,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfigLink } from "@plugins/config_v2/plugins/config-link/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { mapsUsageConfig } from "../../core";
 import { useUsageReadout } from "../internal/use-usage-rows";
 import {
@@ -106,17 +107,13 @@ export function UsageReadout(): ReactElement {
     ready: (d) => d.resetsAt,
   });
   const configLink = useConfigLink();
+  const fmt = useDateFormatter();
   return (
     <Stack gap="md">
       <Text variant="caption" tone="muted">
         {resets === null
           ? "Places calls this month against Google's free allowance."
-          : `Places calls this month against Google's free allowance · resets ${new Date(
-              resets,
-            ).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-            })} (Pacific time). When a budget is spent its callers step down to a cheaper call instead of being billed.`}
+          : `Places calls this month against Google's free allowance · resets ${fmt.date(new Date(resets), { year: "never" })} (Pacific time). When a budget is spent its callers step down to a cheaper call instead of being billed.`}
       </Text>
       <DataView<UsageRow>
         rows={rows}

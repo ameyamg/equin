@@ -49,6 +49,9 @@ chosen so all fifteen Smart buckets are reachable at once).
   - Uses: `primitives/data-view.DataViewSlots`
 - Core:
   - Uses:
+    - `fields/date/format.createDateFormatter`
+    - `fields/date/format.DateFormatter`
+    - `fields/date/format.DEFAULT_DATE_FORMAT_PREFS`
     - `primitives/date-picker.addDays`
     - `primitives/date-picker.addMonths`
     - `primitives/date-picker.isSameDay`

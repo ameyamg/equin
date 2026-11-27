@@ -58,7 +58,7 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `adhoc-actions` "open" → `OpenAdhocAction`
     - `backlog-actions` "adopt" → `AdoptAction`
     - `backlog-actions` "drop" → `DropAction`
-  - Uses: 76 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 77 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `network/live/live-state` ×5
     - `primitives/data-view` ×5
@@ -76,6 +76,7 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `tasks` ×2
     - `conversations/conversation-view.useConversationOpener`
     - `conversations.useConversationById`
+    - `fields/date/format.useDateFormatter`
     - `primitives/app-shell.opensPane`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`

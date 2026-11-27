@@ -4,6 +4,7 @@ import type {
   Participant,
   SendIdentity,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { formatAddressList } from "./addresses";
 import type { DraftAttachment, DraftKind } from "./draft";
 
@@ -86,21 +87,18 @@ function displayName(p: Participant | null): string {
   return p.name ?? p.address;
 }
 
-function longDate(d: Date): string {
-  return d.toLocaleString("en-US", {
+/** The answered message's date in the quote and forward header, in UTC with the zone named. */
+function longDate(d: Date, fmt: DateFormatter): string {
+  return fmt.dateTime(d, {
     weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+    year: "always",
     timeZone: "UTC",
-    timeZoneName: "short",
+    zoneName: true,
   });
 }
 
 /** The quote a reply carries below its body: "On <date>, <who> wrote:" then the text, each line `> `. */
-export function quoteOf(m: MessageContent): string {
+export function quoteOf(m: MessageContent, fmt: DateFormatter): string {
   const who = m.from
     ? m.from.name
       ? `${m.from.name} <${m.from.address}>`
@@ -109,7 +107,7 @@ export function quoteOf(m: MessageContent): string {
   const lines = plainTextOf(m)
     .split("\n")
     .map((l) => (l === "" ? ">" : `> ${l}`));
-  return `On ${longDate(m.date)}, ${who} wrote:\n${lines.join("\n")}`;
+  return `On ${longDate(m.date, fmt)}, ${who} wrote:\n${lines.join("\n")}`;
 }
 
 /**
@@ -129,6 +127,7 @@ export function startFrom(
   me: string,
   /** The thread `source` is in (what a forwarded file is fetched through). */
   threadId: string,
+  fmt: DateFormatter,
 ): DraftStartContent {
   const mine = new Set([me.toLowerCase()]);
   const own = messageIdsIn(source.rfc822MessageId)[0] ?? null;
@@ -143,7 +142,7 @@ export function startFrom(
     const header = [
       "---------- Forwarded message ---------",
       `From: ${source.from ? formatAddressList([source.from]) : ""}`,
-      `Date: ${longDate(source.date)}`,
+      `Date: ${longDate(source.date, fmt)}`,
       `Subject: ${source.subject}`,
       `To: ${formatAddressList(source.to)}`,
       ...(source.cc.length ? [`Cc: ${formatAddressList(source.cc)}`] : []),
@@ -193,7 +192,7 @@ export function startFrom(
     cc: formatAddressList(cc),
     subject: prefixedSubject("reply", source.subject),
     body: "",
-    quote: quoteOf(source),
+    quote: quoteOf(source, fmt),
     ...threading,
     attachments: [],
     replyingTo: {

@@ -5,6 +5,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { HOLD_SPECS, type HoldClass } from "@plugins/infra/plugins/jobs/core";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { formatAbsolute, formatWhen } from "../internal/format";
 import type { JobListStatus, JobProblem } from "../internal/job-rows";
 import { PROBLEM_LABEL, STATUS_META } from "../internal/status";
@@ -25,9 +26,10 @@ export function WhenText({
   due?: boolean;
 }) {
   const now = useNow(10_000);
+  const fmt = useDateFormatter();
   const future = date.getTime() > now;
   const tone = future ? "default" : "muted";
-  const title = `${prefix === undefined ? "" : `${prefix} `}${formatAbsolute(date)}`;
+  const title = `${prefix === undefined ? "" : `${prefix} `}${formatAbsolute(date, fmt)}`;
   return (
     <Text tone={tone} className="tabular-nums" title={title}>
       {due && !future ? "due" : formatWhen(date, now)}

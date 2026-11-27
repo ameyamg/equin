@@ -6,6 +6,7 @@ import {
   type LockWatchState,
 } from "@plugins/database/plugins/lock-watch/core";
 import type { QueryDeadlineHit, QueryDeadlines } from "../../core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 /** How long a database call with no reply keeps the Database row in `attention`. */
 export const RECENT_WINDOW_MS = 10 * 60_000;
@@ -20,34 +21,28 @@ export interface DatabaseVerdict {
   nextChangeAt: number | null;
 }
 
-function clockTime(at: number): string {
-  return new Date(at).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 /**
  * The latest hit in words: which connection, what it was doing, who issued it,
  * when. "jobs-enqueue, issued by tasks.maybe-launch, at 10:21"; a connect reads
  * "opening a jobs-enqueue connection, …"; an unknown caller is left out rather
  * than spelled "unknown".
  */
-function describeHit(h: QueryDeadlineHit): string {
+function describeHit(fmt: DateFormatter, h: QueryDeadlineHit): string {
   const article = /^[aeiou]/.test(h.pool) ? "an" : "a";
   const what =
     h.phase === "connect" ? `opening ${article} ${h.pool} connection` : h.pool;
   const who = h.origin !== null ? `, issued by ${h.origin}` : "";
-  return `${what}${who}, at ${clockTime(h.at)}`;
+  return `${what}${who}, at ${fmt.time(h.at)}`;
 }
 
 function lostSummary(
+  fmt: DateFormatter,
   recent: readonly QueryDeadlineHit[],
   latest: QueryDeadlineHit,
 ): string {
   return recent.length === 1
-    ? `1 database call got no reply in the last 10 min — ${describeHit(latest)}`
-    : `${recent.length} database calls got no reply in the last 10 min — last: ${describeHit(latest)}`;
+    ? `1 database call got no reply in the last 10 min — ${describeHit(fmt, latest)}`
+    : `${recent.length} database calls got no reply in the last 10 min — last: ${describeHit(fmt, latest)}`;
 }
 
 /**
@@ -68,6 +63,7 @@ interface Part {
 function deadlinePart(
   result: ResourceResult<QueryDeadlines> & { status: "ready" | "error" },
   now: number,
+  fmt: DateFormatter,
 ): Part {
   if (result.status === "error") {
     return {
@@ -92,7 +88,7 @@ function deadlinePart(
   }
   return {
     state: "attention",
-    summary: lostSummary(recent, latest),
+    summary: lostSummary(fmt, recent, latest),
     nextChangeAt: oldestAt + RECENT_WINDOW_MS,
   };
 }
@@ -107,6 +103,7 @@ function deadlinePart(
 function lockPart(
   lockWatch: ResourceResult<LockWatchState> & { status: "ready" | "error" },
   now: number,
+  fmt: DateFormatter,
 ): Part {
   if (lockWatch.status === "error") {
     return {
@@ -127,16 +124,16 @@ function lockPart(
   if (now >= staleAt) {
     return {
       state: "attention",
-      summary: `the lock watch has not looked since ${clockTime(o.observedAt)}`,
+      summary: `the lock watch has not looked since ${fmt.time(o.observedAt)}`,
       nextChangeAt: null,
     };
   }
   const head = o.holders[0];
-  const asOf = ` — as of ${clockTime(o.observedAt)}`;
+  const asOf = ` — as of ${fmt.time(o.observedAt)}`;
   if (head === undefined) {
     return {
       state: "ok",
-      summary: `no session holding others back (as of ${clockTime(o.observedAt)})`,
+      summary: `no session holding others back (as of ${fmt.time(o.observedAt)})`,
       nextChangeAt: staleAt,
     };
   }
@@ -180,11 +177,12 @@ export function databaseVerdict(
   result: ResourceResult<QueryDeadlines>,
   lockWatch: ResourceResult<LockWatchState>,
   now: number,
+  fmt: DateFormatter,
 ): DatabaseVerdict {
   if (result.status === "loading" || lockWatch.status === "loading") {
     return { status: { state: "unknown" }, nextChangeAt: null };
   }
-  const parts = [lockPart(lockWatch, now), deadlinePart(result, now)];
+  const parts = [lockPart(lockWatch, now, fmt), deadlinePart(result, now, fmt)];
   const worst = parts.reduce((a, b) =>
     SEVERITY[b.state] > SEVERITY[a.state] ? b : a,
   ).state;

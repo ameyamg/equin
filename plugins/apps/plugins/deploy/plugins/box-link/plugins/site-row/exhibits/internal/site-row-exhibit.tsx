@@ -5,6 +5,7 @@ import type { SiteHealth } from "@plugins/apps/plugins/deploy/plugins/box-link/p
 import { SiteBodyView, SiteGlanceView } from "../../web/components/site-row";
 import { siteStatus, siteTitle } from "../../web/internal/status";
 import type { SiteExhibitState } from "../../web/slots";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { SECOND_SITE, siteIn } from "./fixtures";
 
 /** One site's row as the health report draws it, every part on its fixture. */
@@ -17,9 +18,10 @@ function SiteLine({
   state: SiteExhibitState;
   open: boolean;
 }) {
+  const fmt = useDateFormatter();
   return (
     <HealthLineView
-      status={siteStatus(site)}
+      status={siteStatus(site, fmt)}
       title={siteTitle(site)}
       actions={<SiteGlanceView site={site} exhibit={state} />}
       detail={() => <SiteBodyView site={site} exhibit={state} />}

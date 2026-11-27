@@ -414,6 +414,7 @@ export const browserHost = {
     "fields.date.data-view-codec",
     "fields.date.data-view-group",
     "fields.date.filter",
+    "fields.date.format",
     "fields.date.inline",
     "fields.date.table",
     "fields.directory-path",

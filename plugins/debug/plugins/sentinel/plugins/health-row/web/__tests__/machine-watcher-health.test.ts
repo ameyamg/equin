@@ -11,7 +11,13 @@ import type {
   SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { SentinelStatusValue } from "@plugins/debug/plugins/sentinel/core";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 import { machineWatcherVerdict } from "../internal/machine-watcher-health";
+
+const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 const refetch = () => Promise.resolve();
 
@@ -39,19 +45,23 @@ function recorded(
 describe("Machine watcher health row", () => {
   it("is unknown — not ok — while loading", () => {
     expect(
-      machineWatcherVerdict({
-        status: "loading",
-        refetch,
-      }),
+      machineWatcherVerdict(
+        {
+          status: "loading",
+          refetch,
+        },
+        FMT,
+      ),
     ).toEqual({ state: "unknown" });
   });
 
   it("is unknown with a reason when nothing was recorded or the file is unreadable", () => {
-    expect(machineWatcherVerdict(settled({ kind: "none" })).state).toBe(
+    expect(machineWatcherVerdict(settled({ kind: "none" }), FMT).state).toBe(
       "unknown",
     );
     const unreadable = machineWatcherVerdict(
       settled({ kind: "unreadable", reason: "not JSON" }),
+      FMT,
     );
     expect(unreadable).toEqual({
       state: "unknown",
@@ -61,8 +71,10 @@ describe("Machine watcher health row", () => {
 
   it("is ok while running", () => {
     expect(
-      machineWatcherVerdict(recorded({ state: "running", since: Date.now() }))
-        .state,
+      machineWatcherVerdict(
+        recorded({ state: "running", since: Date.now() }),
+        FMT,
+      ).state,
     ).toBe("ok");
   });
 
@@ -73,6 +85,7 @@ describe("Machine watcher health row", () => {
         since,
         holding: ["locksWaiting"],
       }),
+      FMT,
     );
     expect(verdict.state).toBe("attention");
     expect("ambient" in verdict).toBe(false);
@@ -87,6 +100,7 @@ describe("Machine watcher health row", () => {
     const marksOf = (holding: SignalKey[]) => {
       const verdict = machineWatcherVerdict(
         recorded(running, true, { since: Date.now(), holding }),
+        FMT,
       );
       expect(verdict.state).toBe("attention");
       return verdict.state === "attention"
@@ -102,14 +116,15 @@ describe("Machine watcher health row", () => {
 
   it("asks for attention while the disk is low or filling fast, after duress", () => {
     const running = { state: "running", since: Date.now() } as const;
-    expect(machineWatcherVerdict(recorded(running, true, null, "low"))).toEqual(
-      {
-        state: "attention",
-        summary: "Disk space is running low",
-      },
-    );
     expect(
-      machineWatcherVerdict(recorded(running, true, null, "filling")).state,
+      machineWatcherVerdict(recorded(running, true, null, "low"), FMT),
+    ).toEqual({
+      state: "attention",
+      summary: "Disk space is running low",
+    });
+    expect(
+      machineWatcherVerdict(recorded(running, true, null, "filling"), FMT)
+        .state,
     ).toBe("attention");
     const both = machineWatcherVerdict(
       recorded(
@@ -118,12 +133,13 @@ describe("Machine watcher health row", () => {
         { since: Date.now(), holding: ["decompressionsPerSec"] },
         "filling",
       ),
+      FMT,
     );
     expect("summary" in both && both.summary).toMatch(/^Under duress/);
     // The disk keeps the dot coloured: no ambient marks to hide it behind.
     expect("ambient" in both).toBe(false);
     expect(
-      machineWatcherVerdict(recorded(running, true, null, null)).state,
+      machineWatcherVerdict(recorded(running, true, null, null), FMT).state,
     ).toBe("ok");
   });
 
@@ -137,13 +153,14 @@ describe("Machine watcher health row", () => {
           { since: Date.now(), holding: ["decompressionsPerSec"] },
           "full-soon",
         ),
+        FMT,
       ),
     ).toEqual({
       state: "critical",
       summary: "The disk will be full within the hour at this rate",
     });
     expect(
-      machineWatcherVerdict(recorded(running, true, null, "full")).state,
+      machineWatcherVerdict(recorded(running, true, null, "full"), FMT).state,
     ).toBe("critical");
   });
 
@@ -153,6 +170,7 @@ describe("Machine watcher health row", () => {
         since: Date.now(),
         holding: ["decompressionsPerSec"],
       }),
+      FMT,
     );
     expect(verdict.state).toBe("attention");
   });
@@ -165,6 +183,7 @@ describe("Machine watcher health row", () => {
         deaths: 5,
         lastError: "runtimeNamespace() not declared",
       }),
+      FMT,
     );
     expect(verdict.state).toBe("critical");
     expect("summary" in verdict && verdict.summary).toContain(
@@ -179,6 +198,7 @@ describe("Machine watcher health row", () => {
     expect(
       machineWatcherVerdict(
         recorded({ state: "running", since: Date.now() }, false),
+        FMT,
       ),
     ).toEqual({
       state: "critical",
@@ -196,6 +216,7 @@ describe("Machine watcher health row", () => {
           deaths: 2,
           lastError: null,
         }),
+        FMT,
       ),
     ).toEqual({
       state: "attention",
@@ -208,6 +229,7 @@ describe("Machine watcher health row", () => {
     expect(
       machineWatcherVerdict(
         recorded({ state: "disabled", since: Date.now() }, false),
+        FMT,
       ).state,
     ).toBe("attention");
   });

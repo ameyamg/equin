@@ -27,6 +27,7 @@ import { Expandable } from "@plugins/primitives/plugins/expandable/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /** The body's clamp: about five lines of prose before "Full message". */
 const BODY_COLLAPSED_PX = 100;
@@ -56,11 +57,6 @@ const TYPE_VARIANT: Record<string, BadgeVariant> = {
   perf: "info",
   revert: "destructive",
 };
-
-const absoluteDate = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 /**
  * One commit's message as the head of its pane: the Conventional Commit type
@@ -131,6 +127,7 @@ export function CommitMessage({ commit }: { commit: CommitDetail }) {
 }
 
 function CommitMeta({ commit }: { commit: CommitDetail }) {
+  const fmt = useDateFormatter();
   const coAuthors = commitCoAuthors(commit);
   const authored = new Date(commit.authoredAt);
   const dated = !Number.isNaN(authored.getTime());
@@ -165,7 +162,7 @@ function CommitMeta({ commit }: { commit: CommitDetail }) {
             )}
           </Inline>
           {dated && (
-            <WithTooltip content={absoluteDate.format(authored)}>
+            <WithTooltip content={fmt.dateTime(authored, { year: "always" })}>
               <span>
                 <RelativeTime date={authored} />
               </span>

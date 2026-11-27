@@ -64,6 +64,7 @@ rule), mirroring the scalar operators.
 - Web:
   - Contributes: `DataViewSlots.Filter` "date"
   - Uses:
+    - `fields/date/format.useDateFormatter`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Inset`

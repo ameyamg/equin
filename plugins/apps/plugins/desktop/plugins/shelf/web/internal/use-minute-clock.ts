@@ -25,19 +25,3 @@ export function useMinuteClock(): Date {
   }, []);
   return now;
 }
-
-/** `10:42`: 24-hour, as the mockup's tray reads (en-GB). */
-export function formatClockTime(d: Date): string {
-  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-}
-
-/** `Fri 16 Oct` (en-GB, without the comma some engines put after the day). */
-export function formatClockDate(d: Date): string {
-  return d
-    .toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    })
-    .replace(",", "");
-}

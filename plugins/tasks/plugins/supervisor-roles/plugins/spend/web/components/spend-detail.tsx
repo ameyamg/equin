@@ -59,6 +59,7 @@ import {
 } from "../internal/format";
 import { useSpend, type SpendRead } from "../internal/read";
 import { windowWords } from "../internal/windows";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { CountTo } from "./count-to";
 import { SpendBar } from "./spend-bar";
 import "./spend.css";
@@ -267,6 +268,7 @@ function SpendLevels({
   const key = path.join("/");
   const node = nodes[nodes.length - 1] ?? read.tree;
   const hover = useLinkedHover();
+  const fmt = useDateFormatter();
 
   // ---- a level change: which way, where in the bar, what to animate ----
   const [shown, setShown] = useState<{ key: string; nodes: SpendNode[] }>({
@@ -427,7 +429,7 @@ function SpendLevels({
         <div className="sp-path text-title text-foreground">
           <Breadcrumb segments={segments} motion="wipe" leafWeight="semibold" />
         </div>
-        <span title={read.windows.map(windowWords).join("\n")}>
+        <span title={read.windows.map((w) => windowWords(fmt, w)).join("\n")}>
           <CountTo
             value={node.costUsd}
             className="sp-total text-title text-foreground"
@@ -436,15 +438,7 @@ function SpendLevels({
       </div>
       {read.countedSince !== null ? (
         <span className="text-caption text-faint-foreground">
-          {`Counted since ${new Date(read.countedSince).toLocaleString(
-            "en-US",
-            {
-              weekday: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-              hourCycle: "h23",
-            },
-          )} — spend before it is not attributed`}
+          {`Counted since ${fmt.weekday(read.countedSince)} ${fmt.time(read.countedSince)} — spend before it is not attributed`}
         </span>
       ) : null}
       <div className="sp-stage">

@@ -3,16 +3,14 @@ import type {
   ResourceUnavailable,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import type { MailAccountStatus } from "../../core";
 
 /** One read as `useLive` hands it back — a value read may be `unavailable`. */
 export type Read<T> = ResourceResult<T> | ResourceUnavailable;
 
-function clock(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function clock(iso: string, fmt: DateFormatter): string {
+  return fmt.time(new Date(iso));
 }
 
 function every(ms: number): string {
@@ -49,7 +47,10 @@ function arrival(
  * by the slower fallback); unknown (still) while offline; ok once synced,
  * saying how changes arrive — pushed, or the fallback tick.
  */
-export function mailHealth(read: Read<MailAccountStatus>): HealthStatus {
+export function mailHealth(
+  read: Read<MailAccountStatus>,
+  fmt: DateFormatter,
+): HealthStatus {
   if (read.status === "unavailable") return { state: "absent" };
   if (read.status === "loading") return { state: "unknown" };
   if (read.status === "error")
@@ -70,20 +71,20 @@ export function mailHealth(read: Read<MailAccountStatus>): HealthStatus {
   if (s.connection === "offline" || s.syncFailure?.kind === "offline")
     return {
       state: "unknown",
-      summary: `Offline — showing cached mail${s.syncedAt === null ? "" : `, synced ${clock(s.syncedAt)}`}`,
+      summary: `Offline — showing cached mail${s.syncedAt === null ? "" : `, synced ${clock(s.syncedAt, fmt)}`}`,
     };
   if (s.syncFailure !== null)
     return {
       state: "attention",
       title: "Mail sync failing",
-      summary: `Since ${clock(s.syncFailure.at)}: ${s.syncFailure.message}`,
+      summary: `Since ${clock(s.syncFailure.at, fmt)}: ${s.syncFailure.message}`,
     };
   const push = s.changeSignal.push;
   if (push.kind === "down")
     return {
       state: "attention",
       title: "Mail instant updates down",
-      summary: `Since ${clock(push.since)}: ${push.message} — ${arrival(s.changeSignal)}`,
+      summary: `Since ${clock(push.since, fmt)}: ${push.message} — ${arrival(s.changeSignal)}`,
     };
   if (s.syncedAt === null)
     return {
@@ -93,6 +94,6 @@ export function mailHealth(read: Read<MailAccountStatus>): HealthStatus {
     };
   return {
     state: "ok",
-    summary: `${s.address} · synced ${clock(s.syncedAt)}, ${arrival(s.changeSignal)}`,
+    summary: `${s.address} · synced ${clock(s.syncedAt, fmt)}, ${arrival(s.changeSignal)}`,
   };
 }

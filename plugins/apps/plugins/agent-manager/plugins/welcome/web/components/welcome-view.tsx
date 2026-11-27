@@ -35,6 +35,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 const sendIcon = symbol("arrow-upward");
 
@@ -47,6 +48,7 @@ const RUNNING_DOT = "bg-success";
  */
 export function WelcomeView() {
   const conv = useConversations();
+  const fmt = useDateFormatter();
   const now = new Date();
 
   // The counts describe the user's conversations, so they render only once those
@@ -64,11 +66,7 @@ export function WelcomeView() {
       >
         <Stack gap="xs">
           <Text as="div" variant="caption" tone="faint">
-            {now.toLocaleDateString(undefined, {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
+            {fmt.date(now, { weekday: "long", month: "long", year: "never" })}
           </Text>
           <Text as="h1" variant="display" className="tracking-tight">
             {greeting(now)}

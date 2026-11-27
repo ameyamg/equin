@@ -21,6 +21,7 @@ import {
 import { z } from "zod";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -140,6 +141,7 @@ export function PlaceCard({
   /** Ask the map for the custom place's new position (pick mode). */
   onMovePin: () => void;
 }) {
+  const fmt = useDateFormatter();
   const confirmDialog = useConfirmDialog();
   const updatePlace = useUpdatePlace();
   const deletePlace = useDeletePlace();
@@ -341,11 +343,7 @@ export function PlaceCard({
                 <InfoRow icon={savedIcon}>
                   <Stack gap="none">
                     <Text variant="body">
-                      {`Saved ${place.createdAt.toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}`}
+                      {`Saved ${fmt.date(place.createdAt, { year: "always" })}`}
                     </Text>
                     {place.primaryType !== null ? (
                       <Text variant="caption" tone="faint">
@@ -648,14 +646,11 @@ function ClosedLine({
  * here updates any more. Nothing while Google still finds it.
  */
 function LostLine({ lostAt }: { lostAt: Place["googleLostAt"] }): ReactNode {
+  const fmt = useDateFormatter();
   if (lostAt === null) return null;
   return (
     <Text variant="caption" tone="destructive">
-      {`Google link lost since ${lostAt.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })} — details as Google last gave them`}
+      {`Google link lost since ${fmt.date(lostAt, { year: "always" })} — details as Google last gave them`}
     </Text>
   );
 }

@@ -19,6 +19,7 @@ import {
   type LatencyWindow,
 } from "@plugins/debug/plugins/latency-ledger/core";
 import { formatCount, formatMs, formatShare } from "./format";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 const WINDOWS: { id: LatencyWindow; label: string }[] = [
   { id: "1h", label: "Last hour" },
@@ -267,6 +268,7 @@ function ThreadOwners({ summary }: { summary: Summary }) {
 }
 
 function Slowest({ summary }: { summary: Summary }) {
+  const fmt = useDateFormatter();
   if (summary.slowestInteractions.length === 0) return null;
   return (
     <Stack gap="sm">
@@ -308,7 +310,10 @@ function Slowest({ summary }: { summary: Summary }) {
                   {i.lastResourceKey ?? "–"}
                 </td>
                 <td className="px-sm py-xs text-muted-foreground">
-                  {new Date(i.occurredAt).toLocaleString()}
+                  {fmt.numeric(new Date(i.occurredAt), {
+                    time: true,
+                    seconds: true,
+                  })}
                 </td>
               </tr>
             ))}

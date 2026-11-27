@@ -26,6 +26,7 @@ import {
   type LogLinesQuery,
   type LogLinesRefusal,
 } from "../../shared/resources";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   formatBytes,
   formatDay,
@@ -57,6 +58,7 @@ export function LogReader({
   onShowNewest: () => void;
 }): ReactElement {
   const catalog = useLive(logsCatalog, { worktree });
+  const fmt = useDateFormatter();
   // The header describes the log once the catalog says what it is; until then
   // (or if that read fails) it names the log and nothing more.
   const entry = foldResource(catalog, {
@@ -100,7 +102,7 @@ export function LogReader({
               className="tabular-nums"
               title={new Date(l.t).toString()}
             >
-              {formatLineTime(l.t)}
+              {formatLineTime(l.t, fmt)}
             </Text>
           ),
         width: "8rem",
@@ -151,7 +153,7 @@ export function LogReader({
         width: "4rem",
       },
     ],
-    [],
+    [fmt],
   );
 
   return (
@@ -165,8 +167,8 @@ export function LogReader({
             <Inset pad="sm" className="border-b bg-muted">
               <Stack direction="row" gap="sm" align="center" wrap>
                 <Text variant="caption">
-                  Reading back from <b>{formatDay(at)}</b> — the selected line
-                  is the newest written at or before it.
+                  Reading back from <b>{formatDay(at, fmt)}</b> — the selected
+                  line is the newest written at or before it.
                 </Text>
                 <Button variant="link" onClick={onShowNewest}>
                   Show newest
@@ -255,6 +257,7 @@ function ReaderHeader({
  */
 function GenerationStrip({ entry }: { entry: LogEntry }): ReactElement | null {
   const keep = entry.bound?.keep ?? entry.files.length - 1;
+  const fmt = useDateFormatter();
   if (keep < 0) return null;
   const slots = Array.from({ length: keep + 1 }, (_, i) => keep - i);
   return (
@@ -278,7 +281,7 @@ function GenerationStrip({ entry }: { entry: LogEntry }): ReactElement | null {
               <Text variant="caption" tone="muted" className="truncate">
                 {file === undefined
                   ? "not yet"
-                  : `${formatDay(file.bornMs)} → ${generation === 0 ? "now" : formatDay(file.modifiedMs)} · ${formatBytes(file.bytes)}`}
+                  : `${formatDay(file.bornMs, fmt)} → ${generation === 0 ? "now" : formatDay(file.modifiedMs, fmt)} · ${formatBytes(file.bytes)}`}
               </Text>
             </Stack>
           </Fill>

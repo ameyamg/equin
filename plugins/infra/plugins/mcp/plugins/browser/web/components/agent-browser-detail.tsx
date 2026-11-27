@@ -22,6 +22,7 @@ import {
   RECENT_ERROR_MS,
 } from "../internal/agent-browser-health";
 import { useAgentBrowserStatus } from "../internal/use-agent-browser";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const SESSIONS_VIEW = defineDataView("agent-browser.sessions");
@@ -69,6 +70,7 @@ function SessionName({ conversationId }: { conversationId: string }) {
 export function AgentBrowserDetail(): ReactElement {
   const result = useAgentBrowserStatus();
   const now = useNow(30_000);
+  const fmt = useDateFormatter();
   const status = foldResource(result, {
     loading: () => null,
     error: () => null,
@@ -154,11 +156,7 @@ export function AgentBrowserDetail(): ReactElement {
           {recentError.message.split("\n", 1)[0]}
           <span className="text-muted-foreground">
             {" "}
-            ·{" "}
-            {new Date(recentError.at).toLocaleTimeString([], {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
+            · {fmt.time(new Date(recentError.at))}
           </span>
         </Text>
       )}

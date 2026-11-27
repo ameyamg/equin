@@ -351,6 +351,8 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `date-format/no-raw-date-format` — `core/intervals.ts` (sanctioned)
 - Sub-plugins:
   - **`chart-kit`** — Hand-rolled SVG chart kit, knowing nothing about metrics: TimeChart (area / line / stack / mirror / net, a dashed compare line, gaps for null, partial buckets drawn lighter / dashed, hover +…
 

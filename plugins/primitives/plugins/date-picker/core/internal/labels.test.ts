@@ -7,6 +7,20 @@ import {
   relativeDayLabel,
   weekdayLabels,
 } from "./labels";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
+
+// Month first pinned, so the expected spellings hold on any host locale.
+const MDY = createDateFormatter({
+  ...DEFAULT_DATE_FORMAT_PREFS,
+  dateOrder: "mdy",
+});
+const DMY = createDateFormatter({
+  ...DEFAULT_DATE_FORMAT_PREFS,
+  dateOrder: "dmy",
+});
 
 describe("relativeDayLabel", () => {
   const now = new Date(2026, 7, 3, 14, 30); // Mon Aug 3 2026, mid-afternoon
@@ -80,7 +94,7 @@ describe("relativeDayLabel", () => {
 
 describe("weekdayLabels", () => {
   test("returns 7 abbreviations starting at weekStartsOn", () => {
-    expect(weekdayLabels(0, "en-US").map((l) => l.short)).toEqual([
+    expect(weekdayLabels(0, MDY).map((l) => l.short)).toEqual([
       "Sun",
       "Mon",
       "Tue",
@@ -89,7 +103,7 @@ describe("weekdayLabels", () => {
       "Fri",
       "Sat",
     ]);
-    expect(weekdayLabels(1, "en-US").map((l) => l.short)).toEqual([
+    expect(weekdayLabels(1, MDY).map((l) => l.short)).toEqual([
       "Mon",
       "Tue",
       "Wed",
@@ -98,11 +112,11 @@ describe("weekdayLabels", () => {
       "Sat",
       "Sun",
     ]);
-    expect(weekdayLabels(6, "en-US")[0]!.short).toBe("Sat");
+    expect(weekdayLabels(6, MDY)[0]!.short).toBe("Sat");
   });
 
   test("carries the full name alongside each abbreviation", () => {
-    expect(weekdayLabels(1, "en-US").map((l) => l.long)).toEqual([
+    expect(weekdayLabels(1, MDY).map((l) => l.long)).toEqual([
       "Monday",
       "Tuesday",
       "Wednesday",
@@ -116,53 +130,46 @@ describe("weekdayLabels", () => {
   test("the two forms describe the same weekday, in the same order", () => {
     // The point of returning both from one walk: the header cannot print "Mon"
     // while announcing "Tuesday".
-    for (const label of weekdayLabels(3, "en-US")) {
+    for (const label of weekdayLabels(3, MDY)) {
       expect(label.long.startsWith(label.short)).toBe(true);
     }
   });
 
   test("wraps an out-of-range week start", () => {
-    expect(weekdayLabels(7, "en-US")).toEqual(weekdayLabels(0, "en-US"));
-  });
-
-  test("is locale-driven", () => {
-    expect(weekdayLabels(1, "fr-FR")).toHaveLength(7);
-    expect(weekdayLabels(1, "fr-FR")).not.toEqual(weekdayLabels(1, "en-US"));
+    expect(weekdayLabels(7, MDY)).toEqual(weekdayLabels(0, MDY));
   });
 });
 
 describe("dayLabel", () => {
   test("names the weekday, month, day and year", () => {
-    expect(dayLabel(new Date(2026, 7, 21), "en-US")).toBe(
+    expect(dayLabel(new Date(2026, 7, 21), MDY)).toBe(
       "Friday, August 21, 2026",
     );
-    expect(dayLabel(new Date(2026, 0, 1), "en-US")).toBe(
+    expect(dayLabel(new Date(2026, 0, 1), MDY)).toBe(
       "Thursday, January 1, 2026",
     );
   });
 
   test("ignores the time-of-day", () => {
-    expect(dayLabel(new Date(2026, 7, 21, 23, 59), "en-US")).toBe(
-      dayLabel(new Date(2026, 7, 21, 0, 0), "en-US"),
+    expect(dayLabel(new Date(2026, 7, 21, 23, 59), MDY)).toBe(
+      dayLabel(new Date(2026, 7, 21, 0, 0), MDY),
     );
   });
 
-  test("is locale-driven", () => {
-    expect(dayLabel(new Date(2026, 7, 21), "fr-FR")).not.toBe(
-      dayLabel(new Date(2026, 7, 21), "en-US"),
-    );
+  test("follows the date order setting", () => {
+    expect(dayLabel(new Date(2026, 7, 21), DMY)).toBe("Friday, 21 August 2026");
   });
 });
 
 describe("monthTitle", () => {
   test("renders month + year", () => {
-    expect(monthTitle(new Date(2026, 7, 3), "en-US")).toBe("August 2026");
-    expect(monthTitle(new Date(2026, 0, 31), "en-US")).toBe("January 2026");
+    expect(monthTitle(new Date(2026, 7, 3), MDY)).toBe("August 2026");
+    expect(monthTitle(new Date(2026, 0, 31), MDY)).toBe("January 2026");
   });
 
   test("is independent of the day within the month", () => {
-    expect(monthTitle(new Date(2026, 7, 1), "en-US")).toBe(
-      monthTitle(new Date(2026, 7, 31, 23, 59), "en-US"),
+    expect(monthTitle(new Date(2026, 7, 1), MDY)).toBe(
+      monthTitle(new Date(2026, 7, 31, 23, 59), MDY),
     );
   });
 });

@@ -6,6 +6,7 @@ import {
   StatusDot,
   type StatusDotPaint,
 } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import type { StatusHistoryEntry, TestOutcome, TestStatus } from "../../core";
 
 /** What each status is called and what it means (the summary cards' tooltips). */
@@ -86,12 +87,13 @@ export function HistoryStrip({
 }: {
   history: readonly StatusHistoryEntry[];
 }): ReactElement {
+  const fmt = useDateFormatter();
   return (
     <Inline gap="2xs" aria-label="Recent runs">
       {[...history].reverse().map((h) => (
         <span
           key={h.opId}
-          title={`${h.outcome} · ${h.origin} · ${new Date(h.at).toLocaleString()}${h.current ? "" : " · older code"}`}
+          title={`${h.outcome} · ${h.origin} · ${fmt.numeric(new Date(h.at), { time: true, seconds: true })}${h.current ? "" : " · older code"}`}
           className={`h-3 w-1 rounded-sm ${OUTCOME_FILL[h.outcome]} ${h.current ? "" : "opacity-30"}`}
         />
       ))}

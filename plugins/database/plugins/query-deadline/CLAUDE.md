@@ -223,6 +223,7 @@ effect with no timer to fire again.
     - `HealthReport.Row` "Database"
   - Uses:
     - `debug/trace/engine.TraceChip`
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`

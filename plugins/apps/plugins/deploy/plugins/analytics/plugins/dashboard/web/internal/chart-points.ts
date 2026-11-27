@@ -1,4 +1,5 @@
 import type { AnalyticsReport } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { formatBucket } from "./format";
 import type { Kpi, KpiPart } from "./kpis";
 
@@ -15,11 +16,15 @@ export interface ChartPoint {
  * drawn under point i of the current one. A bucket whose rate has no
  * denominator is a gap, not a zero.
  */
-export function chartPoints(report: AnalyticsReport, kpi: Kpi): ChartPoint[] {
+export function chartPoints(
+  report: AnalyticsReport,
+  kpi: Kpi,
+  fmt: DateFormatter,
+): ChartPoint[] {
   return report.current.series.map((point, i) => {
     const prev = report.previous?.series[i];
     return {
-      label: formatBucket(point.bucket, report.granularity),
+      label: formatBucket(point.bucket, report.granularity, fmt),
       current: kpi.value(point.metrics),
       previous: prev ? kpi.value(prev.metrics) : null,
       parts: Object.fromEntries(

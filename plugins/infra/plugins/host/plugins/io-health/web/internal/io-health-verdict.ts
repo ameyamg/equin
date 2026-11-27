@@ -5,6 +5,7 @@ import type {
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { MONITOR_INTERVAL_MS, type IoHealth } from "../../core";
 import { START_MONITOR_COMMAND } from "@plugins/infra/plugins/host/plugins/io-health/plugins/monitor/core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 /**
  * How old the monitor's newest tick may be before the row says it stopped:
@@ -37,13 +38,6 @@ function osName(platform: string): string {
   }
 }
 
-function clock(at: number): string {
-  return new Date(at).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 /**
  * The Disk I/O row:
  *
@@ -63,6 +57,7 @@ function clock(at: number): string {
 export function ioHealthVerdict(
   read: IoHealthRead,
   now: number,
+  fmt: DateFormatter,
 ): IoHealthVerdict {
   switch (read.status) {
     case "loading":
@@ -107,7 +102,7 @@ export function ioHealthVerdict(
     return {
       status: {
         state: "attention",
-        summary: `Disk health is not watched: the fs-latency monitor has written nothing since ${clock(v.latest.at)}`,
+        summary: `Disk health is not watched: the fs-latency monitor has written nothing since ${fmt.time(v.latest.at)}`,
       },
       nextChangeAt: null,
     };
@@ -129,8 +124,8 @@ export function ioHealthVerdict(
       state: "ok",
       summary:
         ms === null
-          ? `Disk healthy (as of ${clock(v.latest.at)})`
-          : `Disk healthy: ${ms.toFixed(2)} ms per read op (as of ${clock(v.latest.at)})`,
+          ? `Disk healthy (as of ${fmt.time(v.latest.at)})`
+          : `Disk healthy: ${ms.toFixed(2)} ms per read op (as of ${fmt.time(v.latest.at)})`,
     },
     nextChangeAt: staleAt,
   };

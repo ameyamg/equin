@@ -56,12 +56,13 @@ DataView owns no scroll, and a nested one would bound its sticky toolbar.
   - Slots: `commitDetailPane.Actions`
   - Slot contributors: `commitDetailPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "commit-detail"
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `primitives/pane` ×5
     - `primitives/css/ui-kit` ×3
     - `ids` ×2
     - `primitives/css/spacing` ×2
+    - `fields/date/format.useDateFormatter`
     - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/avatar.Avatar`

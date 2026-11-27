@@ -1,4 +1,5 @@
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { Gesture } from "@plugins/primitives/plugins/link-gesture/core";
 import { gestureOf } from "@plugins/primitives/plugins/link-gesture/web";
@@ -259,6 +260,7 @@ function FoldedMessage({
   now: Date;
   onOpen: () => void;
 }): ReactNode {
+  const fmt = useDateFormatter();
   return (
     <Line
       as="button"
@@ -279,7 +281,7 @@ function FoldedMessage({
       </Fill>
       <Rigid>
         <Text variant="caption" tone="faint" className="tabular-nums">
-          {listTime(new Date(m.date), now)}
+          {listTime(new Date(m.date), now, fmt)}
         </Text>
       </Rigid>
     </Line>
@@ -298,6 +300,7 @@ function OpenMessage({
   /** Absent for the last message, which stays open. */
   onFold: (() => void) | undefined;
 }): ReactNode {
+  const fmt = useDateFormatter();
   const to = [...m.to, ...m.cc].map(fullName).join(", ");
   const files = m.attachments.filter((a) => !a.inline);
   const header = (
@@ -318,9 +321,9 @@ function OpenMessage({
           variant="caption"
           tone="faint"
           className="tabular-nums"
-          title={new Date(m.date).toLocaleString()}
+          title={fmt.numeric(new Date(m.date), { time: true, seconds: true })}
         >
-          {listTime(new Date(m.date), now)}
+          {listTime(new Date(m.date), now, fmt)}
         </Text>
       </Rigid>
     </Line>

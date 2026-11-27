@@ -3429,6 +3429,10 @@
       "name": "@equin/plugin-fields-date-filter",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/date/plugins/format": {
+      "name": "@equin/plugin-fields-date-format",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/date/plugins/inline": {
       "name": "@equin/plugin-fields-date-inline",
       "version": "0.0.1",
@@ -10247,6 +10251,8 @@
     "@equin/plugin-fields-date-data-view-group": ["@equin/plugin-fields-date-data-view-group@workspace:plugins/fields/plugins/date/plugins/data-view-group"],
 
     "@equin/plugin-fields-date-filter": ["@equin/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
+
+    "@equin/plugin-fields-date-format": ["@equin/plugin-fields-date-format@workspace:plugins/fields/plugins/date/plugins/format"],
 
     "@equin/plugin-fields-date-inline": ["@equin/plugin-fields-date-inline@workspace:plugins/fields/plugins/date/plugins/inline"],
 

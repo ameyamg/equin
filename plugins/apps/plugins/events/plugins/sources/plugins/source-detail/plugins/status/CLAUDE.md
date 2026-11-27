@@ -24,6 +24,7 @@ the card opens by default only when the source is errored.
     - `apps/events/sources.SOURCE_STATUS_LABEL`
     - `apps/events/sources.SOURCE_STATUS_VARIANT`
     - `apps/events/sources.useEventSource`
+    - `fields/date/format.useDateFormatter`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

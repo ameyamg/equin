@@ -8,6 +8,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { sentinelVitals } from "@plugins/debug/plugins/sentinel/core";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { VALUE_CLASS, STALE_CLASS } from "../internal/vitals-tone";
 import {
   vitalsView,
@@ -74,11 +75,14 @@ export function MachineWatcherGlanceView({ view }: { view: VitalsView }) {
 export function MachineWatcherGlance() {
   const result = useLive(sentinelVitals);
   const now = useNow(STALE_CHECK_MS);
+  const fmt = useDateFormatter();
   // Loading, failed, or nothing readable: nothing here. The summary above
   // already carries the verdict (a failed read says so there), and the
   // expanded detail says why there are no numbers.
   if (result.status === "loading" || result.status === "error") return null;
   if (result.data.kind !== "recorded") return null;
   const { vitals, current } = result.data;
-  return <MachineWatcherGlanceView view={vitalsView(vitals, current, now)} />;
+  return (
+    <MachineWatcherGlanceView view={vitalsView(vitals, current, now, fmt)} />
+  );
 }

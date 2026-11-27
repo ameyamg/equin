@@ -1,10 +1,34 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import type * as FormatCore from "@plugins/fields/plugins/date/plugins/format/core";
+
+// The date formatter reads its prefs from config_v2, which has no
+// registration here: format with the defaults.
+vi.mock(
+  "@plugins/fields/plugins/date/plugins/format/web",
+  async (importOriginal) => {
+    const core = await vi.importActual<typeof FormatCore>(
+      "@plugins/fields/plugins/date/plugins/format/core",
+    );
+    const fmt = core.createDateFormatter(core.DEFAULT_DATE_FORMAT_PREFS);
+    return {
+      ...(await importOriginal<object>()),
+      useDateFormatter: () => fmt,
+    };
+  },
+);
 import {
   dayLabel,
   monthTitle,
 } from "@plugins/primitives/plugins/date-picker/core";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 import { DateEditor } from "../components/date-editor";
+
+/** What the component's `useDateFormatter()` resolves to under the defaults. */
+const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 /**
  * The end-to-end half of this plugin's verification: the REAL
@@ -59,7 +83,7 @@ describe("DateEditor — against the real date picker", () => {
       renderEditor(AUGUST_2026);
       // Derived, not the literal "August 2026" — the title is `Intl`-formatted, so
       // hard-coding it would pin the test to the runtime's default locale.
-      expect(screen.getByText(monthTitle(AUGUST_2026))).toBeTruthy();
+      expect(screen.getByText(monthTitle(AUGUST_2026, FMT))).toBeTruthy();
     },
     SLOW,
   );
@@ -80,7 +104,9 @@ describe("DateEditor — against the real date picker", () => {
       // labels with, and neither side passes a locale — so both resolve against
       // the one runtime locale, and a change to the label's wording can never
       // again orphan this query in silence.
-      fireEvent.click(screen.getByRole("button", { name: dayLabel(PICKED) }));
+      fireEvent.click(
+        screen.getByRole("button", { name: dayLabel(PICKED, FMT) }),
+      );
 
       expect(onCommit).toHaveBeenCalledTimes(1);
       const committed = onCommit.mock.calls[0]![0] as Date;

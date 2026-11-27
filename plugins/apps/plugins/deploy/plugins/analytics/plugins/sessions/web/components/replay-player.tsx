@@ -46,7 +46,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { presentEvent, propsText } from "../internal/events";
 import { sourceOf } from "../internal/facts";
-import { clock, countryName, span, timeOfDay } from "../internal/format";
+import { clock, countryName, span } from "../internal/format";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { journeyOf } from "../internal/journey";
 import { loadPhases, seconds, visitLoad } from "../internal/load";
 import {
@@ -342,6 +343,7 @@ export function ReplayPlayer({
 }
 
 function Facts({ session }: { session: Session }): ReactNode {
+  const fmt = useDateFormatter();
   return (
     <Cluster gap="md">
       <Text variant="label">Replay</Text>
@@ -349,12 +351,10 @@ function Facts({ session }: { session: Session }): ReactNode {
         Visitor {session.visitor}
       </Text>
       <Text variant="caption" tone="muted">
-        {new Date(session.startedAt).toLocaleDateString(undefined, {
+        {fmt.dateTime(new Date(session.startedAt), {
           weekday: "short",
-          month: "short",
-          day: "numeric",
+          year: "never",
         })}
-        , {timeOfDay(session.startedAt)}
       </Text>
       <Text variant="caption" tone="muted">
         {countryName(session.country)}

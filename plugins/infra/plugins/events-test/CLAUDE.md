@@ -36,7 +36,7 @@ curl -sX POST http://<ns>.localhost:<port>/api/events-test/queue-saturate \
   - Contributes:
     - `Pane.Register` "events-test"
     - `DebugApp.Sidebar` "Events Test"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
@@ -44,6 +44,7 @@ curl -sX POST http://<ns>.localhost:<port>/api/events-test/queue-saturate \
     - `primitives/pane` ×2
     - `shell/notifications` ×2
     - `apps/debug/shell.DebugApp`
+    - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`

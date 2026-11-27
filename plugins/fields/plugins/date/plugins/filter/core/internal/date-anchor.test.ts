@@ -7,6 +7,10 @@ import {
   withinRange,
   type DateAnchor,
 } from "./date-anchor";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 
 /** Pinned "now": 2026-01-15T12:00 local (noon → unambiguous start-of-day). */
 const NOW = new Date("2026-01-15T12:00:00").getTime();
@@ -49,9 +53,9 @@ describe("resolveAnchorDay", () => {
   });
 
   it("{kind:'date'} absolute anchor", () => {
-    expect(
-      resolveAnchorDay({ kind: "date", iso: "2026-03-10" }, NOW),
-    ).toBe(day("2026-03-10"));
+    expect(resolveAnchorDay({ kind: "date", iso: "2026-03-10" }, NOW)).toBe(
+      day("2026-03-10"),
+    );
   });
 
   it("null / empty / invalid → null", () => {
@@ -107,46 +111,49 @@ describe("withinRange", () => {
   });
 });
 
+// Month first pinned, so the expected spelling holds on any host locale.
+const FMT = createDateFormatter({
+  ...DEFAULT_DATE_FORMAT_PREFS,
+  dateOrder: "mdy",
+});
+
 describe("formatAnchor", () => {
   it("relative day presets", () => {
-    expect(formatAnchor(TODAY)).toBe("Today");
-    expect(formatAnchor({ kind: "relative", unit: "day", amount: -1 })).toBe(
-      "Yesterday",
-    );
-    expect(formatAnchor({ kind: "relative", unit: "day", amount: 1 })).toBe(
-      "Tomorrow",
-    );
+    expect(formatAnchor(TODAY, FMT)).toBe("Today");
+    expect(
+      formatAnchor({ kind: "relative", unit: "day", amount: -1 }, FMT),
+    ).toBe("Yesterday");
+    expect(
+      formatAnchor({ kind: "relative", unit: "day", amount: 1 }, FMT),
+    ).toBe("Tomorrow");
   });
 
   it("relative N-unit labels (pluralization + direction)", () => {
-    expect(formatAnchor({ kind: "relative", unit: "day", amount: -3 })).toBe(
-      "3 days ago",
-    );
-    expect(formatAnchor({ kind: "relative", unit: "week", amount: 2 })).toBe(
-      "2 weeks from now",
-    );
-    expect(formatAnchor({ kind: "relative", unit: "month", amount: -1 })).toBe(
-      "1 month ago",
-    );
-    expect(formatAnchor({ kind: "relative", unit: "year", amount: 1 })).toBe(
-      "1 year from now",
-    );
+    expect(
+      formatAnchor({ kind: "relative", unit: "day", amount: -3 }, FMT),
+    ).toBe("3 days ago");
+    expect(
+      formatAnchor({ kind: "relative", unit: "week", amount: 2 }, FMT),
+    ).toBe("2 weeks from now");
+    expect(
+      formatAnchor({ kind: "relative", unit: "month", amount: -1 }, FMT),
+    ).toBe("1 month ago");
+    expect(
+      formatAnchor({ kind: "relative", unit: "year", amount: 1 }, FMT),
+    ).toBe("1 year from now");
   });
 
-  it("absolute date → locale short date", () => {
-    const expected = new Date("2026-01-15T00:00:00").toLocaleDateString(
-      undefined,
-      { year: "numeric", month: "short", day: "numeric" },
-    );
-    expect(formatAnchor({ kind: "date", iso: "2026-01-15" } as DateAnchor)).toBe(
-      expected,
-    );
-    expect(formatAnchor("2026-01-15")).toBe(expected);
+  it("absolute date → short date with its year", () => {
+    const expected = "Jan 15, 2026";
+    expect(
+      formatAnchor({ kind: "date", iso: "2026-01-15" } as DateAnchor, FMT),
+    ).toBe(expected);
+    expect(formatAnchor("2026-01-15", FMT)).toBe(expected);
   });
 
   it("empty → placeholder-friendly ''", () => {
-    expect(formatAnchor(null)).toBe("");
-    expect(formatAnchor("")).toBe("");
-    expect(formatAnchor(undefined)).toBe("");
+    expect(formatAnchor(null, FMT)).toBe("");
+    expect(formatAnchor("", FMT)).toBe("");
+    expect(formatAnchor(undefined, FMT)).toBe("");
   });
 });

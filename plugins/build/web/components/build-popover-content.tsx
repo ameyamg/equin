@@ -1,3 +1,4 @@
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback } from "react";
 import {
@@ -94,8 +95,10 @@ function BuildControls({
  */
 function BuildLogView({ building }: { building: boolean }) {
   const toast = useToast();
+  const fmt = useDateFormatter();
   return (
     <LiveLogChannel
+      fmt={fmt}
       channel={BUILD_LOG_CHANNEL}
       label="Logs"
       disclosure={building ? "open" : "closed"}

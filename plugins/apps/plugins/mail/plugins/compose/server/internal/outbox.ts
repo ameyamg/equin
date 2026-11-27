@@ -41,6 +41,7 @@ import {
   type MailDraft,
   type MailDraftId,
 } from "../../core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { _mailDrafts } from "./tables";
 
 type DraftRow = typeof _mailDrafts.$inferSelect;
@@ -57,6 +58,8 @@ export class SendRefusedError extends Error {
 
 export type OutboxDeps = {
   db: Db;
+  /** The user's date formatter, read when a quote is written (`serverDateFormatter`). */
+  dateFormatter: () => DateFormatter;
   /** The account mail is written from (`mailCache.sender`). */
   sender: () => Promise<MailSender>;
   /** A thread's content as the reader reads it (`mailCache.thread`). */
@@ -303,7 +306,13 @@ export function createOutbox(deps: OutboxDeps) {
       return toDraft(await adopt(id, sender, s.threadId, s.messageId));
     }
     const { message } = await sourceMessage(s.threadId, s.messageId);
-    const c = startFrom(s.kind, message, sender.address, s.threadId);
+    const c = startFrom(
+      s.kind,
+      message,
+      sender.address,
+      s.threadId,
+      deps.dateFormatter(),
+    );
     const r = await insert(id, sender.accountId, domain, {
       kind: s.kind,
       threadId: s.threadId,

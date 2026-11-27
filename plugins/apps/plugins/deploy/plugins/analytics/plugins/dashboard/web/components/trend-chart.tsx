@@ -18,6 +18,7 @@ import {
 } from "../internal/chart-points";
 import { previousPeriodLabel } from "../internal/format";
 import type { Kpi } from "../internal/kpis";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // Chart chrome in theme tokens only — the pattern `stats/commits` established.
 const axisProps = {
@@ -48,7 +49,8 @@ export function TrendChart({
   report: AnalyticsReport;
   kpi: Kpi;
 }): ReactNode {
-  const points = chartPoints(report, kpi);
+  const fmt = useDateFormatter();
+  const points = chartPoints(report, kpi, fmt);
   const hasPrevious = report.previous !== null;
   const stack = stackedParts(kpi, points);
   return (

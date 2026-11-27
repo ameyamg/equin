@@ -24,6 +24,7 @@ import {
   type UsageWindowId,
 } from "../../core";
 import { formatResets, USAGE_WINDOWS } from "../internal/claude-usage";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // The Claude Code row's glance: the active account's usage limits as meters.
 // Collapsed, the week alone (the limit that decides the days ahead); expanded,
@@ -83,6 +84,7 @@ export function UsageMeter({
   /** Whose limit it is, named ahead of the label (the health row's glance). */
   account?: string;
 }) {
+  const fmt = useDateFormatter();
   const label = account
     ? `${account} · ${USAGE_WINDOWS[id].label}`
     : USAGE_WINDOWS[id].label;
@@ -95,7 +97,7 @@ export function UsageMeter({
           <Text variant="caption" tone="muted">
             {label}{" "}
             {view.kind === "current"
-              ? formatResets(id, view.resetsAt, now)
+              ? formatResets(fmt, id, view.resetsAt, now)
               : "· reset since the last reading"}
           </Text>
         </Fill>

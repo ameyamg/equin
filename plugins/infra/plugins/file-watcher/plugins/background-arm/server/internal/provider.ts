@@ -10,6 +10,7 @@ import {
   type FileWatcherSnapshot,
   type WatcherBackend,
 } from "@plugins/infra/plugins/file-watcher/server";
+import { serverDateFormatter } from "@plugins/fields/plugins/date/plugins/format/server";
 
 /** At most this many instances are listed one per fact; the rest are counted. */
 const WATCHING_FACTS_MAX = 10;
@@ -24,11 +25,7 @@ const BACKEND_WORDS: Record<WatcherBackend, string> = {
 };
 
 function clock(d: Date, seconds: boolean): string {
-  return d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    ...(seconds ? { second: "2-digit" } : {}),
-  });
+  return serverDateFormatter().time(d, { seconds });
 }
 
 /** A delivery lag in words: ms under a second, else seconds. */

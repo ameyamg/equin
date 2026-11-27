@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { MailAccountStatus } from "../../core";
 import { mailHealth } from "./status-view";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
+
+const fmt = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 const refetch = async () => {};
 const ready = (data: MailAccountStatus) =>
@@ -26,14 +32,16 @@ const account = (
 
 describe("the Mail row", () => {
   test("is absent until Mail holds an account", () => {
-    expect(mailHealth(ready({ kind: "none" }))).toEqual({ state: "absent" });
-    expect(mailHealth({ status: "unavailable", message: "x" })).toEqual({
+    expect(mailHealth(ready({ kind: "none" }), fmt)).toEqual({
+      state: "absent",
+    });
+    expect(mailHealth({ status: "unavailable", message: "x" }, fmt)).toEqual({
       state: "absent",
     });
   });
 
   test("not known yet is unknown, never ok", () => {
-    expect(mailHealth({ status: "loading" } as never)).toEqual({
+    expect(mailHealth({ status: "loading" } as never, fmt)).toEqual({
       state: "unknown",
     });
   });
@@ -45,6 +53,7 @@ describe("the Mail row", () => {
         address: "me@example.com",
         message: "consent revoked",
       }),
+      fmt,
     );
     expect(h.state).toBe("attention");
     expect(h.summary).toContain("consent revoked");
@@ -61,16 +70,17 @@ describe("the Mail row", () => {
           },
         }),
       ),
+      fmt,
     );
     expect(failing.state).toBe("attention");
     expect(failing.summary).toContain("boom");
-    expect(mailHealth(ready(account({ connection: "offline" }))).state).toBe(
-      "unknown",
-    );
+    expect(
+      mailHealth(ready(account({ connection: "offline" })), fmt).state,
+    ).toBe("unknown");
   });
 
   test("synced says how changes arrive", () => {
-    const open = mailHealth(ready(account()));
+    const open = mailHealth(ready(account()), fmt);
     expect(open.state).toBe("ok");
     expect(open.summary).toContain("every 30 s while Mail is open");
     const idle = mailHealth(
@@ -85,6 +95,7 @@ describe("the Mail row", () => {
           },
         }),
       ),
+      fmt,
     );
     expect(idle.summary).toContain("every 10 min");
   });
@@ -108,11 +119,15 @@ describe("the Mail row", () => {
       });
     const live = mailHealth(
       ready(signal({ kind: "live", since: "2026-11-26T10:00:00.000Z" }, false)),
+      fmt,
     );
     expect(live.state).toBe("ok");
     expect(live.summary).toContain("instant updates (push)");
     expect(live.summary).not.toContain("every 30 s");
-    const notSetUp = mailHealth(ready(signal({ kind: "not-set-up" }, true)));
+    const notSetUp = mailHealth(
+      ready(signal({ kind: "not-set-up" }, true)),
+      fmt,
+    );
     expect(notSetUp.state).toBe("ok");
     expect(notSetUp.summary).toContain("every 30 s while Mail is open");
     expect(notSetUp.summary).toContain("not set up");
@@ -135,6 +150,7 @@ describe("the Mail row", () => {
           },
         }),
       ),
+      fmt,
     );
     expect(h.state).toBe("attention");
     expect(h.summary).toContain("subscription deleted");

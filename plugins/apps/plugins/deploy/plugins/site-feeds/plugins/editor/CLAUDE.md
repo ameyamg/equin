@@ -168,7 +168,7 @@ only while something contributes) and `ItemSection` (in the opened item).
     - `DataViewSlots.CollectionItemAction` "site-feeds.publications:investigate" → `CollectionInvestigate`
     - `Pane.Register` "deploy-feeds"
     - `Deploy.Sidebar` "Feeds"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
     - `primitives/pane` ×3
     - `apps/deploy/deployments` ×2
@@ -180,6 +180,7 @@ only while something contributes) and `ItemSection` (in the opened item).
     - `apps/deploy/shell.Deploy`
     - `apps/deploy/site-feeds/box.useSiteFeedDeclarations`
     - `config_v2/fields.FieldsForm`
+    - `fields/date/format.useDateFormatter`
     - `fields/media/table.mediaFieldDef`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/app-shell.opensPane`

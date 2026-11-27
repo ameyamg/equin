@@ -58,6 +58,7 @@ import {
 import { AccountHead, LEVEL_CLASS } from "./account-head";
 import { UsageBar } from "./claude-usage-glance";
 import { ErrorStoppedBanner } from "./error-stopped";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // The Claude account menu's accounts (the agent manager's sidebar foot): which
 // Claude account new agents launch on: the computer's own Claude Code login —
@@ -172,6 +173,7 @@ function LimitBanner({
   now: number;
   onSwitch: (id: string) => void;
 }) {
+  const fmt = useDateFormatter();
   const reached = limitReached(usage.byAccount[active.id], now);
   if (!reached) return null;
   const nextId = roomiestAccount(
@@ -189,7 +191,7 @@ function LimitBanner({
     >
       <Text variant="caption">
         {active.name} hit its {USAGE_WINDOWS[reached.id].label.toLowerCase()}{" "}
-        limit · {formatResets(reached.id, reached.resetsAt, now)}
+        limit · {formatResets(fmt, reached.id, reached.resetsAt, now)}
       </Text>
       {next ? (
         <ForAudience audience="developer" mark="badge">

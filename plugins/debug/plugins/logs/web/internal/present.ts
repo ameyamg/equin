@@ -1,5 +1,6 @@
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import type { LogEntry, LogScope } from "../../shared/resources";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 /** The worktree this page is served for: whose logs open by default. */
 export function servedWorktree(): string | null {
@@ -59,20 +60,7 @@ export function rotatesIn(e: LogEntry, now: number): number | null {
   );
 }
 
-const TIME = new Intl.DateTimeFormat(undefined, {
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  fractionalSecondDigits: 3,
-  hour12: false,
-});
-const DAY = new Intl.DateTimeFormat(undefined, {
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-export const formatLineTime = (t: number): string => TIME.format(t);
-export const formatDay = (t: number): string => DAY.format(t);
+export const formatLineTime = (t: number, fmt: DateFormatter): string =>
+  fmt.time(t, { fractionalSeconds: 3 });
+export const formatDay = (t: number, fmt: DateFormatter): string =>
+  fmt.dateTime(t, { year: "never" });

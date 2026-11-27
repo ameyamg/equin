@@ -182,6 +182,7 @@ clock is pinned with `vi.setSystemTime` so "today" is deterministic.
 - Description: Themed date-picker primitive: <Calendar> month grid, <TimeField> native clock input, <DatePickerPanel> (presets + calendar + time + clear), and <DatePickerPopover>. Day math lives in core/ and is local-calendar, never UTC.
 - Web:
   - Uses:
+    - `fields/date/format.useDateFormatter`
     - `primitives/announce.announce`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

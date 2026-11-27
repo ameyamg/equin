@@ -152,7 +152,7 @@ remote health gate.
     - `SiteCheck` "bundle"
     - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
     - `FieldPresentation.Register` "client:deploy.deployments:release"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×7
     - `network/live/live-state` ×6
     - `apps/deploy/health` ×3
@@ -160,6 +160,7 @@ remote health gate.
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
     - `primitives/relative-time` ×2
+    - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`

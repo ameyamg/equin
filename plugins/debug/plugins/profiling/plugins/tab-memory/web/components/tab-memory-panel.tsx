@@ -27,6 +27,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   DataView,
   defineDataView,
@@ -49,8 +50,6 @@ const COLORS = Array.from(
 );
 const colorAt = (i: number): string => COLORS[i % COLORS.length]!;
 
-const fmtTime = (v: number): string =>
-  new Date(v).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtMb = (mb: number): string =>
   mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${Math.round(mb)} MB`;
 
@@ -74,6 +73,8 @@ function SeriesChart({
   emptyText: string;
 }): ReactElement {
   const anyEmphasis = series.some((s) => s.emphasis);
+  const fmt = useDateFormatter();
+  const fmtTime = (v: number): string => fmt.time(v);
   return (
     <div className="h-56 w-full">
       <ChartState empty={series.length === 0} emptyText={emptyText}>

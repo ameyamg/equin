@@ -21,6 +21,7 @@ import {
   useCaretQuery,
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
 import { type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { $createDateMentionNode } from "./date-mention-node";
 import {
   buildMenu,
@@ -54,6 +55,7 @@ const CLOSED_MENU: MenuModel = { open: false, hint: false, options: [] };
  */
 export function InlineDatePlugin(_: BlockTextPluginProps) {
   const [lexicalEditor] = useLexicalComposerContext();
+  const fmt = useDateFormatter();
 
   function insertMention(option: DateOption) {
     const iso = option.date.toISOString();
@@ -84,7 +86,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
     id: "date",
     trigger: "@",
     canOpen: atWordBoundary,
-    isQueryValid: (q) => !/[@\n]/.test(q) && buildMenu(q, new Date()).open,
+    isQueryValid: (q) => !/[@\n]/.test(q) && buildMenu(q, new Date(), fmt).open,
   });
 
   // `buildMenu` runs here for RENDER (the option rows) and again inside
@@ -94,8 +96,8 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   // page, and a closed menu's presets (each formatted through Intl) cost a long
   // page's opening commit ~25 ms for rows nobody sees.
   const menu = useMemo(
-    () => (caret.open ? buildMenu(caret.query, new Date()) : CLOSED_MENU),
-    [caret.open, caret.query],
+    () => (caret.open ? buildMenu(caret.query, new Date(), fmt) : CLOSED_MENU),
+    [caret.open, caret.query, fmt],
   );
   const options = menu.options;
 

@@ -29,7 +29,7 @@
     - `ConfigV2.WebRegister` "files"
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `ThemeEngine.SubTheme` "Files document"
-  - Uses: 114 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 115 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `primitives/data-view` ×11
     - `primitives/css/ui-kit` ×7
@@ -51,6 +51,7 @@
     - `primitives/shortcuts` ×2
     - `shell/notifications` ×2
     - `companions/menu-bar/app-window.useNativeFileDrag`
+    - `fields/date/format.useDateFormatter`
     - `primitives/action-presentation.MenuItemForm`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`

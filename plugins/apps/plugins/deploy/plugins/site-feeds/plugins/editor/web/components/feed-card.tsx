@@ -9,6 +9,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   SiteCard,
   SiteCardBody,
@@ -34,16 +35,22 @@ const itemsSource = liveDataSource(siteFeedItems, {
   },
 });
 
+/** When an item went out: relative, the full timestamp on hover. */
+function PublishedAt({ at }: { at: Date }): ReactNode {
+  const fmt = useDateFormatter();
+  return (
+    <Text tone="muted" title={fmt.numeric(at, { time: true })}>
+      <RelativeTime date={at} />
+    </Text>
+  );
+}
+
 const overrides = fieldOverrides(siteFeedItems, {
   state: { width: "7rem" },
   publishedAt: {
     width: "8rem",
     cell: (r) =>
-      r.publishedAt === null ? null : (
-        <Text tone="muted" title={r.publishedAt.toLocaleString()}>
-          <RelativeTime date={r.publishedAt} />
-        </Text>
-      ),
+      r.publishedAt === null ? null : <PublishedAt at={r.publishedAt} />,
   },
   updatedAt: { width: "7rem", visible: false },
   createdAt: { width: "7rem", visible: false },

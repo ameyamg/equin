@@ -41,11 +41,3 @@ export function countryName(country: string | null): string {
   if (country === null) return "Unknown location";
   return regionNames?.of(country) ?? country;
 }
-
-/** "14:32" in the reader's zone. */
-export function timeOfDay(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}

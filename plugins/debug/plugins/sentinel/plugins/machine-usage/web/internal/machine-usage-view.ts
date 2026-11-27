@@ -1,3 +1,4 @@
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import {
   MACHINE_USAGE_BUCKET_HINT,
   MACHINE_USAGE_BUCKET_LABEL,
@@ -43,7 +44,10 @@ function percent(share: number): string {
 }
 
 /** The "Where it goes" block, from one sampled reading. */
-export function machineUsageView(usage: MachineUsage): MachineUsageView {
+export function machineUsageView(
+  usage: MachineUsage,
+  fmt: DateFormatter,
+): MachineUsageView {
   const cpuCeiling = usage.cores * 100;
   const buckets = usage.groups.map((g) => {
     const cpuShare = Math.min(1, g.cpuPercent / cpuCeiling);
@@ -65,9 +69,6 @@ export function machineUsageView(usage: MachineUsage): MachineUsageView {
     cpuTotalText: percent(Math.min(1, cpu)),
     memTotalText: gb(mem),
     memOfText: `of ${gb(usage.totalMemBytes)}`,
-    atText: new Date(usage.at).toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    }),
+    atText: fmt.time(new Date(usage.at)),
   };
 }

@@ -407,7 +407,7 @@ the common case.
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
@@ -420,6 +420,7 @@ the common case.
     - `audience.useAudience`
     - `build/deployment.DeploymentChain`
     - `config_v2.ConfigV2`
+    - `fields/date/format.useDateFormatter`
     - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/line.Line`

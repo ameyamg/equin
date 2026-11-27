@@ -185,6 +185,7 @@ block keep taking a plain `ClaudeCliCall`.
 - Web:
   - Uses:
     - `conversations/model-provider.familyClass`
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`

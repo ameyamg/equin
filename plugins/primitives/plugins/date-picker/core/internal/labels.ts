@@ -1,9 +1,10 @@
 /**
- * Human labels for a calendar day — `Intl`-driven, so the month name and the
- * weekday abbreviations follow the viewer's locale instead of a hardcoded
- * English table.
+ * Human labels for a calendar day — written by the user's DateFormatter, so
+ * the month name, the weekday abbreviations and the date order follow the
+ * viewer's locale and Date order setting instead of a hardcoded English table.
  */
 
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { addDays, isSameDay, normalizeWeekStart, startOfDay } from "./day-math";
 
 /** The closed relative vocabulary for a CONCRETE calendar day. */
@@ -49,7 +50,7 @@ export interface WeekdayLabel {
 
 /**
  * The seven weekday labels in column order, starting at `weekStartsOn`
- * (0 = Sunday). E.g. `weekdayLabels(1, "en-US")[0]` → `{short:"Mon", long:"Monday"}`.
+ * (0 = Sunday). E.g. `weekdayLabels(1, fmt)[0]` → `{short:"Mon", long:"Monday"}`.
  *
  * Both forms come out of ONE walk over the same seven days, because the column
  * header shows the abbreviation and announces the full name — two renderings of
@@ -58,18 +59,16 @@ export interface WeekdayLabel {
  */
 export function weekdayLabels(
   weekStartsOn: number,
-  locale?: string,
+  fmt: DateFormatter,
 ): WeekdayLabel[] {
   const start = normalizeWeekStart(weekStartsOn);
-  const short = new Intl.DateTimeFormat(locale, { weekday: "short" });
-  const long = new Intl.DateTimeFormat(locale, { weekday: "long" });
   // Any date, walked back to its own week's Sunday — so the anchor is correct
   // by construction rather than by a hand-verified "this date was a Sunday".
   const anchor = new Date(2021, 0, 3);
   const sunday = addDays(anchor, -anchor.getDay());
   return Array.from({ length: 7 }, (_, i) => {
     const day = addDays(sunday, (start + i) % 7);
-    return { short: short.format(day), long: long.format(day) };
+    return { short: fmt.weekday(day, "short"), long: fmt.weekday(day, "long") };
   });
 }
 
@@ -81,19 +80,11 @@ export function weekdayLabels(
  * cell must carry, because a screen-reader user arrives at it by arrow key with
  * no view of the surrounding month.
  */
-export function dayLabel(day: Date, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(day);
+export function dayLabel(day: Date, fmt: DateFormatter): string {
+  return fmt.date(day, { weekday: "long", month: "long", year: "always" });
 }
 
 /** The calendar header title for `month`, e.g. "August 2026". */
-export function monthTitle(month: Date, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-  }).format(month);
+export function monthTitle(month: Date, fmt: DateFormatter): string {
+  return fmt.date(month, { month: "long", day: false, year: "always" });
 }

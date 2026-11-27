@@ -94,6 +94,7 @@ so Postgres is the only owner measured this way:
   - Resources: `sentinel.machine-usage` (push, notified, capped: MACHINE_USAGE_BUCKETS.length)
 - Web:
   - Uses:
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/clip.Clip`

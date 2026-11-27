@@ -32,6 +32,16 @@ import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/w
 // typography scale). One spelling for every consumer of this primitive.
 const MONO_LOG_CLASS = textVariantClass("code");
 
+/**
+ * What a line's time is written with — the caller's `useDateFormatter()`
+ * (fields/date/format) satisfies it. Declared here rather than imported:
+ * this plugin's `clientLog` sits under the config store the formatter reads,
+ * so importing it would close a plugin cycle.
+ */
+export interface LogLineClock {
+  time(at: number, opts: { seconds: true }): string;
+}
+
 /** The app's own log socket. */
 const LOGS_WS_PATH = "/ws/logs";
 
@@ -56,6 +66,8 @@ interface LiveLogChannelBaseProps {
    * want a toast, never a way to silence it.
    */
   onError?: (message: string) => void;
+  /** How each line's time is written: the caller's `useDateFormatter()`. */
+  fmt: LogLineClock;
 }
 
 /**
@@ -136,6 +148,7 @@ function LiveLogFeed({
   className,
   onError,
   disclosure,
+  fmt,
 }: LiveLogChannelProps): ReactNode {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const lastSeqRef = useRef<number>(0);
@@ -225,6 +238,7 @@ function LiveLogFeed({
         className={className}
         scrollRef={scrollRef}
         bottomSentinel={bottomSentinel}
+        fmt={fmt}
       />
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
       <Pin to="bottom" style={{ bottom: "0.25rem" }}>
@@ -290,6 +304,8 @@ export interface LogEntryListProps {
   scrollRef?: React.Ref<HTMLElement>;
   /** Must be rendered last — it marks the true end of the content. */
   bottomSentinel?: ReactNode;
+  /** How each line's time is written. */
+  fmt: LogLineClock;
 }
 
 /**
@@ -308,6 +324,7 @@ export function LogEntryList({
   className,
   scrollRef,
   bottomSentinel,
+  fmt,
 }: LogEntryListProps): ReactNode {
   return (
     <Scroll
@@ -338,12 +355,7 @@ export function LogEntryList({
           }
         >
           <span className="text-muted-foreground tabular-nums">
-            {new Date(entry.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: false,
-            })}
+            {fmt.time(entry.timestamp, { seconds: true })}
           </span>
           <span className="whitespace-pre-wrap break-all">{entry.line}</span>
         </Stack>

@@ -210,7 +210,7 @@ Mockup: `proto-1794566734-a58es0`.
     - `Pane.Register` "deploy-session-replay"
     - `SiteTabs.View` "Sessions" → `SessionsSection`
     - `sources` "Visits" → `VisitsSource`
-  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×8
     - `primitives/css/ui-kit` ×6
     - `primitives/pane` ×6
@@ -224,6 +224,7 @@ Mockup: `proto-1794566734-a58es0`.
     - `primitives/css/toggle-chip` ×2
     - `apps-core.Apps`
     - `apps/deploy/site-mirror/pull.MirrorFreshness`
+    - `fields/date/format.useDateFormatter`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

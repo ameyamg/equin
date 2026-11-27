@@ -25,11 +25,12 @@
     - `defineJob('page.reminders.reconcile')`
     - `defineJob('page.reminders.fire')`
 - Web:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/text-editor/caret-trigger` ×4
     - `page/editor` ×3
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
+    - `fields/date/format.useDateFormatter`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`

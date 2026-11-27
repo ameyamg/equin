@@ -29,6 +29,10 @@ import {
   mailDraftIdKind,
   type DraftContent,
 } from "../../core";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 import { createOutbox, SendPendingError } from "./outbox";
 import { _mailDrafts } from "./tables";
 
@@ -93,6 +97,7 @@ function harness(o: Pick<FakeMailProviderOptions, "identity"> = {}) {
   };
   const outbox = createOutbox({
     db: t.db,
+    dateFormatter: () => createDateFormatter(DEFAULT_DATE_FORMAT_PREFS),
     sender: async () => ({
       accountId: "acct",
       address: "me@x.test",

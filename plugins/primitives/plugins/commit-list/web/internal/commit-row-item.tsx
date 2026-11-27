@@ -14,10 +14,12 @@ import {
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import type React from "react";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import type { CommitRow } from "../../core";
 import { CommitRail, commitRowHeight } from "./commit-rail";
 
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, fmt: DateFormatter): string {
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return "";
   const diff = Date.now() - t;
@@ -29,7 +31,7 @@ function formatRelative(iso: string): string {
   if (hr < 48) return `${hr}h ago`;
   const day = Math.round(hr / 24);
   if (day < 14) return `${day}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return fmt.numeric(new Date(iso));
 }
 
 /**
@@ -43,9 +45,11 @@ function formatRelative(iso: string): string {
  * so a chain of a checkout's own commits carries the same name on every row,
  * and the row's real content — the subject — is what that width was owed to.
  */
-function whenTitle(commit: CommitRow): string {
+function whenTitle(commit: CommitRow, fmt: DateFormatter): string {
   const t = new Date(commit.authoredAt);
-  const when = Number.isNaN(t.getTime()) ? null : t.toLocaleString();
+  const when = Number.isNaN(t.getTime())
+    ? null
+    : fmt.numeric(t, { time: true, seconds: true });
   return when === null ? commit.authorName : `${commit.authorName} · ${when}`;
 }
 
@@ -88,6 +92,7 @@ export function CommitRowItem({
   commitActivation?: (commit: CommitRow) => Activation;
 }) {
   const height = commitRowHeight(useControlSize());
+  const fmt = useDateFormatter();
   const activation = commitActivation?.(commit);
   return (
     // A commit row IS a single line: the rail, sha, chips and timestamp are
@@ -135,9 +140,9 @@ export function CommitRowItem({
         as="span"
         variant="caption"
         className={cn(rigidClass(), "text-muted-foreground tabular-nums")}
-        title={whenTitle(commit)}
+        title={whenTitle(commit, fmt)}
       >
-        {formatRelative(commit.authoredAt)}
+        {formatRelative(commit.authoredAt, fmt)}
       </Text>
       {actions && <RowActions>{actions}</RowActions>}
     </Line>

@@ -4,6 +4,12 @@ import type { SiteHealth } from "@plugins/apps/plugins/deploy/plugins/box-link/p
 
 type RunStatus = NonNullable<SiteHealth["run"]>["status"];
 import { siteAlert, siteFreshness, siteStatus, siteTitle } from "./status";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
+
+const fmt = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 const T = Date.parse("2026-11-19T18:00:00Z");
 
@@ -65,20 +71,20 @@ const LIVE: LinkState = { kind: "live" };
 
 describe("siteStatus", () => {
   it("is ok while live and up to date", () => {
-    expect(siteStatus(site(LIVE))).toEqual({
+    expect(siteStatus(site(LIVE), fmt)).toEqual({
       state: "ok",
       summary: "Live · abcdef0 · up to date",
     });
   });
 
   it("is ok, naming the commits, while behind main", () => {
-    const s = siteStatus(site(LIVE, { behind: 142 }));
+    const s = siteStatus(site(LIVE, { behind: 142 }), fmt);
     expect(s.state).toBe("ok");
     expect(s.summary).toBe("Live · abcdef0 · 142 commits behind main");
   });
 
   it("is info and transitioning while deploying", () => {
-    const s = siteStatus(site(LIVE, { run: "running" }));
+    const s = siteStatus(site(LIVE, { run: "running" }), fmt);
     expect(s).toMatchObject({ state: "info", transitioning: true });
   });
 
@@ -91,22 +97,22 @@ describe("siteStatus", () => {
           ? null
           : { ...down.run, verb: "restart", phase: null },
     };
-    expect(siteStatus(restarting)).toEqual({
+    expect(siteStatus(restarting, fmt)).toEqual({
       state: "info",
       transitioning: true,
-      summary: `Restarting · since ${new Date(T).toLocaleTimeString(undefined, {
-        hour: "numeric",
-        minute: "2-digit",
-      })}`,
+      summary: `Restarting · since ${fmt.time(T)}`,
     });
     // An update in flight does not hide an outage.
-    expect(siteStatus(down).state).toBe("critical");
+    expect(siteStatus(down, fmt).state).toBe("critical");
   });
 
   it("needs attention after a failed deploy, or a release too old", () => {
-    expect(siteStatus(site(LIVE, { run: "failed" })).state).toBe("attention");
+    expect(siteStatus(site(LIVE, { run: "failed" }), fmt).state).toBe(
+      "attention",
+    );
     expect(
-      siteStatus(site({ kind: "outdated", reason: "route-missing" })).state,
+      siteStatus(site({ kind: "outdated", reason: "route-missing" }), fmt)
+        .state,
     ).toBe("attention");
   });
 
@@ -119,6 +125,7 @@ describe("siteStatus", () => {
         then: "down",
         sshKind: null,
       }),
+      fmt,
     );
     expect(s).toMatchObject({ state: "attention", transitioning: true });
   });
@@ -129,20 +136,20 @@ describe("siteStatus", () => {
       { kind: "unreachable", sshKind: null },
       { kind: "refused", reason: "forwarding-refused" },
     ] satisfies LinkState[]) {
-      expect(siteStatus(site(state, { run: "running" })).state).toBe(
+      expect(siteStatus(site(state, { run: "running" }), fmt).state).toBe(
         "critical",
       );
     }
   });
 
   it("is not known yet while connecting", () => {
-    expect(siteStatus(site({ kind: "connecting" }))).toEqual({
+    expect(siteStatus(site({ kind: "connecting" }), fmt)).toEqual({
       state: "unknown",
     });
   });
 
   it("says a real box seen from a worktree is linked from main", () => {
-    expect(siteStatus(site("main-only")).summary).toBe(
+    expect(siteStatus(site("main-only"), fmt).summary).toBe(
       "Linked from main · abcdef0 · up to date",
     );
   });
@@ -159,9 +166,9 @@ describe("siteFreshness / siteAlert / siteTitle", () => {
   });
 
   it("alerts on a lost link before a failed run, and not on a healthy site", () => {
-    expect(siteAlert(site(LIVE))).toBeNull();
-    expect(siteAlert(site({ kind: "down" }))?.tone).toBe("critical");
-    expect(siteAlert(site(LIVE, { run: "failed" }))?.lead).toBe(
+    expect(siteAlert(site(LIVE), fmt)).toBeNull();
+    expect(siteAlert(site({ kind: "down" }), fmt)?.tone).toBe("critical");
+    expect(siteAlert(site(LIVE, { run: "failed" }), fmt)?.lead).toBe(
       "health check failed",
     );
   });
@@ -175,7 +182,7 @@ describe("siteFreshness / siteAlert / siteTitle", () => {
 describe("siteAlert on a refused link", () => {
   it("says why and what to do: re-run the install command, then Retry", () => {
     expect(
-      siteAlert(site({ kind: "refused", reason: "forwarding-refused" })),
+      siteAlert(site({ kind: "refused", reason: "forwarding-refused" }), fmt),
     ).toEqual({
       tone: "critical",
       lead: "Can't connect: forwarding is disabled on the server",
@@ -194,11 +201,15 @@ describe("the public path", () => {
   });
 
   it("is attention, transitioning, below the threshold", () => {
-    expect(siteStatus(site(LIVE, { publicPath: failing(1) }))).toMatchObject({
+    expect(
+      siteStatus(site(LIVE, { publicPath: failing(1) }), fmt),
+    ).toMatchObject({
       state: "attention",
       transitioning: true,
     });
-    expect(siteAlert(site(LIVE, { publicPath: failing(1) }))).toMatchObject({
+    expect(
+      siteAlert(site(LIVE, { publicPath: failing(1) }), fmt),
+    ).toMatchObject({
       tone: "warning",
       lead: "Public site: Cloudflare can't reach the server (522)",
     });
@@ -206,31 +217,33 @@ describe("the public path", () => {
 
   it("is critical from the threshold, and says where it broke", () => {
     const s = site(LIVE, { publicPath: failing(3) });
-    expect(siteStatus(s).state).toBe("critical");
-    expect(siteStatus(s).summary).toStartWith("Public site down since");
-    expect(siteAlert(s)?.tone).toBe("critical");
+    expect(siteStatus(s, fmt).state).toBe("critical");
+    expect(siteStatus(s, fmt).summary).toStartWith("Public site down since");
+    expect(siteAlert(s, fmt)?.tone).toBe("critical");
   });
 
   it("yields to the link's own state: a box that does not answer reads as that", () => {
     const s = site({ kind: "down" }, { publicPath: failing(5) });
-    expect(siteStatus(s).summary).toStartWith("Not answering since");
-    expect(siteAlert(s)?.lead).toBe(
+    expect(siteStatus(s, fmt).summary).toStartWith("Not answering since");
+    expect(siteAlert(s, fmt)?.lead).toBe(
       "The server answers SSH, but equin is not running on it",
     );
   });
 
   it("yields to a deploy in progress", () => {
     const s = site(LIVE, { run: "running", publicPath: failing(5) });
-    expect(siteStatus(s).state).toBe("info");
-    expect(siteAlert(s)).toBeNull();
+    expect(siteStatus(s, fmt).state).toBe("info");
+    expect(siteAlert(s, fmt)).toBeNull();
   });
 
   it("says nothing of an uncounted miss, or while the link is not live", () => {
-    expect(siteStatus(site(LIVE, { publicPath: failing(0) })).state).toBe("ok");
-    expect(siteAlert(site(LIVE, { publicPath: failing(0) }))).toBeNull();
+    expect(siteStatus(site(LIVE, { publicPath: failing(0) }), fmt).state).toBe(
+      "ok",
+    );
+    expect(siteAlert(site(LIVE, { publicPath: failing(0) }), fmt)).toBeNull();
     const connecting = site({ kind: "connecting" }, { publicPath: failing(5) });
-    expect(siteStatus(connecting).state).toBe("unknown");
-    expect(siteAlert(connecting)).toBeNull();
+    expect(siteStatus(connecting, fmt).state).toBe("unknown");
+    expect(siteAlert(connecting, fmt)).toBeNull();
   });
 
   it("is ok while ok, pending or unwatched", () => {
@@ -238,7 +251,7 @@ describe("the public path", () => {
       { kind: "pending" },
       { kind: "unwatched" },
     ] as const) {
-      expect(siteStatus(site(LIVE, { publicPath })).state).toBe("ok");
+      expect(siteStatus(site(LIVE, { publicPath }), fmt).state).toBe("ok");
     }
   });
 });

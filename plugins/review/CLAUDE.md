@@ -39,13 +39,14 @@ contributions: [
   - Contributes:
     - `Pane.Register` "conv-review"
     - `Conversation.ActionBar` → `ReviewButton`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×6
     - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
+    - `fields/date/format.useDateFormatter`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`

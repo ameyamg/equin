@@ -97,6 +97,7 @@ enough ticks.
     - `Reports.KindView` → `HostIoDegradedSummary`
     - `HealthReport.Row` "Disk I/O"
   - Uses:
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`

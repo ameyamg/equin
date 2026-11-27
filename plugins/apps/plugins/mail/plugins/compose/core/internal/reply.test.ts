@@ -13,8 +13,13 @@ import {
   signatureText,
   startFrom,
 } from "./reply";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 
 const ME = "me@example.com";
+const fmt = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 function message(over: Partial<MessageContent> = {}): MessageContent {
   return {
@@ -92,7 +97,7 @@ describe("parseAddressList", () => {
 
 describe("startFrom", () => {
   test("reply: to the sender, Re:, threaded, the message quoted", () => {
-    const c = startFrom("reply", message(), ME, "t1");
+    const c = startFrom("reply", message(), ME, "t1", fmt);
     expect(c.to).toBe("Ana Example <ana@x.com>");
     expect(c.cc).toBe("");
     expect(c.subject).toBe("Re: Lease renewal");
@@ -109,6 +114,7 @@ describe("startFrom", () => {
       message({ replyTo: [{ name: null, address: "list@x.com" }] }),
       ME,
       "t1",
+      fmt,
     );
     expect(c.to).toBe("list@x.com");
   });
@@ -123,6 +129,7 @@ describe("startFrom", () => {
       }),
       ME,
       "t1",
+      fmt,
     );
     expect(c.to).toBe("Ana Example <ana@x.com>");
     expect(c.cc).toBe("Bob <bob@y.org>, carol@z.io");
@@ -133,6 +140,7 @@ describe("startFrom", () => {
       message({ from: { name: null, address: ME } }),
       ME,
       "t1",
+      fmt,
     );
     expect(c.to).toBe("Bob <bob@y.org>");
     expect(c.cc).toBe("carol@z.io");
@@ -147,6 +155,7 @@ describe("startFrom", () => {
       }),
       ME,
       "t1",
+      fmt,
     );
     expect(c.to).toBe(ME);
   });
@@ -156,7 +165,7 @@ describe("startFrom", () => {
     expect(prefixedSubject("forward", "x")).toBe("Fwd: x");
   });
   test("forward: nobody yet, the message in the body, its files but not inline images", () => {
-    const c = startFrom("forward", message(), ME, "t1");
+    const c = startFrom("forward", message(), ME, "t1", fmt);
     expect(c.to).toBe("");
     expect(c.subject).toBe("Fwd: Lease renewal");
     expect(c.body).toContain("---------- Forwarded message ---------");
@@ -203,6 +212,7 @@ test("odd threading headers keep only their Message-IDs", () => {
     }),
     ME,
     "t1",
+    fmt,
   );
   expect(c.inReplyTo).toBe("<p2@x.com>");
   expect(c.references).toEqual(["<p1@x.com>", "<p0@x.com>", "<p2@x.com>"]);

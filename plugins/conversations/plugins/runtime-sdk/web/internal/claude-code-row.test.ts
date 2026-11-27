@@ -12,10 +12,15 @@ import {
   claudeCodeRowVerdict,
   type ClaudeCodeRowInputs,
 } from "./claude-code-row";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 
 const refetch = () => Promise.resolve();
 const none = { here: 0, elsewhere: [], byAccount: {} };
 const NOW = 1_800_000_000_000;
+const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 const noUsage: ClaudeCodeRowInputs["usage"] = { byAccount: {} };
 const OK: HealthStatus = { state: "ok", summary: "Signed in · v2.1.303" };
 const loaded = (
@@ -46,6 +51,7 @@ describe("claudeCodeRowVerdict", () => {
         OK,
         ready("2.1.999", { here: 3, elsewhere: [], byAccount: {} }),
         NOW,
+        FMT,
       ),
     ).toEqual({ state: "ok", summary: "v2.1.999 · 3 agents here" });
   });
@@ -55,11 +61,13 @@ describe("claudeCodeRowVerdict", () => {
       state: "critical",
       summary: "signed out",
     };
-    expect(claudeCodeRowVerdict(signedOut, ready("2.2.0"), NOW)).toBe(
+    expect(claudeCodeRowVerdict(signedOut, ready("2.2.0"), NOW, FMT)).toBe(
       signedOut,
     );
     const checking: HealthStatus = { state: "unknown" };
-    expect(claudeCodeRowVerdict(checking, ready("2.1.1"), NOW)).toBe(checking);
+    expect(claudeCodeRowVerdict(checking, ready("2.1.1"), NOW, FMT)).toBe(
+      checking,
+    );
   });
 
   test("signed out on the system account stays critical", () => {
@@ -70,7 +78,7 @@ describe("claudeCodeRowVerdict", () => {
     const inputs = loaded({ kind: "signed-out", version: "2.2.0" });
     if (inputs.status !== "ready") throw new Error("unreachable");
     expect(inputs.data.accounts.active).toBe(SYSTEM_ACCOUNT_ID);
-    expect(claudeCodeRowVerdict(signedOut, inputs, NOW)).toBe(signedOut);
+    expect(claudeCodeRowVerdict(signedOut, inputs, NOW, FMT)).toBe(signedOut);
   });
 
   test("the computer signed out does not redden the row while an added account is active", () => {
@@ -94,7 +102,7 @@ describe("claudeCodeRowVerdict", () => {
         },
       },
     };
-    expect(claudeCodeRowVerdict(signedOut, onApiKey, NOW)).toEqual({
+    expect(claudeCodeRowVerdict(signedOut, onApiKey, NOW, FMT)).toEqual({
       state: "ok",
       summary:
         "v2.2.0 · 2 agents here · the computer's own login is signed out",
@@ -103,7 +111,7 @@ describe("claudeCodeRowVerdict", () => {
 
   test("not known yet is unknown, never ok", () => {
     expect(
-      claudeCodeRowVerdict(OK, { status: "loading", refetch }, NOW),
+      claudeCodeRowVerdict(OK, { status: "loading", refetch }, NOW, FMT),
     ).toEqual({
       state: "unknown",
     });
@@ -115,6 +123,7 @@ describe("claudeCodeRowVerdict", () => {
         OK,
         { status: "unavailable", message: "Not here." },
         NOW,
+        FMT,
       ),
     ).toEqual({ state: "not-applicable", summary: "Not here." });
   });
@@ -135,14 +144,14 @@ describe("usage limits", () => {
 
   test("under the limits is ok", () => {
     expect(
-      claudeCodeRowVerdict(OK, ready("2.1.1", none, usage(0.9, 0.5)), NOW)
+      claudeCodeRowVerdict(OK, ready("2.1.1", none, usage(0.9, 0.5)), NOW, FMT)
         .state,
     ).toBe("ok");
   });
 
   test("a reached limit is attention, with when it resets", () => {
     expect(
-      claudeCodeRowVerdict(OK, ready("2.1.1", none, usage(1, 0.5)), NOW),
+      claudeCodeRowVerdict(OK, ready("2.1.1", none, usage(1, 0.5)), NOW, FMT),
     ).toEqual({
       state: "attention",
       summary: "Session usage limit reached · resets in 1 h 30 m",
@@ -155,6 +164,7 @@ describe("usage limits", () => {
         OK,
         ready("2.1.1", none, { byAccount: { work: reading(1, 1) } }),
         NOW,
+        FMT,
       ).state,
     ).toBe("ok");
   });
@@ -165,6 +175,7 @@ describe("usage limits", () => {
         OK,
         ready("2.1.1", none, usage(1, 0.5)),
         NOW + 2 * 3_600_000,
+        FMT,
       ).state,
     ).toBe("ok");
   });
@@ -193,7 +204,12 @@ describe("agentsPhrase", () => {
       },
     ] as const satisfies ClaudeCodeRowInputs["stopped"];
     expect(
-      claudeCodeRowVerdict(OK, loaded(signedIn, none, noUsage, stopped), NOW),
+      claudeCodeRowVerdict(
+        OK,
+        loaded(signedIn, none, noUsage, stopped),
+        NOW,
+        FMT,
+      ),
     ).toEqual({
       state: "attention",
       summary: "1 conversation stopped by an API error",

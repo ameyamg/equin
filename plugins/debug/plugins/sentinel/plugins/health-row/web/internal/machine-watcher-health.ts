@@ -1,3 +1,4 @@
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type {
@@ -80,11 +81,8 @@ export function duressMarks(
   return marks.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export function clockTime(at: number): string {
-  return new Date(at).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+export function clockTime(at: number, fmt: DateFormatter): string {
+  return fmt.time(at);
 }
 
 /**
@@ -106,6 +104,7 @@ export function clockTime(at: number): string {
  */
 export function machineWatcherVerdict(
   result: ResourceResult<SentinelStatusValue>,
+  fmt: DateFormatter,
 ): HealthStatus {
   if (result.status === "loading") return { state: "unknown" };
   if (result.status === "error") {
@@ -149,7 +148,7 @@ export function machineWatcherVerdict(
       const diskStatus = disk === null ? null : DISK_STATUS[disk];
       if (diskStatus?.state === "critical") return diskStatus;
       if (duress !== null) {
-        const summary = `Under duress since ${clockTime(duress.since)} · builds held back`;
+        const summary = `Under duress since ${clockTime(duress.since, fmt)} · builds held back`;
         // A low or filling disk on top keeps the dot coloured: it would
         // otherwise hide behind a mark that only says the machine is busy.
         const marks = diskStatus ? null : duressMarks(duress.holding);
@@ -160,7 +159,7 @@ export function machineWatcherVerdict(
       if (diskStatus) return diskStatus;
       return {
         state: "ok",
-        summary: `Running since ${clockTime(status.since)}`,
+        summary: `Running since ${clockTime(status.since, fmt)}`,
       };
     }
     case "starting":

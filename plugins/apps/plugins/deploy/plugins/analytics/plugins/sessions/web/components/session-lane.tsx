@@ -13,7 +13,8 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { countryName, flagOf, span, timeOfDay } from "../internal/format";
+import { countryName, flagOf, span } from "../internal/format";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { softwareLine } from "../internal/facts";
 import { LANE_TRACKS, useLaneWindow } from "../internal/lane-context";
 import { visitLoad } from "../internal/load";
@@ -38,6 +39,7 @@ export function SessionLane({ session }: { session: Session }): ReactNode {
   if (!journey)
     throw new Error(`[sessions] no journey derived for visit ${session.id}`);
   const flag = flagOf(session.country);
+  const fmt = useDateFormatter();
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- the lane's three tracks are shared with the axis row (LANE_TRACKS), so ticks stand over bars
     <Inset x="sm" y="xsm" className={cn(LANE_TRACKS, "w-full items-center")}>
@@ -57,7 +59,7 @@ export function SessionLane({ session }: { session: Session }): ReactNode {
             tone="faint"
             className="tabular-nums"
           >
-            {timeOfDay(session.startedAt)}
+            {fmt.time(new Date(session.startedAt))}
           </Text>
           {session.owner && (
             <Badge variant="primary" shape="pill">

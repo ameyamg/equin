@@ -18,6 +18,7 @@ on the row"); the view model is pure (`web/internal/vitals-view.ts`,
   - Contributes: `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
   - Uses:
     - `debug/sentinel/machine-usage.MachineUsageBreakdown`
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/cluster.Cluster`

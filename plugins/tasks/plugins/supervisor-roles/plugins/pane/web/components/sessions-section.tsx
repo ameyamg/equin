@@ -18,6 +18,7 @@ import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { isLiveSessionStatus } from "@plugins/tasks/plugins/supervisor-roles/core";
 import { useSessionTallies, type SessionTally } from "../internal/reads";
 import { useSessionNumbers } from "../internal/format";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const SESSIONS_VIEW = defineDataView("tasks.supervisor-roles.sessions");
@@ -25,11 +26,6 @@ const SESSIONS_VIEW = defineDataView("tasks.supervisor-roles.sessions");
 const doneIcon = symbol("check-circle");
 const droppedIcon = symbol("block");
 const runningIcon = stateIcons.working;
-
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-});
 
 const SESSION_PLACE = { tally: "trail", bar: "trail" } as const;
 
@@ -56,6 +52,7 @@ function SessionsList({
   const numbers = useSessionNumbers(roleId);
   const tallies = useSessionTallies(sessions);
   const openPane = useOpenPane();
+  const fmt = useDateFormatter();
   const fields = useMemo<FieldDef<TaskTreeRow>[]>(
     () => [
       {
@@ -75,7 +72,7 @@ function SessionsList({
               <Text variant="label">
                 {live
                   ? `Started ${formatRelativeTime(new Date(s.createdAt))}`
-                  : dateFormat.format(new Date(s.createdAt))}
+                  : fmt.date(new Date(s.createdAt), { year: "never" })}
               </Text>
               {live ? <Badge variant="success">Live</Badge> : null}
             </Inline>
@@ -100,7 +97,7 @@ function SessionsList({
         filterable: false,
       },
     ],
-    [numbers, tallies],
+    [numbers, tallies, fmt],
   );
   return (
     <DataView<TaskTreeRow>

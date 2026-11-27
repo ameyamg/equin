@@ -22,6 +22,7 @@ import {
   windowElapsed,
 } from "../internal/claude-usage";
 import { UsageBar } from "./claude-usage-glance";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // The account menu's head: the active account, then its session and week
 // meters — each a line (the window, when it resets, how much is used) over its
@@ -49,6 +50,7 @@ function AccountMeter({
   window: ClaudeUsageWindow;
   now: number;
 }) {
+  const fmt = useDateFormatter();
   const { label } = USAGE_WINDOWS[id];
   const view = viewUsageWindow(window, now);
   return (
@@ -63,8 +65,8 @@ function AccountMeter({
           <Text variant="caption" tone="faint">
             {view.kind === "current"
               ? view.level === "full"
-                ? `Limit reached · ${formatResets(id, view.resetsAt, now)}`
-                : capitalize(formatResets(id, view.resetsAt, now))
+                ? `Limit reached · ${formatResets(fmt, id, view.resetsAt, now)}`
+                : capitalize(formatResets(fmt, id, view.resetsAt, now))
               : "Reset since the last reading"}
           </Text>
         </Fill>

@@ -14,6 +14,7 @@ import {
   sdkAgentProcesses,
 } from "../../core";
 import { claudeCodeRowVerdict } from "./claude-code-row";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /** The row's inputs: four pushed values, already resident, and the stopped conversations. */
 export function useClaudeCodeRowInputs() {
@@ -31,10 +32,12 @@ export function useClaudeCodeRowHealth(): HealthStatus {
   // A minute's tick: a reached limit's "resets in" counts down, and the row
   // turns ok again once it resets.
   const now = useNow(60_000);
+  const fmt = useDateFormatter();
   // While the computer signs in from the row, its verdict says so.
   return claudeCodeRowVerdict(
     useClaudeCodeSignInHealth(useClaudeCodeHealth()),
     useClaudeCodeRowInputs(),
     now,
+    fmt,
   );
 }

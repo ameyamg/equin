@@ -20,7 +20,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { presentEvent, propsText } from "../internal/events";
 import { sourceOf } from "../internal/facts";
-import { clock, countryName, span, timeOfDay } from "../internal/format";
+import { clock, countryName, span } from "../internal/format";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   pageRead,
   readLabel,
@@ -97,6 +98,7 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
     throw new Error(`[sessions] no journey derived for visit ${session.id}`);
   const load = visitLoad(session);
   const openReplay = useOpenReplay(session.id);
+  const fmt = useDateFormatter();
   return (
     <Stack gap="sm" className="max-w-[920px]">
       <PastRail>
@@ -105,12 +107,10 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
             Visitor {session.visitor}
           </Text>
           <Text variant="caption" tone="muted">
-            {new Date(session.startedAt).toLocaleDateString(undefined, {
+            {fmt.dateTime(new Date(session.startedAt), {
               weekday: "short",
-              month: "short",
-              day: "numeric",
+              year: "never",
             })}
-            , {timeOfDay(session.startedAt)}
           </Text>
           <Text variant="caption" tone="muted">
             {countryName(session.country)}

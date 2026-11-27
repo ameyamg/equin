@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `Stats.Chart` "Responsiveness" → `ResponsivenessSection`
   - Uses:
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/grid.Grid`

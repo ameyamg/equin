@@ -18,6 +18,7 @@ import { SPEND_ROOT_ID, type SpendNode } from "../../core";
 import { money, partColor, pathParam, pct, shareOf } from "../internal/format";
 import { useSpend } from "../internal/read";
 import { windowWords } from "../internal/windows";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { supervisorsSpendPane } from "../panes";
 import { SpendBar } from "./spend-bar";
 import "./spend.css";
@@ -71,6 +72,7 @@ function LegendEntry({
 export function SpendGlance(): ReactElement {
   const read = useSpend();
   const openPane = useOpenPane();
+  const fmt = useDateFormatter();
   const hover = useLinkedHover();
   const hotId = useHoveredId(hover);
   const selected = supervisorsSpendPane.useRouteEntry() !== null;
@@ -100,7 +102,9 @@ export function SpendGlance(): ReactElement {
       tabIndex={0}
       className={cn("sp-glance rounded-md", selected && "on")}
       title={
-        data === null ? undefined : data.windows.map(windowWords).join(" · ")
+        data === null
+          ? undefined
+          : data.windows.map((w) => windowWords(fmt, w)).join(" · ")
       }
       {...linkProps(root)}
       onKeyDown={(e) => {

@@ -46,6 +46,7 @@ import { LEVEL_CLASS, PACE_LABEL } from "./account-head";
 import { AccountSpendGlance } from "./account-spend-glance";
 import { ClaudeAccountMenu } from "./claude-accounts";
 import { UsageBar } from "./claude-usage-glance";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // The agent manager's sidebar foot: the Claude account new agents launch on,
 // with its weekly quota at a glance (the limit worth choosing an account by).
@@ -65,6 +66,7 @@ function WeekGlance({
   usage: ClaudeUsageRead;
   now: number;
 }) {
+  const fmt = useDateFormatter();
   if (account.metered)
     return <AccountSpendGlance accountId={account.id} now={now} />;
   const reading = usage.byAccount[account.id];
@@ -73,7 +75,7 @@ function WeekGlance({
     return (
       <Text variant="caption" tone="destructive">
         {USAGE_WINDOWS[reached.id].label} limit ·{" "}
-        {formatResets(reached.id, reached.resetsAt, now)}
+        {formatResets(fmt, reached.id, reached.resetsAt, now)}
       </Text>
     );
   if (!reading?.week)

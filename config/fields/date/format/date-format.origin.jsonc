@@ -1,0 +1,12 @@
+// @hash 5b1d0847ebba
+{
+  // How every time in the app is written.
+  // Allowed values: "browser", "h12", "h23"
+  "clock": "browser",
+  // The order of a date written with a month name.
+  // Allowed values: "browser", "mdy", "dmy"
+  "dateOrder": "browser",
+  // How a date written all in digits looks.
+  // Allowed values: "ymd", "browser", "mdy", "dmy"
+  "numericDate": "ymd"
+}

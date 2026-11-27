@@ -29,6 +29,7 @@ server barrel.
 - Description: Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand, its scope from `where`, and its facts (each instance's state, pid, since when, restarts, memory and CPU from one `ps`, the last exit, the restart policy, how liveness is known) — plus each incarnation as a run in this process. Pushes the catalog on every instance transition (start, ready, death, respawn, give-up, stop).
 - Server:
   - Uses:
+    - `fields/date/format.serverDateFormatter`
     - `infra/background/catalog.defineBackgroundKind`
     - `infra/spawn/daemon.backoffPolicy`
     - `infra/spawn/daemon.DaemonInstanceInfo`

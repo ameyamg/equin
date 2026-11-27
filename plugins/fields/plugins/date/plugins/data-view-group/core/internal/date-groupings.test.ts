@@ -4,6 +4,10 @@ import type {
   GroupBucket,
   GroupingPlanContext,
 } from "@plugins/primitives/plugins/data-view/core";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 import { buildDateGroupings } from "./date-groupings";
 
 /**
@@ -28,7 +32,10 @@ function at(year: number, month1: number, day: number, hour = 12, minute = 0) {
   return new Date(year, month1 - 1, day, hour, minute);
 }
 
-const GROUPINGS = buildDateGroupings("en-US");
+/** Month first pinned, so the labels under test hold on any host locale. */
+const GROUPINGS = buildDateGroupings(
+  createDateFormatter({ ...DEFAULT_DATE_FORMAT_PREFS, dateOrder: "mdy" }),
+);
 
 function grouping(id: string) {
   const found = GROUPINGS.find((g) => g.id === id);

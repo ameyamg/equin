@@ -105,6 +105,8 @@ not state: the same arguments give the same answer with or without it.
     - `integrations/google-maps/usage`
     - `network/live`
     - `primitives/metrics`
+- Exemptions:
+  - Exempts itself from: `date-format/no-raw-date-format` — `core/internal/wall-clock.ts` (sanctioned)
 - Core:
   - Exports (types): `WallClock`
   - Exports (values):

@@ -3,6 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { hostIoHealth } from "../../core";
 import { ioHealthVerdict } from "./io-health-verdict";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * The health report's Disk I/O row. One subscription to a small pushed value.
@@ -13,7 +14,8 @@ import { ioHealthVerdict } from "./io-health-verdict";
 export function useIoHealth(): HealthStatus {
   const result = useLive(hostIoHealth);
   const [now, setNow] = useState(() => Date.now());
-  const verdict = ioHealthVerdict(result, now);
+  const fmt = useDateFormatter();
+  const verdict = ioHealthVerdict(result, now, fmt);
   const nextChangeAt = verdict.nextChangeAt;
 
   useEffect(() => {

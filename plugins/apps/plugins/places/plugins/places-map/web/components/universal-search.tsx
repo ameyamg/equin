@@ -31,6 +31,7 @@ import { tagPath } from "@plugins/tag-tree/plugins/engine/core";
 import { placeSearchText } from "../internal/fields";
 import { looksLikeQuestion } from "../internal/question";
 import { untilDay } from "../internal/until-day";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { placeVisual } from "../internal/place-visual";
 import type { GoogleSearchState } from "../internal/use-google-search";
 import { GoogleResultCard, type GoogleHit } from "./google-result-card";
@@ -266,6 +267,7 @@ function GoogleSection({
   onOpenHit,
 }: UniversalSearchPanelProps): ReactNode {
   const [showAll, setShowAll] = useState(false);
+  const fmt = useDateFormatter();
   const hits = google.kind === "answer" ? google.hits : [];
 
   const label = (
@@ -309,8 +311,8 @@ function GoogleSection({
         ? {
             description:
               google.rung === "basic"
-                ? `Ratings paused until ${untilDay(google.resumesAt)} · this month's free Google quota is used`
-                : `Names only until ${untilDay(google.resumesAt)} · this month's free Google quota is used`,
+                ? `Ratings paused until ${untilDay(google.resumesAt, fmt)} · this month's free Google quota is used`
+                : `Names only until ${untilDay(google.resumesAt, fmt)} · this month's free Google quota is used`,
           }
         : {})}
     >

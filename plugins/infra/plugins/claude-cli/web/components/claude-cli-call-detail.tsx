@@ -23,6 +23,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { ClaudeCliCall } from "../../core";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { SLOW_CALL_MS } from "../internal/format-call-duration";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * One recorded `claude --print` call, rendered in full: a header (source,
@@ -38,6 +39,7 @@ import { SLOW_CALL_MS } from "../internal/format-call-duration";
  * inset); this is the block, not the container.
  */
 export function ClaudeCliCallDetail({ call }: { call: ClaudeCliCall }) {
+  const fmt = useDateFormatter();
   const meta = modelMeta(call.model);
   const isError = call.error !== null;
   const isSlow = call.durationMs > SLOW_CALL_MS;
@@ -72,14 +74,14 @@ export function ClaudeCliCallDetail({ call }: { call: ClaudeCliCall }) {
             >
               <Text
                 className="tabular-nums"
-                title={call.createdAt.toLocaleString()}
+                title={fmt.numeric(call.createdAt, {
+                  time: true,
+                  seconds: true,
+                })}
               >
-                {call.createdAt.toLocaleString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  second: "2-digit",
+                {fmt.dateTime(call.createdAt, {
+                  year: "never",
+                  seconds: true,
                 })}
               </Text>
             </MetaCell>

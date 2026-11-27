@@ -48,6 +48,11 @@ import {
   startOfWeek,
   toISODay,
 } from "@plugins/primitives/plugins/date-picker/core";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+  type DateFormatter,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 
 /**
  * Weeks start on Monday. **The one line to change** for a Sunday-first week —
@@ -118,25 +123,13 @@ function toDay(value: FieldValue): Date | null {
  * — with the year appended only when it differs from the year being viewed
  * from, which is the only case where it carries information.
  */
-function absoluteDayLabel(day: Date, today: Date, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    ...(day.getFullYear() === today.getFullYear() ? {} : { year: "numeric" }),
-  }).format(day);
+function absoluteDayLabel(day: Date, today: Date, fmt: DateFormatter): string {
+  return fmt.date(day, { weekday: "short", now: today });
 }
 
 /** The name of a week, by its first day: "Week of May 11" (year when it differs). */
-function weekLabel(weekStart: Date, today: Date, locale?: string): string {
-  const formatted = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    ...(weekStart.getFullYear() === today.getFullYear()
-      ? {}
-      : { year: "numeric" }),
-  }).format(weekStart);
-  return `Week of ${formatted}`;
+function weekLabel(weekStart: Date, today: Date, fmt: DateFormatter): string {
+  return `Week of ${fmt.date(weekStart, { now: today })}`;
 }
 
 /**
@@ -193,28 +186,21 @@ function planSmart(ctx: GroupingPlanContext): Bucketer {
 }
 
 /** Day: one section per calendar day, "Today"/"Tomorrow"/"Yesterday" within ±1. */
-function planDay(
-  ctx: GroupingPlanContext,
-  locale: string | undefined,
-): Bucketer {
+function planDay(ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
   const today = startOfDay(new Date(ctx.now));
   return (value) => {
     const day = toDay(value);
     if (day === null) return null;
     return {
       key: `day:${toISODay(day)}`,
-      label:
-        relativeDayLabel(day, today) ?? absoluteDayLabel(day, today, locale),
+      label: relativeDayLabel(day, today) ?? absoluteDayLabel(day, today, fmt),
       order: day.getTime(),
     };
   };
 }
 
 /** Week: one section per `WEEK_STARTS_ON`-aligned week, named by its first day. */
-function planWeek(
-  ctx: GroupingPlanContext,
-  locale: string | undefined,
-): Bucketer {
+function planWeek(ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
   const today = startOfDay(new Date(ctx.now));
   return (value) => {
     const day = toDay(value);
@@ -222,17 +208,14 @@ function planWeek(
     const weekStart = startOfWeek(day, WEEK_STARTS_ON);
     return {
       key: `week:${toISODay(weekStart)}`,
-      label: weekLabel(weekStart, today, locale),
+      label: weekLabel(weekStart, today, fmt),
       order: weekStart.getTime(),
     };
   };
 }
 
 /** Month: one section per calendar month, e.g. "May 2026". */
-function planMonth(
-  _ctx: GroupingPlanContext,
-  locale: string | undefined,
-): Bucketer {
+function planMonth(_ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
   return (value) => {
     const day = toDay(value);
     if (day === null) return null;
@@ -241,7 +224,7 @@ function planMonth(
       // `toISODay` already pads the year and month; slicing its output keeps
       // one definition of that padding rather than re-rolling it here.
       key: `month:${toISODay(monthStart).slice(0, 7)}`,
-      label: monthTitle(monthStart, locale),
+      label: monthTitle(monthStart, fmt),
       order: monthStart.getTime(),
     };
   };
@@ -262,13 +245,15 @@ function planYear(_ctx: GroupingPlanContext): Bucketer {
 }
 
 /**
- * The date type's five groupings, in menu order.
+ * The date type's five groupings, in menu order, their labels written by
+ * `fmt` — a parameter so a test pins the spelling.
  *
- * `locale` is a parameter so the label formats are pinnable in a test; the
- * shipped `dateGroupings` passes `undefined`, i.e. the viewer's own locale —
- * the same convention as `date-picker/core`'s label helpers.
+ * The shipped set writes with the DEFAULT prefs (the browser's date order and
+ * clock), not the user's settings: a grouping's `plan` is handed no formatter
+ * (`GroupingPlanContext` carries `now` only), and data-view cannot read one
+ * without every DataView suite registering the date-format config.
  */
-export function buildDateGroupings(locale?: string): FieldGrouping[] {
+export function buildDateGroupings(fmt: DateFormatter): FieldGrouping[] {
   // Every one is `monotone`: each bucket is one contiguous span of time and
   // its ordinal grows with it (a fixed granularity's is the span's start;
   // Smart's ladder is ordered past → future, each rung a span the rung before
@@ -279,23 +264,25 @@ export function buildDateGroupings(locale?: string): FieldGrouping[] {
       id: "day",
       label: "Day",
       monotone: true,
-      plan: (ctx) => planDay(ctx, locale),
+      plan: (ctx) => planDay(ctx, fmt),
     },
     {
       id: "week",
       label: "Week",
       monotone: true,
-      plan: (ctx) => planWeek(ctx, locale),
+      plan: (ctx) => planWeek(ctx, fmt),
     },
     {
       id: "month",
       label: "Month",
       monotone: true,
-      plan: (ctx) => planMonth(ctx, locale),
+      plan: (ctx) => planMonth(ctx, fmt),
     },
     { id: "year", label: "Year", monotone: true, plan: planYear },
   ];
 }
 
 /** The contributed grouping set for the `date` field type. */
-export const dateGroupings: FieldGrouping[] = buildDateGroupings();
+export const dateGroupings: FieldGrouping[] = buildDateGroupings(
+  createDateFormatter(DEFAULT_DATE_FORMAT_PREFS),
+);

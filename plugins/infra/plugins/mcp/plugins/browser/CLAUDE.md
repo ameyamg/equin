@@ -217,6 +217,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
   - Contributes: `HealthReport.Row` "Agent browser" → `AgentBrowserDetail`
   - Uses:
     - `conversations.useConversationById`
+    - `fields/date/format.useDateFormatter`
     - `network/live.rowOrStale`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`

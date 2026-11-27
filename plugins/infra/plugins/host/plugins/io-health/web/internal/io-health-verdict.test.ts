@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { Finding, IoHealth } from "../../core";
 import { ioHealthVerdict, MONITOR_STALE_MS } from "./io-health-verdict";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 
 const AT = 1_793_700_000_000;
+const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 const refetch = async () => {};
 const present = (findings: Finding[]): IoHealth => ({
   monitor: "present",
@@ -24,7 +29,9 @@ const finding = (
 
 describe("Disk I/O row verdict", () => {
   test("never green before the read lands", () => {
-    expect(ioHealthVerdict({ status: "loading", refetch }, AT).status).toEqual({
+    expect(
+      ioHealthVerdict({ status: "loading", refetch }, AT, FMT).status,
+    ).toEqual({
       state: "unknown",
     });
   });
@@ -33,6 +40,7 @@ describe("Disk I/O row verdict", () => {
     const v = ioHealthVerdict(
       { status: "ready", refetch, data: { monitor: "missing" } },
       AT,
+      FMT,
     );
     expect(v.status.state).toBe("attention");
   });
@@ -49,6 +57,7 @@ describe("Disk I/O row verdict", () => {
         },
       },
       AT,
+      FMT,
     );
     expect(v.status.state).toBe("not-applicable");
     const summary = "summary" in v.status ? v.status.summary : "";
@@ -61,12 +70,14 @@ describe("Disk I/O row verdict", () => {
     const fresh = ioHealthVerdict(
       { status: "ready", refetch, data: present([]) },
       AT + 1000,
+      FMT,
     );
     expect(fresh.status.state).toBe("ok");
     expect(fresh.nextChangeAt).toBe(AT + MONITOR_STALE_MS);
     const stale = ioHealthVerdict(
       { status: "ready", refetch, data: present([]) },
       AT + MONITOR_STALE_MS,
+      FMT,
     );
     expect(stale.status.state).toBe("attention");
     expect("summary" in stale.status && stale.status.summary).toContain(
@@ -85,6 +96,7 @@ describe("Disk I/O row verdict", () => {
         ]),
       },
       AT,
+      FMT,
     );
     expect(v.status).toEqual({
       state: "critical",
@@ -96,6 +108,7 @@ describe("Disk I/O row verdict", () => {
     const v = ioHealthVerdict(
       { status: "unavailable", message: "Needs the desktop app" },
       AT,
+      FMT,
     );
     expect(v.status).toEqual({
       state: "not-applicable",

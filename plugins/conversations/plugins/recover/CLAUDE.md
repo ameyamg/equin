@@ -13,6 +13,7 @@
     - `DebugApp.Sidebar` "Recovery"
   - Uses:
     - `apps/debug/shell.DebugApp`
+    - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useFetchEndpoint`
     - `infra/endpoints.useMachineAvailability`
     - `network/live.useLive`

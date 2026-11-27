@@ -1,5 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type * as FormatCore from "@plugins/fields/plugins/date/plugins/format/core";
+
+// The date formatter reads its prefs from config_v2, which has no
+// registration here: format with the defaults.
+vi.mock(
+  "@plugins/fields/plugins/date/plugins/format/web",
+  async (importOriginal) => {
+    const core = await vi.importActual<typeof FormatCore>(
+      "@plugins/fields/plugins/date/plugins/format/core",
+    );
+    const fmt = core.createDateFormatter(core.DEFAULT_DATE_FORMAT_PREFS);
+    return {
+      ...(await importOriginal<object>()),
+      useDateFormatter: () => fmt,
+    };
+  },
+);
 
 import { Calendar } from "../components/calendar";
 
@@ -58,7 +75,7 @@ function gridName(): string {
 
 describe("Calendar — grid structure", () => {
   beforeEach(() => {
-    render(<Calendar value={SELECTED} locale="en-US" />);
+    render(<Calendar value={SELECTED} />);
   });
 
   it("declares one grid of seven rows", () => {
@@ -102,7 +119,7 @@ describe("Calendar — grid structure", () => {
 
 describe("Calendar — selection and today", () => {
   it("marks the selected day's CELL as selected, and no other", () => {
-    render(<Calendar value={SELECTED} locale="en-US" />);
+    render(<Calendar value={SELECTED} />);
     const selected = screen
       .getAllByRole("gridcell")
       .filter((cell) => cell.getAttribute("aria-selected") === "true");
@@ -113,7 +130,7 @@ describe("Calendar — selection and today", () => {
   });
 
   it("marks today's button as the current date, and no other", () => {
-    render(<Calendar value={SELECTED} locale="en-US" />);
+    render(<Calendar value={SELECTED} />);
     const current = dayButtons().filter(
       (b) => b.getAttribute("aria-current") === "date",
     );
@@ -122,7 +139,7 @@ describe("Calendar — selection and today", () => {
   });
 
   it("no longer presents days as pressed toggles", () => {
-    render(<Calendar value={SELECTED} locale="en-US" />);
+    render(<Calendar value={SELECTED} />);
     expect(
       dayButtons().filter((b) => b.hasAttribute("aria-pressed")),
     ).toHaveLength(0);
@@ -131,21 +148,21 @@ describe("Calendar — selection and today", () => {
 
 describe("Calendar — roving tab stop", () => {
   it("puts exactly one day in the tab order — the selected one", () => {
-    render(<Calendar value={SELECTED} locale="en-US" />);
+    render(<Calendar value={SELECTED} />);
     const tabbable = dayButtons().filter((b) => b.tabIndex === 0);
     expect(tabbable).toHaveLength(1);
     expect(tabbable[0]).toBe(dayButton("2026-08-14"));
   });
 
   it("falls back to today when nothing is selected", () => {
-    render(<Calendar locale="en-US" />);
+    render(<Calendar />);
     const tabbable = dayButtons().filter((b) => b.tabIndex === 0);
     expect(tabbable).toHaveLength(1);
     expect(tabbable[0]).toBe(dayButton("2026-08-20"));
   });
 
   it("follows a click, so the next arrow key walks from the clicked day", () => {
-    render(<Calendar value={SELECTED} locale="en-US" />);
+    render(<Calendar value={SELECTED} />);
     fireEvent.click(dayButton("2026-08-26"));
     expect(dayButton("2026-08-26").tabIndex).toBe(0);
     expect(dayButton("2026-08-14").tabIndex).toBe(-1);
@@ -156,11 +173,7 @@ describe("Calendar — roving tab stop", () => {
     // then disables the 1st. A tabIndex=0 there would drop the whole calendar
     // out of the tab order, since a disabled button is not focusable.
     render(
-      <Calendar
-        month={new Date(2026, 8, 1)}
-        min={new Date(2026, 8, 10)}
-        locale="en-US"
-      />,
+      <Calendar month={new Date(2026, 8, 1)} min={new Date(2026, 8, 10)} />,
     );
     const tabbable = dayButtons().filter((b) => b.tabIndex === 0);
     expect(tabbable).toHaveLength(1);
@@ -177,7 +190,7 @@ describe("Calendar — keyboard navigation", () => {
    */
   function renderAndFocus(iso: string) {
     const [y, m, d] = iso.split("-").map(Number);
-    render(<Calendar value={new Date(y!, m! - 1, d!)} locale="en-US" />);
+    render(<Calendar value={new Date(y!, m! - 1, d!)} />);
     dayButton(iso).focus();
     expect(focusedDay()).toBe(iso);
   }
@@ -226,9 +239,7 @@ describe("Calendar — keyboard navigation", () => {
   });
 
   it("refuses a move past `min` and leaves focus where it was", () => {
-    render(
-      <Calendar value={SELECTED} min={new Date(2026, 7, 14)} locale="en-US" />,
-    );
+    render(<Calendar value={SELECTED} min={new Date(2026, 7, 14)} />);
     dayButton("2026-08-14").focus();
     fireEvent.keyDown(document.activeElement!, { key: "ArrowLeft" });
     expect(focusedDay()).toBe("2026-08-14");
@@ -257,7 +268,7 @@ describe("Calendar — adjacent-month cells", () => {
    * is the test that keeps it that way.
    */
   it("labels leading and trailing cells with their OWN month", () => {
-    render(<Calendar value={SELECTED} locale="en-US" />);
+    render(<Calendar value={SELECTED} />);
     // First cell: Sunday July 26 2026 — July, not August 26.
     expect(dayButtons()[0]!.getAttribute("data-day")).toBe("2026-07-26");
     // Last cell: Saturday September 5 2026.
@@ -270,7 +281,7 @@ describe("Calendar — adjacent-month cells", () => {
 
   it("selects the day a trailing cell SHOWS, not the same number in the viewed month", () => {
     const onSelect = vi.fn();
-    render(<Calendar value={SELECTED} onSelect={onSelect} locale="en-US" />);
+    render(<Calendar value={SELECTED} onSelect={onSelect} />);
     fireEvent.click(dayButton("2026-09-03"));
 
     expect(onSelect).toHaveBeenCalledTimes(1);
@@ -285,7 +296,7 @@ describe("Calendar — adjacent-month cells", () => {
 
   it("selects the day a leading cell SHOWS", () => {
     const onSelect = vi.fn();
-    render(<Calendar value={SELECTED} onSelect={onSelect} locale="en-US" />);
+    render(<Calendar value={SELECTED} onSelect={onSelect} />);
     fireEvent.click(dayButton("2026-07-28"));
 
     const picked = onSelect.mock.calls[0]![0] as Date;

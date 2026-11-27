@@ -3,6 +3,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * What the review shows: the working tree, or one push — by its id; a section
@@ -47,15 +48,6 @@ export function groupPushes(rows: Push[]): PushGroup[] {
   return [...byId.values()].sort((a, b) => +b.createdAt - +a.createdAt);
 }
 
-function formatDate(value: Date): string {
-  return value.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export function SourceTabs({
   source,
   onChange,
@@ -66,6 +58,7 @@ export function SourceTabs({
   /** One tab per push; `"pending"` while the attempt's pushes are not known. */
   pushGroups: PushGroup[] | "pending";
 }) {
+  const fmt = useDateFormatter();
   return (
     <Scroll
       axis="x"
@@ -88,7 +81,7 @@ export function SourceTabs({
               key={g.pushId}
               active={source.kind === "push" && source.pushId === g.pushId}
               onClick={() => onChange({ kind: "push", pushId: g.pushId })}
-              tooltip={`${g.message} · ${formatDate(g.createdAt)}`}
+              tooltip={`${g.message} · ${fmt.dateTime(g.createdAt, { year: "never" })}`}
             >
               <span className="max-w-[24ch] truncate">{g.message}</span>
               {g.count > 1 && (

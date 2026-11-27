@@ -4,6 +4,7 @@ import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { dbLockWatch } from "@plugins/database/plugins/lock-watch/core";
 import { dbQueryDeadlines } from "../../core";
 import { databaseVerdict } from "./database-health";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * The health report's Database row. Cheap: two subscriptions to small pushed
@@ -27,7 +28,8 @@ export function useDatabaseHealth(): HealthStatus {
   const result = useLive(dbQueryDeadlines);
   const lockWatch = useLive(dbLockWatch);
   const [now, setNow] = useState(() => Date.now());
-  const verdict = databaseVerdict(result, lockWatch, now);
+  const fmt = useDateFormatter();
+  const verdict = databaseVerdict(result, lockWatch, now, fmt);
   const nextChangeAt = verdict.nextChangeAt;
 
   useEffect(() => {

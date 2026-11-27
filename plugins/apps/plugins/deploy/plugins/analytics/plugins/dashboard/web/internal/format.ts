@@ -1,3 +1,4 @@
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import {
   NONE_VALUE,
   parseEventPropValue,
@@ -54,20 +55,23 @@ export function previousPeriodLabel(range: AnalyticsRange): string {
 }
 
 /** An x-axis tick for one series bucket (all buckets are UTC). */
-export function formatBucket(bucket: string, granularity: Granularity): string {
+export function formatBucket(
+  bucket: string,
+  granularity: Granularity,
+  fmt: DateFormatter,
+): string {
   switch (granularity) {
     case "hour":
-      return `${bucket.slice(11, 13)}:00`;
+      return fmt.time(new Date(bucket), { timeZone: "UTC" });
     case "day":
-      return new Date(`${bucket}T00:00:00Z`).toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
+      return fmt.date(new Date(`${bucket}T00:00:00Z`), {
+        year: "never",
         timeZone: "UTC",
       });
     case "month":
-      return new Date(`${bucket}T00:00:00Z`).toLocaleDateString(undefined, {
-        month: "short",
-        year: "2-digit",
+      return fmt.date(new Date(`${bucket}T00:00:00Z`), {
+        day: false,
+        year: "always",
         timeZone: "UTC",
       });
   }

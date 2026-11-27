@@ -3,6 +3,8 @@
  * so both (and their tests) read one answer.
  */
 
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+
 /** The avatar palette: six data colours, picked per sender (the prototype's `--k1…6`). */
 const AVATAR_COLORS = [
   "#d4854f",
@@ -56,23 +58,12 @@ export function fullName(p: { name: string | null; address: string }): string {
  * today, "Yesterday", the weekday within the week, else the day and month
  * (and the year when it is not this one).
  */
-export function listTime(at: Date, now: Date, locale?: string): string {
+export function listTime(at: Date, now: Date, fmt: DateFormatter): string {
   const day = (d: Date) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round((day(now) - day(at)) / 86_400_000);
-  if (days <= 0) {
-    return new Intl.DateTimeFormat(locale, {
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(at);
-  }
+  if (days <= 0) return fmt.time(at);
   if (days === 1) return "Yesterday";
-  if (days < 7) {
-    return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(at);
-  }
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    ...(at.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
-  }).format(at);
+  if (days < 7) return fmt.weekday(at, "short");
+  return fmt.date(at, { now });
 }

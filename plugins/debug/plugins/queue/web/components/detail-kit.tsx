@@ -16,6 +16,7 @@ import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { formatAbsolute, formatWhen } from "../internal/format";
 
 // The detail panes' shared vocabulary, after the Claude CLI call detail
@@ -105,10 +106,11 @@ export function IdValue({ value }: { value: string }) {
 /** An instant in a meta cell: the absolute time, with how long ago (or until) as the note. */
 export function TimeCell({ label, date }: { label: string; date: Date }) {
   const now = useNow(10_000);
+  const fmt = useDateFormatter();
   return (
     <MetaCell label={label} note={formatWhen(date, now)}>
       <Text className="tabular-nums" title={date.toISOString()}>
-        {formatAbsolute(date)}
+        {formatAbsolute(date, fmt)}
       </Text>
     </MetaCell>
   );

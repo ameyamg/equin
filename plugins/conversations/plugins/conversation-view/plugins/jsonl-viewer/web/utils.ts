@@ -1,11 +1,13 @@
-export function formatAbsoluteTime(d: Date): string {
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+
+export function formatAbsoluteTime(fmt: DateFormatter, d: Date): string {
+  return fmt.time(d, { seconds: true });
 }
 
-export function formatTime(iso: string): string {
+export function formatTime(fmt: DateFormatter, iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return formatAbsoluteTime(d);
+  return formatAbsoluteTime(fmt, d);
 }
 
 export function formatTokenCount(n: number): string {

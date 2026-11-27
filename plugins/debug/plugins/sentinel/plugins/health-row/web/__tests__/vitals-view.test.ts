@@ -9,7 +9,13 @@ import type {
   SentinelVitalsRecord,
   SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 import { toneOf, vitalsView } from "../internal/vitals-view";
+
+const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 const WALL = new Date(2026, 8, 17, 18, 10).getTime();
 const GIB = 1024 ** 3;
@@ -59,7 +65,7 @@ describe("toneOf", () => {
 
 describe("vitalsView", () => {
   it("writes each signal as 'X of LIMIT' in the mock's units, in the fixed order", () => {
-    const view = vitalsView(vitals(), true, WALL + 3_000);
+    const view = vitalsView(vitals(), true, WALL + 3_000, FMT);
     expect(view.signals.map((s) => s.label)).toEqual([
       "Memory compression",
       "Waiting database locks",
@@ -93,6 +99,7 @@ describe("vitalsView", () => {
       }),
       true,
       WALL,
+      FMT,
     );
     expect(line(view, "locksWaiting")).toMatchObject({
       valueText: "—",
@@ -103,7 +110,7 @@ describe("vitalsView", () => {
   });
 
   it("the glance gives load per core, memory and disk free, and builds", () => {
-    const view = vitalsView(vitals(), true, WALL);
+    const view = vitalsView(vitals(), true, WALL, FMT);
     expect(view.glance.map((f) => `${f.before}${f.value}${f.after}`)).toEqual([
       "Load 0.26 per core",
       "9.4 GB memory available",
@@ -127,6 +134,7 @@ describe("vitalsView", () => {
       }),
       true,
       WALL,
+      FMT,
     );
     expect(low.glance.map((f) => f.tone)).toEqual([
       "neutral",
@@ -154,6 +162,7 @@ describe("vitalsView", () => {
       }),
       true,
       WALL,
+      FMT,
     );
     const disk = filling.glance.find((f) => f.key === "disk");
     expect(disk && `${disk.value}${disk.after}`).toBe(
@@ -172,6 +181,7 @@ describe("vitalsView", () => {
       }),
       true,
       WALL,
+      FMT,
     );
     expect(unread.glance.find((f) => f.key === "disk")?.value).toBe("— GB");
   });
@@ -185,6 +195,7 @@ describe("vitalsView", () => {
       }),
       true,
       WALL,
+      FMT,
     );
     expect(view.banner).toEqual({
       kind: "tripped",
@@ -197,6 +208,7 @@ describe("vitalsView", () => {
       }),
       true,
       WALL,
+      FMT,
     );
     expect(three.banner?.text).toBe(
       "Tripped by memory compression, waiting database locks and slow worktrees",
@@ -204,11 +216,12 @@ describe("vitalsView", () => {
   });
 
   it("is stale past three ticks without a new reading, and says how old", () => {
-    expect(vitalsView(vitals(), true, WALL + 15_000).stale).toBe(false);
+    expect(vitalsView(vitals(), true, WALL + 15_000, FMT).stale).toBe(false);
     const view = vitalsView(
       vitals({ tripped: true, elevated: ["decompressionsPerSec"] }),
       true,
       WALL + 120_000,
+      FMT,
     );
     expect(view.stale).toBe(true);
     // A stale trip state is not claimed as live.
@@ -220,7 +233,7 @@ describe("vitalsView", () => {
   });
 
   it("is stale when the reading is not from the watcher running now", () => {
-    const view = vitalsView(vitals(), false, WALL + 1_000);
+    const view = vitalsView(vitals(), false, WALL + 1_000, FMT);
     expect(view.stale).toBe(true);
     expect(view.banner?.kind).toBe("stale");
     expect(view.banner?.text).toContain("not running now");

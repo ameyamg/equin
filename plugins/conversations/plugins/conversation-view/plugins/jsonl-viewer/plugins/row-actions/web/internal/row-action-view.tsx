@@ -1,6 +1,7 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { RowAction, RowActionElement } from "../slots";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * Draws one row action — the ONLY place a transcript row action gets a look.
@@ -16,17 +17,12 @@ export function rowAction(action: RowAction | null): RowActionElement | null {
 }
 
 function RowActionView({ action }: { action: RowAction }) {
+  const fmt = useDateFormatter();
   if (action.kind === "time") {
     const date = new Date(action.at);
     if (Number.isNaN(date.getTime())) return null;
     return (
-      <span
-        title={date.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })}
-      >
+      <span title={fmt.time(date, { seconds: true })}>
         <RelativeTime date={date} className="tabular-nums text-2xs" />
       </span>
     );

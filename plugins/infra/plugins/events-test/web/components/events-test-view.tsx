@@ -46,6 +46,7 @@ import {
 } from "@plugins/infra/plugins/events/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 const boltIcon = symbol("bolt");
 const deleteIcon = symbol("delete");
@@ -488,6 +489,15 @@ const LOG_VIEW = defineDataView("events-test.log");
 /** A log entry with the key it is listed by (one job may log twice). */
 type LogRow = LogEntry & { key: string };
 
+function FiredAt({ at }: { at: LogRow["firedAt"] }) {
+  const fmt = useDateFormatter();
+  return (
+    <Text as="span" variant="caption" tone="muted">
+      {fmt.time(new Date(at), { seconds: true })}
+    </Text>
+  );
+}
+
 const LOG_FIELDS: FieldDef<LogRow>[] = [
   {
     id: "label",
@@ -532,11 +542,7 @@ const LOG_FIELDS: FieldDef<LogRow>[] = [
     type: "date",
     width: "6rem",
     value: (e) => new Date(e.firedAt),
-    cell: (e) => (
-      <Text as="span" variant="caption" tone="muted">
-        {new Date(e.firedAt).toLocaleTimeString()}
-      </Text>
-    ),
+    cell: (e) => <FiredAt at={e.firedAt} />,
   },
   {
     id: "jobId",

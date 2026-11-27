@@ -7,6 +7,7 @@
 - Description: Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat / raw+numstat parsers, the runGit invocation and commit row types for reuse across plugins.
 - Web:
   - Uses:
+    - `fields/date/format.useDateFormatter`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`

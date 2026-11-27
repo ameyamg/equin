@@ -24,6 +24,7 @@ import {
   type ResumeStoppedResult,
 } from "../../core";
 import { formatResets } from "../internal/claude-usage";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // The conversations an API error stopped (a usage limit, a server error, a
 // lost connection), in the Claude Code row: how many and of which kind, the
@@ -78,6 +79,7 @@ export function ErrorStoppedBanner({
   usage: ClaudeUsageRead;
   now: number;
 }): ReactElement | null {
+  const fmt = useDateFormatter();
   const openPane = useOpenPane();
   const fetchEndpoint = useFetchEndpoint();
   const [failed, setFailed] = useState<{ id: string; message: string }[]>([]);
@@ -126,7 +128,7 @@ export function ErrorStoppedBanner({
           {limited && reached ? (
             <Text variant="caption" tone="muted">
               {accountName} is at its limit ·{" "}
-              {formatResets(reached.id, reached.resetsAt, now)}
+              {formatResets(fmt, reached.id, reached.resetsAt, now)}
             </Text>
           ) : null}
           <Fill />

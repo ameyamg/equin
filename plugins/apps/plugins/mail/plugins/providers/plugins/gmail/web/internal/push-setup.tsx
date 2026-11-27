@@ -7,6 +7,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   foldResource,
   ResourceErrorInline,
@@ -262,6 +263,7 @@ function SetupOutcome({
 
 function PushOn({ status }: { status: GmailPushStatus }): ReactElement {
   const fetchEndpoint = useFetchEndpoint();
+  const fmt = useDateFormatter();
   const [error, setError] = useState<string | null>(null);
   const setup = status.setup!;
   const s = status.state;
@@ -279,8 +281,10 @@ function PushOn({ status }: { status: GmailPushStatus }): ReactElement {
         <StepDone>Instant updates on — changes arrive as they happen</StepDone>
       ) : s.kind === "down" ? (
         <Text as="p" variant="caption" className="text-destructive">
-          Not delivering since {new Date(s.since).toLocaleString()}: {s.message}
-          . Mail checks every 30 seconds meanwhile; this reconnects by itself.
+          Not delivering since{" "}
+          {fmt.numeric(new Date(s.since), { time: true, seconds: true })}:{" "}
+          {s.message}. Mail checks every 30 seconds meanwhile; this reconnects
+          by itself.
         </Text>
       ) : (
         <Text as="p" variant="caption" className="text-muted-foreground">
@@ -292,7 +296,7 @@ function PushOn({ status }: { status: GmailPushStatus }): ReactElement {
           Project {setup.projectId} · subscription{" "}
           {setup.subscription.split("/").at(-1)}
           {setup.watchExpiresAt
-            ? ` · Gmail watch renews before ${new Date(setup.watchExpiresAt).toLocaleDateString()}`
+            ? ` · Gmail watch renews before ${fmt.numeric(new Date(setup.watchExpiresAt))}`
             : ""}
         </Text>
       </Stack>

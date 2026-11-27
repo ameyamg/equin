@@ -194,7 +194,7 @@ what moved). Design §5, task 8.
   - Contributes:
     - `MailProviderUi.Connect` "gmail" → `GmailConnect`
     - `Auth.Integration` "Gmail instant updates"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×5
     - `primitives/setup-steps` ×5
     - `integrations/google-pubsub` ×3
@@ -202,6 +202,7 @@ what moved). Design §5, task 8.
     - `primitives/css/ui-kit` ×2
     - `apps/mail/provider.MailProviderUi`
     - `auth.Auth`
+    - `fields/date/format.useDateFormatter`
     - `integrations/gmail.GmailAccessEmptyState`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`

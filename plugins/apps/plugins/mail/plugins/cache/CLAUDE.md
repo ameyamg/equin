@@ -292,6 +292,7 @@ offline, the byte budget, prefetch (background priority, neighbours first).
     - `HealthReport.Row` "Mail"
   - Uses:
     - `config_v2.ConfigV2`
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `shell/health-report.HealthReport`
 - Server:

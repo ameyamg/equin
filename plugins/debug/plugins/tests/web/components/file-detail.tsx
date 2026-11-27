@@ -23,6 +23,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   runTestsNow,
@@ -261,14 +262,20 @@ function FailureCard({
   );
 }
 
+/** How long ago, with the full timestamp on hover. */
+function FinishedAt({ date }: { date: Date }): ReactElement {
+  const fmt = useDateFormatter();
+  return (
+    <Text tone="muted" title={fmt.numeric(date, { time: true, seconds: true })}>
+      <RelativeTime date={date} />
+    </Text>
+  );
+}
+
 const runOverrides = fieldOverrides(testFileRuns, {
   path: { visible: false },
   runner: { visible: false },
   finishedAt: {
-    cell: (r) => (
-      <Text tone="muted" title={r.finishedAt.toLocaleString()}>
-        <RelativeTime date={r.finishedAt} />
-      </Text>
-    ),
+    cell: (r) => <FinishedAt date={r.finishedAt} />,
   },
 });

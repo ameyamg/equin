@@ -12,6 +12,7 @@
   - Uses:
     - `conversations/conversation-ui/row.ConversationRow`
     - `conversations/conversation-view.useConversationOpener`
+    - `fields/date/format.useDateFormatter`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `network/live/live-state.ResourceErrorInline`

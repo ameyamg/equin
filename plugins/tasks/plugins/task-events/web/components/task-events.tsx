@@ -23,15 +23,12 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { NewTabGlyph } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import type { ReactNode } from "react";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
-function formatDate(value: Date | string): string {
+function formatDate(fmt: DateFormatter, value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return fmt.dateTime(d, { year: "never" });
 }
 
 function PushRow({
@@ -41,6 +38,7 @@ function PushRow({
   push: Push;
   githubBase: string | null;
 }) {
+  const fmt = useDateFormatter();
   const short = push.sha.slice(0, 7);
   const url = githubBase ? `${githubBase}/commit/${push.sha}` : null;
   return (
@@ -71,7 +69,7 @@ function PushRow({
           tone="muted"
           className={cn(rigidClass(), "tabular-nums")}
         >
-          {formatDate(push.createdAt)}
+          {formatDate(fmt, push.createdAt)}
         </Text>
         {url ? (
           <NewTabGlyph
@@ -210,6 +208,7 @@ export function TaskPushes({ taskId }: { taskId: string }) {
 export function TaskAttempts({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
   const opener = useConversationOpener();
+  const fmt = useDateFormatter();
 
   if (attempts.status === "loading") return <Loading variant="rows" />;
   if (attempts.status === "error") {
@@ -254,7 +253,7 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
                 tone="muted"
                 className={cn(rigidClass(), "tabular-nums")}
               >
-                {formatDate(attempt.createdAt)}
+                {formatDate(fmt, attempt.createdAt)}
               </Text>
             </Line>
             {convs.length === 0 ? (

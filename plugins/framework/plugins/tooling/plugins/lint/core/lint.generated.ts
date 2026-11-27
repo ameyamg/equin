@@ -27,6 +27,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/sql-column", id: "database.sql-column", loader: () => import("@plugins/database/plugins/sql-column/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-projection", id: "database.sql-projection", loader: () => import("@plugins/database/plugins/sql-projection/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-rows", id: "database.sql-rows", loader: () => import("@plugins/database/plugins/sql-rows/lint"), dependsOn: [] },
+  { pluginPath: "fields/plugins/date/plugins/format", id: "fields.date.format", loader: () => import("@plugins/fields/plugins/date/plugins/format/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/hook-value", id: "framework.hook-value", loader: () => import("@plugins/framework/plugins/hook-value/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/principal", id: "framework.principal", loader: () => import("@plugins/framework/plugins/principal/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/server-core", id: "framework.server-core", loader: () => import("@plugins/framework/plugins/server-core/lint"), dependsOn: [] },

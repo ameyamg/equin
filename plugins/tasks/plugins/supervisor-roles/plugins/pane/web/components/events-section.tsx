@@ -57,6 +57,7 @@ import {
 } from "@plugins/tasks/plugins/supervisor-roles/plugins/events/core";
 import { useRoles } from "../internal/reads";
 import { SettingRow } from "./setting-row";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const MESSAGES_VIEW = defineDataView("tasks.supervisor-roles.event-messages");
@@ -113,9 +114,6 @@ interface MessageRow {
 }
 
 const NO_ROWS: MessageRow[] = [];
-
-const clock = (d: Date) =>
-  d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
 /**
  * A role's events: the streams sent to it (each narrowed to some kinds), how
@@ -192,6 +190,7 @@ function EventsBody({
   pending: EventLine[];
   messages: MessageRow[];
 }): ReactElement {
+  const fmt = useDateFormatter();
   const fetchEndpoint = useFetchEndpoint();
   const canSend = useMachineAvailability(flushRoleEvents).available;
   const mine = routes.filter((r) => r.roleId === role.id);
@@ -245,7 +244,7 @@ function EventsBody({
         <Fill />
         {has && waiting > 0 ? (
           <Text variant="caption" tone="muted">
-            {`Next message at ${clock(next)} · ${waiting} waiting`}
+            {`Next message at ${fmt.time(next)} · ${waiting} waiting`}
           </Text>
         ) : null}
       </Stack>
@@ -261,7 +260,7 @@ function EventsBody({
               <Stack gap="none">
                 <Text variant="label">{`${waiting} ${waiting === 1 ? "event" : "events"} gathering`}</Text>
                 <Text variant="caption" tone="muted">
-                  {`Sent as one message at ${clock(next)}${pending.length > 1 && pending[0] ? ` · the most frequent: ${pending[0].kind} · ${pending[0].title}` : ""}`}
+                  {`Sent as one message at ${fmt.time(next)}${pending.length > 1 && pending[0] ? ` · the most frequent: ${pending[0].kind} · ${pending[0].title}` : ""}`}
                 </Text>
               </Stack>
             </Fill>
@@ -589,6 +588,7 @@ function MessagesView({ rows }: { rows: MessageRow[] }): ReactElement {
 
 /** A message's lead line, the rest of its lines in the tooltip. */
 function MessageCell({ row }: { row: MessageRow }): ReactElement {
+  const fmt = useDateFormatter();
   const [first, ...rest] = row.lines;
   return (
     <Inline
@@ -612,7 +612,7 @@ function MessageCell({ row }: { row: MessageRow }): ReactElement {
       ) : null}
       {row.outcome !== "gathering" ? (
         <Text variant="caption" tone="muted" className={rigidClass()}>
-          {clock(row.at)}
+          {fmt.time(row.at)}
         </Text>
       ) : null}
     </Inline>

@@ -102,6 +102,7 @@ own hooks before the gate. A copy action is `useCopyAction(text | null, label)`.
     - `JsonlRowActions.Item` ← `conversations.conversation-view.jsonl-viewer.user-text`
     - `JsonlRowActions.Item` ← `conversations.conversation-view.rewind`
   - Uses:
+    - `fields/date/format.useDateFormatter`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/icon-button.IconButton`
     - `primitives/relative-time.RelativeTime`

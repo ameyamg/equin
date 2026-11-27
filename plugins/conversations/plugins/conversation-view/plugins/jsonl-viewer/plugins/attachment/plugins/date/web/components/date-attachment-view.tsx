@@ -2,6 +2,8 @@ import { EventLine } from "@plugins/conversations/plugins/conversation-view/plug
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 const calendarTodayIcon = symbol("calendar-today");
 const eventIcon = symbol("event");
@@ -51,19 +53,14 @@ function readDateNotice(attachment: unknown): DateNotice {
  *  hand so a bare `new Date("2026-06-14")` (UTC midnight) can't shift the day
  *  backwards in a negative-offset timezone. Falls back to the raw string when
  *  the input isn't a well-formed calendar date. */
-function formatCalendarDate(iso: string): string {
+function formatCalendarDate(fmt: DateFormatter, iso: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!match) return iso;
   const [, year, month, day] = match;
-  return new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-  ).toLocaleDateString(undefined, {
+  return fmt.date(new Date(Number(year), Number(month) - 1, Number(day)), {
     weekday: "long",
-    year: "numeric",
     month: "long",
-    day: "numeric",
+    year: "always",
   });
 }
 
@@ -80,8 +77,9 @@ function formatCalendarDate(iso: string): string {
  * orients them. There is nothing else to show, so there is nothing to expand.
  */
 export function DateAttachmentView({ event }: AttachmentRendererProps) {
+  const fmt = useDateFormatter();
   const { iso, changed } = readDateNotice(event.attachment);
-  const formatted = formatCalendarDate(iso);
+  const formatted = formatCalendarDate(fmt, iso);
 
   return (
     <EventLine

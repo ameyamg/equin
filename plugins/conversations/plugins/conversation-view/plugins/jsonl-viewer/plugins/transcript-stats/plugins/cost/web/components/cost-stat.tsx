@@ -16,6 +16,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { formatUsd } from "./format-usd";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * What the session had cost at API prices by the row the reader is on: the
@@ -107,6 +108,7 @@ function CostAt({
   conversationId: string;
   at: string;
 }) {
+  const fmt = useDateFormatter();
   const instant = Date.parse(at);
   const read = useLive(conversationCostByHour, {
     id: conversationId,
@@ -147,10 +149,7 @@ function CostAt({
             { label: "Cost", value: formatUsd(shown.costUsd, "exact") },
             {
               label: "By",
-              value: new Date(shown.at).toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              }),
+              value: fmt.dateTime(new Date(shown.at), { year: "always" }),
             },
             ...(unpriced
               ? [

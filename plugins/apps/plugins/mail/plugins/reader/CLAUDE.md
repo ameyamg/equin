@@ -101,12 +101,13 @@ the painted body, prefetched vs cold.
     - `GET /api/mail/inline/:sig`
     - `GET /api/mail/attachment/:threadId/:messageId/:partId`
 - Web:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/fill` ×2
     - `primitives/css/rigid` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/mail/provider.MailProviderConnect`
+    - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useAssetUrl`
     - `network/live/live-state.ResourceError`
     - `network/live.useLive`

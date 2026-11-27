@@ -37,7 +37,7 @@
     - `trigger-actions` "enabled" → `TriggerEnabledAction`
     - `trigger-actions` "delete" → `DeleteTriggerAction`
     - `DebugApp.Sidebar` "Queue"
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `network/live/live-state` ×6
     - `network/live` ×5
@@ -47,6 +47,7 @@
     - `primitives/css/ui-kit` ×2
     - `apps/debug/shell.DebugApp`
     - `debug/background.backgroundEntryPane`
+    - `fields/date/format.useDateFormatter`
     - `infra/background/catalog.useBackgroundEntry`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`

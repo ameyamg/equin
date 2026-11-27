@@ -85,7 +85,7 @@ search, count, groups, `:rows`, an unscoped read refused).
     - `SiteVisitors.Note` "new-messages" → `NewMessagesNote`
     - `SiteTabs.View` "Messages" → `MessagesSection`
     - `SiteOverview.Card` "messages" → `MessagesCard`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×8
     - `primitives/data-view` ×4
     - `apps/deploy/host-query` ×3
@@ -94,6 +94,7 @@ search, count, groups, `:rows`, an unscoped read refused).
     - `apps/deploy/analytics/dashboard.SiteVisitors`
     - `apps/deploy/box-link/site-row.SiteLiveAside`
     - `apps/deploy/site-mirror/pull.MirrorFreshness`
+    - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useEndpointMutation`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/card.Card`

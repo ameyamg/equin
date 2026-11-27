@@ -4,6 +4,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -211,6 +212,7 @@ function MessageDetail({
   message: SiteMessageRow;
   onClose: () => void;
 }): ReactNode {
+  const fmt = useDateFormatter();
   return (
     <Card>
       <Stack gap="md">
@@ -235,7 +237,9 @@ function MessageDetail({
         </Text>
         <Stack gap="2xs">
           <Text variant="caption" tone="muted">
-            Received {message.createdAt.toLocaleString()} on {message.host}
+            Received{" "}
+            {fmt.numeric(message.createdAt, { time: true, seconds: true })} on{" "}
+            {message.host}
             {message.page}
           </Text>
           {message.spamReason && (

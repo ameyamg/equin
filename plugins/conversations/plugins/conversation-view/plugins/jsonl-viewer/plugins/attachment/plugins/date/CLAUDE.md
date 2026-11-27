@@ -35,6 +35,7 @@ card — a `CollapsibleCard` whose body only restates its label is noise.
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.EventLine`
     - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
+    - `fields/date/format.useDateFormatter`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

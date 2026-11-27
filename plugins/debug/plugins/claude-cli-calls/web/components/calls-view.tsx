@@ -8,6 +8,7 @@ import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { modelMeta } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -78,6 +79,16 @@ function contextSummary(context: Record<string, unknown> | null): string {
 // types and filters). `prompt`, `output` and `error` are filter-only text
 // columns ("Prompt contains …", "Error is not empty"), hidden by default — the
 // summary column already shows the output / error.
+/** How long ago, with the full timestamp on hover. */
+function CreatedAt({ date }: { date: Date }) {
+  const fmt = useDateFormatter();
+  return (
+    <Text tone="muted" title={fmt.numeric(date, { time: true, seconds: true })}>
+      <RelativeTime date={date} />
+    </Text>
+  );
+}
+
 const overrides = fieldOverrides(claudeCliCalls, {
   status: {
     header: false,
@@ -91,11 +102,7 @@ const overrides = fieldOverrides(claudeCliCalls, {
     width: "2rem",
   },
   createdAt: {
-    cell: (r) => (
-      <Text tone="muted" title={r.createdAt.toLocaleString()}>
-        <RelativeTime date={r.createdAt} />
-      </Text>
-    ),
+    cell: (r) => <CreatedAt date={r.createdAt} />,
     width: "7rem",
   },
   sourceName: {

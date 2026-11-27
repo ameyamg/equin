@@ -1,3 +1,5 @@
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+
 /** A coarse span (`12s`, `4m`, `3h`, `2d`) for "in …" / "… ago". */
 function span(ms: number): string {
   const s = Math.round(Math.abs(ms) / 1000);
@@ -21,15 +23,9 @@ export function formatWhen(date: Date, now: number): string {
   return `${span(delta)} ago`;
 }
 
-/** An absolute timestamp, to the second, in the viewer's locale. */
-export function formatAbsolute(date: Date): string {
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+/** An absolute timestamp, to the second, in the user's date and clock settings. */
+export function formatAbsolute(date: Date, fmt: DateFormatter): string {
+  return fmt.dateTime(date, { year: "never", seconds: true });
 }
 
 /** The first line of a (possibly multi-line) error, for a one-line cell. */

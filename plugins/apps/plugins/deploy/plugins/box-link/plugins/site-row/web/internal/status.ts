@@ -1,3 +1,4 @@
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { LinkRefusal } from "@plugins/apps/plugins/deploy/plugins/box-link/core";
 import {
@@ -12,12 +13,9 @@ export function siteTitle(site: SiteHealth): string {
   return site.hostname ?? site.compositionId;
 }
 
-/** "7:01 PM" — a moment of today, on this computer's clock and locale. */
-export function clockTime(at: number | string): string {
-  return new Date(at).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+/** "7:01 PM" / "19:01" — a moment of today, in the user's clock. */
+function clockTime(at: number | string, fmt: DateFormatter): string {
+  return fmt.time(new Date(at));
 }
 
 function plural(n: number, one: string): string {
@@ -84,7 +82,7 @@ const REFUSAL_FIX: Record<LinkRefusal, string> = {
  * A real box seen from a worktree (`main-only`) has no link state here: the
  * line says what the runs and the running commit do ("Linked from main").
  */
-export function siteStatus(site: SiteHealth): HealthStatus {
+export function siteStatus(site: SiteHealth, fmt: DateFormatter): HealthStatus {
   const { run } = site;
   const linkState =
     site.link.kind === "linked" ? site.link.link.state : undefined;
@@ -97,7 +95,7 @@ export function siteStatus(site: SiteHealth): HealthStatus {
     return {
       state: "info",
       transitioning: true,
-      summary: `Restarting · since ${clockTime(run.startedAt)}`,
+      summary: `Restarting · since ${clockTime(run.startedAt, fmt)}`,
     };
   }
   // What the box itself says comes first: a site that is not answering is
@@ -108,12 +106,12 @@ export function siteStatus(site: SiteHealth): HealthStatus {
     case "down":
       return {
         state: "critical",
-        summary: `Not answering since ${clockTime(since ?? Date.now())}`,
+        summary: `Not answering since ${clockTime(since ?? Date.now(), fmt)}`,
       };
     case "unreachable":
       return {
         state: "critical",
-        summary: `Unreachable since ${clockTime(since ?? Date.now())}`,
+        summary: `Unreachable since ${clockTime(since ?? Date.now(), fmt)}`,
       };
     case "refused":
       return {
@@ -139,7 +137,7 @@ export function siteStatus(site: SiteHealth): HealthStatus {
     return {
       state: "info",
       transitioning: true,
-      summary: `Deploying · since ${clockTime(run.startedAt)}`,
+      summary: `Deploying · since ${clockTime(run.startedAt, fmt)}`,
     };
   }
   // The box answers (the link is live), but visitors may not reach it: the
@@ -149,7 +147,7 @@ export function siteStatus(site: SiteHealth): HealthStatus {
     return publicPath.misses >= PUBLIC_PATH_DOWN_MISSES
       ? {
           state: "critical",
-          summary: `Public site down since ${clockTime(publicPath.since)}`,
+          summary: `Public site down since ${clockTime(publicPath.since, fmt)}`,
         }
       : {
           state: "attention",
@@ -255,7 +253,10 @@ function publicPathAlert(
 }
 
 /** The row's alert, or `null` when nothing needs saying beyond the summary. */
-export function siteAlert(site: SiteHealth): SiteAlert | null {
+export function siteAlert(
+  site: SiteHealth,
+  fmt: DateFormatter,
+): SiteAlert | null {
   if (site.link.kind === "linked") {
     const { link } = site.link;
     const { state } = link;
@@ -263,7 +264,7 @@ export function siteAlert(site: SiteHealth): SiteAlert | null {
       case "reconnecting":
         return {
           tone: "warning",
-          lead: `Lost the connection at ${clockTime(link.lastHeardAt ?? link.since)}`,
+          lead: `Lost the connection at ${clockTime(link.lastHeardAt ?? link.since, fmt)}`,
           rest: RECONNECT_WHY[state.cause],
         };
       case "down":
@@ -308,7 +309,7 @@ export function siteAlert(site: SiteHealth): SiteAlert | null {
     return {
       tone: "warning",
       lead: run.message ?? `The last ${run.verb} failed`,
-      rest: clockTime(run.finishedAt ?? run.startedAt),
+      rest: clockTime(run.finishedAt ?? run.startedAt, fmt),
     };
   }
   return null;

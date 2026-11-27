@@ -78,8 +78,6 @@ export interface DatePickerPanelProps {
   /** Inclusive selectable bounds, day-granular. */
   min?: Date;
   max?: Date;
-  /** BCP-47 locale for the month title + weekday row. */
-  locale?: string;
   className?: string;
 }
 
@@ -99,7 +97,6 @@ export function DatePickerPanel({
   weekStartsOn = 0,
   min,
   max,
-  locale,
   className,
 }: DatePickerPanelProps) {
   const now = new Date();
@@ -151,7 +148,6 @@ export function DatePickerPanel({
         weekStartsOn={weekStartsOn}
         min={min}
         max={max}
-        locale={locale}
       />
 
       {withTime || onClear ? (

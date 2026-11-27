@@ -43,6 +43,8 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   ENTRY_CATEGORY_OPTIONS,
@@ -321,6 +323,7 @@ function timeField(
   label: string,
   get: (r: EntryRow) => number | undefined,
   now: number,
+  fmt: DateFormatter,
   { visible }: { visible?: boolean } = {},
 ): FieldDef<EntryRow> {
   return {
@@ -338,7 +341,9 @@ function timeField(
       const ms = get(r);
       if (ms === undefined) return "—";
       return (
-        <span title={formatModifiedFull(ms)}>{formatModified(ms, now)}</span>
+        <span title={formatModifiedFull(ms, fmt)}>
+          {formatModified(ms, now, fmt)}
+        </span>
       );
     },
   };
@@ -512,6 +517,7 @@ export function FileTree({
 }: FileTreeProps): ReactNode {
   // "Today" (shown as a time of day) is today as of this visit to the folder.
   const [now] = useState(() => Date.now());
+  const fmt = useDateFormatter();
   const rows = useMemo(
     () => buildRows(system.fs, listings, root, shows),
     [system.fs, listings, root, shows],
@@ -624,7 +630,7 @@ export function FileTree({
     () => [
       TYPE_GLYPH_FIELD,
       KIND_FIELD,
-      timeField("modified", "Modified", (r) => r.mtimeMs, now),
+      timeField("modified", "Modified", (r) => r.mtimeMs, now, fmt),
       {
         id: "size",
         label: "Size",
@@ -652,10 +658,10 @@ export function FileTree({
             ),
         }),
       },
-      timeField("created", "Created", (r) => r.birthtimeMs, now, {
+      timeField("created", "Created", (r) => r.birthtimeMs, now, fmt, {
         visible: false,
       }),
-      timeField("accessed", "Accessed", (r) => r.atimeMs, now, {
+      timeField("accessed", "Accessed", (r) => r.atimeMs, now, fmt, {
         visible: false,
       }),
       {
@@ -680,7 +686,7 @@ export function FileTree({
         value: (r) => r.symlinkTarget ?? null,
       },
     ],
-    [now, shows, listings, system],
+    [now, fmt, shows, listings, system],
   );
 
   // A nested outline table (its config row) with its column labels: the

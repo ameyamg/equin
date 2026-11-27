@@ -13,11 +13,7 @@ import {
 import { useSessionTallies } from "../internal/reads";
 import { sessionLabel, useSessionNumbers } from "../internal/format";
 import { LaunchSessionButton, OpenSessionButton } from "./session-actions";
-
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-});
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * The role's main action, in a band of its own under its name: the live
@@ -94,6 +90,7 @@ function IdleBand({
   backlog: number;
   oldest: Date | null;
 }): ReactElement {
+  const fmt = useDateFormatter();
   const ready = role.name.trim() !== "" && role.prompt.trim() !== "";
   const waiting =
     backlog > 0 && oldest !== null
@@ -104,7 +101,7 @@ function IdleBand({
   const lastSession =
     last === null
       ? ""
-      : ` · last session ${dateFormat.format(new Date(last.createdAt))}`;
+      : ` · last session ${fmt.date(new Date(last.createdAt), { year: "never" })}`;
   return (
     <Card>
       <Stack direction="row" align="center" gap="md">

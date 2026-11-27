@@ -155,7 +155,7 @@ footer's Add signature puts it back.
     - `fork-data-exclusion` "mail_drafts"
     - `fork-data-exclusion` "mail_drafts_attachments"
     - `ConfigV2.Register` "mail-compose"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/attachments` ×4
     - `config_v2` ×2
     - `database/derived-updated-at` ×2
@@ -168,6 +168,7 @@ footer's Add signature puts it back.
     - `apps/mail/cache.mailCache`
     - `database/admin.ExcludeFromFork`
     - `database.db`
+    - `fields/date/format.serverDateFormatter`
     - `shell/notifications.recordNotification`
   - DB schema:
     - `plugins/apps/plugins/mail/plugins/compose/server/internal/schema-attachments.ts`

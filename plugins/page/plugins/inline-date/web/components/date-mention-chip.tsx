@@ -4,6 +4,7 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { DateMentionFields } from "../../core";
 import { formatMention } from "../internal/format-date";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const calendarTodayIcon = symbol("calendar-today");
@@ -34,6 +35,7 @@ export function DateMentionChip({
   reminderId,
   activation,
 }: DateMentionFields & { activation: Activation | undefined }) {
+  const fmt = useDateFormatter();
   const isReminder = reminderId !== null;
   const icon = isReminder ? notificationsActiveIcon : calendarTodayIcon;
   return (
@@ -47,7 +49,7 @@ export function DateMentionChip({
     >
       {/* The label stays ABSOLUTE — a chip sitting in prose has to say which day
           it means; only the `@` menu's options carry relative labels. */}
-      {formatMention(new Date(iso), isReminder)}
+      {formatMention(new Date(iso), isReminder, fmt)}
     </LinkChip>
   );
 }

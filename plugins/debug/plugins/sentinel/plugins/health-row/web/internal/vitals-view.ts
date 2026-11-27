@@ -6,6 +6,7 @@ import {
   type SentinelVitalsRecord,
   type SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { clockTime } from "./machine-watcher-health";
 
 // The Machine watcher row's glance and detail, as a pure view model: one
@@ -148,8 +149,9 @@ function bannerOf(
   now: number,
   current: boolean,
   late: boolean,
+  fmt: DateFormatter,
 ): BannerView | null {
-  const at = clockTime(vitals.wall);
+  const at = clockTime(vitals.wall, fmt);
   if (!current) {
     return {
       kind: "stale",
@@ -258,6 +260,7 @@ export function vitalsView(
   vitals: SentinelVitalsRecord,
   current: boolean,
   now: number,
+  fmt: DateFormatter,
 ): VitalsView {
   const late = now - vitals.wall > STALE_TICKS * vitals.cadenceMs;
   const signals = SIGNAL_KEYS.map((key): SignalLineView => {
@@ -276,7 +279,7 @@ export function vitalsView(
   const updated = `Updated ${ageText(now - vitals.wall)}`;
   return {
     stale: late || !current,
-    banner: bannerOf(vitals, now, current, late),
+    banner: bannerOf(vitals, now, current, late, fmt),
     glance: glanceOf(vitals),
     signals,
     footer:

@@ -5,7 +5,13 @@
 
 import { describe, expect, it } from "vitest";
 import type { MachineUsage } from "../../core";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core";
 import { machineUsageView } from "../internal/machine-usage-view";
+
+const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 const GB = 1024 ** 3;
 
@@ -29,7 +35,7 @@ const usage: MachineUsage = {
 
 describe("machineUsageView", () => {
   it("states each bucket as a share of the whole machine", () => {
-    const view = machineUsageView(usage);
+    const view = machineUsageView(usage, FMT);
     expect(view.buckets.map((b) => [b.label, b.cpuText, b.memText])).toEqual([
       ["Your Chrome", "18%", "7.4 GB"],
       ["Agent ops", "28%", "6.2 GB"],
@@ -41,19 +47,22 @@ describe("machineUsageView", () => {
   });
 
   it("totals the buckets", () => {
-    const view = machineUsageView(usage);
+    const view = machineUsageView(usage, FMT);
     expect(view.cpuTotalText).toBe("61%");
     expect(view.memTotalText).toBe("21 GB");
     expect(view.memOfText).toBe("of 32 GB");
   });
 
   it("caps a share at the whole machine", () => {
-    const view = machineUsageView({
-      ...usage,
-      groups: [
-        { bucket: "other", processes: 1, cpuPercent: 5_000, memBytes: 0 },
-      ],
-    });
+    const view = machineUsageView(
+      {
+        ...usage,
+        groups: [
+          { bucket: "other", processes: 1, cpuPercent: 5_000, memBytes: 0 },
+        ],
+      },
+      FMT,
+    );
     expect(view.buckets[0]!.cpuShare).toBe(1);
     expect(view.cpuTotalText).toBe("100%");
   });

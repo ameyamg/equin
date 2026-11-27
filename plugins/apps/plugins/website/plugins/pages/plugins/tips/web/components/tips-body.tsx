@@ -8,6 +8,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   ImageGallery,
   useImageViewerTrigger,
@@ -33,8 +34,6 @@ const CARD_CLASS = "rounded-2xl shadow-none";
 
 /** A media frame: the width of the card, rounded like it. */
 const MEDIA_CLASS = "w-full rounded-xl";
-
-const PUBLISHED = new Intl.DateTimeFormat("en-US", { dateStyle: "long" });
 
 type TipsFields = TipsFeed["fields"];
 
@@ -85,13 +84,17 @@ export function TipsBody() {
  */
 function TipCard({ entry }: { entry: SiteFeedEntry<TipsFields> }) {
   const { title, body, media } = entry.values;
+  const fmt = useDateFormatter();
   return (
     <Card as="article" className={CARD_CLASS}>
       <Stack gap="lg">
         <Stack gap="sm">
           <Text as="p" variant="caption" tone="muted">
             <time dateTime={entry.publishedAt}>
-              {PUBLISHED.format(new Date(entry.publishedAt))}
+              {fmt.date(new Date(entry.publishedAt), {
+                month: "long",
+                year: "always",
+              })}
             </time>
           </Text>
           {title !== "" && (

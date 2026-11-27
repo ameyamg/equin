@@ -1,4 +1,5 @@
 import type { UsageWindowId } from "../../core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 // The usage limits' words, as the Claude Code row shows them.
 
@@ -37,20 +38,17 @@ export function formatResetsIn(resetsAt: number, now: number): string {
 }
 
 /** `Thu 09:00` — for the week, which resets on a day. */
-export function formatResetsOn(resetsAt: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(resetsAt);
+export function formatResetsOn(fmt: DateFormatter, resetsAt: number): string {
+  return `${fmt.weekday(resetsAt)} ${fmt.time(resetsAt)}`;
 }
 
 export function formatResets(
+  fmt: DateFormatter,
   id: UsageWindowId,
   resetsAt: number,
   now: number,
 ): string {
   return id === "session"
     ? `resets ${formatResetsIn(resetsAt, now)}`
-    : `resets ${formatResetsOn(resetsAt)}`;
+    : `resets ${formatResetsOn(fmt, resetsAt)}`;
 }

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
 import {
   ControlPanel,
@@ -128,7 +129,8 @@ function AnchorChooser({
   placeholder?: string;
 }): ReactNode {
   const [open, setOpen] = useState(false);
-  const label = formatAnchor(anchor);
+  const fmt = useDateFormatter();
+  const label = formatAnchor(anchor, fmt);
   const exactIso = anchor?.kind === "date" ? anchor.iso : "";
 
   function pick(next: DateAnchor) {

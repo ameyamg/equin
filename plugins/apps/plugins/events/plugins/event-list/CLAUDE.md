@@ -143,6 +143,7 @@ ascending), `All`, and `By category` (grouped). The collection takes
   - Uses:
     - `apps/events/events-core.useEventSourceOrigin`
     - `apps/events/shell.Events`
+    - `fields/date/format.useDateFormatter`
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `primitives/css/placeholder.Placeholder`

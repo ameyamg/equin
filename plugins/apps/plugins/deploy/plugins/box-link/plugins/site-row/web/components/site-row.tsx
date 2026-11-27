@@ -11,6 +11,7 @@ import type { SiteHealth } from "@plugins/apps/plugins/deploy/plugins/box-link/p
 import { SiteLive, type SiteExhibitState, type SiteLivePart } from "../slots";
 import { siteAlert, siteStatus, siteTitle } from "../internal/status";
 import { useSite, useSites } from "../internal/use-site";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 
 /**
  * The row set's one read: every deployed site as an item — keyed by
@@ -20,6 +21,7 @@ import { useSite, useSites } from "../internal/use-site";
  */
 export function useSiteRows(): SetRows {
   const sites = useSites();
+  const fmt = useDateFormatter();
   switch (sites.status) {
     case "loading":
       return { kind: "pending" };
@@ -35,7 +37,7 @@ export function useSiteRows(): SetRows {
           .map((site) => ({
             key: site.deploymentId,
             title: siteTitle(site),
-            status: siteStatus(site),
+            status: siteStatus(site, fmt),
           })),
       };
   }
@@ -77,7 +79,8 @@ export function SiteGlanceView({
 
 /** What is wrong, in one sentence: the first line of the row's body. */
 export function SiteAlertView({ site }: { site: SiteHealth }) {
-  const alert = siteAlert(site);
+  const fmt = useDateFormatter();
+  const alert = siteAlert(site, fmt);
   if (alert === null) return null;
   return (
     <Text

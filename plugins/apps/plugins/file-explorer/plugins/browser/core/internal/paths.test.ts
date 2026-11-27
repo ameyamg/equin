@@ -8,6 +8,13 @@ import {
   pathChain,
 } from "./paths";
 import { formatCount, formatModified, formatSize } from "./format";
+import { createDateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+
+const US = createDateFormatter({
+  clock: "h12",
+  dateOrder: "mdy",
+  numericDate: "ymd",
+});
 
 const HOME_ABS = "/h/me";
 
@@ -79,18 +86,18 @@ describe("format", () => {
     const now = new Date(2026, 9, 2, 15, 0).getTime();
     // Today reads as its time of day, so today's files tell apart.
     const today = (h: number, m: number) =>
-      formatModified(new Date(2026, 9, 2, h, m).getTime(), now, "en-US")
+      formatModified(new Date(2026, 9, 2, h, m).getTime(), now, US)
         // ICU may space "1:05 PM" with a narrow no-break space.
         .replace(/\s/g, " ");
     expect(today(0, 5)).toBe("12:05 AM");
     expect(today(13, 5)).toBe("1:05 PM");
-    expect(formatModified(new Date(2026, 9, 1, 23, 59).getTime(), now)).toBe(
-      "Yesterday",
-    );
-    expect(formatModified(new Date(2026, 8, 28).getTime(), now, "en-US")).toBe(
+    expect(
+      formatModified(new Date(2026, 9, 1, 23, 59).getTime(), now, US),
+    ).toBe("Yesterday");
+    expect(formatModified(new Date(2026, 8, 28).getTime(), now, US)).toBe(
       "Sep 28",
     );
-    expect(formatModified(new Date(2025, 8, 28).getTime(), now, "en-US")).toBe(
+    expect(formatModified(new Date(2025, 8, 28).getTime(), now, US)).toBe(
       "Sep 28, 2025",
     );
   });

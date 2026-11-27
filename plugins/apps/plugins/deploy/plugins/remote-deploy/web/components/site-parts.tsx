@@ -1,3 +1,4 @@
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import type { ReactNode } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -482,9 +483,11 @@ function PhaseSteps({ run }: { run: DeployRun }): ReactNode {
 function LogTail({ run }: { run: DeployRun }): ReactNode {
   const channel =
     run.phase === "build" ? RELEASE_LOG_CHANNEL : DEPLOY_LOG_CHANNEL;
+  const fmt = useDateFormatter();
   return (
     <Inset x="md" y="sm" className="bg-background">
       <LiveLogChannel
+        fmt={fmt}
         key={channel}
         channel={channel}
         className="max-h-32"

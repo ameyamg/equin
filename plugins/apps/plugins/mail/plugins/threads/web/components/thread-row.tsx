@@ -8,6 +8,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import type { MailThreadRow } from "@plugins/apps/plugins/mail/plugins/cache/core";
 import type { MailboxId } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import {
@@ -79,6 +80,7 @@ export function ThreadRow({
   thread: MailThreadRow;
   ctx: ThreadRowContext;
 }): ReactNode {
+  const fmt = useDateFormatter();
   const people =
     ctx.names === "recipients" ? thread.recipients : thread.participants;
   const who =
@@ -140,7 +142,7 @@ export function ThreadRow({
     ) : null;
   const time = (
     <Text variant="caption" tone="faint" className="tabular-nums">
-      {listTime(thread.date, ctx.now)}
+      {listTime(thread.date, ctx.now, fmt)}
     </Text>
   );
   // ONE grid, the prototype's `.row`: one line on a wide list (who in 164px,

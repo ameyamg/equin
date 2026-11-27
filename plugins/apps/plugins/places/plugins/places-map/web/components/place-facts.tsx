@@ -36,6 +36,7 @@ import {
   type MapsLinkPlace,
 } from "../internal/maps-links";
 import { untilDay } from "../internal/until-day";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   compactCount,
   openLine,
@@ -323,6 +324,7 @@ export function DetailsNotice({
 }: {
   details: ResourceResult<PlaceDetailsResult> | ResourceUnavailable;
 }): ReactNode {
+  const fmt = useDateFormatter();
   if (details.status === "unavailable") {
     return (
       <Text variant="caption" tone="muted">
@@ -372,7 +374,7 @@ export function DetailsNotice({
         : `${left.slice(0, -1).join(", ")} and ${left.at(-1)!}`;
     return (
       <Text variant="caption" tone="muted">
-        {`${what.charAt(0).toUpperCase()}${what.slice(1)} paused until ${untilDay(details.data.resumesAt)} · this month's free Google quota is used`}
+        {`${what.charAt(0).toUpperCase()}${what.slice(1)} paused until ${untilDay(details.data.resumesAt, fmt)} · this month's free Google quota is used`}
       </Text>
     );
   }

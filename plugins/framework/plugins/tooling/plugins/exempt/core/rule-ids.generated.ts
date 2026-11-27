@@ -47,6 +47,7 @@ export type ExemptableRuleId =
   | "data-view/no-cell-live-read"
   | "database/no-pool-await-in-transaction"
   | "database/no-pure-write-transaction"
+  | "date-format/no-raw-date-format"
   | "db-client-tools/no-path-pg-client"
   | "db-connection/no-raw-pg-connection"
   | "deadline/no-unstated-wall-age"

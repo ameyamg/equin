@@ -460,7 +460,7 @@ Gotchas the spike hit:
     - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
     - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
     - `ConfigV2.WebRegister` "runtime-sdk-context-nudge"
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `infra/claude-cli/availability` ×4
     - `infra/endpoints` ×4
@@ -476,6 +476,7 @@ Gotchas the spike hit:
     - `primitives/css/control-panel` ×2
     - `audience/developer-mark.ForAudience`
     - `conversations/conversation-view.conversationPane`
+    - `fields/date/format.useDateFormatter`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
