@@ -9,8 +9,9 @@
  * Catches a CONCENTRATED loop on one node. A deduped `render-loop` report is
  * filed when ALL gates hold:
  *   1. Sustained — one signature stays above its class threshold for SUSTAINED_MS.
- *   2. Idle — no pointer/keyboard/scroll input within IDLE_MS, and no playback
- *      timeline held (core `holdPlayback`) within it.
+ *   2. Idle — no pointer/keyboard/scroll input within IDLE_MS, no playback
+ *      timeline held (`activity` core `holdPlayback`) and no other tab's input delivered
+ *      here (`activity` core `markRemoteInput`) within it.
  *   3. Visible — `document.visibilityState === "visible"`.
  *   4. Wasted-work — no-op/oscillating attribute writes (4a) or an identical
  *      childList rebuild whose tag+marker multisets match (4b).
@@ -68,8 +69,11 @@ import {
   type RenderProfilerWindow,
 } from "@plugins/debug/plugins/render-profiler/core";
 import {
-  ANIMATION_HOST_ATTR,
+  lastRemoteInputAt,
   playbackHeld,
+} from "@plugins/reports/plugins/render-loop/plugins/activity/core";
+import {
+  ANIMATION_HOST_ATTR,
   RENDER_LOOP,
   renderLoopFingerprint,
 } from "../../core";
@@ -266,11 +270,12 @@ export function installRenderLoopDetector(): () => void {
     lastInteractionAt = performance.now();
   }
 
-  // A running playback timeline is activity like input (core `holdPlayback`):
-  // idleness is measured from the last moment one was held.
+  // A running playback timeline is activity like input (`activity` core `holdPlayback`):
+  // idleness is measured from the last moment one was held. Another tab's
+  // input delivered here (`activity` core `markRemoteInput`) counts the same.
   function msIdle(now: number): number {
     if (playbackHeld()) lastInteractionAt = now;
-    return now - lastInteractionAt;
+    return now - Math.max(lastInteractionAt, lastRemoteInputAt());
   }
 
   /**

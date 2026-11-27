@@ -10,6 +10,7 @@ import {
 } from "../internal/store";
 import { scanArea } from "../internal/scan";
 import { schemaStamp } from "../../core";
+import { lastRemoteInputAt } from "@plugins/reports/plugins/render-loop/plugins/activity/core";
 import { installStorage, QuotaStorage, storageScopeOf } from "../testing";
 
 /** The page's own scope: these suites test a store's behaviour, not scoping. */
@@ -386,6 +387,37 @@ describe("defineStore", () => {
     window.dispatchEvent(event);
     expect(calls).toBe(2);
     expect(s.read("a")).toMatchObject({ value: "2" });
+  });
+
+  it("another tab's write marks remote input only when a reader here hears it", () => {
+    const o = owner("remote");
+    const s = defineStore({
+      owner: o,
+      label: "X",
+      area: "local",
+      cap: "1 KB",
+      ttl: Infinity,
+      whenFull: "refuse",
+      schema: z.string(),
+    }).in(ROOT);
+    s.write("a", "1");
+    const otherTabWrites = (id: string) => {
+      const raw = JSON.stringify({ v: "2", ts: Date.now() });
+      local.setItem(`s:${o}:${id}`, raw);
+      const event = new StorageEvent("storage", {
+        key: `s:${o}:${id}`,
+        newValue: raw,
+      });
+      Object.defineProperty(event, "storageArea", { value: local });
+      window.dispatchEvent(event);
+    };
+    const before = lastRemoteInputAt();
+    otherTabWrites("a"); // nothing here reads "a"
+    expect(lastRemoteInputAt()).toBe(before);
+    const stop = s.subscribe("a", () => {});
+    otherTabWrites("a");
+    expect(lastRemoteInputAt()).toBeGreaterThan(before);
+    stop();
   });
 
   it("removeEntriesWhere removes matching ids across owners", () => {

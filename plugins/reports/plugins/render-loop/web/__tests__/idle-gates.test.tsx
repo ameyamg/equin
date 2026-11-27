@@ -11,6 +11,7 @@ import {
   RENDER_PROFILER_GLOBAL,
   type RenderProfilerWindow,
 } from "@plugins/debug/plugins/render-profiler/core";
+import { markRemoteInput } from "@plugins/reports/plugins/render-loop/plugins/activity/core";
 import { installRenderLoopDetector } from "../internal/render-loop-detector";
 
 vi.mock("@plugins/reports/web", async (importOriginal) => ({
@@ -116,5 +117,26 @@ describe("render-loop idle gates", () => {
     await new Promise((r) => setTimeout(r, 1600));
     await settle();
     expect(reportMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("files nothing while another tab's input keeps arriving", async () => {
+    const flip = flipper();
+    (window as RenderProfilerWindow)[RENDER_PROFILER_GLOBAL] = {
+      isRunning: () => false,
+      start: () => {},
+      stop: () => {},
+      getReport: () => ({ commitsPerSec: 0, initiators: [] }),
+      componentsAbove: () => [],
+    } as unknown as RenderProfilerWindow[typeof RENDER_PROFILER_GLOBAL];
+    // A draft typed in another tab, redrawn here at the typist's pace. Last in
+    // the file: the mark is module state, and every test restarts the mocked clock.
+    for (let i = 0; i < 6 * 60; i += 1)
+      await frame(() => {
+        if (i % 6 === 0) markRemoteInput();
+        flip(i);
+      }, 1000 / 60);
+    await new Promise((r) => setTimeout(r, 1600));
+    await settle();
+    expect(reportMock).not.toHaveBeenCalled();
   });
 });

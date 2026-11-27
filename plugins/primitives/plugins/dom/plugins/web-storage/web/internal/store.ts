@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
+import { markRemoteInput } from "@plugins/reports/plugins/render-loop/plugins/activity/core";
 import {
   AREA_BUDGET,
   entryBytes,
@@ -472,9 +473,11 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
   return entries;
 }
 
-function listenersOf(state: OwnerState<unknown>, key: string): void {
+function listenersOf(state: OwnerState<unknown>, key: string): boolean {
   const set = state.listeners.get(key);
-  if (set) for (const l of set) l();
+  if (!set || set.size === 0) return false;
+  for (const l of set) l();
+  return true;
 }
 
 /** Whether `key` is in the page's own scope (outside every `PluginScope`). */
@@ -555,7 +558,9 @@ function installCrossTabListener(): void {
         ts: env?.ts ?? Date.now(),
       });
     }
-    listenersOf(state, e.key);
+    // Another tab's write handed to this page's readers: what they redraw is
+    // that tab's input (a draft typed there), not a loop here.
+    if (listenersOf(state, e.key)) markRemoteInput();
     notifyChanged();
   });
 }

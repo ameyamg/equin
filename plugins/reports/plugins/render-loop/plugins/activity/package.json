@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-reports-render-loop-activity",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Page activity the render-loop detector's idle gate counts besides this tab's own input: holdPlayback() while a playback timeline runs (a player rendering on its clock), and markRemoteInput() where another tab's write is handed to a reader in this page (a draft typed there, redrawn here). A leaf library, so any primitive can mark activity without depending on the detector."
+}

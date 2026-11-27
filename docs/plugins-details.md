@@ -64573,7 +64573,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
         - Imported by:
-          - `apps/sonata/session`
           - `apps/website/pages/foundations`
           - `apps/website/pages/story/data-views`
           - `apps/website/pages/story/essay`
@@ -64587,11 +64586,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RenderLoopPayload`
         - Exports (values):
           - `ANIMATION_HOST_ATTR`
-          - `holdPlayback`
-          - `playbackHeld`
           - `RENDER_LOOP`
           - `renderLoopFingerprint`
           - `RenderLoopPayloadSchema`
+      - Plugins:
+        - **`activity`** — Page activity the render-loop detector's idle gate counts besides this tab's own input: holdPlayback() while a playback timeline runs (a player rendering on its clock), and markRemoteInput() where another tab's write is handed to a reader in this page (a draft typed there, redrawn here). A leaf library, so any primitive can mark activity without depending on the detector.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/session`
+              - `primitives/dom/web-storage`
+              - `reports/render-loop`
+          - Core:
+            - Exports (values):
+              - `holdPlayback`
+              - `lastRemoteInputAt`
+              - `markRemoteInput`
+              - `playbackHeld`
     - **`resource-errors`** — Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the failures a developer must fix (loader-failed, not-found — never client-outdated or transport), the Debug → Reports summary view, and the health report's Live reads row (attention with 'N resources failing' while any read on the page is in error). Resource-error report kind: validates a failing live read's payload (key, params, the typed failure kind — loader-failed or not-found — and its message), fingerprints by key + kind (one failing resource = one row, whatever params or message), and renders an investigation task. Re-arms every 6h, since a standing failure re-fails on every retry.
       - Web:
         - Contributes:

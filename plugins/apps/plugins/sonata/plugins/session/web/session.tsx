@@ -35,7 +35,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useKept } from "@plugins/primitives/plugins/kept-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { holdPlayback } from "@plugins/reports/plugins/render-loop/core";
+import { holdPlayback } from "@plugins/reports/plugins/render-loop/plugins/activity/core";
 import {
   relayOf,
   type Relayed,

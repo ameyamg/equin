@@ -7651,6 +7651,10 @@
       "name": "@equin/plugin-reports-render-loop",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/render-loop/plugins/activity": {
+      "name": "@equin/plugin-reports-render-loop-activity",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/resource-errors": {
       "name": "@equin/plugin-reports-resource-errors",
       "version": "0.0.1",
@@ -12264,6 +12268,8 @@
     "@equin/plugin-reports-reload-loss": ["@equin/plugin-reports-reload-loss@workspace:plugins/reports/plugins/reload-loss"],
 
     "@equin/plugin-reports-render-loop": ["@equin/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
+
+    "@equin/plugin-reports-render-loop-activity": ["@equin/plugin-reports-render-loop-activity@workspace:plugins/reports/plugins/render-loop/plugins/activity"],
 
     "@equin/plugin-reports-resource-errors": ["@equin/plugin-reports-resource-errors@workspace:plugins/reports/plugins/resource-errors"],
 
