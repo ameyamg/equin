@@ -34,11 +34,37 @@ export function scrollerKeep(el: Element): ScrollerKeep {
   return { kind: "unkept" };
 }
 
-/** Mark `el` kept under `key` while it is; returns the unmark. */
+/**
+ * Every keeper marking each scroller now, in the order they marked it. A
+ * scroller can carry two at once — its `<Scroll>`'s reload keep and a
+ * persisting follower's — and either can let go first: the mark is theirs
+ * jointly, so one letting go never takes another's with it.
+ */
+const keepers = new WeakMap<HTMLElement, { key: string }[]>();
+
+/**
+ * Mark `el` kept under `key` while it is; returns the unmark. The attribute
+ * names the latest keeper still holding it, and goes only when none does.
+ */
 export function markKept(el: HTMLElement, key: string): () => void {
+  const mark = { key };
+  const held = keepers.get(el) ?? [];
+  held.push(mark);
+  keepers.set(el, held);
   el.setAttribute(KEPT_ATTR, key);
+  let released = false;
   return () => {
-    if (el.getAttribute(KEPT_ATTR) === key) el.removeAttribute(KEPT_ATTR);
+    if (released) return;
+    released = true;
+    const at = held.indexOf(mark);
+    if (at !== -1) held.splice(at, 1);
+    const latest = held.at(-1);
+    if (latest !== undefined) {
+      el.setAttribute(KEPT_ATTR, latest.key);
+      return;
+    }
+    if (keepers.get(el) === held) keepers.delete(el);
+    el.removeAttribute(KEPT_ATTR);
   };
 }
 

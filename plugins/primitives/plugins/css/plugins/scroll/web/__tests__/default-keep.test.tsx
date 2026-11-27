@@ -143,6 +143,40 @@ describe("Scroll's default keep", () => {
     expect(el.getAttribute("data-scroll-kept")).toBe("sticky:f-1");
   });
 
+  it("a persisting follower stays kept when the scroller's keep re-attaches", () => {
+    function Follower() {
+      const { scrollRef, bottomSentinel } = useStickyScroll({
+        persist: { key: "f-2", anchorAttr: "data-row" },
+      });
+      return (
+        <Scroll
+          keep={site("a.tsx#P#1")}
+          ref={(el) => {
+            scrollRef.current = el as HTMLDivElement | null;
+          }}
+        >
+          <div>rows</div>
+          {bottomSentinel}
+        </Scroll>
+      );
+    }
+    const view = render(
+      <KeepScrollScope scope="pane-a">
+        <Follower />
+      </KeepScrollScope>,
+    );
+    // The keep scope changes under a live follower (a pane instance resolved
+    // after mount): the keep attaches again, sees the persisting follower and
+    // stands down again — without taking the follower's own mark with it.
+    view.rerender(
+      <KeepScrollScope scope="pane-b">
+        <Follower />
+      </KeepScrollScope>,
+    );
+    const el = view.container.querySelector("[data-scroller]")!;
+    expect(el.getAttribute("data-scroll-kept")).toBe("sticky:f-2");
+  });
+
   describe("a follower that does not persist", () => {
     // jsdom lays nothing out: give the scroller room to scroll.
     function sized(el: HTMLElement | null): void {
