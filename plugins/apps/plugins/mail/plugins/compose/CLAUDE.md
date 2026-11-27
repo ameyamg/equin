@@ -96,12 +96,18 @@ Design: [`research/2026-11-27-apps-mail-compose-text-format.md`](../../../../../
 
 - `DraftContent.body` is a string in Pages' text format over Mail's block
   set (paragraphs, headings 1-3, lists, quote, code, divider; a blank line
-  an empty paragraph). `bodyFormat` says how it is written: `document`, or
+  an empty paragraph — the first and last ones too: the dialect's
+  `blankLines: "every-empty-block"`, so a forward opens on a line of its
+  own above the header). `bodyFormat` says how it is written: `document`, or
   `text` for a draft saved before formatting, which the editor opens as
   plain paragraphs (`asDocumentContent` → `plainTextBody`, nothing in it
   read as markdown) and saves back as a document. A forward's forwarded
-  message and an adopted provider draft (`plainTextOf`) start as plain
-  paragraphs too (an adopted draft's own formatting is not read back).
+  message is read from its HTML part as drawn (`contentForest` →
+  `page/document-field`'s `emailHtmlToForest`: bold, links, lists, quotes,
+  a colour snapped to a text-colour token; tables, images and fonts as
+  their text), else its text as plain paragraphs. An adopted provider
+  draft (`plainTextOf`) starts as plain paragraphs (its own formatting is
+  not read back).
 - A message built (mirror and send alike) is `messageParts`:
   multipart/alternative of text/plain (`forestToEmailText`: markdown marks
   kept, underline and colour dropped, a quote as `> ` lines, then the
@@ -109,8 +115,15 @@ Design: [`research/2026-11-27-apps-mail-compose-text-format.md`](../../../../../
   and HTML (`forestToEmailHtml`, then the signature as a `gmail_signature`
   and the quote under its header in a `gmail_quote`, so Gmail folds it). A
   `text` body still goes out as text alone.
-- The quote stays outside the body (`mail_drafts.quote`, `MailDraft.quote`);
-  `quoteForest` reads it as its header line and one quote.
+- The quote stays outside the body (`mail_drafts.quote_document`,
+  `MailDraft.quote`): a document in the same dialect (`quoteOf` →
+  `quoteDocument`) — "On …, … wrote:", then the original read the way a
+  forward is (`contentForest`, its HTML first), as ONE quote — so the editor
+  draws it, and both parts send it, with the formatting the recipient saw.
+  The text part writes it as `> ` lines (`forestToEmailText`). A draft
+  started before the quote was a document holds it in `mail_drafts.quote`
+  as `> ` lines, read through `legacyQuoteDocument`, never written.
+- Blank lines at the end of a body go out with none (`messageParts`).
 
 ## Who it is written as
 
@@ -122,7 +135,7 @@ account's address under that identity's display name (a primary address with
 none of its own: the Google account's name, as Gmail does); sending from an
 alias is not offered yet;
 its signature, as plain text (`signatureText`), goes under `-- ` between the
-body and a reply's quote (`messageText`), unless the body is signed already (a
+body and a reply's quote (`messageText`, `core/internal/message-text.ts`), unless the body is signed already (a
 line that is the `-- ` delimiter, `bodySigned`: a draft written in Gmail's
 editor and adopted).
 
@@ -222,8 +235,8 @@ footer's Add signature puts it back.
     - `POST /api/mail/drafts/:id/undo-send`
     - `DELETE /api/mail/drafts/:id`
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/document-field` ×8
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/document-field` ×9
     - `ids` ×2
     - `infra/attachments` ×2
     - `network/live` ×2
@@ -250,6 +263,7 @@ footer's Add signature puts it back.
     - `asDocumentContent`
     - `bodySigned`
     - `bodyText`
+    - `contentForest`
     - `discardMailDraft`
     - `DRAFT_KINDS`
     - `DRAFT_STATES`
@@ -260,6 +274,7 @@ footer's Add signature puts it back.
     - `formatAddressList`
     - `htmlToPlainText`
     - `isDraftEmpty`
+    - `legacyQuoteDocument`
     - `MAIL_ATTACHMENTS_MAX_BYTES`
     - `MAIL_BODY_DIALECT`
     - `MAIL_DRAFT_ATTACHMENTS_MAX`
@@ -278,8 +293,7 @@ footer's Add signature puts it back.
     - `plainTextBody`
     - `plainTextOf`
     - `prefixedSubject`
-    - `quoteBody`
-    - `quoteForest`
+    - `quoteDocument`
     - `quoteOf`
     - `saveMailDraft`
     - `sendMailDraft`

@@ -29,6 +29,7 @@ import {
   isDraftEmpty,
   messageIdsIn,
   messageParts,
+  legacyQuoteDocument,
   plainTextBody,
   MAIL_ATTACHMENTS_MAX_BYTES,
   mailDraftIdKind,
@@ -138,6 +139,12 @@ export function createOutbox(deps: OutboxDeps) {
     return r ?? null;
   }
 
+  /** A draft's quote as a document: a draft started before the quote was one holds it as `> ` lines. */
+  function quoteOfRow(r: DraftRow): string | null {
+    if (r.quoteDocument !== null) return r.quoteDocument;
+    return r.quote === null ? null : legacyQuoteDocument(r.quote);
+  }
+
   function toDraft(r: DraftRow): MailDraft {
     if (r.state === "discarded")
       throw new Error("a discarded draft is not drawn");
@@ -149,7 +156,7 @@ export function createOutbox(deps: OutboxDeps) {
       state: r.state,
       sendAt: r.sendAt?.toISOString() ?? null,
       sendError: r.sendError,
-      quote: r.quote,
+      quote: quoteOfRow(r),
       content: r.content,
     };
   }
@@ -321,14 +328,14 @@ export function createOutbox(deps: OutboxDeps) {
       replyingTo: c.replyingTo,
       inReplyTo: c.inReplyTo,
       references: c.references,
-      quote: c.quote,
+      quoteDocument: c.quote,
       content: {
         to: c.to,
         cc: c.cc,
         bcc: "",
         subject: c.subject,
-        // A forward's forwarded message: plain text, as plain paragraphs.
-        body: plainTextBody(c.body),
+        // A forward's forwarded message, under a line to write on.
+        body: c.body,
         bodyFormat: "document",
         attachments: c.attachments,
         signature: true,
@@ -482,7 +489,7 @@ export function createOutbox(deps: OutboxDeps) {
         r.content.bodyFormat,
         // Removed for this message in the editor: unsigned.
         r.content.signature ? signatureText(identity.signature) : null,
-        r.quote,
+        quoteOfRow(r),
       ),
       attachments: await files(r.content),
     });

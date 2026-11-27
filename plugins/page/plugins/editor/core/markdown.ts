@@ -53,13 +53,21 @@ export interface MarkdownContext {
   /**
    * `"empty-block"` — a blank line is an empty block of the default-text type,
    * landing as the previous sibling of the block that follows it.
+   * A blank run first or last in its scope (the document, a tag body) has no
+   * block before or after it to stand beside, and is dropped — the dialect's
+   * accepted loss.
+   * `"every-empty-block"` — the same, with that loss closed: a leading run is
+   * kept at the depth of the block after it and a trailing run at the scope's
+   * own depth. For a text whose every line is a block to its writer (a Mail
+   * body: a blank line pressed above a forwarded message is a line, not
+   * spacing) — never for text a person or an agent spaces with blank lines.
    * `"separator"` — blank lines are skipped, which is correct CommonMark and
    * the lenient half of the paste contract.
    *
    * Read on PARSE only: there is one emitted form for everybody, so the
    * serializer never asks.
    */
-  blankLines: "empty-block" | "separator";
+  blankLines: "empty-block" | "every-empty-block" | "separator";
   /**
    * How an empty block is EMITTED when a blank line cannot state its position.
    *
@@ -1562,7 +1570,9 @@ export function parseMarkdownToForest(
   const fences = claimers.fences.map((f) => f.fence);
   const tagParsers = tagParsersOf(handles);
 
-  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  // An empty text has no line, not one blank line (which the dialect that
+  // keeps a trailing run would read as an empty paragraph).
+  const lines = text === "" ? [] : text.replace(/\r\n?/g, "\n").split("\n");
   const tokens: FlatToken[] = [];
 
   // A blank line carries no indentation of its own, so the block it stands for
@@ -1579,7 +1589,10 @@ export function parseMarkdownToForest(
     // `tokens.length === 0` is the leading-run drop. A composition shipping no
     // default-text type has nothing to mint, and skips blank lines as it always
     // did — the same answer `defaultTextHandle` gives every other caller.
-    if (tokens.length > 0 && fallback) {
+    if (
+      (tokens.length > 0 || ctx.blankLines === "every-empty-block") &&
+      fallback
+    ) {
       for (let n = 0; n < pendingBlanks; n++) {
         tokens.push({
           indent,
@@ -1597,7 +1610,7 @@ export function parseMarkdownToForest(
     if (raw.trim() === "") {
       // Under `"separator"` nothing is ever counted, so nothing can ever be
       // flushed: this dialect is byte-identical to the skip it replaced.
-      if (ctx.blankLines === "empty-block") pendingBlanks++;
+      if (ctx.blankLines !== "separator") pendingBlanks++;
       i++;
       continue;
     }
@@ -1793,6 +1806,8 @@ export function parseMarkdownToForest(
     }
     i++;
   }
+  // A trailing run, kept at the scope's own depth (the dialect that keeps it).
+  if (ctx.blankLines === "every-empty-block") flushBlanks(0);
 
   return tokensToTree(tokens);
 }

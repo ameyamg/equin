@@ -7393,8 +7393,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/mail/drafts/:id/undo-send`
               - `DELETE /api/mail/drafts/:id`
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
-              - `page/document-field` ×8
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
+              - `page/document-field` ×9
               - `ids` ×2
               - `infra/attachments` ×2
               - `network/live` ×2
@@ -7421,6 +7421,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `asDocumentContent`
               - `bodySigned`
               - `bodyText`
+              - `contentForest`
               - `discardMailDraft`
               - `DRAFT_KINDS`
               - `DRAFT_STATES`
@@ -7431,6 +7432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `formatAddressList`
               - `htmlToPlainText`
               - `isDraftEmpty`
+              - `legacyQuoteDocument`
               - `MAIL_ATTACHMENTS_MAX_BYTES`
               - `MAIL_BODY_DIALECT`
               - `MAIL_DRAFT_ATTACHMENTS_MAX`
@@ -7449,8 +7451,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plainTextBody`
               - `plainTextOf`
               - `prefixedSubject`
-              - `quoteBody`
-              - `quoteForest`
+              - `quoteDocument`
               - `quoteOf`
               - `saveMailDraft`
               - `sendMailDraft`
@@ -49298,6 +49299,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/undo-redo.localUndoProps`
@@ -49336,11 +49338,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `documentBlockHandle`
           - `documentMarkdownContext`
           - `EMAIL_TEXT_COLORS`
+          - `emailHtmlToForest`
           - `escapeHtml`
           - `forestToEmailHtml`
           - `forestToEmailText`
           - `isDocumentBlockType`
           - `lineSegments`
+          - `nearestColorToken`
           - `parseDocument`
           - `plainTextForest`
           - `serializeDocument`
@@ -55537,11 +55541,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SegmentedControl`
               - `ToggleChip`
           - Cross-plugin:
-            - Uses tokens: 36 vars — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Uses tokens: 37 vars — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `ui/tokens/density` ×14
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×7
-              - `ui/tokens/shape` ×3
+              - `ui/tokens/shape` ×4
             - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×7

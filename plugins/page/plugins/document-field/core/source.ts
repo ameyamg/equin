@@ -226,7 +226,8 @@ export function sourceLines(
  * tag lines own none; a blank line owns one only where the parse keeps it — in
  * the `"empty-block"` dialect, with a block before it and after it in its own
  * scope (a blank run first or last in the document or in a tag body is
- * dropped by the parser, which is the dialect's accepted loss).
+ * dropped by the parser, which is the dialect's accepted loss) — and in the
+ * `"every-empty-block"` dialect, always.
  */
 function numberBlocks(
   lines: SourceLine[],
@@ -244,7 +245,11 @@ function numberBlocks(
       continue;
     }
     if (line.kind === "blank") {
-      if (dialect.blankLines === "empty-block" && blankIsKept(lines, roles, i))
+      if (
+        // An empty text is no line at all (the parse reads it as no block).
+        (dialect.blankLines === "every-empty-block" && lines.length > 1) ||
+        (dialect.blankLines === "empty-block" && blankIsKept(lines, roles, i))
+      )
         line.block = next++;
       continue;
     }

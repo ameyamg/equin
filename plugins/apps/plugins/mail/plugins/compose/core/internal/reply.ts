@@ -1,4 +1,8 @@
 import { decodeHtmlText } from "@plugins/infra/plugins/html-decode/core";
+import {
+  plainTextForest,
+  serializeDocument,
+} from "@plugins/page/plugins/document-field/core";
 import type {
   MessageContent,
   Participant,
@@ -7,15 +11,16 @@ import type {
 import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { formatAddressList } from "./addresses";
 import type { DraftAttachment, DraftKind } from "./draft";
+import { contentForest, MAIL_BODY_DIALECT, quoteDocument } from "./body";
 
 /** What a reply or forward starts as, derived from the message it answers. */
 export type DraftStartContent = {
   to: string;
   cc: string;
   subject: string;
-  /** What the editor opens with (a forward's forwarded message; empty for a reply). */
+  /** What the editor opens with, a document in Mail's dialect (a forward's forwarded message; empty for a reply). */
   body: string;
-  /** The answered message's text as quoted below a reply's body when sent (null: none). */
+  /** The quote of the answered message (`quoteOf`), a document sent below a reply's body (null: none). */
   quote: string | null;
   inReplyTo: string | null;
   references: string[];
@@ -97,17 +102,22 @@ function longDate(d: Date, fmt: DateFormatter): string {
   });
 }
 
-/** The quote a reply carries below its body: "On <date>, <who> wrote:" then the text, each line `> `. */
+/**
+ * The quote a reply carries below its body, as a document in Mail's dialect:
+ * "On <date>, <who> wrote:", then what they wrote as one quote — read from its
+ * HTML part when it has one, so the quote keeps the formatting the recipient
+ * saw (bold, links, lists, colour), else from its text.
+ */
 export function quoteOf(m: MessageContent, fmt: DateFormatter): string {
   const who = m.from
     ? m.from.name
       ? `${m.from.name} <${m.from.address}>`
       : m.from.address
     : "someone";
-  const lines = plainTextOf(m)
-    .split("\n")
-    .map((l) => (l === "" ? ">" : `> ${l}`));
-  return `On ${longDate(m.date, fmt)}, ${who} wrote:\n${lines.join("\n")}`;
+  return quoteDocument(
+    `On ${longDate(m.date, fmt)}, ${who} wrote:`,
+    contentForest(m),
+  );
 }
 
 /**
@@ -151,7 +161,12 @@ export function startFrom(
       to: "",
       cc: "",
       subject: prefixedSubject("forward", source.subject),
-      body: `\n\n${header}\n\n${plainTextOf(source)}`,
+      // A line to write on and a blank line, then the header and the
+      // message as it was drawn (its HTML read, as a reply's quote is).
+      body: serializeDocument(
+        [...plainTextForest(`\n\n${header}\n`), ...contentForest(source)],
+        MAIL_BODY_DIALECT,
+      ),
       quote: null,
       ...threading,
       attachments: source.attachments
@@ -216,34 +231,4 @@ export function signatureText(
       : htmlToPlainText(signature.html)
   ).trim();
   return text === "" ? null : text;
-}
-
-/**
- * Whether a body carries its own signature: a line that is the `-- `
- * delimiter (RFC 3676) — a draft written in the provider's own editor and
- * adopted. Such a body is not signed again, and the editor shows no
- * signature block under it.
- */
-export function bodySigned(body: string): boolean {
-  return /(^|\n)-- \r?(\n|$)/.test(body);
-}
-
-/**
- * The text a message goes out with: the body as written, then the signature
- * under the `-- ` delimiter (RFC 3676) — unless the body is signed already (a
- * line that is the delimiter: a draft written in the provider's own editor
- * and adopted, whatever its signature then rendered as) — then the quote a
- * reply answers. Nothing added: the body exactly as written.
- */
-export function messageText(
-  body: string,
-  signature: string | null,
-  quote: string | null,
-): string {
-  const signs = signature !== null && !bodySigned(body);
-  if (!signs && quote === null) return body;
-  let text = body.replace(/\s+$/, "");
-  if (signs)
-    text = text === "" ? `-- \n${signature}` : `${text}\n\n-- \n${signature}`;
-  return quote === null ? `${text}\n` : `${text}\n\n${quote}\n`;
 }

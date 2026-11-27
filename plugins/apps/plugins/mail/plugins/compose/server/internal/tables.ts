@@ -52,7 +52,16 @@ export const _mailDrafts = deriveUpdatedAt(
       /** The Message-ID answered (`In-Reply-To`), and the thread's (`References`, oldest first). */
       inReplyTo: text("in_reply_to"),
       references: text("references").array().notNull().default([]),
-      /** The answered message as quoted below a reply's body when it is built. */
+      /**
+       * The quote of what a reply answers, sent under its body: a document in
+       * Mail's dialect (`quoteOf` — its header line, then the original read
+       * from its HTML as one quote).
+       */
+      quoteDocument: text("quote_document"),
+      /**
+       * The quote as plain `> ` lines, as drafts started before the quote was
+       * a document hold it — read only (`legacyQuoteDocument`), never written.
+       */
       quote: text("quote"),
       content: parsedJson("content", DraftContentSchema).notNull(),
       /** Bumped by every save; `mirroredRevision` is the one the provider holds. */
@@ -107,6 +116,7 @@ export const _mailDrafts = deriveUpdatedAt(
       inReplyTo: false,
       references: false,
       quote: false,
+      quoteDocument: false,
       mirroredRevision: false,
       providerDraftId: false,
       providerThreadId: false,

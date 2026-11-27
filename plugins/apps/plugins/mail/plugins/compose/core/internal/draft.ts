@@ -119,7 +119,7 @@ export const MailDraftSchema = z.object({
   sendAt: z.string().nullable(),
   /** Why the last send did not go, in words; null when none failed. */
   sendError: z.string().nullable(),
-  /** The quote of what a reply answers (`quoteOf`: "On …, … wrote:" then `> ` lines), sent under the body; null: none. */
+  /** The quote of what a reply answers, a document in Mail's dialect (`quoteOf`: "On …, … wrote:" then the original as one quote), sent under the body; null: none. */
   quote: z.string().nullable(),
   content: DraftContentSchema,
 });

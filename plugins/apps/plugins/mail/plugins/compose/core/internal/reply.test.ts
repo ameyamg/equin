@@ -6,13 +6,12 @@ import {
 import { formatAddressList, parseAddressList } from "./addresses";
 import {
   messageIdsIn,
-  messageText,
   plainTextOf,
   prefixedSubject,
-  bodySigned,
   signatureText,
   startFrom,
 } from "./reply";
+import { bodySigned, messageText } from "./message-text";
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
@@ -96,6 +95,24 @@ describe("parseAddressList", () => {
 });
 
 describe("startFrom", () => {
+  test("reply and forward read the HTML part, keeping its formatting", () => {
+    const m = message({
+      html: {
+        content:
+          '<div dir="ltr">Hi, this is a <b>bold</b> test with <i>italic</i> and <a href="https://x.example">a link</a>.<ul><li>one</li></ul></div>',
+        unknownCharset: null,
+      },
+    });
+    const quoted = startFrom("reply", m, ME, "t1", fmt).quote!;
+    expect(quoted).toContain(
+      "  Hi, this is a **bold** test with *italic* and [a link](https://x.example).",
+    );
+    expect(quoted).toContain("  * one");
+    expect(startFrom("forward", m, ME, "t1", fmt).body).toContain(
+      "Hi, this is a **bold** test",
+    );
+  });
+
   test("reply: to the sender, Re:, threaded, the message quoted", () => {
     const c = startFrom("reply", message(), ME, "t1", fmt);
     expect(c.to).toBe("Ana Example <ana@x.com>");
@@ -103,8 +120,16 @@ describe("startFrom", () => {
     expect(c.subject).toBe("Re: Lease renewal");
     expect(c.inReplyTo).toBe("<p2@x.com>");
     expect(c.references).toEqual(["<p1@x.com>", "<p2@x.com>"]);
-    expect(c.quote).toContain("Ana Example <ana@x.com> wrote:");
-    expect(c.quote).toContain("> Signed copy attached.");
+    expect(c.quote).toBe(
+      [
+        "On Wed, Nov 25, 2026 at 9:30 AM UTC, Ana Example \\<ana@x.com> wrote:",
+        "<quote>",
+        "  Hi,",
+        "",
+        "  Signed copy attached.",
+        "</quote>",
+      ].join("\n"),
+    );
     expect(c.body).toBe("");
     expect(c.replyingTo?.name).toBe("Ana Example");
   });
@@ -168,8 +193,14 @@ describe("startFrom", () => {
     const c = startFrom("forward", message(), ME, "t1", fmt);
     expect(c.to).toBe("");
     expect(c.subject).toBe("Fwd: Lease renewal");
-    expect(c.body).toContain("---------- Forwarded message ---------");
-    expect(c.body).toContain("From: Ana Example <ana@x.com>");
+    // A line to write on and a blank line above the header: kept by the
+    // dialect, so the caret does not open on the header.
+    expect(c.body.split("\n").slice(0, 3)).toEqual([
+      "",
+      "",
+      "---------- Forwarded message ---------",
+    ]);
+    expect(c.body).toContain("From: Ana Example \\<ana@x.com>");
     expect(c.body).toContain("Signed copy attached.");
     expect(c.quote).toBeNull();
     expect(c.attachments).toEqual([

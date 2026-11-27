@@ -1,4 +1,5 @@
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { DocumentFieldMode } from "./document-field";
 
 const OPTIONS = [
@@ -21,13 +22,16 @@ export function DocumentFieldModeSwitch({
   return (
     // Keeps the field focused through a press (the caret is carried over).
     <div className="contents" onMouseDownCapture={(e) => e.preventDefault()}>
-      <SegmentedControl
-        label="Editor view"
-        variant="track"
-        options={OPTIONS}
-        value={mode}
-        onChange={onModeChange}
-      />
+      {/* Small, as a footer's switch beside its icon buttons. */}
+      <ControlSizeProvider size="xs">
+        <SegmentedControl
+          label="Editor view"
+          variant="track"
+          options={OPTIONS}
+          value={mode}
+          onChange={onModeChange}
+        />
+      </ControlSizeProvider>
     </div>
   );
 }

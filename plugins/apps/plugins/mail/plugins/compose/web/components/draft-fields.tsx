@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
@@ -30,7 +30,6 @@ import {
   bodySigned,
   MAIL_BODY_DIALECT,
   parseAddressList,
-  quoteBody,
   type DraftContent,
 } from "../../core";
 import type { DraftEditor, SignatureRead } from "../internal/use-draft";
@@ -221,11 +220,7 @@ export function QuoteBlock({
   view: EditorView;
 }): ReactNode {
   const [open, setOpen] = useState(false);
-  const quote = editor.draft.quote;
-  const body = useMemo(
-    () => (quote === null ? null : quoteBody(quote)),
-    [quote],
-  );
+  const body = editor.draft.quote;
   if (body === null) return null;
   if (!open) {
     return (

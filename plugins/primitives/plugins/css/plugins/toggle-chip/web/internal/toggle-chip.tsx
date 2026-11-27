@@ -390,6 +390,9 @@ function TrackSegment({
   ariaLabel,
   onSelect,
 }: UnderlineTabProps) {
+  // The compact density (a footer's small switch) draws its compact segment;
+  // every other one the small segment it always had.
+  const compact = useControlSize() === "xs";
   return (
     <WithTooltip content={tooltip}>
       <button
@@ -399,8 +402,10 @@ function TrackSegment({
         aria-label={ariaLabel}
         onClick={onSelect}
         className={cn(
-          "inline-flex shrink-0 items-center whitespace-nowrap rounded-control-sm transition-colors",
-          "control-sm px-control-sm gap-control-sm",
+          "inline-flex shrink-0 items-center whitespace-nowrap transition-colors",
+          compact
+            ? "control-xs px-control-xs gap-control-xs rounded-control-xs"
+            : "control-sm px-control-sm gap-control-sm rounded-control-sm",
           active
             ? "bg-background text-foreground ring-1 ring-border"
             : "text-muted-foreground hover:text-foreground",

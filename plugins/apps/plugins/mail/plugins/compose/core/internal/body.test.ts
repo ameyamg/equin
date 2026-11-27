@@ -3,14 +3,17 @@ import {
   asDocumentContent,
   bodyText,
   messageParts,
+  legacyQuoteDocument,
+  MAIL_BODY_DIALECT,
   plainTextBody,
-  quoteBody,
 } from "./body";
+import { parseDocument } from "@plugins/page/plugins/document-field/core";
 import { EMPTY_DRAFT_CONTENT, DraftContentSchema, isDraftEmpty } from "./draft";
-import { bodySigned } from "./reply";
+import { bodySigned } from "./message-text";
 
-const QUOTE =
+const QUOTE_TEXT =
   "On Mon, Maya <maya@example.com> wrote:\n> Can we ship?\n>\n> Thanks";
+const QUOTE = legacyQuoteDocument(QUOTE_TEXT);
 
 describe("messageParts", () => {
   const body = [
@@ -49,7 +52,7 @@ describe("messageParts", () => {
 
   it("adds the signature and the quote to both parts", () => {
     const parts = messageParts("Hi", "document", "Mia\nmia.example", QUOTE);
-    expect(parts.text).toBe(`Hi\n\n-- \nMia\nmia.example\n\n${QUOTE}\n`);
+    expect(parts.text).toBe(`Hi\n\n-- \nMia\nmia.example\n\n${QUOTE_TEXT}\n`);
     expect(parts.html).toBe(
       '<p style="margin:0;white-space:pre-wrap">Hi</p>' +
         '<p style="margin:0;white-space:pre-wrap"><br></p><div class="gmail_signature">Mia<br>mia.example</div>' +
@@ -102,9 +105,9 @@ describe("drafts saved before formatting", () => {
   });
 });
 
-describe("quoteBody", () => {
-  it("is the header line, then the original as one quote", () => {
-    expect(quoteBody(QUOTE)).toBe(
+describe("legacyQuoteDocument", () => {
+  it("reads a quote of `> ` lines as the header line, then the original as one quote", () => {
+    expect(QUOTE).toBe(
       [
         "On Mon, Maya \\<maya@example.com> wrote:",
         "<quote>",
@@ -113,6 +116,19 @@ describe("quoteBody", () => {
         "  Thanks",
         "</quote>",
       ].join("\n"),
+    );
+  });
+});
+
+describe("the body's blank lines", () => {
+  it("keeps the first and last, and sends none at the end", () => {
+    const body = "\n\nHi\n\n";
+    expect(parseDocument(body, MAIL_BODY_DIALECT)).toHaveLength(5);
+    const parts = messageParts(body, "document", null, null);
+    expect(parts.text).toBe("\n\nHi");
+    expect(parts.html).toBe(
+      '<p style="margin:0;white-space:pre-wrap"><br></p>'.repeat(2) +
+        '<p style="margin:0;white-space:pre-wrap">Hi</p>',
     );
   });
 });

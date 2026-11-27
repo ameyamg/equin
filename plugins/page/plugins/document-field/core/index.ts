@@ -24,4 +24,5 @@ export {
   forestToEmailText,
   plainTextForest,
 } from "./email";
+export { emailHtmlToForest, nearestColorToken } from "./email-html";
 export { serializeDocumentKeeping } from "./keep-spelling";

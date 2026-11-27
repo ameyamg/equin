@@ -31,10 +31,8 @@ export {
   type MailDraft,
 } from "./internal/draft";
 export {
-  bodySigned,
   htmlToPlainText,
   messageIdsIn,
-  messageText,
   plainTextOf,
   prefixedSubject,
   quoteOf,
@@ -49,10 +47,12 @@ export {
   MAIL_BODY_DIALECT,
   messageParts,
   plainTextBody,
-  quoteBody,
-  quoteForest,
+  contentForest,
+  legacyQuoteDocument,
+  quoteDocument,
   type MessageParts,
 } from "./internal/body";
+export { bodySigned, messageText } from "./internal/message-text";
 export {
   mailDraftAttachmentLinks,
   mailDraftAttachmentLinksEntityRef,

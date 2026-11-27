@@ -25,7 +25,9 @@ The classic segmented control: borderless segments inside ONE tinted, bordered
 track (`bg-muted`, `rounded-control`), the selected one raised onto the
 surface (`bg-background`, a hairline ring, semibold label). For a value whose
 options are parts of one control — a form field's enum (`ControlPanelForm`) —
-where separate pills would read as filters. It wraps with `wrap`.
+where separate pills would read as filters. It wraps with `wrap`. Its
+segments are `control-sm`, or `control-xs` under the `xs` density (a
+footer's small switch: the document field's Markdown | Rich).
 
 ## `SegmentedControl value={null}`: nothing selected
 
@@ -58,11 +60,11 @@ filter rule reads as "custom").
     - `SegmentedControl`
     - `ToggleChip`
 - Cross-plugin:
-  - Uses tokens: 36 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 37 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×14
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×7
-    - `ui/tokens/shape` ×3
+    - `ui/tokens/shape` ×4
   - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
     - `primitives` ×7

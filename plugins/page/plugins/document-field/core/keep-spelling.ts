@@ -31,12 +31,14 @@ let memo: Basis | null = null;
 function basisOf(previous: string, dialect: DocumentDialect): Basis | null {
   if (memo && memo.previous === previous && memo.dialect === dialect)
     return memo;
-  // Blank lines before and after are dropped by the parse (`emptyBlocks:
-  // "blank-line"`): they stand for nothing.
-  const source = previous
-    .replace(/^(\s*\n)+/, "")
-    .replace(/(\n\s*)+$/, "")
-    .split("\n");
+  // Blank lines before and after are dropped by the parse (`blankLines:
+  // "empty-block"`): they stand for nothing. Under `"every-empty-block"` they
+  // are blocks, and stay lines.
+  const source = (
+    dialect.blankLines === "every-empty-block"
+      ? previous
+      : previous.replace(/^(\s*\n)+/, "").replace(/(\n\s*)+$/, "")
+  ).split("\n");
   const canonical = serializeDocument(
     parseDocument(previous, dialect),
     dialect,

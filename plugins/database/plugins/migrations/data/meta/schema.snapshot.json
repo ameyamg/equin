@@ -1,6 +1,6 @@
 {
-  "id": "6f1f9f9a-eabe-484d-9a85-60ed6765fea7",
-  "prevId": "6d7d8b80-4752-4b58-9097-b466571d4fbb",
+  "id": "c59a159f-fbe5-4337-b818-3dea0d35fb68",
+  "prevId": "6f1f9f9a-eabe-484d-9a85-60ed6765fea7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4817,6 +4817,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'"
+        },
+        "quote_document": {
+          "name": "quote_document",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "quote": {
           "name": "quote",

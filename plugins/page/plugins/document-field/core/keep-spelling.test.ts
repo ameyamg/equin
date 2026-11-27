@@ -14,6 +14,17 @@ const MAIL: DocumentDialect = {
   softBreaks: "newline",
 };
 
+describe("serializeDocumentKeeping, blank lines at the ends kept", () => {
+  const ENDS: DocumentDialect = { ...MAIL, blankLines: "every-empty-block" };
+  it("keeps the spelling of a text that starts and ends with blank lines", () => {
+    const previous = ["", "", "header", "", "- a", "- b", ""].join("\n");
+    const forest = parseDocument(previous.replace("- b", "- bb"), ENDS);
+    expect(serializeDocumentKeeping(forest, previous, ENDS)).toBe(
+      ["", "", "header", "", "- a", "* bb", ""].join("\n"),
+    );
+  });
+});
+
 describe("serializeDocumentKeeping", () => {
   const edit = (previous: string, change: (src: string) => string) => {
     // A rich edit: the forest of the previous text, changed.
