@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import type {
   BackupSourceFailed,
@@ -48,6 +49,32 @@ export async function runBackupBody(
     );
   }
 
+  // Only the targets turned on are asked to store the archive: a disabled
+  // target is never run, so it has no way to answer — it used to answer
+  // `{ ok: true, detail: "disabled" }`, which counted as stored, and a run with
+  // every target off was recorded `ok` while the archive went nowhere.
+  const targets = BackupTarget.getContributions().filter(
+    (t) => getConfig(t.enabledBy).enabled,
+  );
+  if (targets.length === 0) {
+    // Nothing can hold the archive, so nothing is assembled: the run fails at
+    // once, through the same ledger stamp, report and exit as any failed run.
+    const detail =
+      "no storage target is enabled — the archive would be stored nowhere";
+    await db
+      .update(_backupRuns)
+      .set({
+        status: "failed",
+        finishedAt: new Date(),
+        targetResults: [{ targetId: "targets", ok: false, detail }],
+      })
+      .where(eq(_backupRuns.id, runId));
+    await reportIncomplete(runId, trigger, "failed", [
+      { kind: "run", what: "Storage targets", error: detail },
+    ]);
+    throw new Error(`[backup] ${detail}`);
+  }
+
   let archive;
   try {
     archive = await assembleArchive(trigger);
@@ -85,7 +112,6 @@ export async function runBackupBody(
     throw err;
   }
 
-  const targets = BackupTarget.getContributions();
   const results = await Promise.all(
     targets.map((t) =>
       t.run(archive).catch((err) => ({

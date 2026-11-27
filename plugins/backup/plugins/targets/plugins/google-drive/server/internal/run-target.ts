@@ -17,10 +17,7 @@ import { DriveTokenError, type DriveToken } from "./token";
 export async function runGoogleDriveTarget(
   archive: BackupArchive,
 ): Promise<BackupTargetResult> {
-  const { enabled, keepLast } = getConfig(googleDriveBackupConfig);
-  if (!enabled) {
-    return { targetId: "google-drive", ok: true, detail: "disabled" };
-  }
+  const { keepLast } = getConfig(googleDriveBackupConfig);
 
   // Asked up front so a missing grant becomes the target's needs-consent
   // result (the run card's Grant access) before anything is sent.

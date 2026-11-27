@@ -10,11 +10,7 @@ const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$/;
 export async function runLocalTarget(
   archive: BackupArchive,
 ): Promise<BackupTargetResult> {
-  const { enabled, keepLast } = getConfig(localBackupConfig);
-
-  if (!enabled) {
-    return { targetId: "local", ok: true, detail: "disabled" };
-  }
+  const { keepLast } = getConfig(localBackupConfig);
 
   let entries: string[];
   try {

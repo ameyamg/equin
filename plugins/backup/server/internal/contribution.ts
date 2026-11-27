@@ -12,10 +12,12 @@ export const BackupTarget = defineServerContribution<{
   name: string;
   /**
    * The target's own config, whose `enabled` field says whether it stores
-   * archives. Read by the Backup health row: a schedule with no target
-   * enabled backs up nowhere, so backup is not activated.
+   * archives. The run reads it: a disabled target is never run, and a run
+   * with no target enabled is recorded `failed` (it would store nowhere).
    */
   enabledBy: ConfigDescriptor<{ enabled: BoolFieldDef }>;
+  /** Store the archive. Called only while the target is enabled, so every
+   *  result it gives is about a real attempt to store. */
   run: (archive: BackupArchive) => Promise<BackupTargetResult>;
 }>("backup.target", { docLabel: (p) => p.name });
 

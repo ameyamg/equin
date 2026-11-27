@@ -3,29 +3,30 @@ import { db } from "@plugins/database/server";
 import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
+import {
+  nextCronFiring,
+  parseCrontab,
+  type Crontab,
+} from "@plugins/infra/plugins/jobs/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { backupHealth, type BackupHealth } from "@plugins/backup/core";
 import { backupConfig } from "../../shared/config";
-import { BackupTarget } from "./contribution";
 import { _backupRuns } from "./tables";
 
 /**
  * The Backup health row's answer.
  *
- * Activation is read from the CURRENT config. The schedule itself is read
- * once at worker startup (`backupRunJob`), so a cron just set takes effect on
- * the next restart — the row says "activated" a little early, never late.
+ * Activation and the owed-run instants are read from the CURRENT config. The
+ * schedule itself is read once at worker startup (`backupRunJob`), so a cron
+ * just set takes effect on the next restart — the row judges by it a little
+ * early, never late.
  */
 export async function loadBackupHealth(): Promise<BackupHealth> {
   if (!isMain()) return { kind: "elsewhere" };
-  if (getConfig(backupConfig).periodicCron.trim() === "") {
-    return { kind: "inactive", reason: "no-schedule" };
-  }
-  const anyTarget = BackupTarget.getContributions().some(
-    (t) => getConfig(t.enabledBy).enabled,
-  );
-  if (!anyTarget) return { kind: "inactive", reason: "no-target" };
+  const cron = getConfig(backupConfig).periodicCron.trim();
+  if (cron === "") return { kind: "inactive", reason: "no-schedule" };
+  const tab = parseCrontab(cron);
 
   const [last] = await db
     .select({ status: _backupRuns.status, finishedAt: _backupRuns.finishedAt })
@@ -40,6 +41,11 @@ export async function loadBackupHealth(): Promise<BackupHealth> {
     .from(_backupRuns)
     .where(isNull(_backupRuns.finishedAt))
     .limit(1);
+  const [latestStart] = await db
+    .select({ startedAt: _backupRuns.startedAt })
+    .from(_backupRuns)
+    .orderBy(desc(_backupRuns.startedAt))
+    .limit(1);
 
   return {
     kind: "active",
@@ -50,7 +56,19 @@ export async function loadBackupHealth(): Promise<BackupHealth> {
       last.status === "running"
         ? null
         : { status: last.status, finishedAt: last.finishedAt.getTime() },
+    owed:
+      latestStart === undefined ? null : owedAfter(tab, latestStart.startedAt),
   };
+}
+
+/** The schedule's first and second firings after a run started. */
+export function owedAfter(
+  tab: Crontab,
+  startedAt: Date,
+): { dueAt: number | null; staleAt: number | null } {
+  const due = nextCronFiring(tab, startedAt);
+  const stale = due === null ? null : nextCronFiring(tab, due);
+  return { dueAt: due?.getTime() ?? null, staleAt: stale?.getTime() ?? null };
 }
 
 /**
@@ -71,25 +89,17 @@ function onConfigChange<F extends FieldsRecord>(
 
 // External: half of the truth is config on disk, which the change feed cannot
 // see. `backup_runs` is declared in `reads`, so a run claimed or closed
-// recomputes it; the configs (backup's own and each target's enabled switch)
-// are watched for as long as a tab reads the value.
+// recomputes it; the backup config (the schedule) is watched for as long as a
+// tab reads the value. Time passing needs no recompute: the value carries the
+// instants it goes stale at, and the reader times them.
 export const backupHealthServed = serveValue(backupHealth, {
   source: "external",
   changes: "notified",
   reads: {
     tables: [_backupRuns],
-    reason: "the latest finished backup run's outcome, and whether one runs",
+    reason:
+      "the latest finished backup run's outcome, whether one runs, and the latest run's start",
   },
-  whileSubscribed: (_params, notify) => {
-    const stops = [
-      onConfigChange(backupConfig, notify),
-      ...BackupTarget.getContributions().map((t) =>
-        onConfigChange(t.enabledBy, notify),
-      ),
-    ];
-    return () => {
-      for (const stop of stops) stop();
-    };
-  },
+  whileSubscribed: (_params, notify) => onConfigChange(backupConfig, notify),
   loader: loadBackupHealth,
 });

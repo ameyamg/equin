@@ -16461,7 +16461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values): `notionAuthConfig`
 
-- **`backup`** — Backup orchestrator UI: run backups, view history, the health report's Backup row (green after a good backup, attention after a failed or partial one, hollow while backup is not activated), and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
+- **`backup`** — Backup orchestrator UI: run backups, view history, the health report's Backup row (green after a good backup, attention after a failed or partial one or once the schedule misses a whole firing, hollow while no schedule is set), and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
   - Web:
     - Slots:
       - `BackupRunDetail.Section`
@@ -41718,7 +41718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOTAL_JOB_SLOTS`
           - `zombieAfterMsFor`
       - Cross-plugin:
-        - Imported by: 102 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 103 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×27
           - `conversations` ×18
           - `infra` ×16
@@ -41726,6 +41726,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×13
           - `database` ×4
           - `page` ×3
+          - `backup`
           - `build`
           - `companions/browser-extension/recorder`
           - `config_v2/auto-merge`
