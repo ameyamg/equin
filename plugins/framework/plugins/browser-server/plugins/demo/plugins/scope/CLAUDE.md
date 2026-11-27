@@ -78,6 +78,13 @@ seed — so the unchanged app reads demo data through `useLive` /
   stale tab) declines with `{ kind: "join", worker }`: the scope joins that
   generation (`HostGenerations.join`) and connects there — no screen. A
   Reset or a retirement is followed the same way.
+- **A demo that keeps nothing says so.** A host that was to keep its data in
+  this browser but keeps it in memory for the visit (`HostBoot.memoryOnly`:
+  no Web Locks, or the browser would not open its IndexedDB —
+  `host-storage`) is exposed as `useDemoHostControl().memoryOnly`, and
+  `DemoMemoryOnlyNotice` (inside the scope) draws the line the visitor reads:
+  their changes last only until they leave or reload. The page places it
+  (the website: beside Reset demo under the frame, over the demo page's foot).
 - **A boot the browser interrupted starts again.** A host declining
   `{ kind: "interrupted" }` (WebKit cut its IndexedDB work short while the
   page was suspended — back/forward cache, a background tab — or the browser
@@ -177,6 +184,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `DemoEntry`
     - `DemoHostControl`
   - Exports (values):
+    - `DemoMemoryOnlyNotice`
     - `DemoScope`
     - `useDemoHostControl`
 - Cross-plugin:

@@ -1,0 +1,19 @@
+/* The demo page's "nothing is kept" line (demo-resident.tsx): a small pill
+   at the foot of the demo, in the site bar's materials (its card panel and
+   hairline), so it reads above any app it covers. Pointer-transparent: it
+   only informs, and must not cover a control the visitor reaches for. */
+.website-demo-memory-only {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 1;
+  max-width: calc(100% - 24px);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+  text-align: center;
+}

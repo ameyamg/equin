@@ -41,7 +41,18 @@
 // writing one IndexedDB PGlite would corrupt it. So such a storage opens IN
 // MEMORY (`openInMemory`), filled from its snapshot as a fresh one would be:
 // the host serves, and what the visitor does is lost with the worker — the
-// limit, said in the boot report (`HostBoot.data`) and the worker's console.
+// limit, said in the boot report (`HostBoot.memoryOnly`, which the page shows
+// the visitor) and the worker's console.
+//
+// The same holds where the browser will not OPEN the storage's IndexedDB
+// databases (`StorageUnavailableError`: WebKit's `UnknownError` "Unable to
+// open database file on disk" on iOS Safari, report-1795766338-jy60yr — its
+// backing store failing to open the database's SQLite file; a full or evicted
+// origin; storage refused). Both databases are opened (PGlite's probed) before
+// anything is read or written, so a refusal there leaves nothing half done,
+// and the storage opens in memory, as without Web Locks. Opening it again in
+// this page would hit the same refusal: what fails is the browser's storage
+// for this site, not this code or its data.
 
 import { wallNow } from "@plugins/packages/plugins/deadline/core";
 import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
@@ -50,13 +61,17 @@ import {
   LIFECYCLE_KEY,
   META_STORE,
   deleteStorageDatabases,
+  pgliteDbName,
   storagePrefix,
   storesDbName,
   type Lifecycle,
 } from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
-import { reportDataProgress } from "@plugins/framework/plugins/browser-server/core";
-import { idbConnect, idbDone, idbRequest } from "./idb";
-import { StorageNewerThanCodeError } from "./errors";
+import {
+  reportDataProgress,
+  type HostMemoryOnly,
+} from "@plugins/framework/plugins/browser-server/core";
+import { idbConnect, idbDone, idbProbeOpen, idbRequest } from "./idb";
+import { StorageNewerThanCodeError, StorageUnavailableError } from "./errors";
 import type {
   DatabaseStart,
   HostStoreOptions,
@@ -126,6 +141,12 @@ export type HostStorageSpec =
 export interface OpenedHostStorage extends HostStorage {
   /** Where its data comes from on this boot. */
   readonly origin: HostStorageOrigin;
+  /**
+   * A persistent storage served from memory for this visit only, and why
+   * (no Web Locks; the browser would not open its IndexedDB). `null`: kept as
+   * asked — persistent, or a memory storage by the spec.
+   */
+  readonly memoryOnly: HostMemoryOnly | null;
   /** The host booted on it (and, when fresh, filled it): record it as ready. */
   booted(): Promise<void>;
   /** Flush and close it, and everything it adopted; nothing writes after. */
@@ -141,13 +162,15 @@ export async function openHostStorage(
     return {
       ...memoryHostStorage(),
       origin: { kind: "empty" },
+      memoryOnly: null,
       booted: () => Promise.resolve(),
       close: () => Promise.resolve(),
       wipe: () => Promise.resolve(),
     };
   }
   const lockHere = webLocks();
-  if (lockHere.kind === "unsupported") return openInMemory(spec);
+  if (lockHere.kind === "unsupported")
+    return openInMemory(spec, { why: "no-web-locks" });
   let opened: OpenedHostStorage | null = null;
   const ownership = await acquireOwnership({
     locks: lockHere.locks,
@@ -177,6 +200,15 @@ export async function openHostStorage(
     return opened;
   } catch (err) {
     ownership.release();
+    // The refusal comes only from an open: before anything was written, or
+    // after a wipe deleted it all (`wipeStored`'s reopen). Either way no
+    // stored data is half done: the visit runs in memory, said so to the page.
+    if (err instanceof StorageUnavailableError) {
+      return openInMemory(spec, {
+        why: "storage-unavailable",
+        error: err.refusal,
+      });
+    }
     throw err;
   }
 }
@@ -189,6 +221,9 @@ async function openPersistent(
 ): Promise<OpenedHostStorage> {
   const prefix = storagePrefix(name);
   const storesName = storesDbName(name);
+  // PGlite opens its database only inside the boot, where a refusal could no
+  // longer fall back to memory: asked first, before anything is opened.
+  await idbProbeOpen(pgliteDbName(name));
   let db = await idbConnect(storesName, [ENTRIES_STORE, META_STORE]);
 
   const readLifecycle = async (): Promise<Lifecycle | undefined> =>
@@ -401,6 +436,7 @@ async function openPersistent(
     databaseDir: `idb://${prefix}db`,
     databaseStart,
     origin,
+    memoryOnly: null,
     store<V>(
       storeName: string,
       options: HostStoreOptions<V>,
@@ -491,18 +527,24 @@ async function loadCheckedSnapshot(
 }
 
 /**
- * A persistent storage where this worker has no Web Locks: nothing can make
- * it the one owner of the stored data, so it touches none of it — it serves
- * from memory, filled from the snapshot `start` names (empty without one),
+ * A persistent storage this worker cannot keep (`memoryOnly`: it has no Web
+ * Locks, so nothing can make it the one owner of the stored data; or the
+ * browser would not open its IndexedDB): it touches none of the stored data
+ * and serves from memory, filled from the snapshot `start` names (empty without one),
  * its times shifted to now as a fresh storage's are. Lost with the worker;
  * a Reset just ends it (the next worker starts from the snapshot again), and
  * another build or tab never claims it (there is nothing to hand over).
  */
 async function openInMemory(
   spec: Extract<HostStorageSpec, { kind: "persistent" }>,
+  memoryOnly: HostMemoryOnly,
 ): Promise<OpenedHostStorage> {
   console.warn(
-    `[host-storage] ${spec.name}: this worker has no Web Locks, so nothing can keep another worker off its stored data — it keeps its data in memory for this visit instead (lost on reload)`,
+    `[host-storage] ${spec.name}: ${
+      memoryOnly.why === "no-web-locks"
+        ? "this worker has no Web Locks, so nothing can keep another worker off its stored data"
+        : `the browser would not open its IndexedDB storage (${memoryOnly.error})`
+    } — it keeps its data in memory for this visit instead (lost on reload)`,
   );
   const snapshot =
     spec.start === undefined
@@ -530,6 +572,7 @@ async function openInMemory(
       snapshot === null
         ? { kind: "empty" }
         : { kind: "snapshot", replacedOutdated: false },
+    memoryOnly,
     store<V>(
       storeName: string,
       options: HostStoreOptions<V>,

@@ -15,7 +15,10 @@ import {
 import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import { usePathname } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
-import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
+import {
+  DemoMemoryOnlyNotice,
+  DemoScope,
+} from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
   DemoBootScreen,
   morphDemoFrame,
@@ -32,6 +35,7 @@ import {
 import { landingUrl } from "../internal/demo-url";
 import { demoPage, demoPagePath } from "../../core";
 import { DemoSiteBar } from "./demo-site-bar";
+import "./demo-memory-only.css";
 
 /**
  * The live demo's resident, wrapping the site's pages (`Website.Resident`):
@@ -177,6 +181,11 @@ function ResidentDemo({
             fills={page ? "viewport" : undefined}
             onTitleChange={claimTitle}
           />
+          {/* The demo page has no controls row: the line sits over the
+              demo's foot. The frame's is in its controls, below. */}
+          {page && (
+            <DemoMemoryOnlyNotice className="website-demo-memory-only" />
+          )}
         </>,
         target.element,
         target.kind,
@@ -195,6 +204,7 @@ function ResidentDemo({
                 setPlace(undefined);
               }}
             />
+            <DemoMemoryOnlyNotice />
           </Inline>,
           controls,
         )}

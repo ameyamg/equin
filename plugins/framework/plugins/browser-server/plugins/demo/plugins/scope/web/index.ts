@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { DemoScope, useDemoHostControl } from "./components/demo-scope";
+export {
+  DemoMemoryOnlyNotice,
+  DemoScope,
+  useDemoHostControl,
+} from "./components/demo-scope";
 export type {
   DemoBoot,
   DemoEntry,

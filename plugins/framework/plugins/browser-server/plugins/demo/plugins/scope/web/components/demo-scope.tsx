@@ -23,6 +23,7 @@ import {
   PortHostRefusedError,
   portBrowserServer,
   type BrowserServer,
+  type HostMemoryOnly,
   type HostProgress,
   type HostServerError,
   type PageInputValue,
@@ -123,6 +124,8 @@ function bootLine(
 interface ScopeHost {
   server: BrowserServer;
   frameBase: string | null;
+  /** The host keeps its data in memory for this visit only (`HostBoot.memoryOnly`). */
+  memoryOnly: HostMemoryOnly | null;
   reset(): void;
   /** Hand the host one page input's value (`PortServer.supply`). */
   supply(key: string, input: PageInputValue): void;
@@ -372,6 +375,7 @@ function startScopeServer(
     report.onReady({
       server: served,
       frameBase: frames.kind === "serving" ? frames.frameBase : null,
+      memoryOnly: hosted.boot.memoryOnly ?? null,
       reset: () => {
         // Before the host is asked: a tab opened while it wipes already
         // connects to the next generation, never to the worker that closes.
@@ -395,6 +399,13 @@ function startScopeServer(
 /** The scope's host, as the subtree can act on it: `reset` wipes its data and boots it again from the seed. */
 export interface DemoHostControl {
   reset(): void;
+  /**
+   * The host was to keep the demo's data in this browser but keeps it in
+   * memory for this visit only (no Web Locks; the browser would not open its
+   * storage): what the visitor changes is lost when they leave. A page says
+   * so (`DemoMemoryOnlyNotice`). `null`: kept as asked.
+   */
+  memoryOnly: HostMemoryOnly | null;
 }
 
 const DemoHostControlContext = createContext<DemoHostControl | null>(null);
@@ -590,6 +601,15 @@ export function DemoScope({
           setState({ kind: "stopped", why: "storage-blocked" });
           return;
         }
+        // The browser's storage failed to answer (not a bug of ours, and
+        // not reported here): the host still runs — its own open falls back
+        // to memory and reports the refusal once — so it starts as on a
+        // first visit.
+        if (held.kind === "unavailable") {
+          console.warn(
+            `[demo] this browser's IndexedDB failed to answer (${held.error}): the demo starts as on a first visit`,
+          );
+        }
         setStorage("usable");
         if (held.kind === "stored") setStarted(true);
       },
@@ -770,7 +790,8 @@ export function DemoScope({
     [host, telemetry],
   );
   const control = useMemo<DemoHostControl | null>(
-    () => (host === null ? null : { reset: host.reset }),
+    () =>
+      host === null ? null : { reset: host.reset, memoryOnly: host.memoryOnly },
     [host],
   );
   // A boot failure the page draws (`boot`) is reported here, once: drawn, it
@@ -942,5 +963,32 @@ function HostStopped({ why }: { why: StopReason }): ReactNode {
         <Button onClick={() => window.location.reload()}>Reload</Button>
       </Stack>
     </Center>
+  );
+}
+
+/**
+ * What the visitor must know when the demo keeps nothing
+ * (`DemoHostControl.memoryOnly`): their changes last only until they leave or
+ * reload. Renders nothing while the host keeps its data as asked. Inside a
+ * `<DemoScope>` only. `data-demo-memory-only`: why, for e2e.
+ */
+export function DemoMemoryOnlyNotice({
+  className,
+}: {
+  className?: string;
+}): ReactNode {
+  const { memoryOnly } = useDemoHostControl();
+  if (memoryOnly === null) return null;
+  return (
+    <Text
+      as="p"
+      variant="caption"
+      tone="muted"
+      className={className}
+      data-demo-memory-only={memoryOnly.why}
+    >
+      This browser won't let the demo save, so your changes last only until you
+      leave or reload.
+    </Text>
   );
 }

@@ -11,7 +11,9 @@ import {
   retireLockName,
   serveHost,
   type HostBooted,
+  type HostMemoryOnly,
   type PortEnd,
+  type HostServerError,
   type ServedHost,
 } from "@plugins/framework/plugins/browser-server/core";
 import { isSuspensionAbort } from "@plugins/primitives/plugins/dom/plugins/indexed-db-failure/core";
@@ -58,6 +60,30 @@ function originLabel(origin: HostStorageOrigin): string {
         ? "snapshot (replacing data from an older one)"
         : "snapshot";
   }
+}
+
+function memoryOnlyLabel(memoryOnly: HostMemoryOnly): string {
+  switch (memoryOnly.why) {
+    case "no-web-locks":
+      return "no Web Locks in this worker";
+    case "storage-unavailable":
+      return `the browser would not open its IndexedDB: ${memoryOnly.error}`;
+  }
+}
+
+/** The report of a storage the browser would not open, as a server error the page files. */
+function storageUnavailableError(
+  spec: BrowserHostStorage,
+  memoryOnly: Extract<HostMemoryOnly, { why: "storage-unavailable" }>,
+): HostServerError {
+  const name = spec.kind === "persistent" ? spec.name : "memory";
+  return {
+    message: `[host-storage] ${name}: the browser would not open its IndexedDB storage (${memoryOnly.error}), so the host keeps its data in memory for this visit only`,
+    stack: null,
+    errorType: "HostStorageUnavailable",
+    // The browser's error name: a quota is not a broken backing store.
+    scope: memoryOnly.error.split(":")[0] ?? null,
+  };
 }
 
 /**
@@ -107,6 +133,7 @@ export function serveBrowserHost(opts: {
     try {
       const host = await opts.boot(storage);
       await storage.booted();
+      const { memoryOnly } = storage;
       // The boot report says where the data came from, what loading the
       // worker's own code cost, and what opening the storage cost (a
       // snapshot's load included) before the graph booted.
@@ -119,13 +146,25 @@ export function serveBrowserHost(opts: {
             { name: "storage", ms: openedMs },
             ...host.boot.stages,
           ],
-          // A persistent storage opened in memory: no Web Locks here (`open.ts`).
+          // A persistent storage opened in memory (`open.ts`): said in the
+          // label, and to the page, which tells the visitor.
           data:
-            opts.storage.kind === "persistent" && storage.kind === "memory"
-              ? `${originLabel(storage.origin)}, in memory (no Web Locks in this worker)`
-              : originLabel(storage.origin),
+            memoryOnly === null
+              ? originLabel(storage.origin)
+              : `${originLabel(storage.origin)}, in memory (${memoryOnlyLabel(memoryOnly)})`,
+          ...(memoryOnly === null ? {} : { memoryOnly }),
           createdAt: performance.timeOrigin,
         },
+        errors:
+          memoryOnly?.why === "storage-unavailable"
+            ? (forward) => {
+                // The browser's refusal is not a fault of this code, but a
+                // visitor who loses their changes is one to count: reported
+                // once per worker, as the error it is.
+                forward(storageUnavailableError(opts.storage, memoryOnly));
+                host.errors(forward);
+              }
+            : host.errors,
       };
     } catch (err) {
       // A host that cannot boot holds the storage for nothing: release it,

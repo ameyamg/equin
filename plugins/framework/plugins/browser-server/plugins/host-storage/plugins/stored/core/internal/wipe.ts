@@ -7,6 +7,7 @@
 import {
   LIFECYCLE_KEY,
   META_STORE,
+  pgliteDbName,
   storagePrefix,
   storageLockName,
   storesDbName,
@@ -47,12 +48,8 @@ export async function deleteStorageDatabases(name: string): Promise<void> {
           .map((d) => d.name)
           .filter((n): n is string => n !== undefined && n.includes(prefix))
       : // No listing below Firefox 126 (the browser floor is 115): delete the
-        // names the storage has — PGlite's IDBFS database for its
-        // `idb://${prefix}db` data dir, and the stores. Emscripten's IDBFS
-        // names its database by the mount point (`getDB(mount.mountpoint)`),
-        // and PGlite mounts `idb://<dir>` at `/pglite/<dir>` (its IdbFs
-        // `init`, as of @electric-sql/pglite 0.5.12).
-        [`/pglite/${prefix}db`, last];
+        // names the storage has: PGlite's IDBFS database and the stores.
+        [pgliteDbName(name), last];
   for (const n of names.filter((n) => n !== last)) await idbDelete(n);
   await idbDelete(last);
 }

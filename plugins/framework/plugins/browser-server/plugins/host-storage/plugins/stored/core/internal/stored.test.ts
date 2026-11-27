@@ -29,6 +29,27 @@ describe("hostDataStored", () => {
     expect(await hostDataStored("demo")).toEqual({ kind: "absent" });
   });
 
+  it("answers unavailable where the browser's storage fails to open (report-1795766338-jy60yr)", async () => {
+    g.indexedDB = {
+      databases: () =>
+        Promise.resolve([{ name: "equin-host--demo--stores", version: 1 }]),
+      open: () => {
+        const req: Record<string, unknown> = {
+          error: new DOMException(
+            "Unable to open database file on disk",
+            "UnknownError",
+          ),
+        };
+        queueMicrotask(() => (req.onerror as () => void)());
+        return req;
+      },
+    };
+    expect(await hostDataStored("demo")).toEqual({
+      kind: "unavailable",
+      error: "UnknownError: Unable to open database file on disk",
+    });
+  });
+
   it("rejects any other failure", () => {
     g.indexedDB = {
       databases: () => Promise.reject(new TypeError("boom")),

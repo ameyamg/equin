@@ -342,6 +342,7 @@ reaching the server, detach on unmount).
     - `HostBoot`
     - `HostBooted`
     - `HostEndReason`
+    - `HostMemoryOnly`
     - `HostProgress`
     - `HostRefusal`
     - `HostServerError`

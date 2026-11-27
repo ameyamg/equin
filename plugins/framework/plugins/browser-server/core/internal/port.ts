@@ -699,6 +699,19 @@ export class HostEndedError extends Error {
  * because server-core sits above this plugin; a host passes its report
  * through, so tsc checks the two agree.
  */
+/**
+ * Why a host that should keep its data in this browser keeps it in memory for
+ * this visit only (`HostBoot.memoryOnly`):
+ * - `no-web-locks`: the worker has no Web Locks (iOS Lockdown Mode, some
+ *   webviews), so nothing can make it the one owner of the stored data;
+ * - `storage-unavailable`: the browser would not open its IndexedDB storage
+ *   (WebKit's `UnknownError` "Unable to open database file on disk",
+ *   report-1795766338-jy60yr; a `QuotaExceededError`; a `SecurityError`).
+ *   `error` is the browser's refusal, as `name: message`.
+ */
+export type HostMemoryOnly =
+  { why: "no-web-locks" } | { why: "storage-unavailable"; error: string };
+
 export interface HostBoot {
   /** Graph nodes booted. */
   plugins: number;
@@ -711,6 +724,13 @@ export interface HostBoot {
    * an earlier boot stored, a snapshot, nothing). Absent: the host keeps none.
    */
   data?: string;
+  /**
+   * Set when a host that keeps its data in this browser could not, and keeps it
+   * in memory for this visit only, so what the visitor changes is lost when
+   * the worker ends. A page shows this to the visitor. Absent: the host keeps
+   * its data as asked, or was asked to keep none.
+   */
+  memoryOnly?: HostMemoryOnly;
   /**
    * When the worker was created, on the wall clock (its
    * `performance.timeOrigin`, ms since the epoch): a page places it on its

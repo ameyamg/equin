@@ -8,6 +8,15 @@
 /** Every IndexedDB database of storage `name` starts with this. */
 export const storagePrefix = (name: string): string => `equin-host--${name}--`;
 
+/**
+ * PGlite's IndexedDB database for the storage's `idb://${storagePrefix}db` data
+ * dir. Emscripten's IDBFS names its database by the mount point
+ * (`getDB(mount.mountpoint)`), and PGlite mounts `idb://<dir>` at
+ * `/pglite/<dir>` (its IdbFs `init`, as of @electric-sql/pglite 0.5.12).
+ */
+export const pgliteDbName = (name: string): string =>
+  `/pglite/${storagePrefix(name)}db`;
+
 /** The database holding the stores' entries and the lifecycle record. */
 export const storesDbName = (name: string): string =>
   `${storagePrefix(name)}stores`;

@@ -18,6 +18,7 @@ export type {
   HostBoot,
   HostBooted,
   HostEndReason,
+  HostMemoryOnly,
   HostRefusal,
   HostServerError,
   PortEnd,

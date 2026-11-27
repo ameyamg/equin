@@ -27,6 +27,7 @@ narrower than the name (a suspension).
 - Cross-plugin:
   - Imported by:
     - `framework/browser-server/host-storage`
+    - `framework/browser-server/host-storage/stored`
     - `reports/main-thread-stall`
 - Core:
   - Exports (types): `IdbFailure`

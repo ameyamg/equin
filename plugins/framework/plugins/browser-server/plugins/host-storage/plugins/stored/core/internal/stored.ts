@@ -1,3 +1,4 @@
+import { idbFailureOf } from "@plugins/primitives/plugins/dom/plugins/indexed-db-failure/core";
 import {
   LIFECYCLE_KEY,
   META_STORE,
@@ -16,9 +17,18 @@ import {
  *   cookies and site data blocked, a sandboxed or third-party frame, strict
  *   privacy settings). No persistent host can run here, so the page must say
  *   so instead of starting one. `error` names the browser's refusal.
+ * - `unavailable` — the browser's own storage failed to answer (WebKit's
+ *   `UnknownError` "Unable to open database file on disk",
+ *   report-1795766338-jy60yr; a `QuotaExceededError`): not known whether
+ *   anything is stored. The host can still run — its own open falls back to
+ *   memory, and reports the refusal — so the page starts it as on a first
+ *   visit. `error` is the browser's, as `name: message`.
  */
 export type HostDataStored =
-  { kind: "stored" } | { kind: "absent" } | { kind: "blocked"; error: string };
+  | { kind: "stored" }
+  | { kind: "absent" }
+  | { kind: "blocked"; error: string }
+  | { kind: "unavailable"; error: string };
 
 /**
  * A refusal of the storage itself, not a failure of ours: the browser denies
@@ -37,7 +47,8 @@ function isStorageRefusal(err: unknown): err is DOMException {
  * page can ask before it decides to start the host: a demo's gate.
  *
  * A browser that refuses the page IndexedDB answers `blocked` (a state the
- * page draws), never a rejection; any other failure rejects. Whether stored
+ * page draws), one whose storage fails to answer `unavailable`, never a
+ * rejection; any other failure rejects. Whether stored
  * data is still current (a newer build's snapshot replaces it) is the host's
  * to decide when it opens it.
  */
@@ -46,6 +57,12 @@ export async function hostDataStored(name: string): Promise<HostDataStored> {
     return (await readStored(name)) ? { kind: "stored" } : { kind: "absent" };
   } catch (err) {
     if (isStorageRefusal(err)) return { kind: "blocked", error: err.name };
+    const failure = idbFailureOf(err);
+    if (failure.kind === "unavailable")
+      return {
+        kind: "unavailable",
+        error: `${failure.name}: ${failure.message}`,
+      };
     throw err;
   }
 }

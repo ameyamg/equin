@@ -2,7 +2,11 @@
 // needs: one object store of entries keyed by [store, key], read whole at open
 // and written one transaction per change.
 
-import { ConnectionClosedByBrowserError } from "./errors";
+import { idbFailureOf } from "@plugins/primitives/plugins/dom/plugins/indexed-db-failure/core";
+import {
+  ConnectionClosedByBrowserError,
+  StorageUnavailableError,
+} from "./errors";
 
 export function idbRequest<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -63,7 +67,7 @@ export async function idbConnect(
   name: string,
   objectStores: readonly string[],
 ): Promise<IdbConnection> {
-  const db = await idbOpen(name, objectStores);
+  const db = await unavailableAsTyped(name, idbOpen(name, objectStores));
   let closedHere = false;
   db.onclose = () =>
     console.warn(
@@ -114,4 +118,65 @@ function idbOpen(
         ),
       );
   });
+}
+
+/**
+ * `opening`, except that the browser refusing to open `name` (its own storage
+ * failed or refused this context: `idbFailureOf`'s `unavailable`) rejects
+ * `StorageUnavailableError`. Only an OPEN is read so: nothing was written yet,
+ * so the storage can still be served from memory. A failure later (a
+ * transaction) stays the error it is.
+ */
+async function unavailableAsTyped<T>(
+  name: string,
+  opening: Promise<T>,
+): Promise<T> {
+  try {
+    return await opening;
+  } catch (err) {
+    const failure = idbFailureOf(err);
+    if (failure.kind === "unavailable") {
+      throw new StorageUnavailableError(
+        name,
+        `${failure.name}: ${failure.message}`,
+        err,
+      );
+    }
+    throw err;
+  }
+}
+
+/**
+ * Whether the browser opens `name`, without creating it or changing it: an
+ * existing database opens as it is (no version, so never upgraded) and is
+ * closed at once; an absent one's creation is aborted. Rejects
+ * `StorageUnavailableError` when the browser refuses (the open itself, before
+ * any upgrade: WebKit opens the database's file first), and any other error
+ * as it is.
+ *
+ * What `open.ts` asks of PGlite's IDBFS database before it touches anything:
+ * PGlite opens it later, inside the boot, where a refusal could no longer be
+ * served from memory.
+ */
+export function idbProbeOpen(name: string): Promise<void> {
+  return unavailableAsTyped(
+    name,
+    new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open(name);
+      let absent = false;
+      req.onupgradeneeded = () => {
+        absent = true;
+        req.transaction!.abort();
+      };
+      req.onsuccess = () => {
+        req.result.close();
+        resolve();
+      };
+      req.onerror = () => {
+        if (absent) resolve();
+        else
+          reject(req.error ?? new Error(`IndexedDB: could not open ${name}`));
+      };
+    }),
+  );
 }

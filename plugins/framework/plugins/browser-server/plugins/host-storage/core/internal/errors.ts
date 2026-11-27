@@ -61,3 +61,26 @@ export class BootInterruptedError extends HostRefusedError {
     this.cause = cause;
   }
 }
+
+/**
+ * The browser would not open one of the storage's IndexedDB databases: its own
+ * storage failed or refused this context (`indexed-db-failure`'s
+ * `unavailable`: WebKit's `UnknownError` "Unable to open database file on
+ * disk", report-1795766338-jy60yr; `QuotaExceededError`; `SecurityError`).
+ * Not a fault of this code, and nothing in IndexedDB was touched: `open.ts`
+ * serves the storage from memory for this visit instead.
+ */
+export class StorageUnavailableError extends Error {
+  constructor(
+    database: string,
+    /** The browser's refusal, as `name: message`. */
+    readonly refusal: string,
+    cause: unknown,
+  ) {
+    super(
+      `[host-storage] the browser would not open IndexedDB ${database}: ${refusal}`,
+    );
+    this.name = "StorageUnavailableError";
+    this.cause = cause;
+  }
+}

@@ -2,6 +2,7 @@ export {
   ENTRIES_STORE,
   LIFECYCLE_KEY,
   META_STORE,
+  pgliteDbName,
   storageLockName,
   storagePrefix,
   storesDbName,

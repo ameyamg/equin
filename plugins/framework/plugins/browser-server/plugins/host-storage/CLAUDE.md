@@ -100,8 +100,26 @@ serveBrowserHost({
   established, and two workers writing one IndexedDB PGlite would corrupt it.
   So a persistent storage opens in memory instead, filled from its snapshot
   as a fresh one would be: the host serves, nothing it writes outlives the
-  worker, and no stored data is touched. The boot report's `data` says so
-  (`snapshot, in memory (no Web Locks in this worker)`).
+  worker, and no stored data is touched. The boot report says so: `data`
+  (`snapshot, in memory (no Web Locks in this worker)`) and `memoryOnly`
+  (`{ why: "no-web-locks" }`), which the page shows the visitor
+  (`demo/scope`'s `DemoMemoryOnlyNotice`).
+- **The browser will not open IndexedDB → in memory too.** WebKit answers
+  an open with `UnknownError` "Unable to open database file on disk" when its
+  backing store cannot open the database's SQLite file (iOS Safari,
+  report-1795766338-jy60yr); a full or evicted origin answers
+  `QuotaExceededError`, refused storage `SecurityError` (`indexed-db-failure`'s
+  `unavailable`). `idb.ts` names such an OPEN `StorageUnavailableError`;
+  `openPersistent` probes PGlite's database (`idbProbeOpen`: never creating
+  or upgrading it) before it opens the stores', so both are asked before
+  anything is read or written — PGlite itself opens only inside the boot,
+  where a refusal could no longer fall back. Refused, the lock is released
+  and the storage opens in memory from its snapshot (`memoryOnly: { why:
+  "storage-unavailable", error }`). Not retried: a fresh worker in the same
+  page meets the same storage. `serveBrowserHost` forwards it once per worker
+  as a server error (`HostStorageUnavailable`), which the page files
+  (`reports/crash`), so the visits it costs stay counted. A refusal later
+  (a transaction, not an open) stays the error it is.
 - **Several tabs** share one SharedWorker per build (the page's
   `startShared(name)`; `serveBrowserHost` accepts every connection). A tab that
   goes away is noticed through the Web Lock its page holds for its end
@@ -173,24 +191,11 @@ serveBrowserHost({
 
 - Description: Where a browser host keeps its state: in memory (lost with the worker) or persistent (IndexedDB, named), declared once by the worker's entry point before boot (declareHostStorage / hostStorage). Gives PGlite its data dir and each in-memory host store (config, transcripts, attachment bytes, data files) a write-through store loaded at open; owns the lifecycle (fresh → seeded, a dead seed wiped, data written by newer code refused), the one-owner Web Lock with the version handoff between builds, and the wipe behind Reset.
 - Core:
-  - Uses:
-    - `framework/browser-server.HostBooted`
-    - `framework/browser-server.HostRefusedError`
-    - `framework/browser-server.PortEnd`
-    - `framework/browser-server.reportDataProgress`
-    - `framework/browser-server.retireLockName`
-    - `framework/browser-server.ServedHost`
-    - `framework/browser-server.serveHost`
-    - `framework/browser-server/host-storage/stored.deleteStorageDatabases`
-    - `framework/browser-server/host-storage/stored.ENTRIES_STORE`
-    - `framework/browser-server/host-storage/stored.Lifecycle`
-    - `framework/browser-server/host-storage/stored.LIFECYCLE_KEY`
-    - `framework/browser-server/host-storage/stored.META_STORE`
-    - `framework/browser-server/host-storage/stored.storageLockName`
-    - `framework/browser-server/host-storage/stored.storagePrefix`
-    - `framework/browser-server/host-storage/stored.storesDbName`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/browser-server/host-storage/stored` ×9
+    - `framework/browser-server` ×9
+    - `primitives/dom/indexed-db-failure` ×2
     - `packages/deadline.wallNow`
-    - `primitives/dom/indexed-db-failure.isSuspensionAbort`
     - `primitives/dom/web-locks.webLocks`
   - Exports (types):
     - `BlobFree`

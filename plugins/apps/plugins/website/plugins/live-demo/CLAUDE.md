@@ -68,15 +68,15 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
   - Contributes:
     - `Website.Resident` "Live demo" → `DemoResident`
     - `Pane.Register` "website-demo"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `apps/website/landing/screenshot/chrome` ×4
     - `apps-core/app-embed` ×2
     - `apps-core/tabs` ×2
     - `apps/website/shell` ×2
+    - `framework/browser-server/demo/scope` ×2
     - `primitives/scope/scoped-store` ×2
     - `apps/deploy/analytics/collect.track`
-    - `framework/browser-server/demo/scope.DemoScope`
     - `primitives/css/inline.Inline`
     - `primitives/css/ui-kit.Button`
     - `primitives/dom/movable.Movable`

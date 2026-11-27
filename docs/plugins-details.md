@@ -14328,15 +14328,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Website.Resident` "Live demo" → `DemoResident`
               - `Pane.Register` "website-demo"
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
               - `primitives/pane` ×5
               - `apps/website/landing/screenshot/chrome` ×4
               - `apps-core/app-embed` ×2
               - `apps-core/tabs` ×2
               - `apps/website/shell` ×2
+              - `framework/browser-server/demo/scope` ×2
               - `primitives/scope/scoped-store` ×2
               - `apps/deploy/analytics/collect.track`
-              - `framework/browser-server/demo/scope.DemoScope`
               - `primitives/css/inline.Inline`
               - `primitives/css/ui-kit.Button`
               - `primitives/dom/movable.Movable`
@@ -34126,6 +34126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostBoot`
           - `HostBooted`
           - `HostEndReason`
+          - `HostMemoryOnly`
           - `HostProgress`
           - `HostRefusal`
           - `HostServerError`
@@ -34207,6 +34208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DemoEntry`
                   - `DemoHostControl`
                 - Exports (values):
+                  - `DemoMemoryOnlyNotice`
                   - `DemoScope`
                   - `useDemoHostControl`
               - Cross-plugin:
@@ -34216,24 +34218,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/live-demo`
         - **`host-storage`** — Where a browser host keeps its state: in memory (lost with the worker) or persistent (IndexedDB, named), declared once by the worker's entry point before boot (declareHostStorage / hostStorage). Gives PGlite its data dir and each in-memory host store (config, transcripts, attachment bytes, data files) a write-through store loaded at open; owns the lifecycle (fresh → seeded, a dead seed wiped, data written by newer code refused), the one-owner Web Lock with the version handoff between builds, and the wipe behind Reset.
           - Core:
-            - Uses:
-              - `framework/browser-server.HostBooted`
-              - `framework/browser-server.HostRefusedError`
-              - `framework/browser-server.PortEnd`
-              - `framework/browser-server.reportDataProgress`
-              - `framework/browser-server.retireLockName`
-              - `framework/browser-server.ServedHost`
-              - `framework/browser-server.serveHost`
-              - `framework/browser-server/host-storage/stored.deleteStorageDatabases`
-              - `framework/browser-server/host-storage/stored.ENTRIES_STORE`
-              - `framework/browser-server/host-storage/stored.Lifecycle`
-              - `framework/browser-server/host-storage/stored.LIFECYCLE_KEY`
-              - `framework/browser-server/host-storage/stored.META_STORE`
-              - `framework/browser-server/host-storage/stored.storageLockName`
-              - `framework/browser-server/host-storage/stored.storagePrefix`
-              - `framework/browser-server/host-storage/stored.storesDbName`
+            - Uses: 22 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/host-storage/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/host-storage/REFERENCE.md)
+              - `framework/browser-server/host-storage/stored` ×9
+              - `framework/browser-server` ×9
+              - `primitives/dom/indexed-db-failure` ×2
               - `packages/deadline.wallNow`
-              - `primitives/dom/indexed-db-failure.isSuspensionAbort`
               - `primitives/dom/web-locks.webLocks`
             - Exports (types):
               - `BlobFree`
@@ -34272,11 +34261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.
           - Plugins:
             - **`stored`** — Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). Also deletes it: deleteStorageDatabases, and wipeHostData — a page's wipe under the storage's lock, for when no host runs to ask (a demo whose boot failed on its stored data). A leaf, so a page can ask before it starts the host: a demo's gate.
-              - Cross-plugin:
-                - Imported by:
-                  - `framework/browser-server/demo/scope`
-                  - `framework/browser-server/host-storage`
               - Core:
+                - Uses: `primitives/dom/indexed-db-failure.idbFailureOf`
                 - Exports (types):
                   - `HostDataStored`
                   - `Lifecycle`
@@ -34286,10 +34272,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `hostDataStored`
                   - `LIFECYCLE_KEY`
                   - `META_STORE`
+                  - `pgliteDbName`
                   - `storageLockName`
                   - `storagePrefix`
                   - `storesDbName`
                   - `wipeHostData`
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/browser-server/demo/scope`
+                  - `framework/browser-server/host-storage`
         - **`test-host`** — Test harness that boots a slice of the app's server registry as a portable host under bun test: the registry or portable dependsOn closure of some roots, plus — derived, never hand-listed — one host provider per service the graph's modules declare (to a fixpoint), the committed migrations and config read off disk, and in-memory host storage.
           - Test helpers:
             - Server: `@plugins/framework/plugins/browser-server/plugins/test-host/server/testing`
@@ -57661,6 +57652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `framework/browser-server/host-storage`
+              - `framework/browser-server/host-storage/stored`
               - `reports/main-thread-stall`
           - Core:
             - Exports (types): `IdbFailure`
