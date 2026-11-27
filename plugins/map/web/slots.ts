@@ -265,6 +265,7 @@ export const GeoMap = {
   Pin: defineDispatchSlot<MapPinProps, string, { mark: MapPinMarkFn }>({
     key: (props) => props.pin.pinType,
     fallback: DefaultPin,
+    fallbackIs: "stand-in",
   }),
   /**
    * Cluster appearance, keyed on the pinType its pins share — the owner of a
@@ -279,5 +280,6 @@ export const GeoMap = {
   >({
     key: (props) => clusterPinType(props.pins),
     fallback: DefaultCluster,
+    fallbackIs: "stand-in",
   }),
 };

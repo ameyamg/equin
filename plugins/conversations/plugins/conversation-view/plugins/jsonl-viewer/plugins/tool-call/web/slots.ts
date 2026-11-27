@@ -77,6 +77,7 @@ export const ToolRendererSlot = defineDispatchSlot<
 >({
   key: (p) => p.event.name,
   fallback: GenericToolView,
+  fallbackIs: "stand-in",
   docLabel: (c) =>
     typeof c.match === "string"
       ? c.match

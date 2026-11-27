@@ -6,6 +6,7 @@ export const JsonlViewerAttachment = {
   Renderer: defineDispatchSlot<AttachmentRendererProps, string>({
     key: (p) => p.event.subtype,
     fallback: GenericAttachmentView,
+    fallbackIs: "stand-in",
     docLabel: (c) =>
       typeof c.match === "string"
         ? c.match

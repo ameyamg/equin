@@ -13,10 +13,12 @@ export const MarkdownExtensions = {
    * How a transcript draws a web link — a plugin that can show the page
    * in-app contributes its link (`match: "web"`). With none, a web link is a
    * plain link that opens the site in a new browser tab, so a host without an
-   * in-app web view (the website's demo) needs nothing.
+   * in-app web view (the website's demo) needs nothing — the fallback is
+   * `complete`, so a scope without the Browser files no scoped-out report.
    */
   WebLink: defineDispatchSlot<WebLinkProps, "web">({
     key: () => "web",
     fallback: PlainWebLink,
+    fallbackIs: "complete",
   }),
 };

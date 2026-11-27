@@ -39,6 +39,7 @@ export const LiveMapSetup = {
   MapIdPreview: defineDispatchSlot<MapIdPreviewProps, "preview">({
     key: () => "preview",
     fallback: NoPreviewRenderer,
+    fallbackIs: "stand-in",
   }),
 };
 

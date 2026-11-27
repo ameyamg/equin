@@ -27,5 +27,6 @@ export const Item = {
     // to pass to exact/regexp passes (they won't match; predicate path wins).
     key: (props) => props.conv.id,
     fallback: AvatarFallback,
+    fallbackIs: "stand-in",
   }),
 };

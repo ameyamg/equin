@@ -213,6 +213,7 @@ const blockSlot = defineOrderedDispatchSlot<
 >({
   key: (props) => props.block.type,
   fallback: UnknownBlock,
+  fallbackIs: "stand-in",
   docLabel: (c) => c.block?.type,
 });
 

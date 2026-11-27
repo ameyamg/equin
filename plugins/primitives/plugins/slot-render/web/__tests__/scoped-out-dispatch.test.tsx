@@ -23,6 +23,7 @@ afterEach(() => {
 const Tool = defineDispatchSlot<{ name: string }>({
   key: (p) => p.name,
   fallback: () => <span>generic card</span>,
+  fallbackIs: "stand-in",
 });
 
 const plugins = [
@@ -39,6 +40,25 @@ const plugins = [
     description: "on the page, out of the scope",
     contributions: [
       Tool({ match: "Read", component: () => <span>read</span> }),
+    ],
+  },
+] as unknown as LoadedPlugin[];
+
+// A slot whose fallback is its whole behaviour (a plain link); the page's
+// contributor (an in-app web view) only enhances it.
+const Link = defineDispatchSlot<{ href: string }, "web">({
+  key: () => "web",
+  fallback: () => <span>plain link</span>,
+  fallbackIs: "complete",
+});
+
+const linkPlugins = [
+  { id: "link-in", description: "in the scope", slots: { link: Link } },
+  {
+    id: "link-out",
+    description: "on the page, out of the scope",
+    contributions: [
+      Link({ match: "web", component: () => <span>in-app link</span> }),
     ],
   },
 ] as unknown as LoadedPlugin[];
@@ -82,6 +102,22 @@ describe(".Dispatch inside a PluginScope", () => {
 
   it("is silent for a key nothing on the page serves", () => {
     expect(mount(["Grep"])).toEqual([]);
+  });
+
+  it("is silent for a slot whose fallback is complete", () => {
+    const faults: ScopedOutDispatchFault[] = [];
+    scopedOutDispatchSink.register((f) => faults.push(f));
+    render(
+      <PluginProvider plugins={linkPlugins}>
+        <PluginScope
+          composition={{ id: "scope-link", home: null, plugins: ["link-in"] }}
+        >
+          <Link.Dispatch href="https://example.com" />
+        </PluginScope>
+      </PluginProvider>,
+    );
+    expect(screen.getByText("plain link")).toBeTruthy();
+    expect(faults).toEqual([]);
   });
 
   it("is silent for a plugin the composition negates by name", () => {

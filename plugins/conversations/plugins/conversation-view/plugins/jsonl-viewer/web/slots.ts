@@ -98,6 +98,7 @@ export const JsonlViewer = {
   >({
     key: (p) => p.event.kind,
     fallback: UnknownEventRow,
+    fallbackIs: "stand-in",
     docLabel: (c) => String(c.match),
   }),
   PendingPrompt: defineDispatchSlot<
@@ -106,6 +107,7 @@ export const JsonlViewer = {
   >({
     key: (p) => p.waitingFor,
     fallback: PendingContentIndicator,
+    fallbackIs: "stand-in",
     docLabel: (c) => String(c.match),
   }),
   EventFilter: defineSlot<EventFilterContribution>({ docLabel: (p) => p.id }),

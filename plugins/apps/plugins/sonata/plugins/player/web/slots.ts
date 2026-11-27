@@ -51,6 +51,7 @@ export const SonataPlayer = {
   >({
     key: (props) => props.activeDisplayId,
     fallback: NoDisplay,
+    fallbackIs: "stand-in",
     docLabel: (c) => c.label,
   }),
 

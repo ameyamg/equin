@@ -630,19 +630,44 @@ export interface DispatchContribution<Props, Key extends string> {
   component: ComponentType<Props>;
 }
 
-export interface DispatchSlotConfig<
+/**
+ * What a dispatch slot's `fallback` is, declared by the slot that owns it:
+ *
+ * - `"stand-in"` — a generic view for a key nobody handled (an unknown tool's
+ *   card, an unknown block). Inside a `<PluginScope>`, falling back to it
+ *   though the page holds a contribution for the key means the scope lost a
+ *   plugin, and `.Dispatch` reports it (`ScopedOutDispatchFault`).
+ * - `"complete"` — the slot's whole behaviour without any contributor; a
+ *   contribution only enhances it (a transcript's web link is a plain link,
+ *   the Browser's opens it in-app). A scope or composition without the
+ *   contributor loses nothing, so nothing is reported.
+ */
+export type DispatchFallbackKind = "stand-in" | "complete";
+
+/**
+ * A fallback and what it is go together: a slot with a `fallback` must say
+ * which kind (`fallbackIs`) — the scoped-out report depends on it — and a slot
+ * without one has nothing to declare.
+ */
+export type DispatchFallback<Props> =
+  | {
+      /** Rendered (and isolated) when nothing matches. */
+      fallback: ComponentType<Props>;
+      fallbackIs: DispatchFallbackKind;
+    }
+  | { fallback?: undefined; fallbackIs?: undefined };
+
+export type DispatchSlotConfig<
   Props,
   Key extends string,
   Extra extends object,
-> {
+> = {
   /** Project the dispatch key out of the render props. */
   key: (props: Props) => Key;
-  /** Rendered (and isolated) when nothing matches. */
-  fallback?: ComponentType<Props>;
   docLabel?: (
     c: DispatchContribution<Props, Key> & Extra,
   ) => string | undefined;
-}
+} & DispatchFallback<Props>;
 
 export interface DispatchSlot<
   Props,
@@ -754,9 +779,11 @@ export function defineDispatchSlot<
     // the scope lost a plugin nobody asked it to lose. Said, never silent
     // (`reports/scoped-out-dispatch` files it); the fallback still renders.
     const scopeId = usePluginScopeId();
+    // A complete fallback is the slot's own answer without a contributor —
+    // a scope without one lost nothing.
     const left = useScopedOutContributions(slot);
     const leftIndex =
-      matched || left.length === 0
+      matched || left.length === 0 || config.fallbackIs === "complete"
         ? -1
         : matchDispatchIndex(
             left as readonly { match?: unknown }[],

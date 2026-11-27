@@ -30,6 +30,7 @@ export const AgentThreadSlots = {
   StepLabel: defineDispatchSlot<StepLabelProps, string>({
     key: (p) => toolName(p.event.name).name,
     fallback: GenericStepLabel,
+    fallbackIs: "stand-in",
     docLabel: (c) =>
       typeof c.match === "string"
         ? c.match

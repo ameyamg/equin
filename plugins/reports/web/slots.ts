@@ -17,5 +17,6 @@ export const Reports = {
   KindView: defineDispatchSlot<KindViewProps, string>({
     key: (props) => props.report.kind,
     fallback: ReportSummaryFallback,
+    fallbackIs: "stand-in",
   }),
 };

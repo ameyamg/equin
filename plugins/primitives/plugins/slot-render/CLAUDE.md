@@ -300,6 +300,17 @@ its composition negates by name) and emits a `ScopedOutDispatchFault` into
 `reports/scoped-out-dispatch` files it. The fallback still renders. Outside a
 scope the list is empty and nothing runs.
 
+Whether that is a loss depends on what the fallback is, and only the slot
+knows, so a slot with a `fallback` must declare it (`fallbackIs`, a type error
+when missing): `"stand-in"` (a generic card for an unhandled key — reported as
+above) or `"complete"` (the slot's whole behaviour, which a contributor only
+enhances: a transcript's web link is a plain link, the Browser's opens it
+in-app). A complete fallback is never reported, so every composition without
+the enhancing plugin is covered without negating it by name. The cost: a
+complete slot stays silent too in a scope that meant to hold its contributor
+and never listed it; a negative cascading it out is still caught statically
+(`cascadeLosses`).
+
 `DispatchOutcomeContext` itself is **not** exported — `.Dispatch` is the single
 writer. A consumer able to provide it could lie about whether its subtree was
 handled.
@@ -341,6 +352,8 @@ the outcome too, with no separate code path.
   - Exports (types):
     - `DerivedIdRenderSlot`
     - `DispatchContribution`
+    - `DispatchFallback`
+    - `DispatchFallbackKind`
     - `DispatchOutcome`
     - `DispatchSlot`
     - `DispatchSlotConfig`

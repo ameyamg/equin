@@ -24,6 +24,7 @@ export const Counterpart = {
   Kind: defineDispatchSlot<CounterpartKindProps, string, CounterpartKindMeta>({
     key: (p) => p.kind,
     fallback: UnknownKind,
+    fallbackIs: "stand-in",
     docLabel: (c) => c.label,
   }),
 };

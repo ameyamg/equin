@@ -22,6 +22,8 @@ export type {
   DispatchSlot,
   DispatchContribution,
   DispatchSlotConfig,
+  DispatchFallback,
+  DispatchFallbackKind,
   OrderedDispatchSlot,
   OrderedDispatchContribution,
   OrderedContribution,

@@ -29,6 +29,7 @@ export const fieldRendererSlot = defineDispatchSlot<FieldRendererProps>({
   fallback: ({ field }) => (
     <Placeholder>Unknown field type: {field.type.id}</Placeholder>
   ),
+  fallbackIs: "stand-in",
   docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
 });
 

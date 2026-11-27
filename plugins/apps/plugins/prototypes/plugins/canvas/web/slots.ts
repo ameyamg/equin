@@ -83,6 +83,7 @@ export const FrameSource = defineDispatchSlot<
 >({
   key: (p) => p.source,
   fallback: UnknownFrameSource,
+  fallbackIs: "stand-in",
   docLabel: (c) => c.addLabel,
 });
 

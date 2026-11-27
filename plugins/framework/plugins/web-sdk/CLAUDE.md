@@ -156,9 +156,12 @@ import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web"
 
 // slot definition — key derives the dispatch key from props
 export const Editor = {
-  Block: defineDispatchSlot<BlockProps, string>("editor.block", {
+  Block: defineDispatchSlot<BlockProps, string>({
     key: (props) => props.block.type,
+    // a fallback says what it is: "stand-in" (a generic view for an unhandled
+    // key) or "complete" (the slot's whole behaviour, a contributor only adds)
     fallback: UnknownBlock,
+    fallbackIs: "stand-in",
   }),
 };
 
@@ -266,9 +269,10 @@ and an out-of-composition read has no spelling inside the demo.
 - **What the scope dropped is readable**: `useScopedOutContributions(slot)`
   answers the contributions on the page the innermost scope left out, minus
   the composition's `negated` plugins (its negatives' direct targets,
-  generated beside `plugins`). `.Dispatch` asks it on a fallback, so a scoped
-  surface falling back for a renderer the page holds is reported
-  (`reports/scoped-out-dispatch`), never silent.
+  generated beside `plugins`). `.Dispatch` asks it on a stand-in fallback, so
+  a scoped surface falling back for a renderer the page holds is reported
+  (`reports/scoped-out-dispatch`), never silent; a slot whose fallback is
+  `complete` (`fallbackIs`) is never reported.
 - **Identity kept**: a read that filters nothing returns the parent array;
   `subscribe` delegates to the parent; nested scopes intersect; `replace`
   throws.
