@@ -53,7 +53,7 @@ func panickingHandler(pr *panicReporter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer pr.recoverHandlerPanic(&startedWriter{ResponseWriter: w}, r)
 		var bk *backend
-		bk.incHTTP()
+		bk.openHTTP(&openConn{})
 	}
 }
 
@@ -80,7 +80,7 @@ func TestHandlerPanicIsReportedAndCoalesced(t *testing.T) {
 		t.Fatalf("entries after the first panic: %d, want 1", len(es))
 	}
 	d := es[0].Data
-	if es[0].Kind != gatewayPanicKind || d.Site != "equin/gateway.(*backend).incHTTP" || d.Count != 1 || d.Path != "/api/health" || len(d.Stack) == 0 {
+	if es[0].Kind != gatewayPanicKind || d.Site != "equin/gateway.(*backend).openHTTP" || d.Count != 1 || d.Path != "/api/health" || len(d.Stack) == 0 {
 		t.Fatalf("first entry: %+v", es[0])
 	}
 

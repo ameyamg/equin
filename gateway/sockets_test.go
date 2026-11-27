@@ -426,10 +426,11 @@ func TestBackendConnTracking(t *testing.T) {
 		t.Fatal("initial conns should be 0")
 	}
 	a, b := &closeRecorder{}, &closeRecorder{}
-	if !bk.addWS(a) || !bk.addWS(b) {
+	if !bk.addWS(a, &openConn{}) || !bk.addWS(b, &openConn{}) {
 		t.Fatal("a serving backend should accept WebSockets")
 	}
-	bk.incHTTP()
+	req := &openConn{}
+	bk.openHTTP(req)
 	if bk.wsCount() != 2 {
 		t.Fatalf("expected 2 ws conns, got %d", bk.wsCount())
 	}
@@ -440,13 +441,13 @@ func TestBackendConnTracking(t *testing.T) {
 		t.Fatalf("expected 3 total conns, got %d", bk.conns())
 	}
 	bk.removeWS(a)
-	bk.decHTTP()
+	bk.closeHTTP(req)
 	if bk.conns() != 1 {
 		t.Fatalf("expected 1 total conn, got %d", bk.conns())
 	}
 	bk.removeWS(b)
-	bk.removeWS(b) // unknown: a no-op
-	bk.decHTTP()   // should not go negative
+	bk.removeWS(b)    // unknown: a no-op
+	bk.closeHTTP(req) // already closed: a no-op
 	if bk.conns() != 0 {
 		t.Fatalf("expected 0 conns, got %d", bk.conns())
 	}
@@ -457,8 +458,8 @@ func TestBackendConnTracking(t *testing.T) {
 func TestRetireWSClosesAndRefuses(t *testing.T) {
 	bk := &backend{}
 	a, b := &closeRecorder{}, &closeRecorder{}
-	bk.addWS(a)
-	bk.addWS(b)
+	bk.addWS(a, &openConn{})
+	bk.addWS(b, &openConn{})
 	if n := bk.retireWS(); n != 2 {
 		t.Fatalf("retireWS closed %d, want 2", n)
 	}
@@ -469,7 +470,7 @@ func TestRetireWSClosesAndRefuses(t *testing.T) {
 		t.Fatalf("wsCount after retire = %d", bk.wsCount())
 	}
 	late := &closeRecorder{}
-	if bk.addWS(late) {
+	if bk.addWS(late, &openConn{}) {
 		t.Fatal("a retired backend accepted a WebSocket")
 	}
 	if n := bk.retireWS(); n != 0 {
@@ -552,8 +553,8 @@ func TestDrainWaitsForHTTPNotWS(t *testing.T) {
 	// their own. With no in-flight HTTP, drainAndStop returns promptly.
 	bk := &backend{socketPath: filepath.Join(cfg.SocketsDir, "t.sock")}
 	ws1, ws2 := &closeRecorder{}, &closeRecorder{}
-	bk.addWS(ws1)
-	bk.addWS(ws2)
+	bk.addWS(ws1, &openConn{})
+	bk.addWS(ws2, &openConn{})
 	start := time.Now()
 	wt.drainAndStop(bk)
 	if elapsed := time.Since(start); elapsed > 2*time.Second {
@@ -565,10 +566,11 @@ func TestDrainWaitsForHTTPNotWS(t *testing.T) {
 
 	// An in-flight HTTP request holds the drain until it completes.
 	bk2 := &backend{socketPath: filepath.Join(cfg.SocketsDir, "t2.sock")}
-	bk2.incHTTP()
+	inflight := &openConn{}
+	bk2.openHTTP(inflight)
 	go func() {
 		time.Sleep(150 * time.Millisecond)
-		bk2.decHTTP()
+		bk2.closeHTTP(inflight)
 	}()
 	start = time.Now()
 	wt.drainAndStop(bk2)

@@ -27750,6 +27750,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/converge`
           - `debug/gateway-panic`
           - `debug/service-down`
+    - **`backend-held`** — Backend-held report renderer: a one-line Debug → Reports summary for the backend-held kind (the rule — silent or kept-alive —, the connection, the backend it holds up and for how long). The backend-held report kind — filed by the gateway through the report outbox when a connection keeps a non-always-on backend up for nobody — silent (no request completed and no byte crossing it for an hour) or kept-alive (a WebSocket that alone kept it up six hours with no request) —, drained by main: the connection (HTTP or WebSocket, method, path, User-Agent, fetch metadata, remote address, bytes, how long open and quiet).
+      - Web:
+        - Contributes: `Reports.KindView` → `BackendHeldSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "backend-held"
+        - Uses: `reports.ReportKind`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+      - Core:
+        - Exports (types):
+          - `BackendHeldPayload`
+          - `HeldConnection`
+        - Exports (values):
+          - `BackendHeldPayloadSchema`
+          - `describeBackendHeld`
+          - `formatHeldDuration`
+          - `HeldConnectionSchema`
     - **`backend-liveness`** — Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind. The backend-frozen report kind — filed by central's liveness probe through the report outbox, drained by main: every minute while a backend stays frozen, once when the episode ends (main's own freeze is filed as soon as its thread runs again). Plus a debug-only trigger that freezes a worktree backend's JS thread to reproduce it. Backend liveness probe (central): every 15 s asks each running backend for any HTTP answer on its own socket, and appends a frozen episode to the backend-liveness data dir when one stays unanswered for a minute of awake time (machine sleep never counts; a stopped process is paused, not frozen) — from outside the backend, so a frozen JS thread is noticed while it lasts.
       - Web:
         - Contributes: `Reports.KindView` → `BackendFrozenSummary`
@@ -42241,6 +42262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/embedded`
               - `database/pgbouncer`
               - `debug/backend-crash`
+              - `debug/backend-held`
               - `debug/gateway-panic`
               - `debug/logs`
               - `debug/service-down`
@@ -54065,9 +54087,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 197 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `debug` ×40
               - `apps` ×39
-              - `debug` ×39
               - `conversations` ×28
               - `reports` ×20
               - `tasks` ×15
@@ -54532,10 +54554,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
+              - `debug` ×21
               - `reports` ×21
-              - `debug` ×20
               - `primitives` ×14
               - `conversations` ×9
               - `page` ×6
@@ -63517,8 +63539,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 51 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×51
+    - Slot contributors: 52 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×52
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -63676,9 +63698,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 96 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 97 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×34
-      - `debug` ×21
+      - `debug` ×22
       - `conversations` ×7
       - `infra` ×7
       - `apps` ×5
@@ -72186,11 +72208,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 578 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 579 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×129
               - `conversations` ×94
               - `primitives` ×84
-              - `debug` ×42
+              - `debug` ×43
               - `page` ×34
               - `plugin-meta` ×27
               - `ui` ×26

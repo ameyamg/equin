@@ -103,8 +103,8 @@ before it) beside the total, worded by `formatReportActivity`
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 51 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×51
+  - Slot contributors: 52 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×52
   - Contributes:
     - `IdKinds.Kind` "report|crash"
     - `ConfigV2.WebRegister` "reports"
@@ -262,9 +262,9 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewExplains`
 - Cross-plugin:
-  - Imported by: 96 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 97 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×34
-    - `debug` ×21
+    - `debug` ×22
     - `conversations` ×7
     - `infra` ×7
     - `apps` ×5

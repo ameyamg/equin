@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-backend-held",
+  "description": "A connection that keeps a backend up for nobody is a report: the gateway files a backend-held entry when a non-always-on backend has had no request completed for an hour and a connection on it has moved no byte for as long (silent), or a WebSocket alone kept it up six hours with no request (kept-alive), naming that connection (HTTP or WebSocket, path, User-Agent, fetch metadata, remote address, bytes, how long open and quiet). Declares the kind and renders its evidence.",
+  "private": true,
+  "version": "0.0.1"
+}

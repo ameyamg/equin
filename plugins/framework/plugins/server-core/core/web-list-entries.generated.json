@@ -1741,6 +1741,7 @@
   {"list":"reports.kind-view","plugin":"debug.backend-crash","fact":{"component":{"$code":true},"match":"backend-crash"}},
   {"list":"reports.kind-view","plugin":"debug.backend-crash","fact":{"component":{"$code":true},"match":"backend-exit"}},
   {"list":"reports.kind-view","plugin":"debug.backend-crash","fact":{"component":{"$code":true},"match":"backend-crash-loop"}},
+  {"list":"reports.kind-view","plugin":"debug.backend-held","fact":{"component":{"$code":true},"match":"backend-held"}},
   {"list":"reports.kind-view","plugin":"debug.backend-liveness","fact":{"component":{"$code":true},"match":"backend-frozen"}},
   {"list":"reports.kind-view","plugin":"debug.boot-budget","fact":{"component":{"$code":true},"match":"boot-budget"}},
   {"list":"reports.kind-view","plugin":"debug.boot-watchdog","fact":{"component":{"$code":true},"match":"boot-wedge"}},

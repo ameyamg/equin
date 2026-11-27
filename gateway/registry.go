@@ -348,7 +348,9 @@ func serverPathMissing(server string) bool {
 
 // Sweep blocks until ctx is done, periodically tearing down idle backends —
 // except the always-on ones (Worktree.AlwaysOn: central and main) and the
-// namespace this gateway serves to the public (Config.publicNamespace).
+// namespace this gateway serves to the public (Config.publicNamespace) — and
+// filing the connections that keep one up with nothing crossing them
+// (connections_report.go).
 func (r *Registry) Sweep(ctx context.Context) {
 	t := time.NewTicker(r.cfg.SweepInterval)
 	defer t.Stop()
@@ -362,6 +364,11 @@ func (r *Registry) Sweep(ctx context.Context) {
 				// its budget (StopAll).
 				if ctx.Err() != nil {
 					break
+				}
+				// The public namespace is never swept, so no connection holds
+				// it up.
+				if wt.Name != r.cfg.publicNamespace() {
+					r.fileHeld(wt, time.Now())
 				}
 				if r.sweepable(wt) {
 					slog.Info("sweeping idle worktree", "worktree", wt.Name)

@@ -460,9 +460,13 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	bk.incHTTP()
-	defer bk.decHTTP()
-	bk.proxy.ServeHTTP(w, r)
+	conn := newOpenConn(connHTTP, r, time.Now())
+	if r.Body != nil && r.Body != http.NoBody {
+		r.Body = countingBody{r.Body, conn}
+	}
+	bk.openHTTP(conn)
+	defer bk.closeHTTP(conn)
+	bk.proxy.ServeHTTP(countingResponse{w, conn}, r)
 	wt.TouchBackend()
 }
 
@@ -523,18 +527,19 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 	// Closed when bk stops serving (a hot restart's swap): the client
 	// reconnects to the successor. Refused if that already happened.
 	ws := wsPair{clientConn, backendConn}
-	if !bk.addWS(ws) {
+	conn := newOpenConn(connWebSocket, r, time.Now())
+	if !bk.addWS(ws, conn) {
 		return
 	}
 	defer bk.removeWS(ws)
 
 	errc := make(chan error, 2)
 	go func() {
-		_, e := io.Copy(backendConn, clientConn)
+		_, e := io.Copy(countingWriter{backendConn, conn, true}, clientConn)
 		errc <- e
 	}()
 	go func() {
-		_, e := io.Copy(clientConn, backendConn)
+		_, e := io.Copy(countingWriter{clientConn, conn, false}, backendConn)
 		errc <- e
 	}()
 	<-errc
@@ -588,6 +593,25 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 		out := make([]WorktreeStatus, 0, len(list))
 		for _, wt := range list {
 			out = append(out, wt.Snapshot())
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(out)
+		return
+	}
+
+	// Every open connection of every backend up (connections.go): what holds
+	// one up. ?worktree=<name> narrows it to one.
+	if r.URL.Path == "/gateway/connections" && r.Method == http.MethodGet {
+		only := r.URL.Query().Get("worktree")
+		now := time.Now()
+		out := []BackendConnections{}
+		for _, wt := range p.reg.List() {
+			if only != "" && wt.Name != only {
+				continue
+			}
+			if bc, ok := wt.connectionsOf(now); ok {
+				out = append(out, bc)
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(out)

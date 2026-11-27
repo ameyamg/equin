@@ -296,7 +296,7 @@ func TestHotRestartCutsWebSocketsAtTheSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	ws := &closeRecorder{}
-	if !old.addWS(ws) {
+	if !old.addWS(ws, &openConn{}) {
 		t.Fatal("the serving backend refused a WebSocket")
 	}
 	if rec := postRestart(pf.proxy, nil); rec.Code != http.StatusOK {
@@ -305,7 +305,7 @@ func TestHotRestartCutsWebSocketsAtTheSwap(t *testing.T) {
 	if ws.closed.Load() != 1 {
 		t.Fatal("the old backend's WebSocket outlived the swap")
 	}
-	if old.addWS(&closeRecorder{}) {
+	if old.addWS(&closeRecorder{}, &openConn{}) {
 		t.Fatal("the swapped-out backend accepted a new WebSocket")
 	}
 	select {

@@ -3021,6 +3021,10 @@
       "name": "@equin/plugin-debug-backend-crash",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/backend-held": {
+      "name": "@equin/plugin-debug-backend-held",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/backend-liveness": {
       "name": "@equin/plugin-debug-backend-liveness",
       "version": "0.0.1",
@@ -10084,6 +10088,8 @@
     "@equin/plugin-debug": ["@equin/plugin-debug@workspace:plugins/debug"],
 
     "@equin/plugin-debug-backend-crash": ["@equin/plugin-debug-backend-crash@workspace:plugins/debug/plugins/backend-crash"],
+
+    "@equin/plugin-debug-backend-held": ["@equin/plugin-debug-backend-held@workspace:plugins/debug/plugins/backend-held"],
 
     "@equin/plugin-debug-backend-liveness": ["@equin/plugin-debug-backend-liveness@workspace:plugins/debug/plugins/backend-liveness"],
 

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "kind": "backend-held",
+  "message": "backend promo-film.att-1795752888-nua188 held up 5h0m0s by a silent websocket GET /ws/notifications (open 5h0m0s, nothing crossed it for 5h0m0s; from 127.0.0.1:61234, User-Agent \"Mozilla/5.0 HeadlessChrome/131.0\")",
+  "data": {
+    "worktree": "promo-film.att-1795752888-nua188",
+    "reason": "silent",
+    "lastActivityAt": 1795752771019,
+    "idleTimeoutMs": 600000,
+    "heldAfterMs": 3600000,
+    "connection": {
+      "id": 42,
+      "kind": "websocket",
+      "method": "GET",
+      "host": "promo-film.att-1795752888-nua188.localhost:8700",
+      "path": "/ws/notifications",
+      "userAgent": "Mozilla/5.0 HeadlessChrome/131.0",
+      "origin": "http://promo-film.att-1795752888-nua188.localhost:8700",
+      "secFetchSite": "same-origin",
+      "secFetchMode": "websocket",
+      "secFetchDest": "empty",
+      "principal": "owner",
+      "remoteAddr": "127.0.0.1:61234",
+      "openedAt": 1795752770000,
+      "openForMs": 18000000,
+      "bytesIn": 1200,
+      "bytesOut": 5300,
+      "lastByteAt": 1795752771000,
+      "quietForMs": 17999000
+    },
+    "openConnections": 1,
+    "detectedAt": 1795770770000
+  },
+  "occurredAt": 1795770770000,
+  "writer": {
+    "pid": 1234,
+    "checkout": "/x/gateway"
+  }
+}

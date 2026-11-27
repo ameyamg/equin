@@ -237,31 +237,35 @@ type backend struct {
 	// exited between passing readiness and being published.
 	exited bool
 
-	// connMu guards the connection state. httpConns tracks in-flight HTTP
+	// connMu guards the connection state. httpConns holds the in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
 	// cleanly instead of resetting into a 502. ws holds the WebSocket
 	// connections (live-state, terminal, logs) proxied to it — long-lived,
 	// never closed on their own, so they are NOT waited on at drain: they are
 	// closed the moment the backend stops serving (retireWS), and their
 	// clients reconnect to its successor. retired: it no longer serves, so a
-	// WebSocket still dialling it is refused rather than pinned to it.
+	// WebSocket still dialling it is refused rather than pinned to it. Each
+	// connection is a record of what it is (connections.go), never a bare
+	// count: a backend held up by one must be able to say by what.
 	connMu    sync.Mutex
-	httpConns int
-	ws        map[io.Closer]struct{}
+	httpConns map[*openConn]struct{}
+	ws        map[io.Closer]*openConn
 	retired   bool
 }
 
-func (b *backend) incHTTP() {
+// openHTTP records an in-flight HTTP request to b; closeHTTP ends it.
+func (b *backend) openHTTP(c *openConn) {
 	b.connMu.Lock()
-	b.httpConns++
+	if b.httpConns == nil {
+		b.httpConns = make(map[*openConn]struct{})
+	}
+	b.httpConns[c] = struct{}{}
 	b.connMu.Unlock()
 }
 
-func (b *backend) decHTTP() {
+func (b *backend) closeHTTP(c *openConn) {
 	b.connMu.Lock()
-	if b.httpConns > 0 {
-		b.httpConns--
-	}
+	delete(b.httpConns, c)
 	b.connMu.Unlock()
 }
 
@@ -269,16 +273,16 @@ func (b *backend) decHTTP() {
 // It answers false — the caller must give the connection up — once b is
 // retired: a WebSocket whose Ensure resolved to b just before a hot restart
 // swapped it out must reconnect to the successor, never live on the old one.
-func (b *backend) addWS(c io.Closer) bool {
+func (b *backend) addWS(c io.Closer, info *openConn) bool {
 	b.connMu.Lock()
 	defer b.connMu.Unlock()
 	if b.retired {
 		return false
 	}
 	if b.ws == nil {
-		b.ws = make(map[io.Closer]struct{})
+		b.ws = make(map[io.Closer]*openConn)
 	}
-	b.ws[c] = struct{}{}
+	b.ws[c] = info
 	return true
 }
 
@@ -315,7 +319,7 @@ func (b *backend) retireWS() int {
 func (b *backend) httpCount() int {
 	b.connMu.Lock()
 	defer b.connMu.Unlock()
-	return b.httpConns
+	return len(b.httpConns)
 }
 
 func (b *backend) wsCount() int {
@@ -329,7 +333,7 @@ func (b *backend) wsCount() int {
 func (b *backend) conns() int {
 	b.connMu.Lock()
 	defer b.connMu.Unlock()
-	return b.httpConns + len(b.ws)
+	return len(b.httpConns) + len(b.ws)
 }
 
 // Worktree owns one backend's lifecycle: spawn, supervise, proxy, idle teardown.
