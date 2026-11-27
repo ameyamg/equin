@@ -53,7 +53,6 @@ import {
   type Vec2,
 } from "@plugins/media/plugins/film/e2e";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
-import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   FILM_CLOCK_FILE,
   FilmClockSchema,
@@ -155,9 +154,7 @@ export async function tipVideo(tip: TipVideo): Promise<void> {
   const given = arg("rec-dir");
   if (renderOnly && given === undefined)
     usage("tips: --render-only renders the take in --rec-dir <dir>: name it");
-  const dir =
-    given ??
-    mkdtempSync(join(readEnv("SCRATCH") || tmpdir(), `tip-${tip.slug}-`));
+  const dir = given ?? mkdtempSync(join(tmpdir(), `tip-${tip.slug}-`));
   console.log(`tips: the take is in ${dir}`);
   if (!renderOnly) await recordTake(tip, dir);
   await runFilm({

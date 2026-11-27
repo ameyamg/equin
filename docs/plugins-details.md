@@ -14820,7 +14820,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SONATA_SECTION_LAYOUT`
                   - `writeFilmShops`
               - Cross-plugin:
-                - Imported by: `apps/website/promo-film`
+                - Imported by:
+                  - `apps/website/pages/tips`
+                  - `apps/website/promo-film`
               - Structure:
                 - Non-standard folders: `data/`
         - **`readme`** — The repo README's images: the animated hero (the logo drawing itself in, beside a living plugin network), the link pills (Watch the film, Try the demo, Install, Discord), the app shelf and the Try the demo card, rendered as SVG (the pills and the shelf once per GitHub theme) from the logo, the apps catalog and the website's tile colours, and held in sync by a check.
@@ -36342,8 +36344,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isE2eScriptPath`
               - `MANUAL_REASONS`
           - Cross-plugin:
-            - Imported by: 214 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×67
+            - Imported by: 215 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×68
               - `primitives` ×30
               - `conversations` ×26
               - `page` ×26
@@ -42898,6 +42900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser`
               - `apps/prototypes/files`
               - `apps/website/landing/screenshot`
+              - `apps/website/pages/tips`
               - `apps/website/promo-film`
               - `code-explorer/file-resolve`
               - `debug/sentinel`
@@ -45445,6 +45448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/prototypes/canvas`
+          - `apps/website/pages/tips`
           - `apps/website/promo-film`
       - Core:
         - Exports (types): `FrameRange`
