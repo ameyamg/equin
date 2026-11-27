@@ -12,6 +12,7 @@ import filesShot from "../shots/app-files.jpg";
 import isleShot from "../shots/app-isle.jpg";
 import mapsShot from "../shots/app-maps.jpg";
 import pagesShot from "../shots/app-pages.jpg";
+import partyShot from "../shots/app-party.jpg";
 import prototypesShot from "../shots/app-prototypes.jpg";
 import sonataShot from "../shots/app-sonata.jpg";
 
@@ -31,6 +32,7 @@ const SHOTS: Readonly<Record<string, ImportedImage>> = {
   files: filesShot,
   desktop: desktopShot,
   isle: isleShot,
+  party: partyShot,
 };
 
 /** The catalog (core/), each app with its screenshot. */

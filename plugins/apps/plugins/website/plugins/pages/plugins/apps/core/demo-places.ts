@@ -51,4 +51,7 @@ export const APP_DEMO_PLACES: Readonly<Record<string, AppDemoPlace>> = {
     shot: "/desktop/sonata/song/song-1792900000-demo04;bar=12",
   },
   isle: { home: "/isle", shot: "/isle" },
+  // The stage, a key pressed by the screenshot script's setup (it shows
+  // nothing until used).
+  party: { home: "/keyboard-party", shot: "/keyboard-party" },
 };

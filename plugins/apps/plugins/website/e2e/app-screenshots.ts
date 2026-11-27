@@ -14,7 +14,8 @@
 //
 // A place a URL cannot stage has a SETUP step, run on the settled frame before
 // the shot: the desktop opens two more apps from its shelf and lays the
-// windows out; the island presses its title card's Start.
+// windows out; the island presses its title card's Start. One caught in
+// motion (Tap Tap Party's key animations) is staged right before the shot.
 //
 // Toasts never reach the image (snap's hideToasts); what each one said is
 // logged as TOAST-HIDDEN, since an error toast is still a bug worth reading.
@@ -185,6 +186,21 @@ const SETUP: Readonly<Record<string, (page: Page) => Promise<void>>> = {
   },
 };
 
+/**
+ * The staging that must be caught in motion, by gallery id: run after the
+ * tips are answered, right before the shot.
+ */
+const JUST_BEFORE: Readonly<Record<string, (page: Page) => Promise<void>>> = {
+  // The stage shows nothing until a key is pressed: a few keys' animations
+  // mid-flight.
+  party: async (page) => {
+    for (const key of ["w", "s"]) {
+      await page.keyboard.press(key);
+      await page.waitForTimeout(450);
+    }
+  },
+};
+
 /** A contextual tip's Got it, while its card shows (the hints stage). */
 const SHOWN_TIP_BUTTON =
   '.hint-card[data-variant="tip"][data-on="true"] button';
@@ -226,6 +242,8 @@ await withBrowser(async (h) => {
     const setup = SETUP[shot.id];
     if (setup) await setup(page);
     await dismissTips(page);
+    const justBefore = JUST_BEFORE[shot.id];
+    if (justBefore) await justBefore(page);
     const result = await snap(page, `${outDir}/app`, shot.id, {
       hideToasts: true,
     });
