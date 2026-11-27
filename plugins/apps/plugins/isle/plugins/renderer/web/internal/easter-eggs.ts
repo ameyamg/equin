@@ -1,13 +1,99 @@
 // The island's easter eggs — things nobody announces, found by being there at
-// the right time: the werewolf that prowls the outskirts at night (howling at
-// the moon, bolting when the hero comes near, gone into the dark and back
-// later), and the bats that circle the campfire at dusk. Pure drawing and motion; the engine
+// the right time: the werewolf that prowls deep in a wood at night, far from
+// every house (howling at the moon, bolting when the hero comes near, gone into
+// the dark and back later; villagers keep clear of its wood and flee when they see it), and the bats that circle the campfire at dusk. Pure drawing and motion; the engine
 // says when (time of day), where (the layout) and puts them in its passes.
 
-import type { Layout, Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
+import type { Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
 import type { Ctx, Rnd } from "./kit";
 
 // ---------------------------------------------------------------- werewolf
+
+/** How far (px) every tree of the werewolf's wood stands from the nearest house or square. */
+const WOOD_CLEAR = 380;
+/** How near (px) a tree must stand to another for both to be the same wood. */
+const WOOD_LINK = 140;
+/** The fewest trees a wood has; fewer, and the werewolf stays away tonight. */
+const WOOD_MIN = 6;
+/** The most trees its prowl threads through. */
+const WOOD_PATH_MAX = 40;
+
+/**
+ * The werewolf's wood: the biggest stand of trees ({@link WOOD_LINK} apart at
+ * most) every tree of which is at least {@link WOOD_CLEAR} from every house
+ * and square — its prowl, a chain through those trees (each the nearest one
+ * not yet taken, from the tree farthest from any house), stepping just behind
+ * each trunk so the crowns hide it. Null when the island has no such wood.
+ */
+export function wolfWood(
+  trees: readonly Pt[],
+  houses: readonly Pt[],
+): { readonly key: string; readonly path: readonly Pt[] } | null {
+  const clear = (x: number, y: number) => {
+    let d = Infinity;
+    for (const [hx, hy] of houses) d = Math.min(d, Math.hypot(hx - x, hy - y));
+    return d;
+  };
+  const far = trees
+    .map(([x, y]) => ({ x, y, c: clear(x, y) }))
+    .filter((t) => t.c >= WOOD_CLEAR);
+  // stands of trees: connected within WOOD_LINK, found through a grid of WOOD_LINK cells
+  const cell = (v: number) => Math.floor(v / WOOD_LINK);
+  const grid = new Map<string, number[]>();
+  far.forEach((t, i) => {
+    const k = `${cell(t.x)},${cell(t.y)}`;
+    const l = grid.get(k);
+    if (l) l.push(i);
+    else grid.set(k, [i]);
+  });
+  const seen = new Uint8Array(far.length);
+  let best: number[] = [];
+  for (let s = 0; s < far.length; s++) {
+    if (seen[s]) continue;
+    seen[s] = 1;
+    const stand = [s];
+    for (let q = 0; q < stand.length; q++) {
+      const t = far[stand[q]!]!;
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dy = -1; dy <= 1; dy++)
+          for (const j of grid.get(`${cell(t.x) + dx},${cell(t.y) + dy}`) ??
+            []) {
+            if (seen[j]) continue;
+            const o = far[j]!;
+            if (Math.hypot(o.x - t.x, o.y - t.y) > WOOD_LINK) continue;
+            seen[j] = 1;
+            stand.push(j);
+          }
+    }
+    if (stand.length > best.length) best = stand;
+  }
+  if (best.length < WOOD_MIN) return null;
+  const left = best.map((i) => far[i]!);
+  let at = left.reduce((a, b) => (b.c > a.c ? b : a));
+  const chain = [at];
+  left.splice(left.indexOf(at), 1);
+  while (left.length && chain.length < WOOD_PATH_MAX) {
+    let ni = -1;
+    let nd = Infinity;
+    left.forEach((o, i) => {
+      const d = Math.hypot(o.x - at.x, o.y - at.y);
+      if (d < nd) {
+        nd = d;
+        ni = i;
+      }
+    });
+    // the nearest tree left is across a clearing: the prowl ends here
+    if (nd > WOOD_LINK * 1.5) break;
+    at = left[ni]!;
+    chain.push(at);
+    left.splice(ni, 1);
+  }
+  if (chain.length < 3) return null;
+  return {
+    key: `${chain[0]!.x},${chain[0]!.y}`,
+    path: chain.map((t) => [t.x, t.y - 8] as const),
+  };
+}
 
 /** How near (px, y squashed ×1.4) the hero may come before the werewolf bolts. */
 const FLEE_NEAR = 170;
@@ -49,30 +135,25 @@ export class Werewolf {
 
   constructor(private readonly rnd: Rnd) {}
 
-  /**
-   * Takes the outskirts' road: the longest road whose middle is farthest from
-   * the campfire square — where nobody would see it.
-   */
-  follow(layout: Layout): void {
-    if (this.route && layout.roads.some((r) => r.key === this.routeKey)) return;
-    const camp = layout.squares.find((q) => q.camp) ?? layout.squares[0];
-    let best: { pts: readonly Pt[]; key: string } | null = null;
-    let score = -Infinity;
-    for (const r of layout.roads) {
-      if (r.pts.length < 8) continue;
-      const m = r.pts[(r.pts.length / 2) | 0]!;
-      const far = camp ? Math.hypot(m[0] - camp.x, m[1] - camp.y) : 0;
-      const s = far + r.pts.length * 4;
-      if (s > score) {
-        score = s;
-        best = { pts: r.pts, key: r.key };
-      }
-    }
-    this.route = best?.pts ?? null;
-    this.routeKey = best?.key ?? null;
+  /** Takes to its wood ({@link wolfWood}), or stays away while the island has none. */
+  follow(wood: ReturnType<typeof wolfWood>): void {
+    if (wood && this.route && wood.key === this.routeKey) return;
+    this.route = wood?.path ?? null;
+    this.routeKey = wood?.key ?? null;
     this.mode = "gone";
     this.timer = 2;
     this.shown = 0;
+  }
+
+  /** Its wood's prowl (world px), or null while it has none. */
+  get wood(): readonly Pt[] | null {
+    return this.route;
+  }
+
+  /** A villager it was seen by screamed: it growls back (unless it is already crying out). */
+  startle(t: number): void {
+    if (this.cry && t < this.cry.until) return;
+    this.say("Grrr…", t, 1.4);
   }
 
   /** Nightfall: it is somewhere out there, about to show. */

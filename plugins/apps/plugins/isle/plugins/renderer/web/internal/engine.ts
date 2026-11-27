@@ -109,7 +109,7 @@ import {
   TOAST_NEAR,
 } from "./campfire";
 import { PBOX, People, type Hero, type Villager, type Walker } from "./people";
-import { drawBats, Werewolf, WOLF_BOX } from "./easter-eggs";
+import { drawBats, Werewolf, WOLF_BOX, wolfWood } from "./easter-eggs";
 import {
   CheatCode,
   drawSerpent,
@@ -354,8 +354,30 @@ const FIRESIDE_NEAR = 170;
 /** How often (s) the fire re-reads the clock. */
 const FIRE_CLOCK_S = 5;
 
+/** At night, how near (px) a walking villager comes to the werewolf's wood before it turns back. */
+const WOLF_KEEP = 200;
+/** How near (px, y squashed ×1.4) the werewolf, showing, is when a villager sees it and flees. */
+const WOLF_SCARE = 260;
+/** How long (s) a villager runs once scared, and how fast (px/s; a stroll is 46). */
+const FRIGHT_S = 2.6;
+const FRIGHT_SPEED = 130;
+const FRIGHT_LINES = [
+  "Eek! A wolf!",
+  "R-run!",
+  "Something's in the woods!",
+  "Aaah!",
+  "Not the woods, not at night!",
+] as const;
+
 /** How far (px) a walking villager keeps its feet from the edge of something solid. */
 const VILLAGER_HALF_WIDTH = 10;
+
+/** How far (px) (x, y) is from the nearest point of `pts`. */
+function distTo(pts: readonly Pt[], x: number, y: number): number {
+  let d = Infinity;
+  for (const [px, py] of pts) d = Math.min(d, Math.hypot(px - x, py - y));
+  return d;
+}
 
 /** The index of the route point nearest (x, y). */
 function nearestIndex(route: readonly Pt[], x: number, y: number): number {
@@ -699,6 +721,7 @@ export class IsleEngine {
       chat: null,
       lastLine: null,
       gather: null,
+      fright: 0,
     }));
     this.resume = opts.resume ?? null;
     this.resumeBelow = opts.resume?.below?.x ?? null;
@@ -1244,8 +1267,16 @@ export class IsleEngine {
         this.cam.y = at.y;
       }
     }
-    this.wolf.follow(layout);
     const trees = this.scene!.statics.filter((o) => o.tree);
+    this.wolf.follow(
+      wolfWood(
+        trees.map((o) => [(o.x0 + o.x1) / 2, o.y] as const),
+        [
+          ...this.buildings.flatMap((b) => [[b.x, b.y] as const, b.door]),
+          ...layout.squares.map((q) => [q.x, q.y] as const),
+        ],
+      ),
+    );
     const rnd = this.rnd;
     this.flies = trees.length
       ? Array.from({ length: 180 }, () => {
@@ -3765,6 +3796,7 @@ export class IsleEngine {
       this.turnTo(v, camp.x - v.x, camp.y - v.y, dt * 6);
       return;
     }
+    if (night && this.frightStep(v, dt, t)) return;
     if (v.gather?.kind === "going") v.attending = false;
     else if (this.attendHero(v, this.hero, dt, t, night)) return;
     if (v.linger) {
@@ -3799,6 +3831,18 @@ export class IsleEngine {
       return;
     }
     const [gx, gy] = v.route[nk]!;
+    // at night nobody walks on into the werewolf's wood: it turns back (always free to walk away)
+    const wood = night ? this.wolf.wood : null;
+    if (wood) {
+      const ahead = distTo(wood, gx, gy);
+      if (ahead < WOLF_KEEP && ahead < distTo(wood, v.x, v.y)) {
+        v.dir = v.dir === 1 ? -1 : 1;
+        v.wait = 0.6 + rnd() * 1.2;
+        v.walking = false;
+        v.speed = 0;
+        return;
+      }
+    }
     if (Math.hypot(gx - v.x, gy - v.y) < 3) {
       v.k = nk;
       if (rnd() < 0.01) v.wait = 1.5 + rnd() * 3;
@@ -3857,12 +3901,58 @@ export class IsleEngine {
     return true;
   }
 
-  /** One frame of a villager's stroll towards (gx, gy). */
-  private stepTowards(v: Villager, gx: number, gy: number, dt: number): void {
+  /**
+   * A route-walking villager that sees the werewolf screams and runs back along
+   * its road, away from it (it growls back). True while it runs.
+   */
+  private frightStep(v: Villager, dt: number, t: number): boolean {
+    const route = v.route;
+    if (!route || v.linger || v.gather) return false;
+    const wolf = this.wolf;
+    if (v.fright <= t) {
+      if (!wolf.present) return false;
+      if (Math.hypot(wolf.x - v.x, (wolf.y - v.y) * 1.4) > WOLF_SCARE)
+        return false;
+      v.fright = t + FRIGHT_S;
+      v.attending = false;
+      v.wait = 0;
+      // the way along its road that leads away from the wolf
+      const fwd = route[Math.min(route.length - 1, v.k + 1)]!;
+      const back = route[Math.max(0, v.k - 1)]!;
+      v.dir =
+        Math.hypot(fwd[0] - wolf.x, fwd[1] - wolf.y) >=
+        Math.hypot(back[0] - wolf.x, back[1] - wolf.y)
+          ? 1
+          : -1;
+      const line = FRIGHT_LINES[(this.rnd() * FRIGHT_LINES.length) | 0]!;
+      v.lastLine = line;
+      v.chat = { line, t0: t, until: t + 1.8 };
+      wolf.startle(t);
+    }
+    const nk = v.k + v.dir;
+    if (nk < 0 || nk >= route.length) {
+      // the road ends: it cowers there, facing the way it came from
+      v.walking = false;
+      v.speed = 0;
+      return true;
+    }
+    const [gx, gy] = route[nk]!;
+    if (Math.hypot(gx - v.x, gy - v.y) < 4) v.k = nk;
+    else this.stepTowards(v, gx, gy, dt, FRIGHT_SPEED);
+    return true;
+  }
+
+  /** One frame of a villager's stroll (or run, at `sp` px/s) towards (gx, gy). */
+  private stepTowards(
+    v: Villager,
+    gx: number,
+    gy: number,
+    dt: number,
+    sp = 46,
+  ): void {
     const ex = gx - v.x;
     const ey = gy - v.y;
     const L = Math.hypot(ex, ey);
-    const sp = 46;
     const step = Math.min(L, sp * dt);
     v.walking = true;
     v.speed = sp;

@@ -50,6 +50,8 @@ export interface Villager extends Walker {
   lastLine: string | null;
   /** At night: going to its place round the campfire, there, or (at daybreak) going back to its route. */
   gather: Gathering | null;
+  /** Until when (engine clock, s) it runs from the werewolf it saw; past, it is not scared. */
+  fright: number;
 }
 
 /** A villager's night round the campfire. */
