@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-git-commit-trailers",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The commit trailers that were renamed, as data: each one's key (what every new commit is stamped with — Equin-Conversation, Equin-Push) and every key it was written under before (the legacy keys in history, LEGACY_IDS), so a reader accepts all of them forever. trailerPlaceholder builds the `%(trailers:key=…,key=…)` git log placeholder over every key; trailerArg spells a `--trailer` for the current one; isTrailerKey matches a parsed key."
+}

@@ -14,8 +14,9 @@ the pushes ledger:
   failure points at `./equin push --unattributed "<reason>"`, which an agent
   passes only with the user's approval in the current conversation.
 
-The trailer keys and `attemptOfBranch` are `tasks-core/core`'s (the trailer
-grammar's one home). The check runs after push's stamping, so a pushed commit is
+The conversation trailer's keys are `infra/git/commit-trailers`' (new commits
+get `Equin-Conversation`; one carrying the legacy key counts as stamped); the
+attempt / unattributed keys and `attemptOfBranch` are `tasks-core/core`'s. The check runs after push's stamping, so a pushed commit is
 judged with the trailers it lands with.
 
 "This branch's own commits" are those reachable from `HEAD` and from no `main`

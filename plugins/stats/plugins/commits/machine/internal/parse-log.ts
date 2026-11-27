@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  CONVERSATION_TRAILER,
+  PUSH_TRAILER,
+  firstTrailerValue,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { defineSourceSet } from "@plugins/packages/plugins/source-digest/core";
 
 // The pure half of reading the history: the `git log` format asked for and
@@ -40,7 +45,9 @@ export const CommitInfoSchema = z.object({
 }) satisfies z.ZodType<CommitInfo>;
 
 /** The `--format` every read asks for: `parseLog` reads exactly it. */
-export const LOG_FORMAT = `--format=__C__%H\x1f%cI\x1f%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly)\x1f%(trailers:key=${LEGACY_IDS.conversationTrailer},valueonly)`;
+// A trailer carried twice (under its old and new key) prints both values,
+// joined by a record separator; the first one is read.
+export const LOG_FORMAT = `--format=__C__%H\x1f%cI\x1f${trailerPlaceholder(PUSH_TRAILER, { separator: "%x1e" })}\x1f${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x1e" })}`;
 
 interface ParsedChunk {
   header: CommitHeader;
@@ -62,8 +69,8 @@ function parseChunks(text: string): ParsedChunk[] {
         header: {
           sha: (fields[0] ?? "").trim(),
           iso: (fields[1] ?? "").trim(),
-          pushId: (fields[2] ?? "").trim() || null,
-          conversationId: (restLines[0] ?? "").trim() || null,
+          pushId: firstTrailerValue(fields[2] ?? "", "\x1e"),
+          conversationId: firstTrailerValue(restLines[0] ?? "", "\x1e"),
         },
         statLines: restLines.slice(1),
       };

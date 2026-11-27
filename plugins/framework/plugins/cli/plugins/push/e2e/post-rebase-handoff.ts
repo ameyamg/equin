@@ -48,7 +48,10 @@ import {
   spawnCaptured,
   type SpawnResult,
 } from "@plugins/infra/plugins/spawn/core";
-import { PUSH_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  PUSH_TRAILER,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 
 export const e2e = {
@@ -322,7 +325,7 @@ async function stampedPushes(repo: string, range: string): Promise<string[]> {
     await git(
       repo,
       "log",
-      `--format=%(trailers:key=${PUSH_TRAILER_KEY},valueonly,separator=)`,
+      `--format=${trailerPlaceholder(PUSH_TRAILER, { separator: "" })}`,
       range,
     )
   ).split("\n");

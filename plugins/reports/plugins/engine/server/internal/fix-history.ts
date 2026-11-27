@@ -2,7 +2,11 @@ import { asc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  CONVERSATION_TRAILER,
+  firstTrailerValue,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import type { ReportFixFacts, ReportId } from "@plugins/reports/core";
 import { _reportFixes } from "./tables";
@@ -25,7 +29,7 @@ export interface FixHistoryEntry extends ReportFixFacts {
   conversation: string | null;
 }
 
-const LOG_FORMAT = `%H%x00%s%x00%(trailers:key=${LEGACY_IDS.conversationTrailer},valueonly,separator=%x2C)%x00`;
+const LOG_FORMAT = `%H%x00%s%x00${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x2C" })}%x00`;
 
 /**
  * Every fix the ledger holds for `reportId`, oldest first, each with its
@@ -61,7 +65,7 @@ export async function readFixHistory(
   for (const record of raw.split("\0\n")) {
     const [sha, subject, conv] = record.replace(/^\n/, "").split("\0");
     if (!sha || subject === undefined) continue;
-    const conversation = (conv ?? "").split(",")[0]?.trim() || null;
+    const conversation = firstTrailerValue(conv ?? "", ",");
     logged.set(sha, { subject, conversation });
   }
   return fixes.map((f) => {

@@ -46,7 +46,10 @@
     - `tryRunGit`
     - `WorktreeGoneError`
 - Core:
-  - Uses: `packages/list-bound.wholeList`
+  - Uses:
+    - `infra/git/commit-trailers.isTrailerKey`
+    - `infra/git/commit-trailers.TrailerKeys`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `CommitRow`
     - `CommitTrailer`

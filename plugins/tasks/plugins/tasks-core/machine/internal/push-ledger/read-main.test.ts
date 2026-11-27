@@ -17,7 +17,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  CONVERSATION_TRAILER,
+  PUSH_TRAILER,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { readMainCommits } from "./read-main";
 
 // Wedge-breaker for this suite's fixture git commands. A test that hangs takes
@@ -49,7 +52,7 @@ let fileSeq = 0;
 async function commit(
   repo: string,
   subject: string,
-  trailers?: { conv: string; push: string },
+  trailers?: { conv: string; push: string; legacy?: boolean },
   when?: string,
 ): Promise<void> {
   fileSeq += 1;
@@ -58,10 +61,13 @@ async function commit(
   const args = ["commit", "-m", subject];
   // The trailers go in their own final paragraph, exactly as
   // `.githooks/prepare-commit-msg` + the push CLI's `--exec` leave them.
+  // `legacy` writes them under the keys history used before the rename.
   if (trailers) {
+    const pick = (t: typeof CONVERSATION_TRAILER) =>
+      trailers.legacy ? t.readKeys[1] : t.key;
     args.push(
       "-m",
-      `${LEGACY_IDS.conversationTrailer}: ${trailers.conv}\n${LEGACY_IDS.pushTrailer}: ${trailers.push}`,
+      `${pick(CONVERSATION_TRAILER)}: ${trailers.conv}\n${pick(PUSH_TRAILER)}: ${trailers.push}`,
     );
   }
   await spawnExpectOk([GIT, ...args], {
@@ -96,6 +102,23 @@ test("reads a trailer-bearing commit, newest first", async () => {
     expect(commits.map((c) => c.subject)).toEqual(["second", "first"]);
     expect(commits[0]?.conversationId).toBe("conv-1");
     expect(commits[0]?.pushId).toBe("push-b");
+  });
+});
+
+// History before the trailer rename carries the old keys; it must read the same.
+test("reads commits stamped under the legacy and the current keys alike", async () => {
+  await withRepo(async (repo) => {
+    await commit(repo, "old", { conv: "conv-1", push: "push-a", legacy: true });
+    await commit(repo, "new", { conv: "conv-2", push: "push-b" });
+
+    const commits = await readMainCommits(repo, null);
+
+    expect(commits.map((c) => [c.subject, c.conversationId, c.pushId])).toEqual(
+      [
+        ["new", "conv-2", "push-b"],
+        ["old", "conv-1", "push-a"],
+      ],
+    );
   });
 });
 

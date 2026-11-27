@@ -7,7 +7,11 @@ import {
   fixLevelOf,
   type FixLevel,
 } from "@plugins/reports/core";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  PUSH_TRAILER,
+  firstTrailerValue,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 
 // Did a fix remove its problem as a class, or patch one instance? A push
 // naming a report it fixes (`Fixes-report:`, stamped by `./equin push
@@ -46,7 +50,7 @@ export function isGuardPath(path: string): boolean {
 /** The git log `--format` {@link parseFixLog} reads: tab-separated fields. */
 export const FIX_LOG_FORMAT =
   `${MARK}%H%x09%ct%x09` +
-  `%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly,separator=)%x09` +
+  `${trailerPlaceholder(PUSH_TRAILER, { separator: "%x1f" })}%x09` +
   `%(trailers:key=${FIX_LEVEL_TRAILER},valueonly,separator=)`;
 
 /**
@@ -63,7 +67,7 @@ export function parseFixLog(out: string): FixCommit[] {
       const [sha = "", ct, push, rawLevel = ""] = line
         .slice(MARK.length)
         .split("\t");
-      const key = push && push.trim().length > 0 ? push.trim() : sha;
+      const key = firstTrailerValue(push ?? "", "\x1f") ?? sha;
       const at = Number(ct) * 1000;
       let level: FixLevel | null = null;
       if (rawLevel.trim() !== "") {

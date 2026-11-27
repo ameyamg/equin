@@ -76,8 +76,8 @@ interface CommitInfo {
 async function readAllCommits(cwd: string): Promise<CommitInfo[]> {
   const FORMAT =
     "%H%x00%cI%x00" +
-    `%(trailers:key=${LEGACY_IDS.conversationTrailer},valueonly,separator=%x00)%x00` +
-    `%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly,separator=%x00)%x00` +
+    `${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x1f" })}%x00` +
+    `${trailerPlaceholder(PUSH_TRAILER, { separator: "%x1f" })}%x00` +
     "%s%x00";
   const raw = await git(
     ["log", "--no-color", `--format=${FORMAT}`, "main"],
@@ -91,8 +91,8 @@ async function readAllCommits(cwd: string): Promise<CommitInfo[]> {
       return {
         sha: sha ?? "",
         committedAt: new Date(cIso ?? ""),
-        conversationId: (convRaw ?? "").trim(),
-        pushId: (pushRaw ?? "").trim(),
+        conversationId: firstTrailerValue(convRaw ?? "", "\x1f") ?? "",
+        pushId: firstTrailerValue(pushRaw ?? "", "\x1f") ?? "",
         subject: subject ?? "",
       };
     })
@@ -182,7 +182,12 @@ const worktree = argNamespace();
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  CONVERSATION_TRAILER,
+  PUSH_TRAILER,
+  firstTrailerValue,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 
 // Wedge-breaker for this script's local git reads (`log`, `for-each-ref`).
 // One number for all of them: they are metadata reads that finish in

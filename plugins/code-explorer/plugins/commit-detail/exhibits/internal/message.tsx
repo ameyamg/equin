@@ -1,10 +1,10 @@
 import type { CommitDetail } from "@plugins/code-explorer/plugins/code-api/core";
 import { CO_AUTHORED_BY_TRAILER_KEY } from "@plugins/primitives/plugins/commit-list/core";
+import { ATTEMPT_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  ATTEMPT_TRAILER_KEY,
-  CONVERSATION_TRAILER_KEY,
-  PUSH_TRAILER_KEY,
-} from "@plugins/tasks/plugins/tasks-core/core";
+  CONVERSATION_TRAILER,
+  PUSH_TRAILER,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { CommitMessage } from "../../web/components/commit-message";
 
 const COMMIT: CommitDetail = {
@@ -21,9 +21,9 @@ const COMMIT: CommitDetail = {
       key: CO_AUTHORED_BY_TRAILER_KEY,
       value: "Claude Opus 5.5 <noreply@anthropic.com>",
     },
-    { key: CONVERSATION_TRAILER_KEY, value: "conv-1794814344-u7g2wo" },
+    { key: CONVERSATION_TRAILER.key, value: "conv-1794814344-u7g2wo" },
     { key: ATTEMPT_TRAILER_KEY, value: "att-1794814300-kvade4" },
-    { key: PUSH_TRAILER_KEY, value: "2507afe6-0c1d-4f7e-9a51-1d2e3f4a5b6c" },
+    { key: PUSH_TRAILER.key, value: "2507afe6-0c1d-4f7e-9a51-1d2e3f4a5b6c" },
   ],
   body: [
     "The gateway's `/gateway/*` control API was reachable from the internet: Caddy forwards every path, a public host counted as an equin host, and a request with no Sec-Fetch-Site and no Origin was the owner.",

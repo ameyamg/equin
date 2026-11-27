@@ -1,6 +1,9 @@
 import {
+  PUSH_TRAILER,
+  trailerArg,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
+import {
   ATTEMPT_TRAILER_KEY,
-  PUSH_TRAILER_KEY,
   UNATTRIBUTED_TRAILER_KEY,
   attemptOfBranch,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -34,7 +37,7 @@ export function resolvePushAttribution(input: {
   /** `--unattributed <reason>`. */
   unattributed: string | undefined;
 }): PushAttribution {
-  const trailers = [`${PUSH_TRAILER_KEY}=${input.pushId}`];
+  const trailers = [trailerArg(PUSH_TRAILER, input.pushId)];
   const attemptId = attemptOfBranch(input.branch);
   if (attemptId) trailers.push(`${ATTEMPT_TRAILER_KEY}=${attemptId}`);
 

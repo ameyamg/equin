@@ -1,7 +1,10 @@
 #!/bin/sh
-# Auto-stamp Singularity-Conversation trailer on every commit when the pane's
-# conversation id is present in the env. No-op if missing (e.g. manual commit
-# from a shell that was not spawned by the tmux runtime).
+# Auto-stamp the conversation trailer (Equin-Conversation) on every commit when
+# the pane's conversation id is present in the env. No-op if missing (e.g.
+# manual commit from a shell that was not spawned by the tmux runtime).
+# The trailer's keys are infra/git/commit-trailers' CONVERSATION_TRAILER: new
+# commits get the current key; a commit already carrying the legacy key
+# (Singularity-Conversation, written before the rename) is already stamped.
 # --no-divider: never treat a `---` line in the message body as a patch/scissors
 # divider. Without it, a commit body containing a line that starts with `---`
 # (e.g. describing a `---` markdown shortcut) makes interpret-trailers stamp the
@@ -10,17 +13,20 @@
 CONVERSATION_ID="$EQUIN_CONVERSATION_ID"
 [ -n "$CONVERSATION_ID" ] || exit 0
 
+KEY="Equin-Conversation"
+KEYS="^(Equin-Conversation|Singularity-Conversation):"
+
 # "Already stamped" means: in the trailer block (the message's last paragraph),
 # which is the only place %(trailers) reads. A line anywhere else — e.g. an old
 # message reused as `-m "$(git log -1 --format=%B)` + appended note"` — is a
 # stray: drop it and stamp properly. The parse only runs when the cheap grep
 # hits (amends, rebase replays), so a fresh commit costs what it always did.
-if grep -q "^Singularity-Conversation:" "$1" 2>/dev/null; then
+if grep -Eiq "$KEYS" "$1" 2>/dev/null; then
   if git interpret-trailers --parse --no-divider "$1" |
-    grep -q "^Singularity-Conversation:"; then
+    grep -Eiq "$KEYS"; then
     exit 0
   fi
-  grep -v "^Singularity-Conversation:" "$1" >"$1.tmp" && mv "$1.tmp" "$1"
+  grep -Eiv "$KEYS" "$1" >"$1.tmp" && mv "$1.tmp" "$1"
 fi
 git interpret-trailers --in-place --no-divider \
-  --trailer "Singularity-Conversation=$CONVERSATION_ID" "$1"
+  --trailer "$KEY=$CONVERSATION_ID" "$1"

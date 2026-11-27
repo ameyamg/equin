@@ -1,4 +1,8 @@
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  PUSH_TRAILER,
+  firstTrailerValue,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   containsCommit,
@@ -29,7 +33,7 @@ export interface FixClaim {
 // The trailer values are comma-separated (one per report).
 const FIX_LOG_FORMAT =
   "%H%x00%cI%x00" +
-  `%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly,separator=%x2C)%x00` +
+  `${trailerPlaceholder(PUSH_TRAILER, { separator: "%x2C" })}%x00` +
   `%(trailers:key=${FIXES_REPORT_TRAILER},valueonly,separator=%x2C)%x00` +
   `%(trailers:key=${REPORT_FIXED_BY_TRAILER},valueonly,separator=%x2C)%x00`;
 
@@ -74,7 +78,7 @@ export function parseFixLog(raw: string): FixClaim[] {
     for (const value of (fixes ?? "").split(",")) {
       if (value.trim() === "") continue;
       const reportId = reportIdIn(value.trim(), sha, FIXES_REPORT_TRAILER);
-      claim(`${reportId}\0${push?.trim() || sha}`, {
+      claim(`${reportId}\0${firstTrailerValue(push ?? "", ",") ?? sha}`, {
         reportId,
         commit: sha,
         landedAt,

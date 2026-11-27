@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  isTrailerKey,
+  type TrailerKeys,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 
 /**
  * One `Key: value` trailer of a commit message (`Co-Authored-By`, a tool's own
@@ -32,11 +36,16 @@ export type CommitRow = z.infer<typeof CommitRowSchema>;
 /**
  * The value of a commit's `key` trailer, or `null` when the message carries
  * none. Git trailer keys are case-insensitive, so the match is too; with the
- * key repeated, the first occurrence wins.
+ * key repeated, the first occurrence wins. A renamed trailer
+ * (`infra/git/commit-trailers`) is matched under any of its keys.
  */
-export function commitTrailer(commit: CommitRow, key: string): string | null {
-  const wanted = key.toLowerCase();
-  const hit = commit.trailers.find((t) => t.key.toLowerCase() === wanted);
+export function commitTrailer(
+  commit: CommitRow,
+  key: string | TrailerKeys,
+): string | null {
+  const keys: TrailerKeys =
+    typeof key === "string" ? { key, readKeys: [key] } : key;
+  const hit = commit.trailers.find((t) => isTrailerKey(keys, t.key));
   return hit === undefined ? null : hit.value;
 }
 

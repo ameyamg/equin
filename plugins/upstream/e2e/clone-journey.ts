@@ -39,10 +39,12 @@ import {
   spawnExpectOk,
   getWorktreeRoot,
 } from "@plugins/infra/plugins/spawn/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import {
-  LEGACY_IDS,
-  PRODUCT_NAME,
-} from "@plugins/framework/plugins/product-name/core";
+  PUSH_TRAILER,
+  trailerArg,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { runMigrationJourney } from "./migration-journey";
 import type { E2eScript } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
@@ -281,7 +283,7 @@ async function main(): Promise<void> {
       "--amend",
       "--no-edit",
       "--trailer",
-      `${LEGACY_IDS.pushTrailer}=e2e-1`,
+      trailerArg(PUSH_TRAILER, "e2e-1"),
     );
     await git(clone, "checkout", "-q", "main");
     await git(clone, "merge", "--ff-only", "update-1");
@@ -304,7 +306,7 @@ async function main(): Promise<void> {
           clone,
           "log",
           "-1",
-          `--format=%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly)`,
+          `--format=${trailerPlaceholder(PUSH_TRAILER)}`,
           "main",
         )
       ).trim() === "e2e-1",

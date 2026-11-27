@@ -3,7 +3,7 @@ import {
   commitTrailer,
   type CommitRow,
 } from "@plugins/primitives/plugins/commit-list/core";
-import { CONVERSATION_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
+import { CONVERSATION_TRAILER } from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 
@@ -16,7 +16,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
  * push, an upstream merge): there is no destination to offer.
  */
 export function OpenCommitConversation({ commit }: { commit: CommitRow }) {
-  const convId = commitTrailer(commit, CONVERSATION_TRAILER_KEY);
+  const convId = commitTrailer(commit, CONVERSATION_TRAILER);
   if (convId === null) return null;
   return (
     <NewTabButton

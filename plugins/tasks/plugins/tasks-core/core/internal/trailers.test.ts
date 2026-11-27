@@ -6,9 +6,11 @@
  */
 import { describe, test, expect } from "bun:test";
 import {
+  CONVERSATION_TRAILER,
+  PUSH_TRAILER,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
+import {
   ATTEMPT_TRAILER_KEY,
-  CONVERSATION_TRAILER_KEY,
-  PUSH_TRAILER_KEY,
   TRAILER_LOG_FORMAT,
   attemptOfBranch,
   parseTrailerLog,
@@ -20,10 +22,29 @@ function record(fields: string[]): string {
 
 const ISO = "2026-08-17T10:00:00+02:00";
 
-test("the format fragment names every trailer key it reads", () => {
-  expect(TRAILER_LOG_FORMAT).toContain(`key=${CONVERSATION_TRAILER_KEY}`);
-  expect(TRAILER_LOG_FORMAT).toContain(`key=${PUSH_TRAILER_KEY}`);
+test("the format fragment names every trailer key it reads, old and new", () => {
+  for (const key of [
+    ...CONVERSATION_TRAILER.readKeys,
+    ...PUSH_TRAILER.readKeys,
+  ])
+    expect(TRAILER_LOG_FORMAT).toContain(`key=${key}`);
   expect(TRAILER_LOG_FORMAT).toContain(`key=${ATTEMPT_TRAILER_KEY}`);
+});
+
+test("a trailer carried twice (old and new key) reads its first value and shifts no field", () => {
+  const raw = record([
+    "sha1",
+    ISO,
+    "conv-a\x1fconv-a",
+    "push-new\x1fpush-old",
+    "",
+    "subject",
+  ]);
+  expect(parseTrailerLog(raw)[0]).toMatchObject({
+    conversationId: "conv-a",
+    pushId: "push-new",
+    subject: "subject",
+  });
 });
 
 test("NUL-delimited records parse, in log order", () => {
@@ -91,20 +112,6 @@ test("a subject is optional — an empty one still yields the commit", () => {
     record(["sha1", ISO, "conv-a", "push-1", "", ""]),
   );
   expect(c).toMatchObject({ sha: "sha1", subject: "" });
-});
-
-test("multiple values of one trailer key shift the fields — a known quirk", () => {
-  // `separator=%x00` means a commit carrying the conversation trailer TWICE emits
-  // both values into the conversation field's slot, pushing every later field
-  // right. The parse then reads the second conversation id as the push id. This is
-  // the ported behaviour, kept deliberately: the writer half stamps exactly one of
-  // each (the shell hook from EQUIN_CONVERSATION_ID, the push CLI per
-  // invocation), so no commit `./equin push` produces can reach it. Pinned
-  // here so a future fix is a deliberate change with a failing test, not a
-  // surprise.
-  const raw = record(["sha1", ISO, "conv-a", "conv-b", "push-1", "subject"]);
-  const [c] = parseTrailerLog(raw);
-  expect(c).toMatchObject({ conversationId: "conv-a", pushId: "conv-b" });
 });
 
 const ATT = "att-1793320131-b1fur3";

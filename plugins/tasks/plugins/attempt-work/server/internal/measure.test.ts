@@ -15,7 +15,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  CONVERSATION_TRAILER,
+  PUSH_TRAILER,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { ATTEMPT_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   GitError,
@@ -79,8 +82,8 @@ async function commit(
     args.push(
       "-m",
       [
-        trailers.conv && `${LEGACY_IDS.conversationTrailer}: ${trailers.conv}`,
-        `${LEGACY_IDS.pushTrailer}: ${trailers.push}`,
+        trailers.conv && `${CONVERSATION_TRAILER.key}: ${trailers.conv}`,
+        `${PUSH_TRAILER.key}: ${trailers.push}`,
         trailers.attempt && `${ATTEMPT_TRAILER_KEY}: ${trailers.attempt}`,
       ]
         .filter(Boolean)

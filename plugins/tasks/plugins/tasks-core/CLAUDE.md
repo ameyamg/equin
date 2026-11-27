@@ -682,7 +682,8 @@ serves them.
     - `tasks.v3:groups` (push)
     - `tasks.v3:rows` (keyed, point)
 - Core:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/git/commit-trailers` ×4
     - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
@@ -696,7 +697,6 @@ serves them.
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/string-list/config.stringListField`
-    - `framework/product-name.LEGACY_IDS`
     - `infra/entities.entityRef`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live/query-resource.compositeKey`
@@ -750,7 +750,6 @@ serves them.
     - `buildTaskPrompt`
     - `CONVERSATION_LAUNCH_CAUSE_OPTIONS`
     - `CONVERSATION_LAUNCH_CAUSES`
-    - `CONVERSATION_TRAILER_KEY`
     - `conversationAttachmentLinks`
     - `conversationAttachmentLinksEntityRef`
     - `ConversationKindSchema`
@@ -772,7 +771,6 @@ serves them.
     - `isBlockedStatus`
     - `isSettled`
     - `parseTrailerLog`
-    - `PUSH_TRAILER_KEY`
     - `pushesEntityRef`
     - `pushRows`
     - `PushSchema`
@@ -811,16 +809,16 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 137 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×53
+  - Imported by: 135 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×52
     - `tasks` ×48
     - `debug` ×6
     - `active-data` ×5
     - `apps` ×3
-    - `code-explorer` ×3
     - `infra` ×3
     - `page` ×3
     - `review` ×3
+    - `code-explorer` ×2
     - `primitives` ×2
     - `stats` ×2
     - `backup/sources/transcripts`

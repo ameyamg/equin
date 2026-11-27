@@ -11,7 +11,10 @@ import {
 } from "@plugins/framework/plugins/cli/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { removeDeadCompositionOutputs } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  PUSH_TRAILER,
+  trailerArg,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
 // magnitude above what any of them take, so only a wedged child trips it. A CLI
@@ -180,7 +183,7 @@ export async function normalizeGeneratedArtifacts(
       "--amend",
       "--no-edit",
       ...(opts.pushId
-        ? ["--trailer", `${LEGACY_IDS.pushTrailer}=${opts.pushId}`]
+        ? ["--trailer", trailerArg(PUSH_TRAILER, opts.pushId)]
         : []),
     ],
     root,

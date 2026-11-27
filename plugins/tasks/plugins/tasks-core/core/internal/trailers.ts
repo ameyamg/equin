@@ -1,4 +1,9 @@
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  CONVERSATION_TRAILER,
+  PUSH_TRAILER,
+  firstTrailerValue,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import {
   attemptBranchName,
   stripAttemptBranchPrefix,
@@ -20,18 +25,15 @@ import { attemptIdKind } from "@plugins/tasks/plugins/task-ids/core";
  * `insertPush`, and `tasks-core` cannot import `attempt-work` (which imports
  * `tasks-core/server`).
  *
- * The WRITER half (`.githooks/prepare-commit-msg` and `cli/plugins/push/cli/run.ts`)
- * keeps its own literals for the two legacy keys; the pre-push
+ * The conversation and push trailers were renamed (`Equin-Conversation`,
+ * `Equin-Push`); their keys, old and new, are `infra/git/commit-trailers`'s,
+ * and every read here accepts both. The pre-push
  * `conversation-trailer` check is what binds writers to readers — it FAILS a
  * push whose commits name neither their conversation nor their attempt (nor say
  * why they are unattributed), so an attributable commit on `main` is an
  * enforced invariant rather than a convention.
  */
 
-/** Written by `.githooks/prepare-commit-msg` from `EQUIN_CONVERSATION_ID`. */
-export const CONVERSATION_TRAILER_KEY = LEGACY_IDS.conversationTrailer;
-/** Stamped per `./equin push` invocation by the rebase `--exec`. */
-export const PUSH_TRAILER_KEY = LEGACY_IDS.pushTrailer;
 /**
  * Stamped by `./equin push` beside the push trailer when the branch is an
  * attempt's (`claude-web/<attemptId>`): the attempt the push is credited to,
@@ -59,15 +61,20 @@ export function attemptOfBranch(branch: string): string | null {
   return attemptBranchName(id) === branch && attemptIdKind.is(id) ? id : null;
 }
 
+/** Between the values of one trailer field (a commit can repeat a trailer). */
+const VALUE_SEPARATOR = "\x1f";
+
 /**
  * `git log --format=` fragment: NUL-separated fields, each record terminated by
- * a NUL so `parseTrailerLog` can split records on `\0\n`.
+ * a NUL so `parseTrailerLog` can split records on `\0\n`. A field's repeated
+ * values are joined by a unit separator, never a NUL, so a commit carrying a
+ * trailer twice (under its old and new key) cannot shift the fields after it.
  */
 export const TRAILER_LOG_FORMAT =
   "%H%x00%cI%x00" +
-  `%(trailers:key=${CONVERSATION_TRAILER_KEY},valueonly,separator=%x00)%x00` +
-  `%(trailers:key=${PUSH_TRAILER_KEY},valueonly,separator=%x00)%x00` +
-  `%(trailers:key=${ATTEMPT_TRAILER_KEY},valueonly,separator=%x00)%x00` +
+  `${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x1f" })}%x00` +
+  `${trailerPlaceholder(PUSH_TRAILER, { separator: "%x1f" })}%x00` +
+  `%(trailers:key=${ATTEMPT_TRAILER_KEY},valueonly,separator=%x1f)%x00` +
   "%s%x00";
 
 /**
@@ -98,9 +105,9 @@ export function parseTrailerLog(raw: string): TrailerCommit[] {
     if (fields.length < 6) continue;
     const [sha, cIso, convRaw, pushRaw, attemptRaw, subject] = fields;
     if (!sha || !cIso) continue;
-    const conversationId = (convRaw ?? "").trim() || null;
-    const attemptId = (attemptRaw ?? "").trim() || null;
-    const pushId = (pushRaw ?? "").trim();
+    const conversationId = firstTrailerValue(convRaw ?? "", VALUE_SEPARATOR);
+    const attemptId = firstTrailerValue(attemptRaw ?? "", VALUE_SEPARATOR);
+    const pushId = firstTrailerValue(pushRaw ?? "", VALUE_SEPARATOR);
     if (!pushId || (!conversationId && !attemptId)) continue;
     out.push({
       sha,

@@ -5,12 +5,16 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   ATTEMPT_TRAILER_KEY,
-  CONVERSATION_TRAILER_KEY,
   UNATTRIBUTED_TRAILER_KEY,
   attemptOfBranch,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  CONVERSATION_TRAILER,
+  trailerPlaceholder,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 
-const TRAILER = CONVERSATION_TRAILER_KEY;
+/** The key new commits carry; a legacy one on an older commit counts too. */
+const TRAILER = CONVERSATION_TRAILER.key;
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -64,7 +68,7 @@ async function commitsAheadOfMain(): Promise<OwnCommit[]> {
     "--not",
     "main",
     "--glob=refs/remotes/*/main",
-    `--format=%H%x00%(trailers:key=${TRAILER},valueonly,separator=%x2C)%x00%(trailers:key=${ATTEMPT_TRAILER_KEY},valueonly,separator=%x2C)%(trailers:key=${UNATTRIBUTED_TRAILER_KEY},valueonly,separator=%x2C)`,
+    `--format=%H%x00${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x2C" })}%x00%(trailers:key=${ATTEMPT_TRAILER_KEY},valueonly,separator=%x2C)%(trailers:key=${UNATTRIBUTED_TRAILER_KEY},valueonly,separator=%x2C)`,
   ]);
   if (exitCode !== 0 || !stdout) return [];
   return stdout.split("\n").map((line) => {
@@ -82,7 +86,8 @@ async function commitsAheadOfMain(): Promise<OwnCommit[]> {
 // trailer at all": the hook fired, but the line ended up in the body.
 async function hasStrayBodyTrailer(sha: string): Promise<boolean> {
   const { stdout } = await run(["git", "show", "-s", "--format=%B", sha]);
-  return new RegExp(`^${TRAILER}:`, "m").test(stdout);
+  const keys = CONVERSATION_TRAILER.readKeys.join("|");
+  return new RegExp(`^(${keys}):`, "im").test(stdout);
 }
 
 const check: Check = {

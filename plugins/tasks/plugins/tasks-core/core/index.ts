@@ -42,8 +42,6 @@ export type {
 // it fills; `attempt-work` reads it from here. See ./internal/trailers.ts.
 export {
   ATTEMPT_TRAILER_KEY,
-  CONVERSATION_TRAILER_KEY,
-  PUSH_TRAILER_KEY,
   UNATTRIBUTED_TRAILER_KEY,
   TRAILER_LOG_FORMAT,
   attemptOfBranch,

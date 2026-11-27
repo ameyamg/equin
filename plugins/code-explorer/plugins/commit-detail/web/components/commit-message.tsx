@@ -4,7 +4,10 @@ import {
   parseConventionalSubject,
 } from "@plugins/primitives/plugins/commit-list/core";
 import type { CommitDetail } from "@plugins/code-explorer/plugins/code-api/core";
-import { CONVERSATION_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  CONVERSATION_TRAILER,
+  type TrailerKeys,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import { useIdPresenters, type IdPresenter } from "@plugins/ids/web";
 import { usePaneToggle } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -35,13 +38,17 @@ const BODY_COLLAPSED_PX = 100;
 /**
  * The provenance trailers the header shows as chips, in order: only the
  * conversation that wrote the commit (the attempt and push are reached from
- * it). The keys are the trailer grammar's own (`tasks-core`'s reader half); a
+ * it), matched under its current and legacy keys (`infra/git/commit-trailers`); a
  * value an id-kind presenter recognises renders as that kind's chip, opening
  * its pane; any other as a plain chip.
  */
-const PROVENANCE: readonly { key: string; label: string; icon: IconRef }[] = [
+const PROVENANCE: readonly {
+  key: TrailerKeys;
+  label: string;
+  icon: IconRef;
+}[] = [
   {
-    key: CONVERSATION_TRAILER_KEY,
+    key: CONVERSATION_TRAILER,
     label: "Conversation",
     icon: symbol("chat"),
   },
@@ -113,7 +120,7 @@ export function CommitMessage({ commit }: { commit: CommitDetail }) {
           <Cluster gap="xs">
             {provenance.map((p) => (
               <ProvenanceChip
-                key={p.key}
+                key={p.label}
                 label={p.label}
                 icon={p.icon}
                 value={p.value}

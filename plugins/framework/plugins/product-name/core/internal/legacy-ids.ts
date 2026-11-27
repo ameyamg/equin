@@ -28,9 +28,9 @@ export const LEGACY_IDS = {
   launchdLabel: "dev.singularity.gateway",
   /** The data root's dir name under the home dir before the data-dir migration (`~/<dir>`). */
   dataDirName: ".singularity",
-  /** The trailer naming the conversation a commit came from. */
+  /** The trailer naming the conversation a commit came from — read only; new commits carry `Equin-Conversation` (infra/git/commit-trailers). */
   conversationTrailer: "Singularity-Conversation",
-  /** The trailer naming the push a commit landed with. */
+  /** The trailer naming the push a commit landed with — read only; new commits carry `Equin-Push` (infra/git/commit-trailers). */
   pushTrailer: "Singularity-Push",
   /** The section of every checkout's git config the app writes keys under. */
   gitConfigSection: "singularity",
@@ -139,10 +139,12 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
     ],
   },
   conversationTrailer: {
-    kept: "written into every commit in history",
+    kept: "written into every commit in history before the rename; readers accept it beside the current key",
     mirrors: [".githooks/prepare-commit-msg"],
   },
-  pushTrailer: { kept: "written into every commit in history" },
+  pushTrailer: {
+    kept: "written into every commit in history before the rename; readers accept it beside the current key",
+  },
   gitConfigSection: {
     kept: "keys in every checkout's .git/config, read by mixed versions",
   },
