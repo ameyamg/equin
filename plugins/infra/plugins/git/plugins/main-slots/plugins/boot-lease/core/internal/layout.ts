@@ -135,6 +135,18 @@ export function slotHolderRole(kind: SlotHolderKind): SlotHolderRole {
   return SLOT_HOLDER_ROLES[kind];
 }
 
+/**
+ * One live holder's role: its kind's ({@link slotHolderRole}), except an
+ * `exec-child` record marked {@link SlotHolder.outlives} — the child of a
+ * supervised job whose work is declared to finish across a switch — which
+ * outlives it by design.
+ */
+export function holderRole(
+  holder: Pick<SlotHolder, "kind" | "outlives">,
+): SlotHolderRole {
+  return holder.outlives === true ? "outlives" : slotHolderRole(holder.kind);
+}
+
 export type SlotLeaseMode = "shared" | "exclusive";
 
 /** One holder record, as written at acquire. */
@@ -151,6 +163,19 @@ export interface SlotHolder {
    * guard bootstrap's copy).
    */
   label: string | null;
+  /**
+   * `exec-child` only: the holder is the child of a supervised job that
+   * declared `acrossSwitch: { finish }` (infra/jobs/supervised-job; the
+   * supervisor marks it with `SLOT_OUTLIVES_SWITCH`), or a descendant of one.
+   * Its work stays valid when main's code moves on and the next backend
+   * re-attaches its run, so it finishes in the slot it started from: its
+   * role is `outlives` ({@link holderRole}) — draining past the switch by
+   * design, never a slow drain, still counted toward the draining-slot
+   * limit. A field rather than a kind of its own, so a reader from before it
+   * (a convergence run in the previous commit's slot) still parses the
+   * record — it reads an ordinary `exec-child`.
+   */
+  outlives?: true;
 }
 
 /** A record's text: one JSON line. */
@@ -169,7 +194,9 @@ export function parseHolder(file: string, text: string): SlotHolder {
       typeof parsed.label !== "string") ||
     typeof parsed.acquiredAt !== "string" ||
     (parsed.mode !== "shared" && parsed.mode !== "exclusive") ||
-    !SLOT_HOLDER_KINDS.includes(parsed.kind as SlotHolderKind)
+    !SLOT_HOLDER_KINDS.includes(parsed.kind as SlotHolderKind) ||
+    (parsed.outlives !== undefined &&
+      (parsed.outlives !== true || parsed.kind !== "exec-child"))
   ) {
     throw new Error(`main-slots: holder record ${file} is malformed: ${text}`);
   }
@@ -361,8 +388,7 @@ export function drainRecordFor(i: {
   /** The holder was found dead at `now`, not released (see {@link DrainRecord.foundDead}). */
   foundDead?: boolean;
 }): DrainRecord | null {
-  if (i.stamp === null || slotHolderRole(i.holder.kind) !== "drains")
-    return null;
+  if (i.stamp === null || holderRole(i.holder) !== "drains") return null;
   const held = heldPastSwitch(i.stamp, i.now);
   if (held.awakeMs <= i.stamp.reportAfterMs) return null;
   return {

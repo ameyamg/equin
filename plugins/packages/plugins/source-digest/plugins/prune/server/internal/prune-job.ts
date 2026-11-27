@@ -28,6 +28,10 @@ export const pruneSourceFactsJob = defineSupervisedJob({
     "Deletes the source-file facts no process has read for two weeks, keeping the shared facts store bounded.",
   input: z.object({}),
   channel: pruneLog,
+  acrossSwitch: {
+    finish:
+      "it prunes the host-wide source-digest store: housekeeping valid whichever commit's code runs it, re-attached by the next backend",
+  },
   schedule: { cron: "29 5 * * *" },
   runAttempts: 1,
   argv: () => ({

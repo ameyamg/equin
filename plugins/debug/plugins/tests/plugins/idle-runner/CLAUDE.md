@@ -50,15 +50,21 @@ A batch is ≤ 25 files or ≤ 60 s of last-known duration.
   (`tests.idle-batch (refs/heads/main)`, which also cancels the running batch:
   its tree is going away, so its harvest would be skipped) ask for the
   digests of the new tree.
-- **Only main's current code.** A batch starts only while the checkout it
-  runs in (the backend's `REPO_ROOT`: main's slot) is at `refs/heads/main`.
+- **Only main's current code.** The batch job declares
+  `acrossSwitch: { cancel }` (`infra/jobs/supervised-job`), so a batch
+  starts only in the backend main's gateway runs, with its checkout at
+  main's tip (`runsMainsCurrentCode`; the runner also asks before it picks
+  a batch, so no file is counted taken for a batch that never starts). A
+  backend that adopted a deploy (rare) pauses the runner until a deploy
+  restarts it.
   Main advances minutes before its new backend takes over; a batch the old
   backend started in between tested code main had left and — a detached child
   holding the old slot — ran on past the switch beside the new backend's boot
   (45–103 s, report-1795461922-nsi1e3). From the advance to the next boot the
   runner starts nothing (a failed deploy pauses it until the next one). Main's
-  boot also cancels a batch a previous backend left running (the race between
-  a start and an advance), before bringing the digests to its tree.
+  boot also cancels a batch a previous backend left running (supervised-job's
+  boot pass for every `cancel` job), and the warm-up brings the digests to
+  its tree.
 - `tests.digestsSettled`, `tests.runsIngested` (runs with failures came in)
   and each batch's end → `tests.idle-next`: pick and enqueue one batch,
   unless one runs.

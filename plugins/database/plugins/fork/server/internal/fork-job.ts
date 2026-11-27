@@ -45,6 +45,10 @@ export const databaseForkJob = defineSupervisedJob({
     "Copies the main database into a new worktree's own database so the worktree starts with current data.",
   input: z.object({ source: z.string(), target: z.string() }),
   channel: forkLog,
+  acrossSwitch: {
+    finish:
+      "it forks a database a worktree is waiting on: the fork is right whichever commit's code made it, and the next backend re-attaches the run",
+  },
   lock: (input) => input.target,
   runAttempts: 5,
   // Its child starts this plugin and what it imports, nothing more: the two

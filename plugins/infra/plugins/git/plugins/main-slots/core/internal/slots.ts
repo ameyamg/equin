@@ -39,7 +39,7 @@ import {
   renderUnserved,
   unservedStamp,
   SLOT_UNSERVED_FILE,
-  slotHolderRole,
+  holderRole,
   type SlotHolder,
   type UnservedStamp,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
@@ -458,7 +458,7 @@ async function stateOf(
   const holders = lock === "unheld" ? [] : await readSlotHolders(slot.path);
   // Records name, the lock decides: a pinning record counts only on a slot
   // whose lock is held (an unheld one lists no holders).
-  const pinnedBy = holders.filter((h) => slotHolderRole(h.kind) === "pins");
+  const pinnedBy = holders.filter((h) => holderRole(h) === "pins");
   const state: SlotStateKind =
     by.length > 0 || pinnedBy.length > 0
       ? "serving"

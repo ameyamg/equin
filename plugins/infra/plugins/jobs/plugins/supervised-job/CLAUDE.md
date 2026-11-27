@@ -22,6 +22,7 @@ defineSupervisedJob({
   wholeApp?: { reason },          // `run` body only, debt: the child starts every plugin
   schedule?, runAttempts?, onEnded?,   // runAttempts / onEnded: single-child only
   hold?: "instant" | "seconds",   // steps only
+  acrossSwitch: { finish: "<why>" } | { cancel: "<who asks again>" },  // required
 });
 ```
 
@@ -137,6 +138,63 @@ machine's lane can never hold it, the job `cannotRunHere` (`infra/jobs`):
 never scheduled, enqueue refused, the catalog saying what machine it needs.
 The child acquires from the same constant; if the two ever disagree, its
 acquire refuses loudly. Today: the type-check backstop.
+
+## Across a switch: `acrossSwitch` (required)
+
+A supervised child runs from the checkout of the backend that started it, and
+on main that is a slot: main switches slots on every deploy (~130 a day,
+2026-11-27), and the child holds its slot past the switch. Every job says what
+that means for its runs — the type has no default, so a new job cannot leave
+it unsaid (`define-supervised-job.test.ts` holds the `@ts-expect-error`s):
+
+- **`{ finish: "<why>" }`** — the work stays valid on any commit (a database
+  fork, a spare checkout, a build, a backup, the type-check backstop's
+  comparison, a host-wide prune). The run finishes in the slot it started
+  from; the next backend re-attaches it (its boot reconcile adopts every
+  unfinished run). The child starts with `EQUIN_SLOT_OUTLIVES_SWITCH=1`, so
+  its slot hold — and its descendants' — is marked `outlives`
+  (main-slots/boot-lease): draining past the switch by design, never a
+  `main-slot-drain-slow` report, still counted toward the draining-slot
+  limit. The reason says why outliving the switch is correct. An own ledger
+  and `steps` may only `finish`: their runs are domain records.
+- **`{ cancel: "<who asks again>" }`** — the work is ABOUT the code main
+  serves (a measurement of the deploy, a test batch). Built-in ledger, one
+  attempt (`runAttempts` > 1 is refused at define: a later attempt's gate
+  could refuse after a switch, which the ladder reads as a lost claim). On
+  main:
+  - **never started by a backend main has left**: the spawn step asks
+    `runsMainsCurrentCode()` before the claim and answers not-claimed
+    otherwise. True off main. On main the one `SupervisedCodeCurrency`
+    contribution answers — this plugin's `machine/` half (the desktop: a
+    browser host never runs main): main's spec names this backend's checkout
+    (so not a backend main switched away from, winding down ~20 s after the
+    switch) AND that checkout's HEAD is `refs/heads/main`. False from main's
+    advance until its new backend's spec, after a failed deploy until the
+    next one, and in a backend that ADOPTED a deploy until one restarts it
+    (its slot holds the previous commit's files — rare on main: 129 builds,
+    ~130 boots in a day). Exported for a caller that picks what to request
+    first (main's test runner);
+  - **cancelled by the next backend**: this plugin's `onReady`, after the
+    boot reconcile, stamps `cancelled_at` on every open run claimed before
+    this process began (`markCancelledStartedBefore`) and signals it — the
+    wake records a cancellation (`done`, no retry, no dead-letter), and
+    `latestSupervisedRun` reports it `cancelled` (so a trigger that asks
+    "was this measured?" asks again). A crash restart on unchanged code
+    cancels them too (nothing tells the two apart without the run's
+    checkout). Residual, as for every cancel here: a row still holding its
+    claiming backend's seed pid would signal that pid's group — the gate
+    stops claims from the advance on, a build before this boot, so such a
+    row's backend died mid-claim.
+  - **not re-run**: the reason names who asks for it again on the new code
+    (its boot hook, the next trigger).
+
+Not expressible, on purpose: cancel a run AND re-run it on the new code. Old
+and new backend dispatch from main's one queue while they overlap (~20 s), so
+a deferred or re-enqueued run can land on the old one again, and a deferral
+that waits for the new code loops after a failed deploy. That needs dispatch
+that knows the code generation (a row only a backend serving main's current
+code may fetch) — the open structural option, owed the day a daily check must
+be cancelled and re-run.
 
 ## Long work, short runs
 
@@ -793,7 +851,9 @@ construction, and the job and the body it spawns cannot drift apart.
 
 - Description: Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
 - Server:
-  - Contributes: `fork-data-exclusion` "supervised_job_runs"
+  - Contributes:
+    - `fork-data-exclusion` "supervised_job_runs"
+    - `supervised-job.code-currency`
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×8
     - `infra/paths` ×4
@@ -808,7 +868,10 @@ construction, and the job and the body it spawns cannot drift apart.
     - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
     - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables.ts`
   - Exports (types):
+    - `AcrossSwitch`
+    - `AcrossSwitchFinish`
     - `CancelByLockResult`
+    - `CodeCurrencyProbe`
     - `DefineSupervisedJobSpec`
     - `RunEndedPayload`
     - `RunStep`
@@ -832,6 +895,8 @@ construction, and the job and the body it spawns cannot drift apart.
     - `onSupervisedRunChange`
     - `openSupervisedRuns`
     - `runEnded`
+    - `runsMainsCurrentCode`
+    - `SupervisedCodeCurrency`
   - Register:
     - `defineTriggerEvent('supervisedRun.ended')`
     - `defineJob('retention.supervised_job_runs')`

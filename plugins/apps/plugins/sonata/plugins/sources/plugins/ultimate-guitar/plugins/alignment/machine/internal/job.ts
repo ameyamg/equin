@@ -302,6 +302,10 @@ export const ugAlignJob = defineSupervisedJob({
     "Chooses a YouTube recording for an Ultimate Guitar song (when none was set) and aligns its chord sheet to the recording's beats.",
   input: UgAlignInputSchema,
   channel: ugAlignmentLog,
+  acrossSwitch: {
+    finish:
+      "it aligns a song's tab to its audio and stores the result: valid whichever commit's code ran it, and the next backend re-attaches the run",
+  },
   lock: (input) => input.songId,
   // Debt: its child starts every plugin.
   wholeApp: {

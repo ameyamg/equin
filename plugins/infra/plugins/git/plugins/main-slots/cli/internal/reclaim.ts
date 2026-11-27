@@ -11,6 +11,7 @@ import {
   heldPastSwitch,
   parseDrainRecord,
   SLOT_DRAIN_LOG_DIR,
+  holderRole,
   slotHolderRole,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
@@ -212,7 +213,7 @@ function stillHolding(s: SlotState, now: ClockStamp): DrainSlowPayload[] {
   const held = heldPastSwitch(s.unserved, now);
   if (held.awakeMs <= s.unserved.reportAfterMs) return [];
   return s.holders
-    .filter((h) => slotHolderRole(h.kind) === "drains")
+    .filter((h) => holderRole(h) === "drains")
     .map((h) => ({
       kind: h.kind,
       label: h.label,

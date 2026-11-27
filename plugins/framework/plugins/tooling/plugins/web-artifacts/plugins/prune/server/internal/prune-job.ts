@@ -34,6 +34,10 @@ export const webArtifactsPruneJob = defineSupervisedJob({
     "Deletes old web build artifacts no served app links any more, keeping the shared build cache bounded.",
   input: z.object({}),
   channel: pruneLog,
+  acrossSwitch: {
+    finish:
+      "it prunes the host-wide web-artifact store: housekeeping valid whichever commit's code runs it, re-attached by the next backend",
+  },
   schedule: { cron: "17 * * * *" },
   runAttempts: 1,
   argv: () => ({

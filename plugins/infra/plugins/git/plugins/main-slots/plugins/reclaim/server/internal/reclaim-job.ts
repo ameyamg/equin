@@ -12,7 +12,7 @@ const reclaimLog = defineLogSink({
 
 /**
  * Daily, main only (a schedule's default): `./equin main-slots-reclaim`
- * (the `reclaim` sub-plugin's command) — the same `reclaimSlots` every main
+ * (this plugin's command) — the same `reclaimSlots` every main
  * build ends with, as a backstop for what no event can announce: a process
  * killed with SIGKILL never releases its lease, so the slot it held frees
  * with nobody there to reclaim it until the next build. The documented
@@ -21,6 +21,10 @@ const reclaimLog = defineLogSink({
  * In a supervised child (git worktree removal, an install's worth of file
  * deletion), never on a backend's event loop. `runAttempts: 1`: the next day,
  * or the next build, is the retry.
+ *
+ * Here, not in main-slots' own `server/`: supervised-job reads main-slots
+ * core (which slot main serves, for its `acrossSwitch` start gate), so
+ * main-slots itself must not import supervised-job.
  */
 export const reclaimSlotsJob = defineSupervisedJob({
   name: "main-slots.reclaim",
@@ -28,6 +32,10 @@ export const reclaimSlotsJob = defineSupervisedJob({
     "Frees main's slots nothing runs from any more (keeping one ready for the next build) and reports processes that kept an old slot busy after their app moved on.",
   input: z.object({}),
   channel: reclaimLog,
+  acrossSwitch: {
+    finish:
+      "it reclaims main's slot pool, under the pool lock: valid whichever commit's code runs it, re-attached by the next backend",
+  },
   schedule: { cron: "23 4 * * *" },
   runAttempts: 1,
   argv: () => ({

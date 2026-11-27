@@ -28,6 +28,10 @@ export const grepIndexPruneJob = defineSupervisedJob({
     "Deletes the grep-check answers no check run has read for two weeks, keeping the shared grep index bounded.",
   input: z.object({}),
   channel: pruneLog,
+  acrossSwitch: {
+    finish:
+      "it prunes the host-wide grep index: housekeeping valid whichever commit's code runs it, re-attached by the next backend",
+  },
   schedule: { cron: "13 5 * * *" },
   runAttempts: 1,
   argv: () => ({

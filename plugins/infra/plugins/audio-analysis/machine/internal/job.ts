@@ -44,6 +44,10 @@ export const beatFeaturesJob = defineSupervisedJob({
     device: AnalysisDeviceSchema,
   }),
   channel: audioAnalysisLog,
+  acrossSwitch: {
+    finish:
+      "it analyses a recording and stores the features: valid whichever commit's code ran it, and the next backend re-attaches the run",
+  },
   lock: ({ videoId, settings }) => `${settingsKey(settings)}/${videoId}`,
   runAttempts: 2,
   // Debt: its child starts every plugin.

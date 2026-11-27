@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -74,6 +74,7 @@ export function builtinLedgerFor(
   setPid(runId: string, pid: number): Promise<void>;
   closeRow(runId: string, terminal: RunTerminal): Promise<void>;
   markCancelled(lockKey: string): Promise<string | null>;
+  markCancelledStartedBefore(before: Date): Promise<readonly string[]>;
   latest(lockKey: string): Promise<SupervisedRunRow | null>;
   openLockKeys(): Promise<ReadonlySet<string>>;
 } {
@@ -195,6 +196,29 @@ export function builtinLedgerFor(
       return row?.id ?? null;
     },
 
+    /**
+     * Stamp `cancelled_at` on every open run of this job claimed before
+     * `before`, and answer their ids — the boot pass that cancels what a
+     * previous backend left of an `acrossSwitch: { cancel }` job. First stamp
+     * wins, as for `markCancelled`.
+     */
+    async markCancelledStartedBefore(before) {
+      const rows = await conn
+        .update(_supervisedJobRuns)
+        .set({
+          cancelledAt: sql`COALESCE(${_supervisedJobRuns.cancelledAt}, now())`,
+        })
+        .where(
+          and(
+            eq(_supervisedJobRuns.jobName, jobName),
+            isNull(_supervisedJobRuns.finishedAt),
+            lt(_supervisedJobRuns.startedAt, before),
+          ),
+        )
+        .returning({ id: _supervisedJobRuns.id });
+      return rows.map((row) => row.id);
+    },
+
     /** The lock key of every open run of this job (at most one per key). */
     async openLockKeys() {
       const rows = await conn
@@ -218,6 +242,7 @@ export function builtinLedgerFor(
           finishedAt: _supervisedJobRuns.finishedAt,
           exitCode: _supervisedJobRuns.exitCode,
           errorMessage: _supervisedJobRuns.errorMessage,
+          cancelledAt: _supervisedJobRuns.cancelledAt,
         })
         .from(_supervisedJobRuns)
         .where(
@@ -235,6 +260,7 @@ export function builtinLedgerFor(
         open: row.finishedAt === null,
         exitCode: row.exitCode,
         errorMessage: row.errorMessage,
+        cancelled: row.cancelledAt !== null,
       };
     },
   };
@@ -295,6 +321,12 @@ export interface SupervisedRunRow {
   readonly exitCode: number | null;
   /** What the child's body threw, when it recorded it before exiting. */
   readonly errorMessage: string | null;
+  /**
+   * The run was asked to stop (`cancelled_at`): a user's Cancel, or the next
+   * backend cancelling an `acrossSwitch: { cancel }` run a previous backend
+   * left — it did not do its work, whatever it exited with.
+   */
+  readonly cancelled: boolean;
 }
 
 /**

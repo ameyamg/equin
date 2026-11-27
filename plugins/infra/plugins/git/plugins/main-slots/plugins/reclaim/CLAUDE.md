@@ -4,7 +4,12 @@
 
 ## Plugin reference
 
-- Description: `./equin main-slots-reclaim` — reclaim main's slot pool (stamp the slots no app lives in any more, file a main-slot-drain-slow report per process that kept one busy past the threshold, remove free slots beyond the one kept ready): the body of the daily main-slots.reclaim job, and what every main build ends with.
+- Description: The daily main-slots.reclaim job (main only): runs `./equin main-slots-reclaim` as a supervised child — the backstop reclaim for slots freed by a killed process, which no event announces.
+- Server:
+  - Uses:
+    - `infra/jobs/supervised-job.defineSupervisedJob`
+    - `primitives/log-channels.defineLogSink`
+  - Register: `defineSupervisedJob('main-slots.reclaim')`
 - Cli:
   - Uses: `infra/git/main-slots.reclaimSlots`
 

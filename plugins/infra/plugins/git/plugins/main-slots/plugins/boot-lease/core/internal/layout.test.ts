@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   drainRecordFor,
   heldPastSwitch,
+  holderRole,
+  parseHolder,
+  renderHolder,
   parseDrainRecord,
   parseUnserved,
   renderUnserved,
@@ -109,6 +112,41 @@ describe("drainRecordFor", () => {
   test("past the threshold awake, the record carries the wall span and the sleep in it", () => {
     const r = record({ boot: "b", asleepMs: 6_970_000 });
     expect([r?.heldPastSwitchMs, r?.sleptMs]).toEqual([7_384_000, 6_970_000]);
+  });
+});
+
+describe("a holder that outlives its slot's switch", () => {
+  const outliving: SlotHolder = { ...holder, outlives: true };
+
+  test("is an outliving exec-child: never a slow drain, released or found dead", () => {
+    expect(holderRole(outliving)).toBe("outlives");
+    expect(holderRole(holder)).toBe("drains");
+    for (const foundDead of [false, true]) {
+      expect(
+        drainRecordFor({
+          stamp: stamp({ boot: "b", asleepMs: 0 }),
+          holder: outliving,
+          slot: "/slot-3",
+          commit: null,
+          now: at(RELEASE, { boot: "b", asleepMs: 0 }),
+          foundDead,
+        }),
+      ).toBeNull();
+    }
+  });
+
+  test("round-trips its mark, and only an exec-child may carry it", () => {
+    expect(parseHolder("x.json", renderHolder(outliving))).toEqual(outliving);
+    expect(parseHolder("x.json", renderHolder(holder))).toEqual(holder);
+    expect(() =>
+      parseHolder(
+        "x.json",
+        renderHolder({ ...holder, kind: "backend", outlives: true }),
+      ),
+    ).toThrow(/malformed/);
+    expect(() =>
+      parseHolder("x.json", JSON.stringify({ ...holder, outlives: false })),
+    ).toThrow(/malformed/);
   });
 });
 

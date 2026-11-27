@@ -1,7 +1,7 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
- * The body of the daily `main-slots.reclaim` job (main-slots' `server/`),
+ * The body of the daily `main-slots.reclaim` job (this plugin's `server/`),
  * which runs it as its supervised child's argv. A command rather than a
  * `run` body so the reclaim (git, the worktree gate, the outbox) stays in the
  * CLI's closure, never the serving backend's.

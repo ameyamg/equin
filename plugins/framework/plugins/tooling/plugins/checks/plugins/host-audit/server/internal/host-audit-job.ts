@@ -29,6 +29,10 @@ export const hostAuditJob = defineSupervisedJob({
     "Checks this machine's shared state (the data folder, the code-signing identity) and files a report for each problem found.",
   input: z.object({}),
   channel: auditLog,
+  acrossSwitch: {
+    finish:
+      "it audits the machine's shared state, not main's code: its verdict is right whichever commit's checks ran it, re-attached by the next backend",
+  },
   schedule: { cron: "23 * * * *" },
   runAttempts: 1,
   argv: () => ({

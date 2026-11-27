@@ -31,6 +31,10 @@ export const checkCachePruneJob = defineSupervisedJob({
     "Deletes old check results and leftover check coordination files, keeping the shared check cache bounded.",
   input: z.object({}),
   channel: pruneLog,
+  acrossSwitch: {
+    finish:
+      "it prunes the host-wide check cache: housekeeping valid whichever commit's code runs it, re-attached by the next backend",
+  },
   schedule: { cron: "47 * * * *" },
   runAttempts: 1,
   argv: () => ({

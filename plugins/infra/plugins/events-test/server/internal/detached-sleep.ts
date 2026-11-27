@@ -25,6 +25,9 @@ export const detachedSleep = defineSupervisedJob({
     fail: z.enum(["none", "retryable", "non-retryable"]).default("none"),
   }),
   channel: detachedSleepLog,
+  acrossSwitch: {
+    finish: "a test harness's sleep that exists to outlive its backend",
+  },
   runAttempts: 2,
   async run({ seconds, fail }, { runId, log }) {
     log(

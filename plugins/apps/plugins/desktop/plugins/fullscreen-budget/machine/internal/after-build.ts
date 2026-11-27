@@ -42,8 +42,11 @@ async function measureIfDeployed(row: BuildRow): Promise<void> {
   if (!isMainCompositionBuild(row.targets)) return;
   const commit = row.commitHash;
   if (commit === null) return;
-  if ((await latestSupervisedRun(fullscreenBudgetJob, { commit })) !== null)
-    return;
+  // A run of this commit measured it — unless it was cancelled: a run a
+  // previous backend left going is cancelled at the next boot
+  // (`acrossSwitch: { cancel }`), and that boot's warm-up measures again.
+  const latest = await latestSupervisedRun(fullscreenBudgetJob, { commit });
+  if (latest !== null && !latest.cancelled) return;
   await fullscreenBudgetJob.enqueue({ commit });
 }
 

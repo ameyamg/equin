@@ -36,6 +36,18 @@ rendered — and none is slow enough for the stall report to see.
   own modules, the demo's in-browser host failing to load its plugins, then
   the 30 s wait for a window). The convergence run holds the namespace's
   deploy lock for its whole run; the script takes it shared and drops it.
+- **Only a backend on main's current code starts a run**
+  (`acrossSwitch: { cancel }`, `infra/jobs/supervised-job`). A build's exit
+  marker lands as main switches, and the backend main is leaving used to
+  start the run from its own slot — the script of the commit main had left,
+  held past the switch beside the new backend's boot (74–112 s,
+  report-1795631244-pwb5aj). Now it starts nothing (no row, so the new
+  backend's boot warm-up still finds the commit unmeasured and measures it),
+  and a run a previous backend left going is cancelled at the next boot — a
+  cancelled run does not count as measured (`latestSupervisedRun`'s
+  `cancelled`), and its own `onEnded` asks again for its commit. A commit a
+  backend adopted (no restart) is not measured: the next restarting deploy's
+  warm-up measures the latest one.
 - **A commit main no longer serves is skipped, not measured.** A run can wait
   minutes for a host e2e slot; by then main may have deployed a newer commit
   (from another slot — the run still resolves main's deploy, see `infra/paths`

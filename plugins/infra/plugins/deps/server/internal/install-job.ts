@@ -28,6 +28,10 @@ export const depsInstallJob = defineSupervisedJob({
     "Downloads and installs one optional dependency in the background so it is ready when a feature needs it.",
   input: z.object({ id: z.string() }),
   channel: depsInstallLog,
+  acrossSwitch: {
+    finish:
+      "it installs an optional dependency into the host's store: the install is right whichever commit's code made it, and the next backend re-attaches the run",
+  },
   lock: ({ id }) => id,
   // Debt: its child starts every plugin.
   wholeApp: {

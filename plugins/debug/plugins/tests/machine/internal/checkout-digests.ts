@@ -52,6 +52,10 @@ export const checkoutDigestsJob = defineSupervisedJob({
     "Computes every test file's digest for this checkout when its code changed — while the Debug → Tests page is open, and on main at every boot and advance when main's test runner is on — so harvested verdicts can be matched against the current code.",
   input: z.object({ unlessTree: z.string().nullable() }),
   channel: digestsLog,
+  acrossSwitch: {
+    cancel:
+      "it digests this backend's checkout: started by a backend main has left, it digests code main no longer serves; main's next backend asks again at boot for the tree it serves (tests.runner-digests-boot)",
+  },
   runAttempts: 1,
   argv: (input) => ({
     argv: [

@@ -120,6 +120,10 @@ export const deployRunJob = defineSupervisedJob({
     "Deploys a composition to its server, preparing the machine then shipping the release, and records the outcome.",
   input: deployRunJobInput,
   channel: deployLog,
+  acrossSwitch: {
+    finish:
+      "a deploy is a person's request recorded in deploy_runs: its legs finish wherever they started and the next backend re-attaches them, so a main switch never cuts one short",
+  },
   hold: "seconds",
   ledger: deployRunLedger,
   steps: (input, { step, ctx }) => runDeploy(input.runId, step, ctx),

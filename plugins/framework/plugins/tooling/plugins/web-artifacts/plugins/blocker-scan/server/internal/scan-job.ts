@@ -27,6 +27,10 @@ export const blockerScanJob = defineSupervisedJob({
     "Checks every URL main serves against the default content-blocker lists (EasyList, EasyPrivacy, uBlock filters) and reports any file they would block.",
   input: z.object({}),
   channel: scanLog,
+  acrossSwitch: {
+    finish:
+      "it scans the host-wide web-artifact store for what blocks pruning: valid whichever commit's code runs it, re-attached by the next backend",
+  },
   schedule: { cron: "41 5 * * *" },
   runAttempts: 1,
   argv: () => ({

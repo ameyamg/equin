@@ -76,6 +76,10 @@ export const worktreeReapJob = defineSupervisedJob({
     "Reclaims stale worktrees and orphaned forked databases, and reports any that could not be cleaned up.",
   input: z.object({}),
   channel: reapLog,
+  acrossSwitch: {
+    finish:
+      "it removes stale worktrees: each removal is right whichever commit's code made it, and the next backend re-attaches the run",
+  },
   schedule: { cron: "0 * * * *" }, // hourly — REAP_PERIOD_MS below
   runAttempts: 1,
   // The sweep reaps in its child, so the panel's held scans (this backend's

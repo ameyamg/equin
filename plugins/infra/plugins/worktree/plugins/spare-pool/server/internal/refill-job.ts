@@ -46,6 +46,10 @@ export const spareRefillJob = defineSupervisedJob({
     "Keeps a ready checkout of main on standby, so launching an agent claims it instead of writing a fresh checkout while you wait.",
   input: z.object({}),
   channel: refillLog,
+  acrossSwitch: {
+    finish:
+      "it makes a spare checkout for the next agent: the spare is right whichever commit's code made it (an agent rebases it), and the next backend re-attaches the run",
+  },
   // Daily: replaces a spare older than a day, so the one a claim takes is never
   // weeks behind `main`.
   schedule: { cron: "40 4 * * *" },

@@ -120,6 +120,12 @@ if (
       : verb === "run" && operand !== undefined
         ? `run ${operand}`
         : (verb ?? "(no verb)"),
+    // The child of a supervised job whose work finishes across a switch
+    // (infra/jobs/supervised-job's `acrossSwitch`), or a descendant of one:
+    // it outlives this slot's switch by design, never a slow drain. A
+    // `build-relay` (the backend's own Build button is such a child) already
+    // outlives by its kind, and only an `exec-child` carries the mark.
+    { outlives: verb !== "build" && readEnv("SLOT_OUTLIVES_SWITCH") === "1" },
   );
 }
 

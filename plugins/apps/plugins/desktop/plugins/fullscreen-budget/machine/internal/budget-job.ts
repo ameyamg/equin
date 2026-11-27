@@ -31,6 +31,10 @@ export const fullscreenBudgetJob = defineSupervisedJob({
     "Measures how much work the desktop's full-screen switch does on the newly deployed app, and files a report when it is over budget.",
   input: z.object({ commit: z.string().regex(/^[0-9a-f]{40}$/) }),
   channel: budgetLog,
+  acrossSwitch: {
+    cancel:
+      "it measures main's deploy with the script in this backend's checkout: started by a backend main has left, it measures from the slot main left; main's next backend asks again at boot (fullscreen-budget.latest-deploy) for the latest deploy no run measured",
+  },
   lock: (input) => input.commit,
   runAttempts: 1,
   argv: (input) => ({
@@ -44,4 +48,12 @@ export const fullscreenBudgetJob = defineSupervisedJob({
     ],
     cwd: REPO_ROOT,
   }),
+  // Cancelled: a backend main switched away from left it going, and the next
+  // one cancelled it at boot (`acrossSwitch`). Ask again for this commit —
+  // the row is closed by now, so the claim can win; the script itself skips
+  // a commit main no longer serves. The boot warm-up asks too, for the case
+  // this wake lands on the old backend, whose start gate refuses it.
+  onEnded: async (_runId, _terminal, meta) => {
+    if (meta.cancelled) await fullscreenBudgetJob.enqueue(meta.input);
+  },
 });

@@ -83,7 +83,17 @@ export function holdSlotLeaseSync(
   root: AppPath,
   kind: SlotHolderKind,
   label: string | null,
+  /**
+   * `outlives`: the holder outlives its slot's switch by design
+   * ({@link SlotHolder.outlives}) — an `exec-child` only.
+   */
+  opts: { outlives?: boolean } = {},
 ): SlotLeaseHold {
+  if (opts.outlives === true && kind !== "exec-child") {
+    throw new Error(
+      `main-slots: only an exec-child holder may outlive its slot's switch, not a ${kind}`,
+    );
+  }
   const admin = slotAdminDirSync(root);
   if (admin === null || !existsSync(joinAppPath(admin, MAIN_SLOT_STAMP)))
     return { kind: "not-a-slot", root };
@@ -107,6 +117,7 @@ export function holdSlotLeaseSync(
     mode: "shared",
     acquiredAt: new Date().toISOString(),
     label,
+    ...(opts.outlives === true ? { outlives: true as const } : {}),
   };
   // `b` keeps a boot record's name apart from an in-process lease's
   // (`<pid>.<n>.json`) of the same process.

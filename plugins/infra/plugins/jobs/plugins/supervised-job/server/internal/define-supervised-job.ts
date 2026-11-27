@@ -38,8 +38,17 @@ import { startSupervisedRun } from "./run/supervisor";
 import { spawnClaimedRun } from "./spawn-claimed";
 import { runStepsBody, type RunStep, type SupervisedJobSpawn } from "./steps";
 import { runEnded } from "./tables-run-ended";
+import {
+  acrossSwitchEnv,
+  assertAcrossSwitch,
+  registerCancelAcrossSwitch,
+  runsMainsCurrentCode,
+  type AcrossSwitch,
+  type AcrossSwitchFinish,
+} from "./across-switch";
 
 export type { SupervisedJobSpawn, SupervisedRunContext };
+export type { AcrossSwitch, AcrossSwitchFinish };
 
 /** What the wrapper can tell `claim` about the workflow doing the claiming. */
 export interface SupervisedJobClaimMeta {
@@ -281,6 +290,13 @@ type LedgerChoice<S extends z.ZodType> =
       ledger: SupervisedJobLedger<z.infer<S>>;
       /** Only the built-in ledger locks by key; an own ledger's claim IS its lock. */
       lock?: never;
+      /**
+       * What becomes of a run when main's code moves on — see
+       * {@link AcrossSwitch}. An own ledger's runs are domain records (a
+       * build, a release, a backup): they finish. `cancel` is the built-in
+       * ledger's `cancelled_at` stamp, so it is not offered here.
+       */
+      acrossSwitch: AcrossSwitchFinish;
     }
   | {
       ledger?: undefined;
@@ -289,6 +305,14 @@ type LedgerChoice<S extends z.ZodType> =
        * the same key never run at once. Omitted, the whole job is one lock.
        */
       lock?: (input: z.infer<S>) => string;
+      /**
+       * What becomes of a run when main's code moves on — `finish` (the work
+       * stays valid: it outlives the switch, re-attached by the next backend)
+       * or `cancel` (the work is about the code main serves: never started by
+       * a backend main has left, cancelled by the next one). See
+       * {@link AcrossSwitch}; the reason is required.
+       */
+      acrossSwitch: AcrossSwitch;
     };
 
 /** Several children, sequenced in the backend — deploy. */
@@ -316,6 +340,8 @@ interface StepsBody<S extends z.ZodType> {
    * a step.
    */
   hold?: "instant" | "seconds";
+  /** A sequence's runs are domain records (deploy): they finish. See {@link AcrossSwitch}. */
+  acrossSwitch: AcrossSwitchFinish;
   argv?: never;
   run?: never;
   admission?: never;
@@ -450,6 +476,27 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
   spec: DefineSupervisedJobSpec<N, S>,
 ): SupervisedJob<N, S> {
   const ledger = resolveLedger(spec);
+  const acrossSwitch: AcrossSwitch = spec.acrossSwitch;
+  assertAcrossSwitch(spec.name, acrossSwitch);
+  if (acrossSwitch.cancel !== undefined && !ledger.builtin) {
+    throw new Error(
+      `[supervised-job] ${spec.name}: acrossSwitch "cancel" needs the built-in ledger (its cancelled_at stamp) — an own ledger's runs finish.`,
+    );
+  }
+  if (
+    acrossSwitch.cancel !== undefined &&
+    spec.steps === undefined &&
+    (spec.runAttempts ?? 1) > 1
+  ) {
+    // A later attempt's start gate could refuse after a switch between
+    // attempts, which the retry ladder reads as a lost claim.
+    throw new Error(
+      `[supervised-job] ${spec.name}: acrossSwitch "cancel" runs one attempt — a run cancelled at a switch is asked for again by its trigger, not retried.`,
+    );
+  }
+  // Every child of this job starts with it: a `finish` child's slot hold
+  // outlives the switch (main-slots/boot-lease), and so do its descendants.
+  const switchEnv = acrossSwitchEnv(acrossSwitch);
 
   const kind = defineSupervisedRunKind({
     id: ledger.kindId,
@@ -480,7 +527,8 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
   if (spec.steps !== undefined) {
     hold = spec.hold ?? "instant";
     const body = spec.steps;
-    run = ({ input, ctx }) => runStepsJob(body, kind, ledger, input, ctx);
+    run = ({ input, ctx }) =>
+      runStepsJob(body, kind, ledger, switchEnv, input, ctx);
   } else {
     const runAttempts = spec.runAttempts ?? 1;
     if (!Number.isInteger(runAttempts) || runAttempts < 1) {
@@ -520,6 +568,8 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
         verdictExits,
         command,
         onEnded,
+        switchEnv,
+        cancelAcrossSwitch: acrossSwitch.cancel !== undefined,
         input,
         ctx,
       });
@@ -561,6 +611,15 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
       await kind.register();
       if (task !== null) await task.register();
       await job.register();
+      // Registered, not merely defined: main's boot cancels only what this
+      // process's own jobs left (`cancelRunsLeftByOlderBackends`).
+      if (acrossSwitch.cancel !== undefined) {
+        registerCancelAcrossSwitch({
+          jobName: spec.name,
+          kind,
+          channel: spec.channel,
+        });
+      }
     },
   };
   if (ledger.builtin && spec.steps === undefined) {
@@ -597,6 +656,10 @@ async function runSingleChildJob<I>(opts: {
         meta: SupervisedJobEndedMeta<I>,
       ) => Promise<void>)
     | undefined;
+  /** The environment every child of this job starts with ({@link acrossSwitchEnv}). */
+  switchEnv: Record<string, string>;
+  /** `acrossSwitch: { cancel }` — no start in a backend main's code has left. */
+  cancelAcrossSwitch: boolean;
   input: I;
   ctx: JobCtx;
 }): Promise<void> {
@@ -608,6 +671,15 @@ async function runSingleChildJob<I>(opts: {
       runAttempts: opts.runAttempts,
       ctx,
       spawn: async (attempt) => {
+        // Inside the memoized spawn step, so a replay answers the same. Not
+        // claimed: the next backend (on main's current code) runs it when
+        // its own trigger asks again — the job's `cancel` reason says which.
+        if (opts.cancelAcrossSwitch && !(await runsMainsCurrentCode())) {
+          kind.spec.channel.publish(
+            `[supervised-job] ${opts.jobName}: not started — this backend's checkout is not main's current code (main moved on; its next backend runs it)`,
+          );
+          return null;
+        }
         const runId = await ledger.claim(input, {
           workflowRunId: ctx.workflowRunId,
           attempt,
@@ -623,7 +695,7 @@ async function runSingleChildJob<I>(opts: {
                 runId,
                 argv: command.argv,
                 cwd: command.cwd,
-                envOverrides: command.envOverrides,
+                envOverrides: { ...opts.switchEnv, ...command.envOverrides },
               }),
             closeRow: ledger.closeRow,
           },
@@ -722,6 +794,7 @@ async function runStepsJob<I>(
   body: (input: I, ctx: SupervisedStepsContext) => Promise<void>,
   kind: SupervisedRunKind,
   ledger: ResolvedLedger<I>,
+  switchEnv: Record<string, string>,
   input: I,
   ctx: JobCtx,
 ): Promise<void> {
@@ -743,7 +816,7 @@ async function runStepsJob<I>(
           runId: childId,
           argv: spawn.argv,
           cwd: spawn.cwd,
-          envOverrides: spawn.envOverrides,
+          envOverrides: { ...switchEnv, ...spawn.envOverrides },
         }),
       body: (step) => body(input, { runId, step, ctx }),
     });

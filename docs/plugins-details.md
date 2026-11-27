@@ -40485,7 +40485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `countRacyEntries`
               - `readIndexFsmonitorToken`
-        - **`main-slots`** — Main's per-commit slots: every app main serves (its own and its compositions) runs from a checkout of the commit it was built from, apps built together share one, and one free slot is kept ready (see the plugin's core and cli). Web half: registers the main-slots config (drainReportAfterSec — how long a process may keep an old slot busy after its app switched away before it is reported) for Settings → Config. Main's per-commit slots (the checkouts main and its compositions are built and served from; see the plugin's core and cli), server half: the main-slots config (drainReportAfterSec), the main-slot-drain-slow report kind (a process that kept an old slot busy past the threshold after its app switched away, one row per job), the main-slots-exhausted report kind (a build found no free slot and the draining ones at the leak limit, and waited), and the daily main-slots.reclaim job (main only) — the backstop reclaim for slots freed by a killed process.
+        - **`main-slots`** — Main's per-commit slots: every app main serves (its own and its compositions) runs from a checkout of the commit it was built from, apps built together share one, and one free slot is kept ready (see the plugin's core and cli). Web half: registers the main-slots config (drainReportAfterSec — how long a process may keep an old slot busy after its app switched away before it is reported) for Settings → Config. Main's per-commit slots (the checkouts main and its compositions are built and served from; see the plugin's core and cli), server half: the main-slots config (drainReportAfterSec), the main-slot-drain-slow report kind (a process that kept an old slot busy past the threshold after its app switched away, one row per job), the main-slots-exhausted report kind (a build found no free slot and the draining ones at the leak limit, and waited). The daily main-slots.reclaim job is the reclaim sub-plugin's.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "main-slots"
             - Uses: `config_v2.ConfigV2`
@@ -40496,11 +40496,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `report-kind` "main-slots-exhausted"
             - Uses:
               - `config_v2.ConfigV2`
-              - `infra/jobs/supervised-job.defineSupervisedJob`
-              - `primitives/log-channels.defineLogSink`
               - `reports.ReportKind`
               - `reports.ReportRow`
-            - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
             - Uses: 52 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
               - `infra/git/main-slots/boot-lease` ×21
@@ -40622,6 +40619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `detachedHeadOf`
                   - `drainRecordFor`
                   - `heldPastSwitch`
+                  - `holderRole`
                   - `holdSlotLeaseSync`
                   - `MAIN_SLOT_SERVED_FILE`
                   - `MAIN_SLOT_STAMP`
@@ -40650,7 +40648,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `boundaries/no-platform-api` — `core/internal/hold-sync.ts`, `core/internal/drain-sync.ts` (debt)
                   - `user-path/no-unproven-claim` — `core/internal/hold-sync.ts` (sanctioned)
                   - `user-path/no-sync-fs` — `core/internal/hold-sync.ts`, `core/internal/drain-sync.ts` (sanctioned)
-            - **`reclaim`** — `./equin main-slots-reclaim` — reclaim main's slot pool (stamp the slots no app lives in any more, file a main-slot-drain-slow report per process that kept one busy past the threshold, remove free slots beyond the one kept ready): the body of the daily main-slots.reclaim job, and what every main build ends with.
+            - **`reclaim`** — The daily main-slots.reclaim job (main only): runs `./equin main-slots-reclaim` as a supervised child — the backstop reclaim for slots freed by a killed process, which no event announces.
+              - Server:
+                - Uses:
+                  - `infra/jobs/supervised-job.defineSupervisedJob`
+                  - `primitives/log-channels.defineLogSink`
+                - Register: `defineSupervisedJob('main-slots.reclaim')`
               - Cli:
                 - Uses: `infra/git/main-slots.reclaimSlots`
         - **`private-index`** — Refresh a checkout's index on a private copy, then publish it back: copy the index WITH its mtime (racy git), let git write the copy (privateIndexWrites), and swap it into place by compare-and-swap under git's own index.lock taken wx — skipped while a git writer holds the lock or once the real index was written since the copy. One protocol, in a sync form (the tree hash, on the CLI's thread) and an async one (a backend's checkout primer).
@@ -41871,7 +41874,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `memoryRowStore` — Rows kept in a plain map — a store that outlives one queue but not the process: what a test hands two queues in turn to stand for a reload. `tx` is ignored (no database), so a rollback is not modelled here.
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
-            - Contributes: `fork-data-exclusion` "supervised_job_runs"
+            - Contributes:
+              - `fork-data-exclusion` "supervised_job_runs"
+              - `supervised-job.code-currency`
             - Uses: 21 symbols — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `infra/jobs` ×8
               - `infra/paths` ×4
@@ -41886,7 +41891,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
               - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables.ts`
             - Exports (types):
+              - `AcrossSwitch`
+              - `AcrossSwitchFinish`
               - `CancelByLockResult`
+              - `CodeCurrencyProbe`
               - `DefineSupervisedJobSpec`
               - `RunEndedPayload`
               - `RunStep`
@@ -41910,6 +41918,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `onSupervisedRunChange`
               - `openSupervisedRuns`
               - `runEnded`
+              - `runsMainsCurrentCode`
+              - `SupervisedCodeCurrency`
             - Register:
               - `defineTriggerEvent('supervisedRun.ended')`
               - `defineJob('retention.supervised_job_runs')`
@@ -43272,9 +43282,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `REPO_ROOT_MODULE`
               - `scriptPath`
           - Cross-plugin:
-            - Imported by: 64 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 65 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
-              - `infra` ×11
+              - `infra` ×12
               - `apps` ×7
               - `build` ×6
               - `packages` ×4
@@ -53957,7 +53967,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-progress`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/commits-graph`
-          - `debug/tests/idle-runner`
           - `infra/git/checkout-watch`
           - `infra/git/git-watcher`
           - `reports/engine`

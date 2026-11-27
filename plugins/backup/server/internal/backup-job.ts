@@ -49,6 +49,11 @@ export const backupRunJob = defineSupervisedJob({
 
   channel: backupLog,
 
+  acrossSwitch: {
+    finish:
+      "a backup archives the data as it is now, recorded in backup_runs: cutting it at a main switch would lose the archive, and the next backend re-attaches the run",
+  },
+
   ledger: {
     kindId: BACKUP_RUN_KIND,
     claim: (input) => claimBackupRun(input.trigger),

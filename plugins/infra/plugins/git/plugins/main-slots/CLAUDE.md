@@ -55,8 +55,10 @@ and the free one. Plans and measurements:
 over the kinds, so a new kind does not compile until it picks one): `pins` (the
 holder is an app living in the slot: the slot serves while it holds it),
 `drains` (must let go soon after the slot's last app left; past the threshold
-it is a slow drain) or `outlives` (holds past the switch it causes by design:
-`build-relay`). **Central pins.** One per machine, it keeps the slot it booted
+it is a slow drain) or `outlives` (holds past the switch by design:
+`build-relay`, which causes it, and a supervised job's child whose work is
+declared to finish across it — an `exec-child` record marked `outlives`, read
+by `holderRole`). **Central pins.** One per machine, it keeps the slot it booted
 from until a deploy restarts it — an adopted deploy keeps it there for as many
 builds as its code is unchanged — and its spec is no proof of where it runs: a
 build on a branch from before slots rewrites central's spec to the repo root on
@@ -138,7 +140,11 @@ Who holds a slot:
   …)` at boot (`server-core/bin/serve.ts`, `central-core/bin/index.ts`).
 - **Every `./equin` run from a slot** — the CLI bootstrap's
   `holdSlotLeaseSync(REPO_ROOT, kind, label)`, for life: `exec-child` (the
-  backend's supervised children, `argv` jobs alike), or `build-relay` for a
+  backend's supervised children, `argv` jobs alike — marked `outlives` when
+  the job declared `acrossSwitch: { finish }`: its work stays valid when
+  main moves on, the next backend re-attaches the run, and it finishes in its
+  slot, draining by design and never reported; see
+  `infra/jobs/supervised-job` § Across a switch), or `build-relay` for a
   `./equin build` (main's convergence run, a relayed build: it hands the build
   to another slot and waits, so it holds its own slot past the switch it
   causes — by design, never a slow drain). Not in the slot handed to a build.
@@ -207,7 +213,7 @@ Who holds a slot:
   would drop every other prunable checkout's entry too, and never
   `git worktree remove`, which enumerates every worktree and dies beside a
   concurrent add — `worktree/no-raw-worktree-git`. At the end of every main build and
-  by the daily `main-slots.reclaim` job (`server/`, main only, running
+  by the daily `main-slots.reclaim` job (the `reclaim` sub-plugin's `server/`, main only, running
   `./equin main-slots-reclaim` — the `reclaim` sub-plugin): a process killed
   with SIGKILL never releases its lease and nothing can announce its death, so
   a scheduled job is the documented exception to "no polling".
@@ -258,7 +264,9 @@ a normal wait:
   `./equin url` living half a second reads "held 43 s … (started 42 s after
   the switch)", not as a 43 s process.
 - Only `drains` holders are reported: never `build-relay` (it causes the
-  switch), never central (it pins its slot). Reclaim checks the role again
+  switch), never central (it pins its slot), never an outliving
+  `exec-child` (a supervised child declared to finish across the switch —
+  its slot still counts toward `DRAINING_SLOT_LIMIT`). Reclaim checks the role again
   when it files a drain record and deletes a record of any other kind: the
   record is written by the releasing process with the code it booted with,
   and a central started before central pinned its slot still noted one at
@@ -310,7 +318,7 @@ a normal wait:
 
 ## Plugin reference
 
-- Description: Main's per-commit slots: every app main serves (its own and its compositions) runs from a checkout of the commit it was built from, apps built together share one, and one free slot is kept ready (see the plugin's core and cli). Web half: registers the main-slots config (drainReportAfterSec — how long a process may keep an old slot busy after its app switched away before it is reported) for Settings → Config. Main's per-commit slots (the checkouts main and its compositions are built and served from; see the plugin's core and cli), server half: the main-slots config (drainReportAfterSec), the main-slot-drain-slow report kind (a process that kept an old slot busy past the threshold after its app switched away, one row per job), the main-slots-exhausted report kind (a build found no free slot and the draining ones at the leak limit, and waited), and the daily main-slots.reclaim job (main only) — the backstop reclaim for slots freed by a killed process.
+- Description: Main's per-commit slots: every app main serves (its own and its compositions) runs from a checkout of the commit it was built from, apps built together share one, and one free slot is kept ready (see the plugin's core and cli). Web half: registers the main-slots config (drainReportAfterSec — how long a process may keep an old slot busy after its app switched away before it is reported) for Settings → Config. Main's per-commit slots (the checkouts main and its compositions are built and served from; see the plugin's core and cli), server half: the main-slots config (drainReportAfterSec), the main-slot-drain-slow report kind (a process that kept an old slot busy past the threshold after its app switched away, one row per job), the main-slots-exhausted report kind (a build found no free slot and the draining ones at the leak limit, and waited). The daily main-slots.reclaim job is the reclaim sub-plugin's.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "main-slots"
   - Uses: `config_v2.ConfigV2`
@@ -321,11 +329,8 @@ a normal wait:
     - `report-kind` "main-slots-exhausted"
   - Uses:
     - `config_v2.ConfigV2`
-    - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`
     - `reports.ReportRow`
-  - Register: `defineSupervisedJob('main-slots.reclaim')`
 - Core:
   - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/git/main-slots/boot-lease` ×21
@@ -417,6 +422,6 @@ a normal wait:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/handoff.ts`, `core/internal/lease.ts`, `core/internal/pool-lock.ts`, `core/internal/slots.ts` (debt)
 - Sub-plugins:
   - **`boot-lease`** [exempt] — A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it…
-  - **`reclaim`** — `./equin main-slots-reclaim` — reclaim main's slot pool (stamp the slots no app lives in any more, file a main-slot-drain-slow report per process that kept one busy past the threshold, remove free…
+  - **`reclaim`** — The daily main-slots.reclaim job (main only): runs `./equin main-slots-reclaim` as a supervised child — the backstop reclaim for slots freed by a killed process, which no event announces.
 
 <!-- AUTOGENERATED:END -->

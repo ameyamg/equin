@@ -40,6 +40,10 @@ export const songIndexLoadJob = defineSupervisedJob({
     "Downloads and loads the song index of real-song chord sections used by the chord trainer.",
   input: z.object({}),
   channel: songIndexLog,
+  acrossSwitch: {
+    finish:
+      "it loads song data into the database: the rows are right whichever commit's code wrote them, and the next backend re-attaches the run",
+  },
   lock: () => "chord.song-index.load",
   // Debt: its child starts every plugin.
   wholeApp: {

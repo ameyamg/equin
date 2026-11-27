@@ -122,6 +122,7 @@ export const serverContributors: Readonly<Record<string, readonly string[]>> = {
   "site-feeds.syndication-target": ["apps/plugins/deploy/plugins/site-feeds/plugins/discord#machine"],
   "site-mirror-sink": ["apps/plugins/deploy/plugins/site-reports/plugins/import"],
   "song-videos.source": ["apps/plugins/chord/plugins/song-index","integrations/plugins/youtube/plugins/song-videos/plugins/youtube-search"],
+  "supervised-job.code-currency": ["infra/plugins/jobs/plugins/supervised-job#machine"],
   "supervisor-event-stream": ["tasks/plugins/supervisor-roles/plugins/events/plugins/report-streams#machine"],
   "supervisorSessionHandoffCarry": ["tasks/plugins/supervisor-roles/plugins/sessions/plugins/handoff"],
   "table-mirror-never": ["apps/plugins/deploy/plugins/analytics/plugins/collect","apps/plugins/deploy/plugins/site-messages/plugins/intake"],

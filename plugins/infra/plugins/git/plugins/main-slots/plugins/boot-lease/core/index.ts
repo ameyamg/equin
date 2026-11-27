@@ -26,6 +26,7 @@ export {
   parseHolder,
   renderHolder,
   SLOT_HOLDER_KINDS,
+  holderRole,
   slotHolderRole,
   SLOT_LEASES_DIR,
   SLOT_LOCK_FILE,

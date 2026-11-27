@@ -13,13 +13,18 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
   set of holder kinds (`SLOT_HOLDER_KINDS`) with each one's role
   (`slotHolderRole`, total over the kinds: `central` pins its slot,
   `build-relay` outlives its slot's switch on purpose, every other kind
-  drains). One spelling for
+  drains), and `holderRole(holder)`: an `exec-child` record marked
+  `outlives: true` (the child of a supervised job declared
+  `acrossSwitch: { finish }`, or a descendant — the CLI bootstrap reads
+  `EQUIN_SLOT_OUTLIVES_SWITCH`) outlives its slot's switch too. A field, not
+  a kind: a reader from before it (a convergence run in the previous
+  commit's slot) still parses the record. One spelling for
   main-slots' own leases, this hold, and the guard bootstrap's copy
   (`tooling/guards/bin/bootstrap.ts`, which may import nothing from the repo;
   its test holds the copy to these values).
 - **`drainRecordFor`** (pure): the drain record a release owes, or `null` —
   no stamp (the slot still serves), a holder that does not drain (central,
-  `build-relay`), or within the threshold.
+  `build-relay`, an outliving `exec-child`), or within the threshold.
   `noteLeaseReleaseSync` (`core/internal/drain-sync.ts`) writes it with plain
   `fs`, on the release paths that load nothing else; `releaseRecordSync` is a
   record's whole end (note, then unlink) — also a lifetime lease's, from its
@@ -35,7 +40,8 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
   code it protects:
   - the CLI bootstrap (`framework/cli/bin/index.ts`) — every `./equin` run
     from a slot holds it for life, kind `exec-child` (labelled by its verb — `run <script>` for a
-    `./equin run` — or a supervised child's job name) or `build-relay` (a `./equin build`), except
+    `./equin run` — or a supervised child's job name; marked `outlives` under
+    `EQUIN_SLOT_OUTLIVES_SWITCH`) or `build-relay` (a `./equin build`), except
     in the slot handed to a build (`EQUIN_BUILD_SLOT`);
   - the agent host (`conversations/runtime-sdk/bin/agent-host.ts`), kind
     `agent-boot`, released by `bin/agent.ts` once its static imports are in.
@@ -75,6 +81,7 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `detachedHeadOf`
     - `drainRecordFor`
     - `heldPastSwitch`
+    - `holderRole`
     - `holdSlotLeaseSync`
     - `MAIN_SLOT_SERVED_FILE`
     - `MAIN_SLOT_STAMP`

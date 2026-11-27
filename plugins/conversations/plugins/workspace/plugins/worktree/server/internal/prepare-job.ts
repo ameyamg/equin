@@ -56,6 +56,10 @@ export const worktreePrepareJob = defineSupervisedJob({
     conversationId: z.string().optional(),
   }),
   channel: prepareLog,
+  acrossSwitch: {
+    finish:
+      "it makes an agent's checkout, which an agent is waiting on: the checkout is right whichever commit's code made it, and the next backend re-attaches the run",
+  },
   lock: (input) => input.attemptId,
   // Each child boots the plugin graph and opens database connections through
   // the host-wide pgbouncer, and a launch storm requests one per launch at

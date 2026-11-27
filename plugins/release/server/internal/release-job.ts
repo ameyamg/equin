@@ -85,6 +85,11 @@ export const releaseJob = defineSupervisedJob({
 
   channel: releaseLog,
 
+  acrossSwitch: {
+    finish:
+      "a release is a person's request recorded in release_runs: it finishes wherever it started, re-attached by the next backend",
+  },
+
   ledger: {
     kindId: RELEASE_RUN_KIND_ID,
     listUnfinished,

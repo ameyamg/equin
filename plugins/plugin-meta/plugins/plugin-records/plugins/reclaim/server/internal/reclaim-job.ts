@@ -28,6 +28,10 @@ export const reclaimRecordsJob = defineSupervisedJob({
     "Deletes the plugin records no build has read for a week, and returns their space to the filesystem.",
   input: z.object({}),
   channel: reclaimLog,
+  acrossSwitch: {
+    finish:
+      "it reclaims the host-wide plugin-records store: housekeeping valid whichever commit's code runs it, re-attached by the next backend",
+  },
   schedule: { cron: "43 4 * * *" },
   runAttempts: 1,
   argv: () => ({

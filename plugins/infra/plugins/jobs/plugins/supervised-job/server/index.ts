@@ -7,10 +7,21 @@ import {
   supervisedRunWatcher,
 } from "./internal/run/supervisor";
 import { _supervisedJobRuns } from "./internal/tables";
+import { cancelRunsLeftByOlderBackends } from "./internal/across-switch";
 import { runEnded } from "./internal/tables-run-ended";
 
 export { defineSupervisedJob } from "./internal/define-supervised-job";
+// The start gate of an `acrossSwitch: { cancel }` job, for a caller that
+// decides what to request before it enqueues (main's test runner picks a
+// batch only where one would start).
+export {
+  runsMainsCurrentCode,
+  SupervisedCodeCurrency,
+} from "./internal/across-switch";
+export type { CodeCurrencyProbe } from "./internal/across-switch";
 export type {
+  AcrossSwitch,
+  AcrossSwitchFinish,
   DefineSupervisedJobSpec,
   SupervisedJob,
   SupervisedJobClaimMeta,
@@ -75,5 +86,13 @@ export default {
   // different subset of the problem. `onReady` rather than `onReadyBlocking`
   // because nothing about serving a request depends on it — a run adopted a
   // second late is a run adopted.
-  onReady: () => reconcileSupervisedRuns(),
+  //
+  // Then, on main, cancel what a previous backend left of a job whose work is
+  // about the code main serves (`acrossSwitch: { cancel }`) — after the
+  // reconcile, so those runs are already adopted and their cancellation is
+  // recorded by the ordinary wake.
+  onReady: async () => {
+    await reconcileSupervisedRuns();
+    await cancelRunsLeftByOlderBackends();
+  },
 } satisfies ServerPluginDefinition;

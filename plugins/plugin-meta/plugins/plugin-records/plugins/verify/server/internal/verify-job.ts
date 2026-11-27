@@ -29,6 +29,10 @@ export const verifyRecordsJob = defineSupervisedJob({
     "Recomputes every plugin record a check pass reads and fails when one disagrees with the shared store.",
   input: z.object({}),
   channel: verifyLog,
+  acrossSwitch: {
+    finish:
+      "it checks that the content-addressed plugin records agree with a fresh read: a disagreement is a fault of the records on any commit, so the check stays valid when main moves on",
+  },
   schedule: { cron: "17 5 * * *" },
   runAttempts: 1,
   argv: () => ({

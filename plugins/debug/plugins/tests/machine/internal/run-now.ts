@@ -30,6 +30,10 @@ export const runNowJob = defineSupervisedJob({
     paths: z.array(z.string()).max(RUN_NOW_MAX_PATHS),
   }),
   channel: runNowLog,
+  acrossSwitch: {
+    finish:
+      "a person asked for these files' verdicts: the run's record names the tree it tested, so its verdicts stay true of that code, and the next backend re-attaches the run",
+  },
   runAttempts: 1,
   // Failing tests are the page's data (the run's record), never a failed job.
   verdictExits: [TESTS_FAILED_EXIT],

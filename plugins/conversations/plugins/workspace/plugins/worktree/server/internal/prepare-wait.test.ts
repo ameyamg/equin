@@ -63,6 +63,7 @@ function world(opts: {
       open: true,
       exitCode: null,
       errorMessage: null,
+      cancelled: false,
     };
   };
   if (opts.openRun) startRun();
@@ -123,6 +124,7 @@ function world(opts: {
               open: run.open,
               exitCode: run.exitCode,
               errorMessage: run.errorMessage,
+              cancelled: run.cancelled,
             },
       ),
     request: () => {

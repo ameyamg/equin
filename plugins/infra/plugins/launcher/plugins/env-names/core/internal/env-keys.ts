@@ -124,6 +124,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the build_runs row a build writes to, set for the build it spawns by whoever claimed that row: the backend (build/machine run-build.ts) or main's convergence run (cli/build converge.ts)",
   BUILD_SLOT:
     "the main slot a build is handed to build in, set by whoever prepared it (infra/git/main-slots runInBuildSlot) for that build: the build takes the slot's exclusive lease itself, and the CLI bootstrap takes no shared one there (main-slots/boot-lease); its descendants inherit it, covered by the build's lease",
+  SLOT_OUTLIVES_SWITCH:
+    "marks the child of a supervised job that declared `acrossSwitch: { finish }` (infra/jobs/supervised-job): its work stays valid when main's code moves on, so the CLI bootstrap marks its main slot hold `outlives` — draining past the switch by design, never reported as a slow drain (main-slots/boot-lease); set by the supervisor for that child, inherited by its descendants (they are the run)",
   BUILD_SLOT_HANDOFF:
     "the handoff id a main slot was marked handed to, set beside BUILD_SLOT by whoever prepared it (infra/git/main-slots runInBuildSlot): the build claims the slot only if its mark names this id (claimHandedBuildSlot), so no other build can have taken it in between",
   BUILD_RELAYED:

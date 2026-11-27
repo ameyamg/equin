@@ -79,6 +79,7 @@ describe("builtinKindIdFor", () => {
     const job = defineSupervisedJob({
       name: "supervised-job.test.derived-kind",
       description: "Test job.",
+      acrossSwitch: { finish: "test work stays valid on any commit" },
       input: z.object({}),
       channel: { publishAll: () => {} } as unknown as LogChannel,
       argv: () => ({ argv: ["true"] }),
@@ -357,6 +358,7 @@ describe("cancelSupervisedJobByLock", () => {
     const own = defineSupervisedJob({
       name: "supervised-job.test.ownledger",
       description: "Test job.",
+      acrossSwitch: { finish: "test work stays valid on any commit" },
       input: z.object({}),
       channel,
       argv: () => ({ argv: ["true"] }),
@@ -431,6 +433,7 @@ describe("the built-in ledger (real DB)", () => {
     const unlocked = defineSupervisedJob({
       name: "supervised-job.test.unlocked",
       description: "Test job.",
+      acrossSwitch: { finish: "test work stays valid on any commit" },
       input: z.object({}),
       channel: { publishAll: () => {} } as unknown as LogChannel,
       argv: () => ({ argv: ["true"] }),
@@ -577,10 +580,43 @@ describe("the built-in ledger (real DB)", () => {
     await t.db.execute(sql`DELETE FROM supervised_job_runs`);
   });
 
+  test("markCancelledStartedBefore stamps this job's open runs claimed before the instant, and only them", async () => {
+    const ledger = builtinLedgerFor("t.across", t.db);
+    const meta = { attempt: 1, workflowRunId: "wf" };
+    const old = await ledger.claim({ ...meta, lockKey: "old" });
+    const done = await ledger.claim({ ...meta, lockKey: "done" });
+    const other = await builtinLedgerFor("t.across.other", t.db).claim({
+      ...meta,
+      lockKey: "old",
+    });
+    if (old === null || done === null || other === null)
+      throw new Error("the claims must win");
+    await ledger.closeRow(done, ended(0, null));
+    // The boot instant: every row above was claimed before it.
+    const [row] = (
+      await t.db.execute<{ now: string }>(sql`SELECT now()::text AS now`)
+    ).rows;
+    if (row === undefined) throw new Error("now() answered no row");
+    const boot = new Date(new Date(row.now).getTime() + 1);
+    const fresh = await ledger.claim({ ...meta, lockKey: "fresh" });
+    if (fresh === null) throw new Error("the claim must win");
+    // Claimed after the instant: pushed past it, as a run of the new backend.
+    await t.db.execute(
+      sql`UPDATE supervised_job_runs SET started_at = ${new Date(boot.getTime() + 60_000).toISOString()}::timestamptz WHERE id = ${fresh}`,
+    );
+
+    expect(await ledger.markCancelledStartedBefore(boot)).toEqual([old]);
+    expect((await readRecordedFailure(old, t.db)).cancelled).toBe(true);
+    expect((await readRecordedFailure(fresh, t.db)).cancelled).toBe(false);
+    expect((await readRecordedFailure(other, t.db)).cancelled).toBe(false);
+    await t.db.execute(sql`DELETE FROM supervised_job_runs`);
+  });
+
   test("cancelSupervisedJobByLock with no open run answers not-running", async () => {
     const job = defineSupervisedJob({
       name: "supervised-job.test.locked",
       description: "Test job.",
+      acrossSwitch: { finish: "test work stays valid on any commit" },
       input: z.object({ song: z.string() }),
       channel: { publishAll: () => {} } as unknown as LogChannel,
       lock: (input) => input.song,
@@ -595,6 +631,7 @@ describe("the built-in ledger (real DB)", () => {
     const job = defineSupervisedJob({
       name: "supervised-job.test.latest",
       description: "Test job.",
+      acrossSwitch: { finish: "test work stays valid on any commit" },
       input: z.object({ target: z.string() }),
       channel: { publishAll: () => {} } as unknown as LogChannel,
       lock: (input) => input.target,
@@ -629,6 +666,7 @@ describe("the built-in ledger (real DB)", () => {
     const job = defineSupervisedJob({
       name: "supervised-job.test.open",
       description: "Test job.",
+      acrossSwitch: { finish: "test work stays valid on any commit" },
       input: z.object({ target: z.string(), note: z.string() }),
       channel: { publishAll: () => {} } as unknown as LogChannel,
       lock: (input) => input.target,

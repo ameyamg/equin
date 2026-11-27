@@ -47,6 +47,10 @@ export const typeCheckBackstopJob = defineSupervisedJob({
     "Runs the two-program type check beside a full check on main and reports any file where they disagree.",
   input: z.object({}),
   channel: backstopLog,
+  acrossSwitch: {
+    finish:
+      "it compares the incremental type check with a full one: a divergence is a fault of the checker on any commit, so the comparison stays valid when main moves on; switches come every ~11 min and a run takes 2\u20135 min awake, so cancelling would lose about a third of its days; its memory is host admission's to bound (decision D28)",
+  },
   schedule: { cron: "30 4 * * *" }, // daily at 04:30 UTC; main only
   runAttempts: 1,
   hostShare: { lane: "background", units: typeCheckWorkerUnits("dual") },

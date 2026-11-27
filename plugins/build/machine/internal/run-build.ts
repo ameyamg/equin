@@ -83,6 +83,11 @@ export const buildJob = defineSupervisedJob({
 
   channel: buildLog,
 
+  acrossSwitch: {
+    finish:
+      "a build is recorded in build_runs and builds the commit it was asked for: it outlives the switch it may itself cause, re-attached by the next backend",
+  },
+
   ledger: {
     kindId: BUILD_RUN_KIND_ID,
     listUnfinished,
