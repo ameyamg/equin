@@ -17,16 +17,14 @@ export type {
   StatusRow,
 } from "./types";
 export {
-  foldQuietRows,
   isPending,
   isPulsing,
   isTransitioning,
   levelOf,
   mergeDot,
   mergeHealth,
-  sortRows,
+  placeRows,
+  standsOut,
   verdictOf,
-  type ReportItem,
   type ReportedStatus,
-  type SortableRow,
 } from "./merge";

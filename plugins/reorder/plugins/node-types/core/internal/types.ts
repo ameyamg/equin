@@ -37,6 +37,14 @@ export interface ReorderNodeType<P = unknown> {
   type: string;
   /** True when the node holds members (`items[]`) and gets pre-rendered children. */
   container: boolean;
+  /**
+   * True when a container's members are the slot's overflow: put out of the
+   * way, shown on demand. A host that draws a slot itself reads it as each
+   * contribution's `overflow` (slot-render's `useSlotPlacement`) — the health
+   * report puts those rows behind its expand chevron — without naming this
+   * node type.
+   */
+  overflow?: true;
   /** Validates (and shapes) this type's opaque payload. */
   schema: z.ZodType<P>;
   render: (props: ReorderNodeRenderProps<P>) => ReactNode;

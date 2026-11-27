@@ -343,6 +343,7 @@ the outcome too, with no separate code path.
     - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
     - `SlotRender.Order` ← `reorder.slot-middleware`
   - Uses:
+    - `network/live/live-state.mapResource`
     - `network/live/live-state.readyResource`
     - `network/live/live-state.ResourceResult`
     - `primitives/css/grow-relay.GrowRelay`
@@ -372,6 +373,7 @@ the outcome too, with no separate code path.
     - `SlotItemOrientation`
     - `SlotListMiddleware`
     - `SlotOrder`
+    - `SlotPlaced`
     - `WrapContribution`
     - `WrapperSlot`
     - `WrapperSlotConfig`
@@ -392,6 +394,7 @@ the outcome too, with no separate code path.
     - `SlotRender`
     - `useDispatchOutcome`
     - `useSlotOrder`
+    - `useSlotPlacement`
 - Cross-plugin:
   - Imported by: 106 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×36

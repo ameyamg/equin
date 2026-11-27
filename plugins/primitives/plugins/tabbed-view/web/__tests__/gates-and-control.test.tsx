@@ -73,7 +73,10 @@ const plugins = [
       SlotRender.Order({
         useOrder: (_slot, contributions) => ({
           status: "ready" as const,
-          data: contributions,
+          data: contributions.map((contribution) => ({
+            contribution,
+            overflow: false,
+          })),
           refetch: () => Promise.resolve(),
         }),
       }),

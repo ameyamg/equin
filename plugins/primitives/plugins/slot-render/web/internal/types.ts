@@ -41,14 +41,25 @@ export interface SlotListMiddleware {
  * registration order standing in for it (that would show hidden items and then
  * jump). The error arm carries the last-known layout as `stale` when there was
  * one, and never the raw order when there was not.
+ *
+ * Each contribution comes with where the layout PLACES it: `overflow` when it
+ * sits in a container the layout puts out of the way (reorder's `overflow`
+ * node) — a self-drawing host shows those on demand (`useSlotPlacement`).
  */
 export interface SlotOrder {
   useOrder: Hook<
     (
       slot: SlotHandle,
       contributions: readonly Contribution[],
-    ) => ResourceResult<readonly Contribution[]>
+    ) => ResourceResult<readonly SlotPlaced<Contribution>[]>
   >;
+}
+
+/** One contribution in its layout order, with where the layout places it. */
+export interface SlotPlaced<C> {
+  contribution: C;
+  /** True when the layout puts it in the slot's overflow: shown on demand. */
+  overflow: boolean;
 }
 
 /** What the box being stamped is, for a {@link SlotItemAttrsFn}. */

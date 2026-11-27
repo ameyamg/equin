@@ -32,7 +32,7 @@ export type {
   WrapContribution,
 } from "./internal/render-slot";
 export { RenderCoreRoot, RenderScopeRoot } from "./internal/root-render";
-export { useSlotOrder } from "./internal/slot-order";
+export { useSlotOrder, useSlotPlacement } from "./internal/slot-order";
 export { SlotItemLayout } from "./internal/item-layout";
 export type { SlotItemOrientation } from "./internal/item-layout";
 export { useDispatchOutcome } from "./internal/dispatch-outcome";
@@ -45,6 +45,7 @@ export type {
   SlotItemMiddleware,
   SlotListMiddleware,
   SlotOrder,
+  SlotPlaced,
 } from "./internal/types";
 export { SlotRender } from "./internal/slots";
 

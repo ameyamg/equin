@@ -24,7 +24,10 @@ import {
   type Contribution,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  SlotRender,
+  type SlotPlaced,
+} from "@plugins/primitives/plugins/slot-render/web";
 import {
   ResourceError,
   type ResourceResult,
@@ -47,7 +50,7 @@ afterEach(() => {
   order.current = null;
 });
 
-type Order = ResourceResult<readonly Contribution[]>;
+type Order = ResourceResult<readonly SlotPlaced<Contribution>[]>;
 const refetch = () => Promise.resolve();
 const LOADING: Order = { status: "loading", refetch };
 const FAILED: Order = {
@@ -67,7 +70,14 @@ function plugin(contributions: unknown[]): LoadedPlugin {
       ...contributions,
       SlotRender.Order({
         useOrder: (_slot, items) =>
-          order.current ?? { status: "ready", data: items, refetch },
+          order.current ?? {
+            status: "ready",
+            data: items.map((contribution) => ({
+              contribution,
+              overflow: false,
+            })),
+            refetch,
+          },
       }),
     ],
     slots: { ...DataViewSlots, ...SlotRender },

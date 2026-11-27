@@ -51,7 +51,10 @@ const plugins = [
         useOrder: (_slot, contributions) =>
           order.current ?? {
             status: "ready" as const,
-            data: contributions,
+            data: contributions.map((contribution) => ({
+              contribution,
+              overflow: false,
+            })),
             refetch: () => Promise.resolve(),
           },
       }),

@@ -163,61 +163,53 @@ function wordsOf(status: HealthStatus): string | undefined {
   return ("title" in status ? status.title : undefined) ?? status.summary;
 }
 
-/** The field `sortRows` arranges by — a contribution or its sealed read. */
-export interface SortableRow {
-  kind: "status" | "info";
+/**
+ * True when a row must be in view whatever the layout says: it needs a look
+ * (`attention` / `critical`), is worth knowing (`info`), or is known to be
+ * unreadable (`unknown` with a summary) — everything that moves the dot off
+ * green. A row that is fine, does not apply, has nothing to say, or is not
+ * known yet (the header says "Checking…") may stay tucked away.
+ */
+export function standsOut(status: ReportedStatus): boolean {
+  if (status === undefined) return false;
+  switch (status.state) {
+    case "attention":
+    case "critical":
+    case "info":
+      return true;
+    case "unknown":
+      return status.summary !== undefined;
+    case "ok":
+    case "not-applicable":
+    case "absent":
+      return false;
+  }
 }
 
 /**
- * The report's row order: info rows first, then status rows, each keeping the
- * order it is given — the slot's reorder layout (the sort is stable). Returns a
- * new array.
+ * The report's two lists, from its rows in the slot's layout order, each
+ * marked `overflow` when the layout puts it in the slot's overflow:
  *
- * Info-first is the report's own arrangement, not a layout choice: an info row
- * says where you are, and reads as the report's heading whatever the layout.
+ * - `shown` — every row outside the overflow, in layout order; then every
+ *   overflow row that {@link standsOut}, in layout order — so a problem is
+ *   never behind the chevron, and it surfaces at the end of the list rather
+ *   than pushing the rows the user placed;
+ * - `tucked` — the other overflow rows, in layout order: behind the chevron.
  *
- * Deliberately blind to status: a row keeps its place whatever it reports, so
- * the report does not reshuffle the moment something turns red. The dot and
- * the verdict already say what is wrong; the order says where to find it.
+ * Deliberately blind to status beyond that: a row keeps its place whatever it
+ * reports, so the report does not reshuffle when something turns red.
  */
-export function sortRows<R extends SortableRow>(rows: ReadonlyArray<R>): R[] {
-  const rank = (row: R): number => (row.kind === "info" ? 0 : 1);
-  return [...rows].sort((a, b) => rank(a) - rank(b));
-}
-
-/** One entry of the report: a row on its own, or several quiet rows folded into one card. */
-export type ReportItem<R> =
-  { kind: "row"; row: R } | { kind: "quiet"; rows: R[] };
-
-/**
- * Fold the quiet rows into ONE card, and keep every row that could be in it
- * beside it, after every other row.
- *
- * A row is quiet when it is a status row with nothing to show beyond its
- * summary at rest (`isPlain`: no glance, no actions — a detail behind its own
- * chevron does not count) and it is `ok`: a line
- * that only says "fine". Several of them stacked are noise, so they collapse
- * into one card that lists them when expanded. The moment one is not `ok` it
- * leaves the card so a problem is never hidden behind a chevron — but it stays
- * next to it, just above, among the other plain rows: where the user saw it
- * while it was fine. Plain rows (in or out of the card) sit after every other
- * row, so a row leaving or rejoining the card never moves the rows around it.
- * Fewer than two quiet rows fold nothing — a card of one is a row.
- */
-export function foldQuietRows<R extends SortableRow>(
-  sorted: ReadonlyArray<R>,
+export function placeRows<R>(
+  rows: ReadonlyArray<{ row: R; overflow: boolean }>,
   statusOf: (row: R) => ReportedStatus,
-  isPlain: (row: R) => boolean,
-): ReportItem<R>[] {
-  const plain = (row: R): boolean => row.kind === "status" && isPlain(row);
-  const isQuiet = (row: R): boolean =>
-    plain(row) && levelOf(statusOf(row)) === "ok";
-  const asRow = (row: R): ReportItem<R> => ({ kind: "row", row });
-  const items = sorted.filter((row) => !plain(row)).map(asRow);
-  const plainRows = sorted.filter(plain);
-  const quiet = plainRows.filter(isQuiet);
-  if (quiet.length < 2) return [...items, ...plainRows.map(asRow)];
-  items.push(...plainRows.filter((row) => !isQuiet(row)).map(asRow));
-  items.push({ kind: "quiet", rows: quiet });
-  return items;
+): { shown: R[]; tucked: R[] } {
+  const inline: R[] = [];
+  const surfaced: R[] = [];
+  const tucked: R[] = [];
+  for (const { row, overflow } of rows) {
+    if (!overflow) inline.push(row);
+    else if (standsOut(statusOf(row))) surfaced.push(row);
+    else tucked.push(row);
+  }
+  return { shown: [...inline, ...surfaced], tucked };
 }

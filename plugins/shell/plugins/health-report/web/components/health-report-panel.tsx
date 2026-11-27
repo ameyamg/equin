@@ -1,6 +1,8 @@
 import {
   renderAsContribution,
   useSlotOrder,
+  useSlotPlacement,
+  type SlotPlaced,
 } from "@plugins/primitives/plugins/slot-render/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -11,9 +13,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  foldQuietRows,
   mergeDot,
-  sortRows,
+  placeRows,
   verdictOf,
   type HealthReportRow,
   type ReportedStatus,
@@ -28,8 +29,7 @@ import {
 import { HealthDot } from "./health-dot";
 import {
   InfoRowView,
-  isPlainLine,
-  QuietRowsView,
+  MoreRowsView,
   StatusRowView,
   type StatusLine,
 } from "./health-row";
@@ -38,9 +38,9 @@ type SealedRow = SealContributions<HealthReportRow>;
 type SealedInfoRow = Extract<SealedRow, { kind: "info" }>;
 
 /**
- * One line of the report, as `sortRows` / `foldQuietRows` arrange it: an info
- * row, or a status line — a row set already expanded into its items, so the
- * fold treats each item as an ordinary row.
+ * One line of the report, as `placeRows` arranges it: an info row, or a status
+ * line — a row set already expanded into its items, so each item is placed as
+ * an ordinary row.
  */
 type ReportLine =
   | { kind: "info"; id: string; row: SealedInfoRow }
@@ -50,33 +50,28 @@ function statusLine(line: StatusLine): ReportLine {
   return { kind: "status", id: line.id, line };
 }
 
-/** The report's lines, in the order the rows are given: each row set where it sits, as its items. */
-function linesOf(
-  rows: readonly SealedRow[],
-  state: HealthReportState,
-): ReportLine[] {
-  return rows.flatMap((row): ReportLine[] => {
-    switch (row.kind) {
-      case "info":
-        return [{ kind: "info", id: row.id, row }];
-      case "status":
-        return [statusLine({ kind: "status", id: row.id, row })];
-      case "set": {
-        const items = state.sets[row.id];
-        if (items === undefined)
-          return [statusLine({ kind: "set-placeholder", id: row.id, row })];
-        return items.map((item) =>
-          statusLine({
-            kind: "set-item",
-            id: setItemId(row.id, item.key),
-            row,
-            rowKey: item.key,
-            title: item.title,
-          }),
-        );
-      }
+/** One row's lines: itself, or a row set's items (its placeholder while it has none). */
+function lineOf(row: SealedRow, state: HealthReportState): ReportLine[] {
+  switch (row.kind) {
+    case "info":
+      return [{ kind: "info", id: row.id, row }];
+    case "status":
+      return [statusLine({ kind: "status", id: row.id, row })];
+    case "set": {
+      const items = state.sets[row.id];
+      if (items === undefined)
+        return [statusLine({ kind: "set-placeholder", id: row.id, row })];
+      return items.map((item) =>
+        statusLine({
+          kind: "set-item",
+          id: setItemId(row.id, item.key),
+          row,
+          rowKey: item.key,
+          title: item.title,
+        }),
+      );
     }
-  });
+  }
 }
 
 /**
@@ -106,10 +101,10 @@ function ContributedRow({
 }
 
 /**
- * The report: a header with the merged dot and the verdict, then every row in
- * a fixed order — info rows first, then status rows, each in the slot's layout
- * order, never by status — with the plain rows at the end, those that are fine
- * folded into one expandable card and the rest just above it (`foldQuietRows`).
+ * The report: a header with the merged dot and the verdict, then the rows as a
+ * plain list in the slot's layout order, never by status — and the rows the
+ * layout puts in its overflow behind a "v" at the end, except one that stands
+ * out (needs a look, worth knowing), which joins the list (`placeRows`).
  * No footer:
  * a row that has a pane to point at does so through its own `actions`, so the
  * report never names a contributor.
@@ -167,72 +162,60 @@ export function HealthReportHeader() {
 }
 
 export function HealthReportPanel() {
-  const order = useSlotOrder(HealthReport.Row);
-  switch (order.status) {
+  const placement = useSlotPlacement(HealthReport.Row);
+  switch (placement.status) {
     case "loading":
       return <Loading variant="rows" count={4} />;
     case "error":
-      return order.stale === undefined ? (
+      return placement.stale === undefined ? (
         <ResourceErrorInline
-          error={order.error}
-          refetch={order.refetch}
+          error={placement.error}
+          refetch={placement.refetch}
           variant="block"
           subject="the health report"
         />
       ) : (
-        <HealthReportPanelReady rows={order.stale} />
+        <HealthReportPanelReady placed={placement.stale} />
       );
     case "ready":
-      return <HealthReportPanelReady rows={order.data} />;
+      return <HealthReportPanelReady placed={placement.data} />;
   }
 }
 
-/** The report once its rows' order is known — see {@link HealthReportPanel}. */
-function HealthReportPanelReady({ rows }: { rows: readonly SealedRow[] }) {
+/** The report once its rows' placement is known — see {@link HealthReportPanel}. */
+function HealthReportPanelReady({
+  placed,
+}: {
+  placed: readonly SlotPlaced<SealedRow>[];
+}) {
   const state = HealthStore.useStore();
   const { statuses } = state;
   const statusOf = (line: ReportLine) =>
     line.kind === "status" ? statuses[line.id] : undefined;
-  const isPlain = (line: ReportLine) =>
-    line.kind === "status" && isPlainLine(line.line);
   // An `absent` row has nothing to say here: it is not drawn at all.
-  const shown = linesOf(rows, state).filter(
-    (line) => statusOf(line)?.state !== "absent",
+  const lines = placed.flatMap(({ contribution, overflow }) =>
+    lineOf(contribution, state)
+      .filter((line) => statusOf(line)?.state !== "absent")
+      .map((line) => ({ row: line, overflow })),
   );
-  const items = foldQuietRows(sortRows(shown), statusOf, isPlain);
+  const { shown, tucked } = placeRows(lines, statusOf);
 
   return (
     <>
-      {items.length > 0 ? (
+      {shown.length + tucked.length > 0 ? (
         <Stack gap="2xs">
           {/* Not a DataView: these are slot contributions — a handful at
-              most — in the slot's layout order, arranged by the report (info
-              first, quiet rows folded), inside a transient popover. */}
-          {items.map((item) =>
-            item.kind === "row" ? (
-              <ContributedRow
-                key={item.row.id}
-                line={item.row}
-                statuses={statuses}
-              />
-            ) : (
-              <QuietRowsView
-                key="quiet"
-                lines={item.rows.flatMap((line) =>
-                  line.kind === "status" ? [line.line] : [],
-                )}
-                statuses={statuses}
-              >
-                {item.rows.map((line) => (
-                  <ContributedRow
-                    key={line.id}
-                    line={line}
-                    statuses={statuses}
-                  />
-                ))}
-              </QuietRowsView>
-            ),
-          )}
+              most — in the slot's layout order, inside a transient popover. */}
+          {shown.map((line) => (
+            <ContributedRow key={line.id} line={line} statuses={statuses} />
+          ))}
+          {tucked.length > 0 ? (
+            <MoreRowsView count={tucked.length}>
+              {tucked.map((line) => (
+                <ContributedRow key={line.id} line={line} statuses={statuses} />
+              ))}
+            </MoreRowsView>
+          ) : null}
         </Stack>
       ) : null}
     </>

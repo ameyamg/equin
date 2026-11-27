@@ -6,17 +6,28 @@ import type {
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { useMemo } from "react";
 import {
+  mapResource,
   readyResource,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { SlotRender } from "./slots";
+import type { SlotPlaced } from "./types";
 
-/** No layout engine: the registration order IS the order, known at once. */
+/** No layout engine: the registration order IS the order, known at once, nothing in overflow. */
 function useRegistrationOrder(
   _slot: SlotHandle,
   contributions: readonly Contribution[],
-): ResourceResult<readonly Contribution[]> {
-  return useMemo(() => readyResource(contributions), [contributions]);
+): ResourceResult<readonly SlotPlaced<Contribution>[]> {
+  return useMemo(
+    () =>
+      readyResource(
+        contributions.map((contribution) => ({
+          contribution,
+          overflow: false,
+        })),
+      ),
+    [contributions],
+  );
 }
 
 /**
@@ -41,6 +52,23 @@ function useRegistrationOrder(
 export function useSlotOrder<P>(
   slot: Slot<P>,
 ): ResourceResult<readonly SealContributions<P>[]> {
+  const placed = useSlotPlacement(slot);
+  return useMemo(
+    () => mapResource(placed, (list) => list.map((p) => p.contribution)),
+    [placed],
+  );
+}
+
+/**
+ * {@link useSlotOrder}, with where the layout places each contribution: in
+ * order, each `{ contribution, overflow }` — `overflow` when the layout puts it
+ * in the slot's overflow (reorder's `overflow` node), for a host that shows
+ * those on demand (the health report, behind its expand chevron). The same
+ * read: `loading` until the layout is known.
+ */
+export function useSlotPlacement<P>(
+  slot: Slot<P>,
+): ResourceResult<readonly SlotPlaced<SealContributions<P>>[]> {
   const contributions = slot.useContributions();
   const orders = SlotRender.Order.useContributions();
   if (orders.length > 1) {
@@ -56,5 +84,5 @@ export function useSlotOrder<P>(
   return useOrder(
     slot,
     contributions as unknown as readonly Contribution[],
-  ) as unknown as ResourceResult<readonly SealContributions<P>[]>;
+  ) as unknown as ResourceResult<readonly SlotPlaced<SealContributions<P>>[]>;
 }

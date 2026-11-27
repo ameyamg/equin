@@ -56,7 +56,7 @@ HealthReport.Row({
   `{ state: "absent" }`.
 - **`info` is "fine, and worth knowing"** (blue): a new version waiting, a
   deploy under way. Not a problem — it is not counted, offers no `remedy`, and
-  leaves the quiet card like any non-`ok` row. With `transitioning` it pulses:
+  joins the list from behind the chevron like any row that stands out. With `transitioning` it pulses:
   work in progress. Use it instead of `ok` whenever green would hide something
   the user would want to see, and instead of `attention` whenever nothing
   needs them.
@@ -85,16 +85,14 @@ HealthReport.Row({
   in `actions`. It gets `expanded` (`GlanceProps`), so it can show less while
   the row is collapsed.
 - **`remedy` is the control that fixes the problem** ("Update"): drawn after
-  `actions` only while the row is `attention` or `critical`. It does not keep
-  the row out of the quiet card (see Merge), so a row that is summary-only
-  while fine can still offer a fix when it is not.
+  `actions` only while the row is `attention` or `critical`.
 - **A row set is N status rows from one contribution** (one per deployed
   site). `useRows` returns `{ kind: "pending" }`, `{ kind: "error", summary }`
   or `{ kind: "ready", rows: { key, title, status }[] }` (`SetRows`); it runs
   all the time, like `useStatus`, and once for the whole set — read ONE value
   that already holds every item's state. Each item is then an ordinary status
   row: merged and counted on its own, drawn where the set sits in the slot
-  order, folded like any quiet row, with its own expand state. Its `title` is
+  order, tucked or surfaced like any row, with its own expand state. Its `title` is
   the item's (a known state's `title` still overrides it). The parts are the
   set's, told which item they draw (`rowKey`, `SetItemProps`) — one component
   instance per item, so per-item reads (a live value keyed by the item) go
@@ -138,27 +136,26 @@ either dot orange. The row itself still draws attention, and the verdict still
 names it. This is not `info`: ambient is an attention the dot deliberately
 does not show; `info` is no problem at all, shown blue.
 
-**Quiet rows fold into one card** (`foldQuietRows`, pure, bun-tested): a
-status row with nothing beyond its summary at rest (no `glance` or `actions`;
-a `component` detail sits behind the row's own chevron, still expandable inside
-the card, and a `remedy` is not drawn while `ok`, so neither counts) that is
-`ok` only says "fine", so two or more of them collapse into one card — "System checks", "All N normal" (a generic title, never the folded titles: that list grows with every contributor) — that lists each when expanded. A row
-leaves the card the moment it is not `ok`, so a problem is never behind a
-chevron — but it stays beside it (just above), where it sat while fine: every
-plain row, folded or not, sits after every other row, so a row leaving or
-rejoining the card never shifts the rest. The rule reads only the row's shape and state, never its
-id.
+**The report is a plain list, the rest behind a "v"** (`placeRows`, pure,
+bun-tested). The rows are drawn in the slot's layout order, never by status, so
+a row keeps its place when it turns red (the dot and verdict already say what is
+wrong). The rows the layout puts in an `overflow` entry are the slot's
+overflow: they sit behind a chevron at the end of the report ("v", up while
+open). A tucked row that **stands out** (`standsOut`: attention, critical,
+info, or unknown with a reason — whatever moves the dot off green) is never
+behind the chevron: it joins the list after the placed rows until it is fine
+again. A row not known yet stays tucked; the header already says "Checking…".
+The rule reads only the row's state and placement, never its id.
 
-Row order: the slot's reorder layout
-(`config/shell/health-report/shell.health-report.row.jsonc` — where a new row is
-placed, with the reason beside it), read with `useSlotOrder`. `HealthReport.Row`
-is a render slot the report never `.Render`s: it draws the rows itself, and on
-top of the layout arranges info rows first (`sortRows`, stable) and folds the
-quiet ones (`foldQuietRows`). Never by status, so a row keeps its place when it
-turns red (the dot and verdict already say what is wrong). A row carries no
-order number — `defineSlot` would reject one.
+Row order and placement: the slot's reorder layout
+(`config/shell/health-report/row.jsonc` — where a new row is placed, with the
+reason beside it, and which rows go in the `more` overflow), read with
+`useSlotPlacement` (slot-render: each contribution in order with its
+`overflow` flag, set by any reorder node type that declares `overflow: true`).
+`HealthReport.Row` is a render slot the report never `.Render`s: it draws the
+rows itself. A row carries no order number — `defineSlot` would reject one.
 
-The The layout order is a read (`useSlotOrder` returns a `ResourceResult`): until
+The layout placement is a read (`useSlotPlacement` returns a `ResourceResult`): until
 it is known the open report's body is a loading state — no rows, never the rows
 in raw registration order. The header's verdict is drawn over every status the
 probes have published (the same set the dot merges). A failed
@@ -202,7 +199,7 @@ probes, is mounted per page.
 
 ## Plugin reference
 
-- Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > info > ok — info is blue: worth knowing, not a problem, so it is not counted — with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
+- Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > info > ok — info is blue: worth knowing, not a problem, so it is not counted — with a count of rows needing a look), opening a popover that lists the rows in the slot's reorder layout order, the layout's overflow rows behind a chevron at the end unless one needs a look. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
 - Web:
   - Slots: `HealthReport.Row`
   - Slot contributors:
@@ -226,9 +223,9 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `tasks.worktree-identity`
     - `HealthReport.Row` ← `upstream`
   - Contributes: `ActionBar.Lead` → `HealthReportButton`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/slot-render` ×6
     - `primitives/collapsible` ×4
-    - `primitives/slot-render` ×4
     - `primitives/css/activity-ring` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/error-boundary` ×2
@@ -311,23 +308,21 @@ probes, is mounted per page.
     - `HealthStatus`
     - `InfoRow`
     - `ReportedStatus`
-    - `ReportItem`
     - `RowLevel`
     - `SetItem`
     - `SetItemProps`
     - `SetRow`
     - `SetRows`
-    - `SortableRow`
     - `StatusRow`
   - Exports (values):
-    - `foldQuietRows`
     - `isPending`
     - `isPulsing`
     - `isTransitioning`
     - `levelOf`
     - `mergeDot`
     - `mergeHealth`
-    - `sortRows`
+    - `placeRows`
+    - `standsOut`
     - `verdictOf`
 
 <!-- AUTOGENERATED:END -->

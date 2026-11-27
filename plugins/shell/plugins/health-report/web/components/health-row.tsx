@@ -1,4 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { ReactNode } from "react";
 import type {
   Contribution,
@@ -28,7 +29,6 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   isPulsing,
-  isTransitioning,
   levelOf,
   type HealthReportRow,
   type ReportedStatus,
@@ -107,19 +107,6 @@ function partsOf(line: StatusLine): LineParts {
 }
 
 /**
- * A line that shows nothing at rest beyond its summary — what `foldQuietRows`
- * may fold. A `glance` or `actions` are drawn on the line itself, so they keep
- * it out. A `component` does not count: it is a detail behind the line's own
- * chevron, still one click away inside the card. Nor does a `remedy`: it is
- * drawn only while the row is not ok, and a folded row is ok. A set's lines
- * read the set's declared shape, so a placeholder sits where its items will.
- */
-export function isPlainLine(line: StatusLine): boolean {
-  const { row } = line;
-  return row.glance === undefined && row.actions === undefined;
-}
-
-/**
  * Contains a crash in a contributor's `glance` / `actions` to that one piece of
  * the row. (The row as a whole sits in its own boundary in the panel; the
  * sealed `component` gets one from `renderIsolated`.)
@@ -149,8 +136,7 @@ function contributedActions(row: SealedRow, actions: ReactNode): ReactNode {
 
 /**
  * `actions`, followed by the line's `remedy` while it needs a look
- * (`attention` / `critical`) — never while it is fine, which is what lets a row
- * with a remedy still fold into the quiet card.
+ * (`attention` / `critical`) — never while it is fine.
  */
 function withRemedy(
   row: SealedRow,
@@ -396,50 +382,60 @@ export function HealthLineView({
   );
 }
 
+const expandMoreIcon = symbol("expand-more");
+
 /**
- * The quiet rows folded into one card (`foldQuietRows`): a green dot, one
- * generic title (never the folded rows' titles: the list grows with every
- * contributor, and a list of names reads like the problem), "All N normal" —
- * and, expanded, each row as it would read
- * on its own, indented under the card's title. The rows are passed in already
- * rendered, each in its own boundary.
+ * The rows the layout puts in the slot's overflow, behind a "v" at the end of
+ * the report: the rows above it, then (expanded) these, then the chevron —
+ * pointing down while they are hidden, up while shown. The rows are passed in
+ * already rendered, each in its own boundary.
  */
-export function QuietRowsView({
-  lines,
-  statuses,
+export function MoreRowsView({
+  count,
   children,
 }: {
-  lines: ReadonlyArray<StatusLine>;
-  statuses: Readonly<Record<string, ReportedStatus>>;
+  count: number;
   children: ReactNode;
 }) {
-  const leading = (
-    <ControlSizeProvider size="lg">
-      <HealthDot
-        level="ok"
-        pulsing={lines.some((line) => isTransitioning(statuses[line.id]))}
-      />
-    </ControlSizeProvider>
-  );
   return (
     <Collapsible>
-      <ExpandTrigger actions={null}>
-        <RowText
-          leading={leading}
-          title="System checks"
-          summary={`All ${lines.length} normal`}
-          summaryClassName={SUMMARY_CLASS.ok}
-        />
-      </ExpandTrigger>
       <CollapsibleContent>
-        <Stack direction="row" gap="sm" align="start" className="px-row">
-          <LeadBox />
-          <Fill>
-            <Stack gap="2xs">{children}</Stack>
-          </Fill>
-        </Stack>
+        <Stack gap="2xs">{children}</Stack>
       </CollapsibleContent>
+      <MoreTrigger count={count} />
     </Collapsible>
+  );
+}
+
+function MoreTrigger({ count }: { count: number }) {
+  const ctx = useCollapsibleContext();
+  if (!ctx) {
+    throw new Error(
+      "health-report: MoreTrigger rendered outside <Collapsible>",
+    );
+  }
+  const label = ctx.open
+    ? "Show fewer checks"
+    : `Show ${count} more ${count === 1 ? "check" : "checks"}`;
+  return (
+    <Row
+      onClick={ctx.toggle}
+      aria-expanded={ctx.open}
+      aria-controls={ctx.contentId}
+      aria-label={label}
+      title={label}
+      size="sm"
+    >
+      <Center className="w-full">
+        <Icon
+          icon={expandMoreIcon}
+          className={cn(
+            "size-4 text-muted-foreground transition-transform duration-200",
+            ctx.open && "rotate-180",
+          )}
+        />
+      </Center>
+    </Row>
   );
 }
 

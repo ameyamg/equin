@@ -15,7 +15,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -106,6 +106,30 @@ function dotClass(): string {
  */
 function summary(text: string): HTMLElement {
   return screen.getByText(text, { selector: ".text-caption" });
+}
+
+/** A layout engine that puts the rows with these ids in the slot's overflow. */
+function overflowOrder(ids: string[]): LoadedPlugin {
+  return {
+    id: "health-report-test-overflow-order",
+    description: "a slot order with an overflow",
+    contributions: [
+      SlotRender.Order({
+        useOrder: (_slot, contributions) =>
+          useMemo(
+            () => ({
+              status: "ready" as const,
+              data: contributions.map((contribution) => ({
+                contribution,
+                overflow: ids.includes(String(contribution.id)),
+              })),
+              refetch: () => Promise.resolve(),
+            }),
+            [contributions],
+          ),
+      }),
+    ],
+  } as unknown as LoadedPlugin;
 }
 
 async function openReport(): Promise<void> {
@@ -290,14 +314,14 @@ describe("the report", () => {
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
   });
 
-  it("orders info rows first, then status rows in place whatever their state", async () => {
+  it("keeps the layout order whatever each row's kind or state", async () => {
     renderReport([
       status("calm", { state: "ok", summary: "calm-summary" }),
       status("bad", { state: "critical", summary: "bad-summary" }),
       info("where", () => ({ title: "Worktree", summary: "where-summary" })),
     ]);
     await openReport();
-    const order = ["where-summary", "calm-summary", "bad-summary"].map(summary);
+    const order = ["calm-summary", "bad-summary", "where-summary"].map(summary);
     for (let i = 1; i < order.length; i++) {
       expect(
         order[i - 1]!.compareDocumentPosition(order[i]!) &
@@ -342,54 +366,59 @@ describe("the report", () => {
     ).toBeTruthy();
   });
 
-  it("folds the plain rows that are fine into one card, listed when expanded", async () => {
+  it("lists every row when the layout puts none in its overflow", async () => {
     renderReport([
       status("Connection", { state: "ok", summary: "conn-summary" }),
-      status("Database", { state: "ok", summary: "db-summary" }),
       status("Live reads", { state: "attention", summary: "reads-summary" }),
-      status("Socket", { state: "ok", summary: "socket-summary" }),
     ]);
     await openReport();
-    // The row that needs a look stays on its own, outside the card.
-    expect(summary("reads-summary")).toBeTruthy();
-    expect(summary("All 3 normal")).toBeTruthy();
-    expect(screen.queryByText("conn-summary")).toBeNull();
-
-    const card = screen.getByRole("button", {
-      name: /System checks/,
-    });
-    fireEvent.click(card);
     expect(summary("conn-summary")).toBeTruthy();
-    expect(summary("db-summary")).toBeTruthy();
-    expect(summary("socket-summary")).toBeTruthy();
+    expect(summary("reads-summary")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /more check/ })).toBeNull();
   });
 
-  it("folds a fine row with a detail too, still expandable inside the card", async () => {
-    function Detail() {
-      return <div data-testid="detail">storage detail</div>;
-    }
-    renderReport([
-      status("Connection", { state: "ok", summary: "conn-summary" }),
-      status(
-        "storage",
-        { state: "ok", summary: "storage-summary" },
-        { title: "Browser storage", component: Detail },
-      ),
-      status(
-        "queue",
-        { state: "ok", summary: "queue-summary" },
-        { title: "Job queue", glance: () => <div>bars</div> },
-      ),
-    ]);
+  it("puts the overflow rows behind the chevron, shown when expanded", async () => {
+    renderReport(
+      [
+        status("Connection", { state: "ok", summary: "conn-summary" }),
+        status("Database", { state: "ok", summary: "db-summary" }),
+        status("Socket", { state: "ok", summary: "socket-summary" }),
+      ],
+      undefined,
+      [overflowOrder(["Database", "Socket"])],
+    );
     await openReport();
-    // A glance is drawn at rest, so its row stays out of the card.
-    expect(summary("queue-summary")).toBeTruthy();
-    expect(summary("All 2 normal")).toBeTruthy();
-    expect(screen.queryByText("storage-summary")).toBeNull();
+    expect(summary("conn-summary")).toBeTruthy();
+    expect(screen.queryByText("db-summary")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /System checks/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Browser storage/ }));
-    expect(screen.getByTestId("detail")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show 2 more checks" }));
+    expect(summary("db-summary")).toBeTruthy();
+    expect(summary("socket-summary")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Show fewer checks" }),
+    ).toBeTruthy();
+  });
+
+  it("brings an overflow row that needs a look into the list, after the placed rows", async () => {
+    renderReport(
+      [
+        status("Live reads", { state: "attention", summary: "reads-summary" }),
+        status("Connection", { state: "ok", summary: "conn-summary" }),
+        status("Database", { state: "ok", summary: "db-summary" }),
+      ],
+      undefined,
+      [overflowOrder(["Live reads", "Database"])],
+    );
+    await openReport();
+    const conn = summary("conn-summary");
+    const reads = summary("reads-summary");
+    expect(
+      conn.compareDocumentPosition(reads) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText("db-summary")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Show 1 more check" }),
+    ).toBeTruthy();
   });
 
   it("is green with an info row alone", () => {
@@ -504,8 +533,8 @@ describe("row sets", () => {
     expect(screen.getByText("two.example")).toBeTruthy();
     expect(summary("deploy failed")).toBeTruthy();
     expect(summary("down")).toBeTruthy();
-    // The ok item folds with the other quiet row.
-    expect(summary("All 2 normal")).toBeTruthy();
+    // The ok item is listed like any other row.
+    expect(summary("live")).toBeTruthy();
 
     set({ kind: "ready", rows: [] });
     expect(button().dataset.health).toBe("ok");
@@ -572,18 +601,26 @@ describe("row sets", () => {
     expect(screen.getByText("glance one closed")).toBeTruthy();
   });
 
-  it("folds plain items with the other quiet rows", async () => {
+  it("puts a set in the overflow item by item, one that needs a look in view", async () => {
     const { row } = liveSet({
       kind: "ready",
       rows: [
         { key: "one", title: "one.example", status: ok("one-summary") },
-        { key: "two", title: "two.example", status: ok("two-summary") },
+        {
+          key: "two",
+          title: "two.example",
+          status: { state: "critical", summary: "two-summary" },
+        },
       ],
     });
-    renderReport([status("a", ok("a-summary")), row]);
+    renderReport([status("a", ok("a-summary")), row], undefined, [
+      overflowOrder([row.id]),
+    ]);
     await openReport();
-    expect(summary("All 3 normal")).toBeTruthy();
+    expect(summary("two-summary")).toBeTruthy();
     expect(screen.queryByText("one-summary")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show 1 more check" }));
+    expect(summary("one-summary")).toBeTruthy();
   });
 
   it("greys the dot when its hook throws, files the crash, keeps its siblings", async () => {

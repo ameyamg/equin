@@ -61728,6 +61728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
           - `SlotRender.Order` ← `reorder.slot-middleware`
         - Uses:
+          - `network/live/live-state.mapResource`
           - `network/live/live-state.readyResource`
           - `network/live/live-state.ResourceResult`
           - `primitives/css/grow-relay.GrowRelay`
@@ -61757,6 +61758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotItemOrientation`
           - `SlotListMiddleware`
           - `SlotOrder`
+          - `SlotPlaced`
           - `WrapContribution`
           - `WrapperSlot`
           - `WrapperSlotConfig`
@@ -61777,6 +61779,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotRender`
           - `useDispatchOutcome`
           - `useSlotOrder`
+          - `useSlotPlacement`
       - Cross-plugin:
         - Imported by: 106 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×36
@@ -65482,7 +65485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `page-hosts-on-demand` — `web/index.ts` (sanctioned)
           - `react-compiler:no-silent-skips` — `web/internal/use-bar-activities.tsx` (debt)
-    - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > info > ok — info is blue: worth knowing, not a problem, so it is not counted — with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
+    - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > info > ok — info is blue: worth knowing, not a problem, so it is not counted — with a count of rows needing a look), opening a popover that lists the rows in the slot's reorder layout order, the layout's overflow rows behind a chevron at the end unless one needs a look. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
       - Web:
         - Slots: `HealthReport.Row`
         - Slot contributors:
@@ -65506,9 +65509,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `tasks.worktree-identity`
           - `HealthReport.Row` ← `upstream`
         - Contributes: `ActionBar.Lead` → `HealthReportButton`
-        - Uses: 31 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
+          - `primitives/slot-render` ×6
           - `primitives/collapsible` ×4
-          - `primitives/slot-render` ×4
           - `primitives/css/activity-ring` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/error-boundary` ×2
@@ -65591,23 +65594,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthStatus`
           - `InfoRow`
           - `ReportedStatus`
-          - `ReportItem`
           - `RowLevel`
           - `SetItem`
           - `SetItemProps`
           - `SetRow`
           - `SetRows`
-          - `SortableRow`
           - `StatusRow`
         - Exports (values):
-          - `foldQuietRows`
           - `isPending`
           - `isPulsing`
           - `isTransitioning`
           - `levelOf`
           - `mergeDot`
           - `mergeHealth`
-          - `sortRows`
+          - `placeRows`
+          - `standsOut`
           - `verdictOf`
     - **`notifications`** — Persistent bell-button notifications backed by the DB, and the one toast API: useToast() shows a toast and records it in the notification history (a liveAction — an Undo closure — is drawn on the live toast only). Persistent bell-button notifications backed by the DB (the fork exclusion of its table is the machine half's).
       - Web:

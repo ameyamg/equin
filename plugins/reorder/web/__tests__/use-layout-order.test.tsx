@@ -12,6 +12,10 @@ import { useLayoutOrder } from "../internal/use-layout-order";
  */
 
 const refetch = () => Promise.resolve();
+// Hoisted with the mock: one registry, the same identity on every render.
+const OVERFLOW_TYPES = vi.hoisted(
+  () => new Map([["overflow", { type: "overflow", overflow: true }]]),
+);
 const error = new Error("boom");
 type Doc = { items?: unknown[] };
 let config:
@@ -28,6 +32,11 @@ vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
   useSetConfig: () => () => {},
 }));
 
+vi.mock("@plugins/reorder/plugins/node-types/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useReorderNodeTypes: () => OVERFLOW_TYPES,
+}));
+
 vi.mock("../internal/descriptors", () => ({
   reorderDescriptors: new Map([["test.slot", {} as ConfigDescriptor]]),
 }));
@@ -42,8 +51,13 @@ const LAYOUT = [
   "test.plugin:a",
 ];
 
-function idsOf(list: readonly Contribution[] | undefined): string[] {
-  return (list ?? []).map((c) => (c as unknown as { id: string }).id);
+function idsOf(
+  list:
+    readonly { contribution: Contribution; overflow: boolean }[] | undefined,
+): string[] {
+  return (list ?? []).map(
+    (p) => (p.contribution as unknown as { id: string }).id,
+  );
 }
 
 function run() {
@@ -63,6 +77,26 @@ describe("useLayoutOrder", () => {
     expect(idsOf(r.status === "ready" ? r.data : undefined)).toEqual([
       "c",
       "a",
+    ]);
+  });
+
+  it("marks the members of an overflow node, at their place", () => {
+    config = {
+      status: "ready",
+      data: {
+        items: [
+          "test.plugin:c",
+          { type: "overflow", id: "more", items: ["test.plugin:a"] },
+          "test.plugin:b",
+        ],
+      },
+      refetch,
+    };
+    const r = run().result.current;
+    expect(r.status === "ready" ? r.data : undefined).toEqual([
+      { contribution: contributions[2], overflow: false },
+      { contribution: contributions[0], overflow: true },
+      { contribution: contributions[1], overflow: false },
     ]);
   });
 

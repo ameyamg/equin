@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
-  foldQuietRows,
   mergeDot,
   mergeHealth,
-  sortRows,
+  placeRows,
+  standsOut,
   verdictOf,
   type ReportedStatus,
 } from "./merge";
@@ -90,27 +90,6 @@ describe("info", () => {
       ]),
     ).toBe("equin is out of date");
     expect(verdictOf([info(), info()])).toBe("2 things to know");
-  });
-
-  it("takes an informative row out of the quiet card", () => {
-    const rows = [
-      { kind: "status" as const, id: "a" },
-      { kind: "status" as const, id: "b" },
-      { kind: "status" as const, id: "c" },
-    ];
-    const statuses: Record<string, HealthStatus> = {
-      a: ok(),
-      b: info(),
-      c: ok(),
-    };
-    const items = foldQuietRows(
-      rows,
-      (r) => statuses[r.id],
-      () => true,
-    );
-    expect(items.map((item) => item.kind)).toEqual(["row", "quiet"]);
-    expect(items[0]).toMatchObject({ row: { id: "b" } });
-    expect(items[1]).toMatchObject({ rows: [{ id: "a" }, { id: "c" }] });
   });
 });
 
@@ -241,104 +220,64 @@ describe("verdictOf", () => {
   });
 });
 
-describe("sortRows", () => {
-  interface R {
-    id: string;
-    kind: "status" | "info";
-    status?: ReportedStatus;
-  }
-  const row = (id: string, kind: R["kind"], status?: ReportedStatus): R => ({
-    id,
-    kind,
-    status,
-  });
-  const ids = (rows: R[]) => sortRows(rows).map((r) => r.id);
-
-  it("puts info rows first, each kind keeping the layout order it is given", () => {
-    expect(
-      ids([
-        row("s", "status", ok()),
-        row("i1", "info"),
-        row("t", "status", ok()),
-        row("i2", "info"),
-      ]),
-    ).toEqual(["i1", "i2", "s", "t"]);
+describe("standsOut", () => {
+  it("is true for everything that moves the dot off green", () => {
+    expect(standsOut(attention())).toBe(true);
+    expect(standsOut(critical())).toBe(true);
+    expect(standsOut(info())).toBe(true);
+    expect(standsOut({ state: "unknown", summary: "crashed" })).toBe(true);
   });
 
-  it("ignores status, so a row keeps its place when it turns red", () => {
-    expect(
-      ids([
-        row("n/a", "status", notApplicable()),
-        row("ok", "status", ok()),
-        row("unknown", "status", undefined),
-        row("attention", "status", attention()),
-        row("critical", "status", critical()),
-      ]),
-    ).toEqual(["n/a", "ok", "unknown", "attention", "critical"]);
-  });
-
-  it("does not mutate its input", () => {
-    const input = [row("s", "status", ok()), row("i", "info")];
-    sortRows(input);
-    expect(input.map((r) => r.id)).toEqual(["s", "i"]);
+  it("is false for a fine, inapplicable, absent or not-yet-known row", () => {
+    expect(standsOut(ok())).toBe(false);
+    expect(standsOut(notApplicable())).toBe(false);
+    expect(standsOut({ state: "absent" })).toBe(false);
+    expect(standsOut({ state: "unknown" })).toBe(false);
+    expect(standsOut(undefined)).toBe(false);
   });
 });
 
-describe("foldQuietRows", () => {
-  type R = {
-    id: string;
-    kind: "status" | "info";
-    status?: ReportedStatus;
-    plain: boolean;
-  };
-  const row = (
-    id: string,
-    status: ReportedStatus,
-    plain = true,
-    kind: R["kind"] = "status",
-  ): R => ({ id, kind, status, plain });
-  const shape = (rows: R[]) =>
-    foldQuietRows(
-      rows,
+describe("placeRows", () => {
+  const place = (
+    rows: { id: string; status: ReportedStatus; overflow: boolean }[],
+  ) => {
+    const { shown, tucked } = placeRows(
+      rows.map((r) => ({ row: r, overflow: r.overflow })),
       (r) => r.status,
-      (r) => r.plain,
-    ).map((item) =>
-      item.kind === "row" ? item.row.id : item.rows.map((r) => r.id),
     );
+    return {
+      shown: shown.map((r) => r.id),
+      tucked: tucked.map((r) => r.id),
+    };
+  };
 
-  it("folds every plain ok status row into one card after every other row", () => {
+  it("keeps the layout order, the overflow rows behind the chevron", () => {
     expect(
-      shape([
-        row("info", undefined, true, "info"),
-        row("bad", critical(), false),
-        row("conn", ok()),
-        row("queue", ok(), false),
-        row("db", ok()),
-        row("n/a", notApplicable(), false),
+      place([
+        { id: "a", status: ok(), overflow: false },
+        { id: "x", status: ok(), overflow: true },
+        { id: "b", status: attention(), overflow: false },
+        { id: "y", status: notApplicable(), overflow: true },
       ]),
-    ).toEqual(["info", "bad", "queue", "n/a", ["conn", "db"]]);
+    ).toEqual({ shown: ["a", "b"], tucked: ["x", "y"] });
   });
 
-  it("puts a plain row that is not ok on its own, just above the card", () => {
+  it("brings an overflow row that stands out into view, after the placed rows", () => {
     expect(
-      shape([
-        row("db", attention()),
-        row("queue", ok(), false),
-        row("conn", ok()),
-        row("reads", ok()),
-        row("late", undefined),
-        row("machine", critical(), false),
+      place([
+        { id: "x", status: critical(), overflow: true },
+        { id: "a", status: ok(), overflow: false },
+        { id: "y", status: ok(), overflow: true },
+        { id: "z", status: info(), overflow: true },
+        { id: "b", status: ok(), overflow: false },
       ]),
-    ).toEqual(["queue", "machine", "db", "late", ["conn", "reads"]]);
+    ).toEqual({ shown: ["a", "b", "x", "z"], tucked: ["y"] });
   });
 
-  it("folds nothing when fewer than two rows are quiet, plain rows still last", () => {
-    expect(
-      shape([
-        row("db", attention()),
-        row("queue", ok(), false),
-        row("conn", ok()),
-      ]),
-    ).toEqual(["queue", "db", "conn"]);
+  it("leaves an overflow row not known yet tucked", () => {
+    expect(place([{ id: "x", status: undefined, overflow: true }])).toEqual({
+      shown: [],
+      tucked: ["x"],
+    });
   });
 });
