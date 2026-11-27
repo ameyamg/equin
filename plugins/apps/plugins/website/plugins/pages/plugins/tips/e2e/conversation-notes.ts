@@ -1,6 +1,7 @@
 // The tip "Conversation notes": the note button under a conversation's prompt
-// opens a note for yourself (never sent to the agent), and deleting its text
-// once it's done hides it again.
+// opens a note for yourself (never sent to the agent) — what someone juggling
+// many conversations keeps there: what this one is about, or a follow-up to
+// ask before closing it — and deleting its text once it's done hides it again.
 //
 //   ./equin run plugins/apps/plugins/website/plugins/pages/plugins/tips/e2e/conversation-notes.ts --composition promo-film
 //
@@ -21,7 +22,7 @@ export const e2e = {
   },
 } satisfies E2eScript;
 
-/** The film's Grieg conversation: its agent ends on a question worth keeping. */
+/** The film's Grieg conversation, waiting on the user: its agent's last answer frames the note. */
 const CONVERSATION = "/agents/c/conv-1792800000-film01";
 /** The note toggle's label while the note is closed and empty. */
 const ADD_NOTE = "Add a note for yourself — never sent";
@@ -36,13 +37,20 @@ await tipVideo({
     await page
       .getByRole("button", { name: ADD_NOTE })
       .waitFor({ state: "visible", timeout: 30_000 });
+    // The prompt's exit button, settled: the run's edited files make it
+    // Push & Close (the in-frame button reads its decision, never a
+    // still-loading or unknown one).
+    await page
+      .getByRole("button", { name: "Push & Close", exact: true })
+      .waitFor({ state: "visible", timeout: 30_000 });
   },
   async script(r) {
     const page = r.page;
     // The toggle keeps its place while its label follows the note's state.
     const toggle = page.getByRole("button", { name: NOTE_TOGGLE });
     const note = page.getByRole("textbox", { name: "Conversation notes" });
-    // The agent's question the note is about, and the prompt under it.
+    // The end of the agent's last answer (the MIDI it fetched, the question
+    // it ends on), and the prompt under it.
     const question = page
       .getByText("Want me to add it to your Repertoire")
       .last();
@@ -55,12 +63,15 @@ await tipVideo({
     await r.click(toggle);
     await r.hold(0.35);
 
-    // The note opens above the prompt: jot down what not to forget.
+    // The note opens above the prompt: a follow-up not to forget before
+    // closing — the kind of thing anyone working with agents writes there.
     // (Opening it does not focus it: the hand clicks in.)
     await r.focus([question, note, toggle], { margin: 32, maxZoom: 1.8 });
     await r.click(note);
     await r.hold(0.2);
-    await r.type("Later: add Grieg to my Repertoire page", { cps: 16 });
+    await r.type("Before closing: ask it to double-check the MIDI", {
+      cps: 16,
+    });
     await r.hold(1.6);
 
     // Done with it: deleting its text hides the note again.
