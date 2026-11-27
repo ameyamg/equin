@@ -43288,10 +43288,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×25
           - `debug` ×22
-          - `apps` ×9
+          - `apps` ×10
           - `conversations` ×6
           - `database` ×4
           - `packages` ×3
@@ -44430,6 +44430,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GmailThreadList`
               - `GmailThreadRef`
               - `GmailWatch`
+              - `PacerWaitReason`
               - `QuotaPacer`
               - `QuotaPacerOptions`
               - `QuotaPacerStats`

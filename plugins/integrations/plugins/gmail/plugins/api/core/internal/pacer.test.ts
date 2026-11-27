@@ -166,6 +166,29 @@ describe("createQuotaPacer", () => {
     expect(log).toEqual(["begin late", "begin gone", "end gone", "end late"]);
   });
 
+  test("onQueued says whether the budget or Google's rate pause held the call", async () => {
+    const c = fakeClock();
+    const pacer = createQuotaPacer({ unitsPerMinute: 100, clock: c.clock });
+    const why: string[] = [];
+    const meter = (r: string) => {
+      why.push(r);
+      return () => {};
+    };
+    await pacer.acquire(90, { priority: "foreground" });
+    const budget = track(
+      pacer.acquire(20, { priority: "foreground", onQueued: meter }),
+    );
+    await c.advance(60_000);
+    expect(budget.done).toBe(true);
+    pacer.pause(5_000);
+    const paused = track(
+      pacer.acquire(10, { priority: "foreground", onQueued: meter }),
+    );
+    expect(why).toEqual(["budget", "paused"]);
+    await c.advance(5_000);
+    expect(paused.done).toBe(true);
+  });
+
   test("refuses a call that could never fit", () => {
     const pacer = createQuotaPacer({
       unitsPerMinute: 100,

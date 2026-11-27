@@ -45,6 +45,9 @@ export type QuotaPacerStats = {
   pausedForMs: number | null;
 };
 
+/** What held a queued call as it queued: this pacer's minute, or Google's rate refusal. */
+export type PacerWaitReason = "budget" | "paused";
+
 export type QuotaPacer = {
   /**
    * Resolves once `units` fit in the window for `priority`, and charges them.
@@ -57,13 +60,16 @@ export type QuotaPacer = {
       priority: GmailPriority;
       signal?: AbortSignal;
       /**
-       * Called only when the call has to wait (no room, or paused) — never
-       * for one admitted at once — and its return called once the wait ends
-       * (admitted or aborted). The transport meters the wait through it, so
-       * a request held by the account's budget names the budget instead of
-       * booking the wait as its own time.
+       * Called only when the call has to wait — never for one admitted at
+       * once — and its return called once the wait ends (admitted or
+       * aborted). The transport meters the wait through it, so a request
+       * held by the account's budget names the budget instead of booking the
+       * wait as its own time. `why` is what held it as it queued: `budget`
+       * (this pacer's minute is spent) or `paused` (Google refused a call for
+       * rate — usually another process spending the same account's budget,
+       * which this pacer cannot see).
        */
-      onQueued?: () => () => void;
+      onQueued?: (why: PacerWaitReason) => () => void;
     },
   ): Promise<void>;
   /**
@@ -227,7 +233,8 @@ export function createQuotaPacer(opts: QuotaPacerOptions = {}): QuotaPacer {
         queues[priority].push(waiter);
         pump();
         // Still queued after the pump: it waits for room.
-        if (!settled && onQueued) endWait = onQueued();
+        if (!settled && onQueued)
+          endWait = onQueued(clock.now() < pausedUntil ? "paused" : "budget");
       });
     },
     pause(ms) {

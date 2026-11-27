@@ -26,17 +26,22 @@ import {
  * of the request that awaited it (2026-11-26: a cold Mail window held 57 s by
  * the account's budget read as `loader mail.threads took 56,072 ms of its
  * own`, naming nothing):
- * - `gmail-quota` (queue): held by the account's pacer, its minute spent or
- *   paused after a rate refusal. Metered only when the call has to wait; not
- *   the waiter's own time.
+ * - `gmail-quota` (queue): held by the account's pacer, its minute spent.
+ *   Metered only when the call has to wait; not the waiter's own time.
+ * - `gmail-rate-pause` (queue): held by the pacer's pause after Google refused
+ *   a call for rate — the account's budget spent by more than this pacer saw
+ *   (another process on the same account: a worktree, a script). Told apart
+ *   from `gmail-quota` because the fixes differ: a spender here, a spender
+ *   elsewhere. Named by what held the call as it queued.
  * - `gmail-backoff` (queue): the delay before re-sending what Google failed
  *   on its side or could not be reached for (a rate refusal waits on the
- *   pacer's pause instead, as `gmail-quota`).
+ *   pacer's pause instead, as `gmail-rate-pause`).
  * - `gmail-api` (io): Google's time — the HTTP round trip, body read
  *   included. An io wait no one files stays part of its waiter's own time,
  *   named.
  */
 const QUOTA_WAIT = "gmail-quota";
+const RATE_PAUSE_WAIT = "gmail-rate-pause";
 const BACKOFF_WAIT = "gmail-backoff";
 const API_WAIT = "gmail-api";
 
@@ -257,12 +262,13 @@ export function createGmailTransport(
   const sleep = opts.retry?.sleep ?? abortableSleep;
   const { pacer } = opts;
 
-  /** The pacer's admission, metered as the `gmail-quota` wait when it has to wait. */
+  /** The pacer's admission, metered when it has to wait: `gmail-quota` (its minute spent) or `gmail-rate-pause` (Google's refusal). */
   function admit(units: number, priority: GmailPriority, signal?: AbortSignal) {
     return pacer.acquire(units, {
       priority,
       signal,
-      onQueued: () => beginWait(QUOTA_WAIT, "queue"),
+      onQueued: (why) =>
+        beginWait(why === "paused" ? RATE_PAUSE_WAIT : QUOTA_WAIT, "queue"),
     });
   }
 

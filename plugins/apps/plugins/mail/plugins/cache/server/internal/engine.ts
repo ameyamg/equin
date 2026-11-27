@@ -32,6 +32,10 @@ import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import {
+  runInRootContext,
+  runTracked,
+} from "@plugins/infra/plugins/runtime-profiler/core";
+import {
   changeCursor,
   MAIL_QUERY_COLUMNS,
   MailNotConnectedError,
@@ -1451,10 +1455,29 @@ export function createMailCache(deps: MailCacheDeps) {
 
   // ── background ──────────────────────────────────────────────────────────
 
+  /**
+   * Work no read waits on — a prefetch, a re-list, a sync step, a summary-cap
+   * sweep — run as its own ROOT `bg` entry (`mail-cache:<what>`), never inside
+   * the read that asked for it. A coalescer starts a run in its asker's
+   * context, so before this every prefetch a window read or a thread open
+   * triggered ran as part of that `loader`: on main (2026-11-27 01:01–01:11
+   * UTC) prefetch pacing itself into Gmail's background share — waits it is
+   * designed to make — was filed 34 times as `wait gmail-quota` against
+   * `loader mail.threads` / `mail.thread` (up to 101 s), whose own reads had
+   * answered from the cache, and its database work ran in the interactive
+   * lane beside the reads a person waits on. A `bg` op's queue wait is no
+   * reader's (slow-ops), and its queries take the background lane.
+   */
+  function detached(what: string, run: () => Promise<void>): Promise<void> {
+    return runInRootContext(() =>
+      runTracked(`mail-cache:${what.replaceAll(" ", "-")}`, run),
+    );
+  }
+
   function background(what: string, run: () => Promise<void>) {
     return async () => {
       try {
-        await run();
+        await detached(what, run);
       } catch (err) {
         // Offline or disconnected: the next read says so, typed. Anything
         // else is a failure to surface.
@@ -1518,7 +1541,7 @@ export function createMailCache(deps: MailCacheDeps) {
   // catch-up, the fallback tick and the idle job fold into one trailing run.
   const catchUps = createKeyedCoalescer<string>({
     name: "mail-cache-catch-up",
-    run: (accountId) => syncStep(accountId),
+    run: (accountId) => detached("sync", () => syncStep(accountId)),
   });
   const relists = createKeyedCoalescer<number>({
     name: "mail-cache-relist",

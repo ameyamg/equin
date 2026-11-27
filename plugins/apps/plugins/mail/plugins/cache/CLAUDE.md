@@ -117,6 +117,17 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
   query's lock, so a cut never lands between its fill and its rows. Open
   windows are not notified.
 
+## Background work is its own op
+
+Prefetch, re-lists, sync steps and summary-cap sweeps run as root `bg`
+entries (`mail-cache:<what>`, the engine's `detached`), never inside the read
+that triggered them: their Gmail calls are background priority and pace into
+the pacer's background share, so they wait by design. Run inside the
+triggering loader (a coalescer starts a run in its asker's context), those
+waits were filed as the loader's `wait gmail-quota` — 34 times, up to 101 s,
+on main 2026-11-27 01:01–01:11 UTC, while every read answered from the cache
+— and their queries took the interactive lane.
+
 ## How changes arrive (`server/internal/sync.ts`, design §5)
 
 - **One sync step per account**, coalesced (`createKeyedCoalescer`: one

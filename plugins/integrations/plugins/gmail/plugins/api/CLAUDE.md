@@ -99,8 +99,11 @@ that account. Two pacers over one account would each spend the whole budget.
 - An abort cuts a backoff wait short.
 - **Waits are metered** in the runtime profiler, named by layer in the trace
   of the request that awaited them: `gmail-quota` (a `queue` wait, only while
-  the pacer holds a call — its minute spent, or paused after a rate refusal;
-  `acquire`'s `onQueued`), `gmail-backoff` (a `queue` wait: the delay before
+  the pacer holds a call because its minute is spent; `acquire`'s
+  `onQueued`), `gmail-rate-pause` (a `queue` wait held by the pacer's pause
+  after Google refused a call for rate — the account's budget spent by more
+  than this pacer saw, usually another process on the same account; named by
+  what held the call as it queued), `gmail-backoff` (a `queue` wait: the delay before
   re-sending a 5xx or an unreachable call) and `gmail-api` (an `io` wait: the
   HTTP round trip — still the waiter's own time unless it is filed). Queue
   waits are not the waiter's own time.
@@ -174,6 +177,7 @@ that account. Two pacers over one account would each spend the whole budget.
     - `GmailThreadList`
     - `GmailThreadRef`
     - `GmailWatch`
+    - `PacerWaitReason`
     - `QuotaPacer`
     - `QuotaPacerOptions`
     - `QuotaPacerStats`
