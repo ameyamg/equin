@@ -29,6 +29,7 @@ import { foldSlowOpBatch, type FoldedBatch, type FoldItem } from "./fold-batch";
 import type { RecordSlowOpInput } from "./input";
 import { buildCallerUpsert, buildOpUpsert } from "./merge-sql";
 import { incidentsFor } from "./report-groups";
+import { findingsBook, judge, type Finding } from "./evidence";
 import { slowOpCallersProducer, slowOpsProducer } from "./producer";
 
 export type { RecordSlowOpInput } from "./input";
@@ -206,17 +207,136 @@ export async function recordSlowOpBatch(
     );
   }
 
-  // Fire-and-forget the reports: one per op, fingerprinted on
-  // (operationKind, operation), the message reflecting the latest trip. A
-  // batch's ops of one kind are one incident (`incidentsFor`): each files its
-  // own report, and the incident rings the bell once. Background lane: nobody
-  // waits on a report (recordReport declares the same for its own writes).
-  for (const incident of incidentsFor(admitted.map((a) => a.input)))
-    void runInBackgroundLane(() =>
-      recordReportIncident(
-        incident.map((report) => ({ kind: "slow-op", ...report })),
-      ),
-    );
+  // Fire-and-forget the reports. Background lane: nobody waits on a report
+  // (recordReport declares the same for its own writes).
+  void runInBackgroundLane(() => reportBatch(admitted));
+}
+
+/** Span kinds that are background work by their own kind: nobody waits on them. */
+const BACKGROUND_KINDS: ReadonlySet<string> = new Set(["bg", "job"]);
+
+/** A per-op item as a finding (./findings.ts): its wall window ends where it was recorded. */
+function findingOf(input: RecordSlowOpInput, occurredAt: Date): Finding {
+  const endMs = occurredAt.getTime();
+  // A server op that is, or was issued by, a `bg` / `job` span (its caller is
+  // its enclosing span) is background work, whenever it ran.
+  const background =
+    input.source !== "client-slow-op" &&
+    (BACKGROUND_KINDS.has(input.operationKind) ||
+      (input.caller != null && BACKGROUND_KINDS.has(input.caller.kind)));
+  return {
+    source: "slow-op",
+    what:
+      `${input.operationKind} ${input.operation} ` +
+      `${Math.round(input.ownMs)}ms` +
+      (Math.round(input.ownMs) !== Math.round(input.durationMs)
+        ? ` own of ${Math.round(input.durationMs)}ms`
+        : "") +
+      ` (threshold ${input.thresholdMs}ms)`,
+    ms: input.ownMs,
+    startMs: endMs - input.durationMs,
+    endMs,
+    ...(input.during !== undefined && { during: input.during }),
+    ...(background && { background: true as const }),
+  };
+}
+
+/**
+ * A batch's reports. Each per-op item is first judged (./findings.ts): one
+ * seen while a person waited end to end — its tab's page load or recovery
+ * (`during`), or this process's restart replay — files nothing and is held as
+ * that wait's evidence. The rest file as before: one report per op,
+ * fingerprinted on (operationKind, operation), a batch's ops of one kind one
+ * incident (`incidentsFor`) that rings the bell once. An end-to-end item
+ * (`measures`) files its own report carrying the evidence held for its wait,
+ * restated as later findings join it.
+ */
+async function reportBatch(admitted: readonly FoldItem[]): Promise<void> {
+  const endToEnd: FoldItem[] = [];
+  const judged: { item: FoldItem; finding: Finding }[] = [];
+  const ownKind: RecordSlowOpInput[] = [];
+  for (const a of admitted) {
+    if (a.input.measures !== undefined) endToEnd.push(a);
+    // Its own kind files the alert (`reportedBy`): not a per-op finding.
+    else if (a.input.reportedBy !== undefined) ownKind.push(a.input);
+    else judged.push({ item: a, finding: findingOf(a.input, a.occurredAt) });
+  }
+  // A tab's items during its wait first, synchronously known: the end-to-end
+  // report of the same batch must already see them.
+  const rest: typeof judged = [];
+  for (const j of judged) {
+    if (j.finding.during !== undefined)
+      findingsBook.note(j.finding, { kind: "evidence", via: "tab" });
+    else rest.push(j);
+  }
+  // Each report its own background write: one that throws (a payload the
+  // kind refuses) rejects loudly on its own and costs no other report.
+  for (const a of endToEnd) void runInBackgroundLane(() => fileEndToEnd(a));
+
+  // The server's own findings wait on its restart replay while it is unsettled.
+  const verdicts = await Promise.all(rest.map((j) => judge(j.finding)));
+  const standalone: { input: RecordSlowOpInput; finding: Finding }[] = [];
+  rest.forEach((j, i) => {
+    const verdict = verdicts[i]!;
+    if (verdict.kind === "evidence") findingsBook.note(j.finding, verdict);
+    else standalone.push({ input: j.item.input, finding: j.finding });
+  });
+  for (const incident of incidentsFor([
+    ...ownKind,
+    ...standalone.map((x) => x.input),
+  ]))
+    void runInBackgroundLane(() => fileIncident(incident, standalone));
+}
+
+/** File one incident and note each standalone finding with the report it filed. */
+async function fileIncident(
+  incident: ReturnType<typeof incidentsFor>[number],
+  standalone: readonly { input: RecordSlowOpInput; finding: Finding }[],
+): Promise<void> {
+  const results = await recordReportIncident(
+    incident.map((report) => ({ kind: "slow-op", ...report })),
+  );
+  // Each standalone finding noted with the report it filed, as a later
+  // end-to-end report's "inside its window" evidence.
+  incident.forEach((report, i) => {
+    const r = results[i];
+    const reportId = r?.outcome === "recorded" ? r.reportId : undefined;
+    for (const x of standalone)
+      if (
+        x.input.operationKind === report.data.operationKind &&
+        x.input.operation === report.data.operation
+      )
+        findingsBook.note(x.finding, { kind: "standalone" }, reportId);
+  });
+}
+
+/** File one end-to-end item with the evidence held for its wait, and keep it open for more. */
+async function fileEndToEnd(a: FoldItem): Promise<void> {
+  const m = a.input.measures!;
+  const report = incidentsFor([a.input])[0]?.[0];
+  if (report === undefined) return;
+  const occurredAt = a.occurredAt.getTime();
+  const findings = findingsBook.evidenceFor(m.waitId, m.startedAt, occurredAt);
+  const data = {
+    ...report.data,
+    startedAtMs: m.startedAt,
+    ...(findings.total > 0 && { findings }),
+  };
+  const result = await recordReport({
+    kind: "slow-op",
+    ...report,
+    data,
+    occurredAt,
+  });
+  if (result.outcome === "recorded")
+    findingsBook.open({
+      reportId: result.reportId,
+      occurredAt,
+      message: report.message,
+      data,
+      waitId: m.waitId,
+      startedAt: m.startedAt,
+    });
 }
 
 // The durable write of a folded batch: ONE upsert per table, each through its

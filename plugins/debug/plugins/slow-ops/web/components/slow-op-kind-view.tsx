@@ -44,6 +44,14 @@ export function SlowOpKindView({ report }: { report: Report }) {
             {d.evidence.stacks.topSelf[0].frame}
           </span>
         )}
+      {d.findings !== undefined && d.findings.total > 0 && (
+        <span
+          className="text-muted-foreground"
+          title="Per-op findings seen while the person waited — this report's evidence, none filed alone"
+        >
+          · {d.findings.total} finding{d.findings.total === 1 ? "" : "s"}
+        </span>
+      )}
       {d.traceId && <TraceChip traceId={d.traceId} />}
     </Inline>
   );

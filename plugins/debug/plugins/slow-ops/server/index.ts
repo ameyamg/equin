@@ -19,6 +19,8 @@ export { _slowOps } from "./internal/tables";
 export { recordSlowOp, recordSlowOpBatch } from "./internal/record-slow-op";
 export type { RecordSlowOpInput } from "./internal/input";
 export { readSlowOpMarkers } from "./internal/read-markers";
+export { fileFinding } from "./internal/evidence";
+export type { Finding, FindingVerdict } from "./internal/evidence";
 
 export default {
   description:

@@ -72,6 +72,16 @@ reconnecting…" (infra/health/connection-row). This is the measure decision D25
 (hold the replay until boot hooks finish) is judged by. Design:
 `research/2026-11-27-debug-live-again-after-reconnect.md`.
 
+**Each of the two alerted measures is a user wait** (slow-ops/sink's
+`beginUserWait`): a page load opens one at navigation start, a recovery at the
+drop; it ends with the measure and is cancelled when the measure is excluded
+(hidden tab, machine sleep). The slow-op queue stamps each per-op item whose
+window overlaps an open wait (`during`), and the alert names its wait
+(`measures`), so the per-op findings seen while a person waited become the
+alert's evidence instead of reports of their own (D26 step 3,
+`research/2026-11-27-debug-per-op-findings-as-evidence.md`). An in-app
+navigation opens none: it has no end-to-end alert to carry evidence.
+
 An interaction ends when the count is zero and stays zero for a short
 quiet window (the next screen's components mount a little after the click). The
 duration recorded is up to the last list's data, not to the end of the quiet window.

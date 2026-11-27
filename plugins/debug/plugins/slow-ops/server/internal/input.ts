@@ -107,4 +107,10 @@ export interface RecordSlowOpInput {
   // in full; the report says so. Absent for server spans.
   userAgent?: string;
   automated?: boolean;
+  // A client END-TO-END item (a page not ready, a tab not live again): the user
+  // wait it measures. Its report carries the findings held in that wait.
+  measures?: { waitId: string; startedAt: number };
+  // A client per-op item seen DURING a user wait of its tab: evidence of that
+  // wait's report, never a report of its own (see ./findings.ts).
+  during?: string;
 }

@@ -1,6 +1,34 @@
 import { z } from "zod";
 import { TabEvidenceSchema } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
+/** What a held per-op finding came from: the three per-op monitors. */
+export const FINDING_SOURCES = ["slow-op", "op-rate", "boot-budget"] as const;
+export type FindingSource = (typeof FINDING_SOURCES)[number];
+
+/** How many findings an end-to-end report names (the largest first). */
+export const MAX_REPORT_FINDINGS = 20;
+
+/**
+ * One per-op finding seen while a person waited end to end (D26 step 3): the
+ * evidence an end-to-end report (`page-load`, `live-again`) carries instead of
+ * the finding filing a report of its own.
+ */
+export const ReportFindingSchema = z.object({
+  source: z.enum(FINDING_SOURCES),
+  /** The finding's own one-line message (as its report would have said it). */
+  what: z.string(),
+  /** Its own time, ms — absent for a count (an op-rate burst). */
+  ms: z.number().optional(),
+  /** Wall-clock start and end (epoch ms). */
+  startMs: z.number(),
+  endMs: z.number(),
+  /** `tab`: the tab's own item during this wait; `restart`: the server's, in its restart replay; `window`: a server finding inside the wait's window. */
+  via: z.enum(["tab", "restart", "window"]),
+  /** The finding's own report, when it was filed on its own (a server finding outside a restart). */
+  reportId: z.string().optional(),
+});
+export type ReportFinding = z.infer<typeof ReportFindingSchema>;
+
 // The jsonb payload for the "slow-op" report. The report fingerprint keys on
 // (operationKind, operation), so each distinct slow op owns its own report; the
 // payload carries that op's identity plus its latest tripping duration —
@@ -63,6 +91,20 @@ export const SlowOpReportPayloadSchema = z.object({
       operations: z.array(
         z.object({ operation: z.string(), ownMs: z.number() }),
       ),
+    })
+    .optional(),
+  // An end-to-end report only (`page-load`, `live-again`): the per-op findings
+  // seen while the person waited — slow ops, op-rate bursts, boot-budget
+  // overruns, waits — which file no report of their own. `total` is every one
+  // held, `items` the largest (`MAX_REPORT_FINDINGS`). Restated as late ones
+  // arrive (op-rate and boot-budget judge on their own ticks).
+  // When the wait this end-to-end report measures began (wall clock, epoch
+  // ms): the findings' times are read from it.
+  startedAtMs: z.number().optional(),
+  findings: z
+    .object({
+      total: z.number(),
+      items: z.array(ReportFindingSchema).max(MAX_REPORT_FINDINGS),
     })
     .optional(),
 });

@@ -13,6 +13,8 @@ import {
   startLiveAgainTracking,
   type NotLiveAgain,
 } from "../internal/live-again-tracker";
+import { userWaitDuring } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+import { __resetUserWaits } from "@plugins/debug/plugins/slow-ops/plugins/sink/core/testing";
 
 let hidden = false;
 vi.mock(
@@ -109,6 +111,7 @@ describe("live-again tracking", () => {
     stop();
     hidden = false;
     vi.useRealTimers();
+    __resetUserWaits();
   });
 
   it("records a recovery that ended under its budget, and tells nothing", () => {
@@ -192,5 +195,28 @@ describe("live-again tracking", () => {
     fake.emit(replaying());
     fake.emit(end(16_000, 0, 1));
     expect(samples).toEqual([[16_000, { censored: true, excluded: false }]]);
+  });
+
+  it("a recovery is a user wait: its report names it, its items fall in it", () => {
+    const droppedAt = Date.now();
+    fake.emit(start(droppedAt));
+    fake.emit(replaying());
+    vi.advanceTimersByTime(10_001);
+    const wait = userWaitDuring(droppedAt + 1_000, droppedAt + 2_000);
+    expect(wait?.kind).toBe("live-again");
+    expect(told[0]?.wait).toEqual({ waitId: wait!.id, startedAt: droppedAt });
+    fake.emit(end(12_000));
+    // Ended: an item after it is not during it.
+    expect(
+      userWaitDuring(Date.now() + 1_000, Date.now() + 2_000),
+    ).toBeUndefined();
+  });
+
+  it("a recovery in a hidden tab holds nothing once it ends", () => {
+    hidden = true;
+    const droppedAt = Date.now();
+    fake.emit(start(droppedAt));
+    fake.emit(end(3_000));
+    expect(userWaitDuring(droppedAt, droppedAt + 1)).toBeUndefined();
   });
 });

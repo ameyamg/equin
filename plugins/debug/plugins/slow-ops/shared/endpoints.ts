@@ -123,6 +123,17 @@ export const SlowOpClientItemSchema = z.object({
   // the client-boot class's section (clientBootClass.supply), which validates
   // and persists it; recordSlowOp never sees it.
   clientBoot: ClientBootSectionSchema.optional(),
+  // The end-to-end wait this item MEASURES (a page not ready, a tab not live
+  // again — clientSlowOpSink's `measures`): its id and wall-clock start. Its
+  // report carries the per-op findings held during that wait as evidence.
+  measures: z
+    .object({ waitId: z.string().max(80), startedAt: z.number() })
+    .optional(),
+  // The end-to-end wait this per-op item happened DURING (stamped by the queue
+  // from sink's `userWaitDuring`): a person was waiting on the page, so the
+  // item files no report of its own and is held as evidence of that wait's
+  // report. Absent: no wait was pending (or an older tab) — it files as before.
+  during: z.string().max(80).optional(),
 });
 export type SlowOpClientItem = z.infer<typeof SlowOpClientItemSchema>;
 

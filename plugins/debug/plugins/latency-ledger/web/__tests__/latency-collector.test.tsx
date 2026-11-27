@@ -158,6 +158,7 @@ describe("a page not ready at its budget", () => {
       budgetMs: 5000,
       waitingFor: ["files.computer.stat×4", "x".repeat(500)],
       done: false,
+      wait: { waitId: "page-load-1", startedAt: 1_000 },
     });
     off();
     expect(seen).toHaveLength(1);
@@ -167,6 +168,7 @@ describe("a page not ready at its budget", () => {
       durationMs: 5003,
       thresholdMs: 5000,
       detail: { censored: true },
+      measures: { waitId: "page-load-1", startedAt: 1_000 },
     });
     expect(seen[0]?.waitingFor?.[0]).toBe("files.computer.stat×4");
     expect(seen[0]?.waitingFor?.[1]).toHaveLength(200);
@@ -190,6 +192,7 @@ describe("a tab not live again at its budget", () => {
       elapsedMs: 10001.2,
       budgetMs: 10000,
       waitingFor: ["claude-code-status×4"],
+      wait: { waitId: "live-again-1", startedAt: 2_000 },
     });
     off();
     expect(seen).toHaveLength(1);
@@ -200,6 +203,7 @@ describe("a tab not live again at its budget", () => {
       thresholdMs: 10000,
       detail: { censored: true },
       waitingFor: ["central: claude-code-status×4"],
+      measures: { waitId: "live-again-1", startedAt: 2_000 },
     });
   });
 });

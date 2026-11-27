@@ -34,7 +34,14 @@ export {
   MAX_WAITING_FOR_NAME,
 } from "./limits";
 export {
+  FINDING_SOURCES,
   isLegacyBurstReport,
+  MAX_REPORT_FINDINGS,
+  ReportFindingSchema,
   SlowOpReportPayloadSchema,
 } from "./report-payload";
-export type { SlowOpReportPayload } from "./report-payload";
+export type {
+  FindingSource,
+  ReportFinding,
+  SlowOpReportPayload,
+} from "./report-payload";

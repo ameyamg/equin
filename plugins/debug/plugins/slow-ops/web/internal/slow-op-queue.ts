@@ -8,6 +8,10 @@ import {
 import { AUTOMATED_BROWSER } from "@plugins/primitives/plugins/scope/plugins/automation/web";
 import { MAX_CLIENT_SLOW_OP_ITEMS } from "../../core";
 import {
+  onUserWaitSettled,
+  userWaitDuring,
+} from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+import {
   submitClientSlowOp,
   type SlowOpClientItem,
 } from "../../shared/endpoints";
@@ -114,19 +118,26 @@ function scheduleFlush(): void {
  * The next chunk to send: items with no window, and windowed items ending by
  * `knownThrough` (the page's stall record is complete for them), oldest first.
  * `null`: no wait was made — no windowed item was queued, or the page is
- * departing and judges with what it knows — so every item is taken.
+ * departing and judges with what it knows — so every item is taken. A per-op
+ * item inside a user wait that has not ended stays queued (unless departing):
+ * the wait's end or cancel flushes it (`onUserWaitSettled`).
  */
-function takeReady(knownThrough: number | null): Queued[] {
+function takeReady(knownThrough: number | null, departing: boolean): Queued[] {
   const ready: Queued[] = [];
   for (
     let i = 0;
     i < queue.length && ready.length < MAX_CLIENT_SLOW_OP_ITEMS;
   ) {
     const q = queue[i]!;
+    // An item inside a user wait still open waits for it to settle: an ended
+    // wait claims it (`during`), a cancelled one lets it file on its own. A
+    // departing page sends it with what it knows.
+    const held = !departing && inOpenWait(q);
     if (
-      knownThrough === null ||
-      q.window === undefined ||
-      q.window.endMs <= knownThrough
+      !held &&
+      (knownThrough === null ||
+        q.window === undefined ||
+        q.window.endMs <= knownThrough)
     ) {
       ready.push(q);
       queue.splice(i, 1);
@@ -135,12 +146,46 @@ function takeReady(knownThrough: number | null): Queued[] {
   return ready;
 }
 
+/** Where an item sat on the wall clock: its window, else its end and duration. */
+function spanOf(
+  item: SlowOpClientItem,
+  window: SpanWindow | undefined,
+): { startMs: number; endMs: number } {
+  const endMs = window?.endMs ?? item.endedAt ?? Date.now();
+  return { startMs: window?.startMs ?? endMs - item.durationMs, endMs };
+}
+
+/** A per-op item overlapping a user wait that has not ended yet. */
+function inOpenWait({ item, window }: Queued): boolean {
+  if (item.measures !== undefined || item.reportedBy !== undefined)
+    return false;
+  const { startMs, endMs } = spanOf(item, window);
+  return userWaitDuring(startMs, endMs)?.open === true;
+}
+
 function latestWindowEnd(): number | null {
   let latest: number | null = null;
   for (const { window } of queue)
     if (window !== undefined && (latest === null || window.endMs > latest))
       latest = window.endMs;
   return latest;
+}
+
+/**
+ * Stamp a per-op item with the end-to-end wait it happened in
+ * (`userWaitDuring`): a person was waiting on this tab's page load or its
+ * recovery, so the item is evidence of that wait's report, not a report of its
+ * own. An end-to-end item itself (`measures`) and one whose own kind files its
+ * alert (`reportedBy`) are left as they are.
+ */
+function stampDuring(
+  item: SlowOpClientItem,
+  window: SpanWindow | undefined,
+): SlowOpClientItem {
+  if (item.measures !== undefined || item.reportedBy !== undefined) return item;
+  const { startMs, endMs } = spanOf(item, window);
+  const wait = userWaitDuring(startMs, endMs);
+  return wait === undefined ? item : { ...item, during: wait.id };
 }
 
 async function flush(departing = false): Promise<void> {
@@ -156,13 +201,18 @@ async function flush(departing = false): Promise<void> {
     // Drain in chunks the server will accept (≤ MAX_CLIENT_SLOW_OP_ITEMS). An
     // over-cap POST would be rejected with 400, so the chunk size — not the
     // accumulated queue length — bounds each request.
-    const items = takeReady(knownThrough).flatMap(({ item, window }) => {
-      if (window === undefined) return [item];
+    const taken = takeReady(knownThrough, departing);
+    // Only items held for an open user wait remain: the wait's end flushes them.
+    if (taken.length === 0) break;
+    const items = taken.flatMap(({ item, window }) => {
+      if (window === undefined) return [stampDuring(item, undefined)];
       const judged = judgePagePauses(
         item,
         pausesDuring(window.startMs, window.endMs),
       );
-      return judged === null ? [] : [{ ...judged, endedAt: window.endMs }];
+      return judged === null
+        ? []
+        : [stampDuring({ ...judged, endedAt: window.endMs }, window)];
     });
     if (items.length === 0) continue;
     const carried = dropped;
@@ -210,6 +260,11 @@ async function flush(departing = false): Promise<void> {
     dropped -= carried;
   }
 }
+
+// A user wait that ends or is cancelled releases the items held for it.
+onUserWaitSettled(() => {
+  if (queue.length > 0) scheduleFlush();
+});
 
 // Flush on tab departure so a queued signal isn't lost to the debounce window
 // when the page goes away. `keepalive` is what lets the request survive the

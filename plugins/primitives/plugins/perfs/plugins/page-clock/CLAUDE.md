@@ -55,6 +55,8 @@ const sampleAt = perfToEpoch(asPerfMs(sample.timestamp), offset);
 - Description: The two clocks a page (or worker) reads, as branded types: EpochMs (the wall clock, Date.now — keeps running while the device sleeps) and PerfMs (the performance timeline — entry.startTime, event.timeStamp, a profiler sample — which pauses while it sleeps on Android and macOS). perfToEpoch / epochToPerf are the only conversion, through the clocks' offset read at once (a ClockOffset), so a stamp taken since the last sleep lands where it happened; `performance.timeOrigin + stamp`, which lags by every sleep since the page loaded, is refused by the page-clock/no-time-origin-arithmetic lint rule.
 - Cross-plugin:
   - Imported by:
+    - `debug/boot-budget`
+    - `debug/latency-ledger`
     - `debug/slow-ops`
     - `framework/web-sdk`
     - `network/live/live-state`

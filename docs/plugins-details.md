@@ -27824,6 +27824,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
+          - `debug/slow-ops.fileFinding`
           - `infra/jobs.defineJob`
           - `reports.ReportKind`
           - `reports/engine.recordReport`
@@ -28976,6 +28977,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/admin.ExcludeFromBackup`
           - `database/admin.ExcludeFromFork`
           - `database/sql-column.parsedText`
+          - `debug/slow-ops.fileFinding`
           - `debug/trace/engine.captureTrace`
           - `infra/jobs.defineJob`
           - `infra/retention.defineRetention`
@@ -30437,14 +30439,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-producer` "slow_ops"
           - `fork-data-exclusion` "slow_op_callers"
           - `fork-data-exclusion` "slow_ops"
-        - Uses: 29 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `infra/jobs` ×4
+          - `reports/engine` ×4
           - `infra/entities` ×3
           - `infra/host/machine-sleep` ×3
           - `config_v2` ×2
           - `infra/host/contention` ×2
           - `infra/host/duress/shed` ×2
-          - `reports/engine` ×2
           - `database/admin.ExcludeFromFork`
           - `database.db`
           - `debug/trace/client-boot.clientBootClass`
@@ -30457,9 +30459,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.defineLogSink`
           - `reports.ReportKind`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
-        - Exports (types): `RecordSlowOpInput`
+        - Exports (types):
+          - `Finding`
+          - `FindingVerdict`
+          - `RecordSlowOpInput`
         - Exports (values):
           - `_slowOps`
+          - `fileFinding`
           - `readSlowOpMarkers`
           - `recordSlowOp`
           - `recordSlowOpBatch`
@@ -30494,7 +30500,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.defineRoute`
           - `reports/main-thread-stall/tab-evidence.TabEvidenceSchema`
         - Exports (types):
+          - `FindingSource`
           - `MeasureStat`
+          - `ReportFinding`
           - `SlowOp`
           - `SlowOpCaller`
           - `SlowOpCallerListRow`
@@ -30506,13 +30514,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VariantBreakdown`
         - Exports (values):
           - `CLIENT_SIGNAL_THRESHOLD`
+          - `FINDING_SOURCES`
           - `isLegacyBurstReport`
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
+          - `MAX_REPORT_FINDINGS`
           - `MAX_SLOW_OP_MARKERS`
           - `MAX_WAITING_FOR`
           - `MAX_WAITING_FOR_NAME`
           - `OTHER_VARIANT`
+          - `ReportFindingSchema`
           - `SAMPLE_HOLDERS_MAX`
           - `slowOpById`
           - `slowOpCallerFields`
@@ -30536,9 +30547,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
         - Imported by:
+          - `debug/boot-budget`
           - `debug/boot-monitor`
           - `debug/health-monitor`
           - `debug/latency-ledger`
+          - `debug/op-rate`
           - `debug/slow-ops/cluster`
           - `debug/slow-ops/pane`
           - `debug/timeline`
@@ -30630,14 +30643,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `CallerRef`
               - `ClientSlowOpSignal`
+              - `UserWait`
+              - `UserWaitKind`
             - Exports (values):
+              - `beginUserWait`
               - `CallerRefSchema`
               - `clientSlowOpSink`
+              - `onUserWaitSettled`
+              - `userWaitDuring`
           - Cross-plugin:
             - Imported by:
               - `debug/latency-ledger`
               - `debug/slow-ops`
               - `reports/main-thread-stall`
+          - Test helpers:
+            - Core: `@plugins/debug/plugins/slow-ops/plugins/sink/core/testing`
+              - `__resetUserWaits` — Test-only: forget every wait.
     - **`stall-monitor`** — Event-loop stall report renderer: a one-line Debug → Reports summary for the event-loop-stall kind (hot frame + View-trace chip), plus the enabled config registration. Files a report when the health-monitor sampler detects a main-thread event-loop stall: captures the coherent-instant stall trace and files a deduped event-loop-stall report (fingerprinted on the dominant caller stack) so a frozen backend reaches the bell + Debug → Reports, linked to its trace.
       - Web:
         - Contributes:
@@ -35388,11 +35409,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 133 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 134 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `apps` ×16
+          - `debug` ×15
           - `conversations` ×14
-          - `debug` ×14
           - `tasks` ×14
           - `database` ×10
           - `network` ×5
@@ -43492,9 +43513,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 86 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×25
-          - `debug` ×22
+          - `debug` ×23
           - `apps` ×10
           - `conversations` ×6
           - `database` ×4
@@ -60961,6 +60982,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`page-clock`** — The two clocks a page (or worker) reads, as branded types: EpochMs (the wall clock, Date.now — keeps running while the device sleeps) and PerfMs (the performance timeline — entry.startTime, event.timeStamp, a profiler sample — which pauses while it sleeps on Android and macOS). perfToEpoch / epochToPerf are the only conversion, through the clocks' offset read at once (a ClockOffset), so a stamp taken since the last sleep lands where it happened; `performance.timeOrigin + stamp`, which lags by every sleep since the page loaded, is refused by the page-clock/no-time-origin-arithmetic lint rule.
           - Cross-plugin:
             - Imported by:
+              - `debug/boot-budget`
+              - `debug/latency-ledger`
               - `debug/slow-ops`
               - `framework/web-sdk`
               - `network/live/live-state`

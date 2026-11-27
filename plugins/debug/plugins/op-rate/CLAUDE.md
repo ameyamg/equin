@@ -133,6 +133,13 @@ unit-tested):
   does not inherit main's history, whose traffic it never carries.
 - A report carries `baseline: { over: "boot" | "steady" | "hour", usualCalls }`
   when judged on the history, nothing when judged on the warm-up bar.
+- **A boot-window trip on a restart the tabs replayed is evidence, not a
+  report** (slow-ops' `fileFinding`): the window (process start → the tick)
+  holds the replay every tab waited on, so the trip is listed on the tabs'
+  `live-again` reports instead (D26 step 3,
+  `research/2026-11-27-debug-per-op-findings-as-evidence.md`). A boot nobody
+  replayed files as before. Steady and hour trips — an op called far more than
+  usual, wasted work — always file, as op-time does.
 
 ### Windowing & counter-reset handling
 
@@ -257,6 +264,7 @@ live-state-churn's accumulator + scheduled job.)
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
     - `database/sql-column.parsedText`
+    - `debug/slow-ops.fileFinding`
     - `debug/trace/engine.captureTrace`
     - `infra/jobs.defineJob`
     - `infra/retention.defineRetention`

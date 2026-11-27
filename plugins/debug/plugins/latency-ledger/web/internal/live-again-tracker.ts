@@ -6,6 +6,10 @@ import type {
 import { pausesDuring } from "@plugins/primitives/plugins/perfs/plugins/page-pauses/web";
 import { peekRoutePattern } from "@plugins/primitives/plugins/pane/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import {
+  beginUserWait,
+  type UserWait,
+} from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 
 // How long a tab takes to be live again after its socket dropped: drop → every
 // read the reconnect replayed answered (live-state's recovery). Recorded as the
@@ -22,6 +26,8 @@ export interface NotLiveAgain {
   budgetMs: number;
   /** The replayed reads still unanswered (`key×n`), or the socket still reconnecting. */
   waitingFor: string[];
+  /** The user wait this recovery is (sink's `beginUserWait`): its report's evidence key. */
+  wait: { waitId: string; startedAt: number };
 }
 
 /** The part of the live-state client this tracker reads. */
@@ -62,6 +68,12 @@ interface Active {
   budgetTimer: ReturnType<typeof setTimeout> | null;
   capTimer: ReturnType<typeof setTimeout>;
   replaying: boolean;
+  /**
+   * The person's wait on this recovery: per-op findings in it are held as its
+   * evidence. Ended with the recovery, cancelled when it is excluded (hidden,
+   * slept) — no person waited on it.
+   */
+  wait: UserWait;
 }
 
 /**
@@ -88,12 +100,18 @@ export function startLiveAgainTracking(
     active.delete(socket);
   };
 
+  const closeWait = (a: Active, excluded: boolean): void => {
+    if (excluded) a.wait.cancel();
+    else a.wait.end();
+  };
+
   const onEnd = (end: LiveRecoveryEnd): void => {
     const a = active.get(end.socket);
     // Ended after the cap already recorded it, or began before tracking did.
     if (a === undefined) return;
     finish(end.socket, a);
     const x = excludedFor(end.droppedAt, end.endedAt, end.sleptMs);
+    closeWait(a, x.hidden || x.slept);
     // A read given up on (reported unanswered) ended the wait without an
     // answer: the duration is a lower bound.
     hooks.onSample(end.awakeMs, {
@@ -121,6 +139,13 @@ export function startLiveAgainTracking(
       if (a !== undefined) a.replaying = e.kind === "replaying";
       return;
     }
+    // A start over a recovery still tracked (not expected: a re-drop keeps its
+    // recovery) must not leave that one's wait open forever.
+    const prev = active.get(socket);
+    if (prev !== undefined) {
+      finish(socket, prev);
+      prev.wait.cancel();
+    }
     const droppedPerf = performance.now();
     const budget = hooks.budgetMs();
     const a: Active = {
@@ -128,11 +153,13 @@ export function startLiveAgainTracking(
       droppedPerf,
       budgetTimer: null,
       replaying: false,
+      wait: beginUserWait("live-again", e.recovery.droppedAt),
       capTimer: setTimeout(() => {
         if (active.get(socket) !== a) return;
         finish(socket, a);
         const now = Date.now();
         const x = excludedFor(a.droppedAt, now, source.recoverySleptMs(socket));
+        closeWait(a, x.hidden || x.slept);
         hooks.onSample(RECOVERY_CAP_MS, {
           censored: true,
           excluded: x.hidden || x.slept,
@@ -164,6 +191,7 @@ export function startLiveAgainTracking(
           waitingFor: a.replaying
             ? source.recoveryPendingKeys(socket, hooks.maxWaitingFor)
             : [STILL_RECONNECTING],
+          wait: { waitId: a.wait.id, startedAt: a.wait.startedAt },
         });
         // Rounded up: a timer may fire up to ~1 ms early against
         // `performance.now()`, and an item under its budget is dropped.
@@ -175,6 +203,9 @@ export function startLiveAgainTracking(
 
   return () => {
     unsubscribe();
-    for (const [socket, a] of active) finish(socket, a);
+    for (const [socket, a] of active) {
+      finish(socket, a);
+      a.wait.cancel();
+    }
   };
 }

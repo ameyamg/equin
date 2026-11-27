@@ -64,6 +64,45 @@ function timeLabel(d: SlowOpReportPayload): string {
   return `${Math.round(d.ownMs)}ms own of ${wall}ms`;
 }
 
+/**
+ * The per-op findings seen while the person waited (D26 step 3): each would
+ * have been a report of its own; here they are this wait's evidence, largest
+ * first, timed from the wait's start.
+ */
+function findingsSection(
+  f: NonNullable<SlowOpReportPayload["findings"]>,
+  startedAtMs: number | undefined,
+): string[] {
+  const via = {
+    tab: "this tab, during the wait",
+    restart: "the server, in its restart replay",
+    window: "the server, inside the wait's window",
+  } as const;
+  const out = [
+    `**Evidence — per-op findings while the person waited** (${f.total}` +
+      (f.total > f.items.length
+        ? `, the ${f.items.length} largest shown`
+        : "") +
+      `; none of these filed a report of its own unless linked):`,
+  ];
+  for (const x of f.items) {
+    const at =
+      startedAtMs !== undefined
+        ? ` at +${((x.startMs - startedAtMs) / 1000).toFixed(1)}s`
+        : "";
+    out.push(
+      `- [${x.source}] ${x.what}${at} — ${via[x.via]}` +
+        (x.reportId !== undefined ? ` (filed: \`${x.reportId}\`)` : ""),
+    );
+  }
+  out.push(
+    "",
+    "Start from the largest shared cause among them (a gate, a boot hook, the " +
+      "replay itself) rather than any one read.",
+  );
+  return out;
+}
+
 function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   const lines: string[] = [];
   if (d.burst) {
@@ -147,6 +186,8 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   }
   const waitLines = describeWaits(d);
   if (waitLines.length > 0) lines.push("", ...waitLines);
+  if (d.findings !== undefined && d.findings.total > 0)
+    lines.push("", ...findingsSection(d.findings, d.startedAtMs));
   if (d.evidence) {
     // A long frame the tab lived through: what ran beneath its entry point.
     lines.push("", ...stacksSection(d.evidence.stacks, d.durationMs, "frame"));

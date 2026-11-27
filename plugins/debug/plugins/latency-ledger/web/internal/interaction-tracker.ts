@@ -1,4 +1,8 @@
 import {
+  asPerfMs,
+  perfToEpoch,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
+import {
   pendingMountSnapshot,
   subscribePendingMounts,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -9,6 +13,10 @@ import {
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { Interaction } from "../../core";
+import {
+  beginUserWait,
+  type UserWait,
+} from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 
 // When is what the user just opened "on screen"?
 //
@@ -41,6 +49,8 @@ export interface NotReady {
    * code) — and then took longer. `elapsedMs` is then its real duration.
    */
   done: boolean;
+  /** The user wait this load is (sink's `beginUserWait`): its report's evidence key. */
+  wait: { waitId: string; startedAt: number };
 }
 // A screen still waiting after this long is recorded as "at least this long".
 const CAP_MS = 60_000;
@@ -61,6 +71,13 @@ interface Active {
   told: boolean;
   /** The ready budget this page load is judged against (`null`: none). */
   budgetMs: number | null;
+  /**
+   * A page load's user wait (sink's `beginUserWait`): per-op findings while it
+   * is pending are held as its evidence. Ended with the load, cancelled when
+   * the tab was hidden in it (no person waited; it never alerts). Null for an
+   * in-app navigation, which has no end-to-end alert to carry evidence.
+   */
+  wait: UserWait | null;
 }
 
 let active: Active | null = null;
@@ -78,6 +95,10 @@ function finish(a: Active, endMs: number, censored: boolean): void {
   if (active !== a) return;
   active = null;
   clearTimers(a);
+  if (a.wait !== null) {
+    if (a.hidden) a.wait.cancel();
+    else a.wait.end();
+  }
   const snap = pendingMountSnapshot();
   // A load quiet at its budget (nothing mounted yet) that then took longer
   // was never told at the budget: tell it now, with what answered last.
@@ -99,6 +120,7 @@ function finish(a: Active, endMs: number, censored: boolean): void {
       budgetMs: a.budgetMs,
       waitingFor: snap.lastReleasedKey === null ? [] : [snap.lastReleasedKey],
       done: true,
+      ...waitOf(a),
     });
   }
   // One line per page load / navigation — a handful a day. When a screen never
@@ -125,6 +147,13 @@ function finish(a: Active, endMs: number, censored: boolean): void {
     resourceCount: snap.startedTotal - a.startedTotalAtStart,
     lastResourceKey: snap.lastReleasedKey,
   });
+}
+
+// A page load always has its wait (`begin`); only a load is ever told.
+function waitOf(a: Active): { wait: NotReady["wait"] } {
+  if (a.wait === null)
+    throw new Error("latency-ledger: a page load without its user wait");
+  return { wait: { waitId: a.wait.id, startedAt: a.wait.startedAt } };
 }
 
 function clearTimers(a: Active): void {
@@ -155,6 +184,7 @@ function armReady(a: Active): void {
         budgetMs: budget,
         waitingFor: pendingMountSnapshot().pendingKeys,
         done: false,
+        ...waitOf(a),
       });
     },
     // Rounded up: a timer may fire up to ~1 ms early against
@@ -214,6 +244,10 @@ function begin(kind: Interaction["kind"], startMs: number): void {
     readyTimer: null,
     told: false,
     budgetMs: kind === "page-load" && ready !== null ? ready.budgetMs() : null,
+    wait:
+      kind === "page-load"
+        ? beginUserWait("page-load", perfToEpoch(asPerfMs(startMs)))
+        : null,
   };
   active = a;
   armReady(a);
@@ -262,6 +296,7 @@ export function startInteractionTracking(
     window.removeEventListener("popstate", onNavigate);
     if (active !== null) {
       clearTimers(active);
+      active.wait?.cancel();
       active = null;
     }
     report = null;

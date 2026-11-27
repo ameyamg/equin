@@ -8,6 +8,8 @@ import {
   startInteractionTracking,
   type NotReady,
 } from "../internal/interaction-tracker";
+import { userWaitDuring } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+import { __resetUserWaits } from "@plugins/debug/plugins/slow-ops/plugins/sink/core/testing";
 
 let pending = 1;
 vi.mock(
@@ -41,6 +43,7 @@ afterEach(() => {
   stop?.();
   stop = null;
   pending = 1;
+  __resetUserWaits();
 });
 
 describe("cutActiveInteraction", () => {
@@ -119,5 +122,21 @@ describe("ready budget", () => {
     expect(late).toHaveLength(1);
     expect(late[0]).toMatchObject({ done: true, budgetMs: 5000 });
     expect(late[0]!.elapsedMs).toBeGreaterThanOrEqual(6000);
+  });
+
+  it("a page load is a user wait: its report names it; a navigation opens none", () => {
+    fakeClock();
+    const late: NotReady[] = [];
+    stop = startInteractionTracking(() => {}, budget(5000, late));
+    const now = Date.now();
+    const wait = userWaitDuring(now, now + 1);
+    expect(wait?.kind).toBe("page-load");
+    vi.advanceTimersByTime(5001);
+    expect(late[0]?.wait.waitId).toBe(wait!.id);
+    // A navigation cuts the load short (its wait ends) and opens no wait.
+    window.dispatchEvent(new Event("shell:navigate"));
+    expect(
+      userWaitDuring(Date.now() + 1_000, Date.now() + 2_000),
+    ).toBeUndefined();
   });
 });

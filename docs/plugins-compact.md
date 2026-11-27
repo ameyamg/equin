@@ -104,7 +104,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-writes`** — Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares — drizzle tables with…
     - **`table-mirror`** [test helpers] [exempt] [2 sub-plugins] — Table mirror: pull a remote database's tables into local Postgres from a row-level change log (deltas plus tombstones, paged by an xid8 cursor), reconciling by key and row hash when deltas cannot be…
 
-- **`debug`** [exempt] [76 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [test helpers] [exempt] [76 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [exempt] [134 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 

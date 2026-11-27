@@ -1,8 +1,14 @@
+import {
+  asPerfMs,
+  perfToEpoch,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
+import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
 import { z } from "zod";
 import { getProfilingData } from "@plugins/framework/plugins/server-core/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { fileFinding } from "@plugins/debug/plugins/slow-ops/server";
 import { bootBudgetConfig } from "../../core";
 import { budgetForSpan, stepsUnder } from "./budget";
 
@@ -41,7 +47,11 @@ export const bootBudgetMonitorJob = defineJob({
     const cfg = getConfig(bootBudgetConfig);
     if (!cfg.enabled) return;
 
-    const { spans, memoryCheckpoints } = getProfilingData();
+    const { spans, memoryCheckpoints, bootStartOffsetMs } = getProfilingData();
+    // Span offsets (on the performance clock, from `bootStartOffsetMs`) → wall
+    // clock (epoch ms), through the clocks' offset now.
+    const wallOf = (offsetMs: number): number =>
+      perfToEpoch(asPerfMs(bootStartOffsetMs + offsetMs));
     // The authoritative phase-boundary RSS snapshots (per-span deltas overlap in
     // the parallel onReady phases and are only directional). Carried into the
     // report so the reader can tell heavy CPU work (RSS spikes) from IO wait
@@ -60,20 +70,40 @@ export const bootBudgetMonitorJob = defineJob({
       if (reported.has(span.id)) continue; // already filed this boot
       reported.add(span.id);
       const steps = stepsUnder(span, spans);
-      await recordReport({
-        kind: "boot-budget",
-        source: "server-boot-budget-monitor",
-        data: {
-          spanName: span.id,
-          phase: span.phase,
-          ...(span.plugin ? { plugin: span.plugin } : {}),
-          durationMs: span.durationMs,
-          budgetMs,
-          memoryCheckpoints: checkpoints,
-          ...(steps.length > 0 && { steps }),
+      const message = `${span.id} — ${span.durationMs}ms boot (${span.phase}, budget ${budgetMs}ms)`;
+      // A hook that ran while every tab replayed after this restart (onReady,
+      // onAllReady) is evidence of the tabs' "not live again" reports, not a
+      // report of its own; one before ready (onReadyBlocking: the predecessor
+      // still served every tab) or on a boot nobody replayed files as before.
+      // D26 step 3 — slow-ops' findings.ts. Not awaited: the judgement waits
+      // on the restart replay while it is unsettled (up to ~33 s), past this
+      // instant job's hold; a failure still rejects loudly.
+      void runInBackgroundLane(() =>
+        fileFinding(
+          {
+            source: "boot-budget",
+            what: message,
+            ms: span.durationMs,
+            startMs: wallOf(span.startMs),
+            endMs: wallOf(span.startMs + span.durationMs),
         },
-        message: `${span.id} — ${span.durationMs}ms boot (${span.phase}, budget ${budgetMs}ms)`,
-      });
+          () =>
+            recordReport({
+              kind: "boot-budget",
+              source: "server-boot-budget-monitor",
+              data: {
+                spanName: span.id,
+                phase: span.phase,
+                ...(span.plugin ? { plugin: span.plugin } : {}),
+                durationMs: span.durationMs,
+                budgetMs,
+                memoryCheckpoints: checkpoints,
+                ...(steps.length > 0 && { steps }),
+              },
+              message,
+            }),
+        ),
+      );
     }
   },
 });

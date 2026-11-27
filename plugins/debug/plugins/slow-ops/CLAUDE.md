@@ -81,6 +81,54 @@ and whose reconnect's replayed reads are still unanswered at the budget files
 one censored item per route pattern, `waitingFor` those reads (or the socket,
 still reconnecting). Design: `research/2026-11-27-debug-live-again-after-reconnect.md`.
 
+## A finding seen while a person waited is evidence, not a report
+
+Every per-op finding — this funnel's items, op-rate's boot-window trips,
+boot-budget's hooks — is judged first by one question
+(`server/internal/findings.ts`): **was an end-to-end measure pending while it
+happened?** Yes: it files no report of its own. It is recorded as before
+(row, marker, history) and held in this backend's findings book as evidence of
+that wait's end-to-end report (`page-load` / `live-again`), which lists them
+(`findings`: total and the 20 largest) and is restated as later ones arrive
+(op-rate judges every 5 min, boot-budget every minute; `restateReportOccurrence`
+— no new occurrence, no bell). A wait that ended inside its budget files
+nothing: nobody waited past it. No: background work nobody waited on, filed
+as before.
+
+- **The tab knows its own waits.** debug/latency-ledger opens a user wait
+  (`sink`'s `beginUserWait`) per page load and per recovery; the queue stamps
+  each item overlapping one with `during`, and the end-to-end item names its
+  wait in `measures`. An item overlapping a wait still open stays queued
+  until the wait ends (stamped) or is cancelled — the ledger excludes it
+  (hidden tab, machine sleep) — and then files on its own: a cancelled wait
+  holds nothing. An in-app navigation opens none (it has no
+  end-to-end alert to carry evidence), so a slow element there files as before.
+- **The server knows its restart.** From ready (the gateway swaps this backend
+  in; every tab's socket drops) to the replay settled (`whenReplaySettled`),
+  when any tab replayed, every tab is waiting to be live again: a server
+  finding overlapping it is that restart's evidence. One before ready (the
+  predecessor still serves: an `onReadyBlocking` hook delays the deploy, not a
+  tab), after it, or on a boot nobody replayed files as before. Background
+  work by its own kind — a `bg` pass, a `job` run, or an op one of them
+  issued — always files: nobody waits on it, whenever it ran. Until the
+  replay settles (≤ herd 3 s + ceiling 30 s) the judgement waits.
+- **Cost reports never ask**: op-time, op-rate's steady and hour windows,
+  live-state-noop — sustained or wasted work is reported whoever waited.
+- Steady-state server findings still file (the server cannot see a tab's page
+  load); an end-to-end report lists those inside its window too, with their
+  report ids.
+- The book is per backend and in memory (15 min, ≤ 2000): a predecessor's
+  findings are not attached to a report its successor receives.
+- A restart whose tabs were all live again inside the budget (or all hidden)
+  files nothing for its held findings: a slow `onReady` hook or a boot-window
+  op-rate loop that holds up no tab's recovery is no longer reported alone —
+  the D26 trade. A late restate lands in full on its row's newest occurrence
+  only (many tabs' reports of one route share a row), and never lowers the
+  count a report already names.
+
+`fileFinding` (server barrel) is the entry for a monitor outside this plugin.
+Design: `research/2026-11-27-debug-per-op-findings-as-evidence.md` (D26 step 3).
+
 An `element` item (`elementSlowOp`, `web/internal/element-slow-op.ts`) follows
 the same identity rule as the latency kinds below: `operation` is the resource
 key alone, and the tuple's `canonicalJson(params)` is its `detail.variant`, so a
@@ -434,14 +482,14 @@ bar).
     - `change-producer` "slow_ops"
     - `fork-data-exclusion` "slow_op_callers"
     - `fork-data-exclusion` "slow_ops"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×4
+    - `reports/engine` ×4
     - `infra/entities` ×3
     - `infra/host/machine-sleep` ×3
     - `config_v2` ×2
     - `infra/host/contention` ×2
     - `infra/host/duress/shed` ×2
-    - `reports/engine` ×2
     - `database/admin.ExcludeFromFork`
     - `database.db`
     - `debug/trace/client-boot.clientBootClass`
@@ -454,9 +502,13 @@ bar).
     - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
-  - Exports (types): `RecordSlowOpInput`
+  - Exports (types):
+    - `Finding`
+    - `FindingVerdict`
+    - `RecordSlowOpInput`
   - Exports (values):
     - `_slowOps`
+    - `fileFinding`
     - `readSlowOpMarkers`
     - `recordSlowOp`
     - `recordSlowOpBatch`
@@ -491,7 +543,9 @@ bar).
     - `primitives/pane.defineRoute`
     - `reports/main-thread-stall/tab-evidence.TabEvidenceSchema`
   - Exports (types):
+    - `FindingSource`
     - `MeasureStat`
+    - `ReportFinding`
     - `SlowOp`
     - `SlowOpCaller`
     - `SlowOpCallerListRow`
@@ -503,13 +557,16 @@ bar).
     - `VariantBreakdown`
   - Exports (values):
     - `CLIENT_SIGNAL_THRESHOLD`
+    - `FINDING_SOURCES`
     - `isLegacyBurstReport`
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
+    - `MAX_REPORT_FINDINGS`
     - `MAX_SLOW_OP_MARKERS`
     - `MAX_WAITING_FOR`
     - `MAX_WAITING_FOR_NAME`
     - `OTHER_VARIANT`
+    - `ReportFindingSchema`
     - `SAMPLE_HOLDERS_MAX`
     - `slowOpById`
     - `slowOpCallerFields`
@@ -533,9 +590,11 @@ bar).
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
   - Imported by:
+    - `debug/boot-budget`
     - `debug/boot-monitor`
     - `debug/health-monitor`
     - `debug/latency-ledger`
+    - `debug/op-rate`
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `debug/timeline`
@@ -549,6 +608,6 @@ bar).
 - Sub-plugins:
   - **`cluster`** [exempt] — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree cluster scan: every…
   - **`pane`** — Aggregates tab of the Slow Events pane: a live, paged ranking of slow operations, and the per-operation detail pane (callers, waits, variants, measures, recent samples).
-  - **`sink`** — The public channel into the client slow-op queue: clientSlowOpSink (an observation sink a producer outside slow-ops emits a fully-formed slow op into; the slow-ops collector forwards it) and…
+  - **`sink`** [test helpers] — The public channel into the client slow-op queue: clientSlowOpSink (an observation sink a producer outside slow-ops emits a fully-formed slow op into; the slow-ops collector forwards it) and…
 
 <!-- AUTOGENERATED:END -->

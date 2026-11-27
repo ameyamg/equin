@@ -36,6 +36,16 @@ span here too filed every slow warm-up twice
 stays, as the boot Gantt's bar. Reports filed before carry `budgetSource` and
 still render.
 
+**A hook that ran while the tabs replayed is evidence, not a report**
+(slow-ops' `fileFinding`): an `onReady` / `onAllReady` span overlapping this
+restart's replay (ready → replay settled, when any tab replayed) is listed on
+the tabs' `live-again` reports instead. An `onReadyBlocking` hook (before
+ready: the predecessor still serves every tab) and any hook on a boot nobody
+replayed file as before (D26 step 3,
+`research/2026-11-27-debug-per-op-findings-as-evidence.md`). The judgement is
+not awaited by the job: it waits for the replay to settle (up to ~33 s), past
+this instant job's hold.
+
 ## Dedup — why a per-process "already reported" Set
 
 Boot happens **once per process**, so the profile is static after boot and the
@@ -108,6 +118,7 @@ half-building a loop sampler. See the plan's "Enforcement / visibility" section.
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `debug/slow-ops.fileFinding`
     - `infra/jobs.defineJob`
     - `reports.ReportKind`
     - `reports/engine.recordReport`

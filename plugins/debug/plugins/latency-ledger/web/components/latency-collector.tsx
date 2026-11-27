@@ -125,6 +125,8 @@ function fileNotReady(info: NotReady): void {
       .slice(0, MAX_WAITING_FOR)
       .map((k) => k.slice(0, MAX_WAITING_FOR_NAME)),
     clientBoot: toClientBootSection(getBootTrace()),
+    // The wait it measures: its report carries the per-op findings held in it.
+    measures: info.wait,
   });
 }
 
@@ -152,5 +154,6 @@ function fileNotLiveAgain(info: NotLiveAgain): void {
           MAX_WAITING_FOR_NAME,
         ),
       ),
+    measures: info.wait,
   });
 }

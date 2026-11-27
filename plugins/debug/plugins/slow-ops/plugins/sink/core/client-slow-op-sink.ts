@@ -31,6 +31,12 @@ import type { CallerRef } from "./caller-ref";
  * `clientBoot` is the browser's boot decomposition (perfs/boot-trace,
  * trimmed by `toClientBootSection`), for an op that is the page's own load:
  * the trace's client-boot lane.
+ *
+ * `measures` marks an END-TO-END item (a page not ready, a tab not live
+ * again): the user wait it measures (`beginUserWait`'s id) and when that wait
+ * began (wall clock). Its report carries, as evidence, the per-op findings
+ * held during that wait — the items the queue stamped with its id and the
+ * server's findings inside its window — instead of each filing alone.
  */
 export interface ClientSlowOpSignal {
   operationKind: string;
@@ -45,6 +51,7 @@ export interface ClientSlowOpSignal {
   evidence?: TabEvidence;
   waitingFor?: string[];
   clientBoot?: ClientBootSection;
+  measures?: { waitId: string; startedAt: number };
 }
 
 /**

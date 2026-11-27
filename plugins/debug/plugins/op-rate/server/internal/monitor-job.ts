@@ -12,6 +12,7 @@ import { db } from "@plugins/database/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { fileFinding } from "@plugins/debug/plugins/slow-ops/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { opRateConfig, type OpRateRegime, type OpRateSpan } from "../../core";
@@ -281,23 +282,41 @@ export const opRateMonitorJob = defineJob({
 
     for (const h of top) {
       if (h.type === "op-rate") {
-        await recordReport({
-          kind: "op-rate",
-          source: "server-op-rate-monitor",
-          data: {
-            kind: h.kind,
-            label: h.label,
-            callsInWindow: h.delta,
-            windowMs: h.windowMs,
-            threshold: h.threshold,
-            ...(h.baseline && { baseline: h.baseline }),
-          },
-          message: h.baseline
-            ? h.baseline.over === "hour"
-              ? `${h.kind} ${h.label} — ${h.delta} calls so far this hour, usually ≤${h.baseline.usualCalls} in an hour (threshold ${h.threshold})`
-              : `${h.kind} ${h.label} — ${h.delta} calls/window, usually ≤${h.baseline.usualCalls} in a ${h.baseline.over} window (threshold ${h.threshold})`
-            : `${h.kind} ${h.label} — ${h.delta} calls/window (warm-up threshold ${h.threshold})`,
-        });
+        const message = h.baseline
+          ? h.baseline.over === "hour"
+            ? `${h.kind} ${h.label} — ${h.delta} calls so far this hour, usually ≤${h.baseline.usualCalls} in an hour (threshold ${h.threshold})`
+            : `${h.kind} ${h.label} — ${h.delta} calls/window, usually ≤${h.baseline.usualCalls} in a ${h.baseline.over} window (threshold ${h.threshold})`
+          : `${h.kind} ${h.label} — ${h.delta} calls/window (warm-up threshold ${h.threshold})`;
+        const file = () =>
+          recordReport({
+            kind: "op-rate",
+            source: "server-op-rate-monitor",
+            data: {
+              kind: h.kind,
+              label: h.label,
+              callsInWindow: h.delta,
+              windowMs: h.windowMs,
+              threshold: h.threshold,
+              ...(h.baseline && { baseline: h.baseline }),
+            },
+            message,
+          });
+        // The boot window (process start → this tick) holds the restart's
+        // replay: an op hammered there while the tabs replayed is evidence of
+        // their "not live again" reports, not a report of its own (D26 step
+        // 3 — slow-ops' findings.ts); a boot nobody replayed files as before.
+        // Steady and hour trips are wasted-work COST — they file whoever waited.
+        if (h.baseline?.over === "boot")
+          await fileFinding(
+            {
+              source: "op-rate",
+              what: message,
+              startMs: performance.timeOrigin,
+              endMs: atWallMs,
+            },
+            file,
+          );
+        else await file();
       } else if (h.type === "gate-wait") {
         // The gate's congestion, filed against the gate: who held it right now
         // (its gauge's holders) and the flight window as evidence. Its waiters
