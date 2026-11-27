@@ -35,6 +35,7 @@ import {
 import { TransportProvider } from "@plugins/primitives/plugins/networking/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { yieldToMain } from "@plugins/primitives/plugins/perfs/plugins/scheduler/web";
+import { holdBackgroundLoads } from "@plugins/primitives/plugins/networking/plugins/background-loads/core";
 import {
   startBootSpan,
   markBootInstant,
@@ -371,6 +372,19 @@ type BootState =
     };
 
 /**
+ * The boot is the download the visitor is waiting on: until the first app
+ * frame has committed, a background load (an idle code preload — a page not
+ * shown, the text editor —, a video's metadata) waits instead of sharing the
+ * link with it. "Idle" is no signal for that: the main thread is idle exactly
+ * while the boot's own modules are still downloading, so on a slow link every
+ * idle preload started there and landed before the first paint (equin.ai on a
+ * phone: ~80 more files, ~870 KB, report-1795765021-3jqcwb). Taken when this
+ * module evaluates — before any plugin defines a lazy component — and released
+ * once by the first app commit, or by a boot that crashed (nothing will commit).
+ */
+const releaseBootHold = holdBackgroundLoads();
+
+/**
  * The page root: everything below resolves the page's own server through
  * `useTransport()` — the context has no default, so this is the one place the
  * page's transport is mounted (a demo scope points its subtree elsewhere).
@@ -420,7 +434,9 @@ function PageApp() {
   });
   const ready = state.phase === "ready";
   useEffect(() => {
-    if (ready) appCommitted.resolve();
+    if (!ready) return;
+    appCommitted.resolve();
+    releaseBootHold();
   }, [ready, appCommitted]);
 
   // The two content milestones, stamped by the commits they name (a layout
@@ -651,6 +667,7 @@ function PageApp() {
       // After the first render the app is on screen and its own crash
       // collector reports an unhandled rejection: leave it to that.
       if (rendered) throw err;
+      releaseBootHold();
       reportBootCrash(err);
       if (!cancelled) {
         setState({

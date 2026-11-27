@@ -59906,6 +59906,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `framework/browser-server/demo/scope`
+              - `framework/web-core`
               - `media/player`
               - `primitives/lazy-component`
           - Core:

@@ -5,7 +5,8 @@
 // is now waiting on.
 //
 // A hold says "the visitor asked for this download and is watching it come
-// in" (the live demo's Enter: ~10 MB they wait for). While any hold is taken,
+// in" (the live demo's Enter: ~10 MB they wait for; the page's own boot, held
+// by web-core until the first app frame has committed). While any hold is taken,
 // a background load that has not started yet waits; once the last is
 // released, every waiting one starts. A load already in flight is never
 // recalled — the browser offers no way to cancel a module fetch — so the
