@@ -46,7 +46,6 @@ import {
   drawnBox,
   initialZoom,
   visibleBox,
-  wholeFit,
   zoomReducer,
   type Box,
   type ZoomAction,
@@ -64,8 +63,8 @@ export interface CompareZoom {
 }
 
 /**
- * A zoom over two sides of `natural` pixel size, starting fitted to the width
- * (top first). The size is read once: a host comparing another pair keys the
+ * A zoom over two sides of `natural` pixel size, starting with the whole
+ * picture in view. The size is read once: a host comparing another pair keys the
  * component holding this hook by it, so the new pair starts fresh.
  */
 export function useCompareZoom(natural: Size): CompareZoom {
@@ -79,10 +78,7 @@ export function useCompareZoom(natural: Size): CompareZoom {
 const HANDLE_HIT_PX = 14;
 
 /** The zoom a key asks for, or null when the key is not one the zoom answers. */
-function keyedZoom(
-  e: KeyboardEvent<HTMLElement>,
-  state: ZoomState,
-): ZoomAction | null {
+function keyedZoom(e: KeyboardEvent<HTMLElement>): ZoomAction | null {
   // ⌘ / Ctrl / Alt stay the browser's (⌘+ is page zoom).
   if (e.metaKey || e.ctrlKey || e.altKey) return null;
   switch (e.key) {
@@ -93,9 +89,7 @@ function keyedZoom(
     case "_":
       return { type: "step", dir: -1 };
     case "0":
-      return state.viewport === null
-        ? null
-        : { type: "fit", fit: wholeFit(state.natural, state.viewport) };
+      return { type: "fit", fit: "whole" };
     case "1":
       return { type: "actual-size" };
     case "w":
@@ -398,7 +392,7 @@ function SwipeFrame({
       onDoubleClick={() => setAt(0.5)}
       onKeyDown={(e) => {
         const next = keyedAt(e.key, e.shiftKey, at);
-        const zoomTo = next === null ? keyedZoom(e, zoom.state) : null;
+        const zoomTo = next === null ? keyedZoom(e) : null;
         if (next === null && zoomTo === null) return;
         e.preventDefault();
         e.stopPropagation();
@@ -502,7 +496,7 @@ function FlipFrame({
           flip();
           return;
         }
-        const zoomTo = keyedZoom(e, zoom.state);
+        const zoomTo = keyedZoom(e);
         if (zoomTo === null) return;
         e.preventDefault();
         e.stopPropagation();
@@ -549,7 +543,7 @@ function PanFrame({
       onPointerUp={() => pan.end()}
       onPointerCancel={() => pan.end()}
       onKeyDown={(e) => {
-        const zoomTo = keyedZoom(e, zoom.state);
+        const zoomTo = keyedZoom(e);
         if (zoomTo === null) return;
         e.preventDefault();
         e.stopPropagation();

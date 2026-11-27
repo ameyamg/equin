@@ -5,7 +5,6 @@ import {
   initialZoom,
   isAtFit,
   visibleBox,
-  wholeFit,
   zoomReducer,
   type ZoomAction,
   type ZoomState,
@@ -18,10 +17,24 @@ function run(state: ZoomState, ...actions: ZoomAction[]): ZoomState {
   return actions.reduce(zoomReducer, state);
 }
 
-const measured = run(initialZoom(TALL), { type: "measure", viewport: PANE });
+const whole = run(initialZoom(TALL), { type: "measure", viewport: PANE });
+const measured = run(whole, { type: "fit", fit: "width" });
 
 describe("zoom model", () => {
-  it("starts fitted to the width, top first", () => {
+  it("starts with the whole picture, centred", () => {
+    expect(whole.view.scale).toBeCloseTo(0.2);
+    expect(whole.fit).toBe("whole");
+    expect(isAtFit(whole, "whole")).toBe(true);
+    expect(canPan(whole)).toBe(false);
+    expect(visibleBox(whole)).toEqual({
+      left: 210,
+      top: 0,
+      width: 280,
+      height: 800,
+    });
+  });
+
+  it("fit width reads a tall picture from its top", () => {
     expect(measured.view).toEqual({ scale: 0.5, x: 0, y: 0 });
     expect(isAtFit(measured, "width")).toBe(true);
     expect(canPan(measured)).toBe(true);
@@ -43,7 +56,7 @@ describe("zoom model", () => {
       width: 280,
       height: 800,
     });
-    expect(wholeFit(TALL, PANE)).toBe("height");
+    expect(isAtFit(s, "whole")).toBe(true);
   });
 
   it("never zooms out past the whole picture", () => {
@@ -78,6 +91,12 @@ describe("zoom model", () => {
       viewport: { width: 1400, height: 800 },
     });
     expect(s.view).toEqual({ scale: 1, x: 0, y: -800 });
+  });
+
+  it("whole fits the axis that runs out of room first", () => {
+    expect(fitAxisScale("whole", { width: 4000, height: 1000 }, PANE)).toBe(
+      700 / 4000,
+    );
   });
 
   it("fit width may enlarge a small picture", () => {

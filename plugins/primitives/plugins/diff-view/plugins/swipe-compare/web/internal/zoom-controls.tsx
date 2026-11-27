@@ -14,6 +14,7 @@ import { canZoomIn, canZoomOut, isAtFit } from "./zoom-model";
 
 const addIcon = symbol("add");
 const removeIcon = symbol("remove");
+const fitScreenIcon = symbol("fit-screen");
 const fitWidthIcon = symbol("fit-page-width");
 const fitHeightIcon = symbol("fit-page-height");
 
@@ -26,9 +27,10 @@ function withKey(label: string, key: string): ReactNode {
 }
 
 /**
- * `− 62% + | Fit width · Fit height · 1:1` — the image viewer's zoom group,
- * for a zoomable comparison: the same steps, readout and actual size, with fit
- * split by axis (a tall page reads at its width, a wide one at its height).
+ * `− 62% + | Fit · Fit width · Fit height · 1:1` — the image viewer's zoom
+ * group, for a zoomable comparison: the same steps, readout, whole-picture fit
+ * and actual size, plus a fit per axis (a tall page reads at its width, a wide
+ * one at its height).
  * The pressed button says which fit the view is at.
  */
 export function CompareZoomControls({
@@ -59,6 +61,14 @@ export function CompareZoomControls({
         onClick={() => dispatch({ type: "step", dir: 1 })}
       />
       <Separator orientation="vertical" className="h-4" />
+      <IconButton
+        icon={fitScreenIcon}
+        label="Fit"
+        tooltip={withKey("Fit to screen", "0")}
+        aria-pressed={isAtFit(state, "whole")}
+        className="aria-pressed:bg-hover-fill"
+        onClick={() => dispatch({ type: "fit", fit: "whole" })}
+      />
       <IconButton
         icon={fitWidthIcon}
         label="Fit width"

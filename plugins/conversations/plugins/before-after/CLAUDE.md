@@ -45,8 +45,8 @@ recording a registration (the website demo's seed) reads as the tool's.
   its error in the body (`ToolOutput`).
 - **Pane** — `beforeAfterPane` (`before-after/:pair`, agent manager), exported
   for the chip. The pair large (`PairViewer`: Swipe / Side by side / Flip)
-  — zoomable: `useCompareZoom` + `CompareZoomControls` (fit width at first,
-  fit height, 1:1, − / +, scroll to zoom, drag to pan; a new pair starts fresh)
+  — zoomable: `useCompareZoom` + `CompareZoomControls` (fit — the whole
+  picture — at first, fit width, fit height, 1:1, − / +, scroll to zoom, drag to pan; a new pair starts fresh)
   over the conversation's pairs as a gallery DataView in its `strip` layout
   (config `conversations.before-after.gallery`, oldest first, no band).
   Selecting rewrites `pair` in place (`useSetParams`). Full screen (header

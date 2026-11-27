@@ -22,10 +22,10 @@ import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 
 /**
  * One pair, large: a toolbar row — the mode switch (Swipe / Side by side /
- * Flip) on the left, the zoom controls (− % + · Fit width · Fit height · 1:1 —
- * scroll to zoom, drag to pan) on the right — the comparison filling the rest
- * of the box, fitted to its width at first (a full-page capture reads from its
- * top), and its caption under it (`route · W × H`). Above them, the title row
+ * Flip) on the left, the zoom controls (− % + · Fit · Fit width · Fit height ·
+ * 1:1 — scroll to zoom, drag to pan) on the right — the comparison filling the
+ * rest of the box, the whole picture in view at first (never reads as
+ * cropped), and its caption under it (`route · W × H`). Above them, the title row
  * when `titled` or `trailing` is given (full screen: the pane header carries
  * the title otherwise). The mode and the divider are the pane's
  * ({@link useCompareState}), so the pane's viewer and the full-screen one show

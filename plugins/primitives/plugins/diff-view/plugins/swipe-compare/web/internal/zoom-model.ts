@@ -22,8 +22,9 @@ import {
  * the same size, so the same transform shows the same part of each.
  */
 
-/** A fit the view follows when the viewport resizes. */
-export type ZoomFit = "width" | "height";
+/** A fit the view follows when the viewport resizes: the whole picture, or
+ *  one axis of it (a tall page reads at its width, a wide one at its height). */
+export type ZoomFit = "whole" | "width" | "height";
 
 export interface ZoomState {
   /** Both sides' pixel size. */
@@ -54,23 +55,28 @@ export function minScale(natural: Size, viewport: Size): number {
   return fitScale(natural, areaOf(viewport));
 }
 
-/** The scale that makes the picture exactly as wide (`width`) or tall
- *  (`height`) as the viewport, held between the whole-picture floor and the
- *  largest zoom — it may enlarge, unlike the floor. */
+/** The scale that makes the picture exactly as wide (`width`), as tall
+ *  (`height`), or as large as fits on both axes (`whole`) as the viewport, held
+ *  between the whole-picture floor and the largest zoom — it may enlarge, unlike
+ *  the floor. */
 export function fitAxisScale(
   fit: ZoomFit,
   natural: Size,
   viewport: Size,
 ): number {
+  const byWidth = viewport.width / natural.width;
+  const byHeight = viewport.height / natural.height;
   const exact =
     fit === "width"
-      ? viewport.width / natural.width
-      : viewport.height / natural.height;
+      ? byWidth
+      : fit === "height"
+        ? byHeight
+        : Math.min(byWidth, byHeight);
   return Math.min(MAX_SCALE, Math.max(minScale(natural, viewport), exact));
 }
 
-/** A fresh zoom: fitted to the width, top first — a tall page reads from its top. */
-export function initialZoom(natural: Size, fit: ZoomFit = "width"): ZoomState {
+/** A fresh zoom: the whole picture, so nothing reads as cropped at first. */
+export function initialZoom(natural: Size, fit: ZoomFit = "whole"): ZoomState {
   return { natural, viewport: null, view: { scale: 1, x: 0, y: 0 }, fit };
 }
 
@@ -241,12 +247,4 @@ export function canZoomOut(state: ZoomState): boolean {
 
 export function canZoomIn(state: ZoomState): boolean {
   return state.view.scale < MAX_SCALE - 1e-3;
-}
-
-/** The fit that shows the whole picture: whichever axis runs out of room first. */
-export function wholeFit(natural: Size, viewport: Size): ZoomFit {
-  return fitAxisScale("width", natural, viewport) <=
-    fitAxisScale("height", natural, viewport)
-    ? "width"
-    : "height";
 }

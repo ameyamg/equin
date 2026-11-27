@@ -44,13 +44,14 @@ sized the box (the canvas's `placeFrames`) passes none.
 `const zoom = useCompareZoom({ width, height })` (the sides' pixel size; key the
 holder by the pair so a new one starts fresh), `<SwipeCompare zoom={zoom}>`, and
 `<CompareZoomControls zoom={zoom} />` wherever the host draws its toolbar
-(`− 62% + | Fit width · Fit height · 1:1`). The geometry is the image viewer's
+(`− 62% + | Fit · Fit width · Fit height · 1:1`). The geometry is the image viewer's
 (`image-viewer/core`: fit floor, zoom ladder, pan clamp, wheel curve), in
 `web/internal/zoom-model.ts`; both sides share one view (side by side: each
 half is a viewport at the same view).
 
-- Starts at **fit width**, top first (a full-page capture reads from its top);
-  a resize re-applies the current fit, keeping the reader's place.
+- Starts at **fit** — the whole picture, centred — so a capture never reads
+  as cropped at first; fit width (top first) and fit height are a click away.
+  A resize re-applies the current fit, keeping the reader's place.
 - The **wheel** zooms around the pointer (a trackpad pinch faster); **drag**
   pans when the picture overflows. In swipe a press within 14px of the divider
   (or anywhere, when there is nothing to pan) moves the divider; a click off it
@@ -79,7 +80,7 @@ Exhibits: `swipe-compare/images` (swipe), `swipe-compare/side`,
 
 ## Plugin reference
 
-- Description: <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect, or zooms in it (useCompareZoom + CompareZoomControls: fit width / fit height / 1:1 / − + / wheel or pinch around the pointer, drag to pan — the image viewer's geometry, both sides at one view); chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
+- Description: <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect, or zooms in it (useCompareZoom + CompareZoomControls: fit (the whole picture, at first) / fit width / fit height / 1:1 / − + / wheel or pinch around the pointer, drag to pan — the image viewer's geometry, both sides at one view); chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
 - Web:
   - Uses:
     - `primitives/css/center.Center`

@@ -57013,7 +57013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/code-review`
           - `review/plugin-changes/file-changes`
       - Plugins:
-        - **`swipe-compare`** — <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect, or zooms in it (useCompareZoom + CompareZoomControls: fit width / fit height / 1:1 / − + / wheel or pinch around the pointer, drag to pan — the image viewer's geometry, both sides at one view); chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
+        - **`swipe-compare`** — <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect, or zooms in it (useCompareZoom + CompareZoomControls: fit (the whole picture, at first) / fit width / fit height / 1:1 / − + / wheel or pinch around the pointer, drag to pan — the image viewer's geometry, both sides at one view); chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
           - Web:
             - Uses:
               - `primitives/css/center.Center`

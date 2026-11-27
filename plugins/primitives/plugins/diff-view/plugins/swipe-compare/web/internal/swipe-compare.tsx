@@ -63,7 +63,7 @@ interface SwipeCompareBaseProps {
  *   fits its parent (each side's, side by side), centred; omitted, it fills
  *   its parent;
  * - `zoom` (from {@link useCompareZoom}): zoomable and pannable in its parent
- *   — fit width / fit height / 1:1 / steps / wheel, the controls
+ *   — fit / fit width / fit height / 1:1 / steps / wheel, the controls
  *   ({@link CompareZoomControls}) wherever the host puts them.
  */
 export type SwipeCompareProps = SwipeCompareBaseProps &
