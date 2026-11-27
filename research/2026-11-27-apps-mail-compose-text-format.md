@@ -92,11 +92,12 @@ backlinks, sub-pages and collaboration, and a draft has none of those. The
 string is the forest's canonical spelling, so nothing is lost.
 
 **Quoted original and signature stay outside the body**, as they already are
-(`r.quote`, `content.signature`). The editor shows them below the field,
-read-only, in the mode's look. So the body never needs `> ` quoting, and the one
-place where Pages' `> ` (toggle) would surprise someone doesn't come up. A quote
-the user writes is `<quote>`, which is rare in a new message. In Rich mode it is
-typed with Pages' own `| ` prefix.
+(`r.quote`, `content.signature`). The editor shows them below the field, in
+the mode's look. The quoted original is in the same dialect, as one `<quote>`
+(the mock lets it be edited; whether the build stores an edited quote is for its
+own task). In the text/plain part it becomes `> ` lines. A quote the user writes
+in the body is also `<quote>`. In Rich mode it is typed with Pages' own `| `
+prefix, because `> ` is Pages' toggle.
 
 ## 3. What's reused, what's missing
 
