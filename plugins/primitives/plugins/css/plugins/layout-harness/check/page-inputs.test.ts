@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { HARNESS_ROOT, PageInputError, pageInputs } from "./page-inputs";
+import { staticSpecifiers } from "./page-imports.scan";
+import { HARNESS_ROOT, PageInputError, pageInputsWith } from "./page-inputs";
 
 const H = HARNESS_ROOT;
 
@@ -7,10 +8,25 @@ function fakeRepo(files: Record<string, string>) {
   const paths = Object.keys(files).sort();
   return {
     has: (p: string) => p in files,
-    read: async (p: string) => files[p] ?? null,
+    blobOf: (p: string) => {
+      if (!(p in files)) throw new Error(`not in the set: ${p}`);
+      return `blob:${files[p]}`;
+    },
     under: (dir: string) => paths.filter((p) => p.startsWith(`${dir}/`)),
     glob: (_pattern: string) => paths.filter((p) => p.includes("/exhibits/")),
   };
+}
+
+/** The scan over `files`' text, with the files it was asked about. */
+function scanOf(files: Record<string, string>, asked: string[][] = []) {
+  return async (rels: readonly string[]) => {
+    asked.push([...rels]);
+    return rels.map((rel) => staticSpecifiers(files[rel]!, rel));
+  };
+}
+
+function pageInputs(files: Record<string, string>) {
+  return pageInputsWith(fakeRepo(files), scanOf(files));
 }
 
 const FILES: Record<string, string> = {
@@ -30,7 +46,7 @@ const FILES: Record<string, string> = {
 };
 
 test("the closure: static imports, stylesheets, exhibits barrels — not an app exhibit's load(), not the check's own imports", async () => {
-  const { files } = await pageInputs(fakeRepo(FILES));
+  const { files } = await pageInputs(FILES);
   expect(files).toEqual(
     [
       "bun.lock",
@@ -50,5 +66,18 @@ test("an import it cannot place fails the key", async () => {
     ...FILES,
     "plugins/primitives/plugins/css/plugins/text/web/internal/a.ts": `import "./gone"; export const a = 1;`,
   };
-  expect(pageInputs(fakeRepo(files))).rejects.toThrow(PageInputError);
+  expect(pageInputs(files)).rejects.toThrow(PageInputError);
+});
+
+test("each file is keyed by its blob; the check's own files and non-code files are not scanned", async () => {
+  const asked: string[][] = [];
+  const { files, blobs } = await pageInputsWith(
+    fakeRepo(FILES),
+    scanOf(FILES, asked),
+  );
+  expect(blobs).toEqual(files.map((f) => `blob:${FILES[f]}`));
+  const scanned = asked.flat();
+  expect(scanned).not.toContain(`${H}/check/index.ts`);
+  expect(scanned).not.toContain("bun.lock");
+  expect(new Set(scanned).size).toBe(scanned.length);
 });

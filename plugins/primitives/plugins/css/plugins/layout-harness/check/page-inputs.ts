@@ -1,8 +1,10 @@
-import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   resolveSpecifier,
   specifierPath,
 } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
+import { PAGE_IMPORTS_SCAN } from "./page-imports.scan";
 
 // What the geometry suite's verdict is a function of, read from the code
 // itself: the files the suite and the page it builds actually load.
@@ -33,7 +35,7 @@ import {
 // (`@import` / `@reference` / `@plugin` / `@config`, followed below) are keyed.
 // Packages are keyed by `bun.lock` (Vite, Tailwind, React, Playwright).
 //
-// Every read goes through the run's `RepoFiles`, so in an input-keyed check
+// Every fact goes through the run's `RepoSnapshot`, so in an input-keyed check
 // the read-set is exactly this closure: an edit outside it replays the cached
 // pass without running the check. That is why the walk is its own, not the
 // plugin-records module graph's: the graph grows every module's whole reach,
@@ -41,6 +43,15 @@ import {
 // in the read-set. Each specifier (script, asset or `@import`) is resolved by
 // the graph's own resolver (`plugin-records/specifier`), so the walk and the
 // graph cannot place one differently.
+//
+// The walk costs what changed, not the closure. A file is keyed by its blob id
+// (`blobOf`: the snapshot's own id, recorded as a content fact of the
+// read-set, no file call), and its imports are a file record keyed by that
+// blob (`page-imports.scan.ts`, read through `scanRepoFiles`): only a file no
+// pass has scanned yet is read — as the record store's shared work, not the
+// check's own. Reading every file's bytes on each run that missed its
+// read-set made the check's own body ~990 file calls, right at the
+// whole-tree bound (1001 on 2026-11-27, failing a push).
 
 export const HARNESS_ROOT =
   "plugins/primitives/plugins/css/plugins/layout-harness";
@@ -49,34 +60,15 @@ export const HARNESS_ROOT =
 const EXHIBITS_BARREL_RE =
   /^plugins\/[^/]+(?:\/plugins\/[^/]+)*\/exhibits\/index\.tsx?$/;
 
-const SCRIPT_RE = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs)$/;
-const CSS_RE = /\.css$/;
+const SCANNED_RE = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs|css)$/;
 const LOCKFILE = "bun.lock";
 const CHECK_DIR = `${HARNESS_ROOT}/check/`;
 
-/** One import a file makes: its specifier and whether it is a dynamic `import()`. */
-export interface ScannedImport {
-  path: string;
-  dynamic: boolean;
-}
+/** The static specifiers of each of `files` (`page-imports.scan.ts`'s answer), in order. */
+export type ScanSpecifiers = (files: readonly string[]) => Promise<string[][]>;
 
-/** The imports of a script module, type-only ones erased (Bun's transpiler — what the bundle loads). */
-export type ScanImports = (rel: string, src: string) => ScannedImport[];
-
-export function bunScanImports(rel: string, src: string): ScannedImport[] {
-  const loader = rel.endsWith(".tsx") || rel.endsWith(".jsx") ? "tsx" : "ts";
-  return new Bun.Transpiler({ loader })
-    .scanImports(src)
-    .map((i) => ({ path: i.path, dynamic: i.kind === "dynamic-import" }));
-}
-
-// `@import "x"`, `@import url("x")`, `@reference "x"`, `@plugin "x"`, `@config "x"`.
-const CSS_IMPORT_RE =
-  /@(?:import|reference|plugin|config)\s+(?:url\(\s*)?["']([^"']+)["']/g;
-
-function cssImports(src: string): string[] {
-  return [...src.matchAll(CSS_IMPORT_RE)].map((m) => m[1]!);
-}
+/** What the walk reads of the run's file set: paths, membership and blob ids — never bytes. */
+export type PageRepo = Pick<RepoSnapshot, "under" | "glob" | "has" | "blobOf">;
 
 /**
  * The repo file `specifier` (written in `rel`) names — or null for a package,
@@ -86,7 +78,7 @@ function cssImports(src: string): string[] {
 function repoTarget(
   rel: string,
   specifier: string,
-  repo: Pick<RepoFiles, "has">,
+  repo: Pick<RepoSnapshot, "has">,
 ): string | null {
   if (specifierPath(rel, specifier) === null) return null;
   const target = resolveSpecifier(rel, specifier, (p) => repo.has(p));
@@ -102,18 +94,26 @@ export class PageInputError extends Error {}
 export interface PageInputs {
   /** Every repo file the page and its suite load, sorted. */
   files: string[];
-  /** Their bytes, in `files` order. */
-  contents: string[];
+  /** Their blob ids, in `files` order. */
+  blobs: string[];
 }
 
 /**
- * The static import closure of the harness and every exhibits barrel, with each
- * file's bytes. Throws (`PageInputError`) on an import it cannot place: a key
- * that skipped it could not be invalidated by the code it names.
+ * The static import closure of the harness and every exhibits barrel, with
+ * each file's blob id, each file's imports read off its file record. Throws
+ * (`PageInputError`) on an import it cannot place: a key that skipped it
+ * could not be invalidated by the code it names.
  */
-export async function pageInputs(
-  repo: Pick<RepoFiles, "under" | "glob" | "read" | "has">,
-  scan: ScanImports = bunScanImports,
+export function pageInputs(repo: RepoSnapshot): Promise<PageInputs> {
+  return pageInputsWith(repo, (files) =>
+    scanRepoFiles(repo, files, PAGE_IMPORTS_SCAN),
+  );
+}
+
+/** {@link pageInputs} over any file set, its per-file specifiers from `scan`. */
+export async function pageInputsWith(
+  repo: PageRepo,
+  scan: ScanSpecifiers,
 ): Promise<PageInputs> {
   const seeds = [
     ...repo.under(HARNESS_ROOT),
@@ -122,53 +122,31 @@ export async function pageInputs(
       .filter((p) => EXHIBITS_BARREL_RE.test(p)),
     LOCKFILE,
   ];
-  const content = new Map<string, string>();
+  const blobs = new Map<string, string>();
   let frontier = [...new Set(seeds)];
   while (frontier.length > 0) {
-    const read = await Promise.all(
-      frontier.map(async (rel) => [rel, await repo.read(rel)] as const),
-    );
-    const next = new Set<string>();
-    for (const [rel, src] of read) {
-      if (src === null)
+    for (const rel of frontier) {
+      if (!repo.has(rel))
         throw new PageInputError(
           `${rel}: in the page's closure but not in the run's file set`,
         );
-      content.set(rel, src);
-      // The check's own code is keyed by its bytes; what it imports (spawn,
-      // host admission, the deps engine) runs the suite but shapes no geometry.
-      if (rel.startsWith(CHECK_DIR)) continue;
-      for (const target of importsOf(rel, src, scan, repo)) {
-        if (!content.has(target)) next.add(target);
-      }
+      blobs.set(rel, repo.blobOf(rel));
     }
-    for (const rel of frontier) next.delete(rel);
-    frontier = [...next].filter((rel) => !content.has(rel));
+    // The check's own code is keyed by its bytes; what it imports (spawn,
+    // host admission, the deps engine) runs the suite but shapes no geometry.
+    const scanned = frontier.filter(
+      (rel) => !rel.startsWith(CHECK_DIR) && SCANNED_RE.test(rel),
+    );
+    const specifiers = await scan(scanned);
+    const next = new Set<string>();
+    scanned.forEach((rel, i) => {
+      for (const spec of specifiers[i]!) {
+        const target = repoTarget(rel, spec, repo);
+        if (target !== null && !blobs.has(target)) next.add(target);
+      }
+    });
+    frontier = [...next];
   }
-  const files = [...content.keys()].sort();
-  return { files, contents: files.map((f) => content.get(f)!) };
-}
-
-function importsOf(
-  rel: string,
-  src: string,
-  scan: ScanImports,
-  repo: Pick<RepoFiles, "has">,
-): string[] {
-  const specifiers = CSS_RE.test(rel)
-    ? cssImports(src)
-    : !SCRIPT_RE.test(rel) || rel.endsWith(".d.ts")
-      ? []
-      : scan(rel, src)
-          // The registry's loaders are the exhibits barrels, already seeded;
-          // any other `import()` is code the measurer page never runs (see
-          // above).
-          .filter((i) => !i.dynamic)
-          .map((i) => i.path);
-  const out: string[] = [];
-  for (const spec of specifiers) {
-    const target = repoTarget(rel, spec, repo);
-    if (target !== null) out.push(target);
-  }
-  return out;
+  const files = [...blobs.keys()].sort();
+  return { files, blobs: files.map((f) => blobs.get(f)!) };
 }

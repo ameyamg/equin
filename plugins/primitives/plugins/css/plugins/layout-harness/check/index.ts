@@ -65,12 +65,14 @@ function sha256(s: string): string {
 
 async function computeSig(ctx: CheckContext): Promise<string> {
   const repo = await ctx.repo();
-  const { files, contents } = await pageInputs(repo);
+  // Each file by its blob id — the snapshot's content id, so the key moves
+  // exactly when the bytes do, and computing it reads no file.
+  const { files, blobs } = await pageInputs(repo);
   const h = createHash("sha256");
   for (let i = 0; i < files.length; i++) {
     h.update(files[i]!);
     h.update("\0");
-    h.update(contents[i]!);
+    h.update(blobs[i]!);
     h.update("\0");
   }
   return h.digest("hex");

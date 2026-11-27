@@ -197,8 +197,14 @@ through the catalog's generic `loadExhibits()`, filtered by `measurableExhibits(
 2. **the contributed check** (`check/index.ts`, id `layout-geometry`) — shells out
    to (1) only when what (1) loads changed. Its key is the **static import
    closure** of the harness plugin and every contributor's exhibits barrel
-   (`check/page-inputs.ts`), with `bun.lock` for the packages, every byte read
-   through `ctx.repo()`. Its own static-only walk (the plugin-records graph
+   (`check/page-inputs.ts`), with `bun.lock` for the packages, every file
+   keyed by its blob id through `ctx.repo()`. Each file's imports are a
+   per-blob file record (`check/page-imports.scan.ts`), so a run reads only
+   the files no pass has scanned yet, as the record store's shared work: the
+   body's own file calls are the marker probes and Chromium's readiness probe
+   (~15), not the ~1k-file closure, which used to put it at the 1,000-call
+   whole-tree bound (1,001 when the marker was absent and the readiness probe
+   ran, under it on the re-run once the marker existed). Its own static-only walk (the plugin-records graph
    would also walk every `import()`, putting the apps behind app exhibits in
    the read-set), each specifier resolved by the graph's own resolver
    (`plugin-records/specifier`). The check is `inputKeyed`, so that closure IS its
