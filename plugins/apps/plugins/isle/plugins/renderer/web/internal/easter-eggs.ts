@@ -15,39 +15,83 @@ const WOOD_CLEAR = 380;
 const WOOD_LINK = 140;
 /** The fewest trees a wood has; fewer, and the werewolf stays away tonight. */
 const WOOD_MIN = 6;
-/** The most trees its prowl threads through. */
+/** The fewest open spots its prowl goes through; fewer, and the wood is too thick to be seen in. */
+const SPOTS_MIN = 3;
+/** The most spots its prowl goes through. */
 const WOOD_PATH_MAX = 40;
+/** How far apart (px) two spots of its prowl may be. */
+const SPOT_LINK = 230;
+/** The most of its box the trees in front may cover for a spot to count as open. */
+const SPOT_COVER = 0.25;
+/** One step in this many, it slips behind its tree's trunk, out of sight a moment. */
+const TUCK_EVERY = 4;
+
+/** A tree as the werewolf's wood reads it: its foot and its drawn box. */
+export interface WoodTree {
+  readonly x: number;
+  readonly y: number;
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
 
 /**
- * The werewolf's wood: the biggest stand of trees ({@link WOOD_LINK} apart at
- * most) every tree of which is at least {@link WOOD_CLEAR} from every house
- * and square — its prowl, a chain through those trees (each the nearest one
- * not yet taken, from the tree farthest from any house), stepping just behind
- * each trunk so the crowns hide it. Null when the island has no such wood.
+ * The werewolf's wood: of the stands of trees (≤ {@link WOOD_LINK} apart)
+ * whose every tree is at least {@link WOOD_CLEAR} from every house and
+ * square, the one with the most open spots — a step just in front of one of
+ * its trees, on walkable ground, that the trees drawn in front of it cover at
+ * most {@link SPOT_COVER} of. Its prowl chains those spots (each the nearest
+ * one not yet taken, from the one farthest from any house), so it is seen
+ * among the trees, and slips behind a trunk one step in {@link TUCK_EVERY}.
+ * Null when the island has no such wood.
  */
 export function wolfWood(
-  trees: readonly Pt[],
+  trees: readonly WoodTree[],
   houses: readonly Pt[],
+  walkable: (x: number, y: number) => boolean,
 ): { readonly key: string; readonly path: readonly Pt[] } | null {
   const clear = (x: number, y: number) => {
     let d = Infinity;
     for (const [hx, hy] of houses) d = Math.min(d, Math.hypot(hx - x, hy - y));
     return d;
   };
-  const far = trees
-    .map(([x, y]) => ({ x, y, c: clear(x, y) }))
-    .filter((t) => t.c >= WOOD_CLEAR);
-  // stands of trees: connected within WOOD_LINK, found through a grid of WOOD_LINK cells
   const cell = (v: number) => Math.floor(v / WOOD_LINK);
-  const grid = new Map<string, number[]>();
-  far.forEach((t, i) => {
-    const k = `${cell(t.x)},${cell(t.y)}`;
-    const l = grid.get(k);
-    if (l) l.push(i);
-    else grid.set(k, [i]);
-  });
+  const bucket = <T extends { x: number; y: number }>(list: readonly T[]) => {
+    const g = new Map<string, number[]>();
+    list.forEach((t, i) => {
+      const k = `${cell(t.x)},${cell(t.y)}`;
+      const l = g.get(k);
+      if (l) l.push(i);
+      else g.set(k, [i]);
+    });
+    return g;
+  };
+  // how much of the werewolf's box, its feet at (x, y), the trees in front of it cover
+  const all = bucket(trees);
+  const [bx0, by0, bx1] = WOLF_BOX;
+  const boxArea = (bx1 - bx0) * -by0;
+  const cover = (x: number, y: number) => {
+    let c = 0;
+    for (let dx = -2; dx <= 2; dx++)
+      for (let dy = -1; dy <= 3; dy++)
+        for (const j of all.get(`${cell(x) + dx},${cell(y) + dy}`) ?? []) {
+          const o = trees[j]!;
+          if (o.y <= y) continue;
+          const w = Math.min(x + bx1, o.x1) - Math.max(x + bx0, o.x0);
+          const h = Math.min(y, o.y1) - Math.max(y + by0, o.y0);
+          if (w > 0 && h > 0) c += w * h;
+        }
+    return c / boxArea;
+  };
+  const far = trees
+    .map((t) => ({ t, c: clear(t.x, t.y) }))
+    .filter((f) => f.c >= WOOD_CLEAR)
+    .map((f) => ({ x: f.t.x, y: f.t.y, t: f.t, c: f.c }));
+  const grid = bucket(far);
   const seen = new Uint8Array(far.length);
-  let best: number[] = [];
+  type Spot = { x: number; y: number; c: number; tree: WoodTree };
+  let best: Spot[] = [];
   for (let s = 0; s < far.length; s++) {
     if (seen[s]) continue;
     seen[s] = 1;
@@ -65,10 +109,21 @@ export function wolfWood(
             stand.push(j);
           }
     }
-    if (stand.length > best.length) best = stand;
+    if (stand.length < WOOD_MIN) continue;
+    const spots: Spot[] = [];
+    for (const i of stand) {
+      const f = far[i]!;
+      // a step in front of the tree, a little to one side of its trunk
+      const x = f.x + ((Math.round(f.x) & 1) * 2 - 1) * 16;
+      const y = f.y + 22;
+      if (clear(x, y) < WOOD_CLEAR || !walkable(x, y)) continue;
+      if (cover(x, y) > SPOT_COVER) continue;
+      spots.push({ x, y, c: f.c, tree: f.t });
+    }
+    if (spots.length > best.length) best = spots;
   }
-  if (best.length < WOOD_MIN) return null;
-  const left = best.map((i) => far[i]!);
+  if (best.length < SPOTS_MIN) return null;
+  const left = [...best];
   let at = left.reduce((a, b) => (b.c > a.c ? b : a));
   const chain = [at];
   left.splice(left.indexOf(at), 1);
@@ -82,17 +137,21 @@ export function wolfWood(
         ni = i;
       }
     });
-    // the nearest tree left is across a clearing: the prowl ends here
-    if (nd > WOOD_LINK * 1.5) break;
+    // the nearest open spot left is across a clearing: the prowl ends here
+    if (nd > SPOT_LINK) break;
     at = left[ni]!;
     chain.push(at);
     left.splice(ni, 1);
   }
-  if (chain.length < 3) return null;
-  return {
-    key: `${chain[0]!.x},${chain[0]!.y}`,
-    path: chain.map((t) => [t.x, t.y - 8] as const),
-  };
+  if (chain.length < SPOTS_MIN) return null;
+  const path: Pt[] = [];
+  chain.forEach((p, i) => {
+    path.push([p.x, p.y]);
+    // now and then it slips behind its tree's trunk, and out again
+    if (i % TUCK_EVERY === TUCK_EVERY - 1 && i < chain.length - 1)
+      path.push([p.tree.x, p.tree.y - 8], [p.x, p.y]);
+  });
+  return { key: `${chain[0]!.x},${chain[0]!.y}`, path };
 }
 
 /** How near (px, y squashed ×1.4) the hero may come before the werewolf bolts. */

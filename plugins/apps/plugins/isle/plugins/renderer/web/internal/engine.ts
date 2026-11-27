@@ -1270,11 +1270,19 @@ export class IsleEngine {
     const trees = this.scene!.statics.filter((o) => o.tree);
     this.wolf.follow(
       wolfWood(
-        trees.map((o) => [(o.x0 + o.x1) / 2, o.y] as const),
+        trees.map((o) => ({
+          x: (o.x0 + o.x1) / 2,
+          y: o.y,
+          x0: o.x0,
+          y0: o.y0,
+          x1: o.x1,
+          y1: o.y1,
+        })),
         [
           ...this.buildings.flatMap((b) => [[b.x, b.y] as const, b.door]),
           ...layout.squares.map((q) => [q.x, q.y] as const),
         ],
+        (x, y) => this.walkableAt(x, y),
       ),
     );
     const rnd = this.rnd;
