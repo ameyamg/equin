@@ -6612,6 +6612,10 @@
       "name": "@equin/plugin-primitives-css-surface",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/surface-parts": {
+      "name": "@equin/plugin-primitives-css-surface-parts",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/switch": {
       "name": "@equin/plugin-primitives-css-switch",
       "version": "0.0.1",
@@ -11737,6 +11741,8 @@
     "@equin/plugin-primitives-css-sticky-stack": ["@equin/plugin-primitives-css-sticky-stack@workspace:plugins/primitives/plugins/css/plugins/sticky/plugins/stack"],
 
     "@equin/plugin-primitives-css-surface": ["@equin/plugin-primitives-css-surface@workspace:plugins/primitives/plugins/css/plugins/surface"],
+
+    "@equin/plugin-primitives-css-surface-parts": ["@equin/plugin-primitives-css-surface-parts@workspace:plugins/primitives/plugins/css/plugins/surface-parts"],
 
     "@equin/plugin-primitives-css-switch": ["@equin/plugin-primitives-css-switch@workspace:plugins/primitives/plugins/css/plugins/switch"],
 

@@ -1,0 +1,180 @@
+/* Surface lines — the mechanism behind surface parts
+   (research/2026-11-27-global-surface-parts.md).
+
+   A region of a surface is a grid whose column lines are NAMED:
+
+     edge   the region's box edge
+     fill   where a row's hover / selected fill starts
+     text   where text and ordinary content start
+
+   A part sits on a line. Nothing pads inline and nothing has a negative
+   margin, so there is nothing to cancel and nothing to pay twice. The two
+   distances are the surface's skin (tokens): `--part-fill` (edge → fill) and
+   `--part-row-pad` (fill → text). */
+
+.part-lines {
+  display: grid;
+  grid-template-columns:
+    [edge-start] var(--part-fill, var(--space-xs))
+    [fill-start] var(--part-row-pad, var(--pad-row-x))
+    [text-start] minmax(0, 1fr) [text-end]
+    var(--part-row-pad, var(--pad-row-x)) [fill-end]
+    var(--part-fill, var(--space-xs)) [edge-end];
+  grid-auto-rows: max-content;
+  align-content: start;
+}
+
+/* A relay hands the lines of the grid it sits in to its own children
+   (subgrid): a Section, a Rows group. Nesting relays adds nothing — the
+   tracks belong to the region alone. */
+.part-relay {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-auto-rows: max-content;
+}
+
+/* Where a child lands. Unknown content — a bare input, a paragraph — lands on
+   `text` by doing nothing. */
+.part-lines > *,
+.part-relay > * {
+  grid-column: text;
+  min-width: 0;
+}
+.part-lines > .part-relay,
+.part-relay > .part-relay,
+.part-lines > .part-at-edge,
+.part-relay > .part-at-edge {
+  grid-column: edge;
+}
+.part-lines > .part-at-fill,
+.part-relay > .part-at-fill {
+  grid-column: fill;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────────── */
+
+.part-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.part-panel-band {
+  flex: none;
+  padding-block: var(--space-sm);
+}
+.part-panel-band[data-rule="bottom"] {
+  border-bottom: 1px solid var(--border);
+}
+.part-panel-band[data-rule="top"] {
+  border-top: 1px solid var(--border);
+}
+/* The search strip owns its room: a drawn field keeps `sm` from the edge
+   whatever the rows' fill inset is. */
+.part-panel-search {
+  flex: none;
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--border);
+}
+/* The body scrolls on BOTH axes on purpose (a base-ui ScrollArea viewport
+   does): an edge-placed part is a track span, never a negative margin, so
+   it cannot create sideways scroll. */
+.part-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-block: var(--part-fill, var(--space-xs));
+}
+
+/* ── Content parts ─────────────────────────────────────────────────── */
+
+.part-section-head {
+  padding-block: var(--space-xs);
+  color: var(--muted-foreground);
+}
+
+.part-row {
+  align-items: center;
+  min-height: var(--part-row-h, 1.75rem);
+  padding-block: var(--pad-row-y);
+  border-radius: var(--radius-md);
+  text-align: start;
+  cursor: default;
+}
+.part-row:hover,
+.part-row:focus-visible {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  outline: none;
+}
+
+.part-rule {
+  height: 0;
+  margin-block: var(--space-xs);
+  border-top: 1px solid var(--border);
+}
+
+/* One line that scrolls sideways edge to edge; its content starts on `text`. */
+.part-strip {
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-block: var(--space-xs);
+  padding-inline: calc(
+    var(--part-fill, var(--space-xs)) + var(--part-row-pad, var(--pad-row-x))
+  );
+}
+.part-strip > * {
+  flex: none;
+}
+
+.part-state {
+  padding-block: var(--space-sm);
+  color: var(--muted-foreground);
+}
+
+/* Loose text: a bare string child of a region, boxed by the part so it is an
+   element the placement rules above can see (an anonymous grid item cannot be
+   selected, and would auto-place into the first track). */
+.part-loose {
+  display: block;
+}
+
+/* ── The other mechanism, for comparison ───────────────────────────────
+   research/2026-11-27-global-surface-parts.md, "Two mechanisms, measured".
+   Under `[data-part-mechanism="pad"]` the SAME parts are laid out the other
+   way: the region pads to `text`, and a part on `fill` / `edge` steps out by
+   the region's own distance (`--part-out-*`). Every box that pads or scrolls
+   without being a region must reset those distances (`part-reset`), so a part
+   can only ever step out of the region that declared them. */
+[data-part-mechanism="pad"] .part-lines {
+  --part-out-fill: var(--part-row-pad, var(--pad-row-x));
+  --part-out-edge: calc(
+    var(--part-fill, var(--space-xs)) + var(--part-row-pad, var(--pad-row-x))
+  );
+  display: flex;
+  flex-direction: column;
+  padding-inline: var(--part-out-edge);
+}
+[data-part-mechanism="pad"] .part-relay {
+  display: flex;
+  flex-direction: column;
+}
+[data-part-mechanism="pad"] .part-at-fill {
+  margin-inline: calc(-1 * var(--part-out-fill, 0px));
+  padding-inline: var(--part-out-fill, 0px);
+}
+[data-part-mechanism="pad"] .part-at-edge {
+  margin-inline: calc(-1 * var(--part-out-edge, 0px));
+}
+[data-part-mechanism="pad"] .part-strip {
+  padding-inline: var(--part-out-edge, 0px);
+}
+[data-part-mechanism="pad"] .part-row {
+  align-items: stretch;
+  justify-content: center;
+}
+.part-reset {
+  --part-out-fill: 0px;
+  --part-out-edge: 0px;
+}

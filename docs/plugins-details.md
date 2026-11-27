@@ -54139,9 +54139,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 149 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×47
-              - `primitives` ×22
+              - `primitives` ×23
               - `conversations` ×20
               - `debug` ×10
               - `tasks` ×9
@@ -54847,6 +54847,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/spend`
           - Exemptions:
             - Exempted by: `primitives/css/ui-kit` (0 debt)
+        - **`surface-parts`** — Experimental, no consumer yet (research/2026-11-27-global-surface-parts.md): surface parts on named lines. <Panel header search footer> is the body of a floating or docked surface whose regions are grids with three named column lines (edge, fill, text); its closed parts (Panel.Section, Row, Rule, Full, Strip, State) each sit on one line, take no className and no padding prop, and nest without adding an inset — no part pads inline and none has a negative margin.
+          - Web:
+            - Uses:
+              - `primitives/css/line.Line`
+              - `primitives/css/text.Text`
+            - Exports (types):
+              - `PanelFullProps`
+              - `PanelProps`
+              - `PanelRowProps`
+              - `PanelSectionProps`
+              - `PanelStateProps`
+              - `PanelStripProps`
+            - Exports (values): `Panel`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --accent`
+              - `ui/tokens/color-palette --accent-foreground`
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --pad-row-x`
+              - `ui/tokens/density --pad-row-y`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --space-xs`
         - **`switch`** — On/off switch primitive: SwitchIndicator is the presentational track+knob (a span with no role or handler, safe inside something that is already the click target), and Switch wraps it in its own role=switch button for standalone use.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -54909,10 +54932,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 454 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 455 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×116
               - `conversations` ×84
-              - `primitives` ×49
+              - `primitives` ×50
               - `debug` ×39
               - `page` ×25
               - `tasks` ×21
@@ -71453,10 +71476,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 574 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 575 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×129
               - `conversations` ×94
-              - `primitives` ×83
+              - `primitives` ×84
               - `debug` ×42
               - `page` ×33
               - `plugin-meta` ×27
@@ -71614,9 +71637,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 372 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 373 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×76
-              - `primitives` ×75
+              - `primitives` ×76
               - `conversations` ×50
               - `debug` ×29
               - `ui` ×28

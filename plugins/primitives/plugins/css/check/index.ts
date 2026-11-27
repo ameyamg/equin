@@ -81,6 +81,8 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   "color-picker": "a control, not a layout mechanic",
   "control-panel":
     "the vocabulary of ONE surface (a data-control panel's sections/rows/fields), not a general arrangement mechanic",
+  "surface-parts":
+    "the parts of ONE surface family (a panel's sections/rows/rules), experimental and without a consumer (research/2026-11-27-global-surface-parts.md) — not a general arrangement mechanic to advertise",
   "control-size": "a token standard (control heights) + its own lint rule",
   "grow-relay":
     "the grow-request handshake — who asks the row for its slack and who relays the ask — a contract BETWEEN boxes, not a box to reach for. The box you reach for is Fill (or growClass() when the content floor is wanted), both of which the message already names. Note `\\bGrow\\b` does not match inside `GrowRelay`, so the sibling `grow` plugin and this entry cannot collide.",
