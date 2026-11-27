@@ -13,7 +13,7 @@
 //   3. the pin pressed;
 //   4. after: the pin gone from the tile.
 //
-// The camera pushes in on the panel, goes through 2 → 4 on the tile (a drawn
+// The camera pushes in on the panel's apps, goes through 2 → 4 on the tile (a drawn
 // pointer and a click ring say where the hand is: a screenshot carries no
 // pointer), pulls back to the whole Mac, then
 // pushes in on the Dock, where shot 1's "equin Files" tooltip is lifted back
@@ -80,10 +80,8 @@ const BOUNDS: Rect = (() => {
 const BACKGROUND = "#0b0d12";
 
 /** What the camera frames, in the screen's CSS px (measured on the shots). */
-const PANEL: Rect = { x: 1132, y: 39, width: 358, height: 605 };
 const APPS: Rect = { x: 1140, y: 229, width: 342, height: 302 };
-/** Events' tile, and the pin on its corner, where shot 3 presses it. */
-const EVENTS_TILE: Vec2 = [1268, 345];
+/** The pin on Events' tile, where shot 3 presses it. */
 const PIN: Vec2 = [1283, 362];
 /** The Dock from its middle to its end, with shot 1's "equin Files" tooltip above its tile. */
 const DOCK: Rect = { x: 640, y: 984, width: 725, height: 132 };
@@ -105,21 +103,24 @@ const PUSH_IN: Easing = { bezier: [0.42, 0, 0.18, 1] };
 const PULL_OUT: Easing = { bezier: [0.4, 0, 0.25, 1] };
 const LOOP_FADE = 0.3;
 
-/** The film's beats, in seconds. */
+/**
+ * The film's beats, in seconds. The hand is a confident user's: one move
+ * straight to the pin and the click as it lands (the tile lights and its
+ * tooltip shows on the way in, shot 2); the only holds come after a result
+ * (the pin gone, the Dock's tooltip), long enough to read it.
+ */
 const T = {
-  pushPanel: [0.9, 1.9],
-  pointerIn: [1.6, 2.5],
-  hover: 2.5, // shot 2
-  pushApps: [2.6, 3.5],
-  toPin: [3.5, 3.95],
-  click: 4.2, // shot 3
-  after: 5.0, // shot 4
-  pointerOut: 6.0,
-  pullOut: [6.3, 7.1],
-  pushDock: [7.7, 8.6],
-  dockTooltip: 8.8, // shot 1's tooltip, over the Dock
-  pullBack: [10.2, 11.0],
-  end: 11.6,
+  pushApps: [0.9, 2.0],
+  pointer: [1.7, 2.6], // from the panel's edge straight to the pin
+  hover: 2.3, // shot 2, as the hand crosses into the tile
+  click: 2.6, // shot 3, on arrival
+  after: 3.0, // shot 4: the pin gone
+  pointerOut: 4.0,
+  pullOut: [4.2, 5.0],
+  pushDock: [5.3, 6.2],
+  dockTooltip: 6.3, // shot 1's tooltip, over the Dock
+  pullBack: [7.8, 8.6],
+  end: 9.2,
 } as const;
 
 const assetsDir = mkdtempSync(join(tmpdir(), `tip-${SLUG}-`));
@@ -175,14 +176,12 @@ function build(shots: string | undefined): Composition {
     };
   });
 
-  // The camera: whole Mac → panel → its apps → whole Mac → Dock → whole Mac.
+  // The camera: whole Mac → the panel's apps → whole Mac → Dock → whole Mac.
   const views: [readonly [number, number], CameraView, CameraView, Easing][] =
     [];
-  const panel = on(PANEL, 20, 1.4);
   const apps = on(APPS, 28, 1.45);
   const dock = on(DOCK, 20, 1.6);
-  views.push([T.pushPanel, REST, panel, PUSH_IN]);
-  views.push([T.pushApps, panel, apps, PUSH_IN]);
+  views.push([T.pushApps, REST, apps, PUSH_IN]);
   views.push([T.pullOut, apps, REST, PULL_OUT]);
   views.push([T.pushDock, REST, dock, PUSH_IN]);
   views.push([T.pullBack, dock, REST, PULL_OUT]);
@@ -194,8 +193,8 @@ function build(shots: string | undefined): Composition {
     zoom.push(...mv.zoom);
   }
 
-  // The pointer a screenshot does not carry: in, onto the tile, onto the
-  // pin, a press, and away.
+  // The pointer a screenshot does not carry: one move straight onto the
+  // pin, the press as it lands, and away once the result has been read.
   const pointer = html(
     `<svg width="17" height="25" viewBox="0 0 17 25" xmlns="http://www.w3.org/2000/svg"><path d="M1 1 L1 19.5 L5.6 15.3 L8.6 22.6 L11.6 21.3 L8.7 14.2 L14.8 14.2 Z" fill="#111" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
     17,
@@ -203,25 +202,21 @@ function build(shots: string | undefined): Composition {
     {
       id: "pointer",
       x: [
-        [T.pointerIn[0], 1090],
-        [T.pointerIn[1], EVENTS_TILE[0], "inOutCubic"],
-        [T.toPin[0], EVENTS_TILE[0]],
-        [T.toPin[1], PIN[0] - 2, "inOutCubic"],
+        [T.pointer[0], 1090],
+        [T.pointer[1], PIN[0] - 2, "inOutCubic"],
       ],
       y: [
-        [T.pointerIn[0], 610],
-        [T.pointerIn[1], EVENTS_TILE[1], "inOutCubic"],
-        [T.toPin[0], EVENTS_TILE[1]],
-        [T.toPin[1], PIN[1] - 2, "inOutCubic"],
+        [T.pointer[0], 610],
+        [T.pointer[1], PIN[1] - 2, "inOutCubic"],
       ],
       // The press, from the arrow's tip.
       origin: [1, 1],
       scale: [
-        [T.click - 0.08, 1],
-        [T.click, 0.86, "outQuad"],
-        [T.click + 0.16, 1, "outQuad"],
+        [T.click, 1],
+        [T.click + 0.07, 0.86, "outQuad"],
+        [T.click + 0.22, 1, "outQuad"],
       ],
-      opacity: fade(T.pointerIn[0], 0.25, T.pointerOut, 0.3),
+      opacity: fade(T.pointer[0], 0.2, T.pointerOut, 0.3),
       style: { filter: "drop-shadow(0 1px 1.5px rgba(0,0,0,.45))" },
     },
   );
@@ -266,7 +261,7 @@ function build(shots: string | undefined): Composition {
     },
     layers: [
       image("shot1"),
-      image("shot2", { opacity: fade(T.hover, 0.25) }),
+      image("shot2", { opacity: fade(T.hover, 0.2) }),
       image("shot3", { opacity: fade(T.click, 0.12) }),
       image("shot4", { opacity: fade(T.after, 0.3) }),
       clickRing,
