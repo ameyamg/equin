@@ -19,7 +19,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`home`** [6 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`isle`** [test helpers] [exempt] [8 sub-plugins] — Isle — the island launcher: every installed app is a building on an illustrated archipelago you walk around; new apps get a generated building and are placed append-only, districts fill, then new…
     - **`keyboard-party`** [exempt] [3 sub-plugins] — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
-    - **`mail`** [test helpers] [exempt] [8 sub-plugins] — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), the cache, the shell and the threads list.
+    - **`mail`** [test helpers] [exempt] [9 sub-plugins] — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), the cache, the shell and the threads list.
     - **`pages`** [exempt] [18 sub-plugins] — Notion-like pages app.
     - **`places`** [test helpers] [exempt] [10 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
     - **`plugin-studio`** [exempt] [28 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.

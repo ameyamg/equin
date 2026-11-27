@@ -155,6 +155,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `Isle.Building` ← `apps.file-explorer.isle-building`
     - `Isle.Building` ← `apps.home.isle-building`
     - `Isle.Building` ← `apps.keyboard-party.isle-building`
+    - `Isle.Building` ← `apps.mail.isle-building`
     - `Isle.Building` ← `apps.pages.isle-building`
     - `Isle.Building` ← `apps.places.isle-building`
     - `Isle.Building` ← `apps.plugin-studio.isle-building`
@@ -256,8 +257,8 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `waterButt`
     - `windowRect`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×21
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×22
 - Test helpers:
   - Core: `@plugins/apps/plugins/isle/plugins/buildings/core/testing`
     - `boxWithin` — Whether `inner` lies inside `outer`, give or take `tolerance` px on each side.

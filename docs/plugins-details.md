@@ -6674,6 +6674,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Isle.Building` ← `apps.file-explorer.isle-building`
               - `Isle.Building` ← `apps.home.isle-building`
               - `Isle.Building` ← `apps.keyboard-party.isle-building`
+              - `Isle.Building` ← `apps.mail.isle-building`
               - `Isle.Building` ← `apps.pages.isle-building`
               - `Isle.Building` ← `apps.places.isle-building`
               - `Isle.Building` ← `apps.plugin-studio.isle-building`
@@ -6775,8 +6776,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `waterButt`
               - `windowRect`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/apps/plugins/isle/plugins/buildings/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/buildings/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 22 plugins — full list in [`plugins/apps/plugins/isle/plugins/buildings/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/buildings/REFERENCE.md)
+              - `apps` ×22
           - Test helpers:
             - Core: `@plugins/apps/plugins/isle/plugins/buildings/core/testing`
               - `boxWithin` — Whether `inner` lies inside `outer`, give or take `tolerance` px on each side.
@@ -7465,6 +7466,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/threads`
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
+        - **`isle-building`** — Mail's building on Isle: a post office built as a giant cast-iron pillar box in faded post-office red (the app's colour only on its signal flag) — letters fly into its slot, the signal arm rises when one lands, a carrier pigeon comes and goes.
+          - Web:
+            - Contributes: `Isle.Building` "mail"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×22
+            - Exports (values): `pillarBox`
         - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one. Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
           - Web:
             - Slots: `MailProviderUi.Connect`
@@ -7768,6 +7777,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/mail/compose`
+              - `apps/mail/isle-building`
               - `apps/mail/reader`
               - `apps/mail/threads`
         - **`threads`** — Mail's index pane (/mail): one DataView over the live mail.threads window — rows are threads, newest first, grouped by received day, searched by the provider's own search (the query column) — whose views are the built-ins (Inbox, Sent, Drafts, Done, Spam, Trash: locked, copy-only, code-defined, the Inbox filter in one place for the boot preload), one per user label (a parent's includes its sub-labels) and the user's own saved views. The mail sidebar is the DataView's aside: the view name, one drag-reorderable list of views (Spam and Trash folded under More), + New view, and the label tree. The toolbar is the search box with Filter and Display inside it, and the view's rules as chips while it is the user's own or edited. A refused window renders by its code: not connected draws the provider's connect surface. Triage: each row's hover actions (Label, Delete, Done — Restore in the trash, Not spam in spam, Move to Inbox elsewhere), checkbox selection with a bottom selection bar (Done, Label, Mark as read, Delete / Restore), the reader's bar (the same, plus Mark as unread), a thread marked read when opened, undo toasts, and the keys j / k (next / previous thread), e (the primary action), # (delete) and / (search) — every op drawn at once on every view through the live row overlay and written through the cache. Labels: the shared tag picker over the account's labels (useMailLabelSource — create, nest, rename, recolour in the provider's palette, delete; no manual order or icons, which the provider has not) as the row, reader and selection bar's Label popover and as the sidebar's label tree, and the mailboxes field's options a tag forest (roles fixed) so the standard tags editor edits a thread's labels.

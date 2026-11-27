@@ -51,6 +51,7 @@ groups without counts), selected in `config/ui/theme-engine/@app/mail/theme.json
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/mail/compose`
+    - `apps/mail/isle-building`
     - `apps/mail/reader`
     - `apps/mail/threads`
 

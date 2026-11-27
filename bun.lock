@@ -834,6 +834,10 @@
       "name": "@equin/plugin-apps-mail-compose",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/isle-building": {
+      "name": "@equin/plugin-apps-mail-isle-building",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/mail/plugins/provider": {
       "name": "@equin/plugin-apps-mail-provider",
       "version": "0.0.1",
@@ -8991,6 +8995,8 @@
     "@equin/plugin-apps-mail-cache": ["@equin/plugin-apps-mail-cache@workspace:plugins/apps/plugins/mail/plugins/cache"],
 
     "@equin/plugin-apps-mail-compose": ["@equin/plugin-apps-mail-compose@workspace:plugins/apps/plugins/mail/plugins/compose"],
+
+    "@equin/plugin-apps-mail-isle-building": ["@equin/plugin-apps-mail-isle-building@workspace:plugins/apps/plugins/mail/plugins/isle-building"],
 
     "@equin/plugin-apps-mail-provider": ["@equin/plugin-apps-mail-provider@workspace:plugins/apps/plugins/mail/plugins/provider"],
 
