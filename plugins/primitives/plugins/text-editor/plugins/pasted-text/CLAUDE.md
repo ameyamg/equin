@@ -6,6 +6,11 @@ since both are a `TextEditor`. Design: prototype `proto-1795704843-weeth6`.
 
 - **Large** is 10+ lines or 1000+ characters (`isLargePaste`). Smaller pastes stay plain
   text, and a wrong guess is one click either way (Expand).
+- **Measured as drawn**: `isLargePaste` takes the editor's token families (the
+  slot's `extensions` prop) and counts each token as one character with none of
+  its newlines, so a selection carrying `<ui-context>` chips (~900 characters of
+  attributes each) pastes as chips, not as a block. The cut is
+  `token-extension`'s `tokenizedSegments`, the same one the editor materializes.
 - **The block** (`PastedTextBlock`) has a header `› <icon> Pasted log · N lines`
   (log / code / JSON / text, read off the body by `pastedTextKind`). It is folded to
   three faded lines and unfolds on click. While composing, the unfolded text is
@@ -47,7 +52,7 @@ since both are a `TextEditor`. Design: prototype `proto-1795704843-weeth6`.
   - Contributes:
     - `TextEditorSlots.Plugin` → `PastedTextPastePlugin`
     - `InlineTextWalkerSlot`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/inline-text` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/hover-reveal` ×2
@@ -62,11 +67,15 @@ since both are a `TextEditor`. Design: prototype `proto-1795704843-weeth6`.
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types): `PastedTextEditing`
   - Exports (values): `PastedTextBlock`
 - Core:
-  - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+  - Uses:
+    - `primitives/text-editor/token-extension.tokenizedSegments`
+    - `primitives/text-editor/token-extension.TokenScanExtension`
+    - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
   - Exports (types):
     - `PastedTextFields`
     - `PastedTextKind`

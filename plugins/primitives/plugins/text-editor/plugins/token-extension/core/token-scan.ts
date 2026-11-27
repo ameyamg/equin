@@ -143,3 +143,52 @@ export function hasToken(
   // Fresh, flagless RegExp per test — see the `/g` note on `matchTokens`.
   return extensions.some((ext) => new RegExp(ext.pattern.source).test(text));
 }
+
+/** One run of a raw text, as an editor would materialize it. */
+export type TokenizedSegment<E extends TokenScanExtension> =
+  { kind: "text"; text: string } | { kind: "token"; match: TokenMatch<E> };
+
+/**
+ * A whole raw text cut into its text runs and its tokens, in document order —
+ * the exact cut a line-by-line host materializes, stated once.
+ *
+ * A family that `spansLines` (a pasted block) is scanned over the WHOLE text
+ * first, so its token is one segment even though its text holds newlines;
+ * every other family is scanned per line, so its pattern keeps its one-line
+ * meaning. A text segment may hold newlines; a token's `start`/`end` index
+ * into its own line for a per-line family, into `text` for a spanning one —
+ * read `match.text`, not the offsets, to know what it covers.
+ */
+export function tokenizedSegments<
+  E extends TokenScanExtension & { readonly spansLines: boolean },
+>(text: string, extensions: readonly E[]): TokenizedSegment<E>[] {
+  const spanning = extensions.filter((e) => e.spansLines);
+  const perLine = extensions.filter((e) => !e.spansLines);
+  const out: TokenizedSegment<E>[] = [];
+  const pushText = (chunk: string) => {
+    if (!chunk) return;
+    const last = out.at(-1);
+    if (last?.kind === "text") last.text += chunk;
+    else out.push({ kind: "text", text: chunk });
+  };
+  const pushGap = (gap: string) => {
+    gap.split("\n").forEach((line, i) => {
+      if (i > 0) pushText("\n");
+      let lastIdx = 0;
+      for (const match of matchTokens(line, undefined, perLine)) {
+        pushText(line.slice(lastIdx, match.start));
+        out.push({ kind: "token", match });
+        lastIdx = match.end;
+      }
+      pushText(line.slice(lastIdx));
+    });
+  };
+  let lastIdx = 0;
+  for (const match of matchTokens(text, undefined, spanning)) {
+    pushGap(text.slice(lastIdx, match.start));
+    out.push({ kind: "token", match });
+    lastIdx = match.end;
+  }
+  pushGap(text.slice(lastIdx));
+  return out;
+}

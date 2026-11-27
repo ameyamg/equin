@@ -107,6 +107,7 @@ decides what may touch it: an id needs a gap, a `<ui-context …/>` tag does not
     - `primitives/text-editor/token-extension.matchTokens`
     - `primitives/text-editor/token-extension.TokenFields`
     - `primitives/text-editor/token-extension.TokenFieldValue`
+    - `primitives/text-editor/token-extension.tokenizedSegments`
   - Exports (values):
     - `defineInlineTokenNode`
     - `registerTokenBoundaries`

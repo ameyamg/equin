@@ -184,6 +184,7 @@ share is the entry model.
     - `page/editor`
     - `primitives/text-editor`
     - `primitives/text-editor/inline-chip`
+    - `primitives/text-editor/pasted-text`
     - `primitives/text-editor/token-extension/node`
 - Core:
   - Exports (types):
@@ -195,6 +196,7 @@ share is the entry model.
     - `SourcedRegistry`
     - `TokenFields`
     - `TokenFieldValue`
+    - `TokenizedSegment`
     - `TokenMatch`
     - `TokenScanExtension`
     - `UnbrandedInlineTokenNode`
@@ -205,6 +207,7 @@ share is the entry model.
     - `hasToken`
     - `matchTokens`
     - `tokenExtension`
+    - `tokenizedSegments`
 - Sub-plugins:
   - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the…
 

@@ -18,6 +18,11 @@
  * id-less form is left alone by that parser, which only takes an exact match.
  */
 
+import {
+  tokenizedSegments,
+  type TokenScanExtension,
+} from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+
 /** One block, anywhere in a text. Group 1 is the body as written (escaped). */
 export const PASTED_TEXT_RE =
   /<pasted_content>\n([\s\S]*?)\n<\/pasted_content>/;
@@ -56,12 +61,29 @@ export const LARGE_PASTE_CHARS = 1000;
  * Is this pasted text a block rather than text typed in place? Below both
  * bounds it lands as plain text; a wrong guess either way is one click (the
  * block's Expand).
+ *
+ * Measured as the editor would DRAW it, not as its bytes: every token of
+ * `extensions` (a `<ui-context>` chip is ~900 characters of attributes drawn as
+ * one pill) counts as one character and none of its newlines, so a selection
+ * holding a few chips pastes as chips, not as a block. Taking the editor's
+ * token set is what makes that hold for every token family, present and future.
  */
-export function isLargePaste(text: string): boolean {
+export function isLargePaste(
+  text: string,
+  extensions: readonly (TokenScanExtension & {
+    readonly spansLines: boolean;
+  })[],
+): boolean {
+  const drawn = tokenizedSegments(text, extensions)
+    .map((s) => (s.kind === "text" ? s.text : TOKEN_CHAR))
+    .join("");
   return (
-    text.length >= LARGE_PASTE_CHARS || lineCount(text) >= LARGE_PASTE_LINES
+    drawn.length >= LARGE_PASTE_CHARS || lineCount(drawn) >= LARGE_PASTE_LINES
   );
 }
+
+/** What a token weighs in {@link isLargePaste}: one character, like the pill it draws. */
+const TOKEN_CHAR = "\uFFFC";
 
 export function lineCount(text: string): number {
   let n = 1;

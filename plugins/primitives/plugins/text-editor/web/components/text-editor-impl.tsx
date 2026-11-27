@@ -152,7 +152,7 @@ export function TextEditor({
           extensions={extensions}
         />
       )}
-      <PluginSlot onError={onError} />
+      <PluginSlot onError={onError} extensions={extensions} />
       <DecoratorNavPlugin />
       <DecoratorBlockPlugin />
       <TokenPastePlugin extensions={extensions} />
@@ -341,10 +341,16 @@ function EditorShell({
   );
 }
 
-function PluginSlot({ onError }: { onError?: (msg: string) => void }) {
+function PluginSlot({
+  onError,
+  extensions,
+}: {
+  onError?: (msg: string) => void;
+  extensions: readonly NodeExtension[];
+}) {
   return (
     <TextEditorSlots.Plugin.Render>
-      {(item) => <item.component onError={onError} />}
+      {(item) => <item.component onError={onError} extensions={extensions} />}
     </TextEditorSlots.Plugin.Render>
   );
 }

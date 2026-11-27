@@ -8,6 +8,8 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import type { TextEditorPluginProps } from "@plugins/primitives/plugins/text-editor/web";
 import { isLargePaste } from "../../core";
 import { $createPastedTextNode } from "./pasted-text-node";
 
@@ -21,10 +23,14 @@ const LEXICAL_MIME = "application/x-lexical-editor";
  * - files (the attachment upload owns those, at the same priority),
  * - a copy out of an editor (its nodes, a block included, are rebuilt as they were),
  * - a paste inside an embedded input (a block's own textarea),
- * - text below the size bounds (`isLargePaste`).
+ * - text below the size bounds (`isLargePaste`), measured as drawn: its
+ *   tokens (a `<ui-context>` chip) count as one character each, so a
+ *   selection carrying chips falls through to `TokenPastePlugin` and pastes
+ *   as chips.
  */
-export function PastedTextPastePlugin() {
+export function PastedTextPastePlugin({ extensions }: TextEditorPluginProps) {
   const [editor] = useLexicalComposerContext();
+  const extensionsRef = useLatestRef(extensions);
   useEffect(
     () =>
       editor.registerCommand(
@@ -35,7 +41,7 @@ export function PastedTextPastePlugin() {
           if (!data || data.files.length > 0) return false;
           if (Array.from(data.types).includes(LEXICAL_MIME)) return false;
           const text = data.getData("text/plain").replace(/\r\n?/g, "\n");
-          if (!isLargePaste(text)) return false;
+          if (!isLargePaste(text, extensionsRef.current)) return false;
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) return false;
           event.preventDefault();
@@ -44,7 +50,7 @@ export function PastedTextPastePlugin() {
         },
         COMMAND_PRIORITY_NORMAL,
       ),
-    [editor],
+    [editor, extensionsRef],
   );
   return null;
 }

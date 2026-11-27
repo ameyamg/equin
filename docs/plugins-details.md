@@ -58914,8 +58914,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×35
+        - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×36
           - `apps` ×26
           - `page` ×6
           - `conversations` ×3
@@ -62490,7 +62490,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `TextEditorSlots.Plugin` → `PastedTextPastePlugin`
               - `InlineTextWalkerSlot`
-            - Uses: 22 symbols — full list in [`plugins/primitives/plugins/text-editor/plugins/pasted-text/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/pasted-text/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/primitives/plugins/text-editor/plugins/pasted-text/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/pasted-text/REFERENCE.md)
               - `primitives/inline-text` ×4
               - `primitives/css/ui-kit` ×3
               - `primitives/hover-reveal` ×2
@@ -62505,11 +62505,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useLatestRef`
               - `ui/icons.Icon`
             - Exports (types): `PastedTextEditing`
             - Exports (values): `PastedTextBlock`
           - Core:
-            - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+            - Uses:
+              - `primitives/text-editor/token-extension.tokenizedSegments`
+              - `primitives/text-editor/token-extension.TokenScanExtension`
+              - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
             - Exports (types):
               - `PastedTextFields`
               - `PastedTextKind`
@@ -62540,6 +62544,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor`
               - `primitives/text-editor`
               - `primitives/text-editor/inline-chip`
+              - `primitives/text-editor/pasted-text`
               - `primitives/text-editor/token-extension/node`
           - Core:
             - Exports (types):
@@ -62551,6 +62556,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SourcedRegistry`
               - `TokenFields`
               - `TokenFieldValue`
+              - `TokenizedSegment`
               - `TokenMatch`
               - `TokenScanExtension`
               - `UnbrandedInlineTokenNode`
@@ -62561,6 +62567,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hasToken`
               - `matchTokens`
               - `tokenExtension`
+              - `tokenizedSegments`
           - Plugins:
             - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the materialized nodes); TokenBoundaryPlugin, which puts a space between a token and whatever beside it would fuse with it once serialized (two id chips, a letter typed against a chip), so saved text reads back as the same tokens; and TokenFrame, the editing chrome every decorated token wears in an editable editor (selected as one object with a ring, never its characters; a hover-revealed × removes it).
               - Web:
@@ -62588,6 +62595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/text-editor/token-extension.matchTokens`
                   - `primitives/text-editor/token-extension.TokenFields`
                   - `primitives/text-editor/token-extension.TokenFieldValue`
+                  - `primitives/text-editor/token-extension.tokenizedSegments`
                 - Exports (values):
                   - `defineInlineTokenNode`
                   - `registerTokenBoundaries`

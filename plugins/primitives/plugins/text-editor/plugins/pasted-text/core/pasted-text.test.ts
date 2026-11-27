@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  PASTED_TEXT_RE,
   isLargePaste,
   lineCount,
   pastedTextKind,
@@ -45,12 +46,36 @@ describe("pasted text", () => {
   });
 
   it("calls a paste large by lines or by length", () => {
-    expect(isLargePaste("a\n".repeat(8))).toBe(false);
-    expect(isLargePaste("a\n".repeat(9))).toBe(true);
-    expect(isLargePaste("x".repeat(999))).toBe(false);
-    expect(isLargePaste("x".repeat(1000))).toBe(true);
+    expect(isLargePaste("a\n".repeat(8), [])).toBe(false);
+    expect(isLargePaste("a\n".repeat(9), [])).toBe(true);
+    expect(isLargePaste("x".repeat(999), [])).toBe(false);
+    expect(isLargePaste("x".repeat(1000), [])).toBe(true);
     expect(lineCount("a")).toBe(1);
     expect(lineCount("a\nb\n")).toBe(3);
+  });
+
+  it("measures a paste as drawn: a token weighs one character", () => {
+    // A per-line chip family shaped like `<ui-context …>…</ui-context>`.
+    const chip = {
+      pattern: /<chip [^>]*>[^<]*<\/chip>/,
+      node: { fieldsOf: () => ({}) },
+      spansLines: false,
+    };
+    // A spanning family: a pasted block, whose newlines are inside the token.
+    const block = {
+      pattern: PASTED_TEXT_RE,
+      node: { fieldsOf: () => ({}) },
+      spansLines: true,
+    };
+    const tag = `<chip a="${"x".repeat(900)}">label</chip>`;
+    const chips = `see ${tag} and ${tag} and ${tag}`;
+    expect(isLargePaste(chips, [])).toBe(true);
+    expect(isLargePaste(chips, [chip])).toBe(false);
+    // The text around the chips still counts.
+    expect(isLargePaste(`${"y".repeat(1000)} ${tag}`, [chip])).toBe(true);
+    const nested = wrapPastedText("l\n".repeat(20));
+    expect(isLargePaste(nested, [])).toBe(true);
+    expect(isLargePaste(nested, [block])).toBe(false);
   });
 
   it("names what was pasted", () => {
