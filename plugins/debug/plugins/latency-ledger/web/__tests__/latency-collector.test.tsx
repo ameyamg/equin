@@ -6,7 +6,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import { flushOnPageHide, recordSample } from "../internal/client-ledger";
-import { cutActiveInteraction } from "../internal/interaction-tracker";
+import {
+  cutActiveInteraction,
+  type ReadyBudget,
+} from "../internal/interaction-tracker";
+import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+
+type ClientSlowOpSignal = Parameters<typeof clientSlowOpSink.emit>[0];
 import { LatencyCollector } from "../components/latency-collector";
 
 const order: string[] = [];
@@ -15,9 +21,17 @@ vi.mock("../internal/client-ledger", () => ({
   recordInteraction: vi.fn(),
   flushOnPageHide: vi.fn(() => order.push("flush")),
 }));
+let readyBudget: ReadyBudget | undefined;
 vi.mock("../internal/interaction-tracker", () => ({
-  startInteractionTracking: () => () => {},
+  startInteractionTracking: (_: unknown, ready?: ReadyBudget) => {
+    readyBudget = ready;
+    return () => {};
+  },
   cutActiveInteraction: vi.fn(() => order.push("cut")),
+}));
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useConfig: () => ({ pageLoadMs: 5000 }),
 }));
 let pageHidden = false;
 vi.mock(
@@ -113,5 +127,32 @@ describe("LatencyCollector", () => {
     expect(order).toEqual([]);
     clientLatencySink.emit(update());
     expect(recordMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("a page not ready at its budget", () => {
+  it("arms the budget from the slow-op config and files the page-load naming what it waits for", () => {
+    const seen: ClientSlowOpSignal[] = [];
+    const off = clientSlowOpSink.subscribe((s) => seen.push(s));
+    render(<LatencyCollector />);
+    expect(readyBudget?.budgetMs()).toBe(5000);
+    readyBudget?.onNotReady({
+      route: "/agents/c/:convId",
+      elapsedMs: 5003.4,
+      budgetMs: 5000,
+      waitingFor: ["files.computer.stat×4", "x".repeat(500)],
+      done: false,
+    });
+    off();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({
+      operationKind: "page-load",
+      operation: "/agents/c/:convId",
+      durationMs: 5003,
+      thresholdMs: 5000,
+      detail: { censored: true },
+    });
+    expect(seen[0]?.waitingFor?.[0]).toBe("files.computer.stat×4");
+    expect(seen[0]?.waitingFor?.[1]).toHaveLength(200);
   });
 });

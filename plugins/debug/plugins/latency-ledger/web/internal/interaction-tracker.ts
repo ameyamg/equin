@@ -21,6 +21,27 @@ import type { Interaction } from "../../core";
 // the end of the quiet window.
 
 const QUIET_MS = 400;
+
+/** A page load still waiting at its ready budget: what it waits for. */
+export interface NotReady {
+  /** The route pattern (`peekRoutePattern`), never the address bar. */
+  route: string;
+  /** Navigation start → now: the budget, give or take a timer's lateness. */
+  elapsedMs: number;
+  /** The budget it was judged against. */
+  budgetMs: number;
+  /**
+   * What held the page: still waiting — the reads on screen with no answer
+   * yet, most waited first; done — the read that answered last.
+   */
+  waitingFor: string[];
+  /**
+   * The load finished (past its budget) before it was told: a load that was
+   * quiet at the budget — its reads not mounted yet (a slow bundle, lazy app
+   * code) — and then took longer. `elapsedMs` is then its real duration.
+   */
+  done: boolean;
+}
 // A screen still waiting after this long is recorded as "at least this long".
 const CAP_MS = 60_000;
 
@@ -34,17 +55,52 @@ interface Active {
   settledAtMs: number | null;
   quietTimer: ReturnType<typeof setTimeout> | null;
   capTimer: ReturnType<typeof setTimeout>;
+  /** The ready-budget check, armed once per page load until it runs. */
+  readyTimer: ReturnType<typeof setTimeout> | null;
+  /** `onNotReady` was told about this load (at most once). */
+  told: boolean;
+  /** The ready budget this page load is judged against (`null`: none). */
+  budgetMs: number | null;
 }
 
 let active: Active | null = null;
 let report: ((interaction: Interaction) => void) | null = null;
+/** What a page load still waiting at its budget is handed to. */
+export interface ReadyBudget {
+  /** The budget, ms from navigation start — read as each page load begins. */
+  budgetMs: () => number;
+  onNotReady: (info: NotReady) => void;
+}
+
+let ready: ReadyBudget | null = null;
 
 function finish(a: Active, endMs: number, censored: boolean): void {
   if (active !== a) return;
   active = null;
-  if (a.quietTimer !== null) clearTimeout(a.quietTimer);
-  clearTimeout(a.capTimer);
+  clearTimers(a);
   const snap = pendingMountSnapshot();
+  // A load quiet at its budget (nothing mounted yet) that then took longer
+  // was never told at the budget: tell it now, with what answered last.
+  // Not a load cut short (censored): a reload or a navigation left it, and
+  // its row says "at least"; one still waiting was told at the budget.
+  const durationMs = Math.max(0, endMs - a.startMs);
+  if (
+    a.kind === "page-load" &&
+    !a.told &&
+    !censored &&
+    !a.hidden &&
+    a.budgetMs !== null &&
+    durationMs >= a.budgetMs
+  ) {
+    a.told = true;
+    ready?.onNotReady({
+      route: peekRoutePattern(),
+      elapsedMs: durationMs,
+      budgetMs: a.budgetMs,
+      waitingFor: snap.lastReleasedKey === null ? [] : [snap.lastReleasedKey],
+      done: true,
+    });
+  }
   // One line per page load / navigation — a handful a day. When a screen never
   // finished, the line names the lists it was still waiting for.
   clientLog(
@@ -69,6 +125,42 @@ function finish(a: Active, endMs: number, censored: boolean): void {
     resourceCount: snap.startedTotal - a.startedTotalAtStart,
     lastResourceKey: snap.lastReleasedKey,
   });
+}
+
+function clearTimers(a: Active): void {
+  if (a.quietTimer !== null) clearTimeout(a.quietTimer);
+  if (a.readyTimer !== null) clearTimeout(a.readyTimer);
+  clearTimeout(a.capTimer);
+}
+
+// The page load's ready budget: once, at the budget, a load still waiting for
+// a read on screen (the count not at zero — a load settled and only sitting
+// out its quiet window is ready) is handed to `onNotReady` with what it waits
+// for. At the budget, not at the end: a page that never finishes, or a tab
+// closed while it waits, is told all the same, and what it waited for is
+// named while it still waits. A tab hidden at any point measures the browser
+// (its timers throttled), so it is never told.
+function armReady(a: Active): void {
+  if (a.budgetMs === null) return;
+  const budget = a.budgetMs;
+  a.readyTimer = setTimeout(
+    () => {
+      a.readyTimer = null;
+      if (active !== a || a.settledAtMs !== null) return;
+      if (a.hidden || document.visibilityState === "hidden") return;
+      a.told = true;
+      ready?.onNotReady({
+        route: peekRoutePattern(),
+        elapsedMs: performance.now() - a.startMs,
+        budgetMs: budget,
+        waitingFor: pendingMountSnapshot().pendingKeys,
+        done: false,
+      });
+    },
+    // Rounded up: a timer may fire up to ~1 ms early against
+    // `performance.now()`, and a load told under its budget is dropped.
+    Math.max(0, Math.ceil(budget - (performance.now() - a.startMs)) + 1),
+  );
 }
 
 function armQuiet(a: Active): void {
@@ -119,8 +211,12 @@ function begin(kind: Interaction["kind"], startMs: number): void {
     settledAtMs: null,
     quietTimer: null,
     capTimer: setTimeout(() => finish(a, performance.now(), true), CAP_MS),
+    readyTimer: null,
+    told: false,
+    budgetMs: kind === "page-load" && ready !== null ? ready.budgetMs() : null,
   };
   active = a;
+  armReady(a);
   onCount(snap.pending);
 }
 
@@ -137,12 +233,15 @@ export function cutActiveInteraction(): void {
 
 /**
  * Start tracking. `onInteraction` receives every finished page load and
- * navigation. Returns the teardown.
+ * navigation; `readyBudget` a page load still waiting at its budget.
+ * Returns the teardown.
  */
 export function startInteractionTracking(
   onInteraction: (interaction: Interaction) => void,
+  readyBudget?: ReadyBudget,
 ): () => void {
   report = onInteraction;
+  ready = readyBudget ?? null;
   const unsubscribe = subscribePendingMounts(onCount);
   const onVisibility = (): void => {
     if (active !== null && document.visibilityState === "hidden")
@@ -162,10 +261,10 @@ export function startInteractionTracking(
     window.removeEventListener("shell:navigate", onNavigate);
     window.removeEventListener("popstate", onNavigate);
     if (active !== null) {
-      if (active.quietTimer !== null) clearTimeout(active.quietTimer);
-      clearTimeout(active.capTimer);
+      clearTimers(active);
       active = null;
     }
     report = null;
+    ready = null;
   };
 }

@@ -6,10 +6,8 @@ import { useEffect } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { slowResourceReportSink } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
-import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { slowOpConfig } from "../../core";
 import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 import {
@@ -28,7 +26,7 @@ import { enqueueSlowOp } from "../internal/slow-op-queue";
 const transportBringUpFiled = new Set<string>();
 
 // A Core.Root side-effect component. It owns the client-side slow-op signals —
-// page-load timing, live-state element settle, and every client latency signal
+// live-state element settle, and every client latency signal
 // (perfs/latency-signal: live update, write confirm, …) — and funnels them into
 // the slow-op queue, which debounces and batches them onto the slow-ops client
 // endpoint. Renders nothing.
@@ -39,46 +37,6 @@ export function SlowOpCollector() {
   // once on mount) always read live values without re-registering on each
   // config change.
   const cfgRef = useLatestRef(cfg);
-
-  // Page-load signal: measure first-content paint in a post-paint frame.
-  useEffect(() => {
-    // A hidden tab gets NO animation frame until it is shown again, so this
-    // callback would fire minutes later and report the time the tab sat in the
-    // background as a page load (a 1,569 s "load" was recorded that way on
-    // 2026-09-19). Once the tab has been hidden the number means nothing: drop it.
-    let wasHidden = document.visibilityState === "hidden";
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") wasHidden = true;
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    const id = requestAnimationFrame(() => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      if (wasHidden) return;
-      const ms = performance.now();
-      const t = cfgRef.current.pageLoadMs;
-      if (ms <= t) return;
-      const durationMs = Math.round(ms);
-      enqueueSlowOp({
-        // No `caller`: page-load's `operation` IS the route path, so a
-        // route caller would just duplicate the operation label.
-        operationKind: "page-load",
-        operation: currentRoutePath(),
-        durationMs,
-        // No window: a long frame during the load IS the load (bundle eval,
-        // first render), so nothing is taken off it.
-        ownMs: durationMs,
-        thresholdMs: t,
-        // The browser's own boot decomposition rides along (trimmed to stay far
-        // under the 64KB keepalive cap), so the resulting trace carries the
-        // client evidence for WHY the load was slow — not just that it was.
-        clientBoot: toClientBootSection(getBootTrace()),
-      });
-    });
-    return () => {
-      cancelAnimationFrame(id);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, []);
 
   // Element signal: live-state resources hand us their mount → settle duration.
   useEffect(() => {
@@ -142,7 +100,8 @@ export function SlowOpCollector() {
     [],
   );
 
-  // Fully-formed slow-ops from producers outside slow-ops (clientSlowOpSink):
+  // Fully-formed slow-ops from producers outside slow-ops (clientSlowOpSink) —
+  // a page not ready at its budget (debug/latency-ledger), a main-thread stall:
   // each judged itself against its own bar, so it is forwarded unchanged —
   // all of it its own time (a main-thread stall IS the frozen page).
   useEffect(

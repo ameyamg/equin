@@ -14,9 +14,9 @@
   - Contributes:
     - `Apps.Surface` "Surface" → `SurfaceBody`
     - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×6
-    - `network/live/live-state` ×3
+    - `network/live/live-state` ×4
     - `primitives/css/toggle-chip` ×2
     - `primitives/slot-render` ×2
     - `apps-core/tab-surface.TabSurface`

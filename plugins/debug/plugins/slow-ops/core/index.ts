@@ -27,7 +27,12 @@ export { slowOpsList, slowOpById, slowOpCallers } from "./resources";
 export type { SlowOpListRow, SlowOpCallerListRow } from "./resources";
 export { slowOpDetailRoute } from "./routes";
 export { slowOpConfig, CLIENT_SIGNAL_THRESHOLD } from "./config";
-export { MAX_CLIENT_SLOW_OP_ITEMS, MAX_SLOW_OP_MARKERS } from "./limits";
+export {
+  MAX_CLIENT_SLOW_OP_ITEMS,
+  MAX_SLOW_OP_MARKERS,
+  MAX_WAITING_FOR,
+  MAX_WAITING_FOR_NAME,
+} from "./limits";
 export {
   isLegacyBurstReport,
   SlowOpReportPayloadSchema,

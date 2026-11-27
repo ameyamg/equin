@@ -46,8 +46,12 @@ export const slowOpKind = ReportKind({
       ? `${d.operationKind} burst of ${d.burst.count} (slowest ${d.burst.operations[0]?.operation ?? "?"})`
       : `${d.operationKind} ${d.operation}` +
         (d.burst ? ` (1 of ${d.burst.count} at once)` : "");
+    const waiting =
+      d.waitingFor !== undefined && d.waitingFor.length > 0
+        ? ` — ${d.censored ? "waiting for" : "last to answer"} ${d.waitingFor.join(", ")}`
+        : "";
     return {
-      title: `[slow-op] ${what} — ${timeLabel(d)}${coldStartSuffix}`,
+      title: `[slow-op] ${what} — ${d.censored ? "not done after " : ""}${timeLabel(d)}${coldStartSuffix}${waiting}`,
       description: renderDescription(row, d),
     };
   },
@@ -100,7 +104,25 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   );
   lines.push("");
   lines.push(`**Operation:** \`${d.operationKind}\` \`${d.operation}\``);
-  lines.push(`**Latest duration:** ${timeLabel(d)}`);
+  lines.push(
+    `**Latest duration:** ${d.censored ? "still not done after " : ""}${timeLabel(d)}`,
+  );
+  if (d.waitingFor !== undefined && d.waitingFor.length > 0) {
+    lines.push("");
+    const names = d.waitingFor.map((k) => `\`${k}\``).join(", ");
+    lines.push(
+      d.censored
+        ? `**Still waiting for:** ${names} — the live reads on screen with no ` +
+            `answer yet when it was filed (most waited first; \`×n\` is n ` +
+            `readers of one resource). Start there: why has each not answered ` +
+            `(its loader, its gate, the socket)?`
+        : `**Last to answer:** ${names} — the load finished past its budget, ` +
+            `so this is the read that held it last. A load quiet at the budget ` +
+            `(its reads not mounted yet: a slow bundle, lazy app code) is filed ` +
+            `when it ends; check the boot trace for where the time before its ` +
+            `reads went.`,
+    );
+  }
   if (d.ownMs !== undefined && Math.round(d.ownMs) !== Math.round(d.durationMs))
     lines.push(
       `Judged on its own time: the rest was spent not working (queued on a ` +

@@ -94,6 +94,12 @@ export interface RecordSlowOpInput {
   // frame's sampled stacks and heap). Report payload only: the recorder never
   // folds it into the row, and the fingerprint and message never read it.
   evidence?: TabEvidence;
+  // What the op was still waiting on when filed (a page not ready yet: the
+  // live reads it waited for). Report payload only, like `evidence`.
+  waitingFor?: string[];
+  // The duration is a lower bound: the op had not finished when filed (a
+  // client item's `detail.censored`).
+  censored?: true;
   // Who saw it, for a client signal: the browser's User-Agent (from the
   // beacon's request) and whether it was driven by automation (the agent
   // browser, an e2e run — `navigator.webdriver`). A mark only: an automated

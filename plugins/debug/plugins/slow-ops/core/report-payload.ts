@@ -44,6 +44,13 @@ export const SlowOpReportPayloadSchema = z.object({
   // the tab lived through). LoAF names only a frame's entry point; this is
   // what ran beneath it. Evidence only: never the fingerprint or message.
   evidence: TabEvidenceSchema.optional(),
+  // What the op was still waiting on when it was filed — a page not ready
+  // yet: the live reads it waited for (resource keys, `×n` for n readers),
+  // most waited first. Named in the title and description.
+  waitingFor: z.array(z.string()).optional(),
+  // The duration is a lower bound: the op had not finished when filed (a page
+  // still not ready at its budget).
+  censored: z.literal(true).optional(),
   // Present when this op tripped beside others of its kind in one batch — one
   // incident, which rang the bell once while each op kept its own report:
   // `count` is every distinct op of the batch, `operations` its slowest few

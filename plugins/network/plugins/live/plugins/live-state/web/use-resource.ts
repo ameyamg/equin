@@ -35,6 +35,7 @@ import { createWatermarkRegistry } from "./watermark-registry";
 import { createTxAckRegistry } from "./tx-ack-registry";
 import { slowResourceReportSink } from "./slow-resource-reporter";
 import { notePendingMount } from "./pending-mount-tracker";
+import { useOnScreen } from "./on-screen";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
 import { installCoalescedNotify } from "./internal/coalesced-notify";
 import { toResourceError } from "./resource-error";
@@ -825,11 +826,15 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // `pending`: a transient error does not make the page "loading again".
   // A skipped read waits on nothing, so it is never counted — nor does a
   // refused one (`answeredWithoutValue`): the refusal IS its answer.
+  // A read off screen (`OnScreenScope`) holds no page: nobody is looking at
+  // it, so its count is released while it is off screen and taken again if
+  // it comes back still waiting.
   const refused = answeredWithoutValue(q.error, skipped);
+  const onScreen = useOnScreen();
   useEffect(() => {
-    if (hasValue || refused || skipped) return;
+    if (hasValue || refused || skipped || !onScreen) return;
     return notePendingMount(key);
-  }, [hasValue, refused, skipped, key, keyStr]);
+  }, [hasValue, refused, skipped, onScreen, key, keyStr]);
 
   // Report the mount→settle duration once, the first time this resource leaves
   // `pending` (`reportTupleSettled`).
@@ -1106,11 +1111,14 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     [byTuple, tupleKeys],
   );
 
-  // Tuples with no value yet: counted as pending mounts. (A cold-start HTTP
-  // prime is the sub's own, sent by `observe` — see `useResource`.)
+  // Tuples with no value yet: counted as pending mounts — while on screen
+  // (`OnScreenScope`, as in `useResource`). (A cold-start HTTP prime is the
+  // sub's own, sent by `observe` — see `useResource`.)
+  const onScreen = useOnScreen();
   const waitingJson = JSON.stringify(
     tupleKeys.filter(
       (_, i) =>
+        onScreen &&
         states[i]?.hasValue !== true &&
         !answeredWithoutValue(states[i]?.error ?? null, false),
     ),

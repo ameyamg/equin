@@ -9,12 +9,19 @@ import type { ClientLatencySignal } from "@plugins/primitives/plugins/perfs/plug
 export const slowOpConfig = defineConfig({
   name: "slow-op",
   fields: {
+    // A page load still not READY after this long is filed (the latency
+    // ledger's end-to-end measure: every live read on screen answered — not
+    // the first paint, which comes before any data). Sized from main's page
+    // loads in visible tabs over 7 days (2026-11-27, 473 loads): p50 0.97 s,
+    // p90 3.0 s — 5 s sits above the ordinary spread of a healthy route (home
+    // p90 1.1 s, prototypes 0.8 s never reach it), and catches a page that
+    // never finishes at 5 s rather than at the ledger's 60 s cap.
     pageLoadMs: intField({
-      default: 2000,
+      default: 5000,
       min: 0,
-      label: "Page load threshold (ms)",
+      label: "Page ready threshold (ms)",
       description:
-        "Report a slow-op when first content paint takes longer than this (measured client-side in a post-paint frame).",
+        "Report a slow-op when a page load is still not ready after this long — some live read on screen has no answer yet — naming the reads it is waiting for.",
     }),
     elementMs: intField({
       default: 1000,

@@ -23,8 +23,8 @@ clip long tasks to the boot window.
     - `apps/deploy/analytics/collect`
     - `apps/deploy/site-reports/channel/slow-load`
     - `debug/boot-profile`
+    - `debug/latency-ledger`
     - `debug/profiling/cold-start`
-    - `debug/slow-ops`
     - `framework/web-core`
     - `network/live/boot-snapshot`
     - `ui/icons/sprites`

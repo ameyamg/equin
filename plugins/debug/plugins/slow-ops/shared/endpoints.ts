@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ClientBootSectionSchema } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
-import { MAX_CLIENT_SLOW_OP_ITEMS } from "../core";
+import {
+  MAX_CLIENT_SLOW_OP_ITEMS,
+  MAX_WAITING_FOR,
+  MAX_WAITING_FOR_NAME,
+} from "../core";
 import { CallerRefSchema } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 import { TabEvidenceSchema } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
@@ -105,6 +109,13 @@ export const SlowOpClientItemSchema = z.object({
   // report payload only — never the aggregate row. Bounded by the profile's
   // own caps (top stacks, frames per stack, string length).
   evidence: TabEvidenceSchema.optional(),
+  // What the op was still waiting on when it was filed (clientSlowOpSink's
+  // `waitingFor`): a page not ready yet names the live reads it waited for.
+  // Rides to the report payload only, never the aggregate row.
+  waitingFor: z
+    .array(z.string().max(MAX_WAITING_FOR_NAME))
+    .max(MAX_WAITING_FOR)
+    .optional(),
   // Additive, backward-compatible client evidence for the `page-load` signal
   // (absent for the others and older clients): the browser's own boot
   // decomposition (perfs/boot-trace), trimmed by toClientBootSection so the

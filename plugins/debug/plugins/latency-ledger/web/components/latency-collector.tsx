@@ -14,7 +14,18 @@ import { startInputTracking } from "../internal/input-tracker";
 import {
   cutActiveInteraction,
   startInteractionTracking,
+  type NotReady,
 } from "../internal/interaction-tracker";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useConfig } from "@plugins/config_v2/web";
+import {
+  MAX_WAITING_FOR,
+  MAX_WAITING_FOR_NAME,
+  slowOpConfig,
+} from "@plugins/debug/plugins/slow-ops/core";
+import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 
 // The ledger metric each client latency signal's total is kept as; a signal
 // with none (a write's confirm) is left to Debug → Slow Events.
@@ -28,7 +39,16 @@ const METRIC_OF: Partial<Record<ClientLatencySignal, ClientLatencyMetric>> = {
 // load, every in-app navigation, the delay of every update a server change
 // pushes into this tab, and of every sent message reaching it.
 export function LatencyCollector() {
-  useEffect(() => startInteractionTracking(recordInteraction), []);
+  // The ready budget is slow-ops' page threshold, read as the load begins.
+  const cfgRef = useLatestRef(useConfig(slowOpConfig));
+  useEffect(
+    () =>
+      startInteractionTracking(recordInteraction, {
+        budgetMs: () => cfgRef.current.pageLoadMs,
+        onNotReady: fileNotReady,
+      }),
+    [cfgRef],
+  );
   // Every click and keypress, input → next paint. Interactions happen only in a
   // visible tab, so none is excluded as hidden.
   useEffect(() => startInputTracking((ms) => recordSample("input", ms)), []);
@@ -62,4 +82,29 @@ export function LatencyCollector() {
   );
 
   return null;
+}
+
+/**
+ * A page load still not ready at its budget, filed as the `page-load` slow-op
+ * — one per route pattern, naming the reads it waits for. Its duration is a
+ * lower bound (`censored`): the ledger's own row keeps how long it really
+ * took. The browser's boot decomposition rides along, the trace's client-boot
+ * lane.
+ */
+function fileNotReady(info: NotReady): void {
+  // Never under the budget it was judged against (the funnel drops an item
+  // whose time is under its bar).
+  const durationMs = Math.max(info.budgetMs, Math.round(info.elapsedMs));
+  clientSlowOpSink.emit({
+    operationKind: "page-load",
+    operation: info.route,
+    durationMs,
+    thresholdMs: info.budgetMs,
+    ...(info.done ? {} : { detail: { censored: true as const } }),
+    endedAt: Date.now(),
+    waitingFor: info.waitingFor
+      .slice(0, MAX_WAITING_FOR)
+      .map((k) => k.slice(0, MAX_WAITING_FOR_NAME)),
+    clientBoot: toClientBootSection(getBootTrace()),
+  });
 }

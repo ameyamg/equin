@@ -18,6 +18,26 @@ const item = (
 });
 
 describe("incidentsFor", () => {
+  test("a page not ready at its budget says so and names what it waits for", () => {
+    const [incident] = incidentsFor([
+      item("/agents/c/:convId", 5003, {
+        operationKind: "page-load",
+        durationMs: 5003,
+        thresholdMs: 5000,
+        censored: true,
+        waitingFor: ["files.computer.stat×4", "turn-ledger.turns"],
+      }),
+    ]);
+    expect(incident![0]!.data.censored).toBe(true);
+    expect(incident![0]!.data.waitingFor).toEqual([
+      "files.computer.stat×4",
+      "turn-ledger.turns",
+    ]);
+    expect(incident![0]!.message).toBe(
+      "page-load /agents/c/:convId still not done after 5003ms (threshold 5000ms) — waiting for files.computer.stat×4, turn-ledger.turns",
+    );
+  });
+
   test("a tab's evidence rides the payload, never the message", () => {
     const evidence = {
       stacks: {

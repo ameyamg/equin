@@ -1,5 +1,6 @@
 import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/core";
 import type { TabEvidence } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
+import type { ClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import type { CallerRef } from "./caller-ref";
 
 /**
@@ -22,6 +23,14 @@ import type { CallerRef } from "./caller-ref";
  * `evidence` is what the producing tab's own thread ran inside the op (its
  * sampled JS stacks and heap — a long frame's): carried to the op's `slow-op`
  * report only, never the aggregate row, the fingerprint or the message.
+ *
+ * `waitingFor` names what the op was still waiting on when it was filed — a
+ * page not ready yet: the live reads it was waiting for (resource keys, most
+ * waited first). Carried to the report's title and description.
+ *
+ * `clientBoot` is the browser's boot decomposition (perfs/boot-trace,
+ * trimmed by `toClientBootSection`), for an op that is the page's own load:
+ * the trace's client-boot lane.
  */
 export interface ClientSlowOpSignal {
   operationKind: string;
@@ -30,10 +39,12 @@ export interface ClientSlowOpSignal {
   thresholdMs: number;
   caller?: CallerRef;
   waits?: Record<string, number>;
-  detail?: { variant?: string };
+  detail?: { variant?: string; censored?: true };
   endedAt?: number;
   reportedBy?: string;
   evidence?: TabEvidence;
+  waitingFor?: string[];
+  clientBoot?: ClientBootSection;
 }
 
 /**

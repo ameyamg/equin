@@ -104,6 +104,7 @@ allowlisting a copy.
     - `conversations/conversation-view/jsonl-viewer`
     - `hints`
     - `media/player`
+    - `network/live/live-state`
     - `primitives/css/working-dots`
     - `primitives/cursor-pagination`
     - `primitives/data-view`

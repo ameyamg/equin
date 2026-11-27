@@ -7,6 +7,7 @@ import {
   useTabs,
   type PlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
+import { OnScreenScope } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { TabSurface } from "./tab-surface";
 
 /**
@@ -83,7 +84,10 @@ export function AppTabsBody() {
             className="absolute inset-0"
             style={{ display: focused ? "block" : "none" }}
           >
-            <TabSurface tab={tab} resident={resident.has(tab.tabId)} />
+            {/* A tab not shown holds no page (live-state's `OnScreenScope`). */}
+            <OnScreenScope onScreen={focused}>
+              <TabSurface tab={tab} resident={resident.has(tab.tabId)} />
+            </OnScreenScope>
           </Theme>
         );
       })}

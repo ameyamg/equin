@@ -33,6 +33,7 @@ import {
   type PlacementStyleApi,
 } from "../slots";
 import { useTabPresence } from "../internal/use-tab-presence";
+import { OnScreenScope } from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /**
  * The one place a {@link PlacementFrame} role becomes CSS. A mode declares the
@@ -606,7 +607,11 @@ function TabContainer({
         )}
         style={insetStyle ?? undefined}
       >
-        <TabSurface tab={tab} resident={resident} />
+        {/* A hidden tab's reads hold no page (live-state's `OnScreenScope`):
+            nobody sees them. A provider, not a box — the chain above stays. */}
+        <OnScreenScope onScreen={visible}>
+          <TabSurface tab={tab} resident={resident} />
+        </OnScreenScope>
       </div>
 
       {/* Each mounted mode's optional sibling Chrome overlay (never a parent of

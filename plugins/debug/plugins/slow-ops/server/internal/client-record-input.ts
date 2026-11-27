@@ -34,6 +34,8 @@ export function toRecordInput(
     traceId,
     ...(item.reportedBy !== undefined ? { reportedBy: item.reportedBy } : {}),
     ...(item.evidence !== undefined ? { evidence: item.evidence } : {}),
+    ...(item.waitingFor !== undefined ? { waitingFor: item.waitingFor } : {}),
+    ...(item.detail?.censored === true ? { censored: true as const } : {}),
     // A signal filed after the fact names when it ended; never later than now
     // (a skewed client clock must not stamp a sample into the future).
     ...(item.endedAt !== undefined

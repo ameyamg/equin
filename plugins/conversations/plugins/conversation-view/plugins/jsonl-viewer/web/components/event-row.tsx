@@ -1,3 +1,8 @@
+import { useRef } from "react";
+import {
+  OnScreenScope,
+  useBoxOnScreen,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import { JsonlViewer } from "../slots";
@@ -35,6 +40,11 @@ export function EventRow({
   event: JsonlEvent;
   hosted?: readonly ContextMember[];
 } & ({ index: number } | { beforeWindow: true } | { standIn: true })) {
+  // Every loaded event is mounted (no windowing), so the reads of a row
+  // scrolled away — its chips' stats, its previews — hold no page while it is
+  // off screen (live-state's `OnScreenScope`).
+  const box = useRef<HTMLDivElement>(null);
+  const onScreen = useBoxOnScreen(box);
   const dispatch = <JsonlViewer.EventRenderer.Dispatch event={event} />;
   const identity =
     "index" in at
@@ -45,14 +55,16 @@ export function EventRow({
   return (
     <EventActionProvider event={event} inert={"standIn" in at}>
       <RowMarkdownProvider>
-        <div className={rowActionsAnchor} {...identity}>
-          {hosted ? (
-            <HostedContextProvider members={hosted}>
-              {dispatch}
-            </HostedContextProvider>
-          ) : (
-            dispatch
-          )}
+        <div ref={box} className={rowActionsAnchor} {...identity}>
+          <OnScreenScope onScreen={onScreen}>
+            {hosted ? (
+              <HostedContextProvider members={hosted}>
+                {dispatch}
+              </HostedContextProvider>
+            ) : (
+              dispatch
+            )}
+          </OnScreenScope>
         </div>
       </RowMarkdownProvider>
     </EventActionProvider>

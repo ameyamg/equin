@@ -59,9 +59,17 @@ export function incidentsFor(
       source: input.source,
       data: { ...payloadOf(input), ...(burst && { burst }) },
       message:
-        `${input.operationKind} ${input.operation} took ${took(input)}` +
+        `${input.operationKind} ${input.operation} ` +
+        (input.censored === true
+          ? `still not done after ${took(input)}`
+          : `took ${took(input)}`) +
         ` (threshold ${input.thresholdMs}ms)` +
         (burst ? ` — 1 of ${burst.count} at once` : "") +
+        (input.waitingFor !== undefined && input.waitingFor.length > 0
+          ? input.censored === true
+            ? ` — waiting for ${input.waitingFor.join(", ")}`
+            : ` — last to answer ${input.waitingFor.join(", ")}`
+          : "") +
         (input.automated === true ? " — in an automated browser" : ""),
       ...(input.userAgent !== undefined && { userAgent: input.userAgent }),
     }));
@@ -91,6 +99,8 @@ function payloadOf(input: RecordSlowOpInput): SlowOpReportPayload {
     // What the tab's thread ran inside this trip (a long frame's stacks and
     // heap). Evidence: the fingerprint keys on kind + operation only.
     ...(input.evidence !== undefined && { evidence: input.evidence }),
+    ...(input.waitingFor !== undefined && { waitingFor: input.waitingFor }),
+    ...(input.censored === true && { censored: true as const }),
   };
 }
 

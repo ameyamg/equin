@@ -1,7 +1,7 @@
-// @hash 956206f5b2c3
+// @hash 708ef90cae65
 {
-  // Report a slow-op when first content paint takes longer than this (measured client-side in a post-paint frame).
-  "pageLoadMs": 2000,
+  // Report a slow-op when a page load is still not ready after this long — some live read on screen has no answer yet — naming the reads it is waiting for.
+  "pageLoadMs": 5000,
   // Report a slow-op when a live-state resource takes longer than this to settle (mount → first data).
   "elementMs": 1000,
   // Report a slow-op when an in-browser server (a demo's worker) takes longer than this from the page asking for it to it being ready — filed once per boot.

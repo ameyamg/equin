@@ -64,6 +64,17 @@ their route — they pass `caller: { kind: "route", label: location.pathname }`,
 which lands on the op's `slow_op_callers` row (`route` · `/agents/c/123` ×N in
 the detail).
 
+**`page-load` is "page not ready after N s"** (`pageLoadMs`, default 5 s),
+filed by `debug/latency-ledger` through `clientSlowOpSink`, not by this
+collector: the ledger's end-to-end measure (every live read ON SCREEN
+answered — live-state's `OnScreenScope`) still waiting at the budget files one
+item, its `operation` the route PATTERN (one report per route), `censored`
+(the duration is a lower bound; the ledger row keeps the real one),
+`waitingFor` the reads it waits for (title and description), and the boot
+trace (`clientBoot`). It replaced a first-paint timer that fired before any
+data (2 reports for 66 loads over 2 s in a week, 2026-11-27).
+Design: `research/2026-11-27-debug-page-ready-alert.md`.
+
 An `element` item (`elementSlowOp`, `web/internal/element-slow-op.ts`) follows
 the same identity rule as the latency kinds below: `operation` is the resource
 key alone, and the tuple's `canonicalJson(params)` is its `detail.variant`, so a
@@ -398,7 +409,6 @@ bar).
     - `primitives/latest-ref.useLatestRef`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
-    - `primitives/perfs/boot-trace.getBootTrace`
     - `primitives/perfs/page-pauses.pausesDuring`
     - `primitives/perfs/page-pauses.stallsKnownThrough`
     - `primitives/scope/automation.AUTOMATED_BROWSER`
@@ -491,6 +501,8 @@ bar).
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `MAX_SLOW_OP_MARKERS`
+    - `MAX_WAITING_FOR`
+    - `MAX_WAITING_FOR_NAME`
     - `OTHER_VARIANT`
     - `SAMPLE_HOLDERS_MAX`
     - `slowOpById`
@@ -517,6 +529,7 @@ bar).
   - Imported by:
     - `debug/boot-monitor`
     - `debug/health-monitor`
+    - `debug/latency-ledger`
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `debug/timeline`

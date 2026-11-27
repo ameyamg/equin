@@ -15619,9 +15619,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Apps.Surface` "Surface" → `SurfaceBody`
           - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-        - Uses: 25 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
           - `apps-core/tabs` ×6
-          - `network/live/live-state` ×3
+          - `network/live/live-state` ×4
           - `primitives/css/toggle-chip` ×2
           - `primitives/slot-render` ×2
           - `apps-core/tab-surface.TabSurface`
@@ -15715,12 +15715,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications/pane`
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab. resident={false} unloads a tab: only its pane provider and title reporter stay mounted, and the app mounts again under ScrollRevival.
       - Web:
-        - Uses: 26 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
           - `apps-core/tabs` ×8
           - `primitives/pane` ×7
           - `apps-core` ×2
           - `primitives/sync-status` ×2
           - `primitives/undo-redo` ×2
+          - `network/live/live-state.OnScreenScope`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/auto-scroll.ScrollRevival`
           - `primitives/kept-state.KeepScope`
@@ -18539,9 +18540,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withListOrder`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 165 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 166 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×44
-      - `debug` ×17
+      - `debug` ×18
       - `conversations` ×15
       - `tasks` ×13
       - `backup` ×12
@@ -20987,8 +20988,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 57 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `network/live/live-state` ×9
+            - Uses: 59 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `network/live/live-state` ×11
               - `primitives/dom/auto-scroll` ×7
               - `conversations/conversation-view/pending-turn` ×6
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×4
@@ -28425,15 +28426,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Core.Root` → `LatencyCollector`
         - Uses:
+          - `config_v2.useConfig`
           - `infra/endpoints.EndpointAgentWriteRefusedError`
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpointOver`
           - `network/live/live-state.pendingMountSnapshot`
           - `network/live/live-state.subscribePendingMounts`
+          - `primitives/latest-ref.useLatestRef`
           - `primitives/log-channels.clientLog`
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/pane.currentRoutePath`
           - `primitives/pane.peekRoutePattern`
+          - `primitives/perfs/boot-trace.getBootTrace`
           - `primitives/perfs/page-pauses.pausesDuring`
           - `primitives/scope/automation.AUTOMATED_BROWSER`
           - `primitives/scope/tab-id.getTabId`
@@ -30318,7 +30322,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/latest-ref.useLatestRef`
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/pane.currentRoutePath`
-          - `primitives/perfs/boot-trace.getBootTrace`
           - `primitives/perfs/page-pauses.pausesDuring`
           - `primitives/perfs/page-pauses.stallsKnownThrough`
           - `primitives/scope/automation.AUTOMATED_BROWSER`
@@ -30411,6 +30414,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `MAX_SLOW_OP_MARKERS`
+          - `MAX_WAITING_FOR`
+          - `MAX_WAITING_FOR_NAME`
           - `OTHER_VARIANT`
           - `SAMPLE_HOLDERS_MAX`
           - `slowOpById`
@@ -30437,6 +30442,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/boot-monitor`
           - `debug/health-monitor`
+          - `debug/latency-ledger`
           - `debug/slow-ops/cluster`
           - `debug/slow-ops/pane`
           - `debug/timeline`
@@ -30533,6 +30539,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clientSlowOpSink`
           - Cross-plugin:
             - Imported by:
+              - `debug/latency-ledger`
               - `debug/slow-ops`
               - `reports/main-thread-stall`
     - **`stall-monitor`** — Event-loop stall report renderer: a one-line Debug → Reports summary for the event-loop-stall kind (hot frame + View-trace chip), plus the enabled config registration. Files a report when the health-monitor sampler detects a main-thread event-loop stall: captures the coherent-instant stall trace and files a deduped event-loop-stall report (fingerprinted on the dominant caller stack) so a frozen backend reaches the bell + Debug → Reports, linked to its trace.
@@ -31002,9 +31009,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-sm`
-            - Imported by: `debug/slow-ops`
+            - Imported by:
+              - `debug/latency-ledger`
+              - `debug/slow-ops`
           - Core:
-            - Exports (types): `AssetRollup`
+            - Exports (types):
+              - `AssetRollup`
+              - `ClientBootSection`
             - Exports (values):
               - `AssetRollupSchema`
               - `ClientBootSectionSchema`
@@ -46386,13 +46397,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveStringArray` — A jsonb string array (tags, label ids).
         - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
           - Web:
-            - Uses: 25 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `primitives/networking` ×12
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/css/center.Center`
               - `primitives/css/inline.Inline`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/dom/in-view.createInViewWatcher`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
@@ -46459,6 +46471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mapResource`
               - `matchResource`
               - `NotificationsProvider`
+              - `OnScreenScope`
               - `pendingMountSnapshot`
               - `queryKeyFor`
               - `readyResource`
@@ -46472,6 +46485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `slowResourceReportSink`
               - `subscribePendingMounts`
               - `unansweredSubReportSink`
+              - `useBoxOnScreen`
               - `useCombinedResources`
               - `useFailingResources`
               - `useLiveRegistries`
@@ -46479,6 +46493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useNotificationsChannelStatuses`
               - `useNotificationsClient`
               - `useNotificationsStatus`
+              - `useOnScreen`
               - `useQueryResource`
               - `useResource`
               - `useResourceAcks`
@@ -46512,7 +46527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 333 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 334 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×88
               - `conversations` ×49
               - `debug` ×31
@@ -46522,8 +46537,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×16
               - `infra` ×11
               - `build` ×9
+              - `apps-core` ×6
               - `active-data` ×5
-              - `apps-core` ×5
               - `auth` ×5
               - `integrations` ×4
               - `plugin-meta` ×4
@@ -57369,6 +57384,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer`
               - `hints`
               - `media/player`
+              - `network/live/live-state`
               - `primitives/css/working-dots`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
@@ -58592,12 +58608,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×35
           - `apps` ×26
           - `page` ×5
           - `conversations` ×3
           - `apps-core` ×2
+          - `debug` ×2
           - `map` ×2
           - `media` ×2
           - `network` ×2
@@ -58605,7 +58622,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell` ×2
           - `build/serve-composition`
           - `companions/browser-extension`
-          - `debug/slow-ops`
           - `fields/media/config`
           - `framework/browser-server/demo/scope`
           - `hints`
@@ -60638,8 +60654,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/collect`
               - `apps/deploy/site-reports/channel/slow-load`
               - `debug/boot-profile`
+              - `debug/latency-ledger`
               - `debug/profiling/cold-start`
-              - `debug/slow-ops`
               - `framework/web-core`
               - `network/live/boot-snapshot`
               - `ui/icons/sprites`

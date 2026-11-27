@@ -57,9 +57,13 @@ never the trace window's (engine clock-domain rule).
   - Uses tokens:
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
-  - Imported by: `debug/slow-ops`
+  - Imported by:
+    - `debug/latency-ledger`
+    - `debug/slow-ops`
 - Core:
-  - Exports (types): `AssetRollup`
+  - Exports (types):
+    - `AssetRollup`
+    - `ClientBootSection`
   - Exports (values):
     - `AssetRollupSchema`
     - `ClientBootSectionSchema`

@@ -27,6 +27,7 @@ demo included, which cannot serve them. The same neutral-sink shape as
     - `clientSlowOpSink`
 - Cross-plugin:
   - Imported by:
+    - `debug/latency-ledger`
     - `debug/slow-ops`
     - `reports/main-thread-stall`
 

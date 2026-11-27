@@ -5,6 +5,12 @@
 // size, not the accumulated queue length, bounds each request.
 export const MAX_CLIENT_SLOW_OP_ITEMS = 200;
 
+// The most reads a "page not ready" item names as still waiting
+// (`waitingFor`), and the longest each name: live-state names at most this
+// many (`pendingMountSnapshot().pendingKeys`), most waited first.
+export const MAX_WAITING_FOR = 8;
+export const MAX_WAITING_FOR_NAME = 200;
+
 // Cap on slow-op marker lines read per worktree file (newest kept). Generous so a
 // chatty backend's window is never truncated before the health pane's read
 // window cuts it off; the web layer coalesces markers to the 10s sample grid

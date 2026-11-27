@@ -46,7 +46,19 @@ counted here either.
 
 "Has its data" is a page-wide count kept by live-state
 (`pending-mount-tracker.ts`): mounted `useResource` reads still waiting for their
-first value. An interaction ends when the count is zero and stays zero for a short
+first value, while ON SCREEN — a read under an `OnScreenScope` that is off
+screen (a hidden tab, a transcript row scrolled away) holds no page.
+
+**A page load still waiting at its ready budget is reported**: slow-ops'
+`pageLoadMs` (5 s), read as the load begins (`startInteractionTracking`'s
+`ReadyBudget`); at the budget a load whose count is not zero files one
+`page-load` slow-op through `clientSlowOpSink` — its route pattern, the reads
+it waits for. A load quiet at the budget (its reads not mounted yet: a slow
+bundle, lazy app code) that then ends past it is filed when it ends, naming
+the read that answered last. Never for a tab hidden at any point, a load cut
+short, or an in-app navigation.
+
+An interaction ends when the count is zero and stays zero for a short
 quiet window (the next screen's components mount a little after the click). The
 duration recorded is up to the last list's data, not to the end of the quiet window.
 
@@ -178,15 +190,18 @@ state rather than the previous window's numbers.
 - Web:
   - Contributes: `Core.Root` → `LatencyCollector`
   - Uses:
+    - `config_v2.useConfig`
     - `infra/endpoints.EndpointAgentWriteRefusedError`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpointOver`
     - `network/live/live-state.pendingMountSnapshot`
     - `network/live/live-state.subscribePendingMounts`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/log-channels.clientLog`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.peekRoutePattern`
+    - `primitives/perfs/boot-trace.getBootTrace`
     - `primitives/perfs/page-pauses.pausesDuring`
     - `primitives/scope/automation.AUTOMATED_BROWSER`
     - `primitives/scope/tab-id.getTabId`
