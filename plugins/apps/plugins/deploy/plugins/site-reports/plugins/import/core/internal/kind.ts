@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { CLIENT_REPORT_SOURCES } from "@plugins/reports/core";
 import {
   cappedList,
@@ -453,9 +454,51 @@ export const WebsiteVisitorErrorSchema = z
      * null from a box that does not keep it, and on rows imported before.
      */
     split: VisitorSplitSchema.nullable().default(null),
+    /**
+     * When this computer received the row (the pull that handed it): with
+     * `lastSeenAt`, how late the sighting arrived (`visitorDeliveryLagMs`).
+     * Null on rows imported before it was kept.
+     */
+    deliveredAt: z.string().datetime().nullable().default(null),
   })
   .strict();
 export type WebsiteVisitorError = z.infer<typeof WebsiteVisitorErrorSchema>;
+
+/**
+ * Past this, a delivered sighting is history, not news: filed without a bell
+ * and without telling the report listeners (the supervisors' streams), and
+ * marked as delivered late. A fresh sighting reaches this computer within
+ * about a minute while the box link is up (its doorbell), and within the
+ * hourly pull-all when it is not, so two hours is well past every normal
+ * delivery — what arrives later was held up (a reconcile walking the whole
+ * table, a backlog the import drained, the computer off).
+ */
+export const VISITOR_LATE_DELIVERY_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * How long after its last sighting on the site this report reached this
+ * computer; null when the row predates `deliveredAt`.
+ */
+export function visitorDeliveryLagMs(e: WebsiteVisitorError): number | null {
+  if (e.deliveredAt === null) return null;
+  return Math.max(0, Date.parse(e.deliveredAt) - Date.parse(e.lastSeenAt));
+}
+
+/** Whether this report's last sighting arrived late (see VISITOR_LATE_DELIVERY_MS). */
+export function isLateVisitorDelivery(e: WebsiteVisitorError): boolean {
+  const lag = visitorDeliveryLagMs(e);
+  return lag !== null && lag > VISITOR_LATE_DELIVERY_MS;
+}
+
+/** `delivered 7d 04h late`, or null when the sighting arrived on time (or the row cannot say). */
+export function visitorLateDeliveryLabel(
+  e: WebsiteVisitorError,
+): string | null {
+  const lag = visitorDeliveryLagMs(e);
+  return lag !== null && lag > VISITOR_LATE_DELIVERY_MS
+    ? `delivered ${formatDuration(lag)} late`
+    : null;
+}
 
 /** The one plain-text line a report of this kind is summarised by. */
 export function websiteVisitorErrorSummary(e: WebsiteVisitorError): string {

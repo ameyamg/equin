@@ -52,11 +52,15 @@ this plugin reads it through the deploy app's
 reduce step as its sink** (`SiteMirrorSink`, `server/internal/reduce-sink.ts`),
 never as a copy. Design: `research/2026-11-12-global-table-mirror.md` § Phase 4.
 
-- The hourly, main-only `site-mirror.pull-all` keeps one replica of the set
-  per deployment and pulls it. The computer SSHes out (the Deploy app's pinned
-  host key and deploy key) and curls the box's host-only mirror routes. Nothing
-  on the internet can write to this machine: there is no inbound endpoint. It
-  runs on a schedule because the box has no change signal that reaches here.
+- The main-only `site-mirror.pull-all` keeps one replica of the set per
+  deployment, and the pull job reads it. The computer SSHes out (the Deploy
+  app's pinned host key and deploy key) and curls the box's host-only mirror
+  routes. Nothing on the internet can write to this machine: there is no
+  inbound endpoint. What asks for a pull: the box link's doorbell (the box
+  rings on every flush of its intake, over the link this computer opened),
+  a pull still behind asking for the next, and the hourly pull-all as the
+  fallback while the link is down. So a fresh sighting arrives within about
+  a minute.
 - **No raw row is stored here.** The replica keeps only the content-free key
   index `table_mirror_keys` (each row's key and hash); the sink parses and
   reduces each row in the page's transaction and keeps only the reduced form,
@@ -76,8 +80,24 @@ never as a copy. Design: `research/2026-11-12-global-table-mirror.md` § Phase 4
   reports (`…__site_report_imports_seed`).
 - **Reconciliation** (the computer was off past the box's 30-day log horizon,
   the box was reinstalled, or a column was added) fetches only rows whose hash
-  differs from the key index; the sink records the ones the ledger admits
-  with `alert: false` — a catch-up rings no bell.
+  differs from the key index; the sink records the ones the ledger admits.
+- **Late is history, not news.** Each report keeps `deliveredAt`, when this
+  computer received it. A sighting delivered more than
+  `VISITOR_LATE_DELIVERY_MS` (2 h) after the site's `last_seen_at` (a
+  reconcile, a drained backlog, the computer off) is filed as its own
+  incident with `announce: false`: no bell, no `ReportRecorded` listener (the
+  supervisors' report streams), and the row says so — a "delivered … late"
+  badge in Reports, a **Delivered late** line in its task. Judged per row from
+  the row's facts, never from how the pull got it: a reconcile also hands rows
+  seen a minute ago, and those ring as usual. Two consequences, intended:
+  sightings from while this computer was off or asleep for over 2 h land
+  quietly too (badged, in Reports, on no stream) — whoever would have
+  answered was away with it; and a late sighting from code containing a
+  landed fix still regresses that fix, which rings and announces as every
+  regression does (the fix ledger's own path: evidence the fix did not
+  hold, however late it came). Before (2026-11-27), a reconcile
+  after a column was added took ~8 h at one page an hour, then filed sightings
+  days old that read as fresh incidents (task-1795761447-gyxfys).
 - **Tombstones file nothing**: the box's 30-day sweep forgetting a fingerprint
   is not news; the local report has the engine's own retention. The ledger
   forgets the key.
@@ -86,7 +106,8 @@ A failed pull (no key, SSH failed, the request failed, the answer was
 unreadable or oversized, the site's release does not serve the set) records
 nothing and is the replica's `last_outcome` (`site-mirror.status`). A row that
 does not parse throws: the page applies nothing, the pull's `run_error` says
-why, and the next hour retries it.
+why, and the next pull (the next ring, at most a minute later, or the hourly
+pull-all) retries it.
 
 ## Structured data only
 
@@ -158,14 +179,21 @@ web Investigate sends, fence the content as data and never as instructions.
 
 ## Bounded here too
 
-- At most 50 rows per deployment per run (`IMPORT_PACE`): ONE page per hourly
-  pull, never followed up, a pull within 50 minutes of the last skipped, and
-  the sync endpoint never pulls the set. A backlog drains 50 an hour, oldest
-  change first. The answer is capped at 1 MB (row JSON cut at 250 KB on the
+- At most 50 rows per deployment per pull (`IMPORT_PACE`): ONE page per pull,
+  pulls at least a minute apart (one asked sooner is put off to that, never
+  dropped), and the sync endpoint never pulls the set. A backlog drains 50 a
+  minute, oldest change first; the box holds at most 2,000 rows, so a full
+  reconcile takes under 40 minutes. The bell is bounded by the engine, as for
+  any source: a pull's on-time rows ring once, a known row re-alerts at most
+  daily, and past 20 new fingerprints a window (60 s) the rest collapse into
+  the window's `report-storm` row. So a flood of new fingerprints on the site
+  costs at most ~20 local rows and one bell a minute while it drains, where
+  the hourly pace allowed 50 rows and one bell an hour — accepted (2026-11-27)
+  so a fresh sighting arrives in a minute instead of hours. The answer is capped at 1 MB (row JSON cut at 250 KB on the
   box), and the sink throws on a page past 50 rows.
 - There is one row per (deployment, site fingerprint).
-- Each page is one incident (`recordReportIncident`), so it rings one bell at
-  most.
+- Each page's on-time rows are one incident (`recordReportIncident`), so a
+  pull rings one bell at most; its late rows ring none.
 - More than 20 new fingerprints in a window collapse into one `report-storm`
   row (the engine's fan-out ceiling).
 - A known error re-alerts at most daily (`notifCooldownMs` 24 h).
@@ -183,7 +211,7 @@ reconcile mechanics are `table-mirror/replica`'s suite.
 
 ## Plugin reference
 
-- Description: Errors and slowness a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: both kinds' Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors and slowness a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index and the delivery ledger site_report_imports: per hashed site fingerprint the site's last sighting and count, so a row the mirror hands again with the same facts — a reconcile after a column was added — is never filed twice) — at most 50 rows per deployment per hourly run, each page ONE incident, each row of the website-visitor-error or website-visitor-slowness kind by its site kind's own category (so a visitor's slow load or freeze is a slow op here too) (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
+- Description: Errors and slowness a deployed site's visitors hit, read from the site's box over SSH within about a minute of the site's flush (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: both kinds' Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count, and a 'delivered … late' badge when its last sighting reached this computer over 2 h after it happened. Reads the errors and slowness a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index and the delivery ledger site_report_imports: per hashed site fingerprint the site's last sighting and count, so a row the mirror hands again with the same facts — a reconcile after a column was added — is never filed twice) — at most 50 rows per deployment per pull and pulls a minute apart (asked by the box link's doorbell and by a pull still behind, the hourly pull-all the fallback), each page's on-time rows ONE incident, each row of the website-visitor-error or website-visitor-slowness kind by its site kind's own category (so a visitor's slow load or freeze is a slow op here too) (a sighting delivered over 2 h after the site saw it is marked delivered late and filed without a bell or a report-listener announcement: history, not news), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
 - Web:
   - Contributes:
     - `Reports.KindView` → `WebsiteVisitorSummary`
@@ -207,6 +235,7 @@ reconcile mechanics are `table-mirror/replica`'s suite.
   - DB schema: `plugins/apps/plugins/deploy/plugins/site-reports/plugins/import/server/internal/tables.ts`
 - Core:
   - Uses:
+    - `fields/duration.formatDuration`
     - `packages/list-bound.cappedList`
     - `packages/list-bound.cappedRecord`
     - `packages/string-hash.hashHex`
@@ -224,8 +253,12 @@ reconcile mechanics are `table-mirror/replica`'s suite.
     - `VisitorStall`
     - `WebsiteVisitorError`
   - Exports (values):
+    - `isLateVisitorDelivery`
     - `reduceSiteReport`
     - `VISITOR_ERROR_LIMITS`
+    - `VISITOR_LATE_DELIVERY_MS`
+    - `visitorDeliveryLagMs`
+    - `visitorLateDeliveryLabel`
     - `WEBSITE_VISITOR_ERROR_KIND`
     - `WEBSITE_VISITOR_SLOWNESS_KIND`
     - `WebsiteVisitorErrorSchema`

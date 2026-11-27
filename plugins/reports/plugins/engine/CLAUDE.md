@@ -57,9 +57,12 @@ is new (never seen in this worktree) when there is one, so a new problem always
 alerts unread. Otherwise it is the lead (`pickIncidentBell`). Its description
 leads with `[+N related, M new]`, and its metadata lists every member
 (`incidentReportIds`). Identity stays per problem and only the alert is shared.
-`{ alert: false }` files a catch-up incident — occurrences already past,
-learned about late (site-reports' reconciliation) — with every row landing as
-usual and no bell: a per-incident choice of the filer, never a kind's.
+`{ alert: false }` files an incident with every row landing as usual and no
+bell (a build failure whose own bell rang); `{ announce: false }` also tells no
+`ReportRecorded` listener (the supervisors' streams) — occurrences long past,
+learned about late (site-reports' import of a sighting delivered hours after
+it happened), history rather than news. Both a per-incident choice of the
+filer, never a kind's; the rows stay on the worklist.
 So never merge co-occurring reports into one fingerprint to quiet the bell:
 that puts unrelated incidents on one row and hides the member that only ever
 co-occurs. First user: slow-ops' per-batch bursts.

@@ -44,10 +44,14 @@ replicas). Replica ids are `site-mirror:<deployment>:<set>`.
   hands the sink each row content once. Such a set is kept for **every**
   deployment (the pull-all creates its replica; no tab asks) and is read at
   its contributed `pace` only: one fetch step of at most `rowsPerRun` rows
-  per pull, no follow-up chunk, a pull within `minIntervalMs` of the last one
-  skipped, and the answer capped at the pace's `maxAnswerBytes`. The sync
-  endpoint refuses it by id and skips it without one, so nothing but the
-  hourly pull-all adds a pull past its flood bound. Site-mirror never names a
+  per pull, pulls at least `minIntervalMs` apart (one asked sooner is put
+  off to that, never dropped), a pull that ends still behind asking for the
+  next at that pace, and the answer capped at the pace's `maxAnswerBytes`.
+  So a backlog — a reconcile walking the whole table — drains continuously
+  instead of one page per hourly pull (site-reports' 2026-11-27 reconcile
+  held fresh rows back ~7 h). The sync endpoint refuses it by id and skips it
+  without one: only the doorbell, the drain and the pull-all ask, each at
+  the pace. Site-mirror never names a
   contributor: the contribution is the whole contract.
 - **`site-mirror.status`** (`source: "db"` over the owner rows and
   `table_mirror_replicas`, so every applied page re-pushes it): per set, the
@@ -81,7 +85,7 @@ list cut, the doorbell's spacing); the engine's own round trips are `table-mirro
 
 ## Plugin reference
 
-- Description: MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal. Answers the box link's doorbell: a box's table-mirror signal pulls the set it names, spaced at least 5 s after the replica's last attempt (a sink set by its pace's minIntervalMs), and a box's hello pulls every replica of that deployment.
+- Description: MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace — one bounded page per pull, pulls at least minIntervalMs apart, a pull still behind asking for the next — never by the sync endpoint), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal. Answers the box link's doorbell: a box's table-mirror signal pulls the set it names, spaced at least 5 s after the replica's last attempt (a sink set by its pace's minIntervalMs), and a box's hello pulls every replica of that deployment.
 - Server:
   - Contributes:
     - `resource.declare` "site-mirror.status"

@@ -10,9 +10,11 @@ export interface SiteMirrorSite {
 /**
  * How fast a sink set is read — its flood bound. Each pull is ONE fetch step
  * (a change page, a copy page, or one keys page with its differing rows) of at
- * most `rowsPerRun` rows, never followed up, and a pull asked within
- * `minIntervalMs` of the last one does nothing: the hourly pull-all is what
- * reads it.
+ * most `rowsPerRun` rows; a pull asked within `minIntervalMs` of the last one
+ * is put off to it (never dropped), and one that ends still behind asks for
+ * the next at that pace. So a backlog drains at `rowsPerRun` per
+ * `minIntervalMs`, and a ring of the box link's doorbell is read within
+ * `minIntervalMs`.
  */
 export interface SiteMirrorPace {
   /** Rows (and keys, for a reconcile page) one pull may hand the sink. */
@@ -21,7 +23,7 @@ export interface SiteMirrorPace {
   maxBytes: number;
   /** One answer's byte cap, re-checked here before it is parsed. */
   maxAnswerBytes: number;
-  /** Pulls closer together than this are skipped. */
+  /** The least time between two pulls (one asked sooner waits for it). */
   minIntervalMs: number;
 }
 

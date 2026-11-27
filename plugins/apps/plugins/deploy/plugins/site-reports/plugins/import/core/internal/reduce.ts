@@ -418,6 +418,8 @@ export function reducePayload(
 export function reduceSiteReport(
   record: SiteReportRecord,
   site: SiteContext,
+  /** When this computer received the row (epoch ms): its `deliveredAt`. */
+  deliveredAt: number,
 ): WebsiteVisitorError {
   if (!SAFE_DEPLOYMENT_ID.test(site.deploymentId)) {
     throw new Error(
@@ -458,6 +460,7 @@ export function reduceSiteReport(
     payload: reducePayload(record.data, hostnames),
     codeOrigin: CodeOriginSchema.safeParse(record.data.codeOrigin).data ?? null,
     split: reduceSplit(record.split, record.count),
+    deliveredAt: new Date(deliveredAt).toISOString(),
   });
 }
 

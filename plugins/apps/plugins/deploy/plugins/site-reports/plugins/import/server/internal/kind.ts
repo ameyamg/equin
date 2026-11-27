@@ -1,3 +1,4 @@
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { stallSamplerKeptPace } from "@plugins/reports/plugins/main-thread-stall/core";
 import type { SiteReportRecord } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 import type { ReportCategory } from "@plugins/reports/core";
@@ -10,15 +11,17 @@ import {
   WEBSITE_VISITOR_ERROR_KIND,
   WEBSITE_VISITOR_SLOWNESS_KIND,
   WebsiteVisitorErrorSchema,
+  isLateVisitorDelivery,
+  visitorDeliveryLagMs,
   type VisitorPayload,
   type VisitorSplit,
   type VisitorStall,
   type WebsiteVisitorError,
 } from "../../core";
 
-// A known website error re-alerts at most once a day: the pull runs hourly,
-// and a stranger's error that keeps recurring is one thing to look at, not
-// an hourly bell.
+// A known website error re-alerts at most once a day: the import pulls within
+// a minute of every flush on the site, and a stranger's error that keeps
+// recurring is one thing to look at, not a bell a minute.
 const NOTIF_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const fnLabel = (fn: string | null): string =>
@@ -148,6 +151,7 @@ export function renderWebsiteVisitorTask(
       `- **Page:** ${e.path ? `\`${e.path}\`` : "(unknown)"}`,
       `- **Site build:** ${e.buildId ? `\`${e.buildId}\`` : "(unknown)"}, commit ${e.commit ? `\`${e.commit}\`` : "(unknown)"}`,
       `- **Occurrences on the site:** ${e.siteCount} (first ${e.firstSeenAt}, last ${e.lastSeenAt}); pulled ${row.count} time(s)`,
+      ...deliveryLines(e),
       "",
       `**Stack (the site's own bundle, ${e.framesOmitted} other frame(s) omitted):**`,
       frames,
@@ -156,6 +160,20 @@ export function renderWebsiteVisitorTask(
       ...payloadLines(e.payload),
     ].join("\n"),
   };
+}
+
+/**
+ * When the last sighting reached this computer, as a task line — and, when it
+ * was late, that this is history, not a live incident.
+ */
+function deliveryLines(e: WebsiteVisitorError): string[] {
+  if (e.deliveredAt === null) return [];
+  const lag = visitorDeliveryLagMs(e) ?? 0;
+  return [
+    isLateVisitorDelivery(e)
+      ? `- **Delivered late:** ${e.deliveredAt}, ${formatDuration(lag)} after its last sighting — the site saw it then, not now, so it rang no bell and reached no supervisor stream`
+      : `- **Delivered:** ${e.deliveredAt}, ${formatDuration(lag)} after its last sighting`,
+  ];
 }
 
 /**

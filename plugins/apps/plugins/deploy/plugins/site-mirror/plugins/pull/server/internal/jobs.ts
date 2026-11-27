@@ -123,7 +123,7 @@ export async function requestPull(
 export const siteMirrorPullJob = defineJob({
   name: "site-mirror.pull",
   description:
-    "Copies a deployed site's mirrored tables (its analytics) from the site's server into this computer, a few pages at a time — or reads a set kept only through its owner's sink (its visitors' errors), one bounded page an hour.",
+    "Copies a deployed site's mirrored tables (its analytics) from the site's server into this computer, a few pages at a time — or reads a set kept only through its owner's sink (its visitors' errors), one bounded page at a time at the sink's pace.",
   hold: "minutes",
   inProcess:
     "Each page is applied with its cursor in one transaction, so a run killed by a restart resumes from the last committed page on its next run; at most 20 SSH requests, each bounded by its 20 s deadline.",
@@ -171,7 +171,7 @@ export const siteMirrorPullJob = defineJob({
           await requestPull(deploymentId, setId);
         }
       } else {
-        await pullPaced(deploymentId, replicaId, set, sinkSpec);
+        await pullPaced(deploymentId, setId, replicaId, set, sinkSpec);
       }
       await db
         .update(siteMirrorReplicas)
@@ -188,13 +188,19 @@ export const siteMirrorPullJob = defineJob({
 });
 
 /**
- * One pull of a set read through a sink, at its pace: skipped when the last
- * attempt is closer than `minIntervalMs`; otherwise ONE fetch step of at most
- * `rowsPerRun` rows, its answer capped at `maxAnswerBytes`, and no follow-up
- * — a backlog drains at that rate, from the cursor, nothing skipped.
+ * One pull of a set read through a sink, at its pace: ONE fetch step of at
+ * most `rowsPerRun` rows, its answer capped at `maxAnswerBytes`, pulls at
+ * least `minIntervalMs` apart. A pull that ends still behind (`stopped`: a
+ * backlog, a reconcile walking the table) asks for the next one at the
+ * pace, so a backlog drains continuously at `rowsPerRun` per `minIntervalMs`,
+ * from the cursor, nothing skipped — and never waits for the next ring or
+ * the hourly pull-all (before, a reconcile held every fresh row back for
+ * hours: task-1795761447-gyxfys). A pull asked too early is put off to the
+ * pace, never dropped, so the last ask of a burst is still read.
  */
 async function pullPaced(
   deploymentId: string,
+  setId: string,
   replicaId: string,
   set: MirrorSetDefinition,
   spec: SiteMirrorSinkSpec,
@@ -204,10 +210,11 @@ async function pullPaced(
     .from(tableMirrorReplicas)
     .where(eq(tableMirrorReplicas.id, replicaId));
   const last = replica?.lastAttemptAt ?? null;
-  if (
-    last !== null &&
-    wallNow("schedule") - last.getTime() < spec.pace.minIntervalMs
-  ) {
+  const now = wallNow("schedule");
+  if (last !== null && now - last.getTime() < spec.pace.minIntervalMs) {
+    await requestPull(deploymentId, setId, {
+      runAt: new Date(last.getTime() + spec.pace.minIntervalMs),
+    });
     return;
   }
   const [deployment] = await db
@@ -216,7 +223,7 @@ async function pullPaced(
     .where(eq(_deployDeployments.id, deploymentIdKind.key(deploymentId)));
   // Deleted mid-run: its owner row cascades, the pull-all drops the replica.
   if (deployment === undefined) return;
-  await pullReplica({
+  const result = await pullReplica({
     db,
     replicaId,
     set,
@@ -231,6 +238,11 @@ async function pullPaced(
       maxBytes: spec.pace.maxBytes,
     },
   });
+  if (result.outcome.kind === "stopped") {
+    await requestPull(deploymentId, setId, {
+      runAt: new Date(wallNow("schedule") + spec.pace.minIntervalMs),
+    });
+  }
 }
 
 /**

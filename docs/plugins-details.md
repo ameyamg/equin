@@ -4575,7 +4575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database/table-mirror/source.readMirrorRows`
                   - `database/table-mirror/source.resolveMirrorSet`
                   - `infra/endpoints.implement`
-            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal. Answers the box link's doorbell: a box's table-mirror signal pulls the set it names, spaced at least 5 s after the replica's last attempt (a sink set by its pace's minIntervalMs), and a box's hello pulls every replica of that deployment.
+            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace — one bounded page per pull, pulls at least minIntervalMs apart, a pull still behind asking for the next — never by the sync endpoint), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal. Answers the box link's doorbell: a box's table-mirror signal pulls the set it names, spaced at least 5 s after the replica's last attempt (a sink set by its pace's minIntervalMs), and a box's hello pulls every replica of that deployment.
               - Server:
                 - Contributes:
                   - `resource.declare` "site-mirror.status"
@@ -4714,7 +4714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `SlowPageLoadPayloadSchema`
                       - `slowPageLoadSummary`
                       - `withLoadSplit`
-            - **`import`** — Errors and slowness a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: both kinds' Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors and slowness a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index and the delivery ledger site_report_imports: per hashed site fingerprint the site's last sighting and count, so a row the mirror hands again with the same facts — a reconcile after a column was added — is never filed twice) — at most 50 rows per deployment per hourly run, each page ONE incident, each row of the website-visitor-error or website-visitor-slowness kind by its site kind's own category (so a visitor's slow load or freeze is a slow op here too) (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
+            - **`import`** — Errors and slowness a deployed site's visitors hit, read from the site's box over SSH within about a minute of the site's flush (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: both kinds' Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count, and a 'delivered … late' badge when its last sighting reached this computer over 2 h after it happened. Reads the errors and slowness a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index and the delivery ledger site_report_imports: per hashed site fingerprint the site's last sighting and count, so a row the mirror hands again with the same facts — a reconcile after a column was added — is never filed twice) — at most 50 rows per deployment per pull and pulls a minute apart (asked by the box link's doorbell and by a pull still behind, the hourly pull-all the fallback), each page's on-time rows ONE incident, each row of the website-visitor-error or website-visitor-slowness kind by its site kind's own category (so a visitor's slow load or freeze is a slow op here too) (a sighting delivered over 2 h after the site saw it is marked delivered late and filed without a bell or a report-listener announcement: history, not news), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
               - Web:
                 - Contributes:
                   - `Reports.KindView` → `WebsiteVisitorSummary`
@@ -4738,6 +4738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - DB schema: `plugins/apps/plugins/deploy/plugins/site-reports/plugins/import/server/internal/tables.ts`
               - Core:
                 - Uses:
+                  - `fields/duration.formatDuration`
                   - `packages/list-bound.cappedList`
                   - `packages/list-bound.cappedRecord`
                   - `packages/string-hash.hashHex`
@@ -4755,8 +4756,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `VisitorStall`
                   - `WebsiteVisitorError`
                 - Exports (values):
+                  - `isLateVisitorDelivery`
                   - `reduceSiteReport`
                   - `VISITOR_ERROR_LIMITS`
+                  - `VISITOR_LATE_DELIVERY_MS`
+                  - `visitorDeliveryLagMs`
+                  - `visitorLateDeliveryLabel`
                   - `WEBSITE_VISITOR_ERROR_KIND`
                   - `WEBSITE_VISITOR_SLOWNESS_KIND`
                   - `WebsiteVisitorErrorSchema`
@@ -32210,6 +32215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseDuration`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/site-reports/import`
           - `conversations/conversation-view/jsonl-viewer/tool-call`
           - `debug/backend-crash`
           - `debug/claude-cli-calls`

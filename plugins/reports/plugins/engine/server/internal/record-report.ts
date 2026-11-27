@@ -220,21 +220,29 @@ export async function recordReport(
 ): Promise<RecordReportResult> {
   stampCommit(input);
   if (!reportsProducer.writesHere()) return toOutbox(input);
-  const filed = await fileReport(input);
+  const filed = await fileReport(input, true);
   if (filed.bell) ringBell(filed.bell, null);
   return filed.result;
 }
 
 /**
- * How an incident is filed. `alert: false` — a catch-up of occurrences
- * already past, which a puller learned about late (site-reports'
- * reconciliation after the computer was away): every row lands, counts and
- * stays in the worklist exactly as otherwise, but no bell rings — history,
- * not news. A per-incident choice of the filer; a kind still cannot opt out
- * of the bell.
+ * How an incident is filed. A per-incident choice of the filer; a kind still
+ * cannot opt out of the bell.
+ *
+ * - `alert: false` — no bell rings; every row lands, counts and stays in the
+ *   worklist exactly as otherwise (a build failure whose own "Build failed"
+ *   bell already rang).
+ * - `announce: false` — no `ReportRecorded` listener is told either (the
+ *   supervisors' report streams, the investigations automation): occurrences
+ *   long past that a puller learned about late (site-reports' import of a
+ *   visitor sighting hours or days old). History, not news — the row says
+ *   so itself; it stays on the worklist. Implies `alert: false`. A fix
+ *   regression the occurrence proves still rings and announces (the fix
+ *   ledger's own path): evidence a fix did not hold is news however late.
  */
 export interface IncidentOptions {
   alert?: boolean;
+  announce?: boolean;
 }
 
 /**
@@ -258,8 +266,9 @@ export async function recordReportIncident(
     for (const input of inputs) outboxed.push(toOutbox(input));
     return outboxed;
   }
+  const announce = opts.announce !== false;
   const filed: FiledReport[] = [];
-  for (const input of inputs) filed.push(await fileReport(input));
+  for (const input of inputs) filed.push(await fileReport(input, announce));
   const ringing = filed.flatMap((f) => (f.bell ? [f.bell] : []));
   // A noise row's bell is muted; it leads only an incident of noise.
   const loud = ringing.filter((b) => !b.row.noise);
@@ -267,7 +276,7 @@ export async function recordReportIncident(
   const pick = pickIncidentBell(
     bells.map((b) => ({ isNew: b.row.count === 1 })),
   );
-  if (pick && opts.alert !== false) {
+  if (pick && announce && opts.alert !== false) {
     // The rows the incident wrote — a shed or collapsed member has none yet.
     const reportIds = filed.flatMap((f) =>
       f.result.outcome === "recorded" ? [f.result.reportId] : [],
@@ -308,7 +317,11 @@ interface FiledReport {
   bell: Bell | null;
 }
 
-async function fileReport(input: ReportInput): Promise<FiledReport> {
+async function fileReport(
+  input: ReportInput,
+  // Tell the ReportRecorded listeners (IncidentOptions.announce).
+  announce: boolean,
+): Promise<FiledReport> {
   const {
     kind,
     source,
@@ -483,7 +496,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
     );
   }
 
-  await announceRecorded(row);
+  if (announce) await announceRecorded(row);
   // A report with a live or pending fix: does this occurrence's code contain
   // it? Judged off the recording path (a git read), and only for these rows.
   if (
