@@ -2214,7 +2214,7 @@ Design:
   blocks: an unchanged `read_page` → `edit_page` planned CREATES, which nothing
   can subtract. Pages became un-editable by agents.
 - **What the escape also fixes.** A mark or link across a break is no longer
-  dropped (`matchDelimiter` and `matchLink` abandon a construct at a real
+  dropped (`pairEmphasis` and `matchLink` abandon a construct at a real
   newline — those guards stay), and a block whose text is only a break is no
   longer deleted by the empty-block pin.
 - **Why one rule in `escapeText`.** Every run-text path inherits it, including a

@@ -13,7 +13,15 @@ import {
   type InlineFormatMatch,
   type SoftBreaks,
 } from "./inline-markdown";
-import { MARK_ORDER, sortMarks, type RichText } from "./rich-text";
+import {
+  coalesce,
+  MARK_ORDER,
+  sortMarks,
+  type ColorToken,
+  type Mark,
+  type RichText,
+  type TextRun,
+} from "./rich-text";
 
 /**
  * The string-level transform the web surgery performs: drop both delimiters,
@@ -417,7 +425,7 @@ describe("parseInlineMarkdown — marks are a per-run SET, never a tree", () => 
     expect(par("")).toEqual([]);
   });
 
-  test("a bare run of delimiter characters is literal (the whole-run rule)", () => {
+  test("a bare run of delimiter characters is literal (it flanks nothing)", () => {
     expect(par("****")).toEqual([{ text: "****" }]);
     expect(par("***")).toEqual([{ text: "***" }]);
     expect(par("~~~~")).toEqual([{ text: "~~~~" }]);
@@ -536,7 +544,7 @@ describe("the soft break: one spelling, in and out of a mark", () => {
   test("an INTERIOR break inside a marked run round-trips exactly", () => {
     // The hoist below only touches a break at a run's EDGE, so this one is
     // untouched — and the escaped form carries no real newline, so
-    // `matchDelimiter`'s newline guard never fires and the closer is found.
+    // `pairEmphasis`'s same-line rule never fires and the closer is found.
     const runs: RichText = [{ text: "a\nb", marks: ["bold"] }];
     expect(ser(runs)).toBe("**a\\nb**");
     expect(par(ser(runs))).toEqual(runs);
@@ -709,4 +717,189 @@ describe("round trip — parse ∘ serialize is the identity on canonical runs",
   test("an all-whitespace marked run loses the marks it cannot express", () => {
     expect(ser([{ text: "   ", marks: ["bold"] }])).toBe("   ");
   });
+});
+
+describe("delimiters that touch — each was read back as literal text", () => {
+  // The parser used to demand that every delimiter be a WHOLE run of its
+  // character, so any of these serializer outputs fell apart on the way back.
+  const cases: [RichText, string][] = [
+    // An escaped literal beside a delimiter is not part of its run.
+    [[{ text: "a *", marks: ["bold"] }, { text: " b" }], "**a \\*** b"],
+    [[{ text: "*" }, { text: "a", marks: ["bold"] }], "\\***a**"],
+    [[{ text: "`" }, { text: "a", marks: ["code"] }], "\\``a`"],
+    [[{ text: "a`", marks: ["code"] }], "`a\\``"],
+    // Sibling spans of one character.
+    [
+      [
+        { text: "a", marks: ["bold"] },
+        { text: "b", marks: ["italic"] },
+      ],
+      "**a***b*",
+    ],
+    // A nested span ending (or starting) where its parent does.
+    [
+      [
+        { text: "hello", marks: ["bold"] },
+        { text: "world", marks: ["bold", "italic"] },
+      ],
+      "**hello*world***",
+    ],
+    [
+      [
+        { text: "a", marks: ["bold", "italic"] },
+        { text: "b", marks: ["bold"] },
+      ],
+      "***a*b**",
+    ],
+    [
+      [
+        { text: "a", marks: ["italic"] },
+        { text: "b", marks: ["bold", "italic"] },
+      ],
+      "*a**b***",
+    ],
+    [
+      [
+        { text: "a", marks: ["italic"] },
+        { text: "b", marks: ["bold"] },
+        { text: "c", marks: ["italic"] },
+      ],
+      "*a***b***c*",
+    ],
+  ];
+  for (const [runs, md] of cases) {
+    test(`${JSON.stringify(md)} round-trips`, () => {
+      expect(ser(runs)).toBe(md);
+      expect(par(md)).toEqual(runs);
+    });
+  }
+});
+
+describe("round trip — fuzzed over random runs", () => {
+  /** A seeded stream, so a failure names a reproducible seed. */
+  function random(seed: number): () => number {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Every character the inline syntax reads, plus words, spaces and a break.
+  const PIECES = [
+    "a",
+    "b",
+    "word",
+    " ",
+    "  ",
+    "*",
+    "**",
+    "_",
+    "__",
+    "~",
+    "~~",
+    "`",
+    "[",
+    "]",
+    "<",
+    ">",
+    "\\",
+    "\n",
+    "(",
+    ")",
+    "<u>",
+    "</u>",
+    "x_y",
+    "2 * 3",
+  ].map((p) => p.replace("\\n", "\n"));
+  const TOKEN_PIECES = ["\\(a_1*b\\)", "[[page:p_1*]]", "[[date:2026-08-03]]"];
+  const COLORS: ColorToken[] = ["red", "blue"];
+  const LINKS = ["https://a.io", "https://a.io/p(1)", "u\\v"];
+  const DELIMITED = new Set<Mark>(
+    INLINE_SYNTAXES.flatMap((row) => [...row.marks]),
+  );
+
+  function genRuns(next: () => number, withTokens: boolean): RichText {
+    const pick = <T>(xs: readonly T[]): T =>
+      xs[Math.floor(next() * xs.length)]!;
+    const runs: RichText = [];
+    const n = 1 + Math.floor(next() * 6);
+    for (let r = 0; r < n; r++) {
+      const link = next() < 0.2 ? pick(LINKS) : undefined;
+      if (withTokens && next() < 0.1) {
+        // A protected token: its own run, unmarked and uncoloured by nature.
+        runs.push({ text: pick(TOKEN_PIECES), ...(link ? { link } : {}) });
+        continue;
+      }
+      let text = "";
+      const len = 1 + Math.floor(next() * 4);
+      for (let k = 0; k < len; k++) {
+        const piece = pick(PIECES);
+        // A backslash next to `(` would SPELL a `\\(…\\)` token across runs —
+        // a token-pattern question, not a delimiter one; covered without tokens.
+        text += withTokens ? piece.replaceAll("\\", "/") : piece;
+      }
+      const marks = MARK_ORDER.filter(() => next() < 0.35);
+      const run: TextRun = { text };
+      if (marks.length > 0) run.marks = sortMarks(marks);
+      if (next() < 0.15) run.color = pick(COLORS);
+      if (link) run.link = link;
+      runs.push(run);
+    }
+    return runs;
+  }
+
+  /**
+   * The documented canonical form, restated independently of the serializer:
+   * coalesced, with boundary whitespace hoisted out of the delimiter marks (a
+   * delimiter may never flank whitespace).
+   */
+  function canonicalOf(runs: RichText): RichText {
+    const out: RichText = [];
+    for (const run of coalesce(runs)) {
+      const marks = run.marks ?? [];
+      if (!marks.some((m) => DELIMITED.has(m))) {
+        out.push(run);
+        continue;
+      }
+      const core = run.text.trim();
+      const lead = run.text.slice(
+        0,
+        run.text.length - run.text.trimStart().length,
+      );
+      const trail =
+        core.length === 0 ? "" : run.text.slice(run.text.trimEnd().length);
+      const kept = marks.filter((m) => !DELIMITED.has(m));
+      const bare = (text: string): TextRun => ({
+        text,
+        ...(kept.length > 0 ? { marks: kept } : {}),
+        ...(run.color ? { color: run.color } : {}),
+        ...(run.link ? { link: run.link } : {}),
+      });
+      if (lead.length > 0) out.push(bare(lead));
+      if (core.length > 0) out.push({ ...run, text: core });
+      if (trail.length > 0) out.push(bare(trail));
+    }
+    return coalesce(out);
+  }
+
+  for (const withTokens of [false, true]) {
+    test(`parse(serialize(runs)) is the canonical form of runs, for 20000 random runs (${withTokens ? "with" : "no"} protected tokens)`, () => {
+      const tokens = withTokens ? TOKENS : [];
+      for (let seed = 1; seed <= 20000; seed++) {
+        const runs = genRuns(random(seed), withTokens);
+        const md = ser(runs, tokens);
+        const back = par(md, tokens);
+        const expected = canonicalOf(runs);
+        if (JSON.stringify(back) !== JSON.stringify(expected)) {
+          throw new Error(
+            `seed ${seed}, tokens ${withTokens}: ${JSON.stringify(runs)}\n  serialized ${JSON.stringify(md)}\n  parsed     ${JSON.stringify(back)}\n  expected   ${JSON.stringify(expected)}`,
+          );
+        }
+      }
+    });
+  }
 });

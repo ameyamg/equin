@@ -195,7 +195,7 @@ describe("soft line breaks (a block's text is ONE document line)", () => {
   });
 
   test("a marked run's interior break round-trips, delimiters and all", () => {
-    // `matchDelimiter` abandons a span at a REAL newline, which is why the
+    // `pairEmphasis` abandons a span at a REAL newline, which is why the
     // escape exists: with no newline in the line, the closing `**` is found.
     const forest = [
       node("text", { text: [{ text: "a\nb", marks: ["bold" as const] }] }),
@@ -957,7 +957,7 @@ describe("prompt (text-bearing, no prefix of its own)", () => {
 
   test("a mark spanning a soft break survives, which it did not before", () => {
     // The multi-line body put a REAL newline between the tags, and
-    // `matchDelimiter` abandons a span at one — so a bold prompt line across a
+    // `pairEmphasis` abandons a span at one — so a bold prompt line across a
     // break came back as one unmarked literal run. With the escape there is no
     // newline for the guard to see, so the closing `**` is still found.
     const forest = [

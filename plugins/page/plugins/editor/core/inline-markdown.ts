@@ -261,10 +261,10 @@ export function matchInlineFormat(
 //   The eight spell themselves; the break is the one that does not, and
 //   `ESCAPES` below is the single table both directions read.
 //
-//   THE BREAK NEEDS A SPELLING because three guards further down abandon a
-//   construct at a real newline — `matchLink` (`:750`, `:768`) and
-//   `matchDelimiter` (`:815`) — so a link or a mark straddling a break would be
-//   silently dropped, and because one block's text has to stay ONE markdown
+//   THE BREAK NEEDS A SPELLING because the guards further down abandon a
+//   construct at a real newline — `matchLink`, `matchCodeSpan` and
+//   `pairEmphasis` (a pair never spans a line) — so a link or a mark
+//   straddling a break would be silently dropped, and because one block's text has to stay ONE markdown
 //   line or `markdown.ts` fans it out into lines indistinguishable from sibling
 //   blocks. Those guards stay exactly as they are: the escape is what makes
 //   them unreachable from our own output rather than something to relax.
@@ -317,6 +317,13 @@ export function matchInlineFormat(
 // span off into its own unmarked run — and is the identity on anything the
 // editor produces from a selection that does not straddle a space, because that
 // is exactly the shape `runs-lexical.ts` reads back out of Lexical.
+//
+// TOUCHING DELIMITERS are the one place the emitted string is not locally
+// obvious: nested marks ending together (`**a*b***`), sibling marks of one
+// character (`**a***b*`) and an escaped literal beside a delimiter
+// (`**a \***`). The parser reads delimiter RUNS and pairs their characters by
+// count (`pairEmphasis`), so each of those reads back; the fuzzed round trip in
+// `inline-markdown.test.ts` is what pins it for every run sequence.
 
 /**
  * Whether a token family's bytes must be MASKED from the inline scan.
@@ -749,6 +756,8 @@ export function serializeInlineMarkdown(
 interface Scan {
   text: string;
   masked: string;
+  /** 1 where the character is the one an escape spells (`*` in `\\*`). */
+  escaped: Uint8Array;
 }
 
 /** Attributes accumulated by the enclosing wrappers at the current scan depth. */
@@ -928,77 +937,269 @@ function matchLink(s: Scan, i: number, to: number): LinkMatch | null {
   return { textStart: i + 1, textEnd: closeBracket, url, end: k + 1 };
 }
 
-interface DelimiterMatch {
-  marks: readonly Mark[];
+/** The code row: its content is verbatim, so it is matched as one construct. */
+const CODE_SYNTAX: InlineSyntax = (() => {
+  const row = INLINE_SYNTAXES.find((r) => r.marks.includes("code"));
+  if (!row || row.tag.length !== 1 || row.marks.length !== 1) {
+    throw new Error(
+      "inline-markdown: the code row must be a one-character tag carrying only `code`",
+    );
+  }
+  return row;
+})();
+
+/**
+ * Every EMPHASIS row (everything but code), by its delimiter character, longest
+ * tag first. A row is a number of that character: `**` is two `*`, and a run of
+ * delimiters pairs by COUNTING its characters — see {@link pairEmphasis}.
+ */
+const EMPHASIS_ROWS: ReadonlyMap<string, readonly InlineSyntax[]> = (() => {
+  const byChar = new Map<string, InlineSyntax[]>();
+  for (const row of INLINE_SYNTAXES) {
+    if (row === CODE_SYNTAX) continue;
+    const char = row.tag[0]!;
+    if (row.tag !== char.repeat(row.tag.length)) {
+      throw new Error(
+        `inline-markdown: emphasis tag ${JSON.stringify(row.tag)} must repeat one character`,
+      );
+    }
+    const rows = byChar.get(char) ?? [];
+    if (rows.some((r) => r.intraword !== row.intraword)) {
+      throw new Error(
+        `inline-markdown: every ${JSON.stringify(char)} row must agree on intraword`,
+      );
+    }
+    rows.push(row);
+    byChar.set(char, rows);
+  }
+  for (const rows of byChar.values())
+    rows.sort((a, b) => b.tag.length - a.tag.length);
+  return byChar;
+})();
+
+/**
+ * `s.text[k]` is a delimiter character `char` that is SYNTAX-capable: not masked
+ * and not the character an escape spells. An escaped `\*` is a literal star, so
+ * it neither joins a delimiter run nor breaks the run rules around one — the
+ * whole reason the scan records `escaped`.
+ */
+function isDelimCharAt(s: Scan, k: number, char: string): boolean {
+  return (
+    k >= 0 &&
+    k < s.text.length &&
+    s.text[k] === char &&
+    s.masked[k] !== MASK &&
+    s.escaped[k] !== 1
+  );
+}
+
+interface CodeMatch {
   contentStart: number;
   contentEnd: number;
   end: number;
 }
 
 /**
- * The delimiter row opening at `i`, tried LONGEST TAG FIRST (the table's own
- * order, which IS the precedence rule). The admission rules mirror
- * `matchInlineFormat`:
- *
- *  - no whitespace immediately inside either delimiter, so `2 * 3 * 4` stays
- *    literal arithmetic and `**a **` is not a bold span;
- *  - non-empty content;
- *  - both delimiters must be a WHOLE run of their character — the same rule
- *    `matchInlineFormat` spells "repeating-char", and what stops `**` stealing
- *    the outer stars of `***x***` or `****` italicizing a lone `*`;
- *  - for the `_` family, punctuation-or-space flanks on the outside, so
- *    `snake_case_name` stays literal.
+ * The code span opening at `i`, or null. A code span is a single construct
+ * (its content verbatim), matched left to right BEFORE emphasis — CommonMark's
+ * precedence. Its delimiters follow the whole-run rule (a backtick touching
+ * either delimiter on the outside or the inside cancels it), no whitespace
+ * inside either delimiter, non-empty content; escapes resolve inside it.
  */
-function matchDelimiter(s: Scan, i: number, to: number): DelimiterMatch | null {
-  for (const row of INLINE_SYNTAXES) {
-    const d = row.tag.length;
-    const char = row.tag[0]!;
-    if (i + d >= to) continue;
-    if (!s.masked.startsWith(row.tag, i)) continue;
-    if (WHITESPACE.test(s.text[i + d]!)) continue;
-    if (s.text[i + d] === char) continue;
-    if (i > 0 && s.text[i - 1] === char) continue;
-    if (!row.intraword) {
-      const before = i > 0 ? s.text[i - 1] : undefined;
-      if (before !== undefined && !PUNCTUATION_OR_SPACE.test(before)) continue;
+function matchCodeSpan(s: Scan, i: number, to: number): CodeMatch | null {
+  const tag = CODE_SYNTAX.tag;
+  const d = tag.length;
+  if (!isDelimCharAt(s, i, tag)) return null;
+  if (i + d >= to) return null;
+  if (WHITESPACE.test(s.text[i + d]!)) return null;
+  if (isDelimCharAt(s, i + d, tag)) return null;
+  if (isDelimCharAt(s, i - 1, tag)) return null;
+  for (let j = i + d; j + d <= to; j++) {
+    if (s.text[j] === "\n") return null;
+    if (s.masked[j] === MASK) continue;
+    if (isEscapeAt(s, j, to)) {
+      j += 1;
+      continue;
     }
-
-    let closeStart: number | null = null;
-    for (let j = i + d; j + d <= to; j++) {
-      if (s.text[j] === "\n") break;
-      if (s.masked[j] === MASK) continue;
-      if (isEscapeAt(s, j, to)) {
-        j += 1;
-        continue;
-      }
-      if (!s.masked.startsWith(row.tag, j)) continue;
-      if (j === i + d) continue;
-      if (WHITESPACE.test(s.text[j - 1]!)) continue;
-      if (s.text[j - 1] === char) continue;
-      if (j + d < to && s.text[j + d] === char) continue;
-      if (!row.intraword) {
-        const after = j + d < to ? s.text[j + d] : undefined;
-        if (after !== undefined && !PUNCTUATION_OR_SPACE.test(after)) continue;
-      }
-      closeStart = j;
-      break;
-    }
-    if (closeStart === null) continue;
-    return {
-      marks: row.marks,
-      contentStart: i + d,
-      contentEnd: closeStart,
-      end: closeStart + d,
-    };
+    if (!isDelimCharAt(s, j, tag)) continue;
+    if (j === i + d) continue;
+    if (WHITESPACE.test(s.text[j - 1]!)) continue;
+    if (isDelimCharAt(s, j + d, tag)) continue;
+    return { contentStart: i + d, contentEnd: j, end: j + d };
   }
   return null;
 }
+
+/**
+ * A maximal run of one emphasis character, and what it may do. The run is the
+ * unit CommonMark reasons about: `***` after `b` in `**a*b***` is ONE run, of
+ * which the first `*` closes the italic and the last two the bold.
+ */
+interface DelimRun {
+  char: string;
+  start: number;
+  /** The run's length as written. */
+  length: number;
+  /** Characters not yet paired: `[lo, hi)`. A closer pairs from `lo`, an opener from `hi`. */
+  lo: number;
+  hi: number;
+  canOpen: boolean;
+  canClose: boolean;
+  /** Real newlines before it: a pair never spans a line. */
+  line: number;
+  /** Cleared when a pair forms around it (CommonMark's "remove from the stack"). */
+  active: boolean;
+  /** Its paired stretches, filled by {@link pairEmphasis}. */
+  edges: EmphasisEdge[];
+}
+
+/** One paired stretch of a run's characters: delimiter syntax that opens or closes marks. */
+interface EmphasisEdge {
+  start: number;
+  end: number;
+  open: boolean;
+  marks: readonly Mark[];
+}
+
+/**
+ * The run of `char` starting at `i` in `[from, to)`, with its flanking.
+ *
+ * Flanking is CommonMark's, minus its punctuation clause, so it mirrors
+ * `matchInlineFormat`'s whitespace rules: a run may OPEN when the character
+ * after it is not whitespace, and CLOSE when the character before it is not —
+ * so `2 * 3 * 4` and `**a **` stay literal. A range edge counts as whitespace.
+ * The `_` family (`intraword: false`) further needs punctuation or space on the
+ * outside, so `snake_case_name` stays literal.
+ */
+function delimRunAt(
+  s: Scan,
+  i: number,
+  from: number,
+  to: number,
+  char: string,
+  line: number,
+): DelimRun {
+  let j = i;
+  while (j < to && isDelimCharAt(s, j, char)) j += 1;
+  const before = i > from ? s.text[i - 1] : undefined;
+  const after = j < to ? s.text[j] : undefined;
+  const leftFlanking = after !== undefined && !WHITESPACE.test(after);
+  const rightFlanking = before !== undefined && !WHITESPACE.test(before);
+  const intraword = EMPHASIS_ROWS.get(char)![0]!.intraword;
+  const outside = (c: string | undefined): boolean =>
+    c === undefined || PUNCTUATION_OR_SPACE.test(c);
+  return {
+    char,
+    start: i,
+    length: j - i,
+    lo: i,
+    hi: j,
+    canOpen: leftFlanking && (intraword || outside(before)),
+    canClose: rightFlanking && (intraword || outside(after)),
+    line,
+    active: true,
+    edges: [],
+  };
+}
+
+/**
+ * Pair the emphasis runs of one span — CommonMark's "process emphasis", over
+ * our table. Each closer, left to right, looks back for the NEAREST opener of
+ * its character on its line; a pair takes the longest row both still hold
+ * (`***` + `***` is one bold+italic pair, `**` + `***` a bold pair leaving one
+ * `*`), from the inside out — the opener's last characters and the closer's
+ * first. Every run between the two is then dead (its characters literal), so
+ * pairs always nest.
+ *
+ * This is what lets the serializer's output read back when delimiters touch:
+ * `**a*b***` (italic closing where bold closes), `**a***b*` (bold, then italic),
+ * `*a**b**c*` (bold inside italic). A rule that demands each delimiter be a
+ * whole run of its character rejects every one of those.
+ *
+ * The RULE OF THREE: when either side could both open and close, the
+ * characters the two runs have LEFT may not sum to a multiple of three unless
+ * both counts are. It is what tells `*a**b**c*` (the inner `**` opens) from a
+ * closer. CommonMark sums the runs' written lengths instead; counting what is
+ * left is what reads `*x***y*…***` right, where one `***` first closes an
+ * italic and then opens a bold — its written length would let a later
+ * italic OPENER close that bold.
+ */
+function pairEmphasis(runs: DelimRun[]): void {
+  for (let ci = 0; ci < runs.length; ci++) {
+    const closer = runs[ci]!;
+    if (!closer.canClose) continue;
+    while (closer.active && closer.lo < closer.hi) {
+      let found = -1;
+      let row: InlineSyntax | undefined;
+      for (let oi = ci - 1; oi >= 0; oi--) {
+        const opener = runs[oi]!;
+        if (opener.line !== closer.line) break;
+        if (!opener.active || !opener.canOpen) continue;
+        if (opener.char !== closer.char || opener.lo === opener.hi) continue;
+        const openLeft = opener.hi - opener.lo;
+        const closeLeft = closer.hi - closer.lo;
+        if (
+          (opener.canClose || closer.canOpen) &&
+          (openLeft + closeLeft) % 3 === 0 &&
+          !(openLeft % 3 === 0 && closeLeft % 3 === 0)
+        ) {
+          continue;
+        }
+        const room = Math.min(openLeft, closeLeft);
+        row = EMPHASIS_ROWS.get(closer.char)!.find((r) => r.tag.length <= room);
+        if (!row) continue;
+        found = oi;
+        break;
+      }
+      if (found === -1 || !row) break;
+      const opener = runs[found]!;
+      for (let k = found + 1; k < ci; k++) runs[k]!.active = false;
+      const d = row.tag.length;
+      opener.hi -= d;
+      opener.edges.push({
+        start: opener.hi,
+        end: opener.hi + d,
+        open: true,
+        marks: row.marks,
+      });
+      closer.edges.push({
+        start: closer.lo,
+        end: closer.lo + d,
+        open: false,
+        marks: row.marks,
+      });
+      closer.lo += d;
+    }
+  }
+}
+
+/** One thing a span holds, found by the left-to-right pass of {@link scanSpan}. */
+type SpanItem =
+  | { kind: "char"; at: number }
+  | { kind: "escape"; at: number }
+  | { kind: "mask"; start: number; end: number }
+  | {
+      kind: "nested";
+      start: number;
+      contentStart: number;
+      contentEnd: number;
+      end: number;
+      attrs: Partial<ScanAttrs>;
+      literal: boolean;
+    }
+  | { kind: "run"; run: DelimRun };
 
 /**
  * Scan `[from, to)` under `attrs`, pushing FLAT runs into `out`. `literal` is set
  * inside a code span: escapes and protected spans still resolve there (a
  * decorator token materializes regardless of the surrounding marks), but no
  * delimiter, link or tag does — CommonMark's code-span precedence.
+ *
+ * Two passes. The first walks left to right and finds what binds tightest —
+ * protected spans, escapes, `<tag>`s, links, code spans — plus the emphasis
+ * delimiter RUNS between them. The second pairs those runs
+ * ({@link pairEmphasis}) and emits, turning marks on and off at each paired
+ * delimiter; an unpaired delimiter character is literal text.
  */
 function scanSpan(
   s: Scan,
@@ -1009,41 +1210,21 @@ function scanSpan(
   literal: boolean,
   trace?: InlineScanTrace,
 ): void {
-  let buf = "";
-  // The source index of each character in `buf`, kept only when tracing.
-  let bufSource: number[] = [];
-  const flush = (): void => {
-    if (buf.length > 0) {
-      out.push(runWith(buf, attrs));
-      if (trace) trace.sourceOf.push(...bufSource);
-      buf = "";
-      bufSource = [];
-    }
-  };
-  const syntax = (start: number, end: number): void => {
-    if (trace && end > start) trace.syntax.push([start, end]);
-  };
+  const items: SpanItem[] = [];
+  const runs: DelimRun[] = [];
+  let line = 0;
   let i = from;
   while (i < to) {
     if (s.masked[i] === MASK) {
       let j = i;
       while (j < to && s.masked[j] === MASK) j += 1;
-      flush();
-      // A decorator token is never marked or coloured, but does inherit an
-      // enclosing link — byte-for-byte `runs-lexical.ts`'s `walkNode`.
-      out.push(
-        attrs.link
-          ? { text: s.text.slice(i, j), link: attrs.link }
-          : { text: s.text.slice(i, j) },
-      );
-      if (trace) for (let k = i; k < j; k++) trace.sourceOf.push(k);
+      items.push({ kind: "mask", start: i, end: j });
+      line += countNewlines(s, i, j);
       i = j;
       continue;
     }
     if (isEscapeAt(s, i, to)) {
-      buf += escapedCharAt(s, i);
-      if (trace) bufSource.push(i + 1);
-      syntax(i, i + 1);
+      items.push({ kind: "escape", at: i });
       i += 2;
       continue;
     }
@@ -1052,22 +1233,16 @@ function scanSpan(
       if (c === "<") {
         const tag = matchTag(s, i, to);
         if (tag) {
-          flush();
-          syntax(i, tag.contentStart);
-          scanSpan(
-            s,
-            tag.contentStart,
-            tag.contentEnd,
-            {
-              ...attrs,
-              ...tag.attrs,
-              marks: sortMarks([...attrs.marks, ...(tag.attrs.marks ?? [])]),
-            },
-            out,
-            false,
-            trace,
-          );
-          syntax(tag.contentEnd, tag.end);
+          items.push({
+            kind: "nested",
+            start: i,
+            contentStart: tag.contentStart,
+            contentEnd: tag.contentEnd,
+            end: tag.end,
+            attrs: tag.attrs,
+            literal: false,
+          });
+          line += countNewlines(s, i, tag.end);
           i = tag.end;
           continue;
         }
@@ -1075,45 +1250,160 @@ function scanSpan(
       if (c === "[") {
         const link = matchLink(s, i, to);
         if (link) {
-          flush();
-          syntax(i, link.textStart);
-          scanSpan(
-            s,
-            link.textStart,
-            link.textEnd,
-            { ...attrs, link: link.url },
-            out,
-            false,
-            trace,
-          );
-          syntax(link.textEnd, link.end);
+          items.push({
+            kind: "nested",
+            start: i,
+            contentStart: link.textStart,
+            contentEnd: link.textEnd,
+            end: link.end,
+            attrs: { link: link.url },
+            literal: false,
+          });
           i = link.end;
           continue;
         }
       }
-      const delim = matchDelimiter(s, i, to);
-      if (delim) {
-        flush();
-        syntax(i, delim.contentStart);
-        scanSpan(
-          s,
-          delim.contentStart,
-          delim.contentEnd,
-          { ...attrs, marks: sortMarks([...attrs.marks, ...delim.marks]) },
-          out,
-          delim.marks.includes("code"),
-          trace,
-        );
-        syntax(delim.contentEnd, delim.end);
-        i = delim.end;
+      const code = matchCodeSpan(s, i, to);
+      if (code) {
+        items.push({
+          kind: "nested",
+          start: i,
+          contentStart: code.contentStart,
+          contentEnd: code.contentEnd,
+          end: code.end,
+          attrs: { marks: [...CODE_SYNTAX.marks] },
+          literal: true,
+        });
+        i = code.end;
         continue;
       }
+      if (EMPHASIS_ROWS.has(c)) {
+        const run = delimRunAt(s, i, from, to, c, line);
+        runs.push(run);
+        items.push({ kind: "run", run });
+        i += run.length;
+        continue;
+      }
+      if (c === "\n") line += 1;
     }
-    buf += s.text[i]!;
-    if (trace) bufSource.push(i);
+    items.push({ kind: "char", at: i });
     i += 1;
   }
+
+  pairEmphasis(runs);
+
+  const active = new Map<Mark, number>();
+  const current = (): ScanAttrs => {
+    const marks = [...attrs.marks];
+    for (const [mark, n] of active) if (n > 0) marks.push(mark);
+    return { ...attrs, marks: sortMarks(marks) };
+  };
+  let buf = "";
+  // The source index of each character in `buf`, kept only when tracing.
+  let bufSource: number[] = [];
+  const flush = (): void => {
+    if (buf.length > 0) {
+      out.push(runWith(buf, current()));
+      if (trace) trace.sourceOf.push(...bufSource);
+      buf = "";
+      bufSource = [];
+    }
+  };
+  const syntax = (start: number, end: number): void => {
+    if (trace && end > start) trace.syntax.push([start, end]);
+  };
+  const literalChar = (at: number): void => {
+    buf += s.text[at]!;
+    if (trace) bufSource.push(at);
+  };
+
+  for (const item of items) {
+    switch (item.kind) {
+      case "char":
+        literalChar(item.at);
+        break;
+      case "escape":
+        buf += escapedCharAt(s, item.at);
+        if (trace) bufSource.push(item.at + 1);
+        syntax(item.at, item.at + 1);
+        break;
+      case "mask": {
+        flush();
+        // A decorator token is never marked or coloured, but does inherit an
+        // enclosing link — byte-for-byte `runs-lexical.ts`'s `walkNode`.
+        out.push(
+          attrs.link
+            ? { text: s.text.slice(item.start, item.end), link: attrs.link }
+            : { text: s.text.slice(item.start, item.end) },
+        );
+        if (trace)
+          for (let k = item.start; k < item.end; k++) trace.sourceOf.push(k);
+        break;
+      }
+      case "nested": {
+        flush();
+        syntax(item.start, item.contentStart);
+        const base = current();
+        scanSpan(
+          s,
+          item.contentStart,
+          item.contentEnd,
+          {
+            ...base,
+            ...item.attrs,
+            marks: sortMarks([...base.marks, ...(item.attrs.marks ?? [])]),
+          },
+          out,
+          item.literal,
+          trace,
+        );
+        syntax(item.contentEnd, item.end);
+        break;
+      }
+      case "run": {
+        const { run } = item;
+        const edges = [...run.edges].sort((a, b) => a.start - b.start);
+        let k = run.start;
+        for (const edge of edges) {
+          while (k < edge.start) literalChar(k++);
+          flush();
+          syntax(edge.start, edge.end);
+          for (const mark of edge.marks)
+            active.set(mark, (active.get(mark) ?? 0) + (edge.open ? 1 : -1));
+          k = edge.end;
+        }
+        while (k < run.start + run.length) literalChar(k++);
+        break;
+      }
+    }
+  }
   flush();
+}
+
+/** Real newlines in `[from, to)` — escaped breaks are not newlines by then. */
+function countNewlines(s: Scan, from: number, to: number): number {
+  let n = 0;
+  for (let k = from; k < to; k++) if (s.text[k] === "\n") n += 1;
+  return n;
+}
+
+/**
+ * The scan over `text`: the text itself, its protected spans masked, and which
+ * characters an escape spells (so `\*` is never a delimiter, whatever it sits
+ * next to). Escapes pair left to right, as the scan reads them: `\\*` is an
+ * escaped backslash, then a live `*`.
+ */
+function scanOf(text: string, protectedSpans: RegExp[]): Scan {
+  const masked = maskProtected(text, protectedSpans);
+  const escaped = new Uint8Array(text.length);
+  const s: Scan = { text, masked, escaped };
+  for (let i = 0; i < text.length; i++) {
+    if (isEscapeAt(s, i, text.length)) {
+      escaped[i + 1] = 1;
+      i += 1;
+    }
+  }
+  return s;
 }
 
 /** What a traced scan records beside its runs — see {@link InlineScan}. */
@@ -1152,7 +1442,7 @@ export function scanInlineMarkdown(
   text: string,
   protectedSpans: RegExp[],
 ): InlineScan {
-  const s: Scan = { text, masked: maskProtected(text, protectedSpans) };
+  const s = scanOf(text, protectedSpans);
   const out: RichText = [];
   const trace: InlineScanTrace = { syntax: [], sourceOf: [] };
   scanSpan(s, 0, text.length, { marks: [] }, out, false, trace);
@@ -1175,7 +1465,7 @@ export function parseInlineMarkdown(
   text: string,
   protectedSpans: RegExp[],
 ): RichText {
-  const s: Scan = { text, masked: maskProtected(text, protectedSpans) };
+  const s = scanOf(text, protectedSpans);
   const out: RichText = [];
   scanSpan(s, 0, text.length, { marks: [] }, out, false);
   return coalesce(out);

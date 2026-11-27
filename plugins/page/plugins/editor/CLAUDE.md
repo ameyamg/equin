@@ -1976,6 +1976,12 @@ The delimiter table (`core/inline-markdown.ts`) is **closed core data, not a slo
   locates the token; `markdownSpan` says whether to mask it. Masking deletes marks, so
   it is required per family: `[[page:…]]`, `[[date:…]]`, `\(latex\)` protect; the
   active-data bare-id chips do not.
+- **Emphasis pairs by delimiter RUNS** (`pairEmphasis`, CommonMark's process-emphasis
+  with its rule of three over the characters each run has left): nested or sibling
+  marks whose delimiters touch (`**a*b***`, `**a***b*`) and an escaped `\*` beside a
+  delimiter all read back. Never return to "a delimiter is a whole run of its
+  character": the serializer's own output breaks it. The fuzzed round trip in
+  `inline-markdown.test.ts` is the gate.
 - **The parser mirrors `matchInlineFormat`'s whitespace rules**; the serializer hoists
   boundary whitespace out of marks (`**a **` → `**a** `) so `parse ∘ serialize` is an
   identity.
