@@ -77,6 +77,7 @@ function recordingTransport() {
     content: null,
     machine: true,
     telemetry: false,
+    beacon: null,
   };
   return { transport, opened };
 }

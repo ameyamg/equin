@@ -505,7 +505,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Plugin reference
 
-- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useWriteAvailability says whether this subtree may send a write (needsMachine on a transport without the computer, or an owner-only route from a page its server took for a deployed site's visitor); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
+- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only; beaconEndpointOver(t) hands a write to the browser to deliver after the page is gone (sendBeacon over the transport's beacon: no headers, no answer — queued or refused) — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useWriteAvailability says whether this subtree may send a write (needsMachine on a transport without the computer, or an owner-only route from a page its server took for a deployed site's visitor); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
 - Load-bearing: yes
 - Web:
   - Uses:
@@ -523,6 +523,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `AssetFetch`
     - `AssetSrc`
     - `AssetUrl`
+    - `BeaconEndpoint`
+    - `BeaconSent`
     - `ContentUrl`
     - `EndpointErrorInfo`
     - `FetchEndpoint`
@@ -530,6 +532,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Exports (values):
     - `assetFetchOver`
     - `assetUrlOver`
+    - `beaconEndpointOver`
     - `contentUrlOver`
     - `EndpointAgentWriteRefusedError`
     - `EndpointError`
@@ -609,6 +612,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `rangedBlobResponse`
     - `rawEndpointHandler`
     - `readEndpointResponse`
+    - `sendEndpointBeacon`
     - `sendEndpointRequest`
     - `unavailableMessage`
     - `unmatchedApiResponse`

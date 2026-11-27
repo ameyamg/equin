@@ -32,6 +32,7 @@ const page: Transport = {
   content: null,
   machine: true,
   telemetry: true,
+  beacon: null,
 };
 const fetchEndpoint = fetchEndpointOver(page);
 

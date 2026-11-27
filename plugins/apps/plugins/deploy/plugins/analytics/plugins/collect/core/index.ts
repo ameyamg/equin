@@ -39,6 +39,7 @@ export {
   CollectResponseSchema,
   ConsentKeySchema,
   EngagementBodySchema,
+  EventEngagementSchema,
   EventBodySchema,
   EventPropsSchema,
   EVENT_NAME_PATTERN,
@@ -93,6 +94,7 @@ export type {
   CollectBody,
   CollectResponse,
   EngagementBody,
+  EventEngagement,
   EventBody,
   PageviewBody,
 } from "./internal/collect-body";

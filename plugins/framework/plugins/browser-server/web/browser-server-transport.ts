@@ -164,5 +164,7 @@ export function browserServerTransport(
     // A server in the page: the computer is not behind it.
     machine: false,
     telemetry,
+    // No browser delivers a request to a server in the page.
+    beacon: null,
   };
 }

@@ -54,5 +54,6 @@ export function createStaticTransport(
     content: null,
     machine: false,
     telemetry: false,
+    beacon: null,
   };
 }

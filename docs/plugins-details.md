@@ -2073,6 +2073,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Web:
                 - Uses:
                   - `apps-core/tabs.navigate`
+                  - `infra/endpoints.beaconEndpointOver`
                   - `infra/endpoints.fetchEndpointOver`
                   - `primitives/dom/in-view.createInViewWatcher`
                   - `primitives/dom/scroll-reveal.revealElement`
@@ -2124,6 +2125,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Dimension`
                   - `EngagementBody`
                   - `EventBody`
+                  - `EventEngagement`
                   - `EventProp`
                   - `FilterLevel`
                   - `Gap`
@@ -2199,6 +2201,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `EVENT_NAME_PATTERN`
                   - `EVENT_PROP_KEY_PATTERN`
                   - `EventBodySchema`
+                  - `EventEngagementSchema`
                   - `EventPropsSchema`
                   - `FilterLevelSchema`
                   - `firstByteOf`
@@ -39444,7 +39447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toolchain`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useWriteAvailability says whether this subtree may send a write (needsMachine on a transport without the computer, or an owner-only route from a page its server took for a deployed site's visitor); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only; beaconEndpointOver(t) hands a write to the browser to deliver after the page is gone (sendBeacon over the transport's beacon: no headers, no answer — queued or refused) — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useWriteAvailability says whether this subtree may send a write (needsMachine on a transport without the computer, or an owner-only route from a page its server took for a deployed site's visitor); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
       - Web:
         - Uses:
           - `framework/principal.pagePrincipal`
@@ -39461,6 +39464,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AssetFetch`
           - `AssetSrc`
           - `AssetUrl`
+          - `BeaconEndpoint`
+          - `BeaconSent`
           - `ContentUrl`
           - `EndpointErrorInfo`
           - `FetchEndpoint`
@@ -39468,6 +39473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `assetFetchOver`
           - `assetUrlOver`
+          - `beaconEndpointOver`
           - `contentUrlOver`
           - `EndpointAgentWriteRefusedError`
           - `EndpointError`
@@ -39547,6 +39553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rangedBlobResponse`
           - `rawEndpointHandler`
           - `readEndpointResponse`
+          - `sendEndpointBeacon`
           - `sendEndpointRequest`
           - `unavailableMessage`
           - `unmatchedApiResponse`
@@ -59546,6 +59553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/networking.stampIssuer`
               - `primitives/networking.Transport`
               - `primitives/networking/request-guard.nativeFetch`
+              - `primitives/networking/request-guard.nativeSendBeacon`
             - Exports (values): `pageTransport`
           - Cross-plugin:
             - Imported by:
@@ -59562,7 +59570,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports`
           - Exemptions:
             - Exempts itself from: `networking/no-request-guard-capability` — `web/page-transport.ts` (sanctioned)
-        - **`request-guard`** — The page request guard: installRequestGuard (once, first thing in the app entry) refuses every same-origin /api, /ws and /gateway request page code issues by a raw channel — fetch, XMLHttpRequest, sendBeacon, EventSource, WebSocket — with a RawApiRequestError (fetch rejects, the rest throw), each also logged and filed through requestGuardReportSink (held until the crash collector registers). The app's own channels hold a capability instead: nativeFetch (the page transport) and nativeWebSocket (the per-tab socket), falling back to the globals at call time when no guard is installed; GET / HEAD of the asset routes allowAssetRoute registers pass. Importing the capability is bounded by networking/no-request-guard-capability.
+        - **`request-guard`** — The page request guard: installRequestGuard (once, first thing in the app entry) refuses every same-origin /api, /ws and /gateway request page code issues by a raw channel — fetch, XMLHttpRequest, sendBeacon, EventSource, WebSocket — with a RawApiRequestError (fetch rejects, the rest throw), each also logged and filed through requestGuardReportSink (held until the crash collector registers). The app's own channels hold a capability instead: nativeFetch and nativeSendBeacon (the page transport) and nativeWebSocket (the per-tab socket), falling back to the globals at call time when no guard is installed; GET / HEAD of the asset routes allowAssetRoute registers pass. Importing the capability is bounded by networking/no-request-guard-capability.
           - Core:
             - Uses: `packages/floor-compat.canParseUrl`
             - Exports (values):
@@ -59589,6 +59597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `allowAssetRoute`
               - `installRequestGuard`
               - `nativeFetch`
+              - `nativeSendBeacon`
               - `nativeWebSocket`
               - `RawApiRequestError`
               - `requestGuardReportSink`

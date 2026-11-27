@@ -13,6 +13,7 @@ import type { TSESTree } from "@typescript-eslint/utils";
  * no inline disable):
  *
  * - `nativeFetch` — the page transport's `fetch`;
+ * - `nativeSendBeacon` — the page transport's `beacon`;
  * - `nativeWebSocket` — the per-tab reconnecting socket;
  * - `allowAssetRoute` — the asset URL resolver (`assetUrlOver`) and the app
  *   entry (the asset mirror's prefix);
@@ -31,6 +32,7 @@ const REQUEST_GUARD =
 
 const CAPABILITIES: readonly string[] = [
   "nativeFetch",
+  "nativeSendBeacon",
   "nativeWebSocket",
   "allowAssetRoute",
   "installRequestGuard",
@@ -45,7 +47,7 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow importing the page request guard's natives (nativeFetch, nativeWebSocket, allowAssetRoute, installRequestGuard) outside their sanctioned holders.",
+        "Disallow importing the page request guard's natives (nativeFetch, nativeSendBeacon, nativeWebSocket, allowAssetRoute, installRequestGuard) outside their sanctioned holders.",
     },
     schema: [],
     messages: {

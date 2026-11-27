@@ -372,6 +372,15 @@ async function recordPageview(
 ): Promise<CollectResponse> {
   const key = await visitorKeyFor(dbx, body, ctx);
   return withVisitorLock(dbx, key, async (tx) => {
+    // The tracker mints the id; one already recorded is a replay (or a
+    // forged id): recording it again would be a second pageview.
+    if (body.pageviewId !== undefined) {
+      const [taken] = await tx
+        .select({ id: analyticsHits.id })
+        .from(analyticsHits)
+        .where(eq(analyticsHits.id, body.pageviewId));
+      if (taken) return { outcome: "ignored", reason: "duplicate-pageview" };
+    }
     const visitor = await resolveVisitor(tx, key);
     const visitId =
       (await findLiveVisitId(tx, visitor.visitorId, ctx.now)) ??
@@ -388,6 +397,7 @@ async function recordPageview(
     const [hit] = await tx
       .insert(analyticsHits)
       .values({
+        ...(body.pageviewId !== undefined ? { id: body.pageviewId } : {}),
         visitId,
         ts: ctx.now,
         kind: "pageview",
@@ -416,7 +426,9 @@ async function recordPageview(
 /**
  * An event joins the visitor's live visit. With none (the tab sat open past
  * the 30-minute gap) it opens one at the event's page: an event is still a
- * sign someone is there.
+ * sign someone is there. The page's visible time it carries is recorded as an
+ * engagement beacon's would be — one naming a pageview not recorded (yet) is
+ * dropped, and the event kept.
  */
 async function recordEvent(
   dbx: AnalyticsDb,
@@ -447,6 +459,9 @@ async function recordEvent(
       eventName: body.name,
       eventProps: body.props ?? null,
     });
+    // Before the visit's own update: an engagement locks its pageview's row,
+    // then its visit's, as a beacon does, so the two never wait on each other.
+    if (body.engagement) await applyEngagement(tx, body.engagement, ctx.now);
     await tx
       .update(analyticsVisits)
       .set({
@@ -470,67 +485,80 @@ function isNewerGaps(
   gaps: readonly Gap[],
   stored: { engagedMs: number; gaps: readonly Gap[] | null },
 ): boolean {
+  // Nothing recorded yet. (An event may have raised the stored total past
+  // this beacon's without sending gaps: the first list still lands.)
+  if (stored.gaps === null) return true;
   if (engagedMs !== stored.engagedMs) return engagedMs > stored.engagedMs;
-  return (
-    stored.gaps === null || gapsExtentMs(gaps) >= gapsExtentMs(stored.gaps)
-  );
+  return gapsExtentMs(gaps) >= gapsExtentMs(stored.gaps);
 }
 
-/**
- * The beacon carries the pageview's CUMULATIVE visible time, so the stored
- * value only ever rises to the largest one reported and a repeated beacon adds
- * nothing. The visit's sum moves by the same delta, and its exit time on page
- * follows when this pageview is still the visit's last one.
- */
 async function recordEngagement(
   dbx: AnalyticsDb,
   body: EngagementBody,
   now: Date,
 ): Promise<CollectResponse> {
-  return dbx.transaction(async (tx) => {
-    const [hit] = await tx
-      .select({
-        visitId: analyticsHits.visitId,
-        engagedMs: analyticsHits.engagedMs,
-        gaps: analyticsHits.gaps,
-        load: analyticsHits.load,
-        sections: analyticsHits.sections,
-      })
-      .from(analyticsHits)
-      .where(
-        and(
-          eq(analyticsHits.id, body.pageviewId),
-          eq(analyticsHits.kind, "pageview"),
-        ),
-      )
-      .for("update");
-    if (!hit) return { outcome: "ignored", reason: "unknown-pageview" };
-    const engagedMs = Math.max(hit.engagedMs, body.engagedMs);
-    const delta = engagedMs - hit.engagedMs;
-    await tx
-      .update(analyticsHits)
-      .set({
-        engagedMs,
-        ...(body.gaps && isNewerGaps(body.engagedMs, body.gaps, hit)
-          ? { gaps: body.gaps }
-          : {}),
-        // Sent once per page load; the first that lands is kept.
-        ...(body.load && hit.load === null ? { load: body.load } : {}),
-        // Only grows within a page load, so the longest is the newest.
-        ...(body.sections &&
-        (hit.sections === null || body.sections.length > hit.sections.length)
-          ? { sections: body.sections }
-          : {}),
-      })
-      .where(eq(analyticsHits.id, body.pageviewId));
-    await tx
-      .update(analyticsVisits)
-      .set({
-        engagedMs: sql`${analyticsVisits.engagedMs} + ${delta}`,
-        exitEngagedMs: sql`CASE WHEN ${analyticsVisits.exitPageviewId} = ${body.pageviewId} THEN ${engagedMs} ELSE ${analyticsVisits.exitEngagedMs} END`,
-        lastAt: sql`GREATEST(${analyticsVisits.lastAt}, ${now})`,
-      })
-      .where(eq(analyticsVisits.id, hit.visitId));
-    return { outcome: "engagement" };
-  });
+  return dbx.transaction(async (tx) =>
+    (await applyEngagement(tx, body, now))
+      ? { outcome: "engagement" }
+      : { outcome: "ignored", reason: "unknown-pageview" },
+  );
+}
+
+/**
+ * Records a pageview's engagement — from its beacon, or carried by an event
+ * (`EventEngagement`: the visible time only). The time is CUMULATIVE, so the
+ * stored value only ever rises to the largest one reported and a repeat adds
+ * nothing. The visit's sum moves by the same delta, and its exit time on page
+ * follows when this pageview is still the visit's last one. False when no such
+ * pageview is recorded.
+ */
+async function applyEngagement(
+  tx: Tx,
+  body: Omit<EngagementBody, "kind">,
+  now: Date,
+): Promise<boolean> {
+  const [hit] = await tx
+    .select({
+      visitId: analyticsHits.visitId,
+      engagedMs: analyticsHits.engagedMs,
+      gaps: analyticsHits.gaps,
+      load: analyticsHits.load,
+      sections: analyticsHits.sections,
+    })
+    .from(analyticsHits)
+    .where(
+      and(
+        eq(analyticsHits.id, body.pageviewId),
+        eq(analyticsHits.kind, "pageview"),
+      ),
+    )
+    .for("update");
+  if (!hit) return false;
+  const engagedMs = Math.max(hit.engagedMs, body.engagedMs);
+  const delta = engagedMs - hit.engagedMs;
+  await tx
+    .update(analyticsHits)
+    .set({
+      engagedMs,
+      ...(body.gaps && isNewerGaps(body.engagedMs, body.gaps, hit)
+        ? { gaps: body.gaps }
+        : {}),
+      // Sent once per page load; the first that lands is kept.
+      ...(body.load && hit.load === null ? { load: body.load } : {}),
+      // Only grows within a page load, so the longest is the newest.
+      ...(body.sections &&
+      (hit.sections === null || body.sections.length > hit.sections.length)
+        ? { sections: body.sections }
+        : {}),
+    })
+    .where(eq(analyticsHits.id, body.pageviewId));
+  await tx
+    .update(analyticsVisits)
+    .set({
+      engagedMs: sql`${analyticsVisits.engagedMs} + ${delta}`,
+      exitEngagedMs: sql`CASE WHEN ${analyticsVisits.exitPageviewId} = ${body.pageviewId} THEN ${engagedMs} ELSE ${analyticsVisits.exitEngagedMs} END`,
+      lastAt: sql`GREATEST(${analyticsVisits.lastAt}, ${now})`,
+    })
+    .where(eq(analyticsVisits.id, hit.visitId));
+  return true;
 }

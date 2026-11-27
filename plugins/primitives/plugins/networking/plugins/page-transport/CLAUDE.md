@@ -32,6 +32,7 @@ to itself).
     - `primitives/networking.stampIssuer`
     - `primitives/networking.Transport`
     - `primitives/networking/request-guard.nativeFetch`
+    - `primitives/networking/request-guard.nativeSendBeacon`
   - Exports (values): `pageTransport`
 - Cross-plugin:
   - Imported by:

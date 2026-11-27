@@ -26,6 +26,7 @@ export function testTransport(overrides: Partial<Transport> = {}): Transport {
     content: null,
     machine: true,
     telemetry: true,
+    beacon: null,
     ...overrides,
   };
   return transport;

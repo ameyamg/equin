@@ -179,8 +179,15 @@ export function visitHasAll(
  * pageview's recorded `gaps`. An exit pageview whose gaps were never recorded
  * (`NULL`: an older tracker, a visit from before `gaps` existed, no beacon
  * yet) adds no background time — its visible time is all that is known.
+ *
+ * Never shorter than the visit's last sign of life (`last_at − started_at`):
+ * the page was open when its last event or beacon came in. Its beacons can be
+ * lost (a phone closing the tab) while its events got through, and the exit
+ * page's time is ONLY what beacons measured — so without this floor a
+ * one-page visit whose visitor scrolled and answered the consent prompt for
+ * half a minute lasted 0 s.
  */
-export const visitDurationMs = sql`(
+export const visitDurationMs = sql`GREATEST(
   (GREATEST(EXTRACT(EPOCH FROM (v.exit_at - v.started_at)) * 1000, 0))::bigint
   + v.exit_engaged_ms
   + COALESCE((
@@ -188,7 +195,8 @@ export const visitDurationMs = sql`(
       FROM analytics_hits xh
         CROSS JOIN LATERAL jsonb_array_elements(xh.gaps) AS g(value)
       WHERE xh.id = v.exit_pageview_id AND g.value->>'kind' = 'hidden'
-    ), 0)::bigint
+    ), 0)::bigint,
+  (GREATEST(EXTRACT(EPOCH FROM (v.last_at - v.started_at)) * 1000, 0))::bigint
 )`;
 
 /**

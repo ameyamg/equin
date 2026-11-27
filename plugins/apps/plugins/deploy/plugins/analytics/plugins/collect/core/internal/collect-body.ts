@@ -108,6 +108,27 @@ export const PageviewBodySchema = z
      * the page at. Absent from an older tracker.
      */
     viewport: ViewportSchema.optional(),
+    /**
+     * The hit's id, minted by the tracker (`crypto.randomUUID()`), so the
+     * page's engagement beacons can name it at once — never waiting for this
+     * pageview's response, which a page hidden or closed right after loading
+     * never gets. Absent from an older tracker: the server mints one.
+     */
+    pageviewId: z.string().uuid().optional(),
+  })
+  .strict();
+
+/**
+ * Where a pageview stands, as an event sends it along (`EventBody.engagement`):
+ * the same cumulative visible time an engagement beacon carries, so a visit
+ * whose beacons were all lost still has the visible time its events saw. No
+ * gaps, load or sections — they would not fit an event's body cap beside its
+ * props; the beacons carry those.
+ */
+export const EventEngagementSchema = z
+  .object({
+    pageviewId: z.string().uuid(),
+    engagedMs: z.number().int().min(0).max(MAX_ENGAGED_MS),
   })
   .strict();
 
@@ -130,13 +151,19 @@ export const EventBodySchema = z
      * then identified by the daily hash alone.
      */
     consentKey: ConsentKeySchema.optional(),
+    /**
+     * The current page's visible time so far ({@link EventEngagementSchema}),
+     * recorded as its engagement beacon's would be (the server keeps the max).
+     * Absent from an older tracker, and before any pageview.
+     */
+    engagement: EventEngagementSchema.optional(),
   })
   .strict();
 
 export const EngagementBodySchema = z
   .object({
     kind: z.literal("engagement"),
-    /** The `pageviewId` the pageview's response returned. */
+    /** The pageview's id: the one the tracker minted (`PageviewBody.pageviewId`). */
     pageviewId: z.string().uuid(),
     /**
      * CUMULATIVE visible milliseconds of that pageview so far — send it on
@@ -174,6 +201,7 @@ export type CollectBody = z.infer<typeof CollectBodySchema>;
 export type PageviewBody = z.infer<typeof PageviewBodySchema>;
 export type EventBody = z.infer<typeof EventBodySchema>;
 export type EngagementBody = z.infer<typeof EngagementBodySchema>;
+export type EventEngagement = z.infer<typeof EventEngagementSchema>;
 
 /**
  * What the server did with one collect request.
@@ -181,9 +209,10 @@ export type EngagementBody = z.infer<typeof EngagementBodySchema>;
  * - `pageview` — recorded; `pageviewId` is what later `engagement` beacons for
  *   this page reference.
  * - `event` / `engagement` — recorded.
- * - `ignored` — deliberately not recorded: the user agent is a bot, or the
- *   engagement names a pageview that does not exist (swept, or never recorded
- *   because it was a bot).
+ * - `ignored` — deliberately not recorded: the user agent is a bot, the
+ *   engagement names a pageview that does not exist (swept, never recorded
+ *   because it was a bot, or not recorded YET — a beacon overtaking its
+ *   pageview), or the pageview names an id already recorded.
  */
 export const CollectResponseSchema = z.discriminatedUnion("outcome", [
   z.object({ outcome: z.literal("pageview"), pageviewId: z.string().uuid() }),
@@ -191,7 +220,7 @@ export const CollectResponseSchema = z.discriminatedUnion("outcome", [
   z.object({ outcome: z.literal("engagement") }),
   z.object({
     outcome: z.literal("ignored"),
-    reason: z.enum(["bot", "unknown-pageview"]),
+    reason: z.enum(["bot", "unknown-pageview", "duplicate-pageview"]),
   }),
 ]);
 export type CollectResponse = z.infer<typeof CollectResponseSchema>;

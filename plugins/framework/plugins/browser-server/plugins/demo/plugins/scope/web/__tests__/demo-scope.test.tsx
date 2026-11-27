@@ -1335,5 +1335,6 @@ function pageBackend(): Transport {
     content: null,
     machine: true,
     telemetry: false,
+    beacon: null,
   };
 }

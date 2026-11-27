@@ -17,6 +17,9 @@ import {
 
 const PV_A = "00000000-0000-4000-8000-00000000000a";
 const PV_B = "00000000-0000-4000-8000-00000000000b";
+const PV_C = "00000000-0000-4000-8000-00000000000c";
+/** The ids the tracker mints, in order: its first pageview is PV_A. */
+const MINTED = [PV_A, PV_B, PV_C];
 /** The load of a page whose browser measured nothing: still sent, every phase null. */
 const NO_LOAD = { ttfbMs: null, fcpMs: null, readyMs: null, firstByte: null };
 
@@ -37,13 +40,17 @@ function harness(
   let deadline: { at: number; fire: () => void } | null = null;
   let armed = 0;
   /**
-   * Every body sent, a pageview's viewport left out (every pageview carries
-   * one; the viewport test reads `raw`) so the other tests compare the rest.
+   * Every body sent — by `send` or by `beacon`, in order — a pageview's
+   * viewport and minted id left out (every pageview carries both; the
+   * viewport and id tests read `raw`) so the other tests compare the rest.
    */
   const sent: CollectBody[] = [];
   const raw: CollectBody[] = [];
   let viewport = { w: 1280, h: 800 };
   const pending: ((r: CollectSent) => void)[] = [];
+  /** Which of `sent` went by beacon. */
+  const beacons: number[] = [];
+  let minted = 0;
   const sections = new Map<string, string[]>();
   let milestones: LoadMilestones = {
     firstByteAt: null,
@@ -60,10 +67,27 @@ function harness(
     send: (body) => {
       raw.push(body);
       if (body.kind === "pageview") {
-        const { viewport: _viewport, ...rest } = body;
+        const { viewport: _viewport, pageviewId: _id, ...rest } = body;
         sent.push(rest);
       } else sent.push(body);
       return new Promise((resolve) => pending.push(resolve));
+    },
+    beacon: (body) => {
+      raw.push(body);
+      sent.push(body);
+      beacons.push(sent.length - 1);
+      // A beacon has no answer; its slot keeps `respond(index)` aligned with `sent`.
+      pending.push(() => {
+        throw new Error(
+          `send #${sent.length - 1} is a beacon: it has no answer`,
+        );
+      });
+    },
+    mintId: () => {
+      const id = MINTED[minted++];
+      if (id === undefined)
+        throw new Error("the test minted more ids than MINTED");
+      return id;
     },
     now: () => clock,
     wallNow: () => clock + slept,
@@ -86,6 +110,7 @@ function harness(
     tracker,
     sent,
     raw,
+    beacons,
     setViewport: (v: { w: number; h: number }) => {
       viewport = v;
     },
@@ -145,7 +170,9 @@ describe("viewport", () => {
     h.tracker.track("film_play", undefined, "/website");
     h.tracker.pathChanged("/website/story");
     expect(
-      h.raw.map((b) => (b.kind === "pageview" ? b.viewport : b.kind)),
+      h.raw
+        .filter((b) => b.kind !== "engagement")
+        .map((b) => (b.kind === "pageview" ? b.viewport : b.kind)),
     ).toEqual([{ w: 1280, h: 800 }, "event", { w: 390, h: 844 }]);
   });
 });
@@ -166,6 +193,7 @@ describe("owner mark", () => {
         path: "/website",
         name: "film_play",
         owner: true,
+        engagement: { pageviewId: PV_A, engagedMs: 0 },
       },
       {
         kind: "pageview",
@@ -194,6 +222,7 @@ describe("consent key", () => {
         path: "/website",
         name: "film_play",
         consentKey: "6f1c3b0e-8d4a-4f6e-9c2b-1a7d5e3f9b20",
+        engagement: { pageviewId: PV_A, engagedMs: 0 },
       },
       { kind: "pageview", host: "equin.dev", path: "/website/story" },
     ]);
@@ -240,13 +269,14 @@ describe("pageviews", () => {
     const h = harness({ landing });
     h.tracker.pathChanged("/about");
     h.tracker.pathChanged("/about/story");
-    expect(h.sent[0]).toEqual({
+    const pageviews = h.sent.filter((b) => b.kind === "pageview");
+    expect(pageviews[0]).toEqual({
       kind: "pageview",
       host: "equin.dev",
       path: "/about",
       ...landing,
     });
-    expect(h.sent[1]).toEqual({
+    expect(pageviews[1]).toEqual({
       kind: "pageview",
       host: "equin.dev",
       path: "/about/story",
@@ -321,42 +351,69 @@ describe("engagement", () => {
     });
   });
 
-  it("holds an engagement until the pageview id arrives", async () => {
+  it("every pageview carries the id the tracker minted, and its beacons name it", async () => {
+    const h = harness();
+    h.tracker.pathChanged("/about");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.tracker.pathChanged("/apps");
+    expect(h.raw.map((b) => ("pageviewId" in b ? b.pageviewId : null))).toEqual(
+      [PV_A, PV_A, PV_B],
+    );
+  });
+
+  it("sends a hide's engagement at once, by beacon, and again once the pageview is recorded", async () => {
+    // A page closed right after loading never gets the pageview's answer: its
+    // beacon must not wait for it.
     const h = harness();
     h.tracker.pathChanged("/about");
     h.advance(400);
     h.tracker.hidden();
-    expect(h.sent).toHaveLength(1);
-    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
-    expect(h.sent[1]).toEqual({
+    const beacon = {
       kind: "engagement",
       pageviewId: PV_A,
       engagedMs: 400,
       gaps: [],
       load: NO_LOAD,
-    });
+    };
+    expect(h.sent[1]).toEqual(beacon);
+    // It lands only if the pageview did first: the answer sends all of it again.
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    expect(h.sent[2]).toEqual(beacon);
+    expect(h.beacons).toEqual([1, 2]);
+    // Then nothing changed: nothing more.
+    h.tracker.hidden();
+    expect(h.sent).toHaveLength(3);
   });
 
-  it("sends no engagement for an ignored pageview", async () => {
+  it("sends nothing more for an ignored pageview", async () => {
     const h = harness();
     h.tracker.pathChanged("/about");
     h.advance(400);
     h.tracker.hidden();
     await h.respond(0, { outcome: "ignored", reason: "bot" });
-    expect(h.sent).toHaveLength(1);
+    h.tracker.visible();
+    h.advance(400);
+    h.tracker.hidden();
+    h.tracker.track("film_play", undefined, "/about");
+    expect(h.sent.map((b) => b.kind)).toEqual([
+      "pageview",
+      "engagement",
+      "event",
+    ]);
+    expect(h.sent[2]).not.toHaveProperty("engagement");
   });
 
-  it("sends no engagement for a pageview lost in transit, and carries on", async () => {
+  it("sends nothing more for a pageview lost in transit, and carries on", async () => {
     const h = harness();
     h.tracker.pathChanged("/about");
     h.advance(400);
     h.tracker.hidden();
     await h.lose(0);
-    expect(h.sent).toHaveLength(1);
+    expect(h.sent).toHaveLength(2);
     // The next page is tracked as usual.
     h.tracker.visible();
     h.tracker.pathChanged("/apps");
-    expect(h.sent[1]).toMatchObject({ kind: "pageview", path: "/apps" });
+    expect(h.sent[2]).toMatchObject({ kind: "pageview", path: "/apps" });
   });
 
   it("does not count time while the page started hidden, but reports it as away", async () => {
@@ -587,14 +644,14 @@ describe("load timing", () => {
     ]);
   });
 
-  it("waits with the beacon for the pageview id, then reads the load", async () => {
+  it("a beacon sent before the pageview's answer is sent again with the load as it is then", async () => {
     const h = harness();
     h.tracker.pathChanged("/about");
     h.tracker.hidden();
-    // Paint lands while the pageview's response is in flight.
+    // Paint is first known while the pageview's response is in flight.
     h.setMilestones({ ...MILESTONES, firstContentfulPaintAt: null });
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
-    expect(engagements(h.sent)[0]).toMatchObject({
+    expect(engagements(h.sent)[1]).toMatchObject({
       load: { ttfbMs: 108, fcpMs: null, readyMs: null },
     });
   });
@@ -723,8 +780,25 @@ describe("events", () => {
         path: "/about/story",
         name: "improve_show_me",
         props: { step: "1" },
+        engagement: { pageviewId: PV_A, engagedMs: 0 },
       },
     ]);
+  });
+
+  it("carries the page's visible time so far, so a visit whose beacons are lost still has it", async () => {
+    const h = harness();
+    h.tracker.pathChanged("/about");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(3000);
+    h.tracker.hidden();
+    h.advance(60_000);
+    h.tracker.visible();
+    h.advance(4000);
+    h.tracker.track("consent_answer", undefined, "/about");
+    expect(h.sent.at(-1)).toMatchObject({
+      kind: "event",
+      engagement: { pageviewId: PV_A, engagedMs: 7000 },
+    });
   });
 });
 
@@ -816,11 +890,14 @@ describe("page sections", () => {
     h.advance(1000);
     h.tracker.pathChanged("/about/vision");
     h.tracker.pathChanged("/about");
-    await h.respond(3, { outcome: "pageview", pageviewId: PV_B });
+    await h.respond(h.sent.length - 1, {
+      outcome: "pageview",
+      pageviewId: PV_C,
+    });
     h.advance(1000);
     h.tracker.hidden();
     expect(engagements(h.sent).at(-1)).toMatchObject({
-      pageviewId: PV_B,
+      pageviewId: PV_C,
       sections: ["landing/hero"],
     });
   });

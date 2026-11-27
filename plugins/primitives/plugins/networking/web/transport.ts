@@ -135,6 +135,19 @@ export interface Transport {
    * to the page and report through `pageTransport` regardless.
    */
   readonly telemetry: boolean;
+  /**
+   * Hands a POST of `body` to `path` to the browser to deliver even after the
+   * page is gone (`navigator.sendBeacon`) — the request a page sends as it is
+   * hidden or closed, which a `fetch`, even `keepalive`, is more often dropped
+   * on (mobile Safari). The body is a string, so it goes as `text/plain` — the
+   * one kind Chrome beacons without refusing (a Blob typed `application/json`
+   * throws there). No headers, no answer: `true` once the browser queued
+   * it, `false` when it refused (its in-flight beacon quota is full). `null`
+   * where no browser delivers this transport's requests (an in-browser
+   * server, a static render). Sent through `beaconEndpointOver`
+   * (`infra/endpoints`). Required, so every transport states it.
+   */
+  readonly beacon: ((path: string, body: string) => boolean) | null;
 }
 
 const TransportContext = createContext<Transport | null>(null);

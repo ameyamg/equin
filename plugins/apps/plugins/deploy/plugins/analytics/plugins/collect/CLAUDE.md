@@ -99,6 +99,13 @@ Two definitions in `server/internal/aggregate-sql.ts`, one per question:
     merge past `MAX_GAPS` may label a little visible time hidden — both small;
   - an exit pageview with `gaps = NULL` adds no background: its visible time is
     all that is known.
+  - **never shorter than the visit's last sign of life** (`last_at −
+    started_at`): the page was open when its last event or beacon landed.
+    The exit page's time is only what beacons measured, and a phone closing
+    the tab often loses them while its events got through — so before this
+    floor (2026-11-27) a one-page visit scrolled and answered for half a
+    minute lasted 0 s (488 of ~4,960 visits of the website's copy had no
+    beacon at all, 266 of them with events).
 
 A page row's `durationMs` (time on page) is that page's visible time minus its
 `idle` stretches — its active time on the page.
@@ -216,6 +223,26 @@ tables are; nothing reads visits over SSH any more (the old host-only
 - The visitor id never leaves the box: `visitor` is the first 8 hex of its
   sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`,
   `research/2026-11-12-global-table-mirror.md` § Phase 2.
+
+## Engagement delivery
+
+A pageview's visible time reaches the box three ways, so losing one is not
+losing it all (`web/internal/tracker.ts`):
+
+- **The tracker mints the pageview's id** (`PageviewBody.pageviewId`,
+  `crypto.randomUUID()`), so a beacon never waits for the pageview's answer.
+  One sent before the answer (a page hidden right after loading) is sent
+  again once the pageview is known recorded — it lands only if the pageview
+  did first. An id already recorded is answered `duplicate-pageview`.
+- **Beacons go by `sendBeacon`** (`beaconEndpointOver(pageTransport)`,
+  `infra/endpoints`), which the browser delivers after the page is gone,
+  where a `keepalive` fetch was dropped (mobile Safari).
+- **Every event carries the page's visible time so far**
+  (`EventBody.engagement`: the pageview id and cumulative `engagedMs`, no
+  gaps — they would not fit an event's body cap beside its props), recorded
+  as a beacon's (`applyEngagement`; the max wins). One naming a pageview not
+  recorded yet is dropped and the event kept. GA4 does the same
+  (`engagement_time_msec` on every event).
 
 ## Away stretches
 
@@ -447,6 +474,7 @@ dropped and re-copied.
 - Web:
   - Uses:
     - `apps-core/tabs.navigate`
+    - `infra/endpoints.beaconEndpointOver`
     - `infra/endpoints.fetchEndpointOver`
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/dom/scroll-reveal.revealElement`
@@ -498,6 +526,7 @@ dropped and re-copied.
     - `Dimension`
     - `EngagementBody`
     - `EventBody`
+    - `EventEngagement`
     - `EventProp`
     - `FilterLevel`
     - `Gap`
@@ -573,6 +602,7 @@ dropped and re-copied.
     - `EVENT_NAME_PATTERN`
     - `EVENT_PROP_KEY_PATTERN`
     - `EventBodySchema`
+    - `EventEngagementSchema`
     - `EventPropsSchema`
     - `FilterLevelSchema`
     - `firstByteOf`

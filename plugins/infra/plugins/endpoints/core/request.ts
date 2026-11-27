@@ -174,6 +174,37 @@ export async function sendEndpointRequest<
 }
 
 /**
+ * Hand one write to an endpoint to a beacon sender (a transport's `beacon`:
+ * `navigator.sendBeacon`), built from its contract like
+ * {@link sendEndpointRequest} — the path goes to the sender and nowhere else.
+ * A beacon is a POST with a string body and no headers, so anything else is
+ * refused here. Returns what the sender said: queued (`true`) or not.
+ */
+export function sendEndpointBeacon<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  beacon: (path: string, body: string) => boolean,
+  endpoint: AnyEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  params: TParams,
+  opts: EndpointRequestOpts<TBody, TQuery>,
+): boolean {
+  if (endpoint.method !== "POST")
+    throw new Error(
+      `${endpoint.route}: a beacon is a POST (sendBeacon sends nothing else)`,
+    );
+  const { path, init } = endpointRequest(endpoint, params, opts);
+  if (typeof init.body !== "string")
+    throw new Error(
+      `${endpoint.route}: a beacon's body must encode to a string (JSON)`,
+    );
+  return beacon(path, init.body);
+}
+
+/**
  * A non-2xx reply in words that name the request: `HTTP <status> from <route>`
  * and, when the body says why, its words (`message`, else `reason`, else the
  * plain-text body, first line, capped). An error that escapes unhandled (a

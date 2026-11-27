@@ -21,7 +21,11 @@ export type {
 } from "./needs-machine";
 export type { ExtractParams } from "./route-params";
 export { implement, rawEndpointHandler, HttpError } from "./implement";
-export { readEndpointResponse, sendEndpointRequest } from "./request";
+export {
+  readEndpointResponse,
+  sendEndpointBeacon,
+  sendEndpointRequest,
+} from "./request";
 export type {
   EndpointAnswer,
   EndpointRequestOpts,

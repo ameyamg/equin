@@ -7,6 +7,7 @@ import {
   pagePathOf,
   type CollectBody,
   type CollectResponse,
+  type EngagementBody,
   type Gap,
   type GapKind,
   type LoadTiming,
@@ -45,6 +46,14 @@ export interface TrackerDeps {
    * failure rejects and is left to surface (see `send` in instance.ts).
    */
   send: (body: CollectBody) => Promise<CollectSent>;
+  /**
+   * Hands an engagement beacon to the browser to deliver even if the page
+   * goes away right after (`navigator.sendBeacon`): what a page hidden or
+   * closed sends, where a `fetch` is more often dropped. No answer.
+   */
+  beacon: (body: EngagementBody) => void;
+  /** A fresh random UUID (`crypto.randomUUID()`): each pageview's id. */
+  mintId: () => string;
   /**
    * The performance timeline (`performance.now()`): pauses while the device
    * sleeps. Times the visible stretches, so engaged time never includes sleep,
@@ -100,15 +109,23 @@ export interface LoadMilestones {
 /** One pageview whose visible time is being counted. */
 interface CurrentPage {
   path: string;
-  /** Set once the pageview's response names it; null before, or if ignored. */
-  pageviewId: string | null;
+  /** Minted here and sent with the pageview, so a beacon never waits for its answer. */
+  pageviewId: string;
+  /**
+   * What the pageview's answer said: `pending` until it comes, `recorded`, or
+   * `dropped` — lost on the way, or ignored (a bot): nothing to attach to.
+   */
+  recorded: "pending" | "recorded" | "dropped";
   /** Cumulative visible milliseconds, excluding the running stretch. */
   engagedMs: number;
   /** When the running visible stretch began, or null while hidden. */
   visibleSince: number | null;
   /** The engagedMs last sent, so a repeated hide never re-sends the same total. */
   sentMs: number;
-  /** An engagement is owed but the pageview id has not arrived yet. */
+  /**
+   * An engagement went out before the pageview was known recorded — it lands
+   * only if the pageview did first — so it is sent again once it is.
+   */
   owed: boolean;
   /** `deps.wallNow()` when the pageview was recorded: what gap offsets count from. */
   startedAt: number;
@@ -150,9 +167,10 @@ export interface Tracker {
 }
 
 /**
- * The tracker's state machine: one pageview per distinct path, the landing
- * source on the first pageview only, and visible time per pageview reported as a
- * cumulative total on every hide and when the visitor leaves the path, with
+ * The tracker's state machine: one pageview per distinct path (its id minted
+ * here), the landing source on the first pageview only, and visible time per
+ * pageview reported as a cumulative total — by beacon on every hide and when
+ * the visitor leaves the path, and on every event sent from the page — with
  * the pageview's away stretches: `hidden` from a hide to the next show, `idle`
  * from the last input to the next one once {@link IDLE_AFTER_MS} pass without
  * any while visible and no media plays. The page load's first pageview — the
@@ -261,6 +279,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
   };
 
   const sendEngagement = (page: CurrentPage) => {
+    if (page.recorded === "dropped") return;
     const engagedMs = engaged(page);
     const gaps = gapsSoFar(page);
     const gapsJson = JSON.stringify(gaps);
@@ -272,28 +291,31 @@ export function createTracker(deps: TrackerDeps): Tracker {
       sections.length <= page.sentSections
     )
       return;
-    if (page.pageviewId === null) {
-      // The pageview's response is still in flight: send once it names the id.
-      page.owed = true;
-      return;
-    }
-    page.owed = false;
-    page.sentMs = engagedMs;
-    page.sentGaps = gapsJson;
     // The full list, whenever it grew (a page with none sends none).
     const grown =
       sections.length > page.sentSections ? { sections: [...sections] } : {};
-    page.sentSections = sections.length;
     const load = page.loadOwed ? { load: loadTiming() } : {};
-    page.loadOwed = false;
-    void deps.send({
+    const body: EngagementBody = {
       kind: "engagement",
       pageviewId: page.pageviewId,
       engagedMs,
       gaps,
       ...load,
       ...grown,
-    });
+    };
+    if (page.recorded === "pending") {
+      // Sent now, in case the page goes away before the pageview's answer
+      // (it lands if the pageview did first). Nothing is marked sent, so the
+      // answer sends all of it again — the load and the sections included.
+      page.owed = true;
+      deps.beacon(body);
+      return;
+    }
+    page.sentMs = engagedMs;
+    page.sentGaps = gapsJson;
+    page.sentSections = sections.length;
+    page.loadOwed = false;
+    deps.beacon(body);
   };
 
   const pause = (page: CurrentPage) => {
@@ -318,7 +340,8 @@ export function createTracker(deps: TrackerDeps): Tracker {
       if (!visible && firstHiddenAt === Infinity) firstHiddenAt = 0;
       const page: CurrentPage = {
         path,
-        pageviewId: null,
+        pageviewId: deps.mintId(),
+        recorded: "pending",
         engagedMs: 0,
         visibleSince: visible ? now : null,
         sentMs: 0,
@@ -343,16 +366,20 @@ export function createTracker(deps: TrackerDeps): Tracker {
           host: deps.host,
           path,
           viewport: deps.viewport(),
+          pageviewId: page.pageviewId,
           ...source,
           ...identity(),
         })
         .then((sent) => {
-          // Lost on the way: the visit has no id to attach engagement to.
-          if (!sent.delivered) return;
-          // `ignored` (a bot) has no id either.
-          if (sent.response.outcome !== "pageview") return;
-          page.pageviewId = sent.response.pageviewId;
-          if (page.owed) sendEngagement(page);
+          // Lost on the way, or `ignored` (a bot): no pageview to attach to.
+          if (!sent.delivered || sent.response.outcome !== "pageview") {
+            page.recorded = "dropped";
+            return;
+          }
+          page.recorded = "recorded";
+          if (!page.owed) return;
+          page.owed = false;
+          sendEngagement(page);
         });
     },
     hidden() {
@@ -383,6 +410,17 @@ export function createTracker(deps: TrackerDeps): Tracker {
       armDeadline();
     },
     track(name, props, fallbackPath) {
+      // The page's visible time so far rides along: a visit whose beacons are
+      // all lost still has what its events saw.
+      const engagement =
+        current && current.recorded !== "dropped"
+          ? {
+              engagement: {
+                pageviewId: current.pageviewId,
+                engagedMs: engaged(current),
+              },
+            }
+          : {};
       void deps.send({
         kind: "event",
         host: deps.host,
@@ -390,6 +428,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
         name,
         ...(props !== undefined ? { props } : {}),
         ...identity(),
+        ...engagement,
       });
     },
     currentPath: () => current?.path ?? null,

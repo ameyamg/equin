@@ -219,13 +219,13 @@ beforeAll(async () => {
   await hit(
     { kind: "engagement", pageviewId: harness, engagedMs: 60_000 },
     A,
-    at(DAY, "10:07"),
+    at(DAY, "10:06"),
   );
   // A repeated, smaller cumulative beacon changes nothing.
   await hit(
     { kind: "engagement", pageviewId: harness, engagedMs: 20_000 },
     A,
-    at(DAY, "10:08"),
+    at(DAY, "10:06"),
   );
 
   // Visitor A, visit 2 (more than 30 minutes later): a direct bounce.
@@ -328,6 +328,158 @@ describe("collect", () => {
       at(DAY, "13:00"),
     );
     expect(res).toEqual({ outcome: "ignored", reason: "unknown-pageview" });
+  });
+
+  describe("on a day of its own, rolled back after", () => {
+    const day = "2026-09-21";
+    const E = { ip: "203.0.113.8", ua: UA.safariIphone };
+    const MINTED = "5b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+    const send = (
+      dbx: Parameters<typeof recordCollect>[0],
+      body: z.input<typeof CollectBodySchema>,
+      now: Date,
+    ) =>
+      recordCollect(
+        dbx,
+        CollectBodySchema.parse(body),
+        { ip: E.ip, userAgent: E.ua, acceptLanguage: "en-US", now },
+        (ip) => countries.lookup(ip),
+      );
+    const plus = (from: Date, ms: number) => new Date(from.getTime() + ms);
+    const t0 = at(day, "09:00");
+    const visitOf = async (dbx: Parameters<typeof recordCollect>[0]) => {
+      const [visit] = await dbx
+        .select()
+        .from(analyticsVisits)
+        .where(eq(analyticsVisits.day, day));
+      if (!visit) throw new Error("no visit recorded");
+      return visit;
+    };
+    const sessionOf = async (dbx: Parameters<typeof recordCollect>[0]) => {
+      const [session] = await readVisitWindow(
+        dbx,
+        {
+          where: clause("startedAt", "gte", `${day}T00:00:00.000Z`),
+          filterable: FILTERABLE,
+          direction: "desc",
+          limit: 5,
+        },
+        at(day, "23:00"),
+      );
+      if (!session) throw new Error("no session listed");
+      return session;
+    };
+    const rolledBack = (
+      body: (tx: Parameters<typeof recordCollect>[0]) => Promise<void>,
+    ) =>
+      expect(
+        t.db.transaction(async (tx) => {
+          await body(tx);
+          tx.rollback();
+        }),
+      ).rejects.toThrow(TransactionRollbackError);
+
+    test("a pageview is recorded under the id its tracker minted; the same id again is not a second one", async () => {
+      rolledBack(async (tx) => {
+        const page = {
+          kind: "pageview",
+          host,
+          path: "/",
+          pageviewId: MINTED,
+        } as const;
+        expect(await send(tx, page, t0)).toEqual({
+          outcome: "pageview",
+          pageviewId: MINTED,
+        });
+        expect(await send(tx, page, plus(t0, 1_000))).toEqual({
+          outcome: "ignored",
+          reason: "duplicate-pageview",
+        });
+        expect((await visitOf(tx)).pageviews).toBe(1);
+      });
+    });
+
+    test("an event carries its page's visible time, recorded as a beacon's", async () => {
+      rolledBack(async (tx) => {
+        await send(
+          tx,
+          { kind: "pageview", host, path: "/", pageviewId: MINTED },
+          t0,
+        );
+        // Every beacon lost; the events got through.
+        const event = (engagedMs: number) => ({
+          kind: "event" as const,
+          host,
+          path: "/",
+          name: "section_reach",
+          engagement: { pageviewId: MINTED, engagedMs },
+        });
+        await send(tx, event(12_000), plus(t0, 12_000));
+        // Out of order: a smaller total changes nothing.
+        await send(tx, event(4_000), plus(t0, 13_000));
+        const visit = await visitOf(tx);
+        expect(visit.events).toBe(2);
+        expect(visit.engagedMs).toBe(12_000);
+        expect(visit.exitEngagedMs).toBe(12_000);
+        // The beacon that does arrive still records its stretches, though an
+        // event already raised the total past its own.
+        await send(
+          tx,
+          {
+            kind: "engagement",
+            pageviewId: MINTED,
+            engagedMs: 10_000,
+            gaps: [{ kind: "hidden", startMs: 2_000, endMs: 8_000 }],
+          },
+          plus(t0, 14_000),
+        );
+        const [pageview] = await tx
+          .select()
+          .from(analyticsHits)
+          .where(eq(analyticsHits.id, MINTED));
+        expect(pageview?.engagedMs).toBe(12_000);
+        expect(pageview?.gaps).toEqual([
+          { kind: "hidden", startMs: 2_000, endMs: 8_000 },
+        ]);
+      });
+    });
+
+    test("an event naming a pageview not recorded is kept, its engagement dropped", async () => {
+      rolledBack(async (tx) => {
+        const res = await send(
+          tx,
+          {
+            kind: "event",
+            host,
+            path: "/",
+            name: "section_reach",
+            engagement: { pageviewId: MINTED, engagedMs: 3_000 },
+          },
+          t0,
+        );
+        expect(res).toEqual({ outcome: "event" });
+        const visit = await visitOf(tx);
+        expect(visit.events).toBe(1);
+        expect(visit.engagedMs).toBe(0);
+      });
+    });
+
+    test("a visit lasts at least until its last sign of life", async () => {
+      rolledBack(async (tx) => {
+        // A one-page visit whose beacons were all lost (an older tracker's
+        // events carry no time): only its events say how long it was open.
+        await send(tx, { kind: "pageview", host, path: "/" }, t0);
+        await send(
+          tx,
+          { kind: "event", host, path: "/", name: "consent_answer" },
+          plus(t0, 31_000),
+        );
+        const session = await sessionOf(tx);
+        expect(session.durationMs).toBe(31_000);
+        // Its gaps were never recorded: nothing is subtracted.
+        expect(session.activeMs).toBe(31_000);
+      });
+    });
   });
 
   test("a 30-minute gap splits visits; source attributes come from the first hit", async () => {
@@ -1255,8 +1407,9 @@ describe("visit duration: one definition, report and sessions alike", () => {
       // B: one page, 5 s visible + 120 s in a background tab.
       "/apps@10:30": 5_000 + 120_000,
       "/@11:00": 0,
-      // C: 10 min to /story, no beacon there.
-      "/@12:00": 10 * 60_000,
+      // C: 10 min to /story, no beacon there — but events from it until
+      // 12:12, so it lasted at least that long.
+      "/@12:00": 12 * 60_000,
     });
   });
 
@@ -1329,7 +1482,7 @@ describe("visit duration: one definition, report and sessions alike", () => {
               { kind: "idle", startMs: 50_000, endMs: 70_000 },
             ],
           },
-          at(day, "10:04"),
+          new Date(at(day, "10:02").getTime() + 70_000),
         );
         // A late beacon of / : 20 s visible, then a background stretch that
         // runs past its next pageview (at 120 s) — only its first 20 s count.
@@ -1341,7 +1494,7 @@ describe("visit duration: one definition, report and sessions alike", () => {
             engagedMs: 20_000,
             gaps: [{ kind: "hidden", startMs: 100_000, endMs: 200_000 }],
           },
-          at(day, "10:04"),
+          new Date(at(day, "10:02").getTime() + 70_000),
         );
         // Wall-clock: 2 min on / + 40 s visible on /b (its 20 s idle in) +
         // its 30 s hidden.

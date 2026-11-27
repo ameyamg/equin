@@ -338,6 +338,22 @@ export function nativeFetch(
 }
 
 /**
+ * The native `navigator.sendBeacon`, past the guard — the page transport's
+ * `beacon`. With no guard installed it is the realm's own, read at call time.
+ * A realm without one (jsdom) throws: every browser the app supports has it.
+ */
+export function nativeSendBeacon(url: string, data: BodyInit): boolean {
+  const beacon =
+    natives?.sendBeacon ??
+    (typeof globalThis.navigator === "object"
+      ? globalThis.navigator.sendBeacon
+      : undefined);
+  if (typeof beacon !== "function")
+    throw new Error("nativeSendBeacon: this realm has no navigator.sendBeacon");
+  return beacon.call(globalThis.navigator, url, data);
+}
+
+/**
  * A `WebSocket` opened past the guard — the per-tab reconnecting socket. With
  * no guard installed it is the global `WebSocket`, read at call time.
  */

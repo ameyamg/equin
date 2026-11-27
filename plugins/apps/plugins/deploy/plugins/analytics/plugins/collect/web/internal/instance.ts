@@ -1,5 +1,8 @@
 import { isLostInTransit } from "@plugins/infra/plugins/endpoints/core";
-import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import {
+  beaconEndpointOver,
+  fetchEndpointOver,
+} from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -16,6 +19,7 @@ import {
   collectEndpoint,
   pagePathOf,
   type CollectBody,
+  type EngagementBody,
 } from "../../core";
 import { consentKeyOf, consentStore } from "./consent";
 import { landingSource } from "./landing";
@@ -37,6 +41,7 @@ import {
 
 // Page-wide telemetry: page-view analytics always reach the page's own server (D3).
 const fetchEndpoint = fetchEndpointOver(pageTransport);
+const beaconEndpoint = beaconEndpointOver(pageTransport);
 
 /**
  * Posts one collect body. `keepalive` lets the engagement beacon sent on
@@ -65,6 +70,22 @@ async function send(body: CollectBody): Promise<CollectSent> {
     console.warn(`[analytics] ${body.kind} not counted — ${err.message}`);
     return { delivered: false };
   }
+}
+
+/**
+ * Hands one engagement beacon to the browser (`sendBeacon`), which delivers it
+ * even if the page is going away — the hide / close send a `keepalive` fetch
+ * was dropped on (mostly mobile Safari: 2026-11, a fifth of one-page visits had no
+ * engagement at all while their events landed). No answer comes back. A
+ * refusal (the browser's in-flight beacon quota is full) is the visitor's
+ * browser, like a send lost in transit: not counted, with a console warning.
+ */
+function beacon(body: EngagementBody): void {
+  const sent = beaconEndpoint(collectEndpoint, {}, { body });
+  if (sent.kind === "refused")
+    console.warn(
+      "[analytics] engagement not counted — the browser refused the beacon",
+    );
 }
 
 let instance: Tracker | null = null;
@@ -177,6 +198,8 @@ export function getTracker(): Tracker {
     isOwner: () => isOwnerMarked(ownerMarkStore),
     consentKey: () => consentKeyOf(consentStore),
     send,
+    beacon,
+    mintId: () => crypto.randomUUID(),
     now: () => performance.now(),
     wallNow: () => Date.now(),
     isVisible: () => document.visibilityState === "visible",

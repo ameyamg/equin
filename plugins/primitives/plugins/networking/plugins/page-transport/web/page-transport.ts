@@ -3,7 +3,10 @@ import {
   SharedWebSocket,
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
-import { nativeFetch } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
+import {
+  nativeFetch,
+  nativeSendBeacon,
+} from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import {
   contentUrl,
   namespaceFromHost,
@@ -53,4 +56,5 @@ export const pageTransport: Transport = {
   content: pageContentServing(),
   machine: true,
   telemetry: true,
+  beacon: (path, body) => nativeSendBeacon(path, body),
 };
