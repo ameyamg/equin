@@ -129,3 +129,21 @@ export function PastVersion({
     version.data.createdAt,
   );
 }
+
+/**
+ * When a past version was replaced: the time of the version after it (the
+ * timeline is newest first). The navigator only offers versions of the
+ * timeline it read, so one missing from it, or the current one, is a bug.
+ */
+export function versionEnd(
+  rows: readonly VersionRow[],
+  versionId: string,
+): Date {
+  const at = rows.findIndex((v) => v.id === versionId);
+  const next = at > 0 ? rows[at - 1] : undefined;
+  if (next === undefined)
+    throw new Error(
+      `decision versions: ${versionId} is not a past version of the timeline`,
+    );
+  return next.createdAt;
+}

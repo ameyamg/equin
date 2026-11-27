@@ -46,7 +46,9 @@ import {
   PastVersion,
   useDecisionVersions,
   VersionNav,
+  versionEnd,
 } from "./decision-versions";
+import { threadAsOf } from "../internal/thread-as-of";
 import { isAnswerable, type DecisionDraft } from "../internal/drafts";
 import { DecisionCardSlots } from "../slots";
 
@@ -61,8 +63,9 @@ import { DecisionCardSlots } from "../slots";
  * it" — all drafts until the SubmitBar sends them.
  *
  * Once edited, its header steps through its versions (`‹ n / N ›`): a past
- * one shows what the decision said then, read-only, with the thread as it is
- * now.
+ * one shows what the decision said then, read-only, with the thread as it
+ * stood when that version was replaced, in full — so what the user wrote
+ * against it stays readable after the agent rewrites the decision.
  *
  * `under`: what the row this card expands beneath already prints beside the
  * decision's label — `"question"` (an open row) or `"outcome"` (a closed
@@ -117,14 +120,12 @@ export function DecisionCard({
       <VersionNav versions={versions} viewing={viewing} onView={setViewing} />
     </Stack>
   );
-  const thread = (
-    <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
-  );
   const body =
     viewing !== null ? (
       // A past version, read-only: what the decision said then (its pill,
-      // question, outcome, body and options); the thread is not versioned,
-      // so it stays as it is now. Answering is on the current version only.
+      // question, outcome, body and options) and the thread as it stood when
+      // the next version replaced it, unfolded. Answering is on the current
+      // version only.
       <PastVersion decisionId={decision.id} versionId={viewing}>
         {(past, at) => (
           <Stack gap="md">
@@ -150,7 +151,14 @@ export function DecisionCard({
             {past.options.length > 0 ? (
               <Options options={past.options} draft={null} />
             ) : null}
-            {thread}
+            {versions.status === "ready" ? (
+              <Thread
+                key={`${decision.id}:${viewing}`}
+                decision={decision}
+                seenBefore={seenBefore}
+                asOf={versionEnd(versions.data, viewing)}
+              />
+            ) : null}
           </Stack>
         )}
       </PastVersion>
@@ -172,7 +180,7 @@ export function DecisionCard({
             draft={draft !== undefined && isAnswerable(decision) ? draft : null}
           />
         ) : null}
-        {thread}
+        <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
         {decision.state !== "closed" && decision.unconsumedAnswers > 0 ? (
           <Text variant="caption" tone="muted">
             {`Sent to ${decision.taskTitle}. Waiting for it to act on your answer.`}
@@ -412,13 +420,19 @@ function Answer({
   );
 }
 
-/** The thread, oldest first: the latest exchange shown, the earlier ones behind one toggle. */
+/**
+ * The thread, oldest first: the latest exchange shown, the earlier ones
+ * behind one toggle. Given `asOf` (a past version's end), the thread as it
+ * stood then, every exchange shown.
+ */
 function Thread({
   decision,
   seenBefore,
+  asOf,
 }: {
   decision: DecisionRow;
   seenBefore: Date | null;
+  asOf?: Date;
 }): ReactElement | null {
   const thread = useLive(decisionExchanges, {
     where: { decisionId: decision.id },
@@ -434,9 +448,10 @@ function Thread({
         refetch={thread.refetch}
       />
     );
-  const exchanges = thread.data;
+  const exchanges =
+    asOf === undefined ? thread.data : threadAsOf(thread.data, asOf);
   if (exchanges.length === 0) return null;
-  const shown = showAll ? exchanges : exchanges.slice(-1);
+  const shown = showAll || asOf !== undefined ? exchanges : exchanges.slice(-1);
   const earlier = exchanges.length - shown.length;
   return (
     <Stack gap="sm">

@@ -106,8 +106,10 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   snapshot's schema is `DecisionSnapshotSchema` (core), shared by the server
   and the card: `DecisionCard`'s header steps through the versions
   (`‹ n / N ›`, `web/components/decision-versions.tsx`), a past one drawn
-  read-only (its pill, question, outcome, body, options; the thread as it is
-  now; no answer box) with Back to the current version.
+  read-only (its pill, question, outcome, body, options; the thread as it
+  stood when the next version replaced it, unfolded — `threadAsOf`, so what
+  the user typed against it stays readable once the agent rewrites the
+  decision; no answer box) with Back to the current version.
   The tool checks the call first (`updateDecision(…, { dryRun: true })`), so
   a refused one pins nothing. The thread is not versioned (append-only on its
   own). A restore is the user's undo: it may reopen or close the decision,
