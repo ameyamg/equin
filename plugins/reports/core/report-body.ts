@@ -14,6 +14,9 @@ import { CLIENT_REPORT_SOURCES, type ReportSource } from "./sources";
 // Every other boundary (the endpoint contract, the recordReport input type) is
 // derived from this schema, so adding a field here can't silently drop it
 // downstream.
+/** The most occurrences one folded report may carry ({@link ReportBodySchema}). */
+export const REPORT_OCCURRENCES_MAX = 100_000;
+
 export const ReportBodySchema = z.object({
   kind: z.string(),
   source: z.enum(CLIENT_REPORT_SOURCES),
@@ -54,7 +57,16 @@ export const ReportBodySchema = z.object({
     .string()
     .regex(/^\/artifacts\/[^/]+\/.+$/)
     .optional(),
+  // How many occurrences this one report stands for (absent: one). Set only
+  // by a channel that folds a page's identical repeats into one send (the
+  // engine channel's fold, web/internal/fold.ts) — an error thrown every
+  // frame is one POST per window carrying its count, not one per frame. The
+  // engine adds it to `count` and `hourly`; the body (message, data, url) is
+  // the newest folded occurrence's. Capped so one body cannot claim more
+  // than a page can raise in a fold window.
+  occurrences: z.number().int().min(1).max(REPORT_OCCURRENCES_MAX).optional(),
 });
+
 export type ReportBody = z.infer<typeof ReportBodySchema>;
 
 // recordReport input: the same field list as the HTTP body (single-sourced from

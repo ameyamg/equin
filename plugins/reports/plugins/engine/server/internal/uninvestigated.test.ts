@@ -45,6 +45,7 @@ const values = (over: Partial<ReportUpsertValues>): ReportUpsertValues => ({
   buildId: null,
   commit: null,
   occurredAt: new Date("2026-11-12T10:00:00.000Z"),
+  occurrences: 1,
   afterWake: null,
   ...over,
 });

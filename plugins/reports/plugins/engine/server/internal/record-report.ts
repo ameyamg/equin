@@ -332,6 +332,9 @@ async function fileReport(
     commit,
     missingFile,
   } = input;
+  // A page's identical repeats folded into this one body (ReportBody's
+  // `occurrences`): counted as that many, written once.
+  const occurrences = input.occurrences ?? 1;
   // A blank message is a collector bug: filed anyway, its message derived
   // from what the report carries (error type, top frame) and naming the bug.
   const rawMessage = reportMessageOrDerived(input);
@@ -482,6 +485,7 @@ async function fileReport(
         buildId: buildId ?? null,
         commit: commit ?? null,
         occurredAt,
+        occurrences,
         afterWake: afterWakeOf(source, occurredAt.getTime()),
       });
     }),
@@ -598,6 +602,12 @@ export interface ReportUpsertValues {
   // The event's true instant — under duress-shed replay this is EARLIER than
   // now (the in-freeze trip time carried through the buffer).
   occurredAt: Date;
+  /**
+   * How many occurrences this write counts (ReportBody's `occurrences`: a
+   * page's folded repeats), added to `count` and this hour of `hourly`.
+   * `recent` keeps it as one entry — the newest of them.
+   */
+  occurrences: number;
   /** The machine had just woken when it happened (see ReportOccurrence). */
   afterWake: ReportOccurrence["afterWake"];
 }
@@ -682,7 +692,7 @@ function buildUpsert(
         select (b->>'h')::bigint h, sum((b->>'n')::int)::int n
         from jsonb_array_elements(
           coalesce(${t.hourly}->'hours', '[]'::jsonb)
-            || jsonb_build_array(jsonb_build_object('h', ${hour}::bigint, 'n', 1))
+            || jsonb_build_array(jsonb_build_object('h', ${hour}::bigint, 'n', ${v.occurrences}::int))
         ) b
         group by 1
         order by 1 desc
@@ -703,7 +713,8 @@ function buildUpsert(
       userAgent: v.userAgent,
       data: v.data,
       recent: [occurrence],
-      hourly: { hours: [{ h: hour, n: 1 }], untrackedBefore: null },
+      hourly: { hours: [{ h: hour, n: v.occurrences }], untrackedBefore: null },
+      count: v.occurrences,
       rateLimited: v.limited,
       noise: v.skewProven ? v.noise.ifSkew : v.noise.ifLive,
       staleOrigin: v.staleOrigin,
@@ -726,7 +737,7 @@ function buildUpsert(
         // Explicit ::jsonb cast: this rides a raw sql param (not the column's
         // drizzle mapper), so the driver must not guess the wire type.
         data: sql`case when ${isNewest} then ${JSON.stringify(v.data)}::jsonb else ${t.data} end`,
-        count: sql`${t.count} + 1`,
+        count: sql`${t.count} + ${v.occurrences}::int`,
         firstSeenAt: sql`least(${t.firstSeenAt}, ${occurredAt})`,
         lastSeenAt: sql`greatest(${t.lastSeenAt}, ${occurredAt})`,
         rateLimited: sql`${t.rateLimited} OR ${v.limited}`,

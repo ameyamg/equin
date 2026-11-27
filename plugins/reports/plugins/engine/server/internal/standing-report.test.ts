@@ -94,6 +94,7 @@ describe("syncStandingConditions (real DB)", () => {
         buildId: null,
         commit: null,
         occurredAt: new Date(),
+        occurrences: 1,
         afterWake: null,
       },
       t.db,

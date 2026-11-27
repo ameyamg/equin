@@ -13,6 +13,7 @@ import {
   type ReportBody,
   type ReportResult,
 } from "../core";
+import { createReportFold, type ReportFold } from "./internal/fold";
 
 export type { ReportResult };
 
@@ -28,7 +29,10 @@ export type ClientReportOutcome =
 
 /**
  * Where a stamped report goes. The default sends it to the page's own reports
- * engine (`POST /api/reports`, one request per report, retried). A composition
+ * engine (`POST /api/reports`, retried), identical repeats folded: the first
+ * sent at once, the rest counted and sent as one report per window carrying
+ * their count (`internal/fold.ts`) — an error thrown every frame is not one
+ * request, engine write and supervisor event per frame. A composition
  * whose server has no engine — the standalone website, whose visitors are
  * anonymous — installs its own channel at register time
  * (`apps/deploy/site-reports/channel`): bounded, batched, deduped, to its own
@@ -70,6 +74,25 @@ async function sendToEngine(body: ReportBody): Promise<ClientReportOutcome> {
   );
 }
 
+// The page's one fold over the engine channel, made on the first report sent
+// there (a page whose composition installed its own channel never makes it).
+// pagehide sends what it holds (keepalive), so a page closing mid-burst still
+// delivers its count.
+let engineFold: ReportFold<ClientReportOutcome> | null = null;
+function foldedEngine(): ReportFold<ClientReportOutcome> {
+  if (engineFold) return engineFold;
+  const fold = createReportFold({
+    send: sendToEngine,
+    schedule: (fn, delayMs) => {
+      setTimeout(fn, delayMs);
+    },
+    warn: (message) => console.warn(message),
+  });
+  window.addEventListener("pagehide", () => fold.flush());
+  engineFold = fold;
+  return fold;
+}
+
 /**
  * Where every report() on this page goes, when a composition says otherwise
  * (a request sink: one handler, its answer returned). Nobody registered →
@@ -91,7 +114,7 @@ export const reportChannel = defineRequestSink<
 // `url` defaults to this page's.
 export type ClientReportBody = Omit<
   ReportBody,
-  "clientId" | "buildId" | "commit"
+  "clientId" | "buildId" | "commit" | "occurrences"
 > & {
   clientId?: string;
 };
@@ -146,7 +169,7 @@ export async function report(
     // Checked before any channel: a body the engine or a site's intake would
     // refuse must not take a site's batch of good ones with it.
     const parsed = ReportBodySchema.parse(stamped);
-    return await (reportChannel.emit(parsed) ?? sendToEngine(parsed));
+    return await (reportChannel.emit(parsed) ?? foldedEngine().submit(parsed));
     // eslint-disable-next-line promise-safety/no-absorbed-failure -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself. The failure is not silent: it is warned below, after the retries above ran out
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);

@@ -63651,6 +63651,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `REPORT_FIX_STATES`
       - `REPORT_FIXED_BY_TRAILER`
       - `REPORT_HOURLY_MAX`
+      - `REPORT_OCCURRENCES_MAX`
       - `REPORT_RECENT_MAX`
       - `REPORT_SIZE_LIMITS`
       - `reportActivity`

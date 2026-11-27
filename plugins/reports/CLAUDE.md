@@ -39,6 +39,24 @@ first (a crash's fingerprint), and loses the message it opens with; a long array
 too large drops its largest fields; each structural cut is named in the
 message. A channel with tighter bounds (the site's) fits it again to its own.
 
+## A page's identical repeats are one send per window
+
+An error thrown every frame (a rAF callback, a per-frame handler) raises 60-120
+occurrences a second. Sent one by one, each is a POST, an engine write, a
+`supervisor-events.report` job and a supervisor event (report-1795480778-ddn9y9:
+489 in 4 s from one tab). So `report()`'s engine channel folds them
+(`web/internal/fold.ts`): the first occurrence of a body is sent at once; its
+IDENTICAL repeats (the whole body equal: kind, source, message, data, url, tab,
+build) are counted for `REPORT_FOLD_WINDOW_MS` (10 s) and sent as one report
+whose `occurrences` is the count, until a window passes quiet. pagehide sends
+what is held. The engine adds `occurrences` to `count` and the hour's `hourly`
+bucket; `recent` keeps one entry per send. Identity is the whole body, finer than
+any kind's fingerprint, so two reports the engine keeps apart are never folded,
+and no occurrence is lost. A repeat answers what the send it folds into answered
+(the same row). The website's channel batches and dedupes on its own (its
+batcher), so the fold is the engine channel's only; `occurrences` is not part of
+a caller's `ClientReportBody`.
+
 ## Readers are live
 
 Every reader reads `reports.list` (`core/resources.ts`), a
@@ -220,6 +238,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `REPORT_FIX_STATES`
     - `REPORT_FIXED_BY_TRAILER`
     - `REPORT_HOURLY_MAX`
+    - `REPORT_OCCURRENCES_MAX`
     - `REPORT_RECENT_MAX`
     - `REPORT_SIZE_LIMITS`
     - `reportActivity`

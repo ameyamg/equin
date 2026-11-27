@@ -40,7 +40,7 @@ export {
 // routes. Declared here, not in a plugin-private shared/, because the engine
 // that serves them is a child plugin (`reports/plugins/engine`).
 export type { ReportBody, ReportInput } from "./report-body";
-export { ReportBodySchema } from "./report-body";
+export { ReportBodySchema, REPORT_OCCURRENCES_MAX } from "./report-body";
 export { reportMessageOrDerived } from "./blank-message";
 export { fitReportBody, trimText, REPORT_SIZE_LIMITS } from "./fit";
 export type { ReportSizeLimits } from "./fit";

@@ -66,6 +66,7 @@ const values = (
   buildId: null,
   commit: null,
   occurredAt: T1,
+  occurrences: 1,
   afterWake: null,
   ...over,
 });
@@ -123,6 +124,22 @@ describe("writeReport (real DB)", () => {
     expect(row?.message).toBe("newest");
     expect(row?.data).toEqual({});
     expect(row?.lastClientId).toBeNull();
+  });
+
+  test("a folded report counts its occurrences in count and hourly, as one recent entry", async () => {
+    const [first] = await writeReport(
+      values({ occurredAt: T0, occurrences: 5 }),
+      t.db,
+    );
+    expect(first?.count).toBe(5);
+    expect(first?.hourly?.hours.reduce((n, b) => n + b.n, 0)).toBe(5);
+    const [row] = await writeReport(
+      values({ occurredAt: T1, occurrences: 488 }),
+      t.db,
+    );
+    expect(row?.count).toBe(493);
+    expect(row?.hourly?.hours.reduce((n, b) => n + b.n, 0)).toBe(493);
+    expect(row?.recent).toHaveLength(2);
   });
 
   // A verdict that differs by the row's fact: noise only while every
