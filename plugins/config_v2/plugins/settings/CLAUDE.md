@@ -108,6 +108,7 @@ renderer, which only the running app has.
     - `ConfigNavSlots.Notice` ← `config_v2.auto-merge`
     - `ConfigNavSlots.Notice` ← `debug.config-orphans`
     - `ConfigNavSlots.Field` ← `config_v2.auto-merge`
+    - `ConfigNavSlots.Field` ← `config_v2.prompts`
   - Contributes:
     - `Pane.Register` "config-v2-detail"
     - `Pane.Register` "config-v2-nav"
@@ -209,6 +210,7 @@ renderer, which only the running app has.
     - `apps/website/promo-film`
     - `config_v2/auto-merge`
     - `config_v2/config-link`
+    - `config_v2/prompts`
     - `config_v2/settings/conflict-agent`
     - `debug/config-orphans`
     - `tasks/automations`

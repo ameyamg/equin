@@ -18391,8 +18391,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 115 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×115
+    - Slot contributors: 116 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×116
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -18659,7 +18659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withListOrder`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 166 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 167 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×44
       - `debug` ×18
       - `conversations` ×15
@@ -18667,8 +18667,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup` ×12
       - `ui` ×11
       - `config_v2` ×9
+      - `infra` ×7
       - `auth` ×6
-      - `infra` ×6
       - `framework` ×5
       - `build` ×3
       - `primitives` ×3
@@ -18959,7 +18959,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/action-bar.ActionBar`
           - `shell/notifications.useToast`
           - `ui/icons.Icon`
-    - **`prompts`** — Agent prompts as config, server half: renderConfigPrompt(descriptor, key, variables) — a prompt field as the user saved it now, filled (a PromptText).
+    - **`prompts`** — Agent prompts as config, web half: the config nav's Prompts field (Settings → Config's filter keeping every config that holds a prompt field, whichever plugin owns it). Agent prompts as config, server half: renderConfigPrompt(descriptor, key, variables) — a prompt field as the user saved it now, filled (a PromptText).
+      - Web:
+        - Contributes: `ConfigNavSlots.Field` → `PromptsNavField`
+        - Uses:
+          - `config_v2.useConfigRegistrations`
+          - `config_v2/settings.ConfigNavSlots`
+          - `network/live/live-state.readyResource`
       - Server:
         - Uses: `config_v2.getConfig`
         - Exports (values): `renderConfigPrompt`
@@ -18977,6 +18983,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PromptVariablesOf`
         - Exports (values):
           - `fillPrompt`
+          - `isPromptField`
           - `joinPrompts`
           - `promptField`
           - `promptList`
@@ -18984,6 +18991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/push-and-exit/capabilities`
           - `hints/ask`
+          - `infra/mcp`
           - `page/annotations/agent-access`
           - `tasks`
           - `tasks/decisions/ask`
@@ -19010,6 +19018,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigNavSlots.Notice` ← `config_v2.auto-merge`
           - `ConfigNavSlots.Notice` ← `debug.config-orphans`
           - `ConfigNavSlots.Field` ← `config_v2.auto-merge`
+          - `ConfigNavSlots.Field` ← `config_v2.prompts`
         - Contributes:
           - `Pane.Register` "config-v2-detail"
           - `Pane.Register` "config-v2-nav"
@@ -19111,6 +19120,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/promo-film`
           - `config_v2/auto-merge`
           - `config_v2/config-link`
+          - `config_v2/prompts`
           - `config_v2/settings/conflict-agent`
           - `debug/config-orphans`
           - `tasks/automations`
@@ -42498,12 +42508,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/rust`
               - `infra/deps/updates`
               - `infra/launcher`
-    - **`mcp`** — The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable. Owns mcp_listed_tools (the tools last listed to each conversation — what its client holds) and toolCallableBy(conversationId, toolRegistration): whether a conversation's agent can call a tool now (listed to it and its when still true), or why not.
+    - **`mcp`** — Registers the MCP agent-instructions config (the hint appended to a tool's refusal) for Settings → Config. The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable. Registers the agent-instructions config (the hint appended to a tool's refusal). Owns mcp_listed_tools (the tools last listed to each conversation — what its client holds) and toolCallableBy(conversationId, toolRegistration): whether a conversation's agent can call a tool now (listed to it and its when still true), or why not.
+      - Web:
+        - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+        - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes:
+          - `ConfigV2.Register` "agent-instructions"
           - `resource.declare` "mcp.catalog"
           - `resource.declare` "mcp.health"
         - Uses:
+          - `config_v2.ConfigV2`
           - `database.db`
           - `infra/retention.defineRetention`
         - DB schema: `plugins/infra/plugins/mcp/server/internal/tables.ts`
@@ -42533,6 +42548,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/mcp/:conversationId`
       - Core:
         - Uses:
+          - `config_v2.defineConfig`
+          - `config_v2/prompts.promptField`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
           - `packages/list-bound.cappedList`
@@ -42554,6 +42571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpDegradedSchema`
           - `mcpHealth`
           - `McpHealthSchema`
+          - `mcpPromptsConfig`
           - `mcpRequest`
       - Cross-plugin:
         - Imported by: 32 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
@@ -46740,7 +46758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 335 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 336 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×88
               - `conversations` ×49
               - `debug` ×31
@@ -46753,10 +46771,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×6
               - `active-data` ×5
               - `auth` ×5
+              - `config_v2` ×4
               - `integrations` ×4
               - `plugin-meta` ×4
               - `companions` ×3
-              - `config_v2` ×3
               - `framework` ×3
               - `network` ×3
               - `review` ×3

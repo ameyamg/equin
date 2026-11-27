@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { defineConfig } from "@plugins/config_v2/core";
-import { promptField } from "./prompt-field";
+import { isPromptField, promptField } from "./prompt-field";
+import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 import { fillPrompt, joinPrompts, promptList } from "./prompt-text";
 
 const config = defineConfig({
@@ -78,5 +79,14 @@ describe("fillPrompt", () => {
     expect<unknown>(promptList([a, blank, a])).toBe(
       "- Always the same.\n- Always the same.",
     );
+  });
+});
+
+describe("isPromptField", () => {
+  test("is true for a prompt field as a descriptor holds it, false for a plain multiline field", () => {
+    expect(Object.values(config.fields).some(isPromptField)).toBe(true);
+    expect(
+      isPromptField(multilineTextField({ label: "Notes", default: "" })),
+    ).toBe(false);
   });
 });

@@ -17,3 +17,4 @@ export {
 } from "./internal/health";
 export type { McpDegraded, McpHealth } from "./internal/health";
 export type { McpCatalog, McpCatalogTool } from "./internal/catalog";
+export { mcpPromptsConfig } from "./internal/prompts";

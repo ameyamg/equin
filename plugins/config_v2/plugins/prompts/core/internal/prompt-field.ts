@@ -23,6 +23,18 @@ export interface PromptFieldDef<
   readonly variables: readonly PromptFieldVariable<N>[];
 }
 
+/** Marks a field def made by {@link promptField}, for {@link isPromptField}. */
+const PROMPT_FIELD = Symbol("promptField");
+
+/**
+ * Whether a config field is a prompt field — made by {@link promptField}, not
+ * merely shaped like one — so a surface listing configs can tell which hold
+ * agent prompts (Settings → Config's Prompts filter).
+ */
+export function isPromptField(def: unknown): def is PromptFieldDef {
+  return typeof def === "object" && def !== null && PROMPT_FIELD in def;
+}
+
 /** The variable names a prompt field is filled with. */
 export type PromptVariablesOf<D> =
   D extends PromptFieldDef<infer N> ? N : never;
@@ -71,5 +83,6 @@ export function promptField<const N extends string = never>(opts: {
     ...base,
     schema,
     variables,
+    [PROMPT_FIELD]: true,
   }) as PromptFieldDef<N> & DeclaredDefault & Labelled;
 }

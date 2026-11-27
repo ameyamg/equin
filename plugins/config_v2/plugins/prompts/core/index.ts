@@ -1,4 +1,4 @@
-export { promptField } from "./internal/prompt-field";
+export { isPromptField, promptField } from "./internal/prompt-field";
 export type {
   PromptFieldDef,
   PromptFieldVariable,

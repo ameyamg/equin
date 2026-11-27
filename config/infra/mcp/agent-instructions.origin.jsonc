@@ -1,0 +1,5 @@
+// @hash fe7617928b7b
+{
+  // Appended (after a blank line) to every MCP tool refusal an agent receives — a handler's 4xx HttpError, never a crash. Empty adds nothing. It is filled with no variable.
+  "refusalHint": ""
+}

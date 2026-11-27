@@ -713,6 +713,7 @@
   {"list":"config_v2.settings.conflict-action","plugin":"config_v2.settings.conflict-agent","fact":{"component":{"$code":true},"id":"conflict-agent"}},
   {"list":"config_v2.settings.detail-banner","plugin":"config_v2.auto-merge","fact":{"component":{"$code":true},"id":"auto-merge"}},
   {"list":"config_v2.settings.nav-field","plugin":"config_v2.auto-merge","fact":{"component":{"$code":true},"id":"autoMerged","label":"Auto-merged"}},
+  {"list":"config_v2.settings.nav-field","plugin":"config_v2.prompts","fact":{"component":{"$code":true},"id":"prompts","label":"Prompts"}},
   {"list":"config_v2.settings.nav-notice","plugin":"config_v2.auto-merge","fact":{"component":{"$code":true},"id":"auto-merged"}},
   {"list":"config_v2.settings.nav-notice","plugin":"debug.config-orphans","fact":{"component":{"$code":true},"id":"stranded-config"}},
   {"list":"conversations.agent-thread.step-label","plugin":"apps.places.places-map","fact":{"component":{"$code":true},"match":"places_search_text"}},

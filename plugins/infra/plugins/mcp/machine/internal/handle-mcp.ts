@@ -15,6 +15,7 @@ import type {
   McpToolResult,
 } from "../../server";
 import { recordMcpRequest } from "./health";
+import { hintedThrow } from "./refusal-hint";
 import { registry, scopeRegistry } from "../../server/internal/registry";
 import {
   readToolsListed,
@@ -345,8 +346,23 @@ export function mountTool(
   );
 }
 
-/** Runs one tool's handler with the context its kind declares. */
+/** Runs one tool's handler, a refusal it throws carrying the user's
+ * refusal hint (`hintedThrow`). */
 async function callTool(
+  tool: McpTool,
+  args: Record<string, unknown>,
+  caller: McpCaller,
+  toolUseId: string | null,
+): Promise<McpToolResult> {
+  try {
+    return await runHandler(tool, args, caller, toolUseId);
+  } catch (err) {
+    throw hintedThrow(err);
+  }
+}
+
+/** Runs one tool's handler with the context its kind declares. */
+async function runHandler(
   tool: McpTool,
   args: Record<string, unknown>,
   caller: McpCaller,

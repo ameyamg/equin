@@ -152,13 +152,18 @@ and without it no tool set can be computed.
 
 ## Plugin reference
 
-- Description: The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable. Owns mcp_listed_tools (the tools last listed to each conversation — what its client holds) and toolCallableBy(conversationId, toolRegistration): whether a conversation's agent can call a tool now (listed to it and its when still true), or why not.
+- Description: Registers the MCP agent-instructions config (the hint appended to a tool's refusal) for Settings → Config. The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable. Registers the agent-instructions config (the hint appended to a tool's refusal). Owns mcp_listed_tools (the tools last listed to each conversation — what its client holds) and toolCallableBy(conversationId, toolRegistration): whether a conversation's agent can call a tool now (listed to it and its when still true), or why not.
 - Load-bearing: yes
+- Web:
+  - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+  - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:
+    - `ConfigV2.Register` "agent-instructions"
     - `resource.declare` "mcp.catalog"
     - `resource.declare` "mcp.health"
   - Uses:
+    - `config_v2.ConfigV2`
     - `database.db`
     - `infra/retention.defineRetention`
   - DB schema: `plugins/infra/plugins/mcp/server/internal/tables.ts`
@@ -188,6 +193,8 @@ and without it no tool set can be computed.
   - Routes: `POST /api/mcp/:conversationId`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
+    - `config_v2/prompts.promptField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
     - `packages/list-bound.cappedList`
@@ -209,6 +216,7 @@ and without it no tool set can be computed.
     - `McpDegradedSchema`
     - `mcpHealth`
     - `McpHealthSchema`
+    - `mcpPromptsConfig`
     - `mcpRequest`
 - Cross-plugin:
   - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
