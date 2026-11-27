@@ -54,6 +54,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "packages/plugins/source-digest/plugins/prune", id: "packages.source-digest.prune", loader: () => import("@plugins/packages/plugins/source-digest/plugins/prune/cli"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/plugin-records/plugins/reclaim", id: "plugin-meta.plugin-records.reclaim", loader: () => import("@plugins/plugin-meta/plugins/plugin-records/plugins/reclaim/cli"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/cli"), dependsOn: [] },
+  { pluginPath: "tasks/plugins/proposals", id: "tasks.proposals", loader: () => import("@plugins/tasks/plugins/proposals/cli"), dependsOn: ["infra/plugins/launcher/plugins/gateway-port"] },
   { pluginPath: "toolchain", id: "toolchain", loader: () => import("@plugins/toolchain/cli"), dependsOn: [] },
 ];
 

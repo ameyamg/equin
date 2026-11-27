@@ -24,6 +24,7 @@ export {
   EmptyAttachmentError,
   getAttachment,
   importAttachment,
+  isAttachmentId,
 } from "./internal/operations";
 export { Attachments } from "./internal/attachments";
 export {

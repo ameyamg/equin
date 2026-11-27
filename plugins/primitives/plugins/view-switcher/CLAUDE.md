@@ -43,6 +43,7 @@ The shared **view-switching primitive**. It offers two things:
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/deploy/site-feeds/editor`
     - `page/code-block`
     - `primitives/data-view/view-core`
     - `primitives/markdown`

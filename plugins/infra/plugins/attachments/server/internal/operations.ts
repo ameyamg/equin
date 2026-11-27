@@ -104,6 +104,11 @@ export class AttachmentConflictError extends Error {
 const ATTACHMENT_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+/** Whether `id` is an attachment id as every instance mints one (a lowercase UUID). */
+export function isAttachmentId(id: string): boolean {
+  return ATTACHMENT_ID.test(id);
+}
+
 /**
  * Write an attachment under a GIVEN id — one minted by another instance
  * (a box receiving a published file from the computer that uploaded it), so

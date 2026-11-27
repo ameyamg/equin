@@ -143,6 +143,7 @@ missing file into the box's staging dir (`siteFeedsStagingDir`, box's
     - `apps/deploy/site-feeds/editor`
     - `apps/deploy/site-feeds/syndication`
     - `apps/website/pages/tips`
+    - `tasks/proposals`
 - Sub-plugins:
   - **`box`** — A site's feeds in the browser: the SiteFeeds.Feed slot a site plugin contributes its feed declarations to (read with their declaring plugin by useSiteFeedDeclarations), useSiteFeed(feed) — a feed's…
   - **`discord`** — Discord in a feed's Also post to section: its switch, the channel's webhook URL (a secret, shown only as set) and the server's upload limit.

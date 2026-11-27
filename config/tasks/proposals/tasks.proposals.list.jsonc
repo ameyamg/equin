@@ -1,0 +1,20 @@
+// @hash 6ec84829688d
+{
+  // One view: the proposals the user may still answer, newest first. The
+  // owner adds its own columns over the proposed values (a tip's title, its
+  // media); the note says why.
+  "views": [
+    {
+      "id": "proposed",
+      "name": "Proposed",
+      "icon": "inbox",
+      "view": {
+        "type": "table",
+        "sort": { "fieldId": "createdAt", "direction": "desc" }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

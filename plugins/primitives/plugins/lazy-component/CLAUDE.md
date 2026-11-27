@@ -22,6 +22,7 @@
     - `apps/sonata/piano-roll/fx-core`
     - `apps/sonata/piano-roll/fx-ripples`
     - `apps/sonata/piano-roll/fx-shatter`
+    - `apps/website/pages/tips`
     - `apps/website/shell`
     - `map/google`
     - `page/math/render`

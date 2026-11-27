@@ -7934,6 +7934,10 @@
       "name": "@equin/plugin-tasks-outcome-report-capability",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/proposals": {
+      "name": "@equin/plugin-tasks-proposals",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/reports-investigation": {
       "name": "@equin/plugin-tasks-reports-investigation",
       "version": "0.0.1",
@@ -12381,6 +12385,8 @@
     "@equin/plugin-tasks-outcome-report": ["@equin/plugin-tasks-outcome-report@workspace:plugins/tasks/plugins/outcome-report"],
 
     "@equin/plugin-tasks-outcome-report-capability": ["@equin/plugin-tasks-outcome-report-capability@workspace:plugins/tasks/plugins/outcome-report/plugins/capability"],
+
+    "@equin/plugin-tasks-proposals": ["@equin/plugin-tasks-proposals@workspace:plugins/tasks/plugins/proposals"],
 
     "@equin/plugin-tasks-reports-investigation": ["@equin/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
 

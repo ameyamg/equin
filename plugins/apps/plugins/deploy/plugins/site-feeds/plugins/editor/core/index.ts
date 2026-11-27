@@ -1,4 +1,5 @@
 export {
+  SITE_FEED_ITEM_PROPOSAL_TYPE,
   SITE_FEED_ITEM_STATES,
   SITE_FEED_ITEM_STATE_META,
   siteFeedItemAttachmentLinks,

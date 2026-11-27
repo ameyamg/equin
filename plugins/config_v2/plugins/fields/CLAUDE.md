@@ -110,11 +110,12 @@ the config-only templates to mirror.
     - `useNumberFit`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×23
     - `apps` ×7
     - `config_v2/settings`
     - `primitives/data-view/view-core`
+    - `tasks/proposals`
 - Core:
   - Exports (types):
     - `ChoiceOption`

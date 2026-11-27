@@ -35,7 +35,12 @@ export function FeedsPage(): ReactNode {
           </Text>
         ) : (
           declarations.map((d) => (
-            <FeedCard key={d.feed.id} feed={d.feed} pluginId={d.pluginId} />
+            <FeedCard
+              key={d.feed.id}
+              feed={d.feed}
+              pluginId={d.pluginId}
+              preview={d.preview}
+            />
           ))
         )}
       </Stack>

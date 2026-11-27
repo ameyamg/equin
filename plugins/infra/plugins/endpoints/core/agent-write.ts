@@ -19,8 +19,12 @@ import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
  *   would hide the agent's own failures.
  * - `"agent-control"` — only ever acts on the agent session's own writes (the
  *   agent-write ledger's revert).
+ * - `"proposal"` — only ever stores a proposal the user reviews before
+ *   anything else changes, and the files it references (`tasks/proposals`: a
+ *   worktree hands an agent's edit of a record to main, and the user accepts
+ *   or rejects it there).
  */
-export type AgentWrite = "telemetry" | "agent-control";
+export type AgentWrite = "telemetry" | "agent-control" | "proposal";
 
 /** Methods that cannot write — never gated, and never declare `agentWrite`. */
 export const SAFE_METHODS: ReadonlySet<string> = new Set([

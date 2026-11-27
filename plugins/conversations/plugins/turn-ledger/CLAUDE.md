@@ -358,6 +358,7 @@ withdrawn).
     - `tasks/decisions`
     - `tasks/orchestration/watch`
     - `tasks/outcome-report`
+    - `tasks/proposals`
     - `tasks/task-title`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)

@@ -94,6 +94,13 @@ export function siteFeedSearchText(
     .join("\n");
 }
 
+/**
+ * The record type site feed items are proposed as (`tasks/proposals`): an
+ * agent's edit of an item in its worktree reaches main as a proposal of this
+ * type, its scope the item's feed.
+ */
+export const SITE_FEED_ITEM_PROPOSAL_TYPE = "site-feed-item";
+
 /** The `site_feed_items` entity: every feed item this computer holds. */
 export const siteFeedItemsEntityRef = entityRef(
   "site_feed_items",

@@ -113,6 +113,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "tasks.decisions.panel-closed", pluginId: "tasks.decisions" },
   { id: "tasks.decisions.panel-open", pluginId: "tasks.decisions" },
   { id: "tasks.manage-grant.actions", pluginId: "tasks.task-mandate.manage-grant" },
+  { id: "tasks.proposals.list", pluginId: "tasks.proposals" },
   { id: "tasks.sidequest-autopilot.launch-list", pluginId: "tasks.sidequest-autopilot" },
   { id: "tasks.supervisor-roles", pluginId: "tasks.supervisor-roles.pane" },
   { id: "tasks.supervisor-roles.adhoc", pluginId: "tasks.supervisor-roles.pane" },

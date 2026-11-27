@@ -4,7 +4,7 @@ import { siteFeedEntryIdKind } from "@plugins/apps/plugins/deploy/plugins/site-f
 import { SiteFeeds } from "./slots";
 
 export { SiteFeeds } from "./slots";
-export type { SiteFeedWebContribution } from "./slots";
+export type { SiteFeedPreviewProps, SiteFeedWebContribution } from "./slots";
 export { useSiteFeed } from "./internal/use-site-feed";
 export type { SiteFeedEntry } from "./internal/use-site-feed";
 export { siteFeedMediaAsset } from "./internal/media-asset";

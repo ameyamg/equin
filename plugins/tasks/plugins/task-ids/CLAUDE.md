@@ -57,6 +57,7 @@ recognition against real mints.
     - `tasks/decisions/item-count`
     - `tasks/decisions/page-block`
     - `tasks/decisions/tray`
+    - `tasks/proposals`
     - `tasks/supervisor-roles/sessions/handoff`
     - `tasks/tasks-core`
 

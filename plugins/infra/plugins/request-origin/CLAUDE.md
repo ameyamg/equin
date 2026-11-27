@@ -130,10 +130,10 @@ own server half.)
     - `systemOrigin`
     - `UNREVERTED_WRITE_HEADER`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×6
+    - `tasks` ×5
     - `infra` ×4
-    - `tasks` ×4
     - `config_v2` ×3
     - `apps-core/app-usage`
     - `auth/apple-signing`

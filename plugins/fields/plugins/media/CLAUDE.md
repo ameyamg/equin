@@ -129,6 +129,7 @@ other file stays a plain thumbnail. It throws outside a gallery.
     - `fields/media/config`
     - `fields/media/storage`
     - `fields/media/table`
+    - `tasks/proposals`
 - Sub-plugins:
   - **`config`** — Media field type: config-render capability — reorderable thumbnails, remove, and the upload dropzone (accept / max / maxBytes from the field), each upload held for a day until its owner links it.
   - **`storage`** — Media field type: DB storage capability — a Postgres jsonb column decoded by the field's own MediaRef[] schema.

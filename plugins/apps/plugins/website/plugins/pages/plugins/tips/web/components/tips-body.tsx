@@ -12,6 +12,7 @@ import {
   useReachEvent,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import {
+  siteFeedMediaAsset,
   useSiteFeed,
   type SiteFeedEntry,
 } from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box/web";
@@ -35,7 +36,9 @@ function MeasuredTipCard({ entry }: { entry: SiteFeedEntry<TipsFields> }) {
   const seen = useReachEvent<HTMLElement>("tip_seen", { tip: entry.id });
   return (
     <TipCard
-      entry={entry}
+      values={entry.values}
+      publishedAt={new Date(entry.publishedAt)}
+      mediaAsset={(media) => siteFeedMediaAsset(entry.id, media.attachmentId)}
       ref={seen}
       onMediaOpen={() => track("tip_media_open", { tip: entry.id })}
     />

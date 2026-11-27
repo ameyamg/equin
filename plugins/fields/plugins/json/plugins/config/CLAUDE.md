@@ -47,12 +47,12 @@
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
     - `conversations` ×8
+    - `tasks` ×6
     - `debug` ×5
     - `infra` ×5
-    - `tasks` ×5
     - `page` ×4
     - `backup` ×2
     - `active-data`

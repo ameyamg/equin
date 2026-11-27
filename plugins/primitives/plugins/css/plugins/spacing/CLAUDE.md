@@ -128,14 +128,14 @@ The rule has no allowlist. A genuinely-fixed one-off escapes per-site via
     - `Stack`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 484 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 485 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×118
     - `conversations` ×79
     - `primitives` ×57
     - `debug` ×39
     - `ui` ×32
     - `page` ×26
-    - `tasks` ×21
+    - `tasks` ×22
     - `plugin-meta` ×16
     - `fields` ×15
     - `infra` ×9

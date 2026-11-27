@@ -95,6 +95,7 @@ what the editor resolves a feed's destinations with.
   - Exports (types):
     - `SiteFeedDeclaration`
     - `SiteFeedEntry`
+    - `SiteFeedPreviewProps`
     - `SiteFeedWebContribution`
   - Exports (values):
     - `siteFeedMediaAsset`

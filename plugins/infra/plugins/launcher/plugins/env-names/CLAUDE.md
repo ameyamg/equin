@@ -27,7 +27,7 @@
     - `setEnvDefault`
     - `unsetEnv`
 - Cross-plugin:
-  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×19
     - `infra` ×16
     - `packages` ×6
@@ -39,6 +39,7 @@
     - `conversations/agent-launch`
     - `plugin-meta/barrel-import`
     - `release`
+    - `tasks/proposals`
     - `upstream`
 - Exemptions:
   - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/env.ts` (sanctioned)

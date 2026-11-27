@@ -23,7 +23,10 @@ machinery is generic: [`apps/deploy/site-feeds`](../../../../../deploy/plugins/s
   known) and video (`MediaPlayer`, `autoPlay="in-view"` + `silent`: looping while on screen, always muted, no volume controls), loaded from the
   box's public media route. Loading and a failed read are shown; no tip
   published → a line saying so. **The homepage is not touched.**
-- `TipCard({ entry, ref?, onMediaOpen? })` (exported) — one tip as the page
+- `TipPreview` (lazy, `web/internal/tip-preview.ts`) — the same card for the
+  editor's review of a proposed tip, contributed as `SiteFeeds.Feed`'s
+  `preview`, its files read from the instance's attachments.
+- `TipCard({ values, publishedAt, mediaAsset, ref?, onMediaOpen? })` (exported) — one tip as the page
   draws it, presentation only: the page wraps it with its analytics
   (`tip_seen` on the card's ref, `tip_media_open` on a screenshot opened), so
   any other surface showing a tip as it will read (a proposed edit's
@@ -116,7 +119,7 @@ Steps:
     - `SiteFeeds.Feed` "tips"
     - `Pane.Register` "website-tips"
     - `Website.LearnEntry` "Tips" → `TipsNavItem`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×7
     - `apps/deploy/site-feeds/box` ×4
     - `primitives/pane` ×3
@@ -132,6 +135,7 @@ Steps:
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/lazy-component.lazyComponent`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values):

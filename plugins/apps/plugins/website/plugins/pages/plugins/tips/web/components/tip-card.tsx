@@ -13,11 +13,10 @@ import {
   ImageGallery,
   useImageViewerTrigger,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
-import {
-  siteFeedMediaAsset,
-  type SiteFeedEntry,
-} from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box/web";
-import type { TipsFeed } from "../../core";
+import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
+import type { SiteFeedValues } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
+import type { SiteFeedPreviewProps } from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box/web";
+import { tipsFeed, type TipsFeed } from "../../core";
 
 const CARD_CLASS = "rounded-2xl shadow-none";
 
@@ -32,33 +31,40 @@ type TipsFields = TipsFeed["fields"];
  * then its media in order. Its screenshots are one gallery: a click opens the
  * full-window viewer, ← / → step through that tip's other screenshots.
  *
- * Presentation only, so any surface showing a tip as it will read (a proposed
- * edit's before/after) draws this same card: `ref` lands on the card's
- * `<article>`, `onMediaOpen` runs when one of its screenshots is opened. The
- * media is read from the box's public media route by the entry's id.
+ * Presentation only, over plain values, so any surface showing a tip as it
+ * will read (a proposed edit's before/after, `TipPreview`) draws this same
+ * card: `publishedAt` null reads "Not published yet", `mediaAsset` says where
+ * each file is read from (the box's public media route on the site, the
+ * attachment route in the editor), `ref` lands on the card's `<article>`,
+ * `onMediaOpen` runs when one of its screenshots is opened.
  */
 export function TipCard({
-  entry,
+  values,
+  publishedAt,
+  mediaAsset,
   ref,
   onMediaOpen,
 }: {
-  entry: SiteFeedEntry<TipsFields>;
+  values: SiteFeedValues<TipsFields>;
+  publishedAt: Date | null;
+  mediaAsset: (media: MediaRef) => AssetPath;
   ref?: Ref<HTMLElement>;
   onMediaOpen?: () => void;
 }) {
-  const { title, body, media } = entry.values;
+  const { title, body, media } = values;
   const fmt = useDateFormatter();
   return (
     <Card as="article" ref={ref} className={CARD_CLASS}>
       <Stack gap="lg">
         <Stack gap="sm">
           <Text as="p" variant="caption" tone="muted">
-            <time dateTime={entry.publishedAt}>
-              {fmt.date(new Date(entry.publishedAt), {
-                month: "long",
-                year: "always",
-              })}
-            </time>
+            {publishedAt === null ? (
+              "Not published yet"
+            ) : (
+              <time dateTime={publishedAt.toISOString()}>
+                {fmt.date(publishedAt, { month: "long", year: "always" })}
+              </time>
+            )}
           </Text>
           {title !== "" && (
             <Text as="h2" variant="heading" className="tracking-tight">
@@ -75,7 +81,7 @@ export function TipCard({
           {media.map((ref) => (
             <TipMedia
               key={ref.attachmentId}
-              entryId={entry.id}
+              asset={mediaAsset(ref)}
               media={ref}
               onOpen={onMediaOpen}
             />
@@ -87,22 +93,49 @@ export function TipCard({
 }
 
 /**
- * One screenshot or video of a tip, from the site's public media route. A
+ * A tip's values as the site would draw them, for the editor's review of a
+ * proposal (`SiteFeeds.Feed`'s `preview`, loaded lazily). Values that no
+ * longer fit the feed are said, never drawn half.
+ */
+export function TipPreview({
+  values,
+  publishedAt,
+  mediaAsset,
+}: SiteFeedPreviewProps) {
+  const parsed = tipsFeed.valuesSchema.safeParse(values);
+  if (!parsed.success) {
+    return (
+      <Text tone="destructive">
+        This tip does not fit the feed&apos;s fields: {parsed.error.message}
+      </Text>
+    );
+  }
+  return (
+    <TipCard
+      values={parsed.data}
+      publishedAt={publishedAt}
+      mediaAsset={mediaAsset}
+    />
+  );
+}
+
+/**
+ * One screenshot or video of a tip, from where `asset` says. A
  * video plays in the themed player (byte ranges, so it seeks), looping while
  * it is on screen (`autoPlay="in-view"`) and without sound (`silent`: no
  * volume controls), like a GIF; nothing is kept across a reload, so a clip
  * always plays again when read.
  */
 function TipMedia({
-  entryId,
+  asset,
   media,
   onOpen,
 }: {
-  entryId: string;
+  asset: AssetPath;
   media: MediaRef;
   onOpen: (() => void) | undefined;
 }) {
-  const src = useAssetSrc(siteFeedMediaAsset(entryId, media.attachmentId));
+  const src = useAssetSrc(asset);
   const [failed, setFailed] = useState<string | null>(null);
   if (src.kind === "loading") {
     return (

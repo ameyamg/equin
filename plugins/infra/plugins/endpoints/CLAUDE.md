@@ -263,13 +263,15 @@ nothing. Design: `research/2026-10-22-global-main-read-only-for-agent-sessions.m
 ```typescript
 export const emitLogs = defineEndpoint({
   route: "POST /api/logs/emit", body: …, response: …,
-  agentWrite: "telemetry",          // or "agent-control" — a closed union
+  agentWrite: "telemetry",          // or "agent-control" / "proposal" — a closed union
 });
 ```
 
 - **Absent = protected**, so a new endpoint is gated without anyone opting in.
   Declare `"telemetry"` only for a write of observability data, `"agent-control"`
-  only for one acting on the agent session's own writes (the ledger revert). A GET
+  only for one acting on the agent session's own writes (the ledger revert),
+  `"proposal"` only for one storing a proposal the user reviews before anything
+  else changes (`tasks/proposals`). A GET
   declaring it is a tsc error.
 - **No write route escapes it (tsc).** server-core's `HttpRoutes` — the type of
   every server / machine barrel's `httpRoutes` — takes only an
@@ -618,11 +620,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 295 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 296 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×90
     - `conversations` ×37
+    - `tasks` ×25
     - `infra` ×24
-    - `tasks` ×24
     - `debug` ×22
     - `page` ×18
     - `primitives` ×15

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { FieldsForm } from "@plugins/config_v2/plugins/fields/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -22,19 +22,27 @@ import {
   unpublishSiteFeedItem,
   updateSiteFeedItem,
 } from "../../shared";
+import type { SiteFeedPreviewProps } from "@plugins/apps/plugins/deploy/plugins/site-feeds/plugins/box/web";
+import type { ProposalRow } from "@plugins/tasks/plugins/proposals/core";
 import { SiteFeedEditor } from "../slots";
 import { ItemDestinations } from "./destinations";
+import { FeedProposalReview } from "./proposal-section";
 
 /** The opened item, read live by id: the publish job's progress shows as it lands. */
 export function ItemEditor({
   id,
   feed,
   pluginId,
+  proposal,
+  preview,
   onClose,
 }: {
   id: string;
   feed: SiteFeedDecl;
   pluginId: PluginId;
+  /** An agent's proposal for the item waiting for the user, reviewed above the form. */
+  proposal: ProposalRow | null;
+  preview: ComponentType<SiteFeedPreviewProps> | null;
   onClose: () => void;
 }): ReactNode {
   const row = useLive(siteFeedItems, { id });
@@ -43,18 +51,39 @@ export function ItemEditor({
       row={row}
       subject="this item"
       missing={
-        <Text variant="caption" tone="muted">
-          This item no longer exists.
-        </Text>
+        <>
+          <Text variant="caption" tone="muted">
+            This item no longer exists.
+          </Text>
+          {/* A proposal for an item deleted since is still answered here. */}
+          {proposal !== null && (
+            <FeedProposalReview
+              proposal={proposal}
+              feed={feed}
+              item={null}
+              preview={preview}
+            />
+          )}
+        </>
       }
     >
       {(item) => (
-        <ItemForm
-          item={item}
-          feed={feed}
-          pluginId={pluginId}
-          onClose={onClose}
-        />
+        <>
+          {proposal !== null && (
+            <FeedProposalReview
+              proposal={proposal}
+              feed={feed}
+              item={item}
+              preview={preview}
+            />
+          )}
+          <ItemForm
+            item={item}
+            feed={feed}
+            pluginId={pluginId}
+            onClose={onClose}
+          />
+        </>
       )}
     </RowView>
   );

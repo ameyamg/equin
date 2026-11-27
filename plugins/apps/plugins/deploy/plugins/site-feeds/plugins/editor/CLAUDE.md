@@ -127,6 +127,23 @@ only while something contributes) and `ItemSection` (in the opened item).
 `_siteFeedItems`, `feedOfItem`, `SiteFeedItemRecord`,
 `siteFeedDestinations` and `primarySiteFeedDestination` for it.
 
+## Agent proposals (`tasks/proposals`)
+
+Items are the record type `site-feed-item` (`SITE_FEED_ITEM_PROPOSAL_TYPE`,
+core), scoped by feed, registered by the machine half
+(`machine/internal/proposal-type.ts`): `read` / `touchedSince` over this
+database, `apply` through `saveItemValues` (the box's judge, media links) plus
+`requeueHeld` for a published item, a proposed new item inserted as a draft
+under its worktree id first. An agent edits items on its worktree's Feeds page
+and runs `./equin propose`; nothing here publishes from a worktree.
+
+On the Feeds page: an **Items / Proposed** switch (the proposals'
+`ProposalsDataView`, the feed's value columns over the proposed values), a
+**Proposal** chip column on the items, and the opened item's
+`FeedProposalReview` above its form (a proposed new item's alone), drawn with
+the site plugin's `SiteFeeds.Feed` `preview`, every file read from this
+instance's attachments.
+
 ## Tests
 
 - `core/internal/items.test.ts` — `siteFeedSearchText`.
@@ -168,11 +185,12 @@ only while something contributes) and `ItemSection` (in the opened item).
     - `DataViewSlots.CollectionItemAction` "site-feeds.publications:investigate" → `CollectionInvestigate`
     - `Pane.Register` "deploy-feeds"
     - `Deploy.Sidebar` "Feeds"
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
+    - `tasks/proposals` ×4
+    - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `apps/deploy/deployments` ×2
-    - `network/live/live-state` ×2
     - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
@@ -193,6 +211,7 @@ only while something contributes) and `ItemSection` (in the opened item).
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
+    - `primitives/view-switcher.ViewSwitcher`
   - Exports (types):
     - `SiteFeedCardProps`
     - `SiteFeedItemProps`
@@ -208,6 +227,7 @@ only while something contributes) and `ItemSection` (in the opened item).
     - `resource.declare` "site-feeds.publications:rows"
     - `resource.declare` "site-feeds.publish-scope"
     - `attachments.link` "site_feed_items"
+    - `proposals.type` "site-feed-item"
   - Uses:
     - `apps/deploy/deployments._deployDeployments`
     - `apps/deploy/site-feeds/box.judgeSiteFeedValues`
@@ -296,6 +316,7 @@ only while something contributes) and `ItemSection` (in the opened item).
     - `deploymentDestination`
     - `parseDestination`
     - `SITE_FEED_DESTINATIONS_MAX`
+    - `SITE_FEED_ITEM_PROPOSAL_TYPE`
     - `SITE_FEED_ITEM_STATE_META`
     - `SITE_FEED_ITEM_STATES`
     - `SITE_FEED_LOCAL_DESTINATION`

@@ -78,6 +78,7 @@ conversation id. Plan: `research/2026-10-30-tasks-message-agents.md`.
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
     - `tasks/decisions`
+    - `tasks/proposals`
 - Core:
   - Exports (types):
     - `AgentLine`

@@ -11,6 +11,8 @@ import {
   parseFormattedText,
 } from "@plugins/fields/plugins/formatted-text/core";
 import type { SiteFeedDecl } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
+import { ProposalChip } from "@plugins/tasks/plugins/proposals/web";
+import type { ProposalRow } from "@plugins/tasks/plugins/proposals/core";
 import type { SiteFeedItemRow } from "../../core";
 import { SiteFeedEditor } from "../slots";
 import { ItemPublicationChips } from "../components/destinations";
@@ -25,27 +27,24 @@ function firstLine(value: unknown, formatted: boolean): string {
 }
 
 /**
- * The list's columns derived from the feed's own fields: each media field as
- * the media cell (its first file and how many more), each field holding text
- * as its first line — the first one the row's title. A field of any other
- * shape is edited in the form but has no column (no generic one-line cell).
- * Display only: the values are one jsonb, so nothing sorts or filters by them.
- *
- * `withElsewhere`: a trailing column drawing `SiteFeedEditor.ItemStatus` —
- * where else the item went (its contributors' chips), only when one exists.
+ * Columns derived from the feed's own fields, over any row holding a feed's
+ * values (an item, a proposed item): each media field as the media cell (its
+ * first file and how many more), each field holding text as its first line —
+ * the first one the row's title. A field of any other shape is edited in the
+ * form but has no column (no generic one-line cell). Display only: the values
+ * are one jsonb, so nothing sorts or filters by them.
  */
-export function feedItemFields(
+export function feedValueFields<R extends { values: Record<string, unknown> }>(
   feed: SiteFeedDecl,
-  { withElsewhere }: { withElsewhere: boolean },
-): FieldDef<SiteFeedItemRow>[] {
-  const fields: FieldDef<SiteFeedItemRow>[] = [];
+): FieldDef<R>[] {
+  const fields: FieldDef<R>[] = [];
   let titled = false;
   for (const [key, field] of Object.entries(feed.fields)) {
     const id = `values.${key}`;
     const label = field.meta.label ?? key;
     if (field.type.id === mediaFieldType.id) {
       fields.push(
-        mediaFieldDef<SiteFeedItemRow>({
+        mediaFieldDef<R>({
           id,
           label,
           media: (row) => MediaRefSchema.array().parse(row.values[key] ?? []),
@@ -78,6 +77,43 @@ export function feedItemFields(
       width: primary ? "minmax(0,1fr)" : "minmax(0,16rem)",
     });
   }
+  return fields;
+}
+
+/**
+ * The items list's columns: the feed's own (`feedValueFields`), a Proposal
+ * chip while an agent's proposal for the item waits for the user, and where
+ * the item is published.
+ *
+ * `withElsewhere`: a trailing column drawing `SiteFeedEditor.ItemStatus` —
+ * where else the item went (its contributors' chips), only when one exists.
+ */
+export function feedItemFields(
+  feed: SiteFeedDecl,
+  {
+    withElsewhere,
+    proposalOf,
+  }: {
+    withElsewhere: boolean;
+    proposalOf: (itemId: string) => ProposalRow | undefined;
+  },
+): FieldDef<SiteFeedItemRow>[] {
+  const fields = feedValueFields<SiteFeedItemRow>(feed);
+  fields.push({
+    id: "proposal",
+    label: "Proposal",
+    type: "text",
+    value: () => "",
+    cell: (row) => {
+      const proposal = proposalOf(row.id);
+      return proposal === undefined ? null : (
+        <ProposalChip proposal={proposal} />
+      );
+    },
+    sortable: false,
+    filterable: false,
+    width: "minmax(0,10rem)",
+  });
   // Where the item is: a chip per copy of the site holding (or getting) it.
   fields.push({
     id: "publishedTo",

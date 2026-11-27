@@ -12,6 +12,7 @@
   - Imported by:
     - `conversations`
     - `database/admin`
+    - `tasks/proposals`
     - `tasks/tasks-core`
 - Core:
   - Exports (values): `FORKED_AT_SETTING`

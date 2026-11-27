@@ -143,6 +143,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `EmptyAttachmentError`
     - `getAttachment`
     - `importAttachment`
+    - `isAttachmentId`
     - `pipeBounded`
     - `readAttachmentBytes`
   - Register: `defineJob('attachments.orphan-sweep')`
@@ -193,10 +194,10 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `attachmentsEntityRef`
     - `getAttachmentFile`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `page` ×6
-    - `tasks` ×4
+    - `tasks` ×5
     - `conversations` ×3
     - `fields` ×2
     - `infra` ×2
