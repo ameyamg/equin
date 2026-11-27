@@ -36,17 +36,20 @@ import (
 //     long. One hour: six idle timeouts (10 min) — the backend has outlived its
 //     sweep by most of an hour — and thirty Bun ping intervals, so no live
 //     connection reaches it.
-//   - kept-alive (WebSocket): a non-always-on backend with no request
-//     completed for heldKeptAliveAfter, and a WebSocket on it open as long —
+//   - kept-alive (any kind): a non-always-on backend with no request
+//     completed for heldKeptAliveAfter, and a connection on it open as long —
 //     traffic or not. Silence cannot catch a client that is alive but nobody's:
 //     a leaked automated browser answers Bun's pings and runs the live-state
 //     client's own 20 s heartbeat (resource-protocol HEARTBEAT_MS) exactly like
-//     a tab in use, so at the gateway the two differ only by how long and by
+//     a tab in use, and a streaming response (NDJSON, SSE) writes its beats
+//     whoever reads it. At the gateway the two differ only by how long and by
 //     who (the User-Agent, the remote address — which the entry names). Six
-//     hours with not one request is past any working session on a page that
-//     does anything: a forgotten tab or a leaked browser, and either way the
-//     backend's memory has been held for nobody. The 2026-11-27 promo-film
-//     backends were held 5+ h and 2 days.
+//     hours with not one request completed is past any working session on a
+//     page that does anything: a forgotten tab, a leaked client, or a backend
+//     holding a stream to itself — and either way the backend's memory has
+//     been held for nobody. The 2026-11-27 promo-film backends were the last:
+//     each held GET /api/host-only/box-link/stream (User-Agent Bun) to its own
+//     namespace, a beat every 15 s, for 5+ h and, one, 2 days.
 
 // backendHeldKind is the report kind. Declared by
 // plugins/debug/plugins/backend-held (core/kind.ts), which owns the payload's
@@ -135,8 +138,7 @@ func (w *Worktree) heldBy(now time.Time, silentAfter, keptAliveAfter time.Durati
 		switch {
 		case time.Duration(st.QuietForMs)*time.Millisecond >= silentAfter:
 			reason, after = heldSilent, silentAfter
-		case st.Kind == connWebSocket && idle >= keptAliveAfter &&
-			time.Duration(st.OpenForMs)*time.Millisecond >= keptAliveAfter:
+		case idle >= keptAliveAfter && time.Duration(st.OpenForMs)*time.Millisecond >= keptAliveAfter:
 			reason, after = heldKeptAlive, keptAliveAfter
 		default:
 			continue

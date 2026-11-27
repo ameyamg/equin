@@ -38,7 +38,7 @@ export const BackendHeldPayloadSchema = z.strictObject({
   worktree: z.string(),
   /**
    * Which rule: `silent` — no byte either way on the connection for
-   * heldAfterMs; `kept-alive` — a WebSocket, traffic or not, that alone kept
+   * heldAfterMs; `kept-alive` — a connection, traffic or not, that alone kept
    * the backend up for heldAfterMs with no request completed.
    */
   reason: z.enum(["silent", "kept-alive"]),

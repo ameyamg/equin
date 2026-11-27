@@ -27750,7 +27750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/converge`
           - `debug/gateway-panic`
           - `debug/service-down`
-    - **`backend-held`** — Backend-held report renderer: a one-line Debug → Reports summary for the backend-held kind (the rule — silent or kept-alive —, the connection, the backend it holds up and for how long). The backend-held report kind — filed by the gateway through the report outbox when a connection keeps a non-always-on backend up for nobody — silent (no request completed and no byte crossing it for an hour) or kept-alive (a WebSocket that alone kept it up six hours with no request) —, drained by main: the connection (HTTP or WebSocket, method, path, User-Agent, fetch metadata, remote address, bytes, how long open and quiet).
+    - **`backend-held`** — Backend-held report renderer: a one-line Debug → Reports summary for the backend-held kind (the rule — silent or kept-alive —, the connection, the backend it holds up and for how long). The backend-held report kind — filed by the gateway through the report outbox when a connection keeps a non-always-on backend up for nobody — silent (no request completed and no byte crossing it for an hour) or kept-alive (a connection that alone kept it up six hours with no request) —, drained by main: the connection (HTTP or WebSocket, method, path, User-Agent, fetch metadata, remote address, bytes, how long open and quiet).
       - Web:
         - Contributes: `Reports.KindView` → `BackendHeldSummary`
         - Uses:

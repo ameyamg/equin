@@ -290,7 +290,7 @@ gateway/
 ├── worktree.go    # Worktree lifecycle transitions (Ensure, Restart, Stop, exit), spawn, readiness
 ├── lifecycle.go   # The lifecycle as one value: the phase union and the spawnAttempt every waiter shares
 ├── connections.go # Every proxied connection as a record (kind, request, client, bytes, quiet time); GET /gateway/connections
-├── connections_report.go # A connection holding a backend up for nobody (silent, or a kept-alive WebSocket), filed as a backend-held report
+├── connections_report.go # A connection holding a backend up for nobody (silent, or kept alive), filed as a backend-held report
 ├── handler_panic.go # A request-handler panic recovered into a 500 and filed as a gateway-panic report
 ├── deploy_spec.go # Spec parsing/validation, the restart route's candidate body, its commit to memory + spec.json
 ├── central_spec_guard.go # Central's spec refused outside main's slot pool once main serves from it
@@ -742,9 +742,9 @@ writer's test and by `plugins/debug/plugins/backend-crash`'s schema test.
 - **`GET /gateway/connections[?worktree=<name>]`**: per backend up (`worktree`, `state`, `alwaysOn`, `lastActivity`), every open connection with its `openForMs` and `quietForMs`. Owner-only.
 - **`backend-held` report** (`connections_report.go`, on the idle sweeper's tick). It applies to a backend that is not always-on and not public, and files each connection once, logged at warn (`backend held up by a connection`).
   - **`silent`**: no request completed on the backend for 1 h (`heldSilentAfter`), and the connection has moved no byte, either way, for as long. An HTTP request in that state is stuck. A live WebSocket is never silent that long: Bun pings it every ~2 min and live-state heartbeats every 20 s. The hour is six idle timeouts and thirty ping intervals.
-  - **`kept-alive`**: a WebSocket that alone kept the backend up 6 h (`heldKeptAliveAfter`) with not one request completed, whatever its traffic. A leaked automated browser answers pings like a tab in use, so only time and identity tell them apart, and the entry names the client.
+  - **`kept-alive`**: any connection that alone kept the backend up 6 h (`heldKeptAliveAfter`) with not one request completed, whatever its traffic. A leaked automated browser answers pings like a tab in use, and a streaming response writes its beats whoever reads it, so only time and identity tell them apart. The entry names the client.
   - Silence and age are timed on the monotonic clock (`connClock`), so a machine sleep does not make a pinging connection look quiet.
-  - Incident: on 2026-11-27, five promo-film backends were held 5+ h at `activeConns: 1`, and nothing could say by what.
+  - Incident: on 2026-11-27, five promo-film backends were held 5+ h (one for 2 days) at `activeConns: 1`, and nothing could say by what. `/gateway/connections` then named it: each backend held `GET /api/host-only/box-link/stream` (User-Agent `Bun`) to its own namespace, a beat every 15 s. The client port was the backend's own.
   - Kind and schema: `plugins/debug/plugins/backend-held`, contract pinned by `testdata/backend-held-entry.json`.
 
 ## A handler panic is reported

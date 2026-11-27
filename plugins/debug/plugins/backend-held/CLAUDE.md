@@ -26,15 +26,17 @@ always-on backend (central, main) or the public namespace.
     idle timeout) and the live-state client heartbeats every 20 s. An hour of
     silence means its peer is gone or frozen.
   - One hour is six idle timeouts (10 min) and thirty ping intervals.
-- **`kept-alive`** (WebSocket): no request completed for **6 h**, and a
-  WebSocket on the backend open as long, whatever its traffic.
-  - A leaked automated browser answers pings and heartbeats exactly like a tab
-    in use, so silence cannot catch it. Only time and identity separate them:
-    the entry names the User-Agent and the remote address.
-  - Six hours with not one request outlasts any working session on a page: it
-    is a forgotten tab or a leaked browser.
-  - In the 2026-11-27 incident, the backends were held 5+ h, and one for 2
-    days.
+- **`kept-alive`** (any kind): no request completed for **6 h**, and a
+  connection on the backend open as long, whatever its traffic.
+  - Silence cannot catch a live client nobody uses. A leaked automated browser
+    answers pings and heartbeats exactly like a tab in use, and a streaming
+    response writes its beats whoever reads it.
+  - Only time and identity separate them, so the entry names the User-Agent
+    and the remote address.
+  - Six hours with not one request outlasts any working session on a page.
+  - The 2026-11-27 backends were this case. Each held
+    `GET /api/host-only/box-link/stream` (User-Agent `Bun`) to its own
+    namespace for 5+ h, one for 2 days.
 
 **Fingerprint** `backend-held:<reason>:<kind>:<method> <path>`: the same
 stuck client on several backends is one row.
@@ -55,7 +57,7 @@ fingerprint are persisted. Do not rename them.
 
 ## Plugin reference
 
-- Description: Backend-held report renderer: a one-line Debug → Reports summary for the backend-held kind (the rule — silent or kept-alive —, the connection, the backend it holds up and for how long). The backend-held report kind — filed by the gateway through the report outbox when a connection keeps a non-always-on backend up for nobody — silent (no request completed and no byte crossing it for an hour) or kept-alive (a WebSocket that alone kept it up six hours with no request) —, drained by main: the connection (HTTP or WebSocket, method, path, User-Agent, fetch metadata, remote address, bytes, how long open and quiet).
+- Description: Backend-held report renderer: a one-line Debug → Reports summary for the backend-held kind (the rule — silent or kept-alive —, the connection, the backend it holds up and for how long). The backend-held report kind — filed by the gateway through the report outbox when a connection keeps a non-always-on backend up for nobody — silent (no request completed and no byte crossing it for an hour) or kept-alive (a connection that alone kept it up six hours with no request) —, drained by main: the connection (HTTP or WebSocket, method, path, User-Agent, fetch metadata, remote address, bytes, how long open and quiet).
 - Web:
   - Contributes: `Reports.KindView` → `BackendHeldSummary`
   - Uses:

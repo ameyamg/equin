@@ -11,7 +11,7 @@ import {
 // The `backend-held` kind, filed by the gateway (connections_report.go)
 // through the report outbox when a connection keeps a non-always-on backend
 // up for nobody: silent (nothing crossed it for an hour) or kept-alive (a
-// WebSocket that alone kept it up six hours with no request). One row per
+// connection that alone kept it up six hours with no request). One row per
 // culprit — the rule, the kind of connection, its method and path — so the
 // same stuck client holding five backends up is one row counted five times.
 export const backendHeldKind = ReportKind({
@@ -55,11 +55,12 @@ function renderDescription(row: ReportRow, d: BackendHeldPayload): string {
           `A live WebSocket moves bytes every couple of minutes (Bun pings it, the live-state ` +
           `client heartbeats every 20 s), and a streaming response writes as it goes, so this ` +
           `one is stuck: a request its backend never answered, or a peer that is gone or frozen.`
-      : `**Kept alive:** a WebSocket open ${formatHeldDuration(c.openForMs)} that alone has kept ` +
-          `the backend up for over ${formatHeldDuration(d.heldAfterMs)} with not one request. Its ` +
-          `client is alive (it answers pings and heartbeats), so at the gateway it looks like a tab ` +
-          `in use — yet nothing has been asked of the backend all that time: a forgotten tab, or a ` +
-          `leaked automated browser. The User-Agent and remote address say which.`,
+      : `**Kept alive:** a ${c.kind} connection open ${formatHeldDuration(c.openForMs)} that ` +
+          `alone has kept the backend up for over ${formatHeldDuration(d.heldAfterMs)} with not ` +
+          `one request completed. Its client is alive (it answers pings, or reads a stream that ` +
+          `keeps writing), so at the gateway it looks like a use — yet nothing has been asked of ` +
+          `the backend all that time: a forgotten tab, a leaked client, or a backend holding a ` +
+          `stream to itself. The User-Agent and remote address say which.`,
   );
   lines.push("");
   lines.push("**The connection:**");

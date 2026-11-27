@@ -121,24 +121,25 @@ func TestHeldByNamesTheSilentConnectionOnce(t *testing.T) {
 	}
 }
 
-// A WebSocket that pings (a live client) is no silent connection, but one that
-// alone has kept a backend up past the kept-alive threshold is reported as
-// such; a younger one is not.
+// A connection that moves bytes (a pinging WebSocket, a streaming response) is
+// no silent connection, but one that alone has kept a backend up past the
+// kept-alive threshold is reported as such; a younger one is not.
 func TestHeldByNamesAKeptAliveWebSocket(t *testing.T) {
 	now := time.Now()
 	wt, bk := heldTestWorktree(t, "promo-film.y", now.Add(-7*time.Hour))
 	old := connOpenedAt(connWebSocket, "/ws/notifications", now.Add(-7*time.Hour))
 	young := connOpenedAt(connWebSocket, "/ws/terminal", now.Add(-2*time.Hour))
-	oldHTTP := connOpenedAt(connHTTP, "/api/stream", now.Add(-7*time.Hour))
-	for _, c := range []*openConn{old, young, oldHTTP} {
+	oldStream := connOpenedAt(connHTTP, "/api/host-only/box-link/stream", now.Add(-7*time.Hour))
+	for _, c := range []*openConn{old, young, oldStream} {
 		c.moved(2, false)
 	}
 	bk.addWS(&closeRecorder{}, old)
 	bk.addWS(&closeRecorder{}, young)
-	bk.openHTTP(oldHTTP)
+	bk.openHTTP(oldStream)
 	held := wt.heldBy(now, time.Hour, 6*time.Hour)
-	if len(held) != 1 || held[0].Reason != heldKeptAlive || held[0].Connection.Path != "/ws/notifications" || held[0].HeldAfterMs != (6*time.Hour).Milliseconds() {
-		t.Fatalf("held = %+v, want the old WebSocket, kept-alive", held)
+	if len(held) != 2 || held[0].Connection.Path != "/ws/notifications" || held[1].Connection.Path != "/api/host-only/box-link/stream" ||
+		held[0].Reason != heldKeptAlive || held[1].Reason != heldKeptAlive || held[0].HeldAfterMs != (6*time.Hour).Milliseconds() {
+		t.Fatalf("held = %+v, want the old WebSocket and the old stream, kept-alive", held)
 	}
 	if !strings.Contains(newBackendHeldEntry(held[0], 1, "x").Message, "by a kept-alive websocket") {
 		t.Fatalf("message = %q", newBackendHeldEntry(held[0], 1, "x").Message)
