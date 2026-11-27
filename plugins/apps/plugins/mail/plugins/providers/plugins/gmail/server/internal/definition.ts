@@ -1,13 +1,18 @@
 import { getGmailToken } from "@plugins/integrations/plugins/gmail/server";
-import type { MailProviderDefinition } from "@plugins/apps/plugins/mail/plugins/provider/core";
+import type { ServerMailProvider } from "@plugins/apps/plugins/mail/plugins/provider/server";
 import { GMAIL_PRIMARY_ACCOUNT, openGmail } from "./accounts";
 import { compileGmailQuery } from "./compile-query";
 import { GMAIL_LABEL_COLORS } from "./labels";
 import { gmailPush } from "./push/push";
 
-export const gmailMailProvider: MailProviderDefinition = {
+export const gmailMailProvider: ServerMailProvider = {
   id: "gmail",
   label: "Gmail",
+  // Gmail's API and the token central hands: no table of this database.
+  reads: {
+    tables: [],
+    reason: "Gmail's API, reached over the network; its token from central",
+  },
   capabilities: {
     mailboxModel: "labels",
     // history.list carries no label create / rename / delete.

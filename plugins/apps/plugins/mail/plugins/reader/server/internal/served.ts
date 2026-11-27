@@ -1,13 +1,8 @@
 import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
-  _mailAccounts,
-  _mailMailboxes,
-  _mailQueries,
-  _mailQueryMembers,
-  _mailThreadBodies,
-  _mailThreads,
   mailCache,
+  mailCacheReads,
   MailThreadUnavailableError,
   onMailThreadsChanged,
   type MailThreadRead,
@@ -117,22 +112,9 @@ export async function readerThread(
 export const mailThreadServed = serveValue(mailThread, {
   source: "external",
   changes: "notified",
-  reads: {
-    tables: [],
-    reason: "the Mail cache's own tables, which only the cache writes",
-    notified: {
-      relations: [
-        _mailAccounts,
-        _mailMailboxes,
-        _mailThreads,
-        _mailThreadBodies,
-        _mailQueries,
-        _mailQueryMembers,
-      ],
-      reason:
-        "the cache writes them only while answering or catching up, and tells this value (onMailThreadsChanged) when a thread moved",
-    },
-  },
+  // The cache's tables and its providers' (the cache tells this value,
+  // onMailThreadsChanged, when a thread moved).
+  reads: mailCacheReads,
   loader: async ({ id }) => {
     try {
       return await readerThread(await mailCache.thread(id));
@@ -167,22 +149,9 @@ export const mailInlineImagesServed = serveValue(mailInlineImages, {
   // Read through the cache like the thread itself (and a part kept in
   // infra/attachments): re-read when the cache says the thread moved.
   changes: "notified",
-  reads: {
-    tables: [],
-    reason: "the Mail cache's own tables, which only the cache writes",
-    notified: {
-      relations: [
-        _mailAccounts,
-        _mailMailboxes,
-        _mailThreads,
-        _mailThreadBodies,
-        _mailQueries,
-        _mailQueryMembers,
-      ],
-      reason:
-        "the cache writes them only while answering or catching up, and tells this value (onMailThreadsChanged) when a thread moved",
-    },
-  },
+  // The cache's tables and its providers' (the cache tells this value,
+  // onMailThreadsChanged, when a thread moved).
+  reads: mailCacheReads,
   loader: async ({ threadId, messageId }) => {
     try {
       const read = await mailCache.thread(threadId);

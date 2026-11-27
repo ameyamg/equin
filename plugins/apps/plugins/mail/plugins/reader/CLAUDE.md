@@ -90,13 +90,8 @@ the painted body, prefetched vs cold.
     - `resource.declare` "mail.inline-images"
     - `resource.declare` "mail.thread"
   - Uses:
-    - `apps/mail/cache._mailAccounts`
-    - `apps/mail/cache._mailMailboxes`
-    - `apps/mail/cache._mailQueries`
-    - `apps/mail/cache._mailQueryMembers`
-    - `apps/mail/cache._mailThreadBodies`
-    - `apps/mail/cache._mailThreads`
     - `apps/mail/cache.mailCache`
+    - `apps/mail/cache.mailCacheReads`
     - `apps/mail/cache.MailThreadRead`
     - `apps/mail/cache.MailThreadUnavailableError`
     - `apps/mail/cache.onMailThreadsChanged`

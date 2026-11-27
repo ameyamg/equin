@@ -33,11 +33,10 @@ demo mailbox beside Gmail: promo-film did, 2026-11-27, and every
   never sent through another.
 - **Push**: every registered provider's push is listened to; a change syncs
   when it is the account's provider (or before the first read resolved one).
-- **Known gap**: the local provider stores its mailbox in this host's
-  Postgres, and its calls run inside the cache's loaders. Those tables are
-  in no declared read, so on a Bun host the route-drift guard reports them
-  once (it fails open). Their changes reach Mail through the provider's own
-  change log and push.
+- **A provider's own tables** (the local mailbox lives in this host's
+  Postgres, and its calls run inside the cache's loaders) are declared reads:
+  each provider names them (`ServerMailProvider.reads`) and the cache's
+  `mailCacheReads` takes them from the registry (see *Declared reads*).
 
 ## What it serves (`core`)
 
@@ -89,6 +88,13 @@ demo mailbox beside Gmail: promo-film did, 2026-11-27, and every
   `is_search`), `mail_query_members` (`query`, `thread`, `at`),
   `mail_thread_bodies` (a thread's content, its message ids, its weight,
   `fetched_at` / `opened_at`: below).
+- **Declared reads** (`mailCacheReads`, a thunk bound once contributions are
+  collected): what `mail.threads`, `mail.mailboxes` and the reader's values
+  read — the cache's tables plus each registered provider's
+  (`ServerMailProvider.reads`), all `notified` (the cache notifies them; a
+  provider's write reaches it through that provider's change signal, which
+  the cache catches up on first). So the drift guard sees no undeclared read
+  when the loaders call a provider whose mailbox is in this database.
 - **Coverage.** A query's members are complete for every thread whose latest
   matching message is after `floor_at` (all once `exhausted`). A window inside
   it is answered from Postgres alone.
@@ -397,6 +403,7 @@ offline, the byte budget, prefetch (speculative priority, neighbours first).
     - `_mailThreads`
     - `CACHE_TABLES`
     - `mailCache`
+    - `mailCacheReads`
     - `MailThreadUnavailableError`
     - `onMailThreadsChanged`
   - Register:

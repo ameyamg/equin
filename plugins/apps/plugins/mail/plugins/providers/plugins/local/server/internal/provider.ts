@@ -44,7 +44,6 @@ import {
   type MailboxRole,
   type MailChanges,
   type MailProvider,
-  type MailProviderDefinition,
   type MailPush,
   type MailQueryColumn,
   type MailWriteTarget,
@@ -53,6 +52,7 @@ import {
   type ThreadId,
   type ThreadSummaryResult,
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
+import type { ServerMailProvider } from "@plugins/apps/plugins/mail/plugins/provider/server";
 import {
   _mailLocalAccounts,
   _mailLocalAttachments,
@@ -1096,9 +1096,23 @@ export function createLocalMail({ db }: { db: Db }) {
     },
   };
 
-  const definition: MailProviderDefinition = {
+  const definition: ServerMailProvider = {
     id: "local",
     label: "This device",
+    // Every read the cache makes through this provider — the connection
+    // check, a list, a thread — reads these; every write to them signals
+    // the push (`commitReturning`), which the cache catches up on.
+    reads: {
+      tables: [
+        _mailLocalAccounts,
+        _mailLocalMailboxes,
+        _mailLocalMessages,
+        _mailLocalAttachments,
+        _mailLocalChanges,
+      ],
+      reason:
+        "the local mailbox: every write to it signals the provider's in-process push, so the cache catches up and notifies",
+    },
     capabilities: {
       mailboxModel: "labels",
       // Every label write is in the change log.

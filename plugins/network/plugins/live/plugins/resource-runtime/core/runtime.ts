@@ -1249,6 +1249,14 @@ export interface DeferredExternal {
   freshness?: ResourceFreshness;
 }
 
+/**
+ * What a deferred EXTERNAL keyed resource — a window or point set — fixes at
+ * definition: its declared freshness (its mode is the contract's, `keyed`).
+ */
+export interface DeferredKeyedExternal {
+  freshness?: ResourceFreshness;
+}
+
 interface DownstreamEdge {
   downstreamKey: string;
   map?: (
@@ -2730,13 +2738,14 @@ export interface ResourceRuntime {
    * non-keyed deferred resource is a push value. Serving it before it is bound
    * throws, and so does defining one after the bind ran.
    *
-   * The third arm (D4) is a deferred EXTERNAL value — one whose declared reads
-   * are computed from contributions (a provider registry): `external` fixes,
-   * at definition, its externality, its mode and its freshness, so the
-   * placeholder is external from the start (`_debug`, the read-set-gap
-   * warning, the D5 guard) and returns a handle with `notify`; its bind
-   * supplies the loader and the `reach` plan, and may not restate another
-   * freshness.
+   * The external arms (D4) are a deferred EXTERNAL value, window or point set
+   * — one whose declared reads are computed from contributions (a provider
+   * registry): `external` fixes, at definition, its externality, its mode (a
+   * keyed one's is the contract's) and its freshness, so the placeholder is
+   * external from the start (`_debug`, the read-set-gap warning, the D5
+   * guard) and returns a handle with `notify`; its bind supplies the loader,
+   * the membership policy (keyed) and the `reach` plan, and may not restate
+   * another freshness.
    */
   defineDeferredResource: {
     <T, P extends ResourceParams = ResourceParams>(
@@ -2751,6 +2760,13 @@ export interface ResourceRuntime {
       contract: ResourceContract<T, P> & { keyed?: never },
       bind: () => ServerResourceOptions<T, P>,
       external: DeferredExternal,
+    ): ExternalResource<T, P>;
+    // Last: a keyed external's bind takes no `mode`, so listed first it would
+    // fix a value bind's `mode: "push"` literal as a string.
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: KeyedResourceContract<T, P>,
+      bind: () => KeyedServerResourceOptions<T, P> & ExternalKeyedPolicy<P>,
+      external: DeferredKeyedExternal,
     ): ExternalResource<T, P>;
   };
   /**
@@ -6387,11 +6403,15 @@ export function createResourceRuntime(
             // tuple, its rows mapped to their ids. Every change of it is a
             // FULL re-read (its `notify`), so no path calls this today; it is
             // what the window's ids MEAN, never a second source of them.
+            // The REGISTERED entry's: a deferred one's bind builds this
+            // record on a scratch entry and copies it onto the placeholder.
             windowIdsOf: externalSource
-              ? async (params: ResourceParams): Promise<string[]> =>
-                  ((await timedLoad(entry, params)) as readonly unknown[]).map(
-                    (row) => entry.keyOf!(row),
-                  )
+              ? async (params: ResourceParams): Promise<string[]> => {
+                  const own = registry.get(def.key) ?? entry;
+                  return (
+                    (await timedLoad(own, params)) as readonly unknown[]
+                  ).map((row) => own.keyOf!(row));
+                }
               : (def.membership.windowIdsOf as (
                   params: ResourceParams,
                 ) => Promise<string[]>),
@@ -6631,11 +6651,17 @@ export function createResourceRuntime(
     external: DeferredExternal,
   ): ExternalResource<T, P>;
   function defineDeferredResource<T, P extends ResourceParams = ResourceParams>(
+    contract: KeyedResourceContract<T, P>,
+    bind: () => KeyedServerResourceOptions<T, P> & ExternalKeyedPolicy<P>,
+    external: DeferredKeyedExternal,
+  ): ExternalResource<T, P>;
+  function defineDeferredResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P>,
     bind: () =>
       | ServerResourceOptions<T, P>
-      | (KeyedServerResourceOptions<T, P> & ScopePolicy<P>),
-    external?: DeferredExternal,
+      | (KeyedServerResourceOptions<T, P> & ScopePolicy<P>)
+      | (KeyedServerResourceOptions<T, P> & ExternalKeyedPolicy<P>),
+    external?: DeferredExternal | DeferredKeyedExternal,
   ): ExternalResource<T, P> {
     const key = contract.key;
     if (registry.has(key)) {
@@ -6651,16 +6677,24 @@ export function createResourceRuntime(
     // say so — checked at bind). An EXTERNAL one (D4) is external from here
     // on, with its declared freshness: `_debug`, the read-set-gap warning and
     // the D5 guard read both before the bind, and the bind cannot change them.
-    if (external && contract.keyed) {
+    // A keyed one (a window or point set) takes its mode from the contract,
+    // a non-keyed one names it.
+    const externalMode =
+      external !== undefined && "mode" in external ? external.mode : undefined;
+    if (
+      external !== undefined &&
+      !contract.keyed &&
+      externalMode === undefined
+    ) {
       throw new Error(
-        `defineDeferredResource: "${key}" is keyed — a deferred external is a non-keyed value`,
+        `defineDeferredResource: "${key}" is a non-keyed deferred external — it names its mode ("push" | "invalidate")`,
       );
     }
     const { entry } = buildEntry(
       {
         key,
         schema: contract.schema,
-        mode: contract.keyed ? "keyed" : (external?.mode ?? "push"),
+        mode: contract.keyed ? "keyed" : (externalMode ?? "push"),
         keyOf: contract.keyed?.keyOf,
         preload: contract.preload,
         ...(contract.optionalParams !== undefined

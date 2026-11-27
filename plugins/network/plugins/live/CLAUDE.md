@@ -1275,7 +1275,10 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   - `"notified"` — `served.notify(params?)`, `whileSubscribed` or
     `recomputeOn` drive it. The only arm with `notify`, `whileSubscribed`,
     `recomputeOn`, `throttleMs`, and `reads` (a loader that also reads
-    Postgres declares them like the db arm; a paged value takes a static list).
+    Postgres declares them like the db arm; a paged value takes a static list;
+    a collection's or a value's may be a thunk over a registry — every
+    resource then registers as a deferred external, bound at
+    `bindDeferredResources`).
     - `reads.notified: { relations, reason }` — relations whose changes
       arrive through the value's OWN notify wired to a domain event (e.g.
       `automations.catalog` on `tasks.statusChanged`), never the feed.

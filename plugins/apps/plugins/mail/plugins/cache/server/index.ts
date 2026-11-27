@@ -23,6 +23,7 @@ import {
 } from "./internal/served";
 
 export { mailCache, onMailThreadsChanged } from "./internal/served";
+export { mailCacheReads } from "./internal/reads";
 export {
   MailThreadUnavailableError,
   type MailAttachmentRead,

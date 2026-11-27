@@ -682,7 +682,7 @@ describe("D4 — a deferred external value", () => {
     expect(h.frames.map((f) => f.kind)).toEqual(["sub-ack"]);
   });
 
-  test("a bind restating another freshness is refused; a keyed external is refused at definition", () => {
+  test("a bind restating another freshness is refused", () => {
     const h = createHarness();
     h.runtime.defineDeferredResource(
       { key: "x", schema: z.number(), validateParams: () => {} },
@@ -696,18 +696,107 @@ describe("D4 — a deferred external value", () => {
     expect(() => h.runtime.bindDeferredResources()).toThrow(
       /externality is fixed where it is defined/,
     );
+  });
+
+  test("a non-keyed one names its mode", () => {
+    const h = createHarness();
     expect(() =>
       h.runtime.defineDeferredResource(
-        {
-          key: "k",
-          schema: z.array(z.object({ id: z.string() })),
-          keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
-          validateParams: () => {},
-        } as never,
-        () => ({ mode: "push", loader: () => [] }),
-        { mode: "push" },
+        { key: "x", schema: z.number(), validateParams: () => {} },
+        () => ({ mode: "push", loader: () => 1 }),
+        { freshness: { kind: "notified" } } as never,
       ),
-    ).toThrow(/a deferred external is a non-keyed value/);
+    ).toThrow(/names its mode/);
+  });
+});
+
+describe("D4 — a deferred external keyed window (a provider registry's reads)", () => {
+  // The relations a registered provider declares, known only at bind.
+  function deferredWindow(runtime: ResourceRuntimeOptions = {}) {
+    const loads: ResourceParams[] = [];
+    let rows = [{ id: "r1", n: 1 }];
+    const h = createHarness(runtime);
+    const handle = h.runtime.defineDeferredResource(
+      {
+        key: "threads",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
+      },
+      () => ({
+        membership: { kind: "window" as const, limitOf: () => 10 },
+        reach: mintReachPlan({
+          routes: [],
+          usesOf: () => new Map(),
+          notified: [
+            {
+              relation: "mail_local_accounts",
+              reason: "the provider's push covers it",
+            },
+          ],
+        }),
+        loader: (p: ResourceParams) => {
+          loads.push(p);
+          return rows;
+        },
+      }),
+      { freshness: { kind: "notified" } },
+    );
+    return {
+      h,
+      handle,
+      loads,
+      setRows: (r: typeof rows) => {
+        rows = r;
+      },
+    };
+  }
+
+  test("external and keyed from definition, unbound until the bind", async () => {
+    const d = deferredWindow();
+    const before = await debugOf(d.h, "threads");
+    expect(before.policy).toBe("unbound");
+    expect(before.externalSource).toBe(true);
+    d.h.runtime.bindDeferredResources();
+    const after = await debugOf(d.h, "threads");
+    expect(after.policy).toBe("external");
+    expect(after.freshness).toEqual({ kind: "notified" });
+  });
+
+  test("the bound reads cover the provider's table in a capture, under strictRoutes", async () => {
+    const d = deferredWindow({
+      lastReadSet: () => ["mail_local_accounts"],
+      strictRoutes: true,
+    });
+    d.h.runtime.bindDeferredResources();
+    await d.h.subscribe("threads", { q: "x" });
+    expect(d.h.frames.map((f) => f.kind)).toEqual(["sub-ack"]);
+  });
+
+  test("its notify re-reads the window and ships the keyed diff", async () => {
+    const d = deferredWindow();
+    d.h.runtime.bindDeferredResources();
+    await d.h.subscribe("threads", { q: "x" });
+    d.loads.length = 0;
+    d.setRows([
+      { id: "r1", n: 1 },
+      { id: "r2", n: 2 },
+    ]);
+    d.handle.notify({ q: "x" });
+    await settle();
+    expect(d.loads).toEqual([{ q: "x" }]);
+    const delta = d.h.pushesFor("threads").find((f) => f.kind === "delta");
+    expect(delta!.order).toEqual(["r1", "r2"]);
+  });
+
+  test("a write to the notified relation reaches nothing by itself", async () => {
+    const d = deferredWindow();
+    d.h.runtime.bindDeferredResources();
+    await d.h.subscribe("threads", { q: "x" });
+    d.loads.length = 0;
+    change(d.h, "mail_local_accounts");
+    await settle();
+    expect(d.loads).toEqual([]);
   });
 });
 

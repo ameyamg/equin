@@ -21,13 +21,8 @@ import {
 } from "../../core";
 import { mailChangeSignal, SYNC_IDLE_MS, SYNC_TICK_MS } from "./sync";
 import { createMailCache } from "./engine";
-import {
-  _mailAccounts,
-  _mailMailboxes,
-  _mailQueries,
-  _mailQueryMembers,
-  _mailThreads,
-} from "./tables";
+import { mailCacheReads } from "./reads";
+import { _mailAccounts } from "./tables";
 
 /**
  * The registered provider kinds and the one chosen in Settings (empty:
@@ -231,22 +226,6 @@ export function watchProviderChoice(): void {
   });
 }
 
-const CACHE_READS = {
-  tables: [],
-  reason: "the Mail cache's own tables, which only the cache writes",
-  notified: {
-    relations: [
-      _mailAccounts,
-      _mailMailboxes,
-      _mailThreads,
-      _mailQueries,
-      _mailQueryMembers,
-    ],
-    reason:
-      "the cache writes them only while answering or catching up, and notifies the served collections itself when what they answer moved",
-  },
-};
-
 /**
  * Any window of the connected account's threads: from coverage when it
  * reaches, else filled from the provider (the window stays loading); refused,
@@ -255,7 +234,7 @@ const CACHE_READS = {
 export const mailThreadsServed = serveCollection(mailThreads, {
   source: "external",
   changes: "notified",
-  reads: CACHE_READS,
+  reads: mailCacheReads,
   window: (q, read) => mailCache.window(q, read),
   rows: (ids) => mailCache.rows(ids),
   keyText: { date: (d: Date) => d.toISOString() },
@@ -283,7 +262,7 @@ export const mailThreadsServed = serveCollection(mailThreads, {
 export const mailMailboxesServed = serveCollection(mailMailboxes, {
   source: "external",
   changes: "notified",
-  reads: CACHE_READS,
+  reads: mailCacheReads,
   all: () => mailCache.mailboxes(),
   rows: async (ids) => {
     const want = new Set(ids);

@@ -10,6 +10,7 @@ import {
 import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import type {
   ResourceParams,
+  ResourceRuntime,
   ServerResourceOptions,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type { ReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
@@ -426,17 +427,21 @@ export interface ServedAllResources<Row, B extends string = never> {
 /**
  * The Postgres reads an external collection's answers (any form) make beside its
  * own truth — only on a `changes: "notified"` one, as an external value's
- * `reads` (`serveValue`): a static list (every resource registers at once).
- * Typically `notified` relations — tables the source's own change signal
- * already covers (a replica's copy, announced by its NOTIFY) — so the
- * runtime's undeclared-read guard accepts them without routing a write.
+ * `reads` (`serveValue`). Typically `notified` relations — tables the
+ * source's own change signal already covers (a replica's copy, announced by
+ * its NOTIFY) — so the runtime's undeclared-read guard accepts them without
+ * routing a write. A thunk when the tables come from a registry that is
+ * complete only once contributions are collected (the providers a cache reads
+ * through, each declaring its own tables): every resource of the collection is
+ * then a deferred external (resource-runtime's D4), external with its
+ * freshness from definition, its plan bound at `bindDeferredResources`.
  */
 export type ExternalCollectionReadsOption<C extends LiveCollectionChanges> = [
   C,
 ] extends ["notified"]
   ? {
       /** Every table the answers read, and why a write to any row may change any tuple. */
-      reads?: ValueReads<ResourceParams>;
+      reads?: ValueReads<ResourceParams> | (() => ValueReads<ResourceParams>);
     }
   : { reads?: never };
 
@@ -445,17 +450,22 @@ export type ExternalCollectionReadsOption<C extends LiveCollectionChanges> = [
  * registers — the window, `:rows`, `:groups`, `:count` (one reach plan, as an
  * external value's; a keyed window takes it full-only, D31).
  */
-function externalReadsRuntime(
+export function externalReadsRuntime(
   label: string,
-  reads: ValueReads<never>,
+  reads: ValueReads<never> | (() => ValueReads<never>),
+  host: Pick<
+    ResourceRuntime,
+    "defineResource" | "defineDeferredResource" | "defineExternalResource"
+  > = { defineResource, defineDeferredResource, defineExternalResource },
 ): Pick<LiveRuntime, "defineResource" | "defineExternalResource"> {
-  const reach = compiledValueReach(
-    reads,
-    label,
-    [],
-  ) as ReachPlan<ResourceParams>;
+  const compile = (declared: ValueReads<never>) =>
+    compiledValueReach(declared, label, []) as ReachPlan<ResourceParams>;
+  // Compiled at once when static, so a bad declaration fails at module eval.
+  const reach = typeof reads === "function" ? null : compile(reads);
+  const declared = (): ValueReads<never> =>
+    typeof reads === "function" ? reads() : reads;
   return {
-    defineResource,
+    defineResource: host.defineResource,
     defineExternalResource: ((contract: never, options: never) => {
       const { freshness } = options as ServerResourceOptions<
         unknown,
@@ -467,10 +477,24 @@ function externalReadsRuntime(
           `${label}: \`reads\` is a "notified" collection's — an immutable or fixed one claims no push, so a write could tell it nothing.`,
         );
       }
-      return defineExternalResource(contract, {
-        ...(options as object),
-        reach,
-      } as never);
+      if (reach !== null) {
+        return host.defineExternalResource(contract, {
+          ...(options as object),
+          reach,
+        } as never);
+      }
+      // Deferred: external, with its freshness (and a value's mode), from
+      // here on; the bind adds the plan once the registry the thunk reads is
+      // complete. One compile per resource, each over the same registry.
+      const bind = () =>
+        ({ ...(options as object), reach: compile(declared()) }) as never;
+      const keyed = (contract as { keyed?: unknown }).keyed !== undefined;
+      return keyed
+        ? host.defineDeferredResource(contract, bind, { freshness })
+        : host.defineDeferredResource(contract, bind, {
+            mode: (options as { mode: "push" | "invalidate" }).mode,
+            freshness,
+          });
     }) as LiveRuntime["defineExternalResource"],
   };
 }
@@ -1429,7 +1453,9 @@ export function serveAnyCollection<
   // table-backed arm below is untouched by it.
   if ((served as { source?: unknown }).source !== undefined) {
     // Erased: the overloads checked the options against the declaration.
-    const { reads, ...external_ } = served as { reads?: ValueReads<never> };
+    const { reads, ...external_ } = served as {
+      reads?: ValueReads<never> | (() => ValueReads<never>);
+    };
     const external = compileExternalCollection(
       reads === undefined
         ? { defineResource, defineExternalResource }

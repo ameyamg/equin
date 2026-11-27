@@ -517,10 +517,13 @@ counts / refusal, `loadResourceFresh`).
 ## Deferred resources (`defineDeferredResource` / `bindDeferredResources`)
 
 For a resource compiled only once contributions are known (`LiveColumns.Expose`,
-`LiveColumns.Scoped`, union arms), or an EXTERNAL value with computed reads (D4).
+`LiveColumns.Scoped`, union arms), or an EXTERNAL resource with computed reads
+(D4) — a value, or a keyed window / point set (an external collection whose
+`reads` is a thunk over a provider registry).
 
 - `defineDeferredResource(contract, bind, { mode, freshness })` registers the entry
-  NOW from the contract, with a throwing loader.
+  NOW from the contract, with a throwing loader. A keyed external passes only
+  `{ freshness }` (its mode is the contract's); a non-keyed one names its mode.
   - The contract supplies key, mode, schema, `keyOf` and preload — visible to
     `Resource.Declare`, `preloadedKeys()` and `_debug`.
 - `bindDeferredResources()` runs each `bind()` through the same `buildEntry`

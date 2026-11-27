@@ -133,6 +133,14 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
   resolves its provider from Settings' choice or from which one is connected
   (`mail/cache`), never from how many are registered, and never names one;
   `mailProviderById(id)` finds one by id.
+- **Its reads (`ServerMailProvider.reads`, required):** the Postgres tables
+  its own I/O reads (the connection check, lists, a thread) and why its
+  change signal covers them — `[]` for Gmail (its API), the `mail_local_*`
+  tables for the local mailbox. The cache calls a provider inside its served
+  loaders, so these land in the loaders' read sets: the cache's `reads` thunk
+  (`mailCacheReads`) takes them from the registry as `notified` relations, so
+  a provider can't be registered with its reads undeclared, and the cache
+  never names one.
 
 ## Testing (`server/testing`)
 
@@ -160,7 +168,7 @@ The cache and e2e tests run on it, never on Gmail.
 
 ## Plugin reference
 
-- Description: Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered ones (several: each, one under the other). Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
+- Description: Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered ones (several: each, one under the other). Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process, and the Postgres tables its own I/O reads (reads, required: the cache declares them as its loaders' reads) — and mailProviderById, the one lookup the cache uses by the id an account names.
 - Web:
   - Slots: `MailProviderUi.Connect`
   - Slot contributors:
@@ -265,6 +273,9 @@ The cache and e2e tests run on it, never on Gmail.
     - `apps/mail/reader`
     - `apps/mail/threads`
 - Server:
+  - Exports (types):
+    - `MailProviderReads`
+    - `ServerMailProvider`
   - Exports (values):
     - `mailProviderById`
     - `MailProviders`

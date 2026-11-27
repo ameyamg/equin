@@ -7237,6 +7237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `_mailThreads`
               - `CACHE_TABLES`
               - `mailCache`
+              - `mailCacheReads`
               - `MailThreadUnavailableError`
               - `onMailThreadsChanged`
             - Register:
@@ -7514,7 +7515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
               - `apps/isle/buildings` ×22
             - Exports (values): `pillarBox`
-        - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered ones (several: each, one under the other). Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
+        - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered ones (several: each, one under the other). Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process, and the Postgres tables its own I/O reads (reads, required: the cache declares them as its loaders' reads) — and mailProviderById, the one lookup the cache uses by the id an account names.
           - Web:
             - Slots: `MailProviderUi.Connect`
             - Slot contributors:
@@ -7619,6 +7620,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/reader`
               - `apps/mail/threads`
           - Server:
+            - Exports (types):
+              - `MailProviderReads`
+              - `ServerMailProvider`
             - Exports (values):
               - `mailProviderById`
               - `MailProviders`
@@ -7739,13 +7743,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "mail.inline-images"
               - `resource.declare` "mail.thread"
             - Uses:
-              - `apps/mail/cache._mailAccounts`
-              - `apps/mail/cache._mailMailboxes`
-              - `apps/mail/cache._mailQueries`
-              - `apps/mail/cache._mailQueryMembers`
-              - `apps/mail/cache._mailThreadBodies`
-              - `apps/mail/cache._mailThreads`
               - `apps/mail/cache.mailCache`
+              - `apps/mail/cache.mailCacheReads`
               - `apps/mail/cache.MailThreadRead`
               - `apps/mail/cache.MailThreadUnavailableError`
               - `apps/mail/cache.onMailThreadsChanged`
